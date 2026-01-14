@@ -82,6 +82,18 @@ const i18n = {
     kickoffSentTitle: "¡Resumen enviado!",
     kickoffSentBody:
       "Tu selección fue enviada a nuestro equipo de concierge. En las próximas horas te contactaremos para afinar detalles y avanzar con las reservas.",
+      quizTitle: "Diseñemos tu experiencia en Cartagena",
+quizSubtitle: "En 30 segundos entendemos tu estilo y te mostramos recomendaciones curadas por nuestro concierge.",
+quizNote: "No vendemos tus datos. Esto solo se usa para personalizar tu catálogo.",
+quizVibeLabel: "Mood del viaje",
+quizBudgetLabel: "Nivel de presupuesto",
+quizKidsLabel: "¿Viajas con niños?",
+quizCuisinesLabel: "Cocinas favoritas (opcional)",
+quizCuisinesPH: "Mariscos, sushi, italiano…",
+quizInterestsLabel: "¿Qué te provoca?",
+quizSkip: "Saltar",
+quizCTA: "Ver recomendaciones →",
+quizEditAnswers: "Editar respuestas",
 
   },
   en: {
@@ -105,6 +117,18 @@ const i18n = {
     approxPrice: "Approx. price",
     perPerson: "per person",
     dayPass: "day pass",
+    quizTitle: "Let’s design your Cartagena experience",
+quizSubtitle: "In 30 seconds we’ll understand your style and show concierge-curated recommendations.",
+quizNote: "We don’t sell your data. This is only used to personalize your catalog.",
+quizVibeLabel: "Trip vibe",
+quizBudgetLabel: "Budget level",
+quizKidsLabel: "Traveling with kids?",
+quizCuisinesLabel: "Favorite cuisines (optional)",
+quizCuisinesPH: "Seafood, sushi, Italian…",
+quizInterestsLabel: "What are you in the mood for?",
+quizSkip: "Skip",
+quizCTA: "See recommendations →",
+quizEditAnswers: "Edit answers",
     perGroup: "per group",
     people: "people",
     details: "Details",
@@ -1777,6 +1801,9 @@ const btn = {
    6) Componente principal
 ================================== */
 export default function TwoTravelCatalog() {
+  const [step, setStep] = useState("quiz"); // "quiz" | "catalog"
+  const [fadeIn, setFadeIn] = useState(false);
+
   const [lang, setLang] = useState("es");
   const [currency, setCurrency] = useState("COP");
 
@@ -1859,8 +1886,19 @@ const priceLevelFromCop = (cop) => {
 
 
 
+useEffect(() => {
+  if (step === "catalog") {
+    setFadeIn(false);
+    const timer = setTimeout(() => setFadeIn(true), 10);
+    return () => clearTimeout(timer);
+  }
+}, [step]);
+
+
+
 
     useEffect(() => {
+
   setIsLoadingServices(true);
 
   fetchServicesFromSheet()
@@ -2020,6 +2058,20 @@ const PriceLevelChip = ({ service, lang }) => {
   const [selectedService, setSelectedService] = useState(null);
   const [showKickoff, setShowKickoff] = useState(false);
   const [kickoffSent, setKickoffSent] = useState(false);
+    // ✅ Step: quiz -> catalog -> kickoff (tú ya tienes kickoff modal)
+
+
+
+  // ✅ Respuestas del quiz (mínimas para arrancar)
+  const [quiz, setQuiz] = useState({
+    vibe: "",
+    budget: "",      // low | mid | high
+    kids: "no",      // "yes" | "no"
+    cuisines: "",    // texto libre
+    interests: [],   // array strings
+  });
+
+  
 
   /* ---------- favoritos / “carrito” ---------- */
   const [cart, setCart] = useState([]);
@@ -2075,6 +2127,9 @@ const PriceLevelChip = ({ service, lang }) => {
 }, [cart, lang, currency]);
 
 
+
+
+  
   /* ---------- filtros ---------- */
     const filteredServices = useMemo(() => {
   return services.filter((s) => {
@@ -2113,9 +2168,114 @@ if (range && range.id !== "all") {
 
 
 
+const vibeLabel = useMemo(() => {
+  const map = {
+    relax: { es: "Relax & beach", en: "Relax & beach" },
+    party: { es: "Nightlife & rooftop", en: "Nightlife & rooftop" },
+    romantic: { es: "Romantic getaway", en: "Romantic getaway" },
+    family: { es: "Family-friendly", en: "Family-friendly" },
+    adventure: { es: "Adventure & water", en: "Adventure & water" },
+  };
+  return map[quiz.vibe]?.[lang] || (lang === "es" ? "Tu estilo" : "Your vibe");
+}, [quiz.vibe, lang]);
+
+
+ 
+ 
+  /* ---------- recomendados (según quiz) ---------- */
+  const recommendedServices = useMemo(() => {
+    // si el usuario no contestó nada, no mostramos recomendados
+    const hasAnswers =
+      quiz.vibe ||
+      quiz.budget ||
+      quiz.cuisines ||
+      (quiz.interests?.length || 0) > 0 ||
+      quiz.kids === "yes";
+
+    if (!hasAnswers) return [];
+
+    const score = (s) => {
+      let pts = 0;
+
+      const cat = s.category;
+      const sub = (s.subcategory || "").toLowerCase();
+      const desc = (
+        (s.description?.es || "") +
+        " " +
+        (s.description?.en || "")
+      ).toLowerCase();
+
+      // ✅ VIBE
+      if (quiz.vibe === "party") {
+        if (cat === "nightlife" || cat === "bars") pts += 4;
+        if (cat === "beach-clubs") pts += 2;
+      }
+      if (quiz.vibe === "relax") {
+        if (cat === "beach-clubs") pts += 4;
+        if (sub.includes("wellness") || sub.includes("spa")) pts += 3;
+      }
+      if (quiz.vibe === "romantic") {
+        if (cat === "restaurants") pts += 3;
+        if (sub.includes("fine") || sub.includes("rooftop")) pts += 2;
+        if (desc.includes("sunset")) pts += 2;
+      }
+      if (quiz.vibe === "family") {
+        if (cat === "tours" || cat === "services") pts += 2;
+        if (cat === "beach-clubs") pts += 1;
+      }
+      if (quiz.vibe === "adventure") {
+        if (cat === "tours") pts += 3;
+        if (sub.includes("adventure") || sub.includes("water") || sub.includes("bike")) pts += 3;
+      }
+
+      // ✅ KIDS (si hay niños, bajamos rumba/bars)
+      if (quiz.kids === "yes") {
+        if (cat === "nightlife" || cat === "bars") pts -= 4;
+        if (cat === "tours" || cat === "services") pts += 1;
+      }
+
+      // ✅ BUDGET (usa tu función getServicePriceLevel)
+      const lvl = getServicePriceLevel(s); // "$" | "$$" | "$$$" | null
+      if (quiz.budget === "low" && lvl === "$") pts += 2;
+      if (quiz.budget === "mid" && lvl === "$$") pts += 2;
+      if (quiz.budget === "high" && lvl === "$$$") pts += 2;
+
+      // ✅ Cuisines (match simple en descripción y subcategoría)
+      const c = (quiz.cuisines || "").trim().toLowerCase();
+      if (c) {
+        if (desc.includes(c)) pts += 2;
+        if (sub.includes(c)) pts += 1;
+      }
+
+      // ✅ Interests (mapeo rápido)
+      const interests = new Set(quiz.interests || []);
+      if (interests.has("food") && cat === "restaurants") pts += 2;
+      if (interests.has("beach") && cat === "beach-clubs") pts += 2;
+      if (interests.has("night") && (cat === "nightlife" || cat === "bars")) pts += 2;
+      if (interests.has("culture") && (sub.includes("cultural") || sub.includes("city") || desc.includes("histor"))) pts += 2;
+      if (interests.has("adventure") && (sub.includes("adventure") || sub.includes("water") || sub.includes("bike"))) pts += 2;
+
+      return pts;
+    };
+
+    // TIP: puedes usar `services` (todo el catálogo) para recomendar
+    // o `filteredServices` si quieres que respeten filtros.
+    const base = services;
+
+    return base
+      .map((s) => ({ s, pts: score(s) }))
+      .filter((x) => x.pts > 0)
+      .sort((a, b) => b.pts - a.pts)
+      .slice(0, 8)
+      .map((x) => x.s);
+  }, [quiz, services]);
 
 
 
+
+
+
+  
   /* ---------- lógica favoritos ---------- */
   const addToCart = (s) => {
     setCart((c) => [
@@ -2174,11 +2334,197 @@ if (range && range.id !== "all") {
     }
   };
 
+  
 
+
+  // ✅ PASO C: Quiz antes de entrar al catálogo
+  if (step === "quiz") {
+    const toggleInterest = (val) => {
+      setQuiz((q) => {
+        const set = new Set(q.interests || []);
+        set.has(val) ? set.delete(val) : set.add(val);
+        return { ...q, interests: Array.from(set) };
+      });
+    };
+
+    const interestOptions = [
+      { id: "food", es: "Comida", en: "Food" },
+      { id: "beach", es: "Playa", en: "Beach" },
+      { id: "night", es: "Rumba", en: "Nightlife" },
+      { id: "culture", es: "Cultura", en: "Culture" },
+      { id: "adventure", es: "Aventura", en: "Adventure" },
+    ];
+
+    return (
+      <div className="min-h-screen bg-neutral-50">
+        <div className="flex justify-end px-4 pt-4">
+  <button
+    onClick={() => setLang("es")}
+    className={`px-3 py-1 text-xs rounded-l border ${
+      lang === "es"
+        ? "bg-neutral-900 text-white"
+        : "bg-white text-neutral-700"
+    }`}
+  >
+    ES
+  </button>
+
+  <button
+    onClick={() => setLang("en")}
+    className={`px-3 py-1 text-xs rounded-r border ${
+      lang === "en"
+        ? "bg-neutral-900 text-white"
+        : "bg-white text-neutral-700"
+    }`}
+  >
+    EN
+  </button>
+</div>
+
+        <div className="max-w-3xl mx-auto px-4 py-10 space-y-4">
+          <img src={logo} alt="Two Travel" className="h-10 w-auto" />
+
+          <div className="space-y-2">
+  <p className="text-[11px] tracking-[0.25em] text-neutral-500 uppercase">
+    {lang === "es" ? "Two Travel Concierge" : "Two Travel Concierge"}
+  </p>
+
+  <h1 className="text-3xl sm:text-4xl font-semibold text-neutral-900 leading-tight">
+    {lang === "es"
+      ? "Diseñemos tu experiencia en Cartagena"
+      : "Let’s design your Cartagena experience"}
+  </h1>
+
+  <p className="text-sm sm:text-base text-neutral-600 max-w-2xl">
+    {lang === "es"
+      ? "En 30 segundos entendemos tu estilo y te mostramos recomendaciones curadas por nuestro concierge."
+      : "In 30 seconds we’ll understand your style and show concierge-curated recommendations."}
+  </p>
+
+  <div className="text-xs text-neutral-500 flex items-center gap-2">
+    <span className="inline-block w-1.5 h-1.5 rounded-full bg-neutral-400" />
+    <span>
+      {lang === "es"
+        ? "No vendemos tus datos. Esto solo se usa para personalizar tu catálogo."
+        : "We don’t sell your data. This is only used to personalize your catalog."}
+    </span>
+  </div>
+</div>
+
+          <div className="flex items-center justify-between text-xs text-neutral-500">
+  <span>{lang === "es" ? "Paso 1 de 2" : "Step 1 of 2"}</span>
+  <div className="flex items-center gap-2">
+    <span className="w-10 h-1 rounded-full bg-neutral-900" />
+    <span className="w-10 h-1 rounded-full bg-neutral-200" />
+  </div>
+</div>
+
+
+          <div className="bg-white border rounded-2xl p-5 space-y-4">
+            <div className="grid md:grid-cols-3 gap-3 text-sm">
+              <div className="space-y-1">
+                <label className="text-[11px] text-neutral-600">
+                  {lang === "es" ? "Vibe" : "Vibe"}
+                </label>
+                <select
+                  className="w-full border rounded-lg px-3 py-2 bg-white"
+                  value={quiz.vibe}
+                  onChange={(e) => setQuiz((q) => ({ ...q, vibe: e.target.value }))}
+                >
+                  <option value="">{lang === "es" ? "—" : "—"}</option>
+                  <option value="relax">{lang==="es" ? "Relax & beach" : "Relax & beach"}</option>
+<option value="party">{lang==="es" ? "Nightlife & rooftop" : "Nightlife & rooftop"}</option>
+<option value="romantic">{lang==="es" ? "Romantic getaway" : "Romantic getaway"}</option>
+<option value="family">{lang==="es" ? "Family-friendly" : "Family-friendly"}</option>
+<option value="adventure">{lang==="es" ? "Adventure & water" : "Adventure & water"}</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] text-neutral-600">
+                  {lang === "es" ? "Presupuesto" : "Budget"}
+                </label>
+                <select
+  className="w-full border rounded-lg px-3 py-2 bg-white"
+  value={quiz.budget}
+  onChange={(e) =>
+    setQuiz((q) => ({ ...q, budget: e.target.value }))
+  }
+>
+  <option value="">—</option>
+  <option value="low">$</option>
+  <option value="mid">$$</option>
+  <option value="high">$$$</option>
+</select>
+
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] text-neutral-600">
+                  {lang === "es" ? "¿Niños?" : "Kids?"}
+                </label>
+                <select
+                  className="w-full border rounded-lg px-3 py-2 bg-white"
+                  value={quiz.kids}
+                  onChange={(e) => setQuiz((q) => ({ ...q, kids: e.target.value }))}
+                >
+                  <option value="no">{lang === "es" ? "No" : "No"}</option>
+                  <option value="yes">{lang === "es" ? "Sí" : "Yes"}</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-neutral-600">
+                {lang === "es" ? "Cocinas favoritas (opcional)" : "Favorite cuisines (optional)"}
+              </label>
+              <input
+                className="w-full border rounded-lg px-3 py-2 bg-white"
+                value={quiz.cuisines}
+                onChange={(e) => setQuiz((q) => ({ ...q, cuisines: e.target.value }))}
+                placeholder={lang === "es" ? "Mariscos, Sushi, Italiano..." : "Seafood, Sushi, Italian..."}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-[11px] text-neutral-600">
+                {lang === "es" ? "¿Qué te interesa?" : "What are you into?"}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {interestOptions.map((opt) => {
+                  const active = (quiz.interests || []).includes(opt.id);
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => toggleInterest(opt.id)}
+                      className={active ? btn.chipOn : btn.chipOff}
+                    >
+                      {lang === "es" ? opt.es : opt.en}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <button className={btn.linkBtn} onClick={() => setStep("catalog")}>
+  {lang === "es" ? "Ver catálogo sin personalizar" : "Browse without personalization"}
+</button>
+
+              <button className={btn.filled} onClick={() => setStep("catalog")}>
+  {lang === "es" ? "Ver recomendaciones →" : "See recommendations →"}
+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   /* ---------- UI ---------- */
   return (
-    <div className="min-h-screen">
+    <div className={`min-h-screen transition-opacity duration-500 ${fadeIn ? "opacity-100" : "opacity-0"}`}>
       {/* Header */}
       <header className="bg-white border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -2327,6 +2673,73 @@ if (range && range.id !== "all") {
           </div>
         )}
       </div>
+            {/* ✅ Recomendados (según quiz) */}
+      {recommendedServices.length > 0 && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          <div className="bg-white border rounded-2xl p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] tracking-[0.22em] uppercase text-neutral-500">
+  {lang === "es" ? "Best for your vibe" : "Best for your vibe"} · {vibeLabel}
+</p>
+
+                <h2 className="text-lg font-bold">
+  {lang === "es" ? "Selección del concierge" : "Concierge picks"}
+</h2>
+<p className="text-xs text-gray-500">
+  {lang === "es"
+    ? "Basado en tus respuestas y disponibilidad típica."
+    : "Based on your preferences and typical availability."}
+</p>
+
+              </div>
+
+              <button
+                type="button"
+                className={btn.linkBtn}
+                onClick={() => setStep("quiz")}
+              >
+                {lang === "es" ? "Editar respuestas" : "Edit answers"}
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {recommendedServices.map((s) => (
+  <div
+    key={`rec-${s.id}`}
+    className="group border rounded-2xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer bg-white"
+    onClick={() => setSelectedService(s)}
+  >
+    <div className="relative h-28">
+      <img
+        src={s.image}
+        alt={s.name}
+        className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+      />
+
+      {/* ✅ BADGE */}
+      <div className="absolute top-2 left-2">
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/90 border border-neutral-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-neutral-900" />
+          {lang === "es" ? "Concierge pick" : "Concierge pick"}
+        </span>
+      </div>
+    </div>
+
+    <div className="p-3">
+      <p className="text-sm font-semibold">{s.name}</p>
+      <p className="text-[11px] text-gray-500">
+        {i18n[lang][s.category] || s.category}
+      </p>
+    </div>
+  </div>
+))}
+
+            </div>
+          </div>
+        </div>
+      )}
+
 
             {/* Grid servicios */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
