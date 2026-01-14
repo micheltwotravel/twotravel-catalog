@@ -1,0 +1,20 @@
+@import url("https://fonts.cdnfonts.com/css/mont");
+@import url("https://fonts.cdnfonts.com/css/caviar-dreams");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    @apply bg-gradient-to-br from-gray-50 to-gray-100;
+  }
+}
+
+@layer utilities {
+  .brand-title {
+    font-family: "Caviar Dreams", sans-serif;
+    letter-spacing: 0.35em;
+  }
+}
