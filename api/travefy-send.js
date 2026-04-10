@@ -213,14 +213,29 @@ function catLabel(cat, lang) {
 }
 
 // Travefy EventTypeId values
+// IMPORTANT: food/restaurant must be checked BEFORE transport to avoid mis-categorization
 function eventTypeId(category) {
   const c = clean(category).toLowerCase();
-  if (/transport|transfer|pickup|airport|van|suv|driver/.test(c))   return 3; // Transport
-  if (/accommodation|hotel|villa|house|penthouse|airbnb/.test(c))   return 2; // Lodging
-  if (/restaurant|food|dinner|lunch|breakfast|chef|eat/.test(c))    return 4; // Food & Drink
-  if (/nightlife|party|club|bar|drinks|lounge/.test(c))             return 5; // Nightlife
-  if (/tour|activity|experience|boat|beach|museum|hike/.test(c))    return 1; // Activity
+  if (/restaurant|food|dinner|lunch|breakfast|chef|eat|comida|restaurante/.test(c)) return 4; // Food & Drink
+  if (/nightlife|party|club|bar|drinks|lounge|discoteca|fiesta/.test(c))            return 5; // Nightlife
+  if (/accommodation|hotel|villa|house|penthouse|airbnb|alojamiento/.test(c))       return 2; // Lodging
+  if (/transport|transfer|pickup|airport|van|suv|driver|traslado|transporte/.test(c)) return 3; // Transport
+  if (/tour|activity|experience|boat|beach|museum|hike|actividad|experiencia/.test(c)) return 1; // Activity
   return 0; // General
+}
+
+// Helper: is this a transport/vehicle service?
+function isTransport(category) {
+  return /transport|transfer|pickup|airport|van|suv|driver|traslado|transporte/.test(
+    clean(category).toLowerCase()
+  );
+}
+
+// Helper: is this a restaurant/food service?
+function isFood(category) {
+  return /restaurant|food|dinner|lunch|breakfast|chef|eat|comida|restaurante/.test(
+    clean(category).toLowerCase()
+  );
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -276,8 +291,8 @@ function buildDescription(svc, cartItem, lang) {
   // 4. Duration
   if (svc.duration) blocks.push(`${lb.duration}: ${svc.duration}`);
 
-  // 5. Capacity
-  if (svc.capacityMin || svc.capacityMax) {
+  // 5. Capacity — skip for restaurants (not relevant for dining)
+  if ((svc.capacityMin || svc.capacityMax) && !isFood(svc.category)) {
     const cap2 = (svc.capacityMin && svc.capacityMax)
       ? `${svc.capacityMin}-${svc.capacityMax}`
       : (svc.capacityMax || svc.capacityMin);
@@ -285,19 +300,24 @@ function buildDescription(svc, cartItem, lang) {
   }
 
   // 6. Price / tiers
+  // For transport: label is "per vehicle", otherwise use priceUnit from catalog
+  const priceUnit = isTransport(svc.category)
+    ? (lang === "es" ? "por vehiculo" : "per vehicle")
+    : (svc.priceUnit || (lang === "es" ? "por persona" : "per person"));
+
   const pMain  = formatCOP(svc.priceCop);
   const pTier1 = formatCOP(svc.priceTier1);
   const pTier2 = formatCOP(svc.priceTier2);
   if (pTier1 && pTier2) {
     blocks.push(
       `${lb.price}:\n` +
-      `${lang === "es" ? "Opcion 1" : "Option 1"}: ${pTier1} / ${svc.priceUnit}\n` +
-      `${lang === "es" ? "Opcion 2" : "Option 2"}: ${pTier2} / ${svc.priceUnit}`
+      `${lang === "es" ? "Opcion 1" : "Option 1"}: ${pTier1} / ${priceUnit}\n` +
+      `${lang === "es" ? "Opcion 2" : "Option 2"}: ${pTier2} / ${priceUnit}`
     );
   } else if (pTier1) {
-    blocks.push(`${lb.price}: ${pTier1} / ${svc.priceUnit}`);
+    blocks.push(`${lb.price}: ${pTier1} / ${priceUnit}`);
   } else if (pMain) {
-    blocks.push(`${lb.price}: ${pMain} / ${svc.priceUnit}`);
+    blocks.push(`${lb.price}: ${pMain} / ${priceUnit}`);
   }
 
   // 7. Deposit notice
@@ -346,13 +366,17 @@ function buildTripEvent(svc, cartItem, lang, sortOrder) {
   const baseName = clean(cartItem?.title || cartItem?.name || svc.name);
 
   // QB code in the title → always visible in Travefy list, even when Description doesn't render
-  // Format: "Dinner at Mamba Negra - CCMR [TO037]"
   const codeTag  = svc.quickbooksCode ? ` [${svc.quickbooksCode}]` : "";
   const title    = `${baseName}${codeTag}`;
+
+  // Notes on the TripEvent itself → shows in Travefy Classic Editor "Notes" field
+  // This is the ONLY field that renders reliably in both the web share and PDF export
+  const notes = buildDescription(svc, cartItem, lang);
 
   return {
     SortOrder:   sortOrder,
     Title:       title,
+    Notes:       notes,
     // ⚠ Location intentionally omitted here.
     // If set on TripEvent, Travefy uses it as the list label and hides the Title.
     // Location belongs on TripIdea only.
@@ -428,6 +452,7 @@ function buildWelcomeDay(meta, lang) {
     TripEvents: [{
       SortOrder:   1,
       Title:       eventTitle || `${meta.guestName || "Your Trip"} - Two Travel Concierge`,
+      Notes:       desc,
       EventTypeId: 0,
       TripIdeas: [{
         Title:       eventTitle || "Two Travel - Concierge Itinerary",
@@ -470,11 +495,12 @@ function buildSummaryDay(matched, lang) {
     TripEvents: [{
       SortOrder:   1,
       Title:       lang === "es" ? "Resumen Completo del Itinerario" : "Full Itinerary Overview",
+      Notes:       cap(desc),
       EventTypeId: 0,
       TripIdeas: [{
         Title:       lang === "es" ? "Resumen del Viaje" : "Trip Summary",
-        Description: desc,
-        Notes:       desc,
+        Description: cap(desc),
+        Notes:       cap(desc),
       }],
     }],
   };
@@ -515,9 +541,9 @@ Muestrale a todos lo increible que es viajar con el servicio de concierge de Two
 Siguenos: @twotravelconcierge en Instagram y TikTok.
 
 Nota:
-- La publicacion debe realizarse durante tu estadia.
-- Se requiere un tag por persona para aplicar el descuento.
-- Para servicios grupales, todos los miembros deben participar para que aplique el descuento.`;
+- La publicacion debe realizarse durante tu estadia en la ciudad.
+- Se requiere un tag por persona para aplicar el descuento al servicio.
+- Para servicios grupales (transporte, chef privado, etc.), todos los miembros deben participar para que aplique el descuento.`;
 
   const desc = lang === "es" ? WELCOME_ES : WELCOME_EN;
 
@@ -530,6 +556,7 @@ Nota:
       Title:       lang === "es"
         ? `Bienvenido a ${city} — Two Travel`
         : `Welcome to ${city} — Two Travel`,
+      Notes:       cap(desc),
       EventTypeId: 0,
       TripIdeas: [{
         Title:       lang === "es" ? "Informacion y Documentos" : "Information & Documents",
