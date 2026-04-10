@@ -2,7 +2,10 @@
 import React, { useMemo, useState, useEffect } from "react";
 import {
   fetchServicesFromSheet,
+  updateKickoffInSheet,
   saveKickoffToSheet,
+  deleteKickoff,
+  fetchKickoffsFromSheet,
 } from "./sheetServices";
 
 
@@ -46,6 +49,7 @@ const i18n = {
     noResults: "No se encontraron servicios",
     language: "Idioma",
     currency: "Moneda",
+    transportation: "Transporte",
     cop: "COP",
     usd: "USD",
     approxPrice: "Precio aproximado",
@@ -93,6 +97,8 @@ quizCuisinesPH: "Mariscos, sushi, italiano…",
 quizInterestsLabel: "¿Qué te provoca?",
 quizSkip: "Saltar",
 quizCTA: "Ver recomendaciones →",
+requestQuote: "Solicita cotización",
+variablePrice: "Precio variable",
 quizEditAnswers: "Editar respuestas",
 
   },
@@ -105,6 +111,7 @@ quizEditAnswers: "Editar respuestas",
     "beach-clubs": "Beach Clubs",
     tours: "Tours",
     nightlife: "Nightlife",
+    transportation: "Transportation",
     services: "Services",
     styles: "Styles",
     price: "Price",
@@ -112,6 +119,8 @@ quizEditAnswers: "Editar respuestas",
     noResults: "No services found",
     language: "Language",
     currency: "Currency",
+    requestQuote: "Request quote",
+variablePrice: "Variable pricing",
     cop: "COP",
     usd: "USD",
     approxPrice: "Approx. price",
@@ -1747,6 +1756,7 @@ const categories = [
   { id: "tours" },
   { id: "nightlife" },
   { id: "services" },
+  { id: "transportation" },
 ];
 
 // Estilos de restaurantes con etiquetas bilingües
@@ -1800,11 +1810,67 @@ const btn = {
 /* ================================
    6) Componente principal
 ================================== */
+
+const CATEGORY_FALLBACKS = {
+  restaurants:
+    "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1280&q=80",
+  bars:
+    "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=1280&q=80",
+  "beach-clubs":
+    "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1280&q=80",
+  tours:
+    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=1280&q=80",
+  nightlife:
+    "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1280&q=80",
+  services:
+    "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=1280&q=80",
+  transportation:
+    "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=1280&q=80",
+  default:
+    "https://images.unsplash.com/photo-1526779259212-939e64788e3c?w=1280&q=80",
+};
+
+function safeImg(url, category = "default") {
+  if (url && String(url).startsWith("http")) return url;
+  return CATEGORY_FALLBACKS[category] || CATEGORY_FALLBACKS.default;
+}
+const StepIndicator = ({ step, lang }) => {
+  const isQuiz = step === "quiz";
+  return (
+    <div className="bg-white border-b">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between text-xs text-neutral-500">
+        <span>
+          {lang === "es"
+            ? isQuiz ? "Paso 1 de 2" : "Paso 2 de 2"
+            : isQuiz ? "Step 1 of 2" : "Step 2 of 2"}
+        </span>
+
+        <div className="flex items-center gap-2">
+          <span className={`w-10 h-1 rounded-full ${isQuiz ? "bg-neutral-900" : "bg-neutral-200"}`} />
+          <span className={`w-10 h-1 rounded-full ${isQuiz ? "bg-neutral-200" : "bg-neutral-900"}`} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const normalizeCapacity = (raw) => {
+  if (raw && typeof raw === "object") return raw;
+
+  const str = String(raw ?? "").trim();
+  if (!str) return { min: 1, max: 1 };
+
+  const parts = str.split(/[-–,]/).map((x) => Number(x.trim()));
+  const min = Number.isFinite(parts[0]) ? parts[0] : 1;
+  const max = Number.isFinite(parts[1]) ? parts[1] : min;
+
+  return { min, max };
+};
 export default function TwoTravelCatalog() {
   const [step, setStep] = useState("quiz"); // "quiz" | "catalog"
   const [fadeIn, setFadeIn] = useState(false);
 
-  const [lang, setLang] = useState("es");
+  const [lang, setLang] = useState("en");
   const [currency, setCurrency] = useState("COP");
 
   const t = i18n[lang];
@@ -1818,12 +1884,13 @@ export default function TwoTravelCatalog() {
 const normalizeCategory = (raw) => {
   const v = (raw || "").toString().trim().toLowerCase();
 
-  if (v.startsWith("rest")) return "restaurants";
-  if (v.startsWith("bar")) return "bars";
+  if (v.includes("rest")) return "restaurants";
+  if (v.includes("bar")) return "bars";
   if (v.includes("beach")) return "beach-clubs";
-  if (v.startsWith("tour")) return "tours";
-  if (v.startsWith("night")) return "nightlife";
-  if (v.startsWith("serv")) return "services";
+  if (v.includes("tour")) return "tours";
+  if (v.includes("night")) return "nightlife";
+  if (v.includes("serv")) return "services";
+  if (v.includes("transport") || v.includes("transfer") || v.includes("traslado")) return "transportation";
 
   return "services";
 };
@@ -1831,12 +1898,20 @@ const normalizeCategory = (raw) => {
 const normalizePriceUnit = (raw) => {
   const v = (raw || "").toString().trim().toLowerCase();
 
-  if (v.includes("grupo")) return "per group";
-  if (v.includes("pasad")) return "day pass";
-  if (v.includes("persona")) return "per person";
+  if (!v) return "per person";
 
+  // Variantes comunes
+  if (v.includes("person") || v.includes("persona") || v === "pp") return "per person";
+  if (v.includes("day") || v.includes("pasad") || v.includes("day pass")) return "day pass";
+  if (v.includes("group") || v.includes("grupo") || v.includes("private")) return "per group";
+
+  // Si ya viene perfecto
+  if (v === "per person" || v === "day pass" || v === "per group") return v;
+
+  // fallback
   return "per person";
 };
+
 // Categorías que usan $, $$, $$$
 const categoriesWithPriceLevel = [
   "restaurants",
@@ -1845,25 +1920,27 @@ const categoriesWithPriceLevel = [
   "nightlife",
 ];
 // Devuelve $, $$ o $$$ para cualquier servicio
-const getServicePriceLevel = (s) => {
-  // 1) si viene del Sheet (columna price_level / PRICE LEVEL / etc.)
+const getServicePriceLevel = (s, clientType = 1) => {
+  // si ya viene definido desde el Sheet, úsalo
   if (s.priceLevel) return s.priceLevel;
 
-  // 2) si no, calculado por precio en COP
-  return priceLevelFromCop(s.price_cop);
+  // si no viene, calcúlalo automáticamente con el precio efectivo
+  const effectivePrice = getEffectivePriceCop(s, clientType);
+  return priceLevelFromCop(effectivePrice);
 };
 
 
 // si no viene del Sheet, calculamos según price_cop
 const normalizePriceLevelValue = (raw) => {
-  const v = (raw || "").toString().trim();
-
+  const v = (raw || "").toString().trim().toLowerCase();
   if (!v) return null;
 
-  // Si ya viene como $, $$ o $$$
   if (v === "$" || v === "$$" || v === "$$$") return v;
 
-  // Si viene como 1, 2, 3
+  if (v === "budget") return "$";
+  if (v === "mid") return "$$";
+  if (v === "premium" || v === "high") return "$$$";
+
   const n = Number(v);
   if (n === 1) return "$";
   if (n === 2) return "$$";
@@ -1880,85 +1957,128 @@ const priceLevelFromCop = (cop) => {
   if (n <= 500000) return "$$";    // 200k–500k
   return "$$$";                    // ≥ 500k
 };
+const getEffectivePriceCop = (service, clientType = 1) => {
+  const tier1 = Number(service.price_tier_1 || 0);
+  const tier2 = Number(service.price_tier_2 || 0);
+  const base = Number(service.price_cop || 0);
 
+  if (clientType === 2 && tier2 > 0) return tier2;
+  if (clientType === 1 && tier1 > 0) return tier1;
 
+  if (tier1 > 0) return tier1;
+  if (tier2 > 0) return tier2;
+  return base;
+};
 
-
-
+const urlParams = new URLSearchParams(window.location.search);
+const currentClientType = Number(urlParams.get("clientType") || 1);
 
 useEffect(() => {
-  if (step === "catalog") {
-    setFadeIn(false);
-    const timer = setTimeout(() => setFadeIn(true), 10);
-    return () => clearTimeout(timer);
-  }
-}, [step]);
-
-
-
-
-    useEffect(() => {
-
+    setFadeIn(true);
+  }, []);
+useEffect(() => {
   setIsLoadingServices(true);
 
-  fetchServicesFromSheet()
-    .then((remote) => {
-      if (remote && remote.length) {
-        const normalized = remote.map((s) => {
-  const priceCop = Number(s.price_cop ?? s.price ?? 0);
+  // ✅ helper fuera del map (más limpio)
+  const normalizeCop = (raw) => {
+    if (raw == null) return 0;
+    if (typeof raw === "number") return isNaN(raw) ? 0 : raw;
 
-  // intentamos leer la columna de muchas formas
-  const rawPriceLevel =
-    s.price_level ??
-    s.priceLevel ??
-    s.PRICE_LEVEL ??
-    s["PRICE LEVEL"] ??
-    s.pricelevel;
+    const str = String(raw).trim();
 
-  const levelFromSheet = normalizePriceLevelValue(rawPriceLevel);
-
-  return {
-    ...s,
-    category: normalizeCategory(
-      s.category || s.Category || s.categoria
-    ),
-    priceUnit: normalizePriceUnit(
-      s.priceUnit || s.price_unit || s.unidad_precio
-    ),
-    price_cop: priceCop,
-
-    // Primero intentamos lo que venga del Sheet ($, $$, $$$ o 1/2/3)
-    // Si no hay nada, lo calculamos con el COP
-    priceLevel: levelFromSheet ?? priceLevelFromCop(priceCop),
-
-    description:
-      typeof s.description === "string"
-        ? { es: s.description, en: s.description }
-        : s.description ?? { es: "", en: "" },
+    // soporta "200.000", "$200,000", "COP 200000", etc.
+    const digits = str.replace(/[^\d]/g, "");
+    const n = Number(digits);
+    return isNaN(n) ? 0 : n;
   };
-});
 
+  fetchServicesFromSheet()
+  .then((rows) => {
+    const normalized = (rows || []).map((s, idx) => {
+      const extraImages = [
+  s["5"],
+  s["6"],
+  s["7"],
+  s["8"],
+  s["9"],
+]
+  .filter(Boolean)
+  .map((img) => img.trim());
+      const rawPriceLevel =
+        s.priceLevel ?? s.price_level ?? s.nivel_precio;
 
-        // 👉 AHORA TODO sale del Sheet
-        setServices(normalized);
-      }
-    })
-    .catch((err) => {
-      console.error("Error leyendo Sheet:", err);
-      setServicesError("No se pudo leer el catálogo.");
+      const rawPriceCop =
+        s.price_cop ?? s.priceCop ?? s.precio_cop ?? s.price;
 
-      // Fallback si el Sheet falla
-      setServices([]); // fallback vacío
-    })
-    .finally(() => {
-      setIsLoadingServices(false);
+      const priceCop = normalizeCop(rawPriceCop);
+
+      const levelFromSheet = normalizePriceLevelValue(rawPriceLevel);
+
+      const rawUnit =
+        s.priceUnit ??
+        s.price_unit ??
+        s.unidad_precio ??
+        s["Price Unit"] ??
+        s["price unit"] ??
+        s["Unidad Precio"];
+
+      return {
+        ...s,
+        id: String(s.id ?? "").trim() || `row-${idx}`,
+        name: String(s.name ?? s.Nombre ?? s.title ?? "").trim(),
+        image: safeImg(s.image ?? s.img),
+        category: normalizeCategory(s.category || s.Category || s.categoria),
+        subcategory: String(
+          s.subcategory ?? s.sub_category ?? s.estilo ?? ""
+        )
+          .trim()
+          .toLowerCase(),
+
+        priceUnit: normalizePriceUnit(rawUnit),
+        images: extraImages,
+        price_cop: priceCop,
+        priceLevel: levelFromSheet ?? null,
+
+        description:
+          typeof s.description === "string"
+            ? { es: s.description, en: s.description }
+            : s.description ?? { es: "", en: "" },
+
+        highlights: Array.isArray(s.highlights)
+  ? s.highlights
+  : String(s.highlights ?? "")
+      .split(/,|\n/)
+      .map((x) => x.trim())
+      .filter(Boolean),
+
+        capacity: normalizeCapacity(s.capacity ?? s.Capacity ?? s.capacidad),
+        duration: String(s.duration ?? ""),
+        location: String(s.location ?? ""),
+        schedule: String(s.schedule ?? ""),
+
+        menuUrl: String(s.menuUrl ?? s.menu_url ?? ""),
+        mapsUrl: String(s.mapsUrl ?? s.maps_url ?? ""),
+      };
     });
+
+    setServices(normalized);
+    setServicesError(null);
+  })
+  .catch((err) => {
+    console.error("Error leyendo Sheet:", err);
+    setServicesError("No se pudo leer el catálogo. Mostrando versión offline.");
+    setServices(servicesData);
+  })
+  .finally(() => setIsLoadingServices(false));
 }, []);
+
+
+
 // ⭐ CHIP + INFO (versión pequeña, elegante y bilingüe)
-const PriceLevelChip = ({ service, lang }) => {
+const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   if (!categoriesWithPriceLevel.includes(service.category)) return null;
 
-  const level = getServicePriceLevel(service);
+  const level = getServicePriceLevel(service, clientType);
   if (!level) return null;
 
   const explanations = {
@@ -1974,7 +2094,9 @@ const PriceLevelChip = ({ service, lang }) => {
     },
   };
 
-  const tInfo = explanations[lang] || explanations.es;
+  
+
+
 
   return (
     <div className="relative inline-flex items-center mt-1 group">
@@ -2027,7 +2149,9 @@ const PriceLevelChip = ({ service, lang }) => {
     currency === "USD" ? Math.round(cop / FX_COP_PER_USD) : cop;
 
   const categoryHasVisiblePrice = (category) =>
-  category === "tours" || category === "services";
+  category === "tours" ||
+  category === "services" ||
+  category === "transportation";
 
 
   const hasPrice = (cop) => cop && cop > 0;
@@ -2055,8 +2179,19 @@ const PriceLevelChip = ({ service, lang }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [priceRange, setPriceRange] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [imgIndex, setImgIndex] = useState(0);
   const [selectedService, setSelectedService] = useState(null);
+
+  const gallery = selectedService
+    ? [selectedService.image, ...(selectedService.images || [])].filter(Boolean)
+    : [];
+
   const [showKickoff, setShowKickoff] = useState(false);
+  const [guestName, setGuestName] = useState("");
+  const [kickoffLoaded, setKickoffLoaded] = useState(false);
+  const [tripName, setTripName] = useState("");
+  const [guestContact, setGuestContact] = useState("");
+
   const [kickoffSent, setKickoffSent] = useState(false);
     // ✅ Step: quiz -> catalog -> kickoff (tú ya tienes kickoff modal)
 
@@ -2078,13 +2213,14 @@ const PriceLevelChip = ({ service, lang }) => {
   const [showCart, setShowCart] = useState(false);
   const [heartBump, setHeartBump] = useState(false); // 💗 animación icono
 
-  // Total en COP
-  const cartTotalCOP = useMemo(
+ const cartTotalCOP = useMemo(
   () =>
     cart
       .filter(
         (item) =>
-          item.category === "tours" || item.category === "services"
+          item.category === "tours" ||
+          item.category === "services" ||
+          item.category === "transportation"
       )
       .reduce((sum, item) => sum + (item.price_cop || 0), 0),
   [cart]
@@ -2113,7 +2249,7 @@ const PriceLevelChip = ({ service, lang }) => {
         priceLine = `${price} • ${unitLabel(item.priceUnit)}`;
       } else {
         // Solo mostramos $, $$ o $$$ para restaurantes, bares, beach clubs, nightlife
-        const level = getServicePriceLevel(item);
+        const level = getServicePriceLevel(item, item.clientType || currentClientType);
         priceLine = level ? `${level}` : "";
       }
 
@@ -2133,8 +2269,10 @@ const PriceLevelChip = ({ service, lang }) => {
   /* ---------- filtros ---------- */
     const filteredServices = useMemo(() => {
   return services.filter((s) => {
+    const serviceCategory = normalizeCategory(s.category);
+
     const catOK =
-      selectedCategory === "all" || s.category === selectedCategory;
+      selectedCategory === "all" || serviceCategory === selectedCategory;
 
     const stylesOK =
       selectedCategory !== "restaurants" || selectedStyles.size === 0
@@ -2144,29 +2282,25 @@ const PriceLevelChip = ({ service, lang }) => {
     const q = searchTerm.trim().toLowerCase();
     const searchOK =
       !q ||
-      s.name.toLowerCase().includes(q) ||
+      (s.name || "").toLowerCase().includes(q) ||
       (s.description?.es || "").toLowerCase().includes(q) ||
       (s.description?.en || "").toLowerCase().includes(q);
 
     const range = priceRanges.find((r) => r.id === priceRange);
-let priceOK = true;
+    let priceOK = true;
 
-if (range && range.id !== "all") {
-  const lvl = getServicePriceLevel(s); // $, $$ o $$$ (o null)
-
-  // si no hay nivel definido, lo excluimos del filtro
-  if (!lvl || !range.levels?.includes(lvl)) {
-    priceOK = false;
-  }
-}
-
-
+    if (range && range.id !== "all") {
+      if (categoriesWithPriceLevel.includes(serviceCategory)) {
+        const lvl = getServicePriceLevel(s, currentClientType);
+        if (!lvl || !range.levels?.includes(lvl)) priceOK = false;
+      } else {
+        priceOK = true;
+      }
+    }
 
     return catOK && stylesOK && searchOK && priceOK;
   });
 }, [services, selectedCategory, selectedStyles, searchTerm, priceRange]);
-
-
 
 const vibeLabel = useMemo(() => {
   const map = {
@@ -2235,7 +2369,7 @@ const vibeLabel = useMemo(() => {
       }
 
       // ✅ BUDGET (usa tu función getServicePriceLevel)
-      const lvl = getServicePriceLevel(s); // "$" | "$$" | "$$$" | null
+      const lvl = getServicePriceLevel(s, currentClientType); // "$" | "$$" | "$$$" | null
       if (quiz.budget === "low" && lvl === "$") pts += 2;
       if (quiz.budget === "mid" && lvl === "$$") pts += 2;
       if (quiz.budget === "high" && lvl === "$$$") pts += 2;
@@ -2271,70 +2405,246 @@ const vibeLabel = useMemo(() => {
   }, [quiz, services]);
 
 
-
+const selectedServiceCategory = selectedService
+  ? normalizeCategory(selectedService.category)
+  : "";
 
 
 
   
   /* ---------- lógica favoritos ---------- */
   const addToCart = (s) => {
-    setCart((c) => [
-      ...c,
-      {
-        cartId: Date.now() + Math.random(),
-        id: s.id,
-        name: s.name,
-        category: s.category,
-        price_cop: s.price_cop,
-        priceUnit: s.priceUnit,
-        priceLevel: s.priceLevel,   // ✅ ADD
-        notes: "",
-      },
-    ]);
-    setHeartBump(true);
-    setTimeout(() => setHeartBump(false), 200);
-  };
-
+  setCart((c) => [
+    ...c,
+    {
+      cartId: Date.now() + Math.random(),
+      id: s.id,
+      name: s.name,
+      category: s.category,
+      subcategory: s.subcategory || "",
+      image: s.image || "",
+      price_cop: getEffectivePriceCop(s, currentClientType),
+price_tier_1: s.price_tier_1,
+price_tier_2: s.price_tier_2,
+clientType: currentClientType,
+      priceUnit: s.priceUnit,
+      priceLevel: s.priceLevel, // ✅
+      notes: "",
+    },
+  ]);
+  setHeartBump(true);
+  setTimeout(() => setHeartBump(false), 200);
+};
   const removeFromCart = (cartId) =>
     setCart((c) => c.filter((x) => x.cartId !== cartId));
+
+  const params = new URLSearchParams(window.location.search);
+const mode = params.get("mode");
+const kickoffId = params.get("kickoffId");
+const guestNameFromUrl = params.get("guestName") || "";
+const tripNameFromUrl = params.get("tripName") || "";
+const guestContactFromUrl = params.get("guestContact") || "";
+
+const isCatalogMode = mode === "catalog";
+const isQuestionnaireMode = mode === "questionnaire";
+useEffect(() => {
+  const run = async () => {
+    if (!kickoffId) return;
+
+    try {
+      const ko = await getKickoffById(kickoffId);
+
+      if (!ko) return;
+
+      // ✅ Usa los campos como estén guardados en tu Sheet
+      setGuestName(
+  String(
+    ko.guestName ||
+    ko.GuestName ||
+    ko.nombre ||
+    guestNameFromUrl ||
+    ""
+  ).trim()
+);
+
+setTripName(
+  String(
+    ko.tripName ||
+    ko.TripName ||
+    ko.viaje ||
+    tripNameFromUrl ||
+    ""
+  ).trim()
+);
+
+setGuestContact(
+  String(
+    ko.guestContact ||
+    ko.GuestContact ||
+    ko.guest_contact ||
+    ko.contact ||
+    ko.Contact ||
+    ko.contacto ||
+    ko.Contacto ||
+    guestContactFromUrl ||
+    ""
+  ).trim()
+);
+
+      // opcional: si ya hay cart guardado en kickoff, puedes precargarlo
+      // if (Array.isArray(ko.cart)) setCart(ko.cart);
+
+    } catch (e) {
+      console.error("No pude precargar kickoff:", e);
+    }
+  };
+
+  run();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [kickoffId, guestNameFromUrl, tripNameFromUrl, guestContactFromUrl]);
+const getKickoffById = async (id) => {
+  const rows = await fetchKickoffsFromSheet();
+  const all = Array.isArray(rows) ? rows : [];
+  return all.find((k) => String(k.id).trim() === String(id).trim()) || null;
+};
+
+useEffect(() => {
+  if (isCatalogMode) {
+    setStep("catalog");
+    setShowKickoff(false);
+  } else if (isQuestionnaireMode) {
+    setStep("quiz");
+    setShowKickoff(false);
+  } else {
+    setStep("quiz");
+    setShowKickoff(false);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [isCatalogMode, isQuestionnaireMode]);
+
 
   const updateCartNotes = (cartId, notes) =>
     setCart((c) => (c.map((x) => (x.cartId === cartId ? { ...x, notes } : x))));
 
       const handleSendKickoff = async () => {
-    try {
-      const payload = {
-        // lo que se guarda en el Sheet
-        cart,
-        conciergeSummary,
-        currency,
-        lang,
-        totalCOP: cartTotalCOP,
-        totalConverted: cartTotalConverted,
-        createdAt: new Date().toISOString(),
-        // campos opcionales que luego puedes rellenar desde otro form:
-        guestName: "",   // TODO: más adelante pedimos nombre / villa / fechas
-        tripName: "",
-        status: "new",
-        internalNotes: "",
-      };
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const kickoffIdFromUrl = params.get("kickoffId");
 
-      await saveKickoffToSheet(payload);
+    // ✅ si viene kickoffId, NO crees uno nuevo
+    if (!kickoffIdFromUrl || !kickoffIdFromUrl.trim()) {
+  alert("Falta kickoffId en la URL");
+  return;
+}
 
-      setShowKickoff(false);
-      setKickoffSent(true);
-      setCart([]); // vaciamos selección del cliente
-    } catch (err) {
-      console.error(err);
-      alert(
-        lang === "es"
-          ? "Hubo un problema enviando tu selección. Intenta de nuevo."
-          : "There was a problem sending your selection. Please try again."
-      );
-    }
-  };
+const idToUse = kickoffIdFromUrl.trim();
 
-  
+// trae kickoff actual para no perder el contacto ya guardado
+const currentKickoff = await getKickoffById(idToUse);
+
+const travifyText = conciergeSummary;
+
+const cleanGuestName = String(guestName || "").trim();
+const cleanTripName = String(tripName || "").trim();
+const guestContactInputValue = document.getElementById("guestContactInput")?.value || "";
+const cleanGuestContact = String(guestContactInputValue || guestContact || "").trim();
+alert("CONTACTO INPUT: " + cleanGuestContact);
+
+const originalGuestContact = String(
+  currentKickoff?.guestContact ||
+  currentKickoff?.GuestContact ||
+  currentKickoff?.guest_contact ||
+  currentKickoff?.contact ||
+  currentKickoff?.Contact ||
+  currentKickoff?.contacto ||
+  currentKickoff?.Contacto ||
+  guestContactFromUrl ||
+  ""
+).trim();
+
+const finalGuestContact = String(
+  cleanGuestContact || originalGuestContact || ""
+).trim();
+
+const payload = {
+  id: idToUse,
+  cart,
+  conciergeSummary,
+  travifyText,
+  currency,
+  lang,
+  totalCOP: cartTotalCOP,
+  totalConverted: cartTotalConverted,
+  createdAt: new Date().toISOString(),
+
+  guestName: cleanGuestName,
+  tripName: cleanTripName,
+
+  viaje: cleanTripName,
+  Viaje: cleanTripName,
+  TripName: cleanTripName,
+
+  huesped: cleanGuestName,
+  Huesped: cleanGuestName,
+  GuestName: cleanGuestName,
+
+  guestContact: finalGuestContact,
+  GuestContact: finalGuestContact,
+  guest_contact: finalGuestContact,
+  contact: finalGuestContact,
+  Contact: finalGuestContact,
+  contacto: finalGuestContact,
+  Contacto: finalGuestContact,
+
+  status: "client_submitted",
+  internalNotes: "",
+};
+
+
+console.log("SENDING PAYLOAD TO KICKOFF:", payload);
+console.log("CONTACTO QUE SE ENVIA:", finalGuestContact);
+console.log("PAYLOAD QUE SE ENVIA:", payload);
+await updateKickoffInSheet(idToUse, payload);
+console.log("Kickoff actualizado:", idToUse);
+
+setShowKickoff(false);
+setKickoffSent(true);
+setStep(isCatalogMode ? "catalog" : "quiz");
+setCart([]);
+
+    
+  } catch (err) {
+    console.error(err);
+    alert(
+      lang === "es"
+        ? "Hubo un problema enviando tu selección. Intenta de nuevo."
+        : "There was a problem sending your selection. Please try again."
+    );
+  }
+};
+
+  if (kickoffSent) {
+  return (
+    <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">
+      <div className="bg-white border rounded-2xl p-6 max-w-lg w-full text-center">
+        <h2 className="text-xl font-bold mb-2">{t.kickoffSentTitle}</h2>
+        <p className="text-sm text-gray-600 mb-4">{t.kickoffSentBody}</p>
+
+        <button
+          className={btn.filled}
+          onClick={() => {
+            setKickoffSent(false);
+            setShowKickoff(false);
+            setShowCart(false);
+          }}
+        >
+          {lang === "es" ? "Volver al catálogo" : "Back to catalog"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
 
   // ✅ PASO C: Quiz antes de entrar al catálogo
@@ -2354,6 +2664,7 @@ const vibeLabel = useMemo(() => {
       { id: "culture", es: "Cultura", en: "Culture" },
       { id: "adventure", es: "Aventura", en: "Adventure" },
     ];
+    
 
     return (
       <div className="min-h-screen bg-neutral-50">
@@ -2508,9 +2819,18 @@ const vibeLabel = useMemo(() => {
             </div>
 
             <div className="flex items-center justify-between pt-2">
-              <button className={btn.linkBtn} onClick={() => setStep("catalog")}>
+              <button
+  className={btn.linkBtn}
+  onClick={() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("mode", "catalog");
+    if (kickoffId) url.searchParams.set("kickoffId", kickoffId);
+    window.location.href = url.toString();
+  }}
+>
   {lang === "es" ? "Ver catálogo sin personalizar" : "Browse without personalization"}
 </button>
+
 
               <button className={btn.filled} onClick={() => setStep("catalog")}>
   {lang === "es" ? "Ver recomendaciones →" : "See recommendations →"}
@@ -2576,6 +2896,7 @@ const vibeLabel = useMemo(() => {
           </div>
         </div>
       </header>
+      <StepIndicator step={step} lang={lang} />
 
       {/* Search + filtros */}
       <div className="bg-white sticky top-16 z-30 border-b">
@@ -2617,11 +2938,11 @@ const vibeLabel = useMemo(() => {
                     setSelectedCategory(c.id);
                     setSelectedStyles(new Set());
                   }}
-                  className={`px-3 py-1 rounded-full text-sm border ${
-                    selectedCategory === c.id
-                      ? "bg-tt.teal text-white border-tt.teal"
-                      : "bg-white text-tt.ink hover:bg-gray-50"
-                  }`}
+                  className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+  selectedCategory === c.id
+    ? "bg-neutral-900 text-white border-neutral-900"
+    : "bg-white text-neutral-800 border-neutral-300 hover:bg-neutral-100"
+}`}
                 >
                   {i18n[lang][c.id]}
                 </button>
@@ -2641,11 +2962,11 @@ const vibeLabel = useMemo(() => {
                           active ? next.delete(s.id) : next.add(s.id);
                           setSelectedStyles(next);
                         }}
-                        className={`px-3 py-1 rounded-full text-xs border ${
-                          active
-                            ? "bg-tt.gold text-tt.ink border-tt.gold"
-                            : "bg-white hover:bg-gray-50"
-                        }`}
+                        className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+  active
+    ? "bg-neutral-900 text-white border-neutral-900"
+    : "bg-white text-neutral-800 border-neutral-300 hover:bg-neutral-100"
+}`}
                       >
                         {s.label[lang]}
                       </button>
@@ -2708,14 +3029,17 @@ const vibeLabel = useMemo(() => {
   <div
     key={`rec-${s.id}`}
     className="group border rounded-2xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer bg-white"
-    onClick={() => setSelectedService(s)}
+    onClick={() => {
+  setSelectedService(s);
+  setImgIndex(0);
+}}
   >
     <div className="relative h-28">
       <img
-        src={s.image}
-        alt={s.name}
-        className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
-      />
+  src={safeImg(s.image)}
+  alt={s.name}
+  className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+/>
 
       {/* ✅ BADGE */}
       <div className="absolute top-2 left-2">
@@ -2745,75 +3069,82 @@ const vibeLabel = useMemo(() => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredServices.map((s) => {
-            const priceConverted = convertPrice(s.price_cop);
-            return (
-              <div
-                key={s.id}
-                className="bg-white rounded-xl shadow hover:shadow-xl transition-shadow overflow-hidden cursor-pointer"
-                onClick={() => setSelectedService(s)}
-              >
-                <div className="relative h-48">
-                  <img
-                    src={s.image}
-                    alt={s.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded-full text-xs font-semibold">
-                    {i18n[lang][s.category] || s.category}
-                  </div>
-                </div>
+  const serviceCategory = normalizeCategory(s.category);
+  const effectivePriceCop = getEffectivePriceCop(s, currentClientType);
+  const priceConverted = convertPrice(effectivePriceCop);
 
-                <div className="p-4">
-                  <h3 className="font-ui font-semibold text-lg mb-1">
-                    {s.name}
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-  {s.description?.[lang] || s.description?.es || s.description?.en || ""}
-</p>
+  return (
+    <div
+      key={s.id}
+      className="bg-white rounded-xl shadow hover:shadow-xl transition-shadow overflow-hidden cursor-pointer"
+      onClick={() => setSelectedService(s)}
+    >
+      <div className="relative h-48">
+        <img
+          src={s.image}
+          alt={s.name}
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded-full text-xs font-semibold">
+          {i18n[lang][serviceCategory] || serviceCategory}
+        </div>
+      </div>
 
+      <div className="p-4">
+        <h3 className="font-ui font-semibold text-lg mb-1">
+          {s.name}
+        </h3>
 
-                  <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {s.duration}
-                    </span>
-                    <span className="flex items-center gap-1">
-  <Users className="w-3 h-3" />
-  {(s.capacity?.min ?? "?")}-{(s.capacity?.max ?? "?")} {t.people}
-</span>
+        <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+          {serviceCategory === "transportation"
+            ? (s.route || s.description?.[lang] || s.description?.es || s.description?.en || "")
+            : (s.description?.[lang] || s.description?.es || s.description?.en || "")}
+        </p>
 
-                  </div>
+        <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
+          <span className="flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {s.duration}
+          </span>
 
-                  <div className="text-tt.ink">
-  {/* Solo TOURS + SERVICES muestran precio numérico */}
-  {categoryHasVisiblePrice(s.category) && hasPrice(s.price_cop) && (
-    <>
-      <span className="text-lg font-bold">
-        {formatPrice(priceConverted)}
-      </span>
-      <span className="text-xs text-gray-500 block">
-        {t.approxPrice} • {unitLabel(s.priceUnit)}
-      </span>
-    </>
-  )}
+          <span className="flex items-center gap-1">
+            <Users className="w-3 h-3" />
+            {serviceCategory === "transportation"
+              ? (s.capacity_notes || `${s.capacity?.min ?? "?"}-${s.capacity?.max ?? "?"} ${t.people}`)
+              : `${s.capacity?.min ?? "?"}-${s.capacity?.max ?? "?"} ${t.people}`}
+          </span>
+        </div>
 
-  {categoryHasVisiblePrice(s.category) && !hasPrice(s.price_cop) && (
-    <span className="text-xs text-gray-500 block">
-      Solicita cotización
-    </span>
-  )}
-{/* RESTAURANTS / BARS / BEACH-CLUBS / NIGHTLIFE → solo $, $$, $$$ */}
-{!categoryHasVisiblePrice(s.category) && (
-  <PriceLevelChip service={s} lang={lang} />
-)}
+        <div className="text-neutral-900">
+          {categoryHasVisiblePrice(serviceCategory) && hasPrice(effectivePriceCop) && (
+            <>
+              <span className="text-lg font-bold">
+                {formatPrice(priceConverted)}
+              </span>
+              <span className="text-xs text-gray-500 block">
+                {t.approxPrice} • {unitLabel(s.priceUnit)}
+              </span>
+            </>
+          )}
 
-</div>
+          {categoryHasVisiblePrice(serviceCategory) && !hasPrice(effectivePriceCop) && (
+            <span className="text-xs text-gray-500 block">
+              {t.requestQuote}
+            </span>
+          )}
 
-
-                </div>
-              </div>
-            );
-          })}
+          {!categoryHasVisiblePrice(serviceCategory) && (
+            <PriceLevelChip
+              service={{ ...s, category: serviceCategory }}
+              lang={lang}
+              clientType={currentClientType}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+})}
 
           {filteredServices.length === 0 && (
             <div className="col-span-full text-center py-10 text-gray-500">
@@ -2829,11 +3160,34 @@ const vibeLabel = useMemo(() => {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full overflow-hidden">
             <div className="relative">
-              <img
-                src={selectedService.image}
-                alt={selectedService.name}
-                className="w-full h-64 object-cover"
-              />
+              <div className="relative">
+                <img
+                  src={gallery[imgIndex] || selectedService.image}
+                  className="w-full h-72 object-cover rounded-2xl"
+                />
+                {gallery.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setImgIndex((i) => (i === 0 ? gallery.length - 1 : i - 1))
+                      }
+                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-white rounded-full w-10 h-10 shadow"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setImgIndex((i) => (i === gallery.length - 1 ? 0 : i + 1))
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-white rounded-full w-10 h-10 shadow"
+                    >
+                      ›
+                    </button>
+                  </>
+                )}
+              </div>
               <button
                 onClick={() => setSelectedService(null)}
                 className="absolute top-4 right-4 bg-white rounded-full p-2 hover:bg-gray-100"
@@ -2853,9 +3207,9 @@ const vibeLabel = useMemo(() => {
     selectedService.description?.en ||
     ""}
 </p>
-{!categoryHasVisiblePrice(selectedService.category) && (
+{!categoryHasVisiblePrice(selectedServiceCategory) && (
   <div className="mb-3 flex items-center gap-2">
-    <PriceLevelChip service={selectedService} lang={lang} />
+    <PriceLevelChip service={selectedService} lang={lang} clientType={currentClientType} />
 
     <span className="text-xs text-gray-500 italic">
       {lang === "es"
@@ -2922,11 +3276,14 @@ const vibeLabel = useMemo(() => {
 
               <div className="border-t pt-4 flex items-center justify-between">
   <div>
-    {categoryHasVisiblePrice(selectedService.category) &&
-    hasPrice(selectedService.price_cop) ? (
+  {(() => {
+    const selectedEffectivePriceCop = getEffectivePriceCop(selectedService, currentClientType);
+
+    return categoryHasVisiblePrice(selectedServiceCategory) &&
+      hasPrice(selectedEffectivePriceCop) ? (
       <>
         <span className="text-2xl font-bold text-tt.ink">
-          {formatPrice(convertPrice(selectedService.price_cop))}
+          {formatPrice(convertPrice(selectedEffectivePriceCop))}
         </span>
         <span className="text-sm text-gray-500 ml-2">
           · {t.approxPrice} • {unitLabel(selectedService.priceUnit)}
@@ -2934,10 +3291,11 @@ const vibeLabel = useMemo(() => {
       </>
     ) : (
       <span className="text-sm text-gray-500">
-        Solicita cotización
+        {t.requestQuote}
       </span>
-    )}
-  </div>
+    );
+  })()}
+</div>
 
   <button
     onClick={() => {
@@ -3004,7 +3362,7 @@ const vibeLabel = useMemo(() => {
   ) : (
     // Para restaurantes / bares / beach clubs / nightlife
     <span className="text-xs text-gray-600">
-      {getServicePriceLevel(item) || "Precio variable"}
+      {getServicePriceLevel(item, item.clientType || currentClientType) || t.variablePrice}
     </span>
   )}
 </div>
@@ -3080,6 +3438,44 @@ const vibeLabel = useMemo(() => {
 
             <div className="flex-1 overflow-auto p-4 space-y-4">
               <p className="text-sm text-gray-600">{t.kickoffIntro}</p>
+              <div className="grid sm:grid-cols-2 gap-3">
+  <div>
+    <label className="text-xs text-gray-500">
+      {lang === "es" ? "Nombre del huésped" : "Guest name"}
+    </label>
+    <input
+  className="w-full border rounded-lg px-3 py-2"
+  value={guestName}
+  onChange={(e) => setGuestName(e.target.value)}
+/>
+  </div>
+
+  <div>
+    <label className="text-xs text-gray-500">
+      {lang === "es" ? "Nombre del viaje / villa" : "Trip / villa name"}
+    </label>
+    <input
+  className="w-full border rounded-lg px-3 py-2"
+  value={tripName}
+  onChange={(e) => setTripName(e.target.value)}
+/>
+  </div>
+
+  <div className="sm:col-span-2">
+    <label className="text-xs text-gray-500">
+      {lang === "es" ? "Contacto (WhatsApp o email)" : "Contact (WhatsApp or email)"}
+    </label>
+    <input
+  id="guestContactInput"
+  name="guestContact"
+  autoComplete="tel"
+  className="w-full border rounded-lg px-3 py-2"
+  value={guestContact}
+  onChange={(e) => setGuestContact(e.target.value)}
+/>
+  </div>
+</div>
+
 
               {cart.length === 0 ? (
                 <p className="text-gray-500 text-sm">{t.emptyCart}</p>
@@ -3101,7 +3497,7 @@ const vibeLabel = useMemo(() => {
   {i18n[lang][item.category] || item.category} •{" "}
   {categoryHasVisiblePrice(item.category) && hasPrice(item.price_cop)
     ? `${formatPrice(convertPrice(item.price_cop))} · ${unitLabel(item.priceUnit)}`
-    : getServicePriceLevel(item) || "Precio variable"}
+    : getServicePriceLevel(item, item.clientType || currentClientType) || t.variablePrice}
 </p>
 
                         {item.notes && (
@@ -3149,4 +3545,5 @@ const vibeLabel = useMemo(() => {
 
     </div>
   );
-} 
+    
+}
