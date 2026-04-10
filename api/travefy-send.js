@@ -225,76 +225,74 @@ function eventTypeId(category) {
 
 /* ══════════════════════════════════════════════════════════════════
    RICH DESCRIPTION BUILDER
-   Mirrors the exact block order seen in Two Travel's Travefy PDFs:
-   [billing code] → narrative → highlights → includes →
-   duration/capacity → price tiers → deposit → cancellation policy
+   Order: narrative → highlights → includes → duration/capacity →
+          price → deposit → cancellation → billing code (at end)
+
+   RULES:
+   - Never start with [ brackets ] — Travefy parser drops the field
+   - No emoji in body text — encoding issues on some Travefy versions
+   - Hard cap at 2000 chars so Travefy doesn't silently truncate
+   - QB billing code goes at the very end as a plain reference line
 ══════════════════════════════════════════════════════════════════ */
+
+function cap(str, max = 2000) {
+  return str.length > max ? str.slice(0, max - 3) + "..." : str;
+}
 
 function buildDescription(svc, cartItem, lang) {
   const lb = LABELS[lang] || LABELS.en;
 
-  // ── If the sheet has a pre-built Travefy template, honour it ──────
+  // If the sheet has a pre-built Travefy template, use it directly
   if (svc.travefyNotes) {
-    const blocks = [];
+    let text = svc.travefyNotes;
+    if (svc.cancellation &&
+        !text.toLowerCase().includes("cancell") &&
+        !text.toLowerCase().includes("cancelac")) {
+      text += `\n\n${lb.cancellation}\n${svc.cancellation}`;
+    }
     if (svc.quickbooksCode) {
       const p = parseNum(svc.priceCop || svc.priceTier1);
-      blocks.push(`[${svc.quickbooksCode}][${p || ""}]`);
+      text += `\n\nRef: ${svc.quickbooksCode} / ${p || "TBD"}`;
     }
-    blocks.push(svc.travefyNotes);
-    // Append cancellation if not already in the template
-    if (svc.cancellation &&
-        !svc.travefyNotes.toLowerCase().includes("cancell") &&
-        !svc.travefyNotes.toLowerCase().includes("cancelac")) {
-      blocks.push(`${lb.cancellation}\n${svc.cancellation}`);
-    }
-    return blocks.join("\n\n").trim();
+    return cap(text.trim());
   }
 
   const blocks = [];
 
-  // 1. Inline billing code  →  [QB_CODE][PRICE]
-  //    Placed first so it reads like the pre-bill PDF format
-  if (svc.quickbooksCode) {
-    const p = parseNum(svc.priceCop || svc.priceTier1);
-    blocks.push(`[${svc.quickbooksCode}][${p || ""}]`);
-  }
-
-  // 2. Main narrative (language-aware with fallback)
+  // 1. Main narrative (language-aware with fallback)
   const main = lang === "es"
     ? (svc.descriptionEs || svc.descriptionEn)
     : (svc.descriptionEn || svc.descriptionEs);
   if (main) blocks.push(main);
 
-  // 3. Trip Highlights
+  // 2. Trip Highlights
   const hi = splitList(svc.highlights);
-  if (hi.length) blocks.push(`${lb.highlights}:\n${hi.map((x) => `• ${x}`).join("\n")}`);
+  if (hi.length) blocks.push(`${lb.highlights}:\n${hi.map((x) => `- ${x}`).join("\n")}`);
 
-  // 4. Includes
+  // 3. Includes
   const inc = splitList(svc.includes);
-  if (inc.length) blocks.push(`${lb.includes}:\n${inc.map((x) => `• ${x}`).join("\n")}`);
+  if (inc.length) blocks.push(`${lb.includes}:\n${inc.map((x) => `- ${x}`).join("\n")}`);
 
-  // 5. Duration
+  // 4. Duration
   if (svc.duration) blocks.push(`${lb.duration}: ${svc.duration}`);
 
-  // 6. Capacity
+  // 5. Capacity
   if (svc.capacityMin || svc.capacityMax) {
-    const cap = svc.capacityMin && svc.capacityMax
-      ? `${svc.capacityMin}–${svc.capacityMax}`
+    const cap2 = (svc.capacityMin && svc.capacityMax)
+      ? `${svc.capacityMin}-${svc.capacityMax}`
       : (svc.capacityMax || svc.capacityMin);
-    blocks.push(`${lb.capacity}: ${cap} ${lang === "es" ? "personas" : "people"}`);
+    blocks.push(`${lb.capacity}: ${cap2} ${lang === "es" ? "personas" : "people"}`);
   }
 
-  // 7. Price / tiers
-  //    (Travefy also renders these natively via Price field, but we include
-  //     them in the description too so the content is self-contained in the PDF)
+  // 6. Price / tiers
   const pMain  = formatCOP(svc.priceCop);
   const pTier1 = formatCOP(svc.priceTier1);
   const pTier2 = formatCOP(svc.priceTier2);
   if (pTier1 && pTier2) {
     blocks.push(
       `${lb.price}:\n` +
-      `  ${lang === "es" ? "Opción 1" : "Option 1"}: ${pTier1} / ${svc.priceUnit}\n` +
-      `  ${lang === "es" ? "Opción 2" : "Option 2"}: ${pTier2} / ${svc.priceUnit}`
+      `${lang === "es" ? "Opcion 1" : "Option 1"}: ${pTier1} / ${svc.priceUnit}\n` +
+      `${lang === "es" ? "Opcion 2" : "Option 2"}: ${pTier2} / ${svc.priceUnit}`
     );
   } else if (pTier1) {
     blocks.push(`${lb.price}: ${pTier1} / ${svc.priceUnit}`);
@@ -302,13 +300,19 @@ function buildDescription(svc, cartItem, lang) {
     blocks.push(`${lb.price}: ${pMain} / ${svc.priceUnit}`);
   }
 
-  // 8. Deposit notice (verbatim from sheet — often a full paragraph)
+  // 7. Deposit notice
   if (svc.deposit) blocks.push(svc.deposit);
 
-  // 9. Cancellation / Terms (verbatim — often multi-line with tiers)
+  // 8. Cancellation / Terms
   if (svc.cancellation) blocks.push(`${lb.cancellation}\n${svc.cancellation}`);
 
-  return blocks.join("\n\n").trim();
+  // 9. Billing reference — at the END so it doesn't confuse Travefy's parser
+  if (svc.quickbooksCode) {
+    const p = parseNum(svc.priceCop || svc.priceTier1);
+    blocks.push(`Ref: ${svc.quickbooksCode} / ${p || "TBD"}`);
+  }
+
+  return cap(blocks.join("\n\n").trim());
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -318,23 +322,23 @@ function buildDescription(svc, cartItem, lang) {
 function buildTripIdea(svc, cartItem, lang) {
   const desc  = buildDescription(svc, cartItem, lang);
   const price = parseNum(svc.priceCop || svc.priceTier1);
+  const name  = clean(cartItem?.title || cartItem?.name || svc.name);
 
   return {
-    Title:       clean(cartItem?.name || cartItem?.title || svc.name),
+    // Both Title and Name — Travefy uses one or the other depending on version
+    Title:       name,
+    Name:        name,
     Description: desc,
-    Notes:       desc,   // Travefy uses both fields depending on context
-    Price:       price   || undefined,
+    Notes:       desc,
+    Price:       price || undefined,
     PriceText:   formatCOP(svc.priceCop || svc.priceTier1) || undefined,
-    Duration:    svc.duration  || undefined,
-    // Location = venue name / neighborhood (shown at bottom of Travefy block)
-    Location:    svc.location  || undefined,
-    // Address = full street address (separate sheet column)
-    Address:     svc.address   || undefined,
-    // Website = primary link (prefer menu, fallback to map)
-    Website:     svc.menuUrl   || svc.mapsUrl || undefined,
-    ImageUrl:    svc.image     || undefined,
-    MenuUrl:     svc.menuUrl   || undefined,
-    MapsUrl:     svc.mapsUrl   || undefined,
+    Duration:    svc.duration || undefined,
+    Location:    svc.location || undefined,   // venue name / neighborhood
+    Address:     svc.address  || undefined,   // full street address
+    Website:     svc.menuUrl  || svc.mapsUrl || undefined,
+    ImageUrl:    svc.image    || undefined,
+    MenuUrl:     svc.menuUrl  || undefined,
+    MapsUrl:     svc.mapsUrl  || undefined,
   };
 }
 
@@ -445,53 +449,39 @@ function buildSummaryDay(matched, lang) {
 function buildInfoDay(lang, meta) {
   const city = meta.city || meta.tripName?.split(" ")?.[0] || "your destination";
 
-  const WELCOME_EN = `Welcome to ${city} - Two Travel.
+  const WELCOME_EN =
+`Welcome to ${city} - Two Travel.
 
-Please take a look at this PDF before your arrival. It contains some information that might be helpful during your trip.
+Please take a look at this document before your arrival. It contains information that might be helpful during your trip.
 
 How to Read This Itinerary
-This is a DRAFT itinerary, which means everything can be adjusted. We can change, add, or remove activities based on what excites you most.
-
-As you review it, I encourage you to focus on what truly interests you — what you'd love to experience, repeat, or maybe skip. The goal is to design the perfect trip for you.
-
-In our next meeting, we'll go through it together and refine it accordingly. Please come prepared with your questions and ideas. You're welcome to share them during the meeting or send them in the group chat beforehand.
-
-___
+This is a DRAFT itinerary - everything can be adjusted. We can change, add, or remove activities based on what excites you most. In our next meeting we will go through it together and refine it accordingly.
 
 Promo!
-Show everyone how amazing it is to travel with Two Travel's concierge service and get discounts on our experiences! ✨
-
-📱 Follow us: @twotravelconcierge
-📍 Instagram | TikTok
+Show everyone how amazing it is to travel with Two Travel's concierge service and get discounts on our experiences!
+Follow us: @twotravelconcierge on Instagram and TikTok.
 
 Note:
-• The post must be made during your stay in the city.
-• One tag per person is required to redeem the service discount.
-• For group services (such as transport or private chef), all members must participate to apply the discount.`;
+- The post must be made during your stay in the city.
+- One tag per person is required to redeem the service discount.
+- For group services (transport, private chef, etc.), all members must participate to apply the discount.`;
 
-  const WELCOME_ES = `Bienvenido a ${city} - Two Travel.
+  const WELCOME_ES =
+`Bienvenido a ${city} - Two Travel.
 
-Por favor revisa este documento antes de tu llegada. Contiene información útil que podría ser de ayuda durante tu viaje.
+Por favor revisa este documento antes de tu llegada. Contiene informacion util para tu viaje.
 
-Cómo Leer Este Itinerario
-Este es un itinerario en BORRADOR, lo que significa que todo puede ajustarse. Podemos cambiar, agregar o eliminar actividades según lo que más te emocione.
+Como leer este itinerario
+Este es un itinerario en BORRADOR - todo puede ajustarse. Podemos cambiar, agregar o eliminar actividades segun lo que mas te emocione. En nuestra proxima reunion lo revisaremos juntos.
 
-Al revisarlo, te invitamos a enfocarte en lo que realmente te interesa: lo que quieres vivir, repetir o quizás omitir. El objetivo es diseñar el viaje perfecto para ti.
-
-En nuestra próxima reunión lo revisaremos juntos y lo ajustaremos. Por favor llega con tus preguntas e ideas, o compártelas en el chat del grupo con anticipación.
-
-___
-
-¡Promo!
-¡Muéstrale a todos lo increíble que es viajar con Two Travel y obtén descuentos en tus experiencias! ✨
-
-📱 Síguenos: @twotravelconcierge
-📍 Instagram | TikTok
+Promo!
+Muestrale a todos lo increible que es viajar con el servicio de concierge de Two Travel y obtente descuentos en tus experiencias!
+Siguenos: @twotravelconcierge en Instagram y TikTok.
 
 Nota:
-• La publicación debe realizarse durante tu estadía.
-• Se requiere un tag por persona para aplicar el descuento.
-• Para servicios grupales, todos los miembros deben participar para que aplique el descuento.`;
+- La publicacion debe realizarse durante tu estadia.
+- Se requiere un tag por persona para aplicar el descuento.
+- Para servicios grupales, todos los miembros deben participar para que aplique el descuento.`;
 
   const desc = lang === "es" ? WELCOME_ES : WELCOME_EN;
 
@@ -506,9 +496,10 @@ Nota:
         : `Welcome to ${city} — Two Travel`,
       EventTypeId: 0,
       TripIdeas: [{
-        Title:       lang === "es" ? "Información y Documentos" : "Information & Documents",
-        Description: desc,
-        Notes:       desc,
+        Title:       lang === "es" ? "Informacion y Documentos" : "Information & Documents",
+        Name:        lang === "es" ? "Informacion y Documentos" : "Information & Documents",
+        Description: cap(desc),
+        Notes:       cap(desc),
       }],
     }],
   };
