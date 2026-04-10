@@ -1,83 +1,119 @@
 // api/travefy-send.js
+// Production-ready Travefy itinerary generator — Two Travel Concierge
+// Structure: Trip → TripDays → TripEvents → TripIdeas
+// Supplemental days: Welcome · Trip Summary · Info & Documents · Accounting Reference
 import Papa from "papaparse";
 
-const TRAVEFY_BASE = "https://api.travefy.com/api/v1";
-const SHEET_CSV_URL =
+const TRAVEFY_BASE   = "https://api.travefy.com/api/v1";
+const SHEET_CSV_URL  =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNGpwNTGIWfyOOxSIFZgTdstPVL53Qhu_jUA1THG3J69YRdWI8SUsj4wHQsVOer2ykFzLMk2SozHuQ/pub?gid=190949837&single=true&output=csv";
 
-/* ───────── tiny helpers ───────── */
+/* ══════════════════════════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════════════════════════ */
 
-const clean = (v) => String(v ?? "").trim();
-
-function parseNum(v) {
-  const n = Number(clean(v).replace(/[^0-9.-]/g, ""));
-  return Number.isNaN(n) ? 0 : n;
-}
-
-function truthy(v) {
-  return ["true", "1", "yes", "si", "sí"].includes(clean(v).toLowerCase());
-}
+const clean  = (v) => String(v ?? "").trim();
+const truthy = (v) => ["true","1","yes","si","sí"].includes(clean(v).toLowerCase());
 
 function first(...vals) {
   for (const v of vals) if (clean(v)) return clean(v);
   return "";
 }
 
-function splitList(v) {
-  return clean(v)
-    .split(/[\n•·]+|[/;|]|,\s(?=[A-Z0-9])/)
-    .map((x) => x.trim())
-    .filter(Boolean);
+function parseNum(v) {
+  const n = Number(clean(v).replace(/[^0-9.-]/g, ""));
+  return Number.isNaN(n) ? 0 : n;
 }
 
 function formatCOP(v) {
   const n = parseNum(v);
-  return n ? `$${n.toLocaleString("es-CO")} COP` : "";
+  if (!n) return "";
+  return `$${n.toLocaleString("es-CO")} COP`;
 }
 
 function normDriveUrl(url) {
   const raw = clean(url);
-  if (!raw || !raw.includes("drive.google.com")) return raw;
+  if (!raw) return "";
+  if (!raw.includes("drive.google.com")) return raw;
   const m = raw.match(/\/file\/d\/([^/]+)/) || raw.match(/[?&]id=([^&]+)/);
   return m?.[1] ? `https://lh3.googleusercontent.com/d/${m[1]}` : "";
 }
 
-/* ───────── catalog ───────── */
+// Splits highlight / includes cells — handles bullets, semicolons, pipes, newlines
+function splitList(v) {
+  return clean(v)
+    .split(/[\n•·]+|[;|]|\s*\/\s*/)
+    .map((x) => x.replace(/^[-–—*]\s*/, "").trim())
+    .filter(Boolean);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CATALOG  —  Google Sheet CSV  →  normalized service objects
+══════════════════════════════════════════════════════════════════ */
 
 function mapRow(row, idx) {
+  // Normalize all header keys: lowercase + underscores
   const n = {};
   for (const [k, v] of Object.entries(row || {}))
-    n[clean(k).toLowerCase()] = v;
+    n[clean(k).toLowerCase().replace(/[\s-]+/g, "_").replace(/\ufeff/g, "")] = v;
 
+  // Extra image columns (columns 5-9 in the sheet)
   const extraImages = ["5","6","7","8","9"]
     .map((k) => normDriveUrl(clean(n[k]))).filter(Boolean);
 
   return {
-    id: parseNum(n.id || idx + 1),
-    sku: clean(n.sku),
-    name: first(n.name, n.title, n.service),
-    category: clean(n.category),
-    quickbooksCode: clean(n["quickbooks_code"] || n["quickbooks code"] || n.quickbooks_code || ""),
-    descriptionEs: first(n["description_es"], n["description es"], n.description),
-    descriptionEn: first(n["description_en"], n["description en"]),
-    location: clean(n.location),          // venue name / neighborhood
-    address:  clean(n.address),           // full street address (separate column)
-    city: clean(n.city),
-    schedule: first(n.schedule, n.time),
-    duration: clean(n.duration),
-    highlights: clean(n.highlights),
-    includes: first(n.includes, n.included),
-    deposit: clean(n.deposit),
-    cancellation: first(n.cancellation, n["terms and conditions"]),
-    priceCop: first(n.price_cop, n.price, n["price cop"]),
-    priceTier1: clean(n.price_tier_1),
-    priceTier2: clean(n.price_tier_2),
-    priceUnit: first(n.priceunit, n["price unit"], "per person"),
-    image: normDriveUrl(first(n.image, n.imageurl, n["image url"])),
-    images: extraImages,
-    mapsUrl: first(n.mapsurl, n["maps url"]),
-    menuUrl: first(n.menuurl, n["menu url"]),
-    enabled: truthy(n["travefy_enabled"] ?? n["travefy enabled"] ?? "true"),
+    id:             parseNum(n.id || idx + 1),
+    sku:            clean(n.sku),
+    name:           first(n.name, n.title, n.service),
+    category:       clean(n.category),
+    subcategory:    clean(n.subcategory),
+
+    // Billing / accounting
+    quickbooksCode: first(n.quickbooks_code, n.quickbooks, n.billing_code, n.code),
+
+    // Descriptions (language-aware with fallback)
+    descriptionEs:  first(n.description_es, n.descripcion, n.description),
+    descriptionEn:  first(n.description_en),
+
+    // Pre-built Travefy notes template — if filled, used instead of auto-generated description
+    travefyNotes:   clean(n.travefy_notes_template),
+
+    // Location
+    location:       clean(n.location),   // venue name / neighborhood (NOT the street address)
+    address:        clean(n.address),    // full street address
+    city:           clean(n.city),
+
+    // Scheduling
+    schedule:       first(n.schedule, n.time),
+    duration:       clean(n.duration),
+
+    // Content
+    highlights:     clean(n.highlights),
+    includes:       first(n.includes, n.included, n.incluye),
+    deposit:        clean(n.deposit),
+    cancellation:   first(n.cancellation, n.terms_and_conditions, n.terms),
+
+    // Pricing
+    priceCop:       first(n.price_cop, n.price),
+    priceTier1:     clean(n.price_tier_1),
+    priceTier2:     clean(n.price_tier_2),
+    priceUnit:      first(n.priceunit, n.price_unit, "per person"),
+
+    // Capacity
+    capacityMin:    parseNum(n.capacity_min),
+    capacityMax:    parseNum(n.capacity_max),
+
+    // Media
+    image:          normDriveUrl(first(n.image, n.imageurl, n.image_url)),
+    images:         extraImages,
+    video1:         clean(n.video1),
+
+    // Links
+    mapsUrl:        first(n.mapsurl, n.maps_url),
+    menuUrl:        first(n.menuurl, n.menu_url),
+
+    // Control
+    enabled:        truthy(first(n.travefy_enabled, "true")),
   };
 }
 
@@ -85,21 +121,23 @@ async function fetchCatalog() {
   const res = await fetch(`${SHEET_CSV_URL}&t=${Date.now()}`);
   if (!res.ok) throw new Error(`Catalog fetch failed: ${res.status}`);
   const { data } = Papa.parse(await res.text(), {
-    header: true,
-    skipEmptyLines: true,
+    header: true, skipEmptyLines: true,
     transformHeader: (h) => clean(h).toLowerCase().replace(/\ufeff/g, ""),
   });
   return data.map(mapRow).filter((r) => r.name);
 }
 
-/* ───────── cart matching ───────── */
+/* ══════════════════════════════════════════════════════════════════
+   CART MATCHING  —  cart item  →  catalog service
+══════════════════════════════════════════════════════════════════ */
 
 function matchCart(cart, catalog) {
   const matched = [], unmatched = [];
-  for (const item of Array.isArray(cart) ? cart : []) {
+  for (const item of (Array.isArray(cart) ? cart : [])) {
     const sku = clean(item?.sku);
     const id  = clean(item?.id);
     const nl  = clean(item?.name).toLowerCase();
+
     const svc =
       catalog.find((s) => sku && s.sku === sku) ||
       catalog.find((s) => id  && String(s.id) === id) ||
@@ -107,231 +145,432 @@ function matchCart(cart, catalog) {
       catalog.find((s) => nl  && s.name.toLowerCase().startsWith(nl)) ||
       (nl.length >= 4
         ? catalog.find((s) =>
-            s.name.toLowerCase().includes(nl) || nl.includes(s.name.toLowerCase())
-          )
+            s.name.toLowerCase().includes(nl) || nl.includes(s.name.toLowerCase()))
         : null);
 
-    if (!svc) {
-      unmatched.push({ name: item?.name || "?", decision: "not_in_catalog" });
-      continue;
-    }
-    if (!svc.enabled) {
-      unmatched.push({ name: svc.name, decision: "disabled" });
-      continue;
-    }
+    if (!svc)          { unmatched.push({ name: item?.name || "?", reason: "not_in_catalog" }); continue; }
+    if (!svc.enabled)  { unmatched.push({ name: svc.name,          reason: "disabled"        }); continue; }
     matched.push({ cartItem: item, service: svc });
   }
   return { matched, unmatched };
 }
 
-/* ───────── description builder ───────── */
+/* ══════════════════════════════════════════════════════════════════
+   LABELS & CATEGORY MAPPING
+══════════════════════════════════════════════════════════════════ */
 
-const L = {
-  en: { highlights:"Highlights", includes:"Includes", duration:"Duration",
-        location:"Location", price:"Price", deposit:"Deposit",
-        cancellation:"Terms & Cancellation", menu:"Menu", map:"Map" },
-  es: { highlights:"Destacados", includes:"Incluye", duration:"Duración",
-        location:"Ubicación", price:"Precio", deposit:"Depósito",
-        cancellation:"Términos y Cancelación", menu:"Menú", map:"Ver en mapa" },
-};
-
-const CATEGORY_LABELS = {
+const LABELS = {
   en: {
-    restaurants: "Restaurant", restaurant: "Restaurant",
-    nightlife: "Nightlife", "night life": "Nightlife",
-    tours: "Tour / Activity", tour: "Tour / Activity", experiences: "Experience",
-    transport: "Transport", transportation: "Transport",
-    "beach clubs": "Beach Club", "beach club": "Beach Club",
-    boats: "Boat / Yacht", boat: "Boat / Yacht",
-    accommodation: "Accommodation", villa: "Villa / Accommodation",
-    shopping: "Shopping",
+    highlights:   "Trip Highlights",
+    includes:     "Includes",
+    duration:     "Duration",
+    price:        "Price",
+    deposit:      "Deposit required",
+    cancellation: "Cancellation Policy",
+    terms:        "Terms and Conditions",
+    capacity:     "Capacity",
   },
   es: {
-    restaurants: "Restaurante", restaurant: "Restaurante",
-    nightlife: "Nightlife / Club", "night life": "Nightlife",
-    tours: "Tour / Actividad", tour: "Tour / Actividad", experiences: "Experiencia",
-    transport: "Transporte", transportation: "Transporte",
-    "beach clubs": "Beach Club", "beach club": "Beach Club",
-    boats: "Bote / Yate", boat: "Bote / Yate",
-    accommodation: "Alojamiento", villa: "Villa / Alojamiento",
-    shopping: "Shopping",
+    highlights:   "Aspectos Destacados",
+    includes:     "Incluye",
+    duration:     "Duración",
+    price:        "Precio",
+    deposit:      "Depósito requerido",
+    cancellation: "Política de Cancelación",
+    terms:        "Términos y Condiciones",
+    capacity:     "Capacidad",
   },
 };
 
-const CATEGORY_EMOJI = {
-  restaurants: "🍽", restaurant: "🍽",
-  nightlife: "🎉", "night life": "🎉",
-  tours: "🏛", tour: "🏛", experiences: "✨",
-  transport: "🚗", transportation: "🚗",
-  "beach clubs": "🏖", "beach club": "🏖",
-  boats: "⛵", boat: "⛵",
-  accommodation: "🏠", villa: "🏠",
-  shopping: "🛍",
+const CAT_LABEL = {
+  en: {
+    restaurants:"Restaurant", restaurant:"Restaurant", food:"Restaurant",
+    nightlife:"Nightlife / Club", night_life:"Nightlife / Club",
+    tours:"Tour / Activity", tour:"Tour / Activity",
+    experiences:"Experience", experience:"Experience",
+    transport:"Transport", transportation:"Transport",
+    beach_clubs:"Beach Club", beach_club:"Beach Club",
+    boats:"Boat / Yacht", boat:"Boat / Yacht", yacht:"Boat / Yacht",
+    accommodation:"Accommodation", villa:"Accommodation", hotel:"Accommodation",
+    shopping:"Shopping",
+  },
+  es: {
+    restaurants:"Restaurante", restaurant:"Restaurante", food:"Restaurante",
+    nightlife:"Nightlife / Club", night_life:"Nightlife / Club",
+    tours:"Tour / Actividad", tour:"Tour / Actividad",
+    experiences:"Experiencia", experience:"Experiencia",
+    transport:"Transporte", transportation:"Transporte",
+    beach_clubs:"Beach Club", beach_club:"Beach Club",
+    boats:"Bote / Yate", boat:"Bote / Yate", yacht:"Bote / Yate",
+    accommodation:"Alojamiento", villa:"Alojamiento", hotel:"Alojamiento",
+    shopping:"Shopping",
+  },
 };
 
-function categoryLabel(svc, lang) {
-  const cat = clean(svc.category).toLowerCase();
-  const labels = CATEGORY_LABELS[lang] || CATEGORY_LABELS.en;
-  const label = labels[cat] || (lang === "es" ? "Servicio" : "Service");
-  const emoji = CATEGORY_EMOJI[cat] || "📌";
-  const parts = [`${emoji} ${label}`];
-  if (svc.location) parts.push(svc.location);
-  return parts.join(" | ");
+function catLabel(cat, lang) {
+  const c = clean(cat).toLowerCase().replace(/[\s-]+/g, "_");
+  return (CAT_LABEL[lang] || CAT_LABEL.en)[c] || (lang === "es" ? "Servicio" : "Service");
 }
 
-function buildDescription(svc, lang) {
-  // Only narrative content — Travefy renders Price, MenuUrl, Location natively from their own fields.
-  // Duplicating them here creates messy double entries in the Travefy PDF.
-  const lb = L[lang] || L.en;
+// Travefy EventTypeId values
+function eventTypeId(category) {
+  const c = clean(category).toLowerCase();
+  if (/transport|transfer|pickup|airport|van|suv|driver/.test(c))   return 3; // Transport
+  if (/accommodation|hotel|villa|house|penthouse|airbnb/.test(c))   return 2; // Lodging
+  if (/restaurant|food|dinner|lunch|breakfast|chef|eat/.test(c))    return 4; // Food & Drink
+  if (/nightlife|party|club|bar|drinks|lounge/.test(c))             return 5; // Nightlife
+  if (/tour|activity|experience|boat|beach|museum|hike/.test(c))    return 1; // Activity
+  return 0; // General
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   RICH DESCRIPTION BUILDER
+   Mirrors the exact block order seen in Two Travel's Travefy PDFs:
+   [billing code] → narrative → highlights → includes →
+   duration/capacity → price tiers → deposit → cancellation policy
+══════════════════════════════════════════════════════════════════ */
+
+function buildDescription(svc, cartItem, lang) {
+  const lb = LABELS[lang] || LABELS.en;
+
+  // ── If the sheet has a pre-built Travefy template, honour it ──────
+  if (svc.travefyNotes) {
+    const blocks = [];
+    if (svc.quickbooksCode) {
+      const p = parseNum(svc.priceCop || svc.priceTier1);
+      blocks.push(`[${svc.quickbooksCode}][${p || ""}]`);
+    }
+    blocks.push(svc.travefyNotes);
+    // Append cancellation if not already in the template
+    if (svc.cancellation &&
+        !svc.travefyNotes.toLowerCase().includes("cancell") &&
+        !svc.travefyNotes.toLowerCase().includes("cancelac")) {
+      blocks.push(`${lb.cancellation}\n${svc.cancellation}`);
+    }
+    return blocks.join("\n\n").trim();
+  }
+
   const blocks = [];
 
-  // Main description (language-aware)
+  // 1. Inline billing code  →  [QB_CODE][PRICE]
+  //    Placed first so it reads like the pre-bill PDF format
+  if (svc.quickbooksCode) {
+    const p = parseNum(svc.priceCop || svc.priceTier1);
+    blocks.push(`[${svc.quickbooksCode}][${p || ""}]`);
+  }
+
+  // 2. Main narrative (language-aware with fallback)
   const main = lang === "es"
     ? (svc.descriptionEs || svc.descriptionEn)
     : (svc.descriptionEn || svc.descriptionEs);
   if (main) blocks.push(main);
 
-  // Trip Highlights
+  // 3. Trip Highlights
   const hi = splitList(svc.highlights);
-  if (hi.length) blocks.push(`${lang === "es" ? "Aspectos Destacados" : "Trip Highlights"}:\n${hi.map((x) => `• ${x}`).join("\n")}`);
+  if (hi.length) blocks.push(`${lb.highlights}:\n${hi.map((x) => `• ${x}`).join("\n")}`);
 
-  // Includes
+  // 4. Includes
   const inc = splitList(svc.includes);
   if (inc.length) blocks.push(`${lb.includes}:\n${inc.map((x) => `• ${x}`).join("\n")}`);
 
-  // Duration (if not already mentioned in narrative)
+  // 5. Duration
   if (svc.duration) blocks.push(`${lb.duration}: ${svc.duration}`);
 
-  // Deposit notice (plain text, not duplicating price)
+  // 6. Capacity
+  if (svc.capacityMin || svc.capacityMax) {
+    const cap = svc.capacityMin && svc.capacityMax
+      ? `${svc.capacityMin}–${svc.capacityMax}`
+      : (svc.capacityMax || svc.capacityMin);
+    blocks.push(`${lb.capacity}: ${cap} ${lang === "es" ? "personas" : "people"}`);
+  }
+
+  // 7. Price / tiers
+  //    (Travefy also renders these natively via Price field, but we include
+  //     them in the description too so the content is self-contained in the PDF)
+  const pMain  = formatCOP(svc.priceCop);
+  const pTier1 = formatCOP(svc.priceTier1);
+  const pTier2 = formatCOP(svc.priceTier2);
+  if (pTier1 && pTier2) {
+    blocks.push(
+      `${lb.price}:\n` +
+      `  ${lang === "es" ? "Opción 1" : "Option 1"}: ${pTier1} / ${svc.priceUnit}\n` +
+      `  ${lang === "es" ? "Opción 2" : "Option 2"}: ${pTier2} / ${svc.priceUnit}`
+    );
+  } else if (pTier1) {
+    blocks.push(`${lb.price}: ${pTier1} / ${svc.priceUnit}`);
+  } else if (pMain) {
+    blocks.push(`${lb.price}: ${pMain} / ${svc.priceUnit}`);
+  }
+
+  // 8. Deposit notice (verbatim from sheet — often a full paragraph)
   if (svc.deposit) blocks.push(svc.deposit);
 
-  // Cancellation policy
-  if (svc.cancellation) {
-    const label = lang === "es" ? "Política de Cancelación" : "Cancellation Policy";
-    blocks.push(`${label}\n${svc.cancellation}`);
-  }
+  // 9. Cancellation / Terms (verbatim — often multi-line with tiers)
+  if (svc.cancellation) blocks.push(`${lb.cancellation}\n${svc.cancellation}`);
 
   return blocks.join("\n\n").trim();
 }
 
-/* ───────── Travefy payload: Trip → TripDays → TripEvents → TripIdeas ───────── */
-
-/**
- * EventType mapping (Travefy's documented values).
- * TripIdeas are stand-alone content blocks — no LibraryItemId needed.
- */
-function eventTypeId(category) {
-  const c = clean(category).toLowerCase();
-  if (/transport|transfer|pickup|airport|van|suv/.test(c)) return 3;  // Transport
-  if (/accommodation|hotel|villa|house|penthouse/.test(c))  return 2;  // Accommodation
-  if (/food|restaurant|dinner|lunch|breakfast|chef/.test(c)) return 4; // Food
-  if (/nightlife|party|club|bar|drinks/.test(c))             return 5; // Nightlife
-  if (/activity|tour|experience|boat|beach|museum/.test(c))  return 1; // Activity
-  return 0; // General
-}
+/* ══════════════════════════════════════════════════════════════════
+   TRAVEFY OBJECT BUILDERS
+══════════════════════════════════════════════════════════════════ */
 
 function buildTripIdea(svc, cartItem, lang) {
-  const desc  = buildDescription(svc, lang);
-  const price = parseNum(svc.priceCop || svc.priceTier1 || "");
+  const desc  = buildDescription(svc, cartItem, lang);
+  const price = parseNum(svc.priceCop || svc.priceTier1);
 
   return {
-    Title:       clean(cartItem?.title || cartItem?.name || svc.name),
+    Title:       clean(cartItem?.name || cartItem?.title || svc.name),
     Description: desc,
-    Notes:       desc,
-    Price:       price || undefined,
+    Notes:       desc,   // Travefy uses both fields depending on context
+    Price:       price   || undefined,
     PriceText:   formatCOP(svc.priceCop || svc.priceTier1) || undefined,
-    Duration:    svc.duration || undefined,
-    // Location = venue name / neighborhood shown at bottom of Travefy item
-    Location:    svc.location || undefined,
-    // Address = full street address (separate field in sheet, don't use location here)
-    Address:     svc.address  || undefined,
-    Website:     svc.menuUrl  || svc.mapsUrl || undefined,
-    ImageUrl:    svc.image    || undefined,
-    MenuUrl:     svc.menuUrl  || undefined,
-    MapsUrl:     svc.mapsUrl  || undefined,
+    Duration:    svc.duration  || undefined,
+    // Location = venue name / neighborhood (shown at bottom of Travefy block)
+    Location:    svc.location  || undefined,
+    // Address = full street address (separate sheet column)
+    Address:     svc.address   || undefined,
+    // Website = primary link (prefer menu, fallback to map)
+    Website:     svc.menuUrl   || svc.mapsUrl || undefined,
+    ImageUrl:    svc.image     || undefined,
+    MenuUrl:     svc.menuUrl   || undefined,
+    MapsUrl:     svc.mapsUrl   || undefined,
   };
 }
 
 function buildTripEvent(svc, cartItem, lang, sortOrder) {
-  const title = clean(cartItem?.title || cartItem?.name || svc.name);
+  const baseName = clean(cartItem?.title || cartItem?.name || svc.name);
+
+  // Append QB code inline to title  →  "Dinner at Mamba Negra [TO037]"
+  // This surfaces the billing reference in Travefy's event list view
+  const codeTag  = svc.quickbooksCode ? ` [${svc.quickbooksCode}]` : "";
+  const title    = `${baseName}${codeTag}`;
+
   return {
-    SortOrder: sortOrder,
-    Title: title,
-    // Do NOT set Location here — Travefy uses it as the list label, hiding the Title
-    StartTime: clean(cartItem?.time || cartItem?.startTime || svc.schedule) || undefined,
+    SortOrder:   sortOrder,
+    Title:       title,
+    // ⚠ Location intentionally omitted here.
+    // If set on TripEvent, Travefy uses it as the list label and hides the Title.
+    // Location belongs on TripIdea only.
+    StartTime:   clean(cartItem?.time || cartItem?.startTime || svc.schedule) || undefined,
     EventTypeId: eventTypeId(svc.category),
-    TripIdeas: [buildTripIdea(svc, cartItem, lang)],
+    TripIdeas:   [buildTripIdea(svc, cartItem, lang)],
   };
 }
 
-function buildWelcomeDay(meta) {
+/* ── Supplemental day: WELCOME / COVER ───────────────────────────── */
+
+function buildWelcomeDay(meta, lang) {
   const lines = [];
-  lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  lines.push("TWO TRAVEL");
-  lines.push("https://two.travel/");
-  lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  if (meta.guestName)      lines.push(`\nGuest:      ${meta.guestName}`);
-  if (meta.guestContact)   lines.push(`Contact:    ${meta.guestContact}`);
-  if (meta.conciergeName)  lines.push(`Concierge:  ${meta.conciergeName}`);
-  if (meta.conciergeEmail) lines.push(`Email:      ${meta.conciergeEmail}`);
-  if (meta.conciergeSummary) lines.push(`\n${meta.conciergeSummary}`);
-  lines.push("\nAll reservations are under Two Travel – " +
-    (meta.guestName || "Guest") + ". Cancellation fees may apply once confirmed.");
+  lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  lines.push("  TWO TRAVEL — Concierge Service");
+  lines.push("  https://two.travel/");
+  lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  lines.push("");
+  if (meta.guestName)      lines.push(`Guest:        ${meta.guestName}`);
+  if (meta.guestContact)   lines.push(`Contact:      ${meta.guestContact}`);
+  lines.push("");
+  if (meta.conciergeName)  lines.push(`Concierge:    ${meta.conciergeName}`);
+  if (meta.conciergeEmail) lines.push(`Email:        ${meta.conciergeEmail}`);
+  if (meta.conciergeName || meta.conciergeEmail) lines.push("");
+  if (meta.conciergeSummary) { lines.push(meta.conciergeSummary); lines.push(""); }
+  lines.push(
+    "All reservations are under Two Travel – " +
+    (meta.guestName || "Guest") +
+    ". Once a reservation has been confirmed, a cancellation fee may apply to certain experiences."
+  );
+
+  const desc = lines.join("\n");
 
   return {
-    SortOrder: 0,
-    Title: `Welcome — ${meta.guestName || "Your Trip"}`,
+    SortOrder:      0,
+    Title:          `Welcome — ${meta.guestName || "Your Trip"}`,
+    IsSupplemental: true,
     TripEvents: [{
-      SortOrder: 1,
-      Title: `${meta.guestName || "Your Trip"} · Two Travel Concierge`,
+      SortOrder:   1,
+      Title:       `${meta.guestName || "Your Trip"} · Two Travel Concierge`,
       EventTypeId: 0,
       TripIdeas: [{
-        Title: `${meta.guestName || "Your Trip"} · Two Travel`,
-        Description: lines.join("\n"),
-        Notes: lines.join("\n"),
+        Title:       "Two Travel — Concierge Itinerary",
+        Description: desc,
+        Notes:       desc,
       }],
     }],
   };
 }
 
-function buildAccountingDay(matched, meta) {
-  const withCodes = matched.filter(({ service }) => service.quickbooksCode);
-  if (withCodes.length === 0 && !meta.guestName) return null;
+/* ── Supplemental day: TRIP SUMMARY ─────────────────────────────── */
 
-  const lines = ["TWO TRAVEL — ACCOUNTING REFERENCE", ""];
+function buildSummaryDay(matched, lang) {
+  const dayMap = new Map();
+  matched.forEach(({ cartItem, service }) => {
+    const key = clean(cartItem?.day || cartItem?.dayLabel || "Itinerary");
+    if (!dayMap.has(key)) dayMap.set(key, []);
+    dayMap.get(key).push({ cartItem, service });
+  });
+
+  const lines = [];
+  for (const [dayTitle, items] of dayMap) {
+    lines.push(dayTitle);
+    for (const { cartItem, service } of items) {
+      const t    = clean(cartItem?.time || service.schedule);
+      const loc  = service.location ? ` - ${service.location}` : "";
+      const code = service.quickbooksCode ? ` [${service.quickbooksCode}]` : "";
+      lines.push(`${t ? t + " " : ""}${service.name}${loc}${code}`);
+    }
+    lines.push("");
+  }
+
+  const desc = lines.join("\n").trim();
+
+  return {
+    SortOrder:      1,
+    Title:          lang === "es" ? "Resumen del Viaje" : "Trip Summary",
+    IsSupplemental: true,
+    TripEvents: [{
+      SortOrder:   1,
+      Title:       lang === "es" ? "Resumen Completo del Itinerario" : "Full Itinerary Overview",
+      EventTypeId: 0,
+      TripIdeas: [{
+        Title:       lang === "es" ? "Resumen del Viaje" : "Trip Summary",
+        Description: desc,
+        Notes:       desc,
+      }],
+    }],
+  };
+}
+
+/* ── Supplemental day: INFORMATION & DOCUMENTS + PROMO ──────────── */
+
+function buildInfoDay(lang, meta) {
+  const city = meta.city || meta.tripName?.split(" ")?.[0] || "your destination";
+
+  const WELCOME_EN = `Welcome to ${city} - Two Travel.
+
+Please take a look at this PDF before your arrival. It contains some information that might be helpful during your trip.
+
+How to Read This Itinerary
+This is a DRAFT itinerary, which means everything can be adjusted. We can change, add, or remove activities based on what excites you most.
+
+As you review it, I encourage you to focus on what truly interests you — what you'd love to experience, repeat, or maybe skip. The goal is to design the perfect trip for you.
+
+In our next meeting, we'll go through it together and refine it accordingly. Please come prepared with your questions and ideas. You're welcome to share them during the meeting or send them in the group chat beforehand.
+
+___
+
+Promo!
+Show everyone how amazing it is to travel with Two Travel's concierge service and get discounts on our experiences! ✨
+
+📱 Follow us: @twotravelconcierge
+📍 Instagram | TikTok
+
+Note:
+• The post must be made during your stay in the city.
+• One tag per person is required to redeem the service discount.
+• For group services (such as transport or private chef), all members must participate to apply the discount.`;
+
+  const WELCOME_ES = `Bienvenido a ${city} - Two Travel.
+
+Por favor revisa este documento antes de tu llegada. Contiene información útil que podría ser de ayuda durante tu viaje.
+
+Cómo Leer Este Itinerario
+Este es un itinerario en BORRADOR, lo que significa que todo puede ajustarse. Podemos cambiar, agregar o eliminar actividades según lo que más te emocione.
+
+Al revisarlo, te invitamos a enfocarte en lo que realmente te interesa: lo que quieres vivir, repetir o quizás omitir. El objetivo es diseñar el viaje perfecto para ti.
+
+En nuestra próxima reunión lo revisaremos juntos y lo ajustaremos. Por favor llega con tus preguntas e ideas, o compártelas en el chat del grupo con anticipación.
+
+___
+
+¡Promo!
+¡Muéstrale a todos lo increíble que es viajar con Two Travel y obtén descuentos en tus experiencias! ✨
+
+📱 Síguenos: @twotravelconcierge
+📍 Instagram | TikTok
+
+Nota:
+• La publicación debe realizarse durante tu estadía.
+• Se requiere un tag por persona para aplicar el descuento.
+• Para servicios grupales, todos los miembros deben participar para que aplique el descuento.`;
+
+  const desc = lang === "es" ? WELCOME_ES : WELCOME_EN;
+
+  return {
+    SortOrder:      2,
+    Title:          lang === "es" ? "Información y Documentos" : "Information & Documents",
+    IsSupplemental: true,
+    TripEvents: [{
+      SortOrder:   1,
+      Title:       lang === "es"
+        ? `Bienvenido a ${city} — Two Travel`
+        : `Welcome to ${city} — Two Travel`,
+      EventTypeId: 0,
+      TripIdeas: [{
+        Title:       lang === "es" ? "Información y Documentos" : "Information & Documents",
+        Description: desc,
+        Notes:       desc,
+      }],
+    }],
+  };
+}
+
+/* ── Supplemental day: ACCOUNTING REFERENCE ────────────────────── */
+
+function buildAccountingDay(matched, meta) {
+  const lines = [];
+  lines.push("TWO TRAVEL — ACCOUNTING REFERENCE");
+  lines.push("");
   lines.push("Client Information");
   if (meta.guestName)    lines.push(`[1A][${meta.guestName}]`);
   if (meta.guestContact) lines.push(`[2A][${meta.guestContact}]`);
   if (meta.startDate)    lines.push(`[3A][${meta.startDate}]`);
   if (meta.endDate)      lines.push(`[4A][${meta.endDate}]`);
+  lines.push("");
 
-  if (withCodes.length > 0) {
-    lines.push("", "Services Included");
+  const withCodes = matched.filter(({ service }) => service.quickbooksCode);
+  if (withCodes.length) {
+    lines.push("Services");
     for (const { service } of withCodes) {
-      const price = parseNum(service.priceCop) || 0;
-      const cat   = clean(service.category) || "Service";
-      lines.push(`[${service.quickbooksCode}][${price}][${cat}:${service.name}]`);
+      const price = parseNum(service.priceCop || service.priceTier1);
+      // Format: [QB_CODE][PRICE][Category:Service Name]
+      lines.push(`[${service.quickbooksCode}][${price}][${service.category}:${service.name}]`);
     }
   }
 
+  if (meta.internalNotes) {
+    lines.push("");
+    lines.push("Internal Notes:");
+    lines.push(meta.internalNotes);
+  }
+
+  const desc = lines.join("\n").trim();
+
   return {
-    SortOrder: 999,
-    Title: "Accounting Reference",
+    SortOrder:      9999,
+    Title:          "Accounting Reference",
+    IsSupplemental: true,
     TripEvents: [{
-      SortOrder: 1,
-      Title: "QuickBooks Codes",
+      SortOrder:   1,
+      Title:       "QuickBooks / Billing Codes",
       EventTypeId: 0,
       TripIdeas: [{
-        Title: "Accounting Reference — Two Travel",
-        Description: lines.join("\n"),
-        Notes: lines.join("\n"),
+        Title:       "Accounting Reference — Two Travel",
+        Description: desc,
+        Notes:       desc,
       }],
     }],
   };
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   ASSEMBLE ALL TRIPDAYS
+   Order: Welcome (supplemental 0) → Summary (1) → Info & Docs (2)
+          → Service days (sorted by cart day label)
+          → Accounting Reference (supplemental 9999)
+══════════════════════════════════════════════════════════════════ */
+
 function buildTripDays(matched, lang, meta) {
-  // Group services by cartItem.day label
+  // Group cart items by their day label
   const dayMap = new Map();
   matched.forEach(({ cartItem, service }, idx) => {
     const key = clean(cartItem?.day || cartItem?.dayLabel || "Itinerary");
@@ -339,34 +578,38 @@ function buildTripDays(matched, lang, meta) {
     dayMap.get(key).push({ cartItem, service, idx });
   });
 
+  // One TripDay per unique day label
   const serviceDays = Array.from(dayMap.entries()).map(([title, items], di) => ({
-    SortOrder: di + 1,
-    Title: title,
-    TripEvents: items.map(({ cartItem, service, idx }) =>
-      buildTripEvent(service, cartItem, lang, idx + 1)
-    ),
+    SortOrder:      di + 10,    // 10+ leaves room for the 3 supplemental days above
+    Title:          title,
+    IsSupplemental: false,
+    TripEvents: items
+      .sort((a, b) =>
+        (Number(a.cartItem?.sortOrder ?? a.idx)) -
+        (Number(b.cartItem?.sortOrder ?? b.idx))
+      )
+      .map(({ cartItem, service }, ei) =>
+        buildTripEvent(service, cartItem, lang, ei + 1)
+      ),
   }));
 
-  // Prepend welcome, append accounting
-  const welcomeDay    = buildWelcomeDay(meta);
-  const accountingDay = buildAccountingDay(matched, meta);
-
   return [
-    welcomeDay,
-    ...serviceDays,
-    ...(accountingDay ? [accountingDay] : []),
+    buildWelcomeDay(meta, lang),        // SortOrder 0  — supplemental
+    buildSummaryDay(matched, lang),     // SortOrder 1  — supplemental
+    buildInfoDay(lang, meta),           // SortOrder 2  — supplemental
+    ...serviceDays,                     // SortOrder 10+ — real itinerary
+    buildAccountingDay(matched, meta),  // SortOrder 9999 — supplemental
   ];
 }
 
-/* Plain-text Notes — cover page + itinerary + QuickBooks codes at the end */
+/* ══════════════════════════════════════════════════════════════════
+   TRIP-LEVEL NOTES  (plain-text fallback shown in Travefy trip overview)
+══════════════════════════════════════════════════════════════════ */
+
 function buildNotes(matched, lang, meta) {
   const lines = [];
-
-  // ── COVER / HEADER ──────────────────────────────
-  lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  lines.push("  TWO TRAVEL");
-  lines.push("  https://two.travel/");
-  lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  lines.push("TWO TRAVEL — Concierge Itinerary");
+  lines.push("https://two.travel/");
   lines.push("");
   if (meta.guestName)      lines.push(`Guest:      ${meta.guestName}`);
   if (meta.guestContact)   lines.push(`Contact:    ${meta.guestContact}`);
@@ -374,79 +617,44 @@ function buildNotes(matched, lang, meta) {
   if (meta.conciergeEmail) lines.push(`Email:      ${meta.conciergeEmail}`);
   lines.push("");
 
-  if (meta.conciergeSummary) {
-    lines.push(meta.conciergeSummary);
-    lines.push("");
-  }
+  if (meta.conciergeSummary) { lines.push(meta.conciergeSummary); lines.push(""); }
 
-  lines.push("All reservations are under Two Travel – " + (meta.guestName || "Guest") +
-    ". Once confirmed, cancellation fees may apply.");
-  lines.push("");
-  lines.push("────────────────────────────────────────");
-  lines.push("");
-
-  // ── ITINERARY BY DAY ────────────────────────────
-  const grouped = new Map();
+  // Day-by-day summary with billing codes
+  const dayMap = new Map();
   matched.forEach(({ cartItem, service }) => {
-    const day = clean(cartItem?.day || "Itinerary");
-    if (!grouped.has(day)) grouped.set(day, []);
-    grouped.get(day).push({ cartItem, service });
+    const key = clean(cartItem?.day || "Itinerary");
+    if (!dayMap.has(key)) dayMap.set(key, []);
+    dayMap.get(key).push({ cartItem, service });
   });
 
-  for (const [day, items] of grouped) {
-    lines.push(`━━ ${day} ━━`);
+  for (const [day, items] of dayMap) {
+    lines.push(`── ${day} ──`);
     for (const { cartItem, service } of items) {
-      const t = clean(cartItem?.time || service.schedule);
-      lines.push(`${t ? t + "  " : ""}${service.name}`);
-      const catLbl = categoryLabel(service, lang);
-      lines.push(`  ${catLbl}`);
-      if (service.duration) lines.push(`  ⏱ ${service.duration}`);
-      const pf = formatCOP(service.priceCop);
-      if (pf) lines.push(`  💰 ${pf}`);
-      if (service.menuUrl)  lines.push(`  🍽 ${service.menuUrl}`);
-      if (service.mapsUrl)  lines.push(`  🗺 ${service.mapsUrl}`);
-      lines.push("");
+      const t    = clean(cartItem?.time || service.schedule);
+      const code = service.quickbooksCode ? ` [${service.quickbooksCode}]` : "";
+      lines.push(`${t ? t + "  " : ""}${service.name}${code}`);
     }
-  }
-
-  if (meta.internalNotes) {
-    lines.push("────────────────────────────────────────");
-    lines.push("Internal Notes:");
-    lines.push(meta.internalNotes);
     lines.push("");
   }
 
-  // ── QUICKBOOKS / ACCOUNTING CODES ───────────────
-  // Format: [QB_CODE][PRICE_COP][Category:Service Name]
-  // Client info: [1A][name] [2A][contact] [3A][startDate] [4A][endDate]
+  // Accounting summary at the bottom
   const withCodes = matched.filter(({ service }) => service.quickbooksCode);
-  if (withCodes.length > 0 || meta.guestName || meta.guestContact) {
-    lines.push("────────────────────────────────────────");
-    lines.push("TWO TRAVEL — ACCOUNTING REFERENCE");
-    lines.push("");
-    lines.push("Client Information");
+  if (withCodes.length) {
+    lines.push("── ACCOUNTING REFERENCE ──");
     if (meta.guestName)    lines.push(`[1A][${meta.guestName}]`);
     if (meta.guestContact) lines.push(`[2A][${meta.guestContact}]`);
-    if (meta.startDate)    lines.push(`[3A][${meta.startDate}]`);
-    if (meta.endDate)      lines.push(`[4A][${meta.endDate}]`);
-    lines.push("");
-
-    if (withCodes.length > 0) {
-      lines.push("Services Included");
-      for (const { service } of withCodes) {
-        const price = parseNum(service.priceCop) || 0;
-        const cat   = clean(service.category) || "Service";
-        // [QB_CODE][PRICE][Category:Service Name]
-        lines.push(`[${service.quickbooksCode}][${price}][${cat}:${service.name}]`);
-      }
+    for (const { service } of withCodes) {
+      const p = parseNum(service.priceCop || service.priceTier1);
+      lines.push(`[${service.quickbooksCode}][${p}][${service.category}:${service.name}]`);
     }
-    lines.push("");
   }
 
   return lines.join("\n").trim();
 }
 
-/* ───────── handler ───────── */
+/* ══════════════════════════════════════════════════════════════════
+   HANDLER
+══════════════════════════════════════════════════════════════════ */
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -465,9 +673,11 @@ export default async function handler(req, res) {
       cart             = [],
       conciergeSummary = "",
       internalNotes    = "",
-      accommodations   = [],
       conciergeName    = "",
       conciergeEmail   = "",
+      city             = "",
+      startDate        = "",
+      endDate          = "",
     } = req.body || {};
 
     const publicKey   = process.env.TRAVEFY_PUBLIC_KEY;
@@ -477,28 +687,34 @@ export default async function handler(req, res) {
 
     const headers = {
       "X-API-PUBLIC-KEY": publicKey,
-      "X-USER-TOKEN": accessToken,
-      "Content-Type": "application/json",
-      Accept: "application/json",
+      "X-USER-TOKEN":     accessToken,
+      "Content-Type":     "application/json",
+      Accept:             "application/json",
     };
 
-    // 1. Match cart → catalog
+    // ── 1. Fetch catalog + match cart ────────────────────────────
     const catalog = await fetchCatalog();
     const { matched, unmatched } = matchCart(cart, catalog);
 
-    // 2. Build Travefy payload:  Trip → TripDays → TripEvents → TripIdeas
-    const meta = { guestName, guestContact, conciergeSummary, internalNotes, conciergeName, conciergeEmail };
+    // ── 2. Build meta ────────────────────────────────────────────
+    const meta = {
+      guestName, guestContact, conciergeSummary,
+      internalNotes, conciergeName, conciergeEmail,
+      city, tripName, startDate, endDate,
+    };
+
+    // ── 3. Build full Travefy structure ──────────────────────────
     const tripDays = buildTripDays(matched, lang, meta);
     const notes    = buildNotes(matched, lang, meta);
 
     const payload = {
-      Name: tripName || guestName || "New Trip",
+      Name:                tripName || guestName || "New Trip",
       PrimaryTravelerName: guestName || "Guest",
-      Notes: notes,
-      TripDays: tripDays,
+      Notes:               notes,
+      TripDays:            tripDays,
     };
 
-    // 3. POST /trips  — full structure in one shot
+    // ── 4. POST /trips ────────────────────────────────────────────
     const tripRes = await fetch(`${TRAVEFY_BASE}/trips`, {
       method: "POST",
       headers,
@@ -511,47 +727,71 @@ export default async function handler(req, res) {
 
     if (!tripRes.ok) {
       return res.status(tripRes.status).json({
-        ok: false,
-        error: `Travefy rejected trip creation (${tripRes.status})`,
-        travefyResponse: raw.slice(0, 500),
-        sentPayload: { ...payload, TripDays: `[${tripDays.length} days]` },
+        ok:              false,
+        error:           `Travefy rejected trip creation (${tripRes.status})`,
+        travefyResponse: raw.slice(0, 800),
+        sentPayload: {
+          Name:    payload.Name,
+          TripDays: tripDays.map((d) => ({
+            sortOrder:      d.SortOrder,
+            title:          d.Title,
+            isSupplemental: d.IsSupplemental,
+            events:         d.TripEvents?.length ?? 0,
+          })),
+        },
       });
     }
 
-    const tripId  = trip?.Id ?? trip?.id ?? null;
+    const tripId   = trip?.Id  ?? trip?.id  ?? null;
     const shareUrl = trip?.ShareUrlPath
       ? `https://www.travefy.com/${trip.ShareUrlPath}`
       : null;
 
-    // 4. Inspect response — did Travefy accept TripDays?
-    const returnedDays  = trip?.TripDays ?? trip?.Days ?? [];
-    const daysAccepted  = returnedDays.length > 0;
-    const eventsInFirst = returnedDays[0]?.TripEvents?.length ?? 0;
+    const returnedDays = trip?.TripDays ?? trip?.Days ?? [];
+
+    // Accounting reference summary (returned to frontend for display)
+    const accountingReference = matched
+      .filter(({ service }) => service.quickbooksCode)
+      .map(({ service }) => {
+        const p = parseNum(service.priceCop || service.priceTier1);
+        return {
+          code:     service.quickbooksCode,
+          name:     service.name,
+          category: service.category,
+          price:    p,
+          inline:   `[${service.quickbooksCode}][${p}]`,
+          full:     `[${service.quickbooksCode}][${p}][${service.category}:${service.name}]`,
+        };
+      });
 
     return res.status(200).json({
-      ok: true,
+      ok:      true,
       message: shareUrl
         ? `✅ Trip creado en Travefy — ${shareUrl}`
         : "✅ Trip creado en Travefy",
       tripId,
       shareUrl,
 
-      matchedServicesCount:   matched.length,
-      unmatchedServicesCount: unmatched.length,
-      unmatchedServices:      unmatched,
-      summaryLines: matched.map(({ cartItem, service }) => {
-        const t = clean(cartItem?.time || service.schedule);
-        const loc = service.location ? ` — ${service.location}` : "";
-        return `${t ? t + " " : ""}${service.name}${loc}`;
-      }),
-      itemCount: matched.length,
+      matched:           matched.length,
+      unmatched:         unmatched.length,
+      unmatchedServices: unmatched,
 
-      // Did the structure land in Travefy?
+      summaryLines: matched.map(({ cartItem, service }) => {
+        const t    = clean(cartItem?.time || service.schedule);
+        const loc  = service.location ? ` — ${service.location}` : "";
+        const code = service.quickbooksCode ? ` [${service.quickbooksCode}]` : "";
+        return `${t ? t + " " : ""}${service.name}${loc}${code}`;
+      }),
+
+      accountingReference,
+
       _structure: {
-        daysAccepted,
-        daysCount: returnedDays.length,
-        eventsInFirstDay: eventsInFirst,
-        responseKeys: trip ? Object.keys(trip) : [],
+        daysAccepted:            returnedDays.length > 0,
+        daysCount:               returnedDays.length,
+        supplementalDays:        tripDays.filter((d) =>  d.IsSupplemental).length,
+        serviceDays:             tripDays.filter((d) => !d.IsSupplemental).length,
+        eventsInFirstServiceDay: tripDays.find((d) => !d.IsSupplemental)?.TripEvents?.length ?? 0,
+        responseKeys:            trip ? Object.keys(trip) : [],
       },
     });
 
