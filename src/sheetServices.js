@@ -78,7 +78,15 @@ function mapRowToService(row, index) {
   .map((x) => toDirectImageUrl(x))
   .filter(Boolean);
 
-const video1 = row.video1 || "";
+const rawVideo = row.video1 || row["video 1"] || row.video || row.video_url || row["video_1"] || "";
+  // Convert Google Drive share URLs to direct/embed-friendly URLs
+  const video1 = (() => {
+    const v = String(rawVideo).trim();
+    if (!v) return "";
+    const m = v.match(/\/file\/d\/([^/]+)/) || v.match(/[?&]id=([^&]+)/);
+    if (m?.[1]) return `https://drive.google.com/uc?export=download&id=${m[1]}`;
+    return v;
+  })();
   return {
     
     id: parseNum(row.id || index + 1),
@@ -102,12 +110,25 @@ video1: video1,
     },
     
     travefy: {
-  libraryId: row["travefy library id"] || "",
-  libraryName: row["travefy library name"] || "",
-  enabled: String(row["travefy enabled"] || "").trim().toLowerCase() === "true",
-  notesTemplate: row["travefy notes template"] || "",
-  categoryOverride: row["travefy category override"] || "",
-},
+      // Sheet usa underscores: travefy_library_id, travefy_enabled, etc.
+      libraryId: String(
+        row["travefy_library_id"] || row["travefy library id"] || ""
+      ).trim(),
+      libraryName: String(
+        row["travefy_library_name"] || row["travefy library name"] || ""
+      ).trim(),
+      enabled: ["true", "1", "yes"].includes(
+        String(
+          row["travefy_enabled"] ?? row["travefy enabled"] ?? ""
+        ).trim().toLowerCase()
+      ),
+      notesTemplate: String(
+        row["travefy_notes_template"] || row["travefy notes template"] || ""
+      ).trim(),
+      categoryOverride: String(
+        row["travefy_category_override"] || row["travefy category override"] || ""
+      ).trim(),
+    },
 
     capacity: {
       min: parseNum(row.capacity_min || 1),
@@ -129,6 +150,12 @@ video1: video1,
     menuUrl: row.menuUrl || "",
     mapsUrl: row.mapsUrl || "",
     clientType: row.clientType || "",
+    family_friendly:
+      ["true", "1", "yes", "si", "sí"].includes(
+        String(row.family_friendly || row["family friendly"] || "")
+          .trim()
+          .toLowerCase()
+      ),
   };
 }
 
@@ -154,6 +181,9 @@ async function fetchCatalogFromSheet() {
 }
 
 export { fetchCatalogFromSheet as fetchServicesFromSheet };
+
+// fetchConciergesFromSheet: pendiente hasta que exista pestaña "Concierges" con GID conocido.
+// Por ahora concierges se asignan manualmente con campos de texto libre.
 
 export async function fetchKickoffById(kickoffId) {
   const json = await postToKickoffAPI({

@@ -55,17 +55,17 @@ const STATUS_LABELS = {
   new: "Nuevo",
   client_submitted: "Cliente llenó selección",
   concierge_editing: "Concierge editando",
-  sent_to_travify: "Enviado",
+  sent_to_travify: "Enviado a Travefy",
+  feedback_submitted: "Cliente llenó feedback",
   done: "Cerrado",
 };
-
-
 
 const STATUS_CLASSES = {
   new: "bg-blue-100 text-blue-700 border-blue-300",
   client_submitted: "bg-indigo-100 text-indigo-800 border-indigo-300",
   concierge_editing: "bg-amber-100 text-amber-800 border-amber-300",
   sent_to_travify: "bg-purple-100 text-purple-800 border-purple-300",
+  feedback_submitted: "bg-teal-100 text-teal-800 border-teal-300",
   done: "bg-emerald-100 text-emerald-700 border-emerald-300",
 };
 const CLIENT_TYPE_LABELS = {
@@ -119,27 +119,27 @@ function StatusBadge({ status }) {
     </span>
   );
 }
-function buildCatalogLink(kickoff, clientType = 1) {
+function buildCatalogLink(kickoff, clientType = 1, lang = "en") {
   const base = window.location.origin;
   const url = new URL("/", base);
   url.searchParams.set("mode", "catalog");
   url.searchParams.set("kickoffId", kickoff?.id || "");
   url.searchParams.set("clientType", String(clientType));
-
-  // ✅ NUEVO (precargar)
+  url.searchParams.set("lang", kickoff?.lang || lang);
   url.searchParams.set("guestName", kickoff?.guestName || "");
   url.searchParams.set("tripName", kickoff?.tripName || "");
-
+  if (kickoff?.guestContact) url.searchParams.set("guestContact", kickoff.guestContact);
   return url.toString();
 }
-function buildFeedbackLink(kickoff) {
+function buildFeedbackLink(kickoff, clientType = 1, lang = "en") {
   const base = window.location.origin;
   const url = new URL("/", base);
 
   url.searchParams.set("mode", "feedback");
   url.searchParams.set("kickoffId", kickoff?.id || "");
+  url.searchParams.set("clientType", String(clientType));
+  url.searchParams.set("lang", kickoff?.lang || lang);
 
-  // opcional: precargar algunos datos
   url.searchParams.set("guestName", kickoff?.guestName || "");
   url.searchParams.set("tripName", kickoff?.tripName || "");
   url.searchParams.set("guestContact", kickoff?.guestContact || "");
@@ -147,17 +147,16 @@ function buildFeedbackLink(kickoff) {
   return url.toString();
 }
 
-function buildQuestionnaireLink(kickoff, clientType = 1) {
+function buildQuestionnaireLink(kickoff, clientType = 1, lang = "en") {
   const base = window.location.origin;
   const url = new URL("/", base);
   url.searchParams.set("mode", "questionnaire");
   url.searchParams.set("kickoffId", kickoff?.id || "");
   url.searchParams.set("clientType", String(clientType));
-
-  // ✅ NUEVO (precargar)
+  url.searchParams.set("lang", kickoff?.lang || lang);
   url.searchParams.set("guestName", kickoff?.guestName || "");
   url.searchParams.set("tripName", kickoff?.tripName || "");
-
+  if (kickoff?.guestContact) url.searchParams.set("guestContact", kickoff.guestContact);
   return url.toString();
 }
 
@@ -712,13 +711,24 @@ function SummaryModal({ kickoff, onClose }) {
                         {item.priceUnit ? ` · ${item.priceUnit}` : ""}
                       </p>
                     </div>
-                    {(item.priceOverride_cop || item.price_cop) && (
-                      <p className="text-xs text-neutral-800 text-right whitespace-nowrap">
-                        {formatPriceCOP(
-                          item.priceOverride_cop || item.price_cop
-                        )}
-                      </p>
-                    )}
+                    {/* Only show COP price for categories that have exact pricing (tours, services, transportation) */}
+                    {(() => {
+                      const cat = String(item.category || "").toLowerCase();
+                      const usesLevels = ["restaurants","bars","beach-clubs","nightlife"].includes(cat);
+                      const price = item.priceOverride_cop || item.price_cop;
+                      if (usesLevels) {
+                        // Show price-level indicator instead of COP
+                        const lvl = item.priceLevel || (price >= 300000 ? "$$$" : price >= 150000 ? "$$" : price ? "$" : null);
+                        return lvl ? (
+                          <span className="text-xs text-neutral-500 whitespace-nowrap">{lvl}</span>
+                        ) : null;
+                      }
+                      return price ? (
+                        <p className="text-xs text-neutral-800 text-right whitespace-nowrap">
+                          {formatPriceCOP(price)}
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                   {item.notes && (
                     <p className="mt-1 text-[11px] text-neutral-700">
@@ -935,8 +945,13 @@ function CatalogPickerModal({ services, clientType = 1, onClose, onPick }) {
 const tier2 = Number(s.price_tier_2 || 0);
 const base = Number(s.price_cop || 0);
 const ct = String(clientType).includes("2") ? 2 : 1;
-
 const price = ct === 2 ? (tier2 || base) : (tier1 || base);
+const usesLevels = ["restaurants","bars","beach-clubs","nightlife"].includes(cat);
+const priceDisplay = usesLevels
+  ? (s.priceLevel || (price >= 300000 ? "$$$" : price >= 150000 ? "$$" : price ? "$" : "—"))
+  : price
+  ? new Intl.NumberFormat("es-CO").format(price) + " COP"
+  : "—";
                 return (
                   <button
                     key={s.id || s.sku || name}
@@ -956,9 +971,7 @@ const price = ct === 2 ? (tier2 || base) : (tier1 || base);
                     </div>
 
                     <div className="shrink-0 text-xs text-neutral-800 whitespace-nowrap">
-                      {price
-                        ? new Intl.NumberFormat("es-CO").format(price) + " COP"
-                        : "—"}
+                      {priceDisplay}
                       <span className="ml-2 inline-flex items-center px-2 py-1 rounded-lg bg-neutral-900 text-white text-[11px]">
                         Agregar
                       </span>
@@ -1028,33 +1041,43 @@ function ConfirmDeleteModal({ kickoff, onCancel, onConfirm, loading }) {
   );
 }
 
-function EditDrawer({ kickoff, onClose, onSave }) {
+function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [guestName, setGuestName] = useState(kickoff?.guestName || "");
   const [tripName, setTripName] = useState(kickoff?.tripName || "");
   const [guestContact, setGuestContact] = useState(kickoff?.guestContact || "");
-  
+  const [assignedConcierge, setAssignedConcierge] = useState(kickoff?.assignedConciergeName || kickoff?.assignedConcierge || "");
+  const [assignedConciergeEmail, setAssignedConciergeEmail] = useState(kickoff?.assignedConciergeEmail || "");
   const [status, setStatus] = useState(kickoff?.status || "new");
-  const [conciergeSummary, setConciergeSummary] = useState(
-    kickoff?.conciergeSummary || ""
-  );
-  const [travifyText, setTravifyText] = useState(kickoff?.travifyText || "");
+  const [conciergeSummary] = useState(kickoff?.conciergeSummary || "");
   const [internalNotes, setInternalNotes] = useState(kickoff?.internalNotes || "");
+  const [travefyResult, setTravefyResult] = useState(null);
+  const [travefySending, setTravefySending] = useState(false);
 
   if (!kickoff) return null;
 
   const handleSave = async () => {
+  // Auto-advance status when concierge saves from "new" or "client_submitted"
+  const autoStatus =
+    status === "new" || status === "client_submitted"
+      ? "concierge_editing"
+      : status;
+
   const updates = {
     guestName: guestName.trim(),
     tripName: tripName.trim(),
-    status,
+    status: autoStatus,
     conciergeSummary,
     internalNotes,
+    assignedConcierge: assignedConcierge.trim(),
+    assignedConciergeName: assignedConcierge.trim(),
+    assignedConciergeEmail: assignedConciergeEmail.trim(),
   };
 
   const c = guestContact.trim();
-  if (c) updates.guestContact = c; // ✅ solo si hay valor (si no, no borra)
+  if (c) updates.guestContact = c;
 
   await onSave(kickoff.id, updates);
+  setStatus(autoStatus);
 };
 
 
@@ -1109,6 +1132,27 @@ function EditDrawer({ kickoff, onClose, onSave }) {
   />
 </div>
 
+            <div>
+              <label className="text-[11px] text-neutral-500">Concierge asignado (nombre)</label>
+              <input
+                value={assignedConcierge}
+                onChange={(e) => setAssignedConcierge(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                placeholder="Nombre del concierge"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] text-neutral-500">Email del concierge</label>
+              <input
+                type="email"
+                value={assignedConciergeEmail}
+                onChange={(e) => setAssignedConciergeEmail(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                placeholder="concierge@email.com"
+              />
+            </div>
+
             <div className="sm:col-span-2">
               <label className="text-[11px] text-neutral-500">Estado</label>
               <select
@@ -1117,36 +1161,14 @@ function EditDrawer({ kickoff, onClose, onSave }) {
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
               >
                 <option value="new">{STATUS_LABELS.new}</option>
-<option value="client_submitted">{STATUS_LABELS.client_submitted}</option>
-<option value="concierge_editing">{STATUS_LABELS.concierge_editing}</option>
-<option value="sent_to_travify">{STATUS_LABELS.sent_to_travify}</option>
-<option value="done">{STATUS_LABELS.done}</option>
-
+                <option value="client_submitted">{STATUS_LABELS.client_submitted}</option>
+                <option value="concierge_editing">{STATUS_LABELS.concierge_editing}</option>
+                <option value="sent_to_travify">{STATUS_LABELS.sent_to_travify}</option>
+                <option value="feedback_submitted">{STATUS_LABELS.feedback_submitted}</option>
+                <option value="done">{STATUS_LABELS.done}</option>
               </select>
-              
             </div>
           </div>
-
-          <div>
-            <label className="text-[11px] text-neutral-500">Concierge summary</label>
-            <textarea
-              value={conciergeSummary}
-              onChange={(e) => setConciergeSummary(e.target.value)}
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm min-h-[90px]"
-              placeholder="Resumen interno / concierge summary"
-            />
-          </div>
-
-          <div>
-  <label className="text-[11px] text-neutral-500">Travify (auto)</label>
-  <textarea
-    readOnly
-    value={travifyText || ""}
-    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm min-h-[140px] font-mono bg-neutral-50"
-    placeholder="Se llena automáticamente desde el formulario (API)."
-  />
-</div>
-
 
           <div>
             <label className="text-[11px] text-neutral-500">Notas internas</label>
@@ -1178,6 +1200,73 @@ function EditDrawer({ kickoff, onClose, onSave }) {
 </div>
         </div>
 
+        {/* Travefy result */}
+        {travefyResult && (
+          <div className={`mx-5 mb-2 rounded-xl p-4 text-sm border ${travefyResult.ok ? "bg-purple-50 border-purple-200 text-purple-900" : "bg-red-50 border-red-200 text-red-800"}`}>
+            {travefyResult.ok ? (
+              <>
+                <p className="font-semibold mb-1">✅ {travefyResult.data?.message || "Enviado a Travefy"}</p>
+
+                {/* Share link */}
+                {travefyResult.data?.shareUrl && (
+                  <a href={travefyResult.data.shareUrl} target="_blank" rel="noreferrer"
+                    className="block text-xs text-purple-700 underline break-all mb-2">
+                    {travefyResult.data.shareUrl}
+                  </a>
+                )}
+
+                {/* Counts */}
+                <p className="text-xs text-purple-700 mb-2">
+                  <span className="font-medium">{travefyResult.data?.matchedServicesCount ?? 0}</span> servicios
+                  {" · "}
+                  <span className="font-medium">{travefyResult.data?.itemCount ?? 0}</span> items en itinerario
+                  {(travefyResult.data?.unmatchedServicesCount ?? 0) > 0 &&
+                    <span className="text-orange-600"> · ⚠️ {travefyResult.data.unmatchedServicesCount} sin match</span>}
+                </p>
+
+                {/* Itinerary summary */}
+                {(travefyResult.data?.summaryLines || []).length > 0 && (
+                  <div className="mb-2 bg-white/60 rounded-lg p-2">
+                    <p className="text-[10px] font-semibold text-purple-500 uppercase tracking-wide mb-1">Itinerario generado</p>
+                    <ul className="space-y-0.5">
+                      {travefyResult.data.summaryLines.map((line, i) => (
+                        <li key={i} className="text-xs text-purple-800 flex gap-1">
+                          <span className="text-purple-400 shrink-0">•</span>
+                          <span>{line}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Structure result */}
+                {travefyResult.data?._structure && (
+                  <div className="mt-2 text-[10px] font-mono bg-purple-100/60 rounded px-2 py-1.5 text-purple-700">
+                    {travefyResult.data._structure.daysAccepted
+                      ? `✅ TripDays aceptados (${travefyResult.data._structure.daysCount} días · ${travefyResult.data._structure.eventsInFirstDay} eventos en día 1)`
+                      : "⚠️ TripDays no devueltos — revisa el trip en Travefy para confirmar"}
+                  </div>
+                )}
+
+                {/* Unmatched services */}
+                {(travefyResult.data?.unmatchedServices || []).length > 0 && (
+                  <ul className="mt-2 space-y-1.5">
+                    {travefyResult.data.unmatchedServices.map((u, i) => (
+                      <li key={i} className="text-xs bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-orange-800">
+                        <span className="font-semibold">{u.name || "?"}</span>
+                        <span className="text-orange-600"> [{u.decision || "unknown"}]</span>
+                        {u.reason && <span className="block text-orange-500 mt-0.5">{u.reason}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            ) : (
+              <p className="font-semibold">❌ {travefyResult.error}</p>
+            )}
+          </div>
+        )}
+
         <div className="px-5 py-4 border-t bg-neutral-50 flex justify-end gap-2">
           <button
             type="button"
@@ -1193,9 +1282,25 @@ function EditDrawer({ kickoff, onClose, onSave }) {
           >
             Guardar
           </button>
+          {/* Preview PDF button */}
+          {kickoff?.cart?.length > 0 && (
+            <a
+              href={`/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff.lang || "en"}`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-1.5"
+              title="Previsualizar itinerario como PDF"
+            >
+              📄 Ver PDF
+            </a>
+          )}
           <button
   type="button"
+  disabled={travefySending || !(kickoff?.cart?.length)}
+  title={!(kickoff?.cart?.length) ? "Agrega servicios al itinerario antes de enviar" : `Enviar ${kickoff.cart.length} servicio(s) a Travefy`}
   onClick={async () => {
+    setTravefySending(true);
+    setTravefyResult(null);
     try {
       const res = await fetch("/api/travefy-send", {
         method: "POST",
@@ -1205,43 +1310,40 @@ function EditDrawer({ kickoff, onClose, onSave }) {
           guestName,
           tripName,
           guestContact,
+          lang: kickoff.lang || "en",
           cart: kickoff.cart || [],
           conciergeSummary,
           internalNotes,
+          conciergeName: assignedConcierge,
+          conciergeEmail: assignedConciergeEmail,
         }),
       });
 
       const text = await res.text();
       let data;
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch {
-        data = { raw: text };
-      }
+      try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
       console.log("Travefy response:", data);
 
-      if (!res.ok) {
-        throw new Error(data?.error || "Error enviando a Travefy");
-      }
+      if (!res.ok) throw new Error(data?.error || `Error ${res.status}`);
 
-      const msg = [
-        data?.message || "Enviado a Travefy ✅",
-        data?.shareUrl ? `\nLink: ${data.shareUrl}` : "",
-        data?.unmatchedServicesCount > 0
-          ? `\n⚠️ ${data.unmatchedServicesCount} servicio(s) sin match en Travefy`
-          : "",
-      ]
-        .filter(Boolean)
-        .join("");
-      alert(msg);
+      setStatus("sent_to_travify");
+      setTravefyResult({ ok: true, data });
+      // Update status without closing drawer
+      try {
+        await (onSilentUpdate || onSave)(kickoff.id, { status: "sent_to_travify" });
+      } catch (e) {
+        console.warn("Status update failed:", e);
+      }
     } catch (err) {
       console.error("Error frontend:", err);
-      alert(err.message || "Error enviando a Travefy");
+      setTravefyResult({ ok: false, error: err.message || "Error enviando a Travefy" });
+    } finally {
+      setTravefySending(false);
     }
   }}
-  className="px-4 py-2 rounded-lg bg-purple-600 text-sm text-white hover:bg-purple-700"
+  className="px-4 py-2 rounded-lg bg-purple-600 text-sm text-white hover:bg-purple-700 disabled:opacity-60"
 >
-  Enviar a Travefy
+  {travefySending ? "Enviando..." : `Enviar a Travefy${kickoff?.cart?.length ? ` (${kickoff.cart.length})` : ""}`}
 </button>
         </div>
       </div>
@@ -1251,6 +1353,107 @@ function EditDrawer({ kickoff, onClose, onSave }) {
     
   );
 }
+function ConciergePickerModal({ concierges, onClose, onSelect }) {
+  return (
+    <Modal
+      title="Asignar concierge"
+      onClose={onClose}
+      maxWidth="max-w-md"
+      footer={
+        <button type="button" onClick={() => onSelect(null)}
+          className="px-4 py-2 rounded-lg border border-neutral-300 text-sm text-neutral-700 hover:bg-neutral-100">
+          Sin asignar
+        </button>
+      }
+    >
+      <div className="space-y-2">
+        {concierges.length === 0 ? (
+          <p className="text-sm text-neutral-500 text-center py-4">
+            No hay concierges en la pestaña "Concierges" del Sheet.
+          </p>
+        ) : (
+          <div className="divide-y border rounded-xl overflow-hidden bg-white">
+            {concierges.map((c) => (
+              <button
+                key={c.id || c.email || c.name}
+                type="button"
+                onClick={() => onSelect(c)}
+                className="w-full text-left px-4 py-3 hover:bg-neutral-50 flex items-center justify-between gap-3"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-neutral-900">{c.name}</p>
+                  {c.email && <p className="text-xs text-neutral-500">{c.email}</p>}
+                </div>
+                <span className="text-xs text-neutral-400">Seleccionar →</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function KickoffPickerModal({ kickoffs, title, onClose, onSelect }) {
+  const [q, setQ] = useState("");
+
+  const filtered = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    return (kickoffs || []).filter((k) => {
+      if (!query) return true;
+      return [k.guestName, k.tripName, k.id, k.guestContact]
+        .filter(Boolean).join(" ").toLowerCase().includes(query);
+    });
+  }, [kickoffs, q]);
+
+  return (
+    <Modal title={title || "Seleccionar cliente"} onClose={onClose} maxWidth="max-w-2xl"
+      footer={
+        <button type="button" onClick={onClose}
+          className="px-4 py-2 rounded-lg border border-neutral-300 text-sm text-neutral-700 hover:bg-neutral-100">
+          Cancelar
+        </button>
+      }
+    >
+      <div className="space-y-3">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="w-full border rounded-lg px-3 py-2 text-sm"
+          placeholder="Buscar por nombre, viaje o ID..."
+          autoFocus
+        />
+        {filtered.length === 0 ? (
+          <p className="text-xs text-neutral-500 text-center py-4">No hay clientes que coincidan.</p>
+        ) : (
+          <div className="border rounded-2xl overflow-hidden bg-white">
+            <div className="max-h-[50vh] overflow-auto divide-y">
+              {filtered.map((k) => (
+                <button key={k.id} type="button" onClick={() => onSelect(k)}
+                  className="w-full text-left px-4 py-3 hover:bg-neutral-50 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-neutral-900 truncate">
+                      {k.guestName || "Sin nombre"}
+                    </div>
+                    <div className="text-[11px] text-neutral-500 truncate">
+                      {k.tripName || "Sin viaje"} · {k.id}
+                      {k.assignedConcierge ? ` · 👤 ${k.assignedConcierge}` : ""}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <ClientTypeBadge value={k.clientType} />
+                    <StatusBadge status={k.status} />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function ClientTypePickerModal({ onClose, onSelect }) {
   const [value, setValue] = useState(1);
 
@@ -1307,6 +1510,7 @@ export default function ConciergePanel() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [conciergeFilter, setConciergeFilter] = useState("all");
 
   const [selectedForSummary, setSelectedForSummary] = useState(null);
   const [selectedForEdit, setSelectedForEdit] = useState(null);
@@ -1314,7 +1518,8 @@ export default function ConciergePanel() {
   const [rowLoadingId, setRowLoadingId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 const [clientTypePickerOpen, setClientTypePickerOpen] = useState(false);
-const [pendingLinkKind, setPendingLinkKind] = useState(null); // "catalog" o "questionnaire"
+const [pendingLinkKind, setPendingLinkKind] = useState(null); // "catalog" | "questionnaire" | "feedback"
+const [feedbackPickerOpen, setFeedbackPickerOpen] = useState(false);
   const normalizeId = (obj) =>
   obj?.id || obj?.kickoffId || obj?.ID || obj?._id || "";
 
@@ -1329,27 +1534,23 @@ const loadKickoffs = async () => {
       const id = normalizeId(k);
       const safeId = String(id || `row-${idx}`);
 
+      const rawCart = k?.cart ?? k?.Cart ?? k?.itinerary ?? [];
+      const cart = Array.isArray(rawCart)
+        ? rawCart
+        : (() => { try { return JSON.parse(rawCart) || []; } catch { return []; } })();
+
       return {
-  ...k,
-  id: safeId,
-  createdAt: k?.createdAt || k?.CreatedAt || k?.timestamp || new Date().toISOString(),
-  clientType:
-  String(k?.clientType || "")
-    .toLowerCase()
-    .includes("2")
-    ? 2
-    : 1,
-  guestContact: String(
-  k?.guestContact ||
-  k?.GuestContact ||
-  k?.guest_contact ||
-  k?.contact ||
-  k?.Contact ||
-  k?.contacto ||
-  k?.Contacto ||
-  ""
-).trim(),
-};
+        ...k,
+        id: safeId,
+        createdAt: k?.createdAt || k?.CreatedAt || k?.timestamp || new Date().toISOString(),
+        clientType: String(k?.clientType || "").toLowerCase().includes("2") ? 2 : 1,
+        guestContact: String(
+          k?.guestContact || k?.GuestContact || k?.guest_contact ||
+          k?.contact || k?.Contact || k?.contacto || k?.Contacto || ""
+        ).trim(),
+        assignedConcierge: String(k?.assignedConcierge || k?.AssignedConcierge || k?.concierge || "").trim(),
+        cart,
+      };
     });
 
     setKickoffs(arr);
@@ -1372,53 +1573,74 @@ const loadKickoffs = async () => {
     loadKickoffs();
   }, []);
   const handleCreateAndOpenLink = async (clientType) => {
-  const guestName = (prompt("Nombre del cliente:") || "").trim();
-  if (!guestName) return;
+    const guestName = (prompt("Nombre del cliente:") || "").trim();
+    if (!guestName) return;
 
-  const tripName = (prompt("Nombre del viaje:") || "").trim();
-  const guestContact = (prompt("Contacto (WhatsApp o email):") || "").trim();
+    const tripName = (prompt("Nombre del viaje:") || "").trim();
+    const guestContact = (prompt("Contacto (WhatsApp o email):") || "").trim();
+    const assignedConciergeName = (prompt("Nombre del concierge asignado (opcional):") || "").trim();
+    const assignedConciergeEmail = assignedConciergeName
+      ? (prompt(`Email de ${assignedConciergeName} (opcional):`) || "").trim()
+      : "";
 
-  const kickoffId = `ko_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    const kickoffId = `ko_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 
-  const created = await saveKickoffToSheet({
-    id: kickoffId,
-    guestName,
-    tripName,
-    guestContact,
-    clientType,
-    createdAt: new Date().toISOString(),
-    status: "new",
-    conciergeSummary: "",
-    travifyText: "",
-    internalNotes: "",
-    cart: [],
-  });
+    const created = await saveKickoffToSheet({
+      id: kickoffId,
+      guestName,
+      tripName,
+      guestContact,
+      clientType,
+      assignedConcierge: assignedConciergeName,
+      assignedConciergeName,
+      assignedConciergeEmail,
+      createdAt: new Date().toISOString(),
+      status: "new",
+      conciergeSummary: "",
+      travifyText: "",
+      internalNotes: "",
+      cart: [],
+    });
 
-  const kickoff = {
-    ...created,
-    id: created?.id || kickoffId,
-    guestName,
-    tripName,
-    guestContact,
-    clientType,
+    const kickoff = {
+      ...created,
+      id: created?.id || kickoffId,
+      guestName,
+      tripName,
+      guestContact,
+      clientType,
+      assignedConcierge: assignedConciergeName,
+      assignedConciergeName,
+      assignedConciergeEmail,
+    };
+
+    setKickoffs((prev) => [kickoff, ...(prev || [])]);
+    setSelectedKickoffForLink(kickoff);
+
+    const link =
+      pendingLinkKind === "questionnaire"
+        ? buildQuestionnaireLink(kickoff, clientType)
+        : pendingLinkKind === "feedback"
+        ? buildFeedbackLink(kickoff, clientType)
+        : buildCatalogLink(kickoff, clientType);
+
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      prompt("Copia este link:", link);
+    }
+
+    window.open(link, "_blank", "noopener,noreferrer");
   };
 
-  setKickoffs((prev) => [kickoff, ...(prev || [])]);
-  setSelectedKickoffForLink(kickoff);
-
-  const link =
-    pendingLinkKind === "questionnaire"
-      ? buildQuestionnaireLink(kickoff, clientType)
-      : buildCatalogLink(kickoff, clientType);
-
-  try {
-    await navigator.clipboard.writeText(link);
-  } catch {
-    prompt("Copia este link:", link);
-  }
-
-  window.open(link, "_blank", "noopener,noreferrer");
-};
+  const conciergeOptions = useMemo(() => {
+    const names = new Set(
+      (kickoffs || [])
+        .map((k) => String(k.assignedConcierge || "").trim())
+        .filter(Boolean)
+    );
+    return ["all", ...Array.from(names).sort((a, b) => a.localeCompare(b))];
+  }, [kickoffs]);
 
   const filteredKickoffs = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -1426,12 +1648,14 @@ const loadKickoffs = async () => {
     return (kickoffs || [])
       .filter((k) => {
         if (statusFilter !== "all" && k.status !== statusFilter) return false;
+        if (conciergeFilter !== "all" && String(k.assignedConcierge || "").trim() !== conciergeFilter) return false;
 
         if (!q) return true;
         const text = [
           k.id,
           k.guestName,
           k.tripName,
+          k.assignedConcierge,
           k.conciergeSummary,
           k.travifyText,
         ]
@@ -1446,7 +1670,26 @@ const loadKickoffs = async () => {
         const db = new Date(b.createdAt || 0).getTime();
         return db - da;
       });
-  }, [kickoffs, search, statusFilter]);
+  }, [kickoffs, search, statusFilter, conciergeFilter]);
+
+  // Updates kickoff locally + in sheet but does NOT close the drawer
+  const handleSilentUpdate = async (id, updates) => {
+    try {
+      await updateKickoffInSheet(id, updates);
+      setKickoffs((prev) =>
+        prev.map((k) => {
+          if (k.id !== id) return k;
+          const next = { ...k, ...updates };
+          if ("guestContact" in updates && String(updates.guestContact || "").trim() === "") {
+            next.guestContact = k.guestContact || "";
+          }
+          return next;
+        })
+      );
+    } catch (err) {
+      console.error("Silent update failed:", err);
+    }
+  };
 
   const handleSaveEdit = async (id, updates) => {
   try {
@@ -1457,7 +1700,6 @@ const loadKickoffs = async () => {
       prev.map((k) => {
         if (k.id !== id) return k;
 
-        // ✅ NO sobreescribir guestContact con vacío
         const next = { ...k, ...updates };
         if ("guestContact" in updates && String(updates.guestContact || "").trim() === "") {
           next.guestContact = k.guestContact || "";
@@ -1515,6 +1757,13 @@ const loadKickoffs = async () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
+
+  <a
+    href="?mode=dashboard"
+    className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100"
+  >
+    Dashboard
+  </a>
 
   <button
     onClick={loadKickoffs}
@@ -1593,29 +1842,7 @@ const loadKickoffs = async () => {
 </button>
 <button
   type="button"
-  onClick={async () => {
-    if (!selectedKickoffForLink) {
-      alert("Selecciona primero un kick-off.");
-      return;
-    }
-
-    const kickoff = await ensureKickoffReady(
-      selectedKickoffForLink,
-      setKickoffs,
-      setSelectedKickoffForLink
-    );
-    if (!kickoff) return;
-
-    const link = buildFeedbackLink(kickoff);
-
-    try {
-      await navigator.clipboard.writeText(link);
-    } catch {
-      prompt("Copia este link:", link);
-    }
-
-    window.open(link, "_blank", "noopener,noreferrer");
-  }}
+  onClick={() => setFeedbackPickerOpen(true)}
   className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100"
 >
   <LinkIcon className="w-4 h-4" />
@@ -1639,20 +1866,40 @@ const loadKickoffs = async () => {
             />
           </div>
 
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-neutral-500">Estado:</span>
-            <select
-  className="border rounded-lg px-2.5 py-1.5 bg-white text-xs"
-  value={statusFilter}
-  onChange={(e) => setStatusFilter(e.target.value)}
->
-  <option value="all">Todos</option>
-  <option value="new">{STATUS_LABELS.new}</option>
-  <option value="client_submitted">{STATUS_LABELS.client_submitted}</option>
-  <option value="concierge_editing">{STATUS_LABELS.concierge_editing}</option>
-  <option value="sent_to_travify">{STATUS_LABELS.sent_to_travify}</option>
-  <option value="done">{STATUS_LABELS.done}</option>
-</select>
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-neutral-500">Estado:</span>
+              <select
+                className="border rounded-lg px-2.5 py-1.5 bg-white text-xs"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">Todos</option>
+                <option value="new">{STATUS_LABELS.new}</option>
+                <option value="client_submitted">{STATUS_LABELS.client_submitted}</option>
+                <option value="concierge_editing">{STATUS_LABELS.concierge_editing}</option>
+                <option value="sent_to_travify">{STATUS_LABELS.sent_to_travify}</option>
+                <option value="feedback_submitted">{STATUS_LABELS.feedback_submitted}</option>
+                <option value="done">{STATUS_LABELS.done}</option>
+              </select>
+            </div>
+
+            {conciergeOptions.length > 1 && (
+              <div className="flex items-center gap-2">
+                <span className="text-neutral-500">Concierge:</span>
+                <select
+                  className="border rounded-lg px-2.5 py-1.5 bg-white text-xs"
+                  value={conciergeFilter}
+                  onChange={(e) => setConciergeFilter(e.target.value)}
+                >
+                  {conciergeOptions.map((c) => (
+                    <option key={c} value={c}>
+                      {c === "all" ? "Todos" : c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1687,6 +1934,9 @@ const loadKickoffs = async () => {
                     Creado
                   </th>
                   <th className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">
+                    Concierge
+                  </th>
+                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">
                     Estado
                   </th>
                   <th className="px-4 py-2 text-right text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">
@@ -1698,7 +1948,7 @@ const loadKickoffs = async () => {
                 {loading && filteredKickoffs.length === 0 && (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={9}
                       className="px-4 py-8 text-center text-xs text-neutral-500"
                     >
                       Cargando kick-offs...
@@ -1709,7 +1959,7 @@ const loadKickoffs = async () => {
                 {!loading && filteredKickoffs.length === 0 && (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={9}
                       className="px-4 py-8 text-center text-xs text-neutral-500"
                     >
                       No hay kick-offs que coincidan con el filtro.
@@ -1791,6 +2041,10 @@ const loadKickoffs = async () => {
   {formatDateTime(k.createdAt)}
 </td>
 
+<td className="px-4 py-2 text-xs text-neutral-700">
+  {k.assignedConcierge || <span className="text-neutral-400 italic">—</span>}
+</td>
+
 <td className="px-4 py-2">
   <StatusBadge status={k.status} />
 </td>
@@ -1827,12 +2081,6 @@ const loadKickoffs = async () => {
 >
   Copiar catálogo
 </button>
-<a
-  href="?mode=dashboard"
-  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100"
->
-  Dashboard
-</a>
 <button
   onClick={async (e) => {
     e.stopPropagation();
@@ -1852,7 +2100,7 @@ const loadKickoffs = async () => {
 <button
   onClick={async (e) => {
     e.stopPropagation();
-    const link = buildFeedbackLink(k);
+    const link = buildFeedbackLink(k, Number(k.clientType ?? 1));
 
     try {
       await navigator.clipboard.writeText(link);
@@ -1896,6 +2144,7 @@ const loadKickoffs = async () => {
           kickoff={selectedForEdit}
           onClose={() => setSelectedForEdit(null)}
           onSave={handleSaveEdit}
+          onSilentUpdate={handleSilentUpdate}
         />
       )}
 
@@ -1908,18 +2157,30 @@ const loadKickoffs = async () => {
         />
       )}
       {clientTypePickerOpen && (
-  <ClientTypePickerModal
-    onClose={() => {
-      setClientTypePickerOpen(false);
-      setPendingLinkKind(null);
-    }}
-    onSelect={async (type) => {
-      setClientTypePickerOpen(false);
-      await handleCreateAndOpenLink(type);
-      setPendingLinkKind(null);
-    }}
-  />
-)}
+        <ClientTypePickerModal
+          onClose={() => { setClientTypePickerOpen(false); setPendingLinkKind(null); }}
+          onSelect={async (type) => {
+            setClientTypePickerOpen(false);
+            await handleCreateAndOpenLink(type);
+            setPendingLinkKind(null);
+          }}
+        />
+      )}
+
+      {feedbackPickerOpen && (
+        <KickoffPickerModal
+          kickoffs={kickoffs}
+          title="Seleccionar cliente para link de feedback"
+          onClose={() => setFeedbackPickerOpen(false)}
+          onSelect={async (k) => {
+            setFeedbackPickerOpen(false);
+            const link = buildFeedbackLink(k, k.clientType || 1);
+            try { await navigator.clipboard.writeText(link); } catch { prompt("Copia este link:", link); }
+            window.open(link, "_blank", "noopener,noreferrer");
+          }}
+        />
+      )}
+
 
     </div>
   );

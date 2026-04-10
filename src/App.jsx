@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect } from "react";
 import ConciergePanel from "./ConciergePanel";
 import TwoTravelCatalog from "./TwoTravelCatalog";
+import ItineraryPrintView from "./ItineraryPrintView";
+import { updateKickoffInSheet } from "./sheetServices";
 
 const translations = {
   en: {
@@ -99,6 +101,7 @@ const translations = {
     reviewTitle: "Loved your experience?",
     reviewSubtitle:
       "We’d really appreciate it if you shared it publicly.",
+    reviewButton: "Leave a review on Tripadvisor",
 
     readySubmit: "Ready to submit?",
     readySubmitSubtitle:
@@ -218,6 +221,7 @@ const translations = {
     reviewTitle: "¿Te encantó la experiencia?",
     reviewSubtitle:
       "Nos ayudaría muchísimo si la compartes públicamente.",
+    reviewButton: "Dejar una reseña en Tripadvisor",
 
     readySubmit: "¿Listo para enviar?",
     readySubmitSubtitle:
@@ -246,13 +250,8 @@ function FeedbackForm({ kickoffId }) {
   const tripName = params.get("tripName") || "";
   const langParam = params.get("lang");
 
-  const browserLang =
-    typeof navigator !== "undefined" && navigator.language.startsWith("es")
-      ? "es"
-      : "en";
-
   const initialLang =
-    langParam === "es" || langParam === "en" ? langParam : browserLang;
+    langParam === "es" || langParam === "en" ? langParam : "en";
 
   const [lang, setLang] = useState(initialLang);
   const t = translations[lang];
@@ -306,10 +305,13 @@ const handleSubmit = async (e) => {
   setSaving(true);
 
   try {
+    // NOTA: este payload va al GAS de feedback (SCRIPT_URL), NO al GAS de kickoffs.
+    // Solo incluye datos de la respuesta + referencia kickoffId para linkear.
+    // No incluir campos que podrían sobreescribir el kickoff si el GAS los procesa mal.
     const payload = {
-      kickoffId,
-      guestName,
-      tripName,
+      kickoffId: kickoffId || "",
+      guestName: guestName || "",
+      tripName: tripName || "",
       language: lang,
       ...form,
       submittedAt: new Date().toISOString(),
@@ -330,6 +332,13 @@ const handleSubmit = async (e) => {
     }
 
     setSubmitted(true);
+
+    // Mark kickoff as feedback submitted (fire-and-forget)
+    if (kickoffId) {
+      updateKickoffInSheet(kickoffId, { status: "feedback_submitted" }).catch(
+        (e) => console.warn("Could not update kickoff status:", e)
+      );
+    }
   } catch (err) {
     console.error(err);
     alert("Error guardando feedback");
@@ -797,27 +806,6 @@ const handleSubmit = async (e) => {
               </div>
             )}
           </section>
-          <Section eyebrow="07" title={t.loyaltyTitle}>
-  <div className="grid gap-6 md:grid-cols-2">
-    <div>
-      <Label>{t.bookAgainLabel}</Label>
-      <ChoiceCards
-        value={form.bookAgain}
-        onChange={(v) => updateField("bookAgain", v)}
-        options={t.options.yesNo}
-      />
-    </div>
-
-    <div>
-      <Label>{t.recommendLabel}</Label>
-      <ChoiceCards
-        value={form.recommend}
-        onChange={(v) => updateField("recommend", v)}
-        options={t.options.yesNo}
-      />
-    </div>
-  </div>
-</Section>
 
 <section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
   <p className="text-[10px] uppercase tracking-[0.28em] text-stone-400">
@@ -834,7 +822,7 @@ const handleSubmit = async (e) => {
     rel="noreferrer"
     className="mt-4 inline-block rounded-full bg-stone-800 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
   >
-    Leave a review on Tripadvisor
+    {t.reviewButton}
   </a>
 </section>
 
@@ -875,18 +863,55 @@ function FeedbackDashboard() {
   const [conciergeFilter, setConciergeFilter] = useState("all");
   const [languageFilter, setLanguageFilter] = useState("all");
 
+  const FEEDBACK_SHEET_ID = "1Tyv5cPTN0MjxezyWRjo-XuIRqOgaPwP-z1heZfgGiuQ";
+
   useEffect(() => {
     const load = async () => {
-      try {
-        const res = await fetch("https://opensheet.elk.sh/1Tyv5cPTN0MjxezyWRjo-XuIRqOgaPwP-z1heZfgGiuQ/feedback");
-        const data = await res.json();
-        setRows(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error(err);
-        setRows([]);
-      } finally {
-        setLoading(false);
+      // Try 1: opensheet.elk.sh (JSON, fast)
+      // Try 2: direct CSV export (more reliable, needs sheet to be public)
+      const sources = [
+        `https://opensheet.elk.sh/${FEEDBACK_SHEET_ID}/feedback`,
+        `https://opensheet.elk.sh/${FEEDBACK_SHEET_ID}/Feedback`,
+        `https://docs.google.com/spreadsheets/d/${FEEDBACK_SHEET_ID}/export?format=csv&sheet=feedback&t=${Date.now()}`,
+      ];
+
+      for (const src of sources) {
+        try {
+          const res = await fetch(src);
+          if (!res.ok) continue;
+
+          const contentType = res.headers.get("content-type") || "";
+          let data = [];
+
+          if (contentType.includes("json")) {
+            data = await res.json();
+            if (!Array.isArray(data)) data = [];
+          } else {
+            // CSV — parse manually
+            const text = await res.text();
+            if (!text || text.trim().startsWith("<!")) continue; // HTML error page
+            const lines = text.trim().split("\n");
+            if (lines.length < 2) continue;
+            const headers = lines[0].split(",").map((h) =>
+              h.trim().replace(/^"|"$/g, "").toLowerCase()
+            );
+            data = lines.slice(1).map((line) => {
+              const vals = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
+              const obj = {};
+              headers.forEach((h, i) => { obj[h] = vals[i] || ""; });
+              return obj;
+            });
+          }
+
+          if (data.length > 0) {
+            setRows(data);
+            break;
+          }
+        } catch (err) {
+          console.warn("Dashboard fetch attempt failed:", src, err.message);
+        }
       }
+      setLoading(false);
     };
 
     load();
@@ -1208,6 +1233,7 @@ function App() {
   if (mode === "dashboard") return <FeedbackDashboard />;
   if (mode === "concierge") return <ConciergePanel />;
   if (mode === "catalog" || mode === "questionnaire") return <TwoTravelCatalog />;
+  if (mode === "itinerary") return <ItineraryPrintView />;
 
   return <FeedbackForm kickoffId={params.get("kickoffId") || ""} />;
 }
