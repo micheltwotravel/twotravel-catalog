@@ -252,7 +252,7 @@ function buildDescription(svc, cartItem, lang) {
     }
     if (svc.quickbooksCode) {
       const p = parseNum(svc.priceCop || svc.priceTier1);
-      text += `\n\nRef: ${svc.quickbooksCode} / ${p || "TBD"}`;
+      text += `\n\n[${svc.quickbooksCode}][${p || ""}]`;
     }
     return cap(text.trim());
   }
@@ -306,10 +306,10 @@ function buildDescription(svc, cartItem, lang) {
   // 8. Cancellation / Terms
   if (svc.cancellation) blocks.push(`${lb.cancellation}\n${svc.cancellation}`);
 
-  // 9. Billing reference — at the END so it doesn't confuse Travefy's parser
+  // 9. Billing reference in bracket format — at the END so Travefy parser doesn't reject the field
   if (svc.quickbooksCode) {
     const p = parseNum(svc.priceCop || svc.priceTier1);
-    blocks.push(`Ref: ${svc.quickbooksCode} / ${p || "TBD"}`);
+    blocks.push(`[${svc.quickbooksCode}][${p || ""}]`);
   }
 
   return cap(blocks.join("\n\n").trim());
