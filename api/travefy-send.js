@@ -365,24 +365,31 @@ function buildTripIdea(svc, cartItem, lang) {
 function buildTripEvent(svc, cartItem, lang, sortOrder) {
   const baseName = clean(cartItem?.title || cartItem?.name || svc.name);
 
-  // QB code in the title → always visible in Travefy list, even when Description doesn't render
+  // QB code in Title → always visible in Travefy event list
   const codeTag  = svc.quickbooksCode ? ` [${svc.quickbooksCode}]` : "";
   const title    = `${baseName}${codeTag}`;
 
-  // Notes on the TripEvent itself → shows in Travefy Classic Editor "Notes" field
-  // This is the ONLY field that renders reliably in both the web share and PDF export
-  const notes = buildDescription(svc, cartItem, lang);
+  // Description on TripEvent → populates the "Notes" rich-text field in Travefy Classic Editor
+  // TripIdeas → always show as "Attachments" (not Notes), so we keep them only for the image
+  const desc = buildDescription(svc, cartItem, lang);
+
+  // Image-only TripIdea (so Travefy shows the photo card in the share view)
+  const ideaWithImage = {
+    Title:    baseName,
+    Name:     baseName,
+    ImageUrl: svc.image || undefined,
+    // Description intentionally empty here — real content is in TripEvent.Description above
+  };
 
   return {
     SortOrder:   sortOrder,
     Title:       title,
-    Notes:       notes,
-    // ⚠ Location intentionally omitted here.
-    // If set on TripEvent, Travefy uses it as the list label and hides the Title.
-    // Location belongs on TripIdea only.
+    Description: desc,   // → Travefy Classic Editor "Notes" field
+    Notes:       desc,   // fallback in case API uses this key instead
+    // ⚠ Location intentionally omitted — causes Travefy to overwrite Title in list
     StartTime:   clean(cartItem?.time || cartItem?.startTime || svc.schedule) || undefined,
     EventTypeId: eventTypeId(svc.category),
-    TripIdeas:   [buildTripIdea(svc, cartItem, lang)],
+    TripIdeas:   svc.image ? [ideaWithImage] : [],
   };
 }
 
@@ -452,14 +459,10 @@ function buildWelcomeDay(meta, lang) {
     TripEvents: [{
       SortOrder:   1,
       Title:       eventTitle || `${meta.guestName || "Your Trip"} - Two Travel Concierge`,
+      Description: desc,
       Notes:       desc,
       EventTypeId: 0,
-      TripIdeas: [{
-        Title:       eventTitle || "Two Travel - Concierge Itinerary",
-        Name:        eventTitle || "Two Travel - Concierge Itinerary",
-        Description: desc,
-        Notes:       desc,
-      }],
+      TripIdeas:   [],
     }],
   };
 }
@@ -495,13 +498,10 @@ function buildSummaryDay(matched, lang) {
     TripEvents: [{
       SortOrder:   1,
       Title:       lang === "es" ? "Resumen Completo del Itinerario" : "Full Itinerary Overview",
+      Description: cap(desc),
       Notes:       cap(desc),
       EventTypeId: 0,
-      TripIdeas: [{
-        Title:       lang === "es" ? "Resumen del Viaje" : "Trip Summary",
-        Description: cap(desc),
-        Notes:       cap(desc),
-      }],
+      TripIdeas:   [],
     }],
   };
 }
@@ -556,14 +556,10 @@ Nota:
       Title:       lang === "es"
         ? `Bienvenido a ${city} — Two Travel`
         : `Welcome to ${city} — Two Travel`,
+      Description: cap(desc),
       Notes:       cap(desc),
       EventTypeId: 0,
-      TripIdeas: [{
-        Title:       lang === "es" ? "Informacion y Documentos" : "Information & Documents",
-        Name:        lang === "es" ? "Informacion y Documentos" : "Information & Documents",
-        Description: cap(desc),
-        Notes:       cap(desc),
-      }],
+      TripIdeas:   [],
     }],
   };
 }
@@ -587,14 +583,11 @@ function buildAccountingDay(matched, meta) {
     const clientDesc = clientLines.join("\n");
     events.push({
       SortOrder:   sort++,
-      Title:       clientLines.join("  "),   // all client codes in the title
+      Title:       clientLines.join("  "),
+      Description: clientDesc,
+      Notes:       clientDesc,
       EventTypeId: 0,
-      TripIdeas: [{
-        Title:       "Client Information",
-        Name:        "Client Information",
-        Description: clientDesc,
-        Notes:       clientDesc,
-      }],
+      TripIdeas:   [],
     });
   }
 
@@ -602,20 +595,16 @@ function buildAccountingDay(matched, meta) {
   const withCodes = matched.filter(({ service }) => service.quickbooksCode);
   for (const { service } of withCodes) {
     const price = parseNum(service.priceCop || service.priceTier1);
-    // Title format the client sees in Travefy list: "[TO037][500000] Service Name"
     const eventTitle = `[${service.quickbooksCode}][${price}] ${service.name}`;
     const ideaDesc   = `[${service.quickbooksCode}][${price}][${service.category}:${service.name}]`;
 
     events.push({
       SortOrder:   sort++,
       Title:       eventTitle,
+      Description: ideaDesc,
+      Notes:       ideaDesc,
       EventTypeId: 0,
-      TripIdeas: [{
-        Title:       eventTitle,
-        Name:        eventTitle,
-        Description: ideaDesc,
-        Notes:       ideaDesc,
-      }],
+      TripIdeas:   [],
     });
   }
 
@@ -624,13 +613,10 @@ function buildAccountingDay(matched, meta) {
     events.push({
       SortOrder:   sort++,
       Title:       "Internal Notes",
+      Description: meta.internalNotes,
+      Notes:       meta.internalNotes,
       EventTypeId: 0,
-      TripIdeas: [{
-        Title:       "Internal Notes",
-        Name:        "Internal Notes",
-        Description: meta.internalNotes,
-        Notes:       meta.internalNotes,
-      }],
+      TripIdeas:   [],
     });
   }
 
