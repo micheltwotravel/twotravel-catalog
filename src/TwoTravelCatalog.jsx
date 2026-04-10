@@ -1870,7 +1870,11 @@ export default function TwoTravelCatalog() {
   const [step, setStep] = useState("quiz"); // "quiz" | "catalog"
   const [fadeIn, setFadeIn] = useState(false);
 
-  const [lang, setLang] = useState("en");
+  const [lang, setLang] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    const l = p.get("lang");
+    return l === "en" || l === "es" ? l : "en";
+  });
   const [currency, setCurrency] = useState("COP");
 
   const t = i18n[lang];
@@ -1884,13 +1888,32 @@ export default function TwoTravelCatalog() {
 const normalizeCategory = (raw) => {
   const v = (raw || "").toString().trim().toLowerCase();
 
-  if (v.includes("rest")) return "restaurants";
-  if (v.includes("bar")) return "bars";
-  if (v.includes("beach")) return "beach-clubs";
-  if (v.includes("tour")) return "tours";
-  if (v.includes("night")) return "nightlife";
-  if (v.includes("serv")) return "services";
-  if (v.includes("transport") || v.includes("transfer") || v.includes("traslado")) return "transportation";
+  // Exact matches first (fastest path, catches most Sheet values)
+  const EXACT = {
+    restaurant: "restaurants", restaurants: "restaurants",
+    restaurante: "restaurants", restaurantes: "restaurants",
+    food: "restaurants", comida: "restaurants",
+    bar: "bars", bars: "bars",
+    "beach club": "beach-clubs", "beach clubs": "beach-clubs",
+    "beach-club": "beach-clubs", "beach-clubs": "beach-clubs",
+    playa: "beach-clubs",
+    tour: "tours", tours: "tours", actividad: "tours", activity: "tours",
+    nightlife: "nightlife", noche: "nightlife", discoteca: "nightlife",
+    transport: "transportation", transportation: "transportation",
+    transporte: "transportation", transfer: "transportation",
+    traslado: "transportation",
+    services: "services", servicio: "services", servicios: "services",
+  };
+  if (EXACT[v]) return EXACT[v];
+
+  // Substring fallback — FOOD first so "restaurante de mariscos" never mis-fires as transport
+  if (/restauran|comida|food|dining/.test(v))             return "restaurants";
+  if (/\bbar\b/.test(v))                                  return "bars";
+  if (/beach|playa/.test(v))                              return "beach-clubs";
+  if (/\btour\b|activid|activit/.test(v))                 return "tours";
+  if (/night|noche|discoteca|nightlife/.test(v))          return "nightlife";
+  if (/transport|transfer|traslado|van\b|suv\b/.test(v))  return "transportation";
+  if (/serv/.test(v))                                     return "services";
 
   return "services";
 };
@@ -1995,15 +2018,7 @@ useEffect(() => {
   fetchServicesFromSheet()
   .then((rows) => {
     const normalized = (rows || []).map((s, idx) => {
-      const extraImages = [
-  s["5"],
-  s["6"],
-  s["7"],
-  s["8"],
-  s["9"],
-]
-  .filter(Boolean)
-  .map((img) => img.trim());
+      // s is already processed by mapRowToService — s.images exists, s["5"] does not
       const rawPriceLevel =
         s.priceLevel ?? s.price_level ?? s.nivel_precio;
 
@@ -2035,7 +2050,7 @@ useEffect(() => {
           .toLowerCase(),
 
         priceUnit: normalizePriceUnit(rawUnit),
-        images: extraImages,
+        images: s.images || [],    // already processed by mapRowToService
         price_cop: priceCop,
         priceLevel: levelFromSheet ?? null,
 
@@ -2548,7 +2563,6 @@ const cleanGuestName = String(guestName || "").trim();
 const cleanTripName = String(tripName || "").trim();
 const guestContactInputValue = document.getElementById("guestContactInput")?.value || "";
 const cleanGuestContact = String(guestContactInputValue || guestContact || "").trim();
-alert("CONTACTO INPUT: " + cleanGuestContact);
 
 const originalGuestContact = String(
   currentKickoff?.guestContact ||
@@ -2568,36 +2582,14 @@ const finalGuestContact = String(
 
 const payload = {
   id: idToUse,
-  cart,
-  conciergeSummary,
-  travifyText,
-  currency,
-  lang,
-  totalCOP: cartTotalCOP,
-  totalConverted: cartTotalConverted,
-  createdAt: new Date().toISOString(),
-
   guestName: cleanGuestName,
   tripName: cleanTripName,
-
-  viaje: cleanTripName,
-  Viaje: cleanTripName,
-  TripName: cleanTripName,
-
-  huesped: cleanGuestName,
-  Huesped: cleanGuestName,
-  GuestName: cleanGuestName,
-
   guestContact: finalGuestContact,
-  GuestContact: finalGuestContact,
-  guest_contact: finalGuestContact,
-  contact: finalGuestContact,
-  Contact: finalGuestContact,
-  contacto: finalGuestContact,
-  Contacto: finalGuestContact,
-
+  cart,
+  conciergeSummary,
+  lang,
+  currency,
   status: "client_submitted",
-  internalNotes: "",
 };
 
 
@@ -2994,8 +2986,8 @@ setCart([]);
           </div>
         )}
       </div>
-            {/* ✅ Recomendados (según quiz) */}
-      {recommendedServices.length > 0 && (
+            {/* ✅ Recomendados (según quiz) — solo cuando no hay filtro activo */}
+      {recommendedServices.length > 0 && selectedCategory === "all" && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
           <div className="bg-white border rounded-2xl p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
@@ -3088,6 +3080,11 @@ setCart([]);
         <div className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded-full text-xs font-semibold">
           {i18n[lang][serviceCategory] || serviceCategory}
         </div>
+        {s.family_friendly && (
+          <div className="absolute top-2 left-2 bg-emerald-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+            👨‍👩‍👧 {lang === "es" ? "Familiar" : "Family"}
+          </div>
+        )}
       </div>
 
       <div className="p-4">
@@ -3172,7 +3169,7 @@ setCart([]);
                       onClick={() =>
                         setImgIndex((i) => (i === 0 ? gallery.length - 1 : i - 1))
                       }
-                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-white rounded-full w-10 h-10 shadow"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 shadow flex items-center justify-center text-2xl font-bold leading-none"
                     >
                       ‹
                     </button>
@@ -3181,7 +3178,7 @@ setCart([]);
                       onClick={() =>
                         setImgIndex((i) => (i === gallery.length - 1 ? 0 : i + 1))
                       }
-                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-white rounded-full w-10 h-10 shadow"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 shadow flex items-center justify-center text-2xl font-bold leading-none"
                     >
                       ›
                     </button>
@@ -3197,10 +3194,43 @@ setCart([]);
               </button>
             </div>
 
+            {selectedService.video1 && (() => {
+              const vUrl = selectedService.video1;
+              // If it's a Drive download URL, swap to /preview for iframe embedding
+              const driveMatch = vUrl.match(/\/uc\?export=download&id=([^&]+)/) || vUrl.match(/\/file\/d\/([^/]+)/);
+              const isSrc = !vUrl.includes("drive.google.com") && (vUrl.endsWith(".mp4") || vUrl.endsWith(".webm") || vUrl.endsWith(".mov"));
+              return (
+                <div className="px-4 pt-3">
+                  {driveMatch ? (
+                    <iframe
+                      src={`https://drive.google.com/file/d/${driveMatch[1]}/preview`}
+                      className="w-full rounded-xl"
+                      style={{ height: 200 }}
+                      allow="autoplay"
+                      title="video"
+                    />
+                  ) : isSrc ? (
+                    <video src={vUrl} controls className="w-full rounded-xl max-h-48 object-cover" />
+                  ) : (
+                    <a href={vUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-blue-600 underline">
+                      Ver video ↗
+                    </a>
+                  )}
+                </div>
+              );
+            })()}
+
             <div className="p-6">
-              <h2 className="text-2xl font-bold mb-2">
-                {selectedService.name}
-              </h2>
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <h2 className="text-2xl font-bold">
+                  {selectedService.name}
+                </h2>
+                {selectedService.family_friendly && (
+                  <span className="shrink-0 inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 border border-emerald-300 px-2.5 py-1 rounded-full text-xs font-semibold">
+                    👨‍👩‍👧 {lang === "es" ? "Apto para familias" : "Family Friendly"}
+                  </span>
+                )}
+              </div>
               <p className="text-gray-600 mb-4">
   {selectedService.description?.[lang] ||
     selectedService.description?.es ||
