@@ -366,25 +366,60 @@ function buildTripEvent(svc, cartItem, lang, sortOrder) {
 
 function buildWelcomeDay(meta, lang) {
   const lines = [];
-  lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  lines.push("  TWO TRAVEL — Concierge Service");
-  lines.push("  https://two.travel/");
-  lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+  // ── Concierge header (mirrors Travefy PDF top-left block) ──
+  if (meta.conciergeName)  lines.push(meta.conciergeName);
+  if (meta.conciergeEmail) lines.push(meta.conciergeEmail);
+  if (meta.conciergeTitle) lines.push(meta.conciergeTitle);
+  lines.push("https://two.travel/");
+  lines.push("Two Travel");
   lines.push("");
-  if (meta.guestName)      lines.push(`Guest:        ${meta.guestName}`);
-  if (meta.guestContact)   lines.push(`Contact:      ${meta.guestContact}`);
+
+  // ── Trip title bar ──
+  const tripLabel = [meta.guestName, meta.city, meta.tripDates]
+    .filter(Boolean).join(" ");
+  if (tripLabel) lines.push(tripLabel);
+  if (meta.tripName && meta.tripName !== tripLabel) lines.push(meta.tripName);
   lines.push("");
-  if (meta.conciergeName)  lines.push(`Concierge:    ${meta.conciergeName}`);
-  if (meta.conciergeEmail) lines.push(`Email:        ${meta.conciergeEmail}`);
-  if (meta.conciergeName || meta.conciergeEmail) lines.push("");
+
+  // ── Dates ──
+  if (meta.tripDates) lines.push(meta.tripDates);
+  lines.push("");
+
+  // ── Accommodation block ──
+  if (meta.accommodationName) {
+    lines.push(meta.accommodationName);
+    if (meta.accommodationAddr) lines.push(meta.accommodationAddr);
+    lines.push("___");
+    if (meta.groupSize) lines.push(meta.groupSize);
+    lines.push("__");
+    if (meta.checkIn)  lines.push(`Check-in: ${meta.checkIn}`);
+    if (meta.checkOut) lines.push(`Check out: ${meta.checkOut}`);
+    lines.push("__");
+    lines.push("");
+  }
+
+  // ── Guest / contact ──
+  if (meta.guestContact) lines.push(`Contact: ${meta.guestContact}`);
+  lines.push("");
+
+  // ── Concierge summary ──
   if (meta.conciergeSummary) { lines.push(meta.conciergeSummary); lines.push(""); }
+
+  // ── Footer ──
+  lines.push("___");
   lines.push(
-    "All reservations are under Two Travel – " +
+    "All reservations are under Two Travel - " +
     (meta.guestName || "Guest") +
     ". Once a reservation has been confirmed, a cancellation fee may apply to certain experiences."
   );
 
-  const desc = lines.join("\n");
+  const desc = cap(lines.join("\n").trim());
+  const eventTitle = [
+    meta.guestName,
+    meta.city,
+    meta.tripDates,
+  ].filter(Boolean).join(" ");
 
   return {
     SortOrder:      0,
@@ -392,10 +427,11 @@ function buildWelcomeDay(meta, lang) {
     IsSupplemental: true,
     TripEvents: [{
       SortOrder:   1,
-      Title:       `${meta.guestName || "Your Trip"} · Two Travel Concierge`,
+      Title:       eventTitle || `${meta.guestName || "Your Trip"} - Two Travel Concierge`,
       EventTypeId: 0,
       TripIdeas: [{
-        Title:       "Two Travel — Concierge Itinerary",
+        Title:       eventTitle || "Two Travel - Concierge Itinerary",
+        Name:        eventTitle || "Two Travel - Concierge Itinerary",
         Description: desc,
         Notes:       desc,
       }],
@@ -657,18 +693,25 @@ export default async function handler(req, res) {
 
   try {
     const {
-      guestName        = "",
-      tripName         = "",
-      guestContact     = "",
-      lang             = "en",
-      cart             = [],
-      conciergeSummary = "",
-      internalNotes    = "",
-      conciergeName    = "",
-      conciergeEmail   = "",
-      city             = "",
-      startDate        = "",
-      endDate          = "",
+      guestName         = "",
+      tripName          = "",
+      guestContact      = "",
+      lang              = "en",
+      cart              = [],
+      conciergeSummary  = "",
+      internalNotes     = "",
+      conciergeName     = "",
+      conciergeEmail    = "",
+      conciergeTitle    = "",
+      city              = "",
+      tripDates         = "",
+      groupSize         = "",
+      accommodationName = "",
+      accommodationAddr = "",
+      checkIn           = "",
+      checkOut          = "",
+      startDate         = "",
+      endDate           = "",
     } = req.body || {};
 
     const publicKey   = process.env.TRAVEFY_PUBLIC_KEY;
@@ -691,7 +734,9 @@ export default async function handler(req, res) {
     const meta = {
       guestName, guestContact, conciergeSummary,
       internalNotes, conciergeName, conciergeEmail,
-      city, tripName, startDate, endDate,
+      conciergeTitle, city, tripName, tripDates,
+      groupSize, accommodationName, accommodationAddr,
+      checkIn, checkOut, startDate, endDate,
     };
 
     // ── 3. Build full Travefy structure ──────────────────────────

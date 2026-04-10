@@ -1053,6 +1053,16 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [travefyResult, setTravefyResult] = useState(null);
   const [travefySending, setTravefySending] = useState(false);
 
+  // Cover / trip-level fields for Travefy document
+  const [tripDates,          setTripDates]          = useState(kickoff?.tripDates          || "");
+  const [city,               setCity]               = useState(kickoff?.city               || "");
+  const [groupSize,          setGroupSize]          = useState(kickoff?.groupSize          || "");
+  const [conciergeTitle,     setConciergeTitle]     = useState(kickoff?.conciergeTitle     || "");
+  const [accommodationName,  setAccommodationName]  = useState(kickoff?.accommodationName  || "");
+  const [accommodationAddr,  setAccommodationAddr]  = useState(kickoff?.accommodationAddr  || "");
+  const [checkIn,            setCheckIn]            = useState(kickoff?.checkIn            || "");
+  const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "");
+
   if (!kickoff) return null;
 
   const handleSave = async () => {
@@ -1071,6 +1081,15 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     assignedConcierge: assignedConcierge.trim(),
     assignedConciergeName: assignedConcierge.trim(),
     assignedConciergeEmail: assignedConciergeEmail.trim(),
+    // Cover fields
+    tripDates:         tripDates.trim(),
+    city:              city.trim(),
+    groupSize:         groupSize.trim(),
+    conciergeTitle:    conciergeTitle.trim(),
+    accommodationName: accommodationName.trim(),
+    accommodationAddr: accommodationAddr.trim(),
+    checkIn:           checkIn.trim(),
+    checkOut:          checkOut.trim(),
   };
 
   const c = guestContact.trim();
@@ -1179,6 +1198,62 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               placeholder="Notas internas"
             />
           </div>
+
+          {/* ── Travefy Cover Info ─────────────────────────────── */}
+          <div className="border rounded-2xl p-4 bg-neutral-50 space-y-3">
+            <p className="text-xs font-semibold text-neutral-700">Portada del documento (Travefy)</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] text-neutral-500">Fechas del viaje</label>
+                <input value={tripDates} onChange={(e) => setTripDates(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="May 22-28, 2026" />
+              </div>
+              <div>
+                <label className="text-[11px] text-neutral-500">Ciudad / Destino</label>
+                <input value={city} onChange={(e) => setCity(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="Medellín" />
+              </div>
+              <div>
+                <label className="text-[11px] text-neutral-500">Personas en el grupo</label>
+                <input value={groupSize} onChange={(e) => setGroupSize(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="5 people" />
+              </div>
+              <div>
+                <label className="text-[11px] text-neutral-500">Título del concierge</label>
+                <input value={conciergeTitle} onChange={(e) => setConciergeTitle(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="Senior Concierge Medellín" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-[11px] text-neutral-500">Nombre del alojamiento</label>
+                <input value={accommodationName} onChange={(e) => setAccommodationName(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="Edificio Los Eucaliptos" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-[11px] text-neutral-500">Dirección del alojamiento</label>
+                <input value={accommodationAddr} onChange={(e) => setAccommodationAddr(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="Calle 10 # 29-34, Medellín, Antioquia" />
+              </div>
+              <div>
+                <label className="text-[11px] text-neutral-500">Check-in</label>
+                <input value={checkIn} onChange={(e) => setCheckIn(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="3:00 PM" />
+              </div>
+              <div>
+                <label className="text-[11px] text-neutral-500">Check-out</label>
+                <input value={checkOut} onChange={(e) => setCheckOut(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="11:00 AM" />
+              </div>
+            </div>
+          </div>
+
           {/* ITINERARIO */}
 <div className="border rounded-2xl p-4 bg-white">
   <div className="text-sm font-semibold text-neutral-900">Itinerario</div>
@@ -1306,16 +1381,25 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          kickoffId: kickoff.id,
+          kickoffId:         kickoff.id,
           guestName,
           tripName,
           guestContact,
-          lang: kickoff.lang || "en",
-          cart: kickoff.cart || [],
+          lang:              kickoff.lang || "en",
+          cart:              kickoff.cart || [],
           conciergeSummary,
           internalNotes,
-          conciergeName: assignedConcierge,
-          conciergeEmail: assignedConciergeEmail,
+          conciergeName:     assignedConcierge,
+          conciergeEmail:    assignedConciergeEmail,
+          // Cover / trip-level fields
+          tripDates,
+          city,
+          groupSize,
+          conciergeTitle,
+          accommodationName,
+          accommodationAddr,
+          checkIn,
+          checkOut,
         }),
       });
 
