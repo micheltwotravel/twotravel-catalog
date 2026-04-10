@@ -2042,13 +2042,7 @@ useEffect(() => {
         id: String(s.id ?? "").trim() || `row-${idx}`,
         name: String(s.name ?? s.Nombre ?? s.title ?? "").trim(),
         image: safeImg(s.image ?? s.img),
-        category: (() => {
-          const raw = s.category || s.Category || s.categoria || "";
-          const normalized = normalizeCategory(raw);
-          // 🔍 Debug log — remove after verifying categories are correct
-          console.log(`[CATALOG] "${s.name}" | raw="${raw}" → "${normalized}"`);
-          return normalized;
-        })(),
+        category: normalizeCategory(s.category || s.Category || s.categoria),
         subcategory: String(
           s.subcategory ?? s.sub_category ?? s.estilo ?? ""
         )
