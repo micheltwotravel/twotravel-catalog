@@ -345,8 +345,8 @@ function buildTripIdea(svc, cartItem, lang) {
 function buildTripEvent(svc, cartItem, lang, sortOrder) {
   const baseName = clean(cartItem?.title || cartItem?.name || svc.name);
 
-  // Append QB code inline to title  →  "Dinner at Mamba Negra [TO037]"
-  // This surfaces the billing reference in Travefy's event list view
+  // QB code in the title → always visible in Travefy list, even when Description doesn't render
+  // Format: "Dinner at Mamba Negra - CCMR [TO037]"
   const codeTag  = svc.quickbooksCode ? ` [${svc.quickbooksCode}]` : "";
   const title    = `${baseName}${codeTag}`;
 
@@ -542,50 +542,79 @@ Nota:
 }
 
 /* ── Supplemental day: ACCOUNTING REFERENCE ────────────────────── */
+// Each QB code gets its own TripEvent so the code is visible in Travefy's
+// list view (TripEvent.Title always renders, even when Description doesn't).
 
 function buildAccountingDay(matched, meta) {
-  const lines = [];
-  lines.push("TWO TRAVEL — ACCOUNTING REFERENCE");
-  lines.push("");
-  lines.push("Client Information");
-  if (meta.guestName)    lines.push(`[1A][${meta.guestName}]`);
-  if (meta.guestContact) lines.push(`[2A][${meta.guestContact}]`);
-  if (meta.startDate)    lines.push(`[3A][${meta.startDate}]`);
-  if (meta.endDate)      lines.push(`[4A][${meta.endDate}]`);
-  lines.push("");
+  const events = [];
+  let sort = 1;
 
+  // ── Client info events (visible in list as [1A][Name] etc.) ──
+  const clientLines = [];
+  if (meta.guestName)    clientLines.push(`[1A][${meta.guestName}]`);
+  if (meta.guestContact) clientLines.push(`[2A][${meta.guestContact}]`);
+  if (meta.startDate)    clientLines.push(`[3A][${meta.startDate}]`);
+  if (meta.endDate)      clientLines.push(`[4A][${meta.endDate}]`);
+
+  if (clientLines.length) {
+    const clientDesc = clientLines.join("\n");
+    events.push({
+      SortOrder:   sort++,
+      Title:       clientLines.join("  "),   // all client codes in the title
+      EventTypeId: 0,
+      TripIdeas: [{
+        Title:       "Client Information",
+        Name:        "Client Information",
+        Description: clientDesc,
+        Notes:       clientDesc,
+      }],
+    });
+  }
+
+  // ── One TripEvent per service with QB code in the Title ──
   const withCodes = matched.filter(({ service }) => service.quickbooksCode);
-  if (withCodes.length) {
-    lines.push("Services");
-    for (const { service } of withCodes) {
-      const price = parseNum(service.priceCop || service.priceTier1);
-      // Format: [QB_CODE][PRICE][Category:Service Name]
-      lines.push(`[${service.quickbooksCode}][${price}][${service.category}:${service.name}]`);
-    }
+  for (const { service } of withCodes) {
+    const price = parseNum(service.priceCop || service.priceTier1);
+    // Title format the client sees in Travefy list: "[TO037][500000] Service Name"
+    const eventTitle = `[${service.quickbooksCode}][${price}] ${service.name}`;
+    const ideaDesc   = `[${service.quickbooksCode}][${price}][${service.category}:${service.name}]`;
+
+    events.push({
+      SortOrder:   sort++,
+      Title:       eventTitle,
+      EventTypeId: 0,
+      TripIdeas: [{
+        Title:       eventTitle,
+        Name:        eventTitle,
+        Description: ideaDesc,
+        Notes:       ideaDesc,
+      }],
+    });
   }
 
+  // ── Internal notes as final event if present ──
   if (meta.internalNotes) {
-    lines.push("");
-    lines.push("Internal Notes:");
-    lines.push(meta.internalNotes);
+    events.push({
+      SortOrder:   sort++,
+      Title:       "Internal Notes",
+      EventTypeId: 0,
+      TripIdeas: [{
+        Title:       "Internal Notes",
+        Name:        "Internal Notes",
+        Description: meta.internalNotes,
+        Notes:       meta.internalNotes,
+      }],
+    });
   }
 
-  const desc = lines.join("\n").trim();
+  // Fallback: if no services have codes, at least show client info
+  if (events.length === 0) return null;
 
   return {
     SortOrder:      9999,
     Title:          "Accounting Reference",
     IsSupplemental: true,
-    TripEvents: [{
-      SortOrder:   1,
-      Title:       "QuickBooks / Billing Codes",
-      EventTypeId: 0,
-      TripIdeas: [{
-        Title:       "Accounting Reference — Two Travel",
-        Description: desc,
-        Notes:       desc,
-      }],
-    }],
+    TripEvents:     events,
   };
 }
 
