@@ -2071,8 +2071,8 @@ useEffect(() => {
         location: String(s.location ?? ""),
         schedule: String(s.schedule ?? ""),
 
-        menuUrl: String(s.menuUrl ?? s.menu_url ?? ""),
-        mapsUrl: String(s.mapsUrl ?? s.maps_url ?? ""),
+        menuUrl: String(s.menuUrl ?? s.menuurl ?? s.menu_url ?? s["menu url"] ?? ""),
+        mapsUrl: String(s.mapsUrl ?? s.mapsurl ?? s.maps_url ?? s["maps url"] ?? ""),
       };
     });
 

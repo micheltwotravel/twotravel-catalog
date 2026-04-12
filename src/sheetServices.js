@@ -147,8 +147,8 @@ video1: video1,
 
     deposit: row.deposit || "",
     cancellation: row.cancellation || "",
-    menuUrl: row.menuUrl || "",
-    mapsUrl: row.mapsUrl || "",
+    menuUrl: row.menuurl || row.menu_url || row["menu url"] || row.menuUrl || "",
+    mapsUrl: row.mapsurl || row.maps_url || row["maps url"] || row.mapsUrl || "",
     clientType: row.clientType || "",
     family_friendly:
       ["true", "1", "yes", "si", "sí"].includes(
