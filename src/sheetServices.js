@@ -110,12 +110,11 @@ video1: video1,
     price_tier_2: parseNum(row.price_tier_2),
 
     priceUnit: row.priceUnit || "per person",
-    // Primary image: "image_source" is canonical (underscore); also try "image source" (space)
-    // Fall back to generic "image" column and common aliases.
-    image: normalizeDriveImage(
-      row["image_source"] || row["image source"] || row["imagesource"] ||
-      row.image || row.img || ""
-    ) || "",
+    // Each source is normalized independently so a folder URL in image_source
+    // doesn't block the fallback to row.image (which restaurants use).
+    image: normalizeDriveImage(row["image_source"] || row["image source"] || "") ||
+           normalizeDriveImage(row.image || row.img || "") ||
+           "",
 
     description: {
       es: row.description_es || "",
