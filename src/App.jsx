@@ -45,7 +45,7 @@ const translations = {
 
     optional: "Optional",
     moreFeedbackTitle:
-      "If you have a bit more time, we’d love to hear more.",
+      "If you have a bit more time, we'd love to hear more.",
     moreFeedbackToggleShow: "Click here to share a little more.",
     moreFeedbackToggleHide: "Click here to hide a little more.",
 
@@ -100,7 +100,7 @@ const translations = {
 
     reviewTitle: "Loved your experience?",
     reviewSubtitle:
-      "We’d really appreciate it if you shared it publicly.",
+      "We'd really appreciate it if you shared it publicly.",
     reviewButton: "Leave a review on Tripadvisor",
 
     readySubmit: "Ready to submit?",

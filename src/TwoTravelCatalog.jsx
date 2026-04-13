@@ -126,9 +126,9 @@ variablePrice: "Variable pricing",
     approxPrice: "Approx. price",
     perPerson: "per person",
     dayPass: "day pass",
-    quizTitle: "Let’s design your Cartagena experience",
-quizSubtitle: "In 30 seconds we’ll understand your style and show concierge-curated recommendations.",
-quizNote: "We don’t sell your data. This is only used to personalize your catalog.",
+    quizTitle: "Let's design your Cartagena experience",
+quizSubtitle: "In 30 seconds we'll understand your style and show concierge-curated recommendations.",
+quizNote: "We don't sell your data. This is only used to personalize your catalog.",
 quizVibeLabel: "Trip vibe",
 quizBudgetLabel: "Budget level",
 quizKidsLabel: "Traveling with kids?",
@@ -149,7 +149,7 @@ quizEditAnswers: "Edit answers",
     close: "Close",
     add: "Add to favorites",
     yourSelection: "Your Selection",
-    emptyCart: "You don’t have favorites yet",
+    emptyCart: "You don't have favorites yet",
     notes: "Notes",
         continue: "Go to summary →",
     kickoffTitle: "Your Selection Summary",
@@ -160,7 +160,7 @@ quizEditAnswers: "Edit answers",
     sendKickoff: "Send to concierge",
     conciergePanelTitle: "Concierge Summary",
     conciergePanelHelp:
-      "This is the summary of the guest’s favorites. You can copy and paste it into Travify or your internal flow.",
+      "This is the summary of the guest's favorites. You can copy and paste it into Travify or your internal flow.",
     travifyNote:
       "Clicking the button will copy the summary and open an email draft for Travify.",
     kickoffNextStepsTitle: "What happens next?",
@@ -168,7 +168,7 @@ quizEditAnswers: "Edit answers",
       "Our concierge will review your selection, check availability, and contact you via email or WhatsApp with timing options and bookings.",
     kickoffSentTitle: "Summary sent!",
     kickoffSentBody:
-      "Your selection has been sent to our concierge team. We’ll reach out in the next few hours to refine details and proceed with bookings.",
+      "Your selection has been sent to our concierge team. We'll reach out in the next few hours to refine details and proceed with bookings.",
 
   },
 };
@@ -1018,7 +1018,7 @@ const servicesData = [
   image: "https://images.unsplash.com/photo-1581505792161-dfcd4b6b5b39?w=1280&q=80",
   description: {
     es: "Bar tipo lounge en el Centro Histórico. Coctelería creativa, DJs y diseño artístico moderno. Ideal para pre-party o noche relajada.",
-    en: "Lounge-style bar in Cartagena’s Old City. Creative cocktails, DJs, and artistic modern design. Ideal for pre-party or a chill night out."
+    en: "Lounge-style bar in Cartagena's Old City. Creative cocktails, DJs, and artistic modern design. Ideal for pre-party or a chill night out."
   },
   capacity: { min: 2, max: 60 },
   schedule: "Thu–Sun 6 pm–2 am",
@@ -1875,7 +1875,18 @@ export default function TwoTravelCatalog() {
     const l = p.get("lang");
     return l === "en" || l === "es" ? l : "en";
   });
-  const [currency, setCurrency] = useState("COP");
+  // Currency defaults to USD when language is English, COP when Spanish
+  const [currency, setCurrency] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    const l = p.get("lang");
+    return (l === "es") ? "COP" : "USD";
+  });
+
+  // Auto-switch currency when language changes (unless user manually set it)
+  const [currencyManuallySet, setCurrencyManuallySet] = useState(false);
+  useEffect(() => {
+    if (!currencyManuallySet) setCurrency(lang === "es" ? "COP" : "USD");
+  }, [lang]);
 
   const t = i18n[lang];
     // 🔹 Estado que se alimenta del Sheet
@@ -2223,7 +2234,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
 
   
 
-  /* ---------- favoritos / “carrito” ---------- */
+  /* ---------- favoritos / "carrito" ---------- */
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
   const [heartBump, setHeartBump] = useState(false); // 💗 animación icono
@@ -2695,13 +2706,13 @@ setCart([]);
   <h1 className="text-3xl sm:text-4xl font-semibold text-neutral-900 leading-tight">
     {lang === "es"
       ? "Diseñemos tu experiencia en Cartagena"
-      : "Let’s design your Cartagena experience"}
+      : "Let's design your Cartagena experience"}
   </h1>
 
   <p className="text-sm sm:text-base text-neutral-600 max-w-2xl">
     {lang === "es"
       ? "En 30 segundos entendemos tu estilo y te mostramos recomendaciones curadas por nuestro concierge."
-      : "In 30 seconds we’ll understand your style and show concierge-curated recommendations."}
+      : "In 30 seconds we'll understand your style and show concierge-curated recommendations."}
   </p>
 
   <div className="text-xs text-neutral-500 flex items-center gap-2">
@@ -2709,7 +2720,7 @@ setCart([]);
     <span>
       {lang === "es"
         ? "No vendemos tus datos. Esto solo se usa para personalizar tu catálogo."
-        : "We don’t sell your data. This is only used to personalize your catalog."}
+        : "We don't sell your data. This is only used to personalize your catalog."}
     </span>
   </div>
 </div>
@@ -2864,7 +2875,7 @@ setCart([]);
               <select
                 className="border rounded px-2 py-1"
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
+                onChange={(e) => { setCurrency(e.target.value); setCurrencyManuallySet(true); }}
               >
                 <option value="COP">{t.cop}</option>
                 <option value="USD">{t.usd}</option>
@@ -3270,7 +3281,10 @@ setCart([]);
                 <div>
                   <h3 className="font-semibold mb-2">{t.highlights}</h3>
                   <ul className="space-y-1 text-sm text-gray-600">
-  {(selectedService.highlights || []).map((h, i) => (
+  {(lang === "en" && (selectedService.highlights_en || []).length > 0
+    ? selectedService.highlights_en
+    : selectedService.highlights || []
+  ).map((h, i) => (
     <li key={i}>✓ {h}</li>
   ))}
 </ul>

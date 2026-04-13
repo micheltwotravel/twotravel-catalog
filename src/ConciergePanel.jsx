@@ -237,63 +237,63 @@ function buildTravifyTextFromCart(kickoff) {
 function ActivityRow({ item, onUpdate, onRemove }) {
   const [showNotes, setShowNotes] = useState(!!(item.notes));
   return (
-    <div className=”px-4 py-2.5 hover:bg-neutral-50 transition-colors”>
-      <div className=”grid grid-cols-12 gap-x-2 items-center”>
+    <div className="px-4 py-2.5 hover:bg-neutral-50 transition-colors">
+      <div className="grid grid-cols-12 gap-x-2 items-center">
         {/* Time */}
-        <div className=”col-span-2”>
+        <div className="col-span-2">
           <input
-            value={item.timeLabel || “”}
+            value={item.timeLabel || ""}
             onChange={e => onUpdate(item.id, { timeLabel: e.target.value })}
-            placeholder=”Hora”
-            className=”w-full text-xs text-neutral-500 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300”
+            placeholder="Hora"
+            className="w-full text-xs text-neutral-500 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
           />
         </div>
         {/* Name */}
-        <div className=”col-span-6”>
+        <div className="col-span-6">
           <input
-            value={item.displayName || item.name || “”}
+            value={item.displayName || item.name || ""}
             onChange={e => onUpdate(item.id, { displayName: e.target.value })}
-            placeholder=”Nombre del servicio”
-            className=”w-full text-sm font-medium text-neutral-900 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent”
+            placeholder="Nombre del servicio"
+            className="w-full text-sm font-medium text-neutral-900 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent"
           />
           {item.category && (
-            <span className=”text-[9px] text-neutral-400 uppercase tracking-wide leading-none”>
+            <span className="text-[9px] text-neutral-400 uppercase tracking-wide leading-none">
               {item.category}
             </span>
           )}
         </div>
         {/* Price */}
-        <div className=”col-span-3”>
+        <div className="col-span-3">
           <input
-            type=”number”
-            value={item.priceOverride_cop ?? “”}
+            type="number"
+            value={item.priceOverride_cop ?? ""}
             onChange={e => onUpdate(item.id, {
-              priceOverride_cop: e.target.value === “” ? null : Number(e.target.value),
+              priceOverride_cop: e.target.value === "" ? null : Number(e.target.value),
             })}
-            placeholder={String(item.price_cop || “Precio COP”)}
-            className=”w-full text-xs text-right text-neutral-500 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300”
+            placeholder={String(item.price_cop || "Precio COP")}
+            className="w-full text-xs text-right text-neutral-500 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
           />
         </div>
         {/* Actions */}
-        <div className=”col-span-1 flex items-center justify-end gap-1.5”>
-          <button type=”button” onClick={() => setShowNotes(v => !v)}
-            title=”Notas”
-            className=”text-[11px] text-neutral-300 hover:text-neutral-600 leading-none”>
+        <div className="col-span-1 flex items-center justify-end gap-1.5">
+          <button type="button" onClick={() => setShowNotes(v => !v)}
+            title="Notas"
+            className="text-[11px] text-neutral-300 hover:text-neutral-600 leading-none">
             ✎
           </button>
-          <button type=”button” onClick={() => onRemove(item.id)}
-            title=”Quitar”
-            className=”text-[11px] text-neutral-300 hover:text-red-500 leading-none”>
+          <button type="button" onClick={() => onRemove(item.id)}
+            title="Quitar"
+            className="text-[11px] text-neutral-300 hover:text-red-500 leading-none">
             ✕
           </button>
         </div>
       </div>
       {showNotes && (
         <input
-          value={item.notes || “”}
+          value={item.notes || ""}
           onChange={e => onUpdate(item.id, { notes: e.target.value })}
-          placeholder=”Notas: mesa, alergias, confirmación, prepago…”
-          className=”mt-1.5 w-full text-xs text-neutral-400 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 col-span-12”
+          placeholder="Notas: mesa, alergias, confirmación, prepago…"
+          className="mt-1.5 w-full text-xs text-neutral-400 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 col-span-12"
           autoFocus
         />
       )}
@@ -320,43 +320,43 @@ function DaySection({ label, meta, items, loadingServices,
   };
 
   return (
-    <div className=”border border-neutral-200 rounded-2xl overflow-hidden shadow-sm”>
+    <div className="border border-neutral-200 rounded-2xl overflow-hidden shadow-sm">
       {/* ── Day header band ── */}
-      <div className=”bg-neutral-900 px-4 py-3”>
-        <div className=”flex items-center justify-between gap-2”>
+      <div className="bg-neutral-900 px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
           {/* Editable date / day label */}
           {editingLabel ? (
             <input autoFocus value={localLabel}
               onChange={e => setLocalLabel(e.target.value)}
               onBlur={commitLabel}
-              onKeyDown={e => { if (e.key === “Enter”) commitLabel(); }}
-              className=”bg-neutral-800 text-white text-sm font-bold rounded px-2 py-0.5 w-52 focus:outline-none border border-neutral-600”
+              onKeyDown={e => { if (e.key === "Enter") commitLabel(); }}
+              className="bg-neutral-800 text-white text-sm font-bold rounded px-2 py-0.5 w-52 focus:outline-none border border-neutral-600"
             />
           ) : (
-            <button type=”button” onClick={() => setEditingLabel(true)}
-              title=”Click para editar nombre/fecha del día”
-              className=”text-sm font-bold text-white hover:text-neutral-300 text-left truncate max-w-[200px]”>
+            <button type="button" onClick={() => setEditingLabel(true)}
+              title="Click para editar nombre/fecha del día"
+              className="text-sm font-bold text-white hover:text-neutral-300 text-left truncate max-w-[200px]">
               {label}
             </button>
           )}
-          <div className=”flex items-center gap-2 flex-shrink-0”>
-            <span className=”text-[10px] text-neutral-500”>{items.length} act.</span>
-            <button type=”button” onClick={() => setCollapsed(v => !v)}
-              className=”text-neutral-500 hover:text-white text-xs w-5 text-center”>
-              {collapsed ? “▼” : “▲”}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-[10px] text-neutral-500">{items.length} act.</span>
+            <button type="button" onClick={() => setCollapsed(v => !v)}
+              className="text-neutral-500 hover:text-white text-xs w-5 text-center">
+              {collapsed ? "▼" : "▲"}
             </button>
-            <button type=”button” onClick={onRemoveDay}
-              className=”text-neutral-600 hover:text-red-400 text-xs w-4 text-center”>
+            <button type="button" onClick={onRemoveDay}
+              className="text-neutral-600 hover:text-red-400 text-xs w-4 text-center">
               ✕
             </button>
           </div>
         </div>
         {/* Editable day description (what goes into Travefy day title) */}
         <input
-          value={meta.title || “”}
+          value={meta.title || ""}
           onChange={e => onUpdateMeta({ title: e.target.value })}
-          placeholder=”Descripción del día: ARRIVALS + CHECK IN + DINNER AT LA VITROLA…”
-          className=”mt-1.5 w-full bg-transparent text-[11px] text-neutral-400 placeholder-neutral-700 focus:outline-none focus:text-white transition-colors”
+          placeholder="Descripción del día: ARRIVALS + CHECK IN + DINNER AT LA VITROLA…"
+          className="mt-1.5 w-full bg-transparent text-[11px] text-neutral-400 placeholder-neutral-700 focus:outline-none focus:text-white transition-colors"
         />
       </div>
 
@@ -364,11 +364,11 @@ function DaySection({ label, meta, items, loadingServices,
       {!collapsed && (
         <>
           {items.length === 0 ? (
-            <div className=”px-4 py-3 text-xs text-neutral-400 italic bg-white”>
+            <div className="px-4 py-3 text-xs text-neutral-400 italic bg-white">
               Sin actividades — agrega una abajo.
             </div>
           ) : (
-            <div className=”divide-y divide-neutral-100 bg-white”>
+            <div className="divide-y divide-neutral-100 bg-white">
               {items.map(item => (
                 <ActivityRow key={item.id} item={item}
                   onUpdate={onUpdateItem} onRemove={onRemoveItem}/>
@@ -376,14 +376,14 @@ function DaySection({ label, meta, items, loadingServices,
             </div>
           )}
           {/* Add buttons */}
-          <div className=”flex gap-2 px-4 py-2.5 bg-neutral-50 border-t border-neutral-100”>
-            <button type=”button” onClick={onAddManual}
-              className=”text-xs text-neutral-500 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-400 rounded-lg px-3 py-1.5 bg-white transition-colors”>
+          <div className="flex gap-2 px-4 py-2.5 bg-neutral-50 border-t border-neutral-100">
+            <button type="button" onClick={onAddManual}
+              className="text-xs text-neutral-500 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-400 rounded-lg px-3 py-1.5 bg-white transition-colors">
               + Manual
             </button>
-            <button type=”button” onClick={onAddFromCatalog} disabled={loadingServices}
-              className=”text-xs text-neutral-500 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-400 rounded-lg px-3 py-1.5 bg-white disabled:opacity-40 transition-colors”>
-              {loadingServices ? “Cargando…” : “+ Catálogo”}
+            <button type="button" onClick={onAddFromCatalog} disabled={loadingServices}
+              className="text-xs text-neutral-500 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-400 rounded-lg px-3 py-1.5 bg-white disabled:opacity-40 transition-colors">
+              {loadingServices ? "Cargando…" : "+ Catálogo"}
             </button>
           </div>
         </>
@@ -418,7 +418,7 @@ function ItineraryCanvas({ kickoff, onSave }) {
     (async () => {
       try {
         setLoadingServices(true);
-        const { fetchServicesFromSheet } = await import(“./sheetServices”);
+        const { fetchServicesFromSheet } = await import("./sheetServices");
         const data = await fetchServicesFromSheet();
         if (alive) setServices(data || []);
       } catch (e) { console.error(e); }
@@ -431,15 +431,15 @@ function ItineraryCanvas({ kickoff, onSave }) {
   const days = useMemo(() => {
     const metaLabels = dayMeta.map(dm => dm.label);
     const extraLabels = [...new Set(
-      cart.map(i => i.dayLabel || “Sin día”).filter(l => !metaLabels.includes(l))
+      cart.map(i => i.dayLabel || "Sin día").filter(l => !metaLabels.includes(l))
     )];
     const orderedLabels = [...metaLabels, ...extraLabels];
     if (orderedLabels.length === 0) return [];
 
     return orderedLabels.map(label => {
-      const meta  = dayMeta.find(dm => dm.label === label) || { label, title: “”, sortOrder: 99 };
+      const meta  = dayMeta.find(dm => dm.label === label) || { label, title: "", sortOrder: 99 };
       const items = cart
-        .filter(i => (i.dayLabel || “Sin día”) === label)
+        .filter(i => (i.dayLabel || "Sin día") === label)
         .sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999));
       return { label, meta, items };
     });
@@ -450,12 +450,12 @@ function ItineraryCanvas({ kickoff, onSave }) {
     setDayMeta(prev => {
       const exists = prev.find(dm => dm.label === label);
       if (exists) return prev.map(dm => dm.label === label ? { ...dm, ...patch } : dm);
-      return [...prev, { label, title: “”, sortOrder: prev.length, ...patch }];
+      return [...prev, { label, title: "", sortOrder: prev.length, ...patch }];
     });
 
   const renameDayLabel = (oldLabel, newLabel) => {
     setCart(prev => prev.map(i =>
-      (i.dayLabel || “Sin día”) === oldLabel ? { ...i, dayLabel: newLabel } : i
+      (i.dayLabel || "Sin día") === oldLabel ? { ...i, dayLabel: newLabel } : i
     ));
     setDayMeta(prev => prev.map(dm =>
       dm.label === oldLabel ? { ...dm, label: newLabel } : dm
@@ -464,12 +464,12 @@ function ItineraryCanvas({ kickoff, onSave }) {
 
   const addDay = () => {
     const label = `Día ${days.length + 1}`;
-    setDayMeta(prev => [...prev, { label, title: “”, sortOrder: prev.length }]);
+    setDayMeta(prev => [...prev, { label, title: "", sortOrder: prev.length }]);
   };
 
   const removeDay = (label) => {
-    if (!window.confirm(`¿Eliminar “${label}” y todas sus actividades?`)) return;
-    setCart(prev => prev.filter(i => (i.dayLabel || “Sin día”) !== label));
+    if (!window.confirm(`¿Eliminar "${label}" y todas sus actividades?`)) return;
+    setCart(prev => prev.filter(i => (i.dayLabel || "Sin día") !== label));
     setDayMeta(prev => prev.filter(dm => dm.label !== label));
   };
 
@@ -481,7 +481,7 @@ function ItineraryCanvas({ kickoff, onSave }) {
     setCart(prev => prev.filter(i => i.id !== id));
 
   const addManualToDay = (dayLabel) => {
-    const count = cart.filter(i => (i.dayLabel || “Sin día”) === dayLabel).length;
+    const count = cart.filter(i => (i.dayLabel || "Sin día") === dayLabel).length;
     setCart(prev => [...prev, { ...mapManualToCartItem(), dayLabel, sortOrder: count }]);
   };
 
@@ -499,7 +499,7 @@ function ItineraryCanvas({ kickoff, onSave }) {
       await onSave(newCart, dayMeta);
     } catch (e) {
       console.error(e);
-      alert(“No se pudo guardar el itinerario.”);
+      alert("No se pudo guardar el itinerario.");
     } finally {
       setSaving(false);
     }
@@ -510,31 +510,31 @@ function ItineraryCanvas({ kickoff, onSave }) {
   const totalActivities = days.reduce((n, d) => n + d.items.length, 0);
 
   return (
-    <div className=”space-y-3”>
+    <div className="space-y-3">
       {/* ── Top bar ── */}
-      <div className=”flex flex-wrap items-center justify-between gap-2”>
-        <p className=”text-[11px] text-neutral-400”>
-          {days.length} {days.length === 1 ? “día” : “días”} · {totalActivities} actividades
-          {loadingServices && “ · Cargando catálogo…”}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[11px] text-neutral-400">
+          {days.length} {days.length === 1 ? "día" : "días"} · {totalActivities} actividades
+          {loadingServices && " · Cargando catálogo…"}
         </p>
-        <div className=”flex gap-2”>
-          <button type=”button” onClick={addDay}
-            className=”px-3 py-1.5 rounded-lg border border-neutral-200 text-xs hover:bg-neutral-50 text-neutral-600”>
+        <div className="flex gap-2">
+          <button type="button" onClick={addDay}
+            className="px-3 py-1.5 rounded-lg border border-neutral-200 text-xs hover:bg-neutral-50 text-neutral-600">
             + Agregar día
           </button>
-          <button type=”button” onClick={handleSave} disabled={saving}
-            className=”px-3 py-1.5 rounded-lg bg-neutral-900 text-white text-xs hover:bg-neutral-800 disabled:opacity-50”>
-            {saving ? “Guardando…” : “Guardar itinerario”}
+          <button type="button" onClick={handleSave} disabled={saving}
+            className="px-3 py-1.5 rounded-lg bg-neutral-900 text-white text-xs hover:bg-neutral-800 disabled:opacity-50">
+            {saving ? "Guardando…" : "Guardar itinerario"}
           </button>
         </div>
       </div>
 
       {/* ── Empty state ── */}
       {days.length === 0 && (
-        <div className=”text-center py-10 border-2 border-dashed border-neutral-200 rounded-2xl”>
-          <p className=”text-sm text-neutral-400 mb-3”>No hay días aún.</p>
-          <button type=”button” onClick={addDay}
-            className=”px-4 py-2 rounded-lg bg-neutral-900 text-white text-xs”>
+        <div className="text-center py-10 border-2 border-dashed border-neutral-200 rounded-2xl">
+          <p className="text-sm text-neutral-400 mb-3">No hay días aún.</p>
+          <button type="button" onClick={addDay}
+            className="px-4 py-2 rounded-lg bg-neutral-900 text-white text-xs">
             + Crear primer día
           </button>
         </div>
@@ -565,7 +565,7 @@ function ItineraryCanvas({ kickoff, onSave }) {
           clientType={kickoff?.clientType || 1}
           onClose={() => setCatalogTargetDay(null)}
           onPick={svc => {
-            const count = cart.filter(i => (i.dayLabel || “Sin día”) === catalogTargetDay).length;
+            const count = cart.filter(i => (i.dayLabel || "Sin día") === catalogTargetDay).length;
             setCart(prev => [...prev, {
               ...mapServiceToCartItem(svc, kickoff?.clientType || 1),
               dayLabel: catalogTargetDay,

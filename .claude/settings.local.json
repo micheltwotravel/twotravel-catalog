@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ':*)",
+      "WebSearch",
+      "WebFetch(domain:www.postman.com)",
+      "WebFetch(domain:intercom.help)"
+    ]
+  }
+}

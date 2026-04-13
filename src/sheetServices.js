@@ -143,7 +143,13 @@ video1: video1,
     duration: row.duration || "",
     location: row.location || "",
 
-    highlights: splitHighlights(row.highlights),
+    // Bilingual highlights:
+    // Sheet columns: "highlights" (Spanish/default), "highlights_en" (English)
+    // "highlights_es" also accepted as alias for "highlights"
+    highlights: splitHighlights(row.highlights_es || row.highlights),
+    highlights_en: splitHighlights(row.highlights_en || ""),
+    // Helper: call getHighlights(service, lang) to get the right one with fallback
+
 
     deposit: row.deposit || "",
     cancellation: row.cancellation || "",
@@ -181,6 +187,27 @@ async function fetchCatalogFromSheet() {
 }
 
 export { fetchCatalogFromSheet as fetchServicesFromSheet };
+
+/**
+ * getHighlights(service, lang)
+ * Returns the correct highlights array for the given language.
+ * Falls back to Spanish highlights if English not available.
+ * Usage: getHighlights(service, "en") or getHighlights(service, "es")
+ *
+ * Sheet columns needed:
+ *   highlights    — Spanish highlights (required, current column)
+ *   highlights_en — English highlights (optional, add when ready)
+ */
+export function getHighlights(service, lang = "en") {
+  if (!service) return [];
+  if (lang === "en") {
+    const en = service.highlights_en || [];
+    if (en.length > 0) return en;
+    // Fallback: use Spanish highlights (better than nothing)
+    return service.highlights || [];
+  }
+  return service.highlights || [];
+}
 
 // fetchConciergesFromSheet: pendiente hasta que exista pestaña "Concierges" con GID conocido.
 // Por ahora concierges se asignan manualmente con campos de texto libre.
