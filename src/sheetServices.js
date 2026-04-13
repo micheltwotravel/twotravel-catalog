@@ -41,7 +41,10 @@ function normalizeDriveImage(url) {
   const raw = String(url || "").trim();
   if (!raw) return "";
 
-  // si no es drive → úsala normal
+  // Already a thumbnail/uc URL → return as-is
+  if (raw.includes("drive.google.com/thumbnail") || raw.includes("drive.google.com/uc")) return raw;
+
+  // si no es drive → úsala normal (cualquier https:// funciona)
   if (!raw.includes("drive.google.com")) return raw;
 
   // ❌ carpetas no sirven
@@ -49,14 +52,14 @@ function normalizeDriveImage(url) {
 
   // sacar ID del archivo
   const match =
-    raw.match(/\/file\/d\/([^/]+)/) ||
+    raw.match(/\/file\/d\/([^/?]+)/) ||
     raw.match(/[?&]id=([^&]+)/);
 
   const id = match?.[1];
   if (!id) return "";
 
-  // 🔥 URL que SIEMPRE funciona
-  return `https://lh3.googleusercontent.com/d/${id}`;
+  // uc?export=view — original format that worked for all categories
+  return `https://drive.google.com/uc?export=view&id=${id}`;
 }
 
 function splitHighlights(value) {
@@ -67,16 +70,21 @@ function splitHighlights(value) {
 }
 
 function mapRowToService(row, index) {
+  // Sheet headers (after PapaParse lowercasing):
+  // Primary: "image_source"  (col AF in screenshot)
+  // Extra:   "image 5", "image 6", "image 7", "image 8", "image 9"
+  // Legacy fallbacks: "5","6","7","8","9" or "image2"..."image6"
+  // Extra images — sheet headers are "image 5".."image 9" (with space, lowercased by PapaParse)
+  // Also try underscore variant in case the sheet uses that, plus legacy numeric names.
   const extraImages = [
-  row["5"],
-  row["6"],
-  row["7"],
-  row["8"],
-  row["9"],
-]
-  .map((x) => normalizeDriveImage(x))
-  .map((x) => toDirectImageUrl(x))
-  .filter(Boolean);
+    row["image 5"] || row["image_5"] || row["image5"] || row["5"],
+    row["image 6"] || row["image_6"] || row["image6"] || row["6"],
+    row["image 7"] || row["image_7"] || row["image7"] || row["7"],
+    row["image 8"] || row["image_8"] || row["image8"] || row["8"],
+    row["image 9"] || row["image_9"] || row["image9"] || row["9"],
+  ]
+    .map((x) => normalizeDriveImage(x || ""))
+    .filter(Boolean);
 
 const rawVideo = row.video1 || row["video 1"] || row.video || row.video_url || row["video_1"] || "";
   // Convert Google Drive share URLs to direct/embed-friendly URLs
@@ -102,7 +110,12 @@ video1: video1,
     price_tier_2: parseNum(row.price_tier_2),
 
     priceUnit: row.priceUnit || "per person",
-    image: toDirectImageUrl(normalizeDriveImage(row.image)),
+    // Primary image: "image_source" is canonical (underscore); also try "image source" (space)
+    // Fall back to generic "image" column and common aliases.
+    image: normalizeDriveImage(
+      row["image_source"] || row["image source"] || row["imagesource"] ||
+      row.image || row.img || ""
+    ) || "",
 
     description: {
       es: row.description_es || "",
@@ -151,10 +164,14 @@ video1: video1,
     // Helper: call getHighlights(service, lang) to get the right one with fallback
 
 
+    quickbooksCode: row.quickbooks_code || row.quickbooks || row.billing_code || row.qb_code || "",
+
     deposit: row.deposit || "",
     cancellation: row.cancellation || "",
-    menuUrl: row.menuurl || row.menu_url || row["menu url"] || row.menuUrl || "",
-    mapsUrl: row.mapsurl || row.maps_url || row["maps url"] || row.mapsUrl || "",
+    menuUrl:   row.menuurl   || row.menu_url   || row["menu url"]   || row.menuUrl   || "",
+    mapsUrl:   row.mapsurl   || row.maps_url   || row["maps url"]   || row.mapsUrl   || "",
+    // Dress code — shown for bars & nightlife with 👔 icon
+    dressCode: row.dress_code || row["dress code"] || row.dresscode || row.codigo_vestimenta || "",
     clientType: row.clientType || "",
     family_friendly:
       ["true", "1", "yes", "si", "sí"].includes(

@@ -34,9 +34,20 @@ function formatCOP(v) {
 function normDriveUrl(url) {
   const raw = clean(url);
   if (!raw) return "";
+
+  // Already a usable direct URL — pass through
+  if (raw.includes("drive.google.com/uc") || raw.includes("drive.google.com/thumbnail")) return raw;
+
+  // Non-Drive URL — use as-is
   if (!raw.includes("drive.google.com")) return raw;
-  const m = raw.match(/\/file\/d\/([^/]+)/) || raw.match(/[?&]id=([^&]+)/);
-  return m?.[1] ? `https://lh3.googleusercontent.com/d/${m[1]}` : "";
+
+  // Extract Drive file ID
+  const m = raw.match(/\/file\/d\/([^/?]+)/) || raw.match(/[?&]id=([^&]+)/);
+  const id = m?.[1];
+  if (!id) return "";
+
+  // Use uc?export=view — most reliable public URL for Travefy (direct, no JS redirect)
+  return `https://drive.google.com/uc?export=view&id=${id}`;
 }
 
 // Splits highlight / includes cells — handles bullets, semicolons, pipes, newlines
@@ -57,9 +68,15 @@ function mapRow(row, idx) {
   for (const [k, v] of Object.entries(row || {}))
     n[clean(k).toLowerCase().replace(/[\s-]+/g, "_").replace(/\ufeff/g, "")] = v;
 
-  // Extra image columns (columns 5-9 in the sheet)
-  const extraImages = ["5","6","7","8","9"]
-    .map((k) => normDriveUrl(clean(n[k]))).filter(Boolean);
+  // Extra image columns: sheet headers "image 5"…"image 9" → after normalization → "image_5"…"image_9"
+  // Also try legacy numeric headers "5"…"9"
+  const extraImages = [
+    first(n.image_5, n["5"]),
+    first(n.image_6, n["6"]),
+    first(n.image_7, n["7"]),
+    first(n.image_8, n["8"]),
+    first(n.image_9, n["9"]),
+  ].map((k) => normDriveUrl(clean(k))).filter(Boolean);
 
   return {
     id:             parseNum(n.id || idx + 1),
@@ -103,8 +120,8 @@ function mapRow(row, idx) {
     capacityMin:    parseNum(n.capacity_min),
     capacityMax:    parseNum(n.capacity_max),
 
-    // Media
-    image:          normDriveUrl(first(n.image, n.imageurl, n.image_url)),
+    // Media — primary image: "image_source" is the canonical column name in the sheet
+    image:          normDriveUrl(first(n.image_source, n.image, n.imageurl, n.image_url)),
     images:         extraImages,
     video1:         clean(n.video1),
 
@@ -256,6 +273,7 @@ function cap(str, max = 2000) {
 
 function buildDescription(svc, cartItem, lang) {
   const lb = LABELS[lang] || LABELS.en;
+  const isEs = lang === "es";
 
   // If the sheet has a pre-built Travefy template, use it directly
   if (svc.travefyNotes) {
@@ -263,7 +281,7 @@ function buildDescription(svc, cartItem, lang) {
     if (svc.cancellation &&
         !text.toLowerCase().includes("cancell") &&
         !text.toLowerCase().includes("cancelac")) {
-      text += `\n\n${lb.cancellation}\n${svc.cancellation}`;
+      text += `\n\n${lb.cancellation}: ${svc.cancellation}`;
     }
     if (svc.quickbooksCode) {
       const p = parseNum(svc.priceCop || svc.priceTier1);
@@ -272,67 +290,63 @@ function buildDescription(svc, cartItem, lang) {
     return cap(text.trim());
   }
 
-  const blocks = [];
+  const lines = [];
 
-  // 1. Main narrative (language-aware with fallback)
-  const main = lang === "es"
+  // 1. Main narrative
+  const main = isEs
     ? (svc.descriptionEs || svc.descriptionEn)
     : (svc.descriptionEn || svc.descriptionEs);
-  if (main) blocks.push(main);
+  if (main) { lines.push(main); lines.push(""); }
 
-  // 2. Trip Highlights
-  const hi = splitList(svc.highlights);
-  if (hi.length) blocks.push(`${lb.highlights}:\n${hi.map((x) => `- ${x}`).join("\n")}`);
-
-  // 3. Includes
-  const inc = splitList(svc.includes);
-  if (inc.length) blocks.push(`${lb.includes}:\n${inc.map((x) => `- ${x}`).join("\n")}`);
-
-  // 4. Duration
-  if (svc.duration) blocks.push(`${lb.duration}: ${svc.duration}`);
-
-  // 5. Capacity — skip for restaurants (not relevant for dining)
-  if ((svc.capacityMin || svc.capacityMax) && !isFood(svc.category)) {
-    const cap2 = (svc.capacityMin && svc.capacityMax)
-      ? `${svc.capacityMin}-${svc.capacityMax}`
-      : (svc.capacityMax || svc.capacityMin);
-    blocks.push(`${lb.capacity}: ${cap2} ${lang === "es" ? "personas" : "people"}`);
+  // 2. Highlights (max 6)
+  const hi = splitList(svc.highlights).slice(0, 6);
+  if (hi.length) {
+    lines.push(lb.highlights + ":");
+    hi.forEach(x => lines.push("- " + x));
+    lines.push("");
   }
 
-  // 6. Price / tiers
-  // For transport: label is "per vehicle", otherwise use priceUnit from catalog
+  // 3. Price
   const priceUnit = isTransport(svc.category)
-    ? (lang === "es" ? "por vehiculo" : "per vehicle")
-    : (svc.priceUnit || (lang === "es" ? "por persona" : "per person"));
-
+    ? (isEs ? "por vehiculo" : "per vehicle")
+    : (svc.priceUnit || (isEs ? "por persona" : "per person"));
   const pMain  = formatCOP(svc.priceCop);
   const pTier1 = formatCOP(svc.priceTier1);
   const pTier2 = formatCOP(svc.priceTier2);
+
   if (pTier1 && pTier2) {
-    blocks.push(
-      `${lb.price}:\n` +
-      `${lang === "es" ? "Opcion 1" : "Option 1"}: ${pTier1} / ${priceUnit}\n` +
-      `${lang === "es" ? "Opcion 2" : "Option 2"}: ${pTier2} / ${priceUnit}`
-    );
-  } else if (pTier1) {
-    blocks.push(`${lb.price}: ${pTier1} / ${priceUnit}`);
-  } else if (pMain) {
-    blocks.push(`${lb.price}: ${pMain} / ${priceUnit}`);
+    lines.push(`${lb.price} (${isEs ? "grupo pequeno" : "small group"}): ${pTier1} ${priceUnit}`);
+    lines.push(`${lb.price} (${isEs ? "grupo grande" : "large group"}): ${pTier2} ${priceUnit}`);
+    lines.push("");
+  } else if (pTier1 || pMain) {
+    lines.push(`${lb.price}: ${pTier1 || pMain} ${priceUnit}`);
+    lines.push("");
   }
 
-  // 7. Deposit notice
-  if (svc.deposit) blocks.push(svc.deposit);
+  // 4. Duration (skip for food/nightlife)
+  if (svc.duration && !isFood(svc.category)) {
+    lines.push(`${lb.duration}: ${svc.duration}`);
+  }
 
-  // 8. Cancellation / Terms
-  if (svc.cancellation) blocks.push(`${lb.cancellation}\n${svc.cancellation}`);
+  // 5. Location / address
+  const locParts = [svc.location, svc.address].filter(Boolean);
+  if (locParts.length) {
+    lines.push((isEs ? "Lugar" : "Location") + ": " + locParts.join(", "));
+  }
 
-  // 9. Billing reference in bracket format — at the END so Travefy parser doesn't reject the field
+  // 6. Cancellation
+  if (svc.cancellation) {
+    lines.push("");
+    lines.push(`${lb.cancellation}: ${svc.cancellation}`);
+  }
+
+  // 7. Billing code — always last
   if (svc.quickbooksCode) {
     const p = parseNum(svc.priceCop || svc.priceTier1);
-    blocks.push(`[${svc.quickbooksCode}][${p || ""}]`);
+    lines.push(`\n[${svc.quickbooksCode}][${p || ""}]`);
   }
 
-  return cap(blocks.join("\n\n").trim());
+  return cap(lines.join("\n").trim());
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -384,10 +398,11 @@ function buildTripEvent(svc, cartItem, lang, sortOrder) {
   return {
     SortOrder:   sortOrder,
     Title:       title,
-    Description: desc,   // → Travefy Classic Editor "Notes" field
-    Notes:       desc,   // fallback in case API uses this key instead
-    // ⚠ Location intentionally omitted — causes Travefy to overwrite Title in list
+    Description: desc,
+    Notes:       desc,
     StartTime:   clean(cartItem?.time || cartItem?.startTime || svc.schedule) || undefined,
+    Duration:    svc.duration || undefined,
+    Address:     svc.address  || undefined,
     EventTypeId: eventTypeId(svc.category),
     TripIdeas:   svc.image ? [ideaWithImage] : [],
   };
@@ -512,11 +527,11 @@ function buildInfoDay(lang, meta) {
   const city = meta.city || meta.tripName?.split(" ")?.[0] || "your destination";
 
   const WELCOME_EN =
-`Welcome to ${city} - Two Travel.
+`Take a look - ${city}
+Please take a look at this PDF before your arrival. It contains some information that might be helpful during your trip.
 
-Please take a look at this document before your arrival. It contains information that might be helpful during your trip.
+Welcome to ${city} - Two Travel.
 
-How to Read This Itinerary
 This is a DRAFT itinerary - everything can be adjusted. We can change, add, or remove activities based on what excites you most. In our next meeting we will go through it together and refine it accordingly.
 
 Promo!
@@ -526,7 +541,7 @@ Follow us: @twotravelconcierge on Instagram and TikTok.
 Note:
 - The post must be made during your stay in the city.
 - One tag per person is required to redeem the service discount.
-- For group services (transport, private chef, etc.), all members must participate to apply the discount.`;
+- For group services (such as transport or private chef), all members must participate to apply the discount.`;
 
   const WELCOME_ES =
 `Bienvenido a ${city} - Two Travel.
@@ -545,22 +560,178 @@ Nota:
 - Se requiere un tag por persona para aplicar el descuento al servicio.
 - Para servicios grupales (transporte, chef privado, etc.), todos los miembros deben participar para que aplique el descuento.`;
 
-  const desc = lang === "es" ? WELCOME_ES : WELCOME_EN;
+  const CTG_RECS_EN =
+`Recommendations in Cartagena
+────────────────────────────────
+
+Coffee & Bakeries
+  Cafe San Alberto — Award-winning specialty coffee. Calle del Arzobispado #36-57.
+  Libertario — Artisan coffee in a relaxed courtyard. Calle de Badillo.
+  Epoca Cafe Bar — Coffee by day, bar by night. No reservations, arrive early.
+  La Manchuria — Chill corner cafe, good filter coffee. Centro Historico.
+  Ely — Famous pan de bono, pastries & light breakfasts. Multiple locations.
+
+Chocolate
+  Evok — Artisan Colombian chocolate shop. Beautiful gifts and tastings.
+
+Museums
+  Museo del Oro Zenu — Free gold museum. Plaza de Bolivar.
+  Museo Historico de Cartagena — Inside the Palacio de la Inquisicion.
+  MAMCA — Modern art museum. Plaza de San Pedro.
+
+Rooftops
+  Townhouse — Stylish rooftop, great cocktails. Reservations recommended.
+  Apogeo — Elegant penthouse bar with 360 views. Centro Historico.
+  Buena Vida — Casual rooftop, great vibes.
+  Mirador — Laid-back viewpoint. Best at sunset.
+
+────────────────────────────────
+
+Shopping
+  La Serrezuela: Malva, Artesanias de Colombia, Loto del Sur.
+  Walled City: Soloio, Agua de Leon, St Dom, Casa Chiqui, Territorio.
+
+────────────────────────────────
+
+Brunch
+  Al Alma — Stunning colonial mansion courtyard. Famous eggs benny and acai bowls. Reservations strongly recommended. Calle del Santisimo #8-19.
+  Ely Centro Historico — Local institution. Pan de bono, juices, empanadas. Casual & beloved. Calle Segunda de Badillo.
+  Epoca Cafe Bar — Trendy brunch with great coffee. No reservations, arrive early. Calle de la Mantilla.
+
+────────────────────────────────
+
+Lunch
+  Pezetarian — Plant-forward Mediterranean. Beautiful Walled City spot. Reservations recommended.
+  Kona — Hawaiian poke bowls and fresh seafood. Light and fresh. Plaza de San Diego.
+  Buena Vida Marisqueria — Great ceviche and grilled fish. Popular with locals.
+  Tacos del Gordo — Authentic Mexican street tacos. Very affordable. Getsemani.
+
+Getsemani Lunch
+  El Beso — Colombian fusion, colorful decor. Neighborhood gem.
+  Cocina de Pepina — Traditional home cooking, grandmother recipes. Soulful.
+  Casa del Tunel — Relaxed courtyard in a colonial house. Good cocktails.
+  Carta Ajena / OSH — Creative cocktails and food. One of Getsemani's coolest spots.
+
+────────────────────────────────
+
+Places to Visit (free / walking)
+  Plaza de San Diego, Plaza Fernandez de Madrid, Plaza de la Merced,
+  Plaza Santo Domingo (Botero sculpture), Plaza Bolivar, San Pedro Claver Church,
+  Plaza de la Aduana, Plaza de los Coches (Portal de los Dulces),
+  Clock Tower — main entrance to the Walled City.`;
+
+  const CTG_RECS_ES =
+`Recomendaciones en Cartagena
+────────────────────────────────
+
+Cafes y Panaderias
+  Cafe San Alberto — Cafe de especialidad premiado. Calle del Arzobispado #36-57.
+  Libertario — Cafe artesanal en patio tranquilo. Calle de Badillo.
+  Epoca Cafe Bar — Cafe de dia, bar de noche. Sin reservas, llegar temprano.
+  La Manchuria — Cafe de esquina, buen cafe filtrado. Centro Historico.
+  Ely — Famoso por pan de bono, pasteles y desayunos ligeros. Varias sedes.
+
+Chocolateria
+  Evok — Chocolateria artesanal colombiana. Regalos y degustaciones.
+
+Museos
+  Museo del Oro Zenu — Museo gratuito. Plaza de Bolivar.
+  Museo Historico de Cartagena — Dentro del Palacio de la Inquisicion.
+  MAMCA — Arte moderno. Plaza de San Pedro.
+
+Rooftops
+  Townhouse — Rooftop elegante, tragos excelentes. Reservas recomendadas.
+  Apogeo — Bar penthouse con vista 360. Centro Historico.
+  Buena Vida — Rooftop casual con buena energia.
+  Mirador — Punto de vista tranquilo. Mejor al atardecer.
+
+────────────────────────────────
+
+Shopping
+  La Serrezuela: Malva, Artesanias de Colombia, Loto del Sur.
+  Ciudad Amurallada: Soloio, Agua de Leon, St Dom, Casa Chiqui, Territorio.
+
+────────────────────────────────
+
+Brunch
+  Al Alma — Patio colonial impresionante. Famoso por eggs benny y bowls de acai. Reservas indispensables. Calle del Santisimo #8-19.
+  Ely Centro Historico — Institucion cartagenera. Pan de bono, jugos, empanadas. Calle Segunda de Badillo.
+  Epoca Cafe Bar — Brunch trendy con excelente cafe. Sin reservas, llegar temprano. Calle de la Mantilla.
+
+────────────────────────────────
+
+Almuerzo
+  Pezetarian — Mediterraneo plant-forward. Spot precioso en la Ciudad Amurallada. Reservas recomendadas.
+  Kona — Poke bowls hawaianos y mariscos frescos. Plaza de San Diego.
+  Buena Vida Marisqueria — Excelente ceviche y pescado a la brasa.
+  Tacos del Gordo — Tacos mexicanos autenticos. Muy economico. Getsemani.
+
+Almuerzo en Getsemani
+  El Beso — Fusion colombiana, decor colorido. Joya del barrio.
+  Cocina de Pepina — Cocina casera tradicional, recetas de abuela.
+  Casa del Tunel — Patio colonial relajado. Buenos cocteles.
+  Carta Ajena / OSH — Cocteles creativos y cocina. Uno de los spots mas cool de Getsemani.
+
+────────────────────────────────
+
+Lugares para visitar (gratis / caminando)
+  Plaza de San Diego, Plaza Fernandez de Madrid, Plaza de la Merced,
+  Plaza Santo Domingo (escultura de Botero), Plaza Bolivar, Iglesia San Pedro Claver,
+  Plaza de la Aduana, Plaza de los Coches (Portal de los Dulces),
+  Torre del Reloj — entrada principal a la Ciudad Amurallada.`;
+
+  const RECS = lang === "es" ? CTG_RECS_ES : CTG_RECS_EN;
+  const welcome = lang === "es" ? WELCOME_ES : WELCOME_EN;
+
+  // Event 1 — Welcome message + promo
+  const welcomeDesc = cap(welcome, 3000);
+
+  // Event 2 — Links & Resources (pre-trip content from concierge, or default links)
+  const defaultLinks = [
+    "Pre Check-in Form: https://forms.gle/REPLACE_WITH_FORM_LINK",
+    "Drink Calculator: https://two.travel/drinks",
+    "Cartagena City Guide: https://two.travel/ctg-guide.pdf",
+    "WhatsApp Concierge: https://wa.me/573001234567",
+  ].join("\n");
+  const linksBody = meta.preTripContent ? clean(meta.preTripContent) : defaultLinks;
+
+  // Event 3 — CTG Recommendations (always present, rich formatted)
+  const recsDesc = cap(RECS, 3000);
+
+  const events = [
+    {
+      SortOrder:   1,
+      Title:       lang === "es"
+        ? `Bienvenido a ${city} — Two Travel`
+        : `Welcome to ${city} — Two Travel`,
+      Description: welcomeDesc,
+      Notes:       welcomeDesc,
+      EventTypeId: 0,
+      TripIdeas:   [],
+    },
+    {
+      SortOrder:   2,
+      Title:       lang === "es" ? "Links y Recursos" : "Links & Resources",
+      Description: cap(linksBody, 3000),
+      Notes:       cap(linksBody, 3000),
+      EventTypeId: 0,
+      TripIdeas:   [],
+    },
+    {
+      SortOrder:   3,
+      Title:       lang === "es" ? "Recomendaciones en CTG" : "CTG Recommendations",
+      Description: recsDesc,
+      Notes:       recsDesc,
+      EventTypeId: 0,
+      TripIdeas:   [],
+    },
+  ];
 
   return {
     SortOrder:      2,
     Title:          lang === "es" ? "Información y Documentos" : "Information & Documents",
     IsSupplemental: true,
-    TripEvents: [{
-      SortOrder:   1,
-      Title:       lang === "es"
-        ? `Bienvenido a ${city} — Two Travel`
-        : `Welcome to ${city} — Two Travel`,
-      Description: cap(desc),
-      Notes:       cap(desc),
-      EventTypeId: 0,
-      TripIdeas:   [],
-    }],
+    TripEvents:     events,
   };
 }
 
@@ -773,6 +944,7 @@ export default async function handler(req, res) {
       checkOut          = "",
       startDate         = "",
       endDate           = "",
+      preTripContent    = "",
     } = req.body || {};
 
     const publicKey   = process.env.TRAVEFY_PUBLIC_KEY;
@@ -798,7 +970,7 @@ export default async function handler(req, res) {
       conciergeTitle, city, tripName, tripDates,
       groupSize, accommodationName, accommodationAddr,
       checkIn, checkOut, startDate, endDate,
-      dayMeta,
+      dayMeta, preTripContent,
     };
 
     // ── 3. Build full Travefy structure ──────────────────────────

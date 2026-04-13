@@ -48,6 +48,95 @@ const formatPriceCOP = (value) =>
   }).format(value || 0);
 
 /* =========================================
+   Pre-Trip default template
+   Edit this to change the default content
+   that appears in every new kickoff's
+   Pre-Trip Information block.
+   ========================================= */
+
+const DEFAULT_PRE_TRIP = `Take a look - Cartagena
+Please take a look at this before your arrival. It has some helpful info for your trip.
+
+Pre Check-in Form: https://forms.gle/REPLACE_WITH_FORM_LINK
+Drink Calculator: https://two.travel/drinks
+Cartagena City Guide (PDF): https://two.travel/ctg-guide.pdf
+WhatsApp Concierge: https://wa.me/573001234567
+
+──────────────────────────────
+
+Promo!
+Show everyone how amazing it is to travel with Two Travel's concierge service and get discounts on your experiences. Follow us @twotravelconcierge on Instagram and TikTok.
+
+Note: The post must be made during your stay. One tag per person required to redeem. For group services (transport, chef, etc.) all members must participate for the discount to apply.
+
+──────────────────────────────
+
+Recommendations in Cartagena
+
+☕ Coffee & Bakeries
+Cafe San Alberto — Specialty coffee, award-winning roaster from Bogotá. Calle del Arzobispado #36-57.
+Libertario — Artisan coffee in a relaxed courtyard. Calle de Badillo.
+Epoca Cafe Bar — Coffee bar by day, bar by night. Great brunch spot (no reservations, first come first served). Calle de la Mantilla.
+La Manchuria — Chill corner café with good filter coffee. Centro Histórico.
+Ely — Beloved local bakery famous for pan de bono, pastries, and light breakfasts. Multiple locations.
+
+🍫 Chocolate
+Evok — Artisan Colombian chocolate store, beautiful gifts and tastings.
+
+🏛️ Museums
+Museo del Oro Zenú — Free gold museum showcasing Zenú culture. Plaza de Bolívar.
+Museo Histórico de Cartagena — Inside the historic Palacio de la Inquisición. Must-visit.
+Museo de Arte Moderno de Cartagena (MAMCA) — Rotating modern art exhibitions. Plaza de San Pedro.
+
+🌅 Rooftops
+Townhouse Cartagena — Stylish rooftop with city views, great cocktails. Reservations recommended.
+Apogeo — Elegant penthouse rooftop bar with 360° views. Centro Histórico.
+Buena Vida — Casual rooftop with great vibes and affordable drinks.
+Mirador — Laid-back viewpoint rooftop. Great for sunsets.
+
+──────────────────────────────
+
+🛍️ Shopping
+La Serrezuela Mall: Malva (local designers), Artesanias de Colombia, Loto del Sur (Colombian emeralds).
+Walled City boutiques: Soloio, Agua de Leon, St Dom, Casa Chiqui, Territorio.
+
+──────────────────────────────
+
+🥞 Brunch
+Al Alma — Stunning courtyard restaurant in a colonial mansion. Beautiful setting, great eggs benedicts and açaí bowls. Reservations strongly recommended. Calle del Santísimo #8-19.
+Ely Centro Histórico — Cartagena institution. Beloved for their pan de bono, fresh juices, and empanadas. Casual and local. Calle Segunda de Badillo.
+Epoca Cafe Bar — Trendy brunch spot with excellent coffee and food. No reservations, arrive early. Calle de la Mantilla.
+
+──────────────────────────────
+
+🍽️ Lunch
+Pezetarian — Plant-forward Mediterranean menu in a beautiful Walled City spot. Fresh, light and delicious. Reservations recommended.
+Kona — Casual Hawaiian-inspired poke bowls and fresh seafood. Great for a lighter lunch. Plaza de San Diego.
+Buena Vida Marisquería — Seafood-focused spot with great ceviche and grilled fish. Popular with locals.
+Tacos del Gordo — Authentic Mexican street tacos, surprisingly great. Very affordable. Getsemaní.
+
+──────────────────────────────
+
+🌿 Getsemaní Lunch
+El Beso — Vibrant neighborhood gem with Colombian fusion dishes and colorful decor.
+Cocina de Pepina — Traditional Colombian home cooking, grandmother recipes. Soulful and delicious.
+Casa del Túnel — Relaxed courtyard restaurant inside a colonial house. Good mojitos.
+Carta Ajena / OSH — Creative cocktail bar and restaurant. One of Getsemaní's coolest spots.
+
+──────────────────────────────
+
+📍 Places to Visit (free / walking)
+Plaza de San Diego — Charming square surrounded by restaurants and boutiques.
+Plaza Fernández de Madrid — Quiet, authentic local square. Great for people-watching.
+Plaza de la Merced — Beautiful colonial church and open square.
+Plaza Santo Domingo — Iconic square with the famous Botero sculpture. Lively at night.
+Plaza de Bolívar — Central plaza with the gold museum and Palacio de la Inquisición.
+San Pedro Claver Church — Beautiful colonial church and cloister. Worth a visit.
+Plaza de la Aduana — Large colonial square near the Clock Tower.
+Plaza de los Coches — Portal de los Dulces with local sweets vendors.
+Clock Tower (Torre del Reloj) — The main entrance to the Walled City. Great photos.`;
+
+/* =========================================
    Estados
    ========================================= */
 
@@ -1188,6 +1277,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [accommodationAddr,  setAccommodationAddr]  = useState(kickoff?.accommodationAddr  || "");
   const [checkIn,            setCheckIn]            = useState(kickoff?.checkIn            || "");
   const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "");
+  const [preTripContent,     setPreTripContent]     = useState(kickoff?.preTripContent     || DEFAULT_PRE_TRIP);
 
   if (!kickoff) return null;
 
@@ -1216,6 +1306,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     accommodationAddr: accommodationAddr.trim(),
     checkIn:           checkIn.trim(),
     checkOut:          checkOut.trim(),
+    // Pre-trip info block (rendered as a page before itinerary days in PDF)
+    preTripContent:    preTripContent.trim(),
   };
 
   const c = guestContact.trim();
@@ -1380,6 +1472,23 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             </div>
           </div>
 
+          {/* PRE-TRIP INFO — page that appears before itinerary days in PDF */}
+          <div className="border rounded-2xl p-4 bg-neutral-50 space-y-2">
+            <p className="text-xs font-semibold text-neutral-700">Pre-Trip Information</p>
+            <p className="text-[11px] text-neutral-400 leading-relaxed">
+              This block appears as a full page <em>before</em> the itinerary days in the PDF.
+              Include links (forms, WhatsApp, PDFs), notes, recommendations, promo info, etc.
+              One item per line. Lines starting with http/https render as clickable links.
+            </p>
+            <textarea
+              value={preTripContent}
+              onChange={(e) => setPreTripContent(e.target.value)}
+              rows={8}
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm min-h-[140px] font-mono bg-white"
+              placeholder={`Pre Check-in Form: https://form.link/checkin\nDrink Calculator: https://two.travel/drinks\nCartagena City Guide: https://two.travel/guide.pdf\nWhatsApp Concierge: https://wa.me/573001234567\n\nPromo: Share @twotravelconcierge and get a discount on select experiences.\n\nCoffee recommendations: Amor Perfecto, Pergamino\nRooftop recommendations: Aloft, Alma`}
+            />
+          </div>
+
           {/* ITINERARIO — canvas con edición inline por día */}
 <div className="border rounded-2xl p-4 bg-white">
   <div className="flex items-center justify-between mb-1">
@@ -1535,6 +1644,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           accommodationAddr,
           checkIn,
           checkOut,
+          preTripContent,
         }),
       });
 

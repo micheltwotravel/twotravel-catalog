@@ -25,9 +25,11 @@ import {
 import logo from "./assets/logo.png";
 
 /* ================================
-   1) CONFIG: tasa de cambio (aprox)
+   1) CONFIG: tasa de cambio
+   Se actualiza en vivo desde Frankfurter API (tasa oficial - 2%).
+   Fallback: 4200 COP/USD si la API falla.
 ================================== */
-const FX_COP_PER_USD = 4200;
+const FX_FALLBACK = 4200;
 
 /* ================================
    2) I18N (textos de interfaz)
@@ -71,18 +73,18 @@ const i18n = {
     continue: "Continuar a resumen →",
     kickoffTitle: "Resumen de tu selección",
     kickoffIntro:
-      "Estas son las experiencias que elegiste. Con esto nuestro concierge preparará tu itinerario y revisará disponibilidad.",
+      "Tu selección nos da una idea de las preferencias, el estilo y las experiencias que busca tu grupo. Nuestro concierge usará esta información para personalizar tu experiencia y preparar tu kickoff call.",
     kickoffQuestionsTitle: "Tu selección",
     backToCart: "Editar selección",
     sendKickoff: "Enviar al concierge",
-    conciergePanelTitle: "Resumen para Concierge",      // los puedes dejar aunque ya no se usan en esta pantalla
+    conciergePanelTitle: "Resumen para Concierge",
     conciergePanelHelp:
       "Este es el resumen de los favoritos del cliente. Puedes copiarlo y pegarlo en Travify o en tu flujo interno.",
     travifyNote:
       "Al hacer clic en el botón, se copiará el resumen y se abrirá un borrador de correo para Travify.",
     kickoffNextStepsTitle: "¿Qué pasa después?",
     kickoffNextStepsBody:
-      "Nuestro concierge revisará tu selección, verificará disponibilidad y te contactará por email o WhatsApp con propuestas de horarios y reservas.",
+      "Tu concierge revisará tus respuestas en detalle y las usará para guiar el kickoff call. Juntos vamos a refinar tus preferencias, explorar opciones curadas y construir un itinerario personalizado para tu estadía.",
     kickoffSentTitle: "¡Resumen enviado!",
     kickoffSentBody:
       "Tu selección fue enviada a nuestro equipo de concierge. En las próximas horas te contactaremos para afinar detalles y avanzar con las reservas.",
@@ -154,7 +156,7 @@ quizEditAnswers: "Edit answers",
         continue: "Go to summary →",
     kickoffTitle: "Your Selection Summary",
     kickoffIntro:
-      "These are the experiences you chose. Our concierge will use this to prepare your itinerary and check availability.",
+      "Your selections give us insight into your group's preferences, style, and desired experiences. Our concierge will use this information to tailor your experience and prepare for your upcoming kickoff call.",
     kickoffQuestionsTitle: "Your selection",
     backToCart: "Edit selection",
     sendKickoff: "Send to concierge",
@@ -165,7 +167,7 @@ quizEditAnswers: "Edit answers",
       "Clicking the button will copy the summary and open an email draft for Travify.",
     kickoffNextStepsTitle: "What happens next?",
     kickoffNextStepsBody:
-      "Our concierge will review your selection, check availability, and contact you via email or WhatsApp with timing options and bookings.",
+      "Your concierge will review your inputs in detail and use them to guide the kickoff call. Together, we'll refine your preferences, explore curated options, and shape a personalized itinerary for your stay.",
     kickoffSentTitle: "Summary sent!",
     kickoffSentBody:
       "Your selection has been sent to our concierge team. We'll reach out in the next few hours to refine details and proceed with bookings.",
@@ -1834,6 +1836,34 @@ function safeImg(url, category = "default") {
   if (url && String(url).startsWith("http")) return url;
   return CATEGORY_FALLBACKS[category] || CATEGORY_FALLBACKS.default;
 }
+
+// Extract Google Drive file ID from any Drive URL format
+function driveId(src) {
+  return (
+    src.match(/[?&]id=([^&/]+)/)?.[1] ||
+    src.match(/\/d\/([^?&/]+)/)?.[1] ||
+    null
+  );
+}
+
+// Progressive fallback for Drive images:
+// Initial: uc?export=view → att0: lh3 → att1: thumbnail → fallback
+function driveOnError(e, category = "default") {
+  const src  = e.target.src || "";
+  const id   = driveId(src);
+  const att  = parseInt(e.target.dataset.driveAttempt || "0", 10);
+
+  if (id && att === 0) {
+    e.target.dataset.driveAttempt = "1";
+    e.target.src = `https://lh3.googleusercontent.com/d/${id}`;
+  } else if (id && att === 1) {
+    e.target.dataset.driveAttempt = "2";
+    e.target.src = `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
+  } else {
+    e.target.dataset.driveAttempt = "done";
+    e.target.src = CATEGORY_FALLBACKS[category] || CATEGORY_FALLBACKS.default;
+  }
+}
 const StepIndicator = ({ step, lang }) => {
   const isQuiz = step === "quiz";
   return (
@@ -1887,6 +1917,24 @@ export default function TwoTravelCatalog() {
   useEffect(() => {
     if (!currencyManuallySet) setCurrency(lang === "es" ? "COP" : "USD");
   }, [lang]);
+
+  // ── Live exchange rate: tasa oficial COP/USD - 2% ──────────────
+  // Frankfurter is free, no key needed, updates daily from ECB data.
+  // We apply -2% so quoted USD prices have a small buffer above market.
+  // Example: official 4100 → we use 4018 → $100k COP = $24.89 USD
+  const [fxRate, setFxRate] = useState(FX_FALLBACK);
+  useEffect(() => {
+    fetch("https://api.frankfurter.app/latest?from=USD&to=COP")
+      .then(r => r.json())
+      .then(data => {
+        const official = data?.rates?.COP;
+        if (official && official > 500) {
+          // official rate minus 2% = divide by smaller number = slightly higher USD
+          setFxRate(Math.round(official * 0.98));
+        }
+      })
+      .catch(() => {/* silently keep fallback */});
+  }, []);
 
   const t = i18n[lang];
     // 🔹 Estado que se alimenta del Sheet
@@ -2052,7 +2100,9 @@ useEffect(() => {
         ...s,
         id: String(s.id ?? "").trim() || `row-${idx}`,
         name: String(s.name ?? s.Nombre ?? s.title ?? "").trim(),
-        image: safeImg(s.image ?? s.img),
+        // Keep raw URL here; call safeImg(url, category) at render-time so each
+        // category gets its own themed fallback image if the URL is missing.
+        image: String(s.image ?? s.img ?? "").trim(),
         category: normalizeCategory(s.category || s.Category || s.categoria),
         subcategory: String(
           s.subcategory ?? s.sub_category ?? s.estilo ?? ""
@@ -2172,7 +2222,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   /* ---------- helpers ---------- */
   
   const convertPrice = (cop) =>
-    currency === "USD" ? Math.round(cop / FX_COP_PER_USD) : cop;
+    currency === "USD" ? Math.round(cop / fxRate) : cop;
 
   const categoryHasVisiblePrice = (category) =>
   category === "tours" ||
@@ -2225,7 +2275,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
 
   // ✅ Respuestas del quiz (mínimas para arrancar)
   const [quiz, setQuiz] = useState({
-    vibe: "",
+    vibes: [],       // array — multiple vibes allowed e.g. ["party","adventure"]
     budget: "",      // low | mid | high
     kids: "no",      // "yes" | "no"
     cuisines: "",    // texto libre
@@ -2293,51 +2343,61 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
 
   
   /* ---------- filtros ---------- */
-    const filteredServices = useMemo(() => {
-  return services.filter((s) => {
-    const serviceCategory = normalizeCategory(s.category);
+  // Normalise subcategory strings coming from the sheet so they always match
+  // the restaurantStyles IDs (which use dashes, e.g. "fine-dining").
+  const normalizeSubcategory = (raw) =>
+    String(raw || "").trim().toLowerCase().replace(/\s+/g, "-");
 
-    const catOK =
-      selectedCategory === "all" || serviceCategory === selectedCategory;
+  const filteredServices = useMemo(() => {
+    return services.filter((s) => {
+      // s.category is already normalised when loaded from sheet (line ~2056)
+      const serviceCategory = s.category || "services";
 
-    const stylesOK =
-      selectedCategory !== "restaurants" || selectedStyles.size === 0
-        ? true
-        : selectedStyles.has(s.subcategory);
+      const catOK =
+        selectedCategory === "all" || serviceCategory === selectedCategory;
 
-    const q = searchTerm.trim().toLowerCase();
-    const searchOK =
-      !q ||
-      (s.name || "").toLowerCase().includes(q) ||
-      (s.description?.es || "").toLowerCase().includes(q) ||
-      (s.description?.en || "").toLowerCase().includes(q);
+      // Style sub-filter: only relevant when "restaurants" tab is active
+      // Normalise both sides so "fine dining" == "fine-dining"
+      const stylesOK =
+        selectedCategory !== "restaurants" || selectedStyles.size === 0
+          ? true
+          : selectedStyles.has(normalizeSubcategory(s.subcategory));
 
-    const range = priceRanges.find((r) => r.id === priceRange);
-    let priceOK = true;
+      const q = searchTerm.trim().toLowerCase();
+      const searchOK =
+        !q ||
+        (s.name || "").toLowerCase().includes(q) ||
+        (s.description?.es || "").toLowerCase().includes(q) ||
+        (s.description?.en || "").toLowerCase().includes(q) ||
+        (s.location || "").toLowerCase().includes(q) ||
+        (s.subcategory || "").toLowerCase().includes(q);
 
-    if (range && range.id !== "all") {
-      if (categoriesWithPriceLevel.includes(serviceCategory)) {
-        const lvl = getServicePriceLevel(s, currentClientType);
-        if (!lvl || !range.levels?.includes(lvl)) priceOK = false;
-      } else {
-        priceOK = true;
+      const range = priceRanges.find((r) => r.id === priceRange);
+      let priceOK = true;
+
+      if (range && range.id !== "all") {
+        if (categoriesWithPriceLevel.includes(serviceCategory)) {
+          const lvl = getServicePriceLevel(s, currentClientType);
+          if (!lvl || !range.levels?.includes(lvl)) priceOK = false;
+        }
+        // For tours / transportation / services: no price-level filter applied
       }
-    }
 
-    return catOK && stylesOK && searchOK && priceOK;
-  });
-}, [services, selectedCategory, selectedStyles, searchTerm, priceRange]);
+      return catOK && stylesOK && searchOK && priceOK;
+    });
+  }, [services, selectedCategory, selectedStyles, searchTerm, priceRange, currentClientType]);
 
 const vibeLabel = useMemo(() => {
   const map = {
-    relax: { es: "Relax & beach", en: "Relax & beach" },
-    party: { es: "Nightlife & rooftop", en: "Nightlife & rooftop" },
-    romantic: { es: "Romantic getaway", en: "Romantic getaway" },
-    family: { es: "Family-friendly", en: "Family-friendly" },
-    adventure: { es: "Adventure & water", en: "Adventure & water" },
+    relax:    { es: "Relax & playa", en: "Relax & beach" },
+    party:    { es: "Nightlife", en: "Nightlife" },
+    romantic: { es: "Romántico", en: "Romantic" },
+    family:   { es: "Familia", en: "Family" },
+    adventure:{ es: "Aventura", en: "Adventure" },
   };
-  return map[quiz.vibe]?.[lang] || (lang === "es" ? "Tu estilo" : "Your vibe");
-}, [quiz.vibe, lang]);
+  if (!quiz.vibes.length) return lang === "es" ? "Tu estilo" : "Your vibe";
+  return quiz.vibes.map((v) => map[v]?.[lang] || v).join(" · ");
+}, [quiz.vibes, lang]);
 
 
  
@@ -2365,25 +2425,26 @@ const vibeLabel = useMemo(() => {
         (s.description?.en || "")
       ).toLowerCase();
 
-      // ✅ VIBE
-      if (quiz.vibe === "party") {
+      // ✅ VIBE — multiple vibes supported; each matching vibe adds points
+      const vibes = quiz.vibes || [];
+      if (vibes.includes("party")) {
         if (cat === "nightlife" || cat === "bars") pts += 4;
         if (cat === "beach-clubs") pts += 2;
       }
-      if (quiz.vibe === "relax") {
+      if (vibes.includes("relax")) {
         if (cat === "beach-clubs") pts += 4;
         if (sub.includes("wellness") || sub.includes("spa")) pts += 3;
       }
-      if (quiz.vibe === "romantic") {
+      if (vibes.includes("romantic")) {
         if (cat === "restaurants") pts += 3;
         if (sub.includes("fine") || sub.includes("rooftop")) pts += 2;
         if (desc.includes("sunset")) pts += 2;
       }
-      if (quiz.vibe === "family") {
+      if (vibes.includes("family")) {
         if (cat === "tours" || cat === "services") pts += 2;
         if (cat === "beach-clubs") pts += 1;
       }
-      if (quiz.vibe === "adventure") {
+      if (vibes.includes("adventure")) {
         if (cat === "tours") pts += 3;
         if (sub.includes("adventure") || sub.includes("water") || sub.includes("bike")) pts += 3;
       }
@@ -2736,22 +2797,44 @@ setCart([]);
 
           <div className="bg-white border rounded-2xl p-5 space-y-4">
             <div className="grid md:grid-cols-3 gap-3 text-sm">
-              <div className="space-y-1">
+              {/* Vibe — multi-select chips (pick one or more) */}
+              <div className="space-y-1 md:col-span-3">
                 <label className="text-[11px] text-neutral-600">
-                  {lang === "es" ? "Vibe" : "Vibe"}
+                  {lang === "es" ? "¿Cuál es tu vibe? (elige uno o más)" : "What's your vibe? (pick one or more)"}
                 </label>
-                <select
-                  className="w-full border rounded-lg px-3 py-2 bg-white"
-                  value={quiz.vibe}
-                  onChange={(e) => setQuiz((q) => ({ ...q, vibe: e.target.value }))}
-                >
-                  <option value="">{lang === "es" ? "—" : "—"}</option>
-                  <option value="relax">{lang==="es" ? "Relax & beach" : "Relax & beach"}</option>
-<option value="party">{lang==="es" ? "Nightlife & rooftop" : "Nightlife & rooftop"}</option>
-<option value="romantic">{lang==="es" ? "Romantic getaway" : "Romantic getaway"}</option>
-<option value="family">{lang==="es" ? "Family-friendly" : "Family-friendly"}</option>
-<option value="adventure">{lang==="es" ? "Adventure & water" : "Adventure & water"}</option>
-                </select>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {[
+                    { id: "relax",    emoji: "🏖️", es: "Relax & playa",    en: "Relax & beach" },
+                    { id: "party",    emoji: "🎉", es: "Nightlife & fiestas", en: "Nightlife & parties" },
+                    { id: "romantic", emoji: "🌹", es: "Romántico",          en: "Romantic" },
+                    { id: "family",   emoji: "👨‍👩‍👧", es: "Familia",         en: "Family" },
+                    { id: "adventure",emoji: "🏄", es: "Aventura",           en: "Adventure" },
+                  ].map((v) => {
+                    const active = quiz.vibes.includes(v.id);
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() =>
+                          setQuiz((q) => ({
+                            ...q,
+                            vibes: active
+                              ? q.vibes.filter((x) => x !== v.id)
+                              : [...q.vibes, v.id],
+                          }))
+                        }
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
+                          active
+                            ? "bg-neutral-900 text-white border-neutral-900"
+                            : "bg-white text-neutral-700 border-neutral-300 hover:border-neutral-500"
+                        }`}
+                      >
+                        <span>{v.emoji}</span>
+                        <span>{lang === "es" ? v.es : v.en}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -3004,7 +3087,7 @@ setCart([]);
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] tracking-[0.22em] uppercase text-neutral-500">
-  {lang === "es" ? "Best for your vibe" : "Best for your vibe"} · {vibeLabel}
+  {lang === "es" ? "Ideal para tu estilo" : "Best for your vibe"} · {vibeLabel}
 </p>
 
                 <h2 className="text-lg font-bold">
@@ -3037,11 +3120,12 @@ setCart([]);
   setImgIndex(0);
 }}
   >
-    <div className="relative h-28">
+    <div className="relative h-44">
       <img
-  src={safeImg(s.image)}
+  src={safeImg(s.image, s.category)}
   alt={s.name}
-  className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+  className="w-full h-full object-cover object-center group-hover:scale-[1.02] transition-transform duration-300"
+  onError={e => driveOnError(e, s.category)}
 />
 
       {/* ✅ BADGE */}
@@ -3070,7 +3154,7 @@ setCart([]);
 
             {/* Grid servicios */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredServices.map((s) => {
   const serviceCategory = normalizeCategory(s.category);
   const effectivePriceCop = getEffectivePriceCop(s, currentClientType);
@@ -3084,9 +3168,10 @@ setCart([]);
     >
       <div className="relative h-48">
         <img
-          src={s.image}
+          src={safeImg(s.image, serviceCategory)}
           alt={s.name}
           className="w-full h-full object-cover"
+          onError={e => driveOnError(e, serviceCategory)}
         />
         <div className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded-full text-xs font-semibold">
           {i18n[lang][serviceCategory] || serviceCategory}
@@ -3109,19 +3194,23 @@ setCart([]);
             : (s.description?.[lang] || s.description?.es || s.description?.en || "")}
         </p>
 
-        <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
-          <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            {s.duration}
-          </span>
-
-          <span className="flex items-center gap-1">
-            <Users className="w-3 h-3" />
-            {serviceCategory === "transportation"
-              ? (s.capacity_notes || `${s.capacity?.min ?? "?"}-${s.capacity?.max ?? "?"} ${t.people}`)
-              : `${s.capacity?.min ?? "?"}-${s.capacity?.max ?? "?"} ${t.people}`}
-          </span>
-        </div>
+        {/* Duration + capacity — hidden for restaurants & bars (not relevant for dining/nightlife) */}
+        {!["restaurants","bars","nightlife"].includes(serviceCategory) && (
+          <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
+            {s.duration && (
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {s.duration}
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <Users className="w-3 h-3" />
+              {serviceCategory === "transportation"
+                ? (s.capacity_notes || `${s.capacity?.min ?? "?"}-${s.capacity?.max ?? "?"} ${t.people}`)
+                : `${s.capacity?.min ?? "?"}-${s.capacity?.max ?? "?"} ${t.people}`}
+            </span>
+          </div>
+        )}
 
         <div className="text-neutral-900">
           {categoryHasVisiblePrice(serviceCategory) && hasPrice(effectivePriceCop) && (
@@ -3172,8 +3261,10 @@ setCart([]);
                 <img
                   src={gallery[imgIndex] || selectedService.image}
                   className="w-full h-72 object-cover rounded-2xl"
+                  onError={e => driveOnError(e, selectedService.category)}
                 />
-                {gallery.length > 1 && (
+                {/* Arrows only when there are MORE than 2 images (3+) */}
+                {gallery.length > 2 && (
                   <>
                     <button
                       type="button"
@@ -3268,14 +3359,31 @@ setCart([]);
                 <div>
                   <h3 className="font-semibold mb-2">{t.details}</h3>
                   <ul className="space-y-1 text-sm text-gray-600">
-                    <li>📍 {selectedService.location}</li>
-                    <li>⏰ {selectedService.schedule}</li>
-                    <li>⏱️ {selectedService.duration}</li>
-                    <li>
-  👥 {(selectedService.capacity?.min ?? "?")}-
-  {(selectedService.capacity?.max ?? "?")} {t.people}
-</li>
-
+                    {selectedService.location && (
+                      <li>📍 {selectedService.location}</li>
+                    )}
+                    {selectedService.schedule && (
+                      <li>⏰ {selectedService.schedule}</li>
+                    )}
+                    {/* Duration & capacity: hidden for restaurants, bars, nightlife */}
+                    {!["restaurants","bars","nightlife"].includes(selectedServiceCategory) && (
+                      <>
+                        {selectedService.duration && (
+                          <li>⏱️ {selectedService.duration}</li>
+                        )}
+                        <li>
+                          👥 {(selectedService.capacity?.min ?? "?")}-
+                          {(selectedService.capacity?.max ?? "?")} {t.people}
+                        </li>
+                      </>
+                    )}
+                    {/* Dress code — shown for bars & nightlife when available */}
+                    {["bars","nightlife"].includes(selectedServiceCategory) && selectedService.dressCode && (
+                      <li className="flex items-center gap-1.5">
+                        <span style={{ fontSize: 14 }}>👔</span>
+                        <span>{lang === "es" ? "Dress code: " : "Dress code: "}{selectedService.dressCode}</span>
+                      </li>
+                    )}
                   </ul>
                 </div>
                 <div>
@@ -3293,18 +3401,20 @@ setCart([]);
               </div>
 
               <div className="flex flex-wrap items-center gap-3 mb-6">
-                {selectedService.category === "restaurants" &&
-                  selectedService.menuUrl && (
-                    <a
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-gray-50"
-                      href={selectedService.menuUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      {t.menu}
-                    </a>
-                  )}
+                {selectedService.menuUrl && (
+                  <a
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-gray-50"
+                    href={selectedService.menuUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    {/* "Menu" for food/bar, "Website" for others */}
+                    {["restaurants","bars","nightlife","beach-clubs"].includes(selectedService.category)
+                      ? t.menu
+                      : (lang === "es" ? "Sitio web" : "Website")}
+                  </a>
+                )}
                 {selectedService.mapsUrl && (
                   <a
                     className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-gray-50"
