@@ -231,224 +231,350 @@ function buildTravifyTextFromCart(kickoff) {
     })
     .join("\n\n");
 }
-function ItineraryEditor({ kickoff, onSave }) {
+/* ═══════════════════════════════════════════════════════════════
+   ACTIVITY ROW — inline-editable row inside a day section
+═══════════════════════════════════════════════════════════════ */
+function ActivityRow({ item, onUpdate, onRemove }) {
+  const [showNotes, setShowNotes] = useState(!!(item.notes));
+  return (
+    <div className=”px-4 py-2.5 hover:bg-neutral-50 transition-colors”>
+      <div className=”grid grid-cols-12 gap-x-2 items-center”>
+        {/* Time */}
+        <div className=”col-span-2”>
+          <input
+            value={item.timeLabel || “”}
+            onChange={e => onUpdate(item.id, { timeLabel: e.target.value })}
+            placeholder=”Hora”
+            className=”w-full text-xs text-neutral-500 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300”
+          />
+        </div>
+        {/* Name */}
+        <div className=”col-span-6”>
+          <input
+            value={item.displayName || item.name || “”}
+            onChange={e => onUpdate(item.id, { displayName: e.target.value })}
+            placeholder=”Nombre del servicio”
+            className=”w-full text-sm font-medium text-neutral-900 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent”
+          />
+          {item.category && (
+            <span className=”text-[9px] text-neutral-400 uppercase tracking-wide leading-none”>
+              {item.category}
+            </span>
+          )}
+        </div>
+        {/* Price */}
+        <div className=”col-span-3”>
+          <input
+            type=”number”
+            value={item.priceOverride_cop ?? “”}
+            onChange={e => onUpdate(item.id, {
+              priceOverride_cop: e.target.value === “” ? null : Number(e.target.value),
+            })}
+            placeholder={String(item.price_cop || “Precio COP”)}
+            className=”w-full text-xs text-right text-neutral-500 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300”
+          />
+        </div>
+        {/* Actions */}
+        <div className=”col-span-1 flex items-center justify-end gap-1.5”>
+          <button type=”button” onClick={() => setShowNotes(v => !v)}
+            title=”Notas”
+            className=”text-[11px] text-neutral-300 hover:text-neutral-600 leading-none”>
+            ✎
+          </button>
+          <button type=”button” onClick={() => onRemove(item.id)}
+            title=”Quitar”
+            className=”text-[11px] text-neutral-300 hover:text-red-500 leading-none”>
+            ✕
+          </button>
+        </div>
+      </div>
+      {showNotes && (
+        <input
+          value={item.notes || “”}
+          onChange={e => onUpdate(item.id, { notes: e.target.value })}
+          placeholder=”Notas: mesa, alergias, confirmación, prepago…”
+          className=”mt-1.5 w-full text-xs text-neutral-400 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 col-span-12”
+          autoFocus
+        />
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DAY SECTION — one per day, collapsible, with editable header
+═══════════════════════════════════════════════════════════════ */
+function DaySection({ label, meta, items, loadingServices,
+  onUpdateMeta, onRenameLabel, onRemoveDay,
+  onUpdateItem, onRemoveItem, onAddManual, onAddFromCatalog }) {
+
+  const [editingLabel, setEditingLabel] = useState(false);
+  const [localLabel,   setLocalLabel]   = useState(label);
+  const [collapsed,    setCollapsed]    = useState(false);
+
+  useEffect(() => setLocalLabel(label), [label]);
+
+  const commitLabel = () => {
+    setEditingLabel(false);
+    if (localLabel.trim() && localLabel !== label) onRenameLabel(localLabel.trim());
+  };
+
+  return (
+    <div className=”border border-neutral-200 rounded-2xl overflow-hidden shadow-sm”>
+      {/* ── Day header band ── */}
+      <div className=”bg-neutral-900 px-4 py-3”>
+        <div className=”flex items-center justify-between gap-2”>
+          {/* Editable date / day label */}
+          {editingLabel ? (
+            <input autoFocus value={localLabel}
+              onChange={e => setLocalLabel(e.target.value)}
+              onBlur={commitLabel}
+              onKeyDown={e => { if (e.key === “Enter”) commitLabel(); }}
+              className=”bg-neutral-800 text-white text-sm font-bold rounded px-2 py-0.5 w-52 focus:outline-none border border-neutral-600”
+            />
+          ) : (
+            <button type=”button” onClick={() => setEditingLabel(true)}
+              title=”Click para editar nombre/fecha del día”
+              className=”text-sm font-bold text-white hover:text-neutral-300 text-left truncate max-w-[200px]”>
+              {label}
+            </button>
+          )}
+          <div className=”flex items-center gap-2 flex-shrink-0”>
+            <span className=”text-[10px] text-neutral-500”>{items.length} act.</span>
+            <button type=”button” onClick={() => setCollapsed(v => !v)}
+              className=”text-neutral-500 hover:text-white text-xs w-5 text-center”>
+              {collapsed ? “▼” : “▲”}
+            </button>
+            <button type=”button” onClick={onRemoveDay}
+              className=”text-neutral-600 hover:text-red-400 text-xs w-4 text-center”>
+              ✕
+            </button>
+          </div>
+        </div>
+        {/* Editable day description (what goes into Travefy day title) */}
+        <input
+          value={meta.title || “”}
+          onChange={e => onUpdateMeta({ title: e.target.value })}
+          placeholder=”Descripción del día: ARRIVALS + CHECK IN + DINNER AT LA VITROLA…”
+          className=”mt-1.5 w-full bg-transparent text-[11px] text-neutral-400 placeholder-neutral-700 focus:outline-none focus:text-white transition-colors”
+        />
+      </div>
+
+      {/* ── Activities list ── */}
+      {!collapsed && (
+        <>
+          {items.length === 0 ? (
+            <div className=”px-4 py-3 text-xs text-neutral-400 italic bg-white”>
+              Sin actividades — agrega una abajo.
+            </div>
+          ) : (
+            <div className=”divide-y divide-neutral-100 bg-white”>
+              {items.map(item => (
+                <ActivityRow key={item.id} item={item}
+                  onUpdate={onUpdateItem} onRemove={onRemoveItem}/>
+              ))}
+            </div>
+          )}
+          {/* Add buttons */}
+          <div className=”flex gap-2 px-4 py-2.5 bg-neutral-50 border-t border-neutral-100”>
+            <button type=”button” onClick={onAddManual}
+              className=”text-xs text-neutral-500 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-400 rounded-lg px-3 py-1.5 bg-white transition-colors”>
+              + Manual
+            </button>
+            <button type=”button” onClick={onAddFromCatalog} disabled={loadingServices}
+              className=”text-xs text-neutral-500 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-400 rounded-lg px-3 py-1.5 bg-white disabled:opacity-40 transition-colors”>
+              {loadingServices ? “Cargando…” : “+ Catálogo”}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ITINERARY CANVAS — replaces ItineraryEditor
+   Day-grouped view with true inline editing.
+   Source of truth: cart (flat items) + dayMeta (day-level titles)
+   Both are persisted on save and drive PDF + Travefy output.
+═══════════════════════════════════════════════════════════════ */
+function ItineraryCanvas({ kickoff, onSave }) {
+  const [cart,     setCart]     = useState(kickoff?.cart     || []);
+  const [dayMeta,  setDayMeta]  = useState(kickoff?.dayMeta  || []);
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(false);
+  const [saving,   setSaving]   = useState(false);
+  const [catalogTargetDay, setCatalogTargetDay] = useState(null);
 
-  const [cart, setCart] = useState(kickoff?.cart || []);
-  const [saving, setSaving] = useState(false);
-
-  // refresca si cambias de kickoff
+  // Sync when kickoff changes (e.g. switching between kickoffs)
   useEffect(() => {
-    setCart(kickoff?.cart || []);
+    setCart(kickoff?.cart     || []);
+    setDayMeta(kickoff?.dayMeta || []);
   }, [kickoff?.id]);
 
-  // carga catálogo para "Desde catálogo"
+  // Load catalog once
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         setLoadingServices(true);
-        const { fetchServicesFromSheet } = await import("./sheetServices");
+        const { fetchServicesFromSheet } = await import(“./sheetServices”);
         const data = await fetchServicesFromSheet();
         if (alive) setServices(data || []);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        if (alive) setLoadingServices(false);
-      }
+      } catch (e) { console.error(e); }
+      finally { if (alive) setLoadingServices(false); }
     })();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
 
-  const updateItem = (idx, patch) => {
-    setCart((prev) => {
-      const next = [...(prev || [])];
-      next[idx] = { ...(next[idx] || {}), ...patch };
-      return next;
+  // Build ordered day list: dayMeta order first, then any orphan cart items
+  const days = useMemo(() => {
+    const metaLabels = dayMeta.map(dm => dm.label);
+    const extraLabels = [...new Set(
+      cart.map(i => i.dayLabel || “Sin día”).filter(l => !metaLabels.includes(l))
+    )];
+    const orderedLabels = [...metaLabels, ...extraLabels];
+    if (orderedLabels.length === 0) return [];
+
+    return orderedLabels.map(label => {
+      const meta  = dayMeta.find(dm => dm.label === label) || { label, title: “”, sortOrder: 99 };
+      const items = cart
+        .filter(i => (i.dayLabel || “Sin día”) === label)
+        .sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999));
+      return { label, meta, items };
     });
+  }, [cart, dayMeta]);
+
+  /* ── Day helpers ── */
+  const upsertDayMeta = (label, patch) =>
+    setDayMeta(prev => {
+      const exists = prev.find(dm => dm.label === label);
+      if (exists) return prev.map(dm => dm.label === label ? { ...dm, ...patch } : dm);
+      return [...prev, { label, title: “”, sortOrder: prev.length, ...patch }];
+    });
+
+  const renameDayLabel = (oldLabel, newLabel) => {
+    setCart(prev => prev.map(i =>
+      (i.dayLabel || “Sin día”) === oldLabel ? { ...i, dayLabel: newLabel } : i
+    ));
+    setDayMeta(prev => prev.map(dm =>
+      dm.label === oldLabel ? { ...dm, label: newLabel } : dm
+    ));
   };
 
-  const removeItem = (idx) => {
-    setCart((prev) => (prev || []).filter((_, i) => i !== idx));
+  const addDay = () => {
+    const label = `Día ${days.length + 1}`;
+    setDayMeta(prev => [...prev, { label, title: “”, sortOrder: prev.length }]);
   };
 
-  const addManual = () => {
-    setCart((prev) => [mapManualToCartItem(), ...(prev || [])]);
+  const removeDay = (label) => {
+    if (!window.confirm(`¿Eliminar “${label}” y todas sus actividades?`)) return;
+    setCart(prev => prev.filter(i => (i.dayLabel || “Sin día”) !== label));
+    setDayMeta(prev => prev.filter(dm => dm.label !== label));
   };
 
-  const [catalogModalOpen, setCatalogModalOpen] = useState(false);
+  /* ── Item helpers ── */
+  const updateItem = (id, patch) =>
+    setCart(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i));
 
-const addFromCatalog = () => {
-  if (loadingServices) return;
-  if (!services?.length) return alert("No hay servicios cargados aún.");
-  setCatalogModalOpen(true);
-};
+  const removeItem = (id) =>
+    setCart(prev => prev.filter(i => i.id !== id));
 
+  const addManualToDay = (dayLabel) => {
+    const count = cart.filter(i => (i.dayLabel || “Sin día”) === dayLabel).length;
+    setCart(prev => [...prev, { ...mapManualToCartItem(), dayLabel, sortOrder: count }]);
+  };
+
+  /* ── Save ── */
   const handleSave = async () => {
     try {
       setSaving(true);
-      await onSave(cart);
+      // Rebuild flat cart with clean sortOrders per day
+      const newCart = [];
+      days.forEach(({ label, items }) =>
+        items.forEach((item, i) =>
+          newCart.push({ ...item, dayLabel: label, sortOrder: i })
+        )
+      );
+      await onSave(newCart, dayMeta);
     } catch (e) {
       console.error(e);
-      alert("No se pudo guardar el itinerario.");
+      alert(“No se pudo guardar el itinerario.”);
     } finally {
       setSaving(false);
     }
   };
 
   if (!kickoff) return null;
+
+  const totalActivities = days.reduce((n, d) => n + d.items.length, 0);
+
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <div className="text-sm font-semibold text-neutral-900">
-            Ítems del itinerario
-          </div>
-          <div className="text-[11px] text-neutral-500">
-            Ajusta nombre, precio, día/horario y notas de cada experiencia.
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={addManual}
-            className="px-3 py-2 rounded-lg border border-neutral-300 text-xs hover:bg-neutral-100"
-          >
-            + Ítem manual
+    <div className=”space-y-3”>
+      {/* ── Top bar ── */}
+      <div className=”flex flex-wrap items-center justify-between gap-2”>
+        <p className=”text-[11px] text-neutral-400”>
+          {days.length} {days.length === 1 ? “día” : “días”} · {totalActivities} actividades
+          {loadingServices && “ · Cargando catálogo…”}
+        </p>
+        <div className=”flex gap-2”>
+          <button type=”button” onClick={addDay}
+            className=”px-3 py-1.5 rounded-lg border border-neutral-200 text-xs hover:bg-neutral-50 text-neutral-600”>
+            + Agregar día
           </button>
-
-          <button
-            type="button"
-            onClick={addFromCatalog}
-            disabled={loadingServices}
-            className="px-3 py-2 rounded-lg border border-neutral-300 text-xs hover:bg-neutral-100 disabled:opacity-60"
-            title={loadingServices ? "Cargando catálogo..." : "Agregar desde catálogo"}
-          >
-            + Desde catálogo
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="px-3 py-2 rounded-lg bg-neutral-900 text-white text-xs hover:bg-neutral-950 disabled:opacity-60"
-          >
-            {saving ? "Guardando..." : "Guardar itinerario"}
+          <button type=”button” onClick={handleSave} disabled={saving}
+            className=”px-3 py-1.5 rounded-lg bg-neutral-900 text-white text-xs hover:bg-neutral-800 disabled:opacity-50”>
+            {saving ? “Guardando…” : “Guardar itinerario”}
           </button>
         </div>
       </div>
 
-      {(cart || []).length === 0 ? (
-        <div className="text-xs text-neutral-500 border rounded-xl p-3 bg-neutral-50">
-          No hay ítems todavía. Agrega con “Ítem manual” o “Desde catálogo”.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {cart.map((it, idx) => (
-            <div key={`${it.id || idx}`} className="border rounded-2xl p-4 bg-white">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="text-[11px] text-neutral-500">Ítem #{idx + 1}</div>
-                  <div className="text-sm font-semibold text-neutral-900 truncate">
-                    {(it.displayName || it.name || "Servicio").trim()}
-                  </div>
-                  <div className="text-[11px] text-neutral-500">
-                    {it.category || "—"}
-                    {it.priceUnit ? ` · ${it.priceUnit}` : ""}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => removeItem(idx)}
-                  className="text-xs text-red-600 hover:bg-red-50 border border-red-200 px-3 py-2 rounded-lg"
-                >
-                  Quitar del itinerario
-                </button>
-              </div>
-
-              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-neutral-500">Nombre para el huésped</label>
-                  <input
-                    value={it.displayName || ""}
-                    onChange={(e) => updateItem(idx, { displayName: e.target.value })}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                    placeholder={it.name || "Nombre visible"}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] text-neutral-500">Precio referencia (COP)</label>
-                  <input
-                    type="number"
-                    value={it.priceOverride_cop ?? ""}
-                    onChange={(e) =>
-                      updateItem(idx, {
-                        priceOverride_cop: e.target.value === "" ? null : Number(e.target.value),
-                      })
-                    }
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                    placeholder={String(it.price_cop || 0)}
-                  />
-                  <div className="text-[10px] text-neutral-400 mt-1">
-                    Vacío = usa precio del catálogo (
-                    {new Intl.NumberFormat("es-CO").format(Number(it.price_cop || 0))} COP)
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[11px] text-neutral-500">Día / fecha sugerida</label>
-                  <input
-                    value={it.dayLabel || ""}
-                    onChange={(e) => updateItem(idx, { dayLabel: e.target.value })}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                    placeholder="Ej: Día 1 – tarde / 12 mar"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] text-neutral-500">Horario sugerido</label>
-                  <input
-                    value={it.timeLabel || ""}
-                    onChange={(e) => updateItem(idx, { timeLabel: e.target.value })}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                    placeholder="Ej: 7:30 p.m."
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="text-[11px] text-neutral-500">Notas para este servicio</label>
-                  <textarea
-                    value={it.notes || ""}
-                    onChange={(e) => updateItem(idx, { notes: e.target.value })}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm min-h-[80px]"
-                    placeholder="Mesa terraza, alergias, prepago, etc."
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
+      {/* ── Empty state ── */}
+      {days.length === 0 && (
+        <div className=”text-center py-10 border-2 border-dashed border-neutral-200 rounded-2xl”>
+          <p className=”text-sm text-neutral-400 mb-3”>No hay días aún.</p>
+          <button type=”button” onClick={addDay}
+            className=”px-4 py-2 rounded-lg bg-neutral-900 text-white text-xs”>
+            + Crear primer día
+          </button>
         </div>
       )}
 
-      {/* ✅ MODAL AQUÍ (al final del return) */}
-      {catalogModalOpen && (
-  <CatalogPickerModal
-    services={services}
-    clientType={kickoff?.clientType || 1}
-    onClose={() => setCatalogModalOpen(false)}
-    onPick={(svc) => {
-  const clientType = kickoff?.clientType || 1; // o el clientType leído de la URL en el portal cliente
-  setCart((prev) => [mapServiceToCartItem(svc, clientType), ...(prev || [])]);
-  setCatalogModalOpen(false);
-}}
-  />
-)}
+      {/* ── Day sections ── */}
+      {days.map(({ label, meta, items }) => (
+        <DaySection
+          key={label}
+          label={label}
+          meta={meta}
+          items={items}
+          loadingServices={loadingServices}
+          onUpdateMeta={patch => upsertDayMeta(label, patch)}
+          onRenameLabel={newLabel => renameDayLabel(label, newLabel)}
+          onRemoveDay={() => removeDay(label)}
+          onUpdateItem={updateItem}
+          onRemoveItem={removeItem}
+          onAddManual={() => addManualToDay(label)}
+          onAddFromCatalog={() => setCatalogTargetDay(label)}
+        />
+      ))}
+
+      {/* Catalog picker modal (per-day) */}
+      {catalogTargetDay && (
+        <CatalogPickerModal
+          services={services}
+          clientType={kickoff?.clientType || 1}
+          onClose={() => setCatalogTargetDay(null)}
+          onPick={svc => {
+            const count = cart.filter(i => (i.dayLabel || “Sin día”) === catalogTargetDay).length;
+            setCart(prev => [...prev, {
+              ...mapServiceToCartItem(svc, kickoff?.clientType || 1),
+              dayLabel: catalogTargetDay,
+              sortOrder: count,
+            }]);
+            setCatalogTargetDay(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1254,24 +1380,32 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             </div>
           </div>
 
-          {/* ITINERARIO */}
+          {/* ITINERARIO — canvas con edición inline por día */}
 <div className="border rounded-2xl p-4 bg-white">
-  <div className="text-sm font-semibold text-neutral-900">Itinerario</div>
-  <div className="text-[11px] text-neutral-500">
-    Agrega ítems manuales o desde catálogo y guarda.
+  <div className="flex items-center justify-between mb-1">
+    <div className="text-sm font-semibold text-neutral-900">Itinerario</div>
+    {kickoff?.cart?.length > 0 && (
+      <a
+        href={`/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff.lang || "en"}`}
+        target="_blank" rel="noreferrer"
+        className="text-[11px] text-blue-600 hover:underline">
+        📄 Ver PDF →
+      </a>
+    )}
   </div>
-
-  <div className="mt-3">
-    <ItineraryEditor
-      kickoff={kickoff}
-      onSave={async (newCart) => {
-        await onSave(kickoff.id, {
-          cart: newCart,
-          status: "concierge_editing",
-        });
-      }}
-    />
+  <div className="text-[11px] text-neutral-400 mb-3">
+    Agrupa actividades por día. Edita nombre, hora y precio directamente en cada fila.
   </div>
+  <ItineraryCanvas
+    kickoff={kickoff}
+    onSave={async (newCart, newDayMeta) => {
+      await onSave(kickoff.id, {
+        cart: newCart,
+        dayMeta: newDayMeta,
+        status: "concierge_editing",
+      });
+    }}
+  />
 </div>
         </div>
 
@@ -1386,7 +1520,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           tripName,
           guestContact,
           lang:              kickoff.lang || "en",
-          cart:              kickoff.cart || [],
+          cart:              kickoff.cart    || [],
+          dayMeta:           kickoff.dayMeta || [],
           conciergeSummary,
           internalNotes,
           conciergeName:     assignedConcierge,

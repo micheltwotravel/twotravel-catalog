@@ -38,7 +38,7 @@ function matchCart(cart, catalog) {
   return out;
 }
 
-function buildDays(matched, lang) {
+function buildDays(matched, lang, dayMeta) {
   const map = new Map();
   matched.forEach(({ cartItem, service }, idx) => {
     const key = cl(cartItem?.dayLabel || cartItem?.day || "Itinerary");
@@ -69,10 +69,18 @@ function buildDays(matched, lang) {
       familyFriendly: !!(service.family_friendly),
     });
   });
-  return [...map.entries()].map(([title, items]) => ({
-    title,
-    items: [...items].sort((a, b) => a.sort - b.sort),
-  }));
+  // Respect dayMeta order if provided
+  const metaList   = Array.isArray(dayMeta) ? dayMeta : [];
+  const metaLabels = metaList.map(dm => cl(dm.label)).filter(Boolean);
+  const extraLabels = [...map.keys()].filter(k => !metaLabels.includes(k));
+  const orderedLabels = [...metaLabels.filter(l => map.has(l)), ...extraLabels];
+
+  return orderedLabels.map(label => {
+    const dm = metaList.find(d => cl(d.label) === label);
+    const items = (map.get(label) || []).sort((a, b) => a.sort - b.sort);
+    // Day band shows label; subtitle shows the descriptive title if set
+    return { label, title: dm?.title || "", items };
+  });
 }
 
 function splitList(v) {
@@ -497,10 +505,20 @@ function SummaryPage({ kickoff, days, page, total }) {
 
       <div className="sum-body">
         {days.map(day => (
-          <div key={day.title} className="sum-day-block">
+          <div key={day.label} className="sum-day-block">
             <div className="sum-day-header">
               <span className="sum-day-pip"/>
-              <span className="sum-day-label">{day.title}</span>
+              <div>
+                <span className="sum-day-label">{day.label}</span>
+                {day.title && (
+                  <span style={{
+                    fontSize: 10, color: "#bbb", marginLeft: 8,
+                    fontWeight: 400, textTransform: "uppercase", letterSpacing: "1px",
+                  }}>
+                    {day.title}
+                  </span>
+                )}
+              </div>
             </div>
             {day.items.map((it, i) => (
               <div key={i} className="sum-svc-row">
@@ -734,8 +752,21 @@ function DayPage({ kickoff, day, page, total, lang }) {
     <div className="page">
       <PH kickoff={kickoff}/>
       <div className="day-band">
-        <span className="day-band-sup">{lang === "es" ? "Día" : "Day"}</span>
-        <span className="day-band-title">{day.title}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <span className="day-band-sup">{lang === "es" ? "Día" : "Day"}</span>
+            <span className="day-band-title">{day.label}</span>
+          </div>
+          {day.title && (
+            <div style={{
+              fontSize: 10, color: "#888", marginTop: 3,
+              textTransform: "uppercase", letterSpacing: "1.5px",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            }}>
+              {day.title}
+            </div>
+          )}
+        </div>
       </div>
       <div style={{ flex: 1 }}>
         {day.items.map((it, i) => (
@@ -779,7 +810,7 @@ export default function ItineraryPrintView() {
 
   const days = useMemo(() => {
     if (!kickoff || !catalog.length) return [];
-    return buildDays(matchCart(kickoff.cart, catalog), lang);
+    return buildDays(matchCart(kickoff.cart, catalog), lang, kickoff.dayMeta || []);
   }, [kickoff, catalog, lang]);
 
   // First available service image → cover hero

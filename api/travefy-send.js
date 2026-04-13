@@ -639,28 +639,46 @@ function buildAccountingDay(matched, meta) {
 ══════════════════════════════════════════════════════════════════ */
 
 function buildTripDays(matched, lang, meta) {
-  // Group cart items by their day label
+  // Respect dayMeta order if provided, otherwise use insertion order
+  const dayMetaList = Array.isArray(meta.dayMeta) ? meta.dayMeta : [];
+
+  // Group cart items by dayLabel
   const dayMap = new Map();
   matched.forEach(({ cartItem, service }, idx) => {
-    const key = clean(cartItem?.day || cartItem?.dayLabel || "Itinerary");
+    const key = clean(cartItem?.dayLabel || cartItem?.day || "Itinerary");
     if (!dayMap.has(key)) dayMap.set(key, []);
     dayMap.get(key).push({ cartItem, service, idx });
   });
 
+  // Build ordered list of day labels: dayMeta order first, then any extras
+  const metaLabels  = dayMetaList.map(dm => clean(dm.label)).filter(Boolean);
+  const extraLabels = [...dayMap.keys()].filter(k => !metaLabels.includes(k));
+  const orderedLabels = [...metaLabels.filter(l => dayMap.has(l)), ...extraLabels];
+
   // One TripDay per unique day label
-  const serviceDays = Array.from(dayMap.entries()).map(([title, items], di) => ({
-    SortOrder:      di + 10,    // 10+ leaves room for the 3 supplemental days above
-    Title:          title,
-    IsSupplemental: false,
-    TripEvents: items
-      .sort((a, b) =>
-        (Number(a.cartItem?.sortOrder ?? a.idx)) -
-        (Number(b.cartItem?.sortOrder ?? b.idx))
-      )
-      .map(({ cartItem, service }, ei) =>
-        buildTripEvent(service, cartItem, lang, ei + 1)
-      ),
-  }));
+  const serviceDays = orderedLabels.map((label, di) => {
+    const items = dayMap.get(label) || [];
+    // dayMeta provides the descriptive title (e.g. "ARRIVALS + CHECK IN + DINNER AT LA VITROLA")
+    const dm = dayMetaList.find(d => clean(d.label) === label);
+    // Travefy day title = label + " — " + description, or just label
+    const dayTitle = dm?.title
+      ? `${label} — ${dm.title}`
+      : label;
+
+    return {
+      SortOrder:      di + 10,
+      Title:          dayTitle,
+      IsSupplemental: false,
+      TripEvents: items
+        .sort((a, b) =>
+          (Number(a.cartItem?.sortOrder ?? a.idx)) -
+          (Number(b.cartItem?.sortOrder ?? b.idx))
+        )
+        .map(({ cartItem, service }, ei) =>
+          buildTripEvent(service, cartItem, lang, ei + 1)
+        ),
+    };
+  });
 
   return [
     buildWelcomeDay(meta, lang),        // SortOrder 0  — supplemental
@@ -740,6 +758,7 @@ export default async function handler(req, res) {
       guestContact      = "",
       lang              = "en",
       cart              = [],
+      dayMeta           = [],
       conciergeSummary  = "",
       internalNotes     = "",
       conciergeName     = "",
@@ -779,6 +798,7 @@ export default async function handler(req, res) {
       conciergeTitle, city, tripName, tripDates,
       groupSize, accommodationName, accommodationAddr,
       checkIn, checkOut, startDate, endDate,
+      dayMeta,
     };
 
     // ── 3. Build full Travefy structure ──────────────────────────
