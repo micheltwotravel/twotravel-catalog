@@ -2098,7 +2098,7 @@ useEffect(() => {
 
       return {
         ...s,
-        id: String(s.id ?? "").trim() || `row-${idx}`,
+        id: `row-${idx}`,
         name: String(s.name ?? s.Nombre ?? s.title ?? "").trim(),
         // Keep raw URL here; call safeImg(url, category) at render-time so each
         // category gets its own themed fallback image if the URL is missing.
@@ -3155,14 +3155,14 @@ setCart([]);
             {/* Grid servicios */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredServices.map((s) => {
+          {filteredServices.map((s, _svcIdx) => {
   const serviceCategory = normalizeCategory(s.category);
   const effectivePriceCop = getEffectivePriceCop(s, currentClientType);
   const priceConverted = convertPrice(effectivePriceCop);
 
   return (
     <div
-      key={s.id}
+      key={`svc-${_svcIdx}-${s.id}`}
       className="bg-white rounded-xl shadow hover:shadow-xl transition-shadow overflow-hidden cursor-pointer"
       onClick={() => setSelectedService(s)}
     >
