@@ -88,8 +88,8 @@ const i18n = {
     kickoffSentTitle: "¡Resumen enviado!",
     kickoffSentBody:
       "Tu selección fue enviada a nuestro equipo de concierge. En las próximas horas te contactaremos para afinar detalles y avanzar con las reservas.",
-      quizTitle: "Diseñemos tu experiencia en Cartagena",
-quizSubtitle: "En 30 segundos entendemos tu estilo y te mostramos recomendaciones curadas por nuestro concierge.",
+      quizTitle: "Diseñemos tus Experiences en Cartagena",
+quizSubtitle: "En 30 segundos, entendemos tu estilo y te mostramos recomendaciones curadas por nuestro concierge.",
 quizNote: "No vendemos tus datos. Esto solo se usa para personalizar tu catálogo.",
 quizVibeLabel: "Mood del viaje",
 quizBudgetLabel: "Nivel de presupuesto",
@@ -128,8 +128,8 @@ variablePrice: "Variable pricing",
     approxPrice: "Approx. price",
     perPerson: "per person",
     dayPass: "day pass",
-    quizTitle: "Let's design your Cartagena experience",
-quizSubtitle: "In 30 seconds we'll understand your style and show concierge-curated recommendations.",
+    quizTitle: "Let's design your Cartagena Experiences!",
+quizSubtitle: "In 30 seconds, we'll understand your style and show concierge-curated recommendations.",
 quizNote: "We don't sell your data. This is only used to personalize your catalog.",
 quizVibeLabel: "Trip vibe",
 quizBudgetLabel: "Budget level",
@@ -1781,20 +1781,20 @@ const priceRanges = [
   },
   {
     id: "budget",
-    labelEs: "$ (más económico)",
-    labelEn: "$ (budget)",
+    labelEs: "Económico $",
+    labelEn: "Budget $",
     levels: ["$"],
   },
   {
     id: "mid",
-    labelEs: "$$ (medio)",
-    labelEn: "$$ (mid)",
+    labelEs: "Medio $$",
+    labelEn: "Mid $$",
     levels: ["$$"],
   },
   {
     id: "premium",
-    labelEs: "$$$ (alto)",
-    labelEn: "$$$ (premium)",
+    labelEs: "Alto $$$",
+    labelEn: "High $$$",
     levels: ["$$$"],
   },
 ];
@@ -2251,7 +2251,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
 
   /* ---------- estados de filtros ---------- */
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedStyles, setSelectedStyles] = useState(new Set());
+  const [selectedStyle, setSelectedStyle] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [priceRange, setPriceRange] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
@@ -2278,8 +2278,10 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
     vibes: [],       // array — multiple vibes allowed e.g. ["party","adventure"]
     budget: "",      // low | mid | high
     kids: "no",      // "yes" | "no"
+    groupSize: "",   // number of people
     cuisines: "",    // texto libre
     interests: [],   // array strings
+    groupNotes: "",  // open text: "What else should we know?"
   });
 
   
@@ -2359,9 +2361,9 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
       // Style sub-filter: only relevant when "restaurants" tab is active
       // Normalise both sides so "fine dining" == "fine-dining"
       const stylesOK =
-        selectedCategory !== "restaurants" || selectedStyles.size === 0
+        selectedCategory !== "restaurants" || !selectedStyle
           ? true
-          : selectedStyles.has(normalizeSubcategory(s.subcategory));
+          : normalizeSubcategory(s.subcategory) === selectedStyle;
 
       const q = searchTerm.trim().toLowerCase();
       const searchOK =
@@ -2385,7 +2387,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
 
       return catOK && stylesOK && searchOK && priceOK;
     });
-  }, [services, selectedCategory, selectedStyles, searchTerm, priceRange, currentClientType]);
+  }, [services, selectedCategory, selectedStyle, searchTerm, priceRange, currentClientType]);
 
 const vibeLabel = useMemo(() => {
   const map = {
@@ -2406,7 +2408,7 @@ const vibeLabel = useMemo(() => {
   const recommendedServices = useMemo(() => {
     // si el usuario no contestó nada, no mostramos recomendados
     const hasAnswers =
-      quiz.vibe ||
+      (quiz.vibes?.length || 0) > 0 ||
       quiz.budget ||
       quiz.cuisines ||
       (quiz.interests?.length || 0) > 0 ||
@@ -2468,13 +2470,17 @@ const vibeLabel = useMemo(() => {
         if (sub.includes(c)) pts += 1;
       }
 
-      // ✅ Interests (mapeo rápido)
+      // ✅ Interests (mapeo rápido) — alineado con categorías del catálogo
       const interests = new Set(quiz.interests || []);
-      if (interests.has("food") && cat === "restaurants") pts += 2;
-      if (interests.has("beach") && cat === "beach-clubs") pts += 2;
-      if (interests.has("night") && (cat === "nightlife" || cat === "bars")) pts += 2;
-      if (interests.has("culture") && (sub.includes("cultural") || sub.includes("city") || desc.includes("histor"))) pts += 2;
-      if (interests.has("adventure") && (sub.includes("adventure") || sub.includes("water") || sub.includes("bike"))) pts += 2;
+      if (interests.has("food") && cat === "restaurants") pts += 3;
+      if (interests.has("beach") && cat === "beach-clubs") pts += 3;
+      if (interests.has("night") && (cat === "nightlife" || cat === "bars")) pts += 3;
+      // Culture → prioritize cultural tours; also history/art mentions
+      if (interests.has("culture") && cat === "tours") pts += 2;
+      if (interests.has("culture") && (sub.includes("cultural") || sub.includes("city") || sub.includes("histor") || desc.includes("histor") || desc.includes("cultur") || desc.includes("art") || desc.includes("museo"))) pts += 2;
+      // Adventure → tours with adventure/outdoor subcategories
+      if (interests.has("adventure") && cat === "tours") pts += 1;
+      if (interests.has("adventure") && (sub.includes("adventure") || sub.includes("water") || sub.includes("bike") || sub.includes("sport") || desc.includes("aventura"))) pts += 2;
 
       return pts;
     };
@@ -2849,9 +2855,9 @@ setCart([]);
   }
 >
   <option value="">—</option>
-  <option value="low">$</option>
-  <option value="mid">$$</option>
-  <option value="high">$$$</option>
+  <option value="low">{lang === "es" ? "Económico $" : "Budget $"}</option>
+  <option value="mid">{lang === "es" ? "Medio $$" : "Mid $$"}</option>
+  <option value="high">{lang === "es" ? "Alto $$$" : "High $$$"}</option>
 </select>
 
               </div>
@@ -2869,6 +2875,21 @@ setCart([]);
                   <option value="yes">{lang === "es" ? "Sí" : "Yes"}</option>
                 </select>
               </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] text-neutral-600">
+                  {lang === "es" ? "¿Cuántas personas?" : "Group size"}
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="200"
+                  className="w-full border rounded-lg px-3 py-2 bg-white"
+                  value={quiz.groupSize}
+                  onChange={(e) => setQuiz((q) => ({ ...q, groupSize: e.target.value }))}
+                  placeholder="2"
+                />
+              </div>
             </div>
 
             <div className="space-y-1">
@@ -2885,7 +2906,9 @@ setCart([]);
 
             <div className="space-y-2">
               <p className="text-[11px] text-neutral-600">
-                {lang === "es" ? "¿Qué te interesa?" : "What are you into?"}
+                {lang === "es"
+                  ? "¿Qué actividades o experiencias quiere priorizar tu grupo en este viaje?"
+                  : "What kinds of activities or experiences would your group like to prioritize on this trip?"}
               </p>
               <div className="flex flex-wrap gap-2">
                 {interestOptions.map((opt) => {
@@ -2902,6 +2925,23 @@ setCart([]);
                   );
                 })}
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-[11px] text-neutral-600">
+                {lang === "es"
+                  ? "¿Algo más que debamos saber sobre tu grupo?"
+                  : "What else should we know about your group?"}
+              </p>
+              <textarea
+                className="w-full border rounded-lg px-3 py-2 bg-white text-sm resize-none"
+                rows={3}
+                value={quiz.groupNotes}
+                onChange={(e) => setQuiz((q) => ({ ...q, groupNotes: e.target.value }))}
+                placeholder={lang === "es"
+                  ? "Alergias, celebraciones especiales, preferencias de movilidad…"
+                  : "Allergies, special celebrations, mobility preferences…"}
+              />
             </div>
 
             <div className="flex items-center justify-between pt-2">
@@ -3022,7 +3062,7 @@ setCart([]);
                   key={c.id}
                   onClick={() => {
                     setSelectedCategory(c.id);
-                    setSelectedStyles(new Set());
+                    setSelectedStyle("");
                   }}
                   className={`px-3 py-1 rounded-full text-xs border transition-colors ${
   selectedCategory === c.id
@@ -3034,30 +3074,20 @@ setCart([]);
                 </button>
               ))}
 
-              {/* Estilos restaurantes */}
+              {/* Estilos restaurantes — dropdown */}
               {selectedCategory === "restaurants" && (
                 <div className="flex items-center gap-2 ml-2">
                   <span className="text-xs text-gray-600">{t.styles}:</span>
-                  {restaurantStyles.map((s) => {
-                    const active = selectedStyles.has(s.id);
-                    return (
-                      <button
-                        key={s.id}
-                        onClick={() => {
-                          const next = new Set(selectedStyles);
-                          active ? next.delete(s.id) : next.add(s.id);
-                          setSelectedStyles(next);
-                        }}
-                        className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-  active
-    ? "bg-neutral-900 text-white border-neutral-900"
-    : "bg-white text-neutral-800 border-neutral-300 hover:bg-neutral-100"
-}`}
-                      >
-                        {s.label[lang]}
-                      </button>
-                    );
-                  })}
+                  <select
+                    value={selectedStyle}
+                    onChange={(e) => setSelectedStyle(e.target.value)}
+                    className="border rounded-lg px-3 py-1.5 text-xs bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-900/30"
+                  >
+                    <option value="">{lang === "es" ? "Todos los estilos" : "All styles"}</option>
+                    {restaurantStyles.map((s) => (
+                      <option key={s.id} value={s.id}>{s.label[lang]}</option>
+                    ))}
+                  </select>
                 </div>
               )}
 
@@ -3160,6 +3190,8 @@ setCart([]);
   const effectivePriceCop = getEffectivePriceCop(s, currentClientType);
   const priceConverted = convertPrice(effectivePriceCop);
 
+  const isInCart = cart.some((c) => c.id === s.id);
+
   return (
     <div
       key={`svc-${_svcIdx}-${s.id}`}
@@ -3181,6 +3213,22 @@ setCart([]);
             👨‍👩‍👧 {lang === "es" ? "Apto para familias" : "Family Friendly"}
           </div>
         )}
+        {/* Quick-add heart button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!isInCart) addToCart(s);
+          }}
+          title={isInCart ? (lang === "es" ? "Ya en favoritos" : "Already in favorites") : (lang === "es" ? "Agregar a favoritos" : "Add to favorites")}
+          className={`absolute bottom-2 right-2 w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-colors border ${
+            isInCart
+              ? "bg-neutral-900 text-white border-neutral-900"
+              : "bg-white/90 text-neutral-700 border-white/60 hover:bg-neutral-900 hover:text-white"
+          }`}
+        >
+          <Heart className={`w-4 h-4 ${isInCart ? "fill-current" : ""}`} />
+        </button>
       </div>
 
       <div className="p-4">
@@ -3377,11 +3425,25 @@ setCart([]);
                         </li>
                       </>
                     )}
-                    {/* Dress code — shown for bars & nightlife when available */}
-                    {["bars","nightlife"].includes(selectedServiceCategory) && selectedService.dressCode && (
+                    {/* Dress code — restaurants, bars & nightlife */}
+                    {["restaurants","bars","nightlife","beach-clubs"].includes(selectedServiceCategory) && selectedService.dressCode && (
                       <li className="flex items-center gap-1.5">
                         <span style={{ fontSize: 14 }}>👔</span>
                         <span>{lang === "es" ? "Dress code: " : "Dress code: "}{selectedService.dressCode}</span>
+                      </li>
+                    )}
+                    {/* Cancellation policy */}
+                    {selectedService.cancellation && (
+                      <li className="flex items-center gap-1.5">
+                        <span style={{ fontSize: 14 }}>📋</span>
+                        <span>{lang === "es" ? "Cancelación: " : "Cancellation: "}{selectedService.cancellation}</span>
+                      </li>
+                    )}
+                    {/* Deposit */}
+                    {selectedService.deposit && (
+                      <li className="flex items-center gap-1.5">
+                        <span style={{ fontSize: 14 }}>💳</span>
+                        <span>{lang === "es" ? "Depósito: " : "Deposit: "}{selectedService.deposit}</span>
                       </li>
                     )}
                   </ul>
