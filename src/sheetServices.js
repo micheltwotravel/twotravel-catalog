@@ -102,6 +102,7 @@ const rawVideo = row.video1 || row["video 1"] || row.video || row.video_url || r
     name: row.name || "",
     category: row.category || "services",
     subcategory: row.subcategory || "",
+    city: (row.city || row.ciudad || row.destination || row.destino || "").trim().toLowerCase(),
     images: extraImages,
 video1: video1,
 

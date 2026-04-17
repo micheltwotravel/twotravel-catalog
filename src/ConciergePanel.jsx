@@ -652,6 +652,7 @@ function ItineraryCanvas({ kickoff, onSave }) {
         <CatalogPickerModal
           services={services}
           clientType={kickoff?.clientType || 1}
+          city={kickoff?.city || ""}
           onClose={() => setCatalogTargetDay(null)}
           onPick={svc => {
             const count = cart.filter(i => (i.dayLabel || "Sin día") === catalogTargetDay).length;
@@ -993,6 +994,10 @@ async function ensureKickoffReady(
     const tripName = (prompt("Nombre del viaje:") || "").trim();
     const guestContact = (prompt("Contacto (WhatsApp o email):") || "").trim();
 
+    const cityRaw = (prompt("Ciudad destino:\n1 = Cartagena\n2 = Medellín\n3 = CDMX\n4 = Tulum\n5 = Otra") || "1").trim();
+    const cityMap = { "1": "cartagena", "2": "medellín", "3": "cdmx", "4": "tulum" };
+    const city = cityMap[cityRaw] || cityRaw.toLowerCase() || "cartagena";
+
     const clientType = window.confirm("¿Cliente Tipo 2? (OK = Sí, Cancel = Tipo 1)") ? 2 : 1;
 
 const kickoffId = `ko_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
@@ -1003,6 +1008,7 @@ const kickoffId = `ko_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
       tripName,
       guestContact,
       clientType,
+      city,
       createdAt: new Date().toISOString(),
       status: "new",
       conciergeSummary: "",
@@ -1063,22 +1069,37 @@ const kickoffId = `ko_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
   return selectedKickoffForLink;
 }
 
-function CatalogPickerModal({ services, clientType = 1, onClose, onPick }) {
+function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPick }) {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("all");
 
+  // Normalise city for comparison (lowercase, no accents on common names)
+  const normalizeCity = (v) => String(v || "").trim().toLowerCase();
+  const kickoffCity = normalizeCity(city);
+
+  // Base list: filter by city when kickoff has one and service has city tagged
+  const cityServices = useMemo(() => {
+    if (!kickoffCity) return services || [];
+    return (services || []).filter((s) => {
+      const sCity = normalizeCity(s.city);
+      // If service has no city tag → show it (backward-compat for untagged rows)
+      if (!sCity) return true;
+      return sCity === kickoffCity;
+    });
+  }, [services, kickoffCity]);
+
   const categories = useMemo(() => {
     const set = new Set(
-      (services || [])
+      cityServices
         .map((s) => String(s.category || "").trim())
         .filter(Boolean)
     );
     return ["all", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
-  }, [services]);
+  }, [cityServices]);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
-    return (services || [])
+    return cityServices
       .filter((s) => {
         const cat = String(s.category || "").trim();
         if (category !== "all" && cat !== category) return false;
@@ -1098,11 +1119,11 @@ function CatalogPickerModal({ services, clientType = 1, onClose, onPick }) {
         return haystack.includes(query);
       })
       .slice(0, 200); // evita listas gigantes
-  }, [services, q, category]);
+  }, [cityServices, q, category]);
 
   return (
     <Modal
-      title="Agregar desde Catálogo"
+      title={kickoffCity ? `Agregar desde Catálogo · ${kickoffCity.charAt(0).toUpperCase() + kickoffCity.slice(1)}` : "Agregar desde Catálogo"}
       onClose={onClose}
       maxWidth="max-w-4xl"
       footer={
