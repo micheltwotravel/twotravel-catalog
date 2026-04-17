@@ -2772,14 +2772,14 @@ setCart([]);
 
   <h1 className="text-3xl sm:text-4xl font-semibold text-neutral-900 leading-tight">
     {lang === "es"
-      ? "Diseñemos tu experiencia en Cartagena"
-      : "Let's design your Cartagena experience"}
+      ? "Diseñemos tus Experiences en Cartagena"
+      : "Let's design your Cartagena Experiences!"}
   </h1>
 
   <p className="text-sm sm:text-base text-neutral-600 max-w-2xl">
     {lang === "es"
-      ? "En 30 segundos entendemos tu estilo y te mostramos recomendaciones curadas por nuestro concierge."
-      : "In 30 seconds we'll understand your style and show concierge-curated recommendations."}
+      ? "En 30 segundos, entendemos tu estilo y te mostramos recomendaciones curadas por nuestro concierge."
+      : "In 30 seconds, we'll understand your style and show concierge-curated recommendations."}
   </p>
 
   <div className="text-xs text-neutral-500 flex items-center gap-2">
@@ -2896,12 +2896,21 @@ setCart([]);
               <label className="text-[11px] text-neutral-600">
                 {lang === "es" ? "Cocinas favoritas (opcional)" : "Favorite cuisines (optional)"}
               </label>
-              <input
+              <select
                 className="w-full border rounded-lg px-3 py-2 bg-white"
                 value={quiz.cuisines}
                 onChange={(e) => setQuiz((q) => ({ ...q, cuisines: e.target.value }))}
-                placeholder={lang === "es" ? "Mariscos, Sushi, Italiano..." : "Seafood, Sushi, Italian..."}
-              />
+              >
+                <option value="">{lang === "es" ? "— Selecciona —" : "— Select —"}</option>
+                <option value="seafood">{lang === "es" ? "Mariscos" : "Seafood"}</option>
+                <option value="caribbean">{lang === "es" ? "Caribeño" : "Caribbean"}</option>
+                <option value="contemporary">{lang === "es" ? "Contemporáneo" : "Contemporary"}</option>
+                <option value="fine-dining">{lang === "es" ? "Fine dining" : "Fine dining"}</option>
+                <option value="japanese">{lang === "es" ? "Japonés / Nikkei" : "Japanese / Nikkei"}</option>
+                <option value="peruvian">{lang === "es" ? "Peruano" : "Peruvian"}</option>
+                <option value="rooftop">{lang === "es" ? "Rooftop" : "Rooftop"}</option>
+                <option value="classic">{lang === "es" ? "Clásico / Tradicional" : "Classic / Traditional"}</option>
+              </select>
             </div>
 
             <div className="space-y-2">
