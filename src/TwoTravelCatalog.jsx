@@ -2290,6 +2290,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
   const [heartBump, setHeartBump] = useState(false); // 💗 animación icono
+  const [cartToast, setCartToast] = useState(false);  // popup "cuando termines..."
 
  const cartTotalCOP = useMemo(
   () =>
@@ -2485,16 +2486,21 @@ const vibeLabel = useMemo(() => {
       return pts;
     };
 
-    // TIP: puedes usar `services` (todo el catálogo) para recomendar
-    // o `filteredServices` si quieres que respeten filtros.
-    const base = services;
-
-    return base
+    // Scored picks (max 6)
+    const scored = services
       .map((s) => ({ s, pts: score(s) }))
       .filter((x) => x.pts > 0)
       .sort((a, b) => b.pts - a.pts)
-      .slice(0, 8)
+      .slice(0, 6)
       .map((x) => x.s);
+
+    // Airport / transfer always pinned at the end (max 2 transport services)
+    const scoredIds = new Set(scored.map((s) => s.id));
+    const transportPicks = services
+      .filter((s) => s.category === "transportation" && !scoredIds.has(s.id))
+      .slice(0, 2);
+
+    return [...scored, ...transportPicks];
   }, [quiz, services]);
 
 
@@ -2527,6 +2533,9 @@ clientType: currentClientType,
   ]);
   setHeartBump(true);
   setTimeout(() => setHeartBump(false), 200);
+  // Show "when you're done tap the heart" toast on first add
+  setCartToast(true);
+  setTimeout(() => setCartToast(false), 4000);
 };
   const removeFromCart = (cartId) =>
     setCart((c) => c.filter((x) => x.cartId !== cartId));
@@ -3119,6 +3128,20 @@ setCart([]);
           </div>
         )}
       </div>
+      {/* Toast: guía al cliente cuando agrega el primer favorito */}
+      {cartToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
+          <div className="flex items-center gap-3 bg-neutral-900 text-white px-5 py-3 rounded-2xl shadow-xl text-sm max-w-xs text-center">
+            <Heart className="w-4 h-4 fill-current shrink-0" />
+            <span>
+              {lang === "es"
+                ? "¡Guardado! Cuando termines, toca el ❤️ arriba para revisar tu lista."
+                : "Saved! When you're done browsing, tap the ❤️ at the top to review your picks."}
+            </span>
+          </div>
+        </div>
+      )}
+
             {/* ✅ Recomendados (según quiz) — solo cuando no hay filtro activo */}
       {recommendedServices.length > 0 && selectedCategory === "all" && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
