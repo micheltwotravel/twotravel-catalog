@@ -1740,6 +1740,7 @@ export default function ConciergePanel() {
 const [clientTypePickerOpen, setClientTypePickerOpen] = useState(false);
 const [pendingLinkKind, setPendingLinkKind] = useState(null); // "catalog" | "questionnaire" | "feedback"
 const [feedbackPickerOpen, setFeedbackPickerOpen] = useState(false);
+const [portalLang, setPortalLang] = useState("en"); // language for client-facing links
   const normalizeId = (obj) =>
   obj?.id || obj?.kickoffId || obj?.ID || obj?._id || "";
 
@@ -1839,10 +1840,10 @@ const loadKickoffs = async () => {
 
     const link =
       pendingLinkKind === "questionnaire"
-        ? buildQuestionnaireLink(kickoff, clientType)
+        ? buildQuestionnaireLink(kickoff, clientType, portalLang)
         : pendingLinkKind === "feedback"
-        ? buildFeedbackLink(kickoff, clientType)
-        : buildCatalogLink(kickoff, clientType);
+        ? buildFeedbackLink(kickoff, clientType, portalLang)
+        : buildCatalogLink(kickoff, clientType, portalLang);
 
     try {
       await navigator.clipboard.writeText(link);
@@ -1978,6 +1979,16 @@ const loadKickoffs = async () => {
         </div>
         <div className="flex items-center gap-2">
 
+  {/* Language toggle — controls language of catalog/questionnaire links */}
+  <button
+    type="button"
+    onClick={() => setPortalLang(l => l === "en" ? "es" : "en")}
+    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100 font-medium"
+    title="Cambiar idioma de los links de cliente"
+  >
+    {portalLang === "en" ? "🇺🇸 EN" : "🇨🇴 ES"}
+  </button>
+
   <a
     href="?mode=dashboard"
     className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100"
@@ -2011,7 +2022,7 @@ const loadKickoffs = async () => {
   );
   if (!kickoff) return;
 
-  const link = buildQuestionnaireLink(kickoff, kickoff.clientType || 1);
+  const link = buildQuestionnaireLink(kickoff, kickoff.clientType || 1, portalLang);
 
   try {
     await navigator.clipboard.writeText(link);
@@ -2045,7 +2056,7 @@ const loadKickoffs = async () => {
   );
   if (!kickoff) return;
 
-  const link = buildCatalogLink(kickoff, kickoff.clientType || 1);
+  const link = buildCatalogLink(kickoff, kickoff.clientType || 1, portalLang);
 
   try {
     await navigator.clipboard.writeText(link);

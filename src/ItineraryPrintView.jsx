@@ -3,6 +3,7 @@
 // Visual direction: luxury editorial, horizontal images, clean hierarchy
 import { useState, useEffect, useMemo, useRef } from "react";
 import { fetchServicesFromSheet, fetchKickoffsFromSheet } from "./sheetServices";
+import ttLogo from "./assets/logo.png";
 
 /* ─── contentEditable helper ─────────────────────────────────
    Renders a span that is click-to-edit when editMode is on.
@@ -506,7 +507,7 @@ function PF({ n, total }) {
 /* ═══════════════════════════════════════════════════════════
    PAGE 1: COVER
 ═══════════════════════════════════════════════════════════ */
-function CoverPage({ kickoff, heroImage, total, lang, editMode }) {
+function CoverPage({ kickoff, total, lang, editMode }) {
   const a   = kickoff;
   const isEs = lang === "es";
 
@@ -515,12 +516,17 @@ function CoverPage({ kickoff, heroImage, total, lang, editMode }) {
 
   return (
     <div className="page">
-      {/* Hero — landscape image or dark gradient */}
-      {heroImage
-        ? <img src={heroImage} alt="" className="cover-hero"
-            onError={e => { e.target.style.display = "none"; }}/>
-        : <div className="cover-hero-placeholder"/>
-      }
+      {/* Hero — always Two Travel brand image */}
+      <div className="cover-hero-placeholder" style={{
+        background: "#0a0a0a",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 0,
+      }}>
+        <img src={ttLogo} alt="Two Travel"
+          style={{ maxHeight: 120, maxWidth: 320, objectFit: "contain", opacity: 0.92 }}
+        />
+      </div>
 
       <PH kickoff={a}/>
 
@@ -584,8 +590,8 @@ function CoverPage({ kickoff, heroImage, total, lang, editMode }) {
         <Editable
           tag="div" className="cover-footer-note" editMode={editMode}
           value={isEs
-            ? `Todas las reservas están bajo Two Travel — ${a.guestName || "Guest"}. Una vez confirmada la reserva, puede aplicar un cargo por cancelación en ciertas experiencias.`
-            : `All reservations are under Two Travel — ${a.guestName || "Guest"}. Once a reservation has been confirmed, a cancellation fee may apply to certain experiences.`}
+            ? `Por favor tómate un momento para revisar este PDF antes de tu llegada. Incluye información útil para tu estadía, como detalles de facturación, consejos de seguridad, cultura de propinas y servicios adicionales de concierge para hacer tu experiencia en Cartagena lo más fluida y disfrutable posible.`
+            : `Please take a moment to review this PDF before your arrival. It includes useful information for your stay, such as billing details, safety tips, tipping culture, and additional concierge services to help make your Cartagena experience as smooth and enjoyable as possible.`}
         />
       </div>
 
@@ -1364,7 +1370,6 @@ export default function ItineraryPrintView() {
       {/* ── Pages ── */}
       <CoverPage
         kickoff={kickoff}
-        heroImage={heroImage}
         total={total}
         lang={lang}
         editMode={editMode}
