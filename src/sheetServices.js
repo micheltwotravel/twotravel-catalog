@@ -100,8 +100,10 @@ const rawVideo = row.video1 || row["video 1"] || row.video || row.video_url || r
     id: parseNum(row.id || index + 1),
     sku: row.sku || "",
     name: row.name || "",
+    name_en: row.name_en || row.nombre_en || "",
     category: row.category || "services",
     subcategory: row.subcategory || "",
+    subcategory_en: row.subcategory_en || "",
     city: (row.city || row.ciudad || row.destination || row.destino || "").trim().toLowerCase(),
     images: extraImages,
 video1: video1,
@@ -155,6 +157,7 @@ video1: video1,
     schedule: row.schedule || "",
     duration: row.duration || "",
     location: row.location || "",
+    location_en: row.location_en || "",
 
     // Bilingual highlights:
     // Sheet columns: "highlights" (Spanish/default), "highlights_en" (English)
@@ -172,6 +175,7 @@ video1: video1,
     mapsUrl:   row.mapsurl   || row.maps_url   || row["maps url"]   || row.mapsUrl   || "",
     // Dress code — shown for bars & nightlife with 👔 icon
     dressCode: row.dress_code || row["dress code"] || row.dresscode || row.codigo_vestimenta || "",
+    dressCode_en: row.dress_code_en || row["dress code en"] || "",
     clientType: row.clientType || "",
     family_friendly:
       ["true", "1", "yes", "si", "sí"].includes(

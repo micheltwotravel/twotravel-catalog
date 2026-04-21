@@ -44,6 +44,7 @@ const i18n = {
     "beach-clubs": "Beach Clubs",
     tours: "Tours",
     nightlife: "Nightlife",
+    chef: "Chef Privado",
     services: "Servicios",
     styles: "Estilos",
     price: "Precio",
@@ -113,6 +114,7 @@ quizEditAnswers: "Editar respuestas",
     "beach-clubs": "Beach Clubs",
     tours: "Tours",
     nightlife: "Nightlife",
+    chef: "Private Chef",
     transportation: "Transportation",
     services: "Services",
     styles: "Styles",
@@ -1757,6 +1759,7 @@ const categories = [
   { id: "beach-clubs" },
   { id: "tours" },
   { id: "nightlife" },
+  { id: "chef" },
   { id: "services" },
   { id: "transportation" },
 ];
@@ -2279,7 +2282,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
     budget: "",      // low | mid | high
     kids: "no",      // "yes" | "no"
     groupSize: "",   // number of people
-    cuisines: "",    // texto libre
+    cuisines: [],    // array of cuisine ids (multi-select)
     interests: [],   // array strings
     groupNotes: "",  // open text: "What else should we know?"
   });
@@ -2411,7 +2414,7 @@ const vibeLabel = useMemo(() => {
     const hasAnswers =
       (quiz.vibes?.length || 0) > 0 ||
       quiz.budget ||
-      quiz.cuisines ||
+      (quiz.cuisines?.length || 0) > 0 ||
       (quiz.interests?.length || 0) > 0 ||
       quiz.kids === "yes";
 
@@ -2464,11 +2467,11 @@ const vibeLabel = useMemo(() => {
       if (quiz.budget === "mid" && lvl === "$$") pts += 2;
       if (quiz.budget === "high" && lvl === "$$$") pts += 2;
 
-      // ✅ Cuisines (match simple en descripción y subcategoría)
-      const c = (quiz.cuisines || "").trim().toLowerCase();
-      if (c) {
+      // ✅ Cuisines (multi-select array)
+      const cuisineList = Array.isArray(quiz.cuisines) ? quiz.cuisines : [];
+      for (const c of cuisineList) {
         if (desc.includes(c)) pts += 2;
-        if (sub.includes(c)) pts += 1;
+        if (sub.includes(c)) pts += 2;
       }
 
       // ✅ Interests (mapeo rápido) — alineado con categorías del catálogo
@@ -2593,8 +2596,14 @@ setGuestContact(
   ).trim()
 );
 
-      // opcional: si ya hay cart guardado en kickoff, puedes precargarlo
-      // if (Array.isArray(ko.cart)) setCart(ko.cart);
+      // Auto-currency based on kickoff city
+      if (!currencyManuallySet) {
+        const koCity = String(ko.city || "").trim().toLowerCase();
+        if (koCity === "tulum") setCurrency("USD");
+        else if (koCity === "cdmx" || koCity === "mexico" || koCity === "ciudad de mexico") setCurrency("MXN");
+        else if (koCity === "cartagena") setCurrency("COP");
+        else if (koCity === "medellin" || koCity === "medellín") setCurrency("COP");
+      }
 
     } catch (e) {
       console.error("No pude precargar kickoff:", e);
@@ -2901,25 +2910,37 @@ setCart([]);
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[11px] text-neutral-600">
+            <div className="space-y-2">
+              <p className="text-[11px] text-neutral-600">
                 {lang === "es" ? "Cocinas favoritas (opcional)" : "Favorite cuisines (optional)"}
-              </label>
-              <select
-                className="w-full border rounded-lg px-3 py-2 bg-white"
-                value={quiz.cuisines}
-                onChange={(e) => setQuiz((q) => ({ ...q, cuisines: e.target.value }))}
-              >
-                <option value="">{lang === "es" ? "— Selecciona —" : "— Select —"}</option>
-                <option value="seafood">{lang === "es" ? "Mariscos" : "Seafood"}</option>
-                <option value="caribbean">{lang === "es" ? "Caribeño" : "Caribbean"}</option>
-                <option value="contemporary">{lang === "es" ? "Contemporáneo" : "Contemporary"}</option>
-                <option value="fine-dining">{lang === "es" ? "Fine dining" : "Fine dining"}</option>
-                <option value="japanese">{lang === "es" ? "Japonés / Nikkei" : "Japanese / Nikkei"}</option>
-                <option value="peruvian">{lang === "es" ? "Peruano" : "Peruvian"}</option>
-                <option value="rooftop">{lang === "es" ? "Rooftop" : "Rooftop"}</option>
-                <option value="classic">{lang === "es" ? "Clásico / Tradicional" : "Classic / Traditional"}</option>
-              </select>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: "seafood",     es: "Mariscos",           en: "Seafood" },
+                  { id: "caribbean",   es: "Caribeño",           en: "Caribbean" },
+                  { id: "contemporary",es: "Contemporáneo",      en: "Contemporary" },
+                  { id: "fine-dining", es: "Fine dining",        en: "Fine dining" },
+                  { id: "japanese",    es: "Japonés / Nikkei",   en: "Japanese / Nikkei" },
+                  { id: "peruvian",    es: "Peruano",            en: "Peruvian" },
+                  { id: "rooftop",     es: "Rooftop",            en: "Rooftop" },
+                  { id: "classic",     es: "Clásico",            en: "Classic" },
+                ].map((c) => {
+                  const active = (quiz.cuisines || []).includes(c.id);
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setQuiz((q) => {
+                        const cur = q.cuisines || [];
+                        return { ...q, cuisines: active ? cur.filter((x) => x !== c.id) : [...cur, c.id] };
+                      })}
+                      className={active ? btn.chipXsOn : btn.chipXsOff}
+                    >
+                      {lang === "es" ? c.es : c.en}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="space-y-2">
