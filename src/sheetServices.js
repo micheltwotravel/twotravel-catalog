@@ -23,7 +23,7 @@ function toDirectImageUrl(url) {
   if (str.includes("drive.google.com/file/d/")) {
     const match = str.match(/\/file\/d\/([^/]+)/);
     if (match?.[1]) {
-      return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800`;
     }
   }
 
@@ -31,7 +31,7 @@ function toDirectImageUrl(url) {
   if (str.includes("id=")) {
     const match = str.match(/[?&]id=([^&]+)/);
     if (match?.[1]) {
-      return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800`;
     }
   }
 
@@ -58,8 +58,8 @@ function normalizeDriveImage(url) {
   const id = match?.[1];
   if (!id) return "";
 
-  // uc?export=view — original format that worked for all categories
-  return `https://drive.google.com/uc?export=view&id=${id}`;
+  // thumbnail format — renders directly in <img> without Google's redirect warning
+  return `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
 }
 
 function splitHighlights(value) {
