@@ -108,6 +108,7 @@ const rawVideo = row.video1 || row["video 1"] || row.video || row.video_url || r
     images: extraImages,
 video1: video1,
 
+    priceLevel: (row["$$$"] || row.price_level || row.nivel_precio || "").trim(),
     price_cop: parseNum(row.price_cop),
     price_tier_1: parseNum(row.price_tier_1),
     price_tier_2: parseNum(row.price_tier_2),
@@ -152,7 +153,7 @@ video1: video1,
 
     capacity_notes: row.capacity_notes || "",
     vehicle_type: row.vehicle_type || "",
-    route: row.route || "",
+    route: row.route || row.route_detail || "",
 
     schedule: row.schedule || "",
     duration: row.duration || "",
