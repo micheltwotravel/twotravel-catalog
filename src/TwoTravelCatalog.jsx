@@ -2271,6 +2271,8 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   const [kickoffLoaded, setKickoffLoaded] = useState(false);
   const [tripName, setTripName] = useState("");
   const [guestContact, setGuestContact] = useState("");
+  const [arrivalDate, setArrivalDate] = useState("");
+  const [departureDate, setDepartureDate] = useState("");
 
   const [kickoffSent, setKickoffSent] = useState(false);
     // ✅ Step: quiz -> catalog -> kickoff (tú ya tienes kickoff modal)
@@ -2597,6 +2599,9 @@ setGuestContact(
   ).trim()
 );
 
+if (ko.arrivalDate) setArrivalDate(String(ko.arrivalDate).trim());
+if (ko.departureDate) setDepartureDate(String(ko.departureDate).trim());
+
       // Auto-currency based on kickoff city
       if (!currencyManuallySet) {
         const koCity = String(ko.city || "").trim().toLowerCase();
@@ -2677,17 +2682,46 @@ const finalGuestContact = String(
   cleanGuestContact || originalGuestContact || ""
 ).trim();
 
+// Auto-generate day structure from travel dates
+const calcDayMeta = (arrival, departure) => {
+  if (!arrival || !departure) return undefined;
+  const start = new Date(arrival);
+  const end   = new Date(departure);
+  const nights = Math.round((end - start) / 86400000);
+  if (nights <= 0 || nights > 30) return undefined;
+  return Array.from({ length: nights }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    const dateStr = d.toLocaleDateString(lang === "es" ? "es-CO" : "en-US", {
+      weekday: "short", month: "short", day: "numeric",
+    });
+    return {
+      label: lang === "es" ? `Día ${i + 1}` : `Day ${i + 1}`,
+      title: dateStr,
+      note: "",
+    };
+  });
+};
+
+const generatedDayMeta = calcDayMeta(arrivalDate, departureDate);
+
 const payload = {
   id: idToUse,
   guestName: cleanGuestName,
   tripName: cleanTripName,
   guestContact: finalGuestContact,
+  arrivalDate: arrivalDate.trim(),
+  departureDate: departureDate.trim(),
   cart,
   conciergeSummary,
   lang,
   currency,
   status: "client_submitted",
   clientSubmittedAt: new Date().toISOString(),
+  // Pre-fill itinerary day structure if dates provided
+  ...(generatedDayMeta ? { dayMeta: generatedDayMeta } : {}),
+  // Notify concierge email (handled by Apps Script backend)
+  notifyEmail: currentKickoff?.assignedConciergeEmail || "",
 };
 
 
@@ -3588,10 +3622,7 @@ setCart([]);
                     rel="noreferrer"
                   >
                     <ExternalLink className="w-4 h-4" />
-                    {/* "Menu" for food/bar, "Website" for others */}
-                    {["restaurants","bars","nightlife","beach-clubs"].includes(selectedService.category)
-                      ? t.menu
-                      : (lang === "es" ? "Sitio web" : "Website")}
+                    {t.menu}
                   </a>
                 )}
                 {selectedService.mapsUrl && (
@@ -3808,6 +3839,40 @@ setCart([]);
   onChange={(e) => setGuestContact(e.target.value)}
 />
   </div>
+
+  {/* Travel dates */}
+  <div>
+    <label className="text-xs text-gray-500">
+      {lang === "es" ? "Fecha de llegada" : "Arrival date"}
+    </label>
+    <input
+      type="date"
+      className="w-full border rounded-lg px-3 py-2"
+      value={arrivalDate}
+      onChange={(e) => setArrivalDate(e.target.value)}
+    />
+  </div>
+  <div>
+    <label className="text-xs text-gray-500">
+      {lang === "es" ? "Fecha de salida" : "Departure date"}
+    </label>
+    <input
+      type="date"
+      className="w-full border rounded-lg px-3 py-2"
+      value={departureDate}
+      onChange={(e) => setDepartureDate(e.target.value)}
+    />
+  </div>
+
+  {/* Nights count */}
+  {arrivalDate && departureDate && (() => {
+    const n = Math.round((new Date(departureDate) - new Date(arrivalDate)) / 86400000);
+    return n > 0 ? (
+      <div className="sm:col-span-2 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+        🌙 {n} {lang === "es" ? (n === 1 ? "noche" : "noches") : (n === 1 ? "night" : "nights")}
+      </div>
+    ) : null;
+  })()}
 </div>
 
 

@@ -1287,6 +1287,15 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [conciergeSummary] = useState(kickoff?.conciergeSummary || "");
   const [internalNotes, setInternalNotes] = useState(kickoff?.internalNotes || "");
 
+  // Read-only: dates submitted by client in questionnaire
+  const clientArrival   = kickoff?.arrivalDate   || "";
+  const clientDeparture = kickoff?.departureDate || "";
+  const clientNights    = (() => {
+    if (!clientArrival || !clientDeparture) return null;
+    const n = Math.round((new Date(clientDeparture) - new Date(clientArrival)) / 86400000);
+    return n > 0 ? n : null;
+  })();
+
   // Cover / trip-level fields for Travefy document
   const [tripDates,          setTripDates]          = useState(kickoff?.tripDates          || "");
   const [city,               setCity]               = useState(kickoff?.city               || "");
@@ -1392,6 +1401,16 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     placeholder="WhatsApp o email"
   />
 </div>
+
+            {/* Dates submitted by client */}
+            {(clientArrival || clientDeparture) && (
+              <div className="col-span-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 text-xs text-blue-800 space-y-0.5">
+                <p className="font-semibold mb-1">📅 Fechas del cliente</p>
+                {clientArrival   && <p>Llegada: <span className="font-medium">{clientArrival}</span></p>}
+                {clientDeparture && <p>Salida: <span className="font-medium">{clientDeparture}</span></p>}
+                {clientNights    && <p>Noches: <span className="font-medium">{clientNights}</span></p>}
+              </div>
+            )}
 
             <div>
               <label className="text-[11px] text-neutral-500">Concierge asignado (nombre)</label>
