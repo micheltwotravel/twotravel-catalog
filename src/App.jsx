@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import ConciergePanel from "./ConciergePanel";
 import TwoTravelCatalog from "./TwoTravelCatalog";
 import ItineraryPrintView from "./ItineraryPrintView";
-import { updateKickoffInSheet } from "./sheetServices";
+import { updateKickoffInSheet, fetchKickoffsFromSheet } from "./sheetServices";
 
 const translations = {
   en: {
@@ -857,11 +857,14 @@ function FeedbackDashboard() {
   const sheetUrl =
     "https://docs.google.com/spreadsheets/d/1Tyv5cPTN0MjxezyWRjo-XuIRqOgaPwP-z1heZfgGiuQ/edit#gid=0";
 
+  const [tab, setTab] = useState("gestion");
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [destinationFilter, setDestinationFilter] = useState("all");
   const [conciergeFilter, setConciergeFilter] = useState("all");
   const [languageFilter, setLanguageFilter] = useState("all");
+  const [kickoffs, setKickoffs] = useState([]);
+  const [kLoading, setKLoading] = useState(true);
 
   const FEEDBACK_SHEET_ID = "1Tyv5cPTN0MjxezyWRjo-XuIRqOgaPwP-z1heZfgGiuQ";
 
@@ -915,6 +918,18 @@ function FeedbackDashboard() {
     };
 
     load();
+  }, []);
+
+  useEffect(() => {
+    fetchKickoffsFromSheet()
+      .then((data) => {
+        setKickoffs(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => {
+        console.warn("Kickoffs fetch failed:", err.message);
+        setKickoffs([]);
+      })
+      .finally(() => setKLoading(false));
   }, []);
 
   const uniqueValues = (key) => {
@@ -988,6 +1003,30 @@ function FeedbackDashboard() {
       String(r.stayNotes || "").trim()
   );
 
+  // ── Gestión helpers ────────────────────────────────────────────────
+  function avgHours(ks, fromKey, toKey) {
+    const diffs = ks
+      .filter((k) => k[fromKey] && k[toKey])
+      .map((k) => (new Date(k[toKey]) - new Date(k[fromKey])) / 3600000);
+    if (!diffs.length) return null;
+    return diffs.reduce((a, b) => a + b, 0) / diffs.length;
+  }
+  function fmtHours(h) {
+    if (h === null) return "—";
+    if (h < 1) return `${Math.round(h * 60)} min`;
+    if (h < 24) return `${h.toFixed(1)} hrs`;
+    return `${(h / 24).toFixed(1)} días`;
+  }
+
+  const STATUS_LABELS = {
+    new: { label: "Nuevo", color: "#6b7280" },
+    client_submitted: { label: "Enviado por cliente", color: "#2563eb" },
+    concierge_editing: { label: "En edición", color: "#d97706" },
+    feedback_submitted: { label: "Feedback enviado", color: "#7c3aed" },
+    done: { label: "Completado", color: "#16a34a" },
+  };
+  const STATUS_KEYS = ["new", "client_submitted", "concierge_editing", "feedback_submitted", "done"];
+
   const BarChartCard = ({ title, data }) => {
     const max = Math.max(...data.map((d) => d.value), 1);
 
@@ -1019,6 +1058,42 @@ function FeedbackDashboard() {
     );
   };
 
+  // ── Gestión panel computed values ──────────────────────────────────
+  const kTotal = kickoffs.length;
+  const kActivos = kickoffs.filter((k) => k.status !== "done").length;
+  const kScores = kickoffs
+    .map((k) => Number(k.overallExperience))
+    .filter((n) => !Number.isNaN(n) && n > 0);
+  const kAvgScore =
+    kScores.length
+      ? (kScores.reduce((a, b) => a + b, 0) / kScores.length).toFixed(1)
+      : "—";
+  const kConversionCount = kickoffs.filter(
+    (k) => k.status === "feedback_submitted" || k.status === "done"
+  ).length;
+  const kConversion =
+    kTotal > 0 ? `${Math.round((kConversionCount / kTotal) * 100)}%` : "—";
+
+  const statusCounts = STATUS_KEYS.map((s) => ({
+    key: s,
+    count: kickoffs.filter((k) => k.status === s).length,
+  }));
+  const maxStatusCount = Math.max(...statusCounts.map((s) => s.count), 1);
+
+  const timeCreatedToClient = avgHours(kickoffs, "createdAt", "clientSubmittedAt");
+  const timeClientToConcierge = avgHours(kickoffs, "clientSubmittedAt", "conciergeEditingAt");
+  const timeConciergeToFeedback = avgHours(kickoffs, "conciergeEditingAt", "feedbackAt");
+
+  const conciergeGroups = {};
+  kickoffs.forEach((k) => {
+    const name = k.assignedConcierge || "Sin asignar";
+    conciergeGroups[name] = (conciergeGroups[name] || 0) + 1;
+  });
+  const topConcierges = Object.entries(conciergeGroups)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+  const maxConciergeCount = Math.max(...topConcierges.map((c) => c.count), 1);
+
   return (
     <div className="min-h-screen bg-stone-50 p-6 text-stone-800">
       <div className="mx-auto max-w-7xl">
@@ -1042,6 +1117,143 @@ function FeedbackDashboard() {
           </div>
         </div>
 
+        {/* ── Tab buttons ── */}
+        <div className="mb-6 flex gap-2">
+          <button
+            onClick={() => setTab("gestion")}
+            className={`rounded-full px-6 py-2.5 text-sm font-semibold transition-colors ${
+              tab === "gestion"
+                ? "bg-stone-800 text-white"
+                : "bg-white border border-stone-200 text-stone-600 hover:bg-stone-100"
+            }`}
+          >
+            Gestión
+          </button>
+          <button
+            onClick={() => setTab("feedback")}
+            className={`rounded-full px-6 py-2.5 text-sm font-semibold transition-colors ${
+              tab === "feedback"
+                ? "bg-stone-800 text-white"
+                : "bg-white border border-stone-200 text-stone-600 hover:bg-stone-100"
+            }`}
+          >
+            Feedback
+          </button>
+        </div>
+
+        {/* ── Gestión tab ── */}
+        {tab === "gestion" && (
+          <>
+            {kLoading ? (
+              <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm text-sm text-stone-500">
+                Cargando datos de gestión...
+              </div>
+            ) : (
+              <>
+                {/* KPI Cards */}
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
+                    <p className="text-sm text-stone-500">Total kickoffs</p>
+                    <p className="mt-2 text-3xl font-semibold">{kTotal}</p>
+                  </div>
+                  <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
+                    <p className="text-sm text-stone-500">Activos</p>
+                    <p className="mt-2 text-3xl font-semibold">{kActivos}</p>
+                  </div>
+                  <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
+                    <p className="text-sm text-stone-500">Score promedio</p>
+                    <p className="mt-2 text-3xl font-semibold">{kAvgScore}</p>
+                  </div>
+                  <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
+                    <p className="text-sm text-stone-500">Conversión</p>
+                    <p className="mt-2 text-3xl font-semibold">{kConversion}</p>
+                  </div>
+                </div>
+
+                {/* Status distribution + Avg time per stage */}
+                <div className="mt-6 grid gap-6 lg:grid-cols-2">
+                  {/* Status distribution */}
+                  <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
+                    <p className="text-lg font-semibold mb-4">Distribución por estado</p>
+                    <div className="space-y-3">
+                      {statusCounts.map(({ key, count }) => {
+                        const { label, color } = STATUS_LABELS[key];
+                        const pct = kTotal > 0 ? Math.round((count / kTotal) * 100) : 0;
+                        return (
+                          <div key={key}>
+                            <div className="mb-1 flex items-center justify-between gap-3 text-sm">
+                              <span className="truncate" style={{ color }}>{label}</span>
+                              <span className="font-semibold text-stone-700">
+                                {count} <span className="text-stone-400 font-normal">({pct}%)</span>
+                              </span>
+                            </div>
+                            <div className="h-3 rounded-full bg-stone-100 overflow-hidden">
+                              <div
+                                className="h-full rounded-full"
+                                style={{
+                                  width: `${(count / maxStatusCount) * 100}%`,
+                                  backgroundColor: color,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Avg time per stage */}
+                  <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
+                    <p className="text-lg font-semibold mb-4">Tiempo promedio por etapa</p>
+                    <div className="space-y-4 text-sm">
+                      <div className="flex items-center justify-between rounded-xl border border-stone-100 px-4 py-3">
+                        <span className="text-stone-600">Creado → Cliente envía</span>
+                        <span className="font-semibold">{fmtHours(timeCreatedToClient)}</span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-xl border border-stone-100 px-4 py-3">
+                        <span className="text-stone-600">Cliente → Edición concierge</span>
+                        <span className="font-semibold">{fmtHours(timeClientToConcierge)}</span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-xl border border-stone-100 px-4 py-3">
+                        <span className="text-stone-600">Edición → Feedback</span>
+                        <span className="font-semibold">{fmtHours(timeConciergeToFeedback)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Top concierges */}
+                <div className="mt-6 rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
+                  <p className="text-lg font-semibold mb-4">Top concierges</p>
+                  {topConcierges.length ? (
+                    <div className="space-y-3">
+                      {topConcierges.map(({ name, count }) => (
+                        <div key={name}>
+                          <div className="mb-1 flex items-center justify-between gap-3 text-sm">
+                            <span className="truncate text-stone-700">{name}</span>
+                            <span className="font-semibold">{count}</span>
+                          </div>
+                          <div className="h-3 rounded-full bg-stone-100 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-stone-800"
+                              style={{ width: `${(count / maxConciergeCount) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-stone-500">Sin datos de concierges todavía.</p>
+                  )}
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {/* ── Feedback tab ── */}
+        {tab === "feedback" && (
+          <>
         <div className="mb-6 grid gap-4 md:grid-cols-3">
           <select
             value={destinationFilter}
@@ -1214,6 +1426,8 @@ function FeedbackDashboard() {
                 )}
               </div>
             </div>
+          </>
+        )}
           </>
         )}
 

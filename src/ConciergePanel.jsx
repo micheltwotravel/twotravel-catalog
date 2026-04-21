@@ -1685,6 +1685,195 @@ function KickoffPickerModal({ kickoffs, title, onClose, onSelect }) {
   );
 }
 
+/* =========================================
+   CreateClientModal — reemplaza el prompt() chain
+   ========================================= */
+
+function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
+  const [form, setForm] = React.useState({
+    guestName: "",
+    tripName: "",
+    guestContact: "",
+    concierge: "",
+    conciergeEmail: "",
+    clientType: 1,
+  });
+  const [submitting, setSubmitting] = React.useState(false);
+
+  // Build concierge list from kickoffs
+  const conciergeList = React.useMemo(() => {
+    const map = new Map();
+    (kickoffs || []).forEach((k) => {
+      const name = String(k.assignedConcierge || "").trim();
+      const email = String(k.assignedConciergeEmail || "").trim();
+      if (name && !map.has(name)) map.set(name, email);
+    });
+    return Array.from(map.entries()).map(([name, email]) => ({ name, email }));
+  }, [kickoffs]);
+
+  const handleConciergeChange = (e) => {
+    const selectedName = e.target.value;
+    const match = conciergeList.find((c) => c.name === selectedName);
+    setForm((prev) => ({
+      ...prev,
+      concierge: selectedName,
+      conciergeEmail: match ? match.email : "",
+    }));
+  };
+
+  const handleField = (field) => (e) =>
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const handleSubmit = async () => {
+    if (!form.guestName.trim()) return;
+    setSubmitting(true);
+    try {
+      await onSubmit(form);
+      setForm({ guestName: "", tripName: "", guestContact: "", concierge: "", conciergeEmail: "", clientType: 1 });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white max-w-md w-full rounded-2xl shadow-xl p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-neutral-900">Nuevo cliente</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-neutral-400 hover:text-neutral-600"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {/* Nombre del cliente */}
+          <div>
+            <label className="block text-xs font-medium text-neutral-600 mb-1">
+              Nombre del cliente <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={form.guestName}
+              onChange={handleField("guestName")}
+              placeholder="Ej: María García"
+              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+            />
+          </div>
+
+          {/* Nombre del viaje */}
+          <div>
+            <label className="block text-xs font-medium text-neutral-600 mb-1">
+              Nombre del viaje
+            </label>
+            <input
+              type="text"
+              value={form.tripName}
+              onChange={handleField("tripName")}
+              placeholder="Ej: Cartagena Junio 2025"
+              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+            />
+          </div>
+
+          {/* Contacto */}
+          <div>
+            <label className="block text-xs font-medium text-neutral-600 mb-1">
+              Contacto WhatsApp / email
+            </label>
+            <input
+              type="text"
+              value={form.guestContact}
+              onChange={handleField("guestContact")}
+              placeholder="Ej: +57 300 1234567"
+              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+            />
+          </div>
+
+          {/* Tipo de cliente */}
+          <div>
+            <label className="block text-xs font-medium text-neutral-600 mb-1">
+              Tipo de cliente
+            </label>
+            <div className="flex items-center gap-4">
+              {[1, 2].map((t) => (
+                <label key={t} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="clientType"
+                    value={t}
+                    checked={form.clientType === t}
+                    onChange={() => setForm((prev) => ({ ...prev, clientType: t }))}
+                    className="accent-neutral-900"
+                  />
+                  Tipo {t}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Concierge dropdown */}
+          <div>
+            <label className="block text-xs font-medium text-neutral-600 mb-1">
+              Concierge asignado
+            </label>
+            <select
+              value={form.concierge}
+              onChange={handleConciergeChange}
+              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+            >
+              <option value="">Sin asignar</option>
+              {conciergeList.map((c) => (
+                <option key={c.name} value={c.name}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Email del concierge — solo si hay nombre */}
+          {form.concierge && (
+            <div>
+              <label className="block text-xs font-medium text-neutral-600 mb-1">
+                Email del concierge
+              </label>
+              <input
+                type="email"
+                value={form.conciergeEmail}
+                onChange={handleField("conciergeEmail")}
+                placeholder="concierge@empresa.com"
+                className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-neutral-300 text-sm text-neutral-700 hover:bg-neutral-100"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={submitting || !form.guestName.trim()}
+            className="px-4 py-2 rounded-lg bg-neutral-900 text-sm text-white hover:bg-neutral-950 disabled:opacity-50"
+          >
+            {submitting ? "Creando..." : "Crear y abrir link"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ClientTypePickerModal({ onClose, onSelect }) {
   const [value, setValue] = useState(1);
 
@@ -1752,6 +1941,7 @@ const [clientTypePickerOpen, setClientTypePickerOpen] = useState(false);
 const [pendingLinkKind, setPendingLinkKind] = useState(null); // "catalog" | "questionnaire" | "feedback"
 const [feedbackPickerOpen, setFeedbackPickerOpen] = useState(false);
 const [portalLang, setPortalLang] = useState("en"); // language for client-facing links
+const [createModalOpen, setCreateModalOpen] = useState(false);
   const normalizeId = (obj) =>
   obj?.id || obj?.kickoffId || obj?.ID || obj?._id || "";
 
@@ -1804,16 +1994,15 @@ const loadKickoffs = async () => {
   useEffect(() => {
     loadKickoffs();
   }, []);
-  const handleCreateAndOpenLink = async (clientType) => {
-    const guestName = (prompt("Nombre del cliente:") || "").trim();
-    if (!guestName) return;
-
-    const tripName = (prompt("Nombre del viaje:") || "").trim();
-    const guestContact = (prompt("Contacto (WhatsApp o email):") || "").trim();
-    const assignedConciergeName = (prompt("Nombre del concierge asignado (opcional):") || "").trim();
-    const assignedConciergeEmail = assignedConciergeName
-      ? (prompt(`Email de ${assignedConciergeName} (opcional):`) || "").trim()
-      : "";
+  const handleCreateAndOpenLink = async (form) => {
+    const {
+      guestName,
+      tripName,
+      guestContact,
+      concierge: assignedConciergeName,
+      conciergeEmail: assignedConciergeEmail,
+      clientType,
+    } = form;
 
     const kickoffId = `ko_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 
@@ -1849,17 +2038,22 @@ const loadKickoffs = async () => {
     setKickoffs((prev) => [kickoff, ...(prev || [])]);
     setSelectedKickoffForLink(kickoff);
 
+    // Capture pendingLinkKind before clearing it
+    const linkKind = pendingLinkKind;
+    setCreateModalOpen(false);
+    setPendingLinkKind(null);
+
     const link =
-      pendingLinkKind === "questionnaire"
+      linkKind === "questionnaire"
         ? buildQuestionnaireLink(kickoff, clientType, portalLang)
-        : pendingLinkKind === "feedback"
+        : linkKind === "feedback"
         ? buildFeedbackLink(kickoff, clientType, portalLang)
         : buildCatalogLink(kickoff, clientType, portalLang);
 
     try {
       await navigator.clipboard.writeText(link);
     } catch {
-      prompt("Copia este link:", link);
+      // fallback: just open the link
     }
 
     window.open(link, "_blank", "noopener,noreferrer");
@@ -2022,7 +2216,7 @@ const loadKickoffs = async () => {
   onClick={async () => {
   if (!selectedKickoffForLink) {
     setPendingLinkKind("questionnaire");
-    setClientTypePickerOpen(true);
+    setCreateModalOpen(true);
     return;
   }
 
@@ -2056,7 +2250,7 @@ const loadKickoffs = async () => {
   onClick={async () => {
   if (!selectedKickoffForLink) {
     setPendingLinkKind("catalog");
-    setClientTypePickerOpen(true);
+    setCreateModalOpen(true);
     return;
   }
 
@@ -2084,7 +2278,14 @@ const loadKickoffs = async () => {
 </button>
 <button
   type="button"
-  onClick={() => setFeedbackPickerOpen(true)}
+  onClick={async () => {
+    if (!selectedKickoffForLink) {
+      setPendingLinkKind("feedback");
+      setCreateModalOpen(true);
+      return;
+    }
+    setFeedbackPickerOpen(true);
+  }}
   className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100"
 >
   <LinkIcon className="w-4 h-4" />
@@ -2403,11 +2604,17 @@ const loadKickoffs = async () => {
           onClose={() => { setClientTypePickerOpen(false); setPendingLinkKind(null); }}
           onSelect={async (type) => {
             setClientTypePickerOpen(false);
-            await handleCreateAndOpenLink(type);
             setPendingLinkKind(null);
           }}
         />
       )}
+
+      <CreateClientModal
+        open={createModalOpen}
+        onClose={() => { setCreateModalOpen(false); setPendingLinkKind(null); }}
+        onSubmit={handleCreateAndOpenLink}
+        kickoffs={kickoffs}
+      />
 
       {feedbackPickerOpen && (
         <KickoffPickerModal
