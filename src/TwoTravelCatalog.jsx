@@ -3221,7 +3221,7 @@ setCart([]);
     </div>
 
     <div className="p-3">
-      <p className="text-sm font-semibold">{s.name}</p>
+      <p className="text-sm font-semibold">{(lang === "en" && s.name_en) ? s.name_en : s.name}</p>
       <p className="text-[11px] text-gray-500">
         {i18n[lang][s.category] || s.category}
       </p>
@@ -3286,7 +3286,7 @@ setCart([]);
 
       <div className="p-4">
         <h3 className="font-ui font-semibold text-lg mb-1">
-          {s.name}
+          {(lang === "en" && s.name_en) ? s.name_en : s.name}
         </h3>
 
         <p className="text-gray-600 text-sm mb-3 line-clamp-2">
