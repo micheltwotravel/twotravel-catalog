@@ -2230,7 +2230,8 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   const categoryHasVisiblePrice = (category) =>
   category === "tours" ||
   category === "services" ||
-  category === "transportation";
+  category === "transportation" ||
+  category === "chef";
 
 
   const hasPrice = (cop) => cop && cop > 0;
