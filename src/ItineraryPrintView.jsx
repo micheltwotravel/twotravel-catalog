@@ -524,7 +524,7 @@ function CoverPage({ kickoff, total, lang, editMode }) {
         padding: 0,
       }}>
         <img src={ttLogo} alt="Two Travel"
-          style={{ maxHeight: 160, maxWidth: 380, objectFit: "contain", opacity: 1, filter: "brightness(1.15)" }}
+          style={{ maxHeight: 160, maxWidth: 380, objectFit: "contain", filter: "brightness(0) invert(1)" }}
         />
       </div>
 

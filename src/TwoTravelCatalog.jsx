@@ -2293,7 +2293,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
   const [heartBump, setHeartBump] = useState(false); // 💗 animación icono
-  const [cartToast, setCartToast] = useState(false);  // popup "cuando termines..."
+  const [cartToast, setCartToast] = useState(true);   // popup "cuando termines..." — visible desde que entra
 
  const cartTotalCOP = useMemo(
   () =>
@@ -3238,6 +3238,49 @@ setCart([]);
 
             {/* Grid servicios */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Section headers when showing all categories */}
+        {selectedCategory === "all" ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {(() => {
+            let lastCat = null;
+            return filteredServices.map((s, _svcIdx) => {
+              const serviceCategory = normalizeCategory(s.category);
+              const effectivePriceCop = getEffectivePriceCop(s, currentClientType);
+              const priceConverted = convertPrice(effectivePriceCop);
+              const isInCart = cart.some((c) => c.id === s.id);
+              const showHeader = serviceCategory !== lastCat;
+              lastCat = serviceCategory;
+              return (
+                <React.Fragment key={`svc-${_svcIdx}-${s.id}`}>
+                  {showHeader && (
+                    <div className="col-span-full mt-6 mb-2 flex items-center gap-3">
+                      <h2 className="text-base font-bold text-neutral-800">
+                        {i18n[lang][serviceCategory] || serviceCategory}
+                      </h2>
+                      <div className="flex-1 h-px bg-neutral-200"/>
+                    </div>
+                  )}
+                  <div
+                    className="bg-white rounded-xl shadow hover:shadow-xl transition-shadow overflow-hidden cursor-pointer"
+                    onClick={() => setSelectedService(s)}
+                  >
+                    <div className="relative h-48">
+                      <img src={safeImg(s.image, serviceCategory)} alt={s.name} className="w-full h-full object-cover"/>
+                      <button onClick={(e)=>{e.stopPropagation();if(!isInCart)addToCart(s);}} className={`absolute bottom-2 right-2 w-9 h-9 rounded-full flex items-center justify-center shadow-md border transition-colors ${isInCart?"bg-neutral-900 text-white border-neutral-900":"bg-white/90 text-neutral-600 border-white hover:bg-neutral-100"}`}>
+                        <Heart className={`w-4 h-4 ${isInCart?"fill-current":""}`}/>
+                      </button>
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm font-semibold">{(lang==="en"&&s.name_en)?s.name_en:s.name}</p>
+                      <p className="text-[11px] text-gray-500">{i18n[lang][s.category]||s.category}</p>
+                    </div>
+                  </div>
+                </React.Fragment>
+              );
+            });
+          })()}
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredServices.map((s, _svcIdx) => {
   const serviceCategory = normalizeCategory(s.category);
@@ -3351,6 +3394,7 @@ setCart([]);
             </div>
           )}
         </div>
+        )}
       </div>
 
 
@@ -3669,8 +3713,9 @@ setCart([]);
     ) : (
       // ✅ Solo hay restaurantes / bares / nightlife (sin precio numérico)
       <p className="text-xs text-gray-500 italic">
-        Los precios exactos de restaurantes, bares y nightlife
-        se confirman con Concierge.
+        {lang === "es"
+          ? "Los precios exactos de restaurantes, bares y nightlife se confirman con Concierge."
+          : "Exact prices for restaurants, bars and nightlife are confirmed with your Concierge."}
       </p>
     )}
 

@@ -2189,9 +2189,9 @@ const loadKickoffs = async () => {
     type="button"
     onClick={() => setPortalLang(l => l === "en" ? "es" : "en")}
     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100 font-medium"
-    title="Cambiar idioma de los links de cliente"
+    title="Idioma del catálogo que verá el cliente (no cambia este portal)"
   >
-    {portalLang === "en" ? "🇺🇸 EN" : "🇨🇴 ES"}
+    Links: {portalLang === "en" ? "🇺🇸 EN" : "🇨🇴 ES"}
   </button>
 
   <a
