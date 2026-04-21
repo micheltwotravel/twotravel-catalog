@@ -518,13 +518,13 @@ function CoverPage({ kickoff, total, lang, editMode }) {
     <div className="page">
       {/* Hero — always Two Travel brand image */}
       <div className="cover-hero-placeholder" style={{
-        background: "#0a0a0a",
+        background: "linear-gradient(160deg,#1a1410 0%,#0d0d0d 60%,#111 100%)",
         alignItems: "center",
         justifyContent: "center",
         padding: 0,
       }}>
         <img src={ttLogo} alt="Two Travel"
-          style={{ maxHeight: 120, maxWidth: 320, objectFit: "contain", opacity: 0.92 }}
+          style={{ maxHeight: 160, maxWidth: 380, objectFit: "contain", opacity: 1, filter: "brightness(1.15)" }}
         />
       </div>
 
@@ -580,11 +580,6 @@ function CoverPage({ kickoff, total, lang, editMode }) {
               </div>
             )}
           </div>
-        )}
-
-        {/* Concierge welcome note */}
-        {a.conciergeSummary && (
-          <Editable tag="p" className="cover-note" editMode={editMode} value={a.conciergeSummary}/>
         )}
 
         <Editable
@@ -682,20 +677,38 @@ function InfoPage({ kickoff, lang, page, total, editMode }) {
         </div>
 
         <div className="info-block">
-          <div className="info-h3">{isEs ? "Promo" : "Promo"}</div>
+          <div className="info-h3">Promo</div>
           <Editable
             tag="p" className="info-p" editMode={editMode}
             value={isEs
               ? "Comparte tu experiencia con Two Travel en Instagram o TikTok y obtén descuento en servicios seleccionados."
               : "Share your experience with Two Travel on Instagram or TikTok and receive a discount on select services."}
           />
-          <p className="info-p" style={{ color: "#bbb", fontSize: 10.5 }}>
-            @twotravelconcierge
-            {isEs
-              ? " · La publicación debe realizarse durante tu estadía · Un tag por persona requerido · Para servicios grupales, todos los miembros deben participar."
-              : " · Tag must be posted during your stay · One tag per person required · For group services, all members must participate."}
+          <p className="info-p" style={{ marginBottom: 4 }}>
+            <a href="https://www.instagram.com/twotravelconcierge" target="_blank" rel="noreferrer"
+              style={{ color: "#1d4ed8", fontWeight: 600, textDecoration: "underline", fontSize: 12 }}>
+              @twotravelconcierge
+            </a>
+            <span style={{ color: "#bbb", fontSize: 10.5 }}>
+              {isEs
+                ? " · La publicación debe realizarse durante tu estadía · Un tag por persona requerido · Para servicios grupales, todos los miembros deben participar."
+                : " · Tag must be posted during your stay · One tag per person required · For group services, all members must participate."}
+            </span>
           </p>
         </div>
+
+        {kickoff.welcomePdfUrl && (
+          <div className="info-block">
+            <div className="info-h3">{isEs ? "Documento de bienvenida" : "Welcome Document"}</div>
+            <p className="info-p">
+              {isEs ? "Antes de llegar, por favor revisa este documento:" : "Before your arrival, please review this document:"}
+            </p>
+            <a href={kickoff.welcomePdfUrl} target="_blank" rel="noreferrer"
+              style={{ color: "#1d4ed8", fontSize: 12, textDecoration: "underline", display: "block", marginTop: 4 }}>
+              {isEs ? "📄 Ver documento de bienvenida →" : "📄 View Welcome Document →"}
+            </a>
+          </div>
+        )}
 
         {kickoff.internalNotes && (
           <div className="info-block">

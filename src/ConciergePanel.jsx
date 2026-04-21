@@ -1296,6 +1296,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [accommodationAddr,  setAccommodationAddr]  = useState(kickoff?.accommodationAddr  || "");
   const [checkIn,            setCheckIn]            = useState(kickoff?.checkIn            || "");
   const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "");
+  const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "");
   const [preTripContent,     setPreTripContent]     = useState(kickoff?.preTripContent     || DEFAULT_PRE_TRIP);
 
   if (!kickoff) return null;
@@ -1325,6 +1326,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     accommodationAddr: accommodationAddr.trim(),
     checkIn:           checkIn.trim(),
     checkOut:          checkOut.trim(),
+    welcomePdfUrl:     welcomePdfUrl.trim(),
     // Pre-trip info block (rendered as a page before itinerary days in PDF)
     preTripContent:    preTripContent.trim(),
   };
@@ -1436,9 +1438,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             />
           </div>
 
-          {/* ── Travefy Cover Info ─────────────────────────────── */}
+          {/* ── Cover Info ─────────────────────────────── */}
           <div className="border rounded-2xl p-4 bg-neutral-50 space-y-3">
-            <p className="text-xs font-semibold text-neutral-700">Portada del documento (Travefy)</p>
+            <p className="text-xs font-semibold text-neutral-700">Portada del itinerario (PDF)</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] text-neutral-500">Fechas del viaje</label>
@@ -1487,6 +1489,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 <input value={checkOut} onChange={(e) => setCheckOut(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="11:00 AM" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-[11px] text-neutral-500">Welcome PDF URL (link que aparece en el itinerario)</label>
+                <input value={welcomePdfUrl} onChange={(e) => setWelcomePdfUrl(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="https://drive.google.com/file/d/.../view" />
               </div>
             </div>
           </div>
