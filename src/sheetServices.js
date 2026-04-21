@@ -109,7 +109,8 @@ const rawVideo = row.video1 || row["video 1"] || row.video || row.video_url || r
 video1: video1,
 
     priceLevel: (row["$$$"] || row.price_level || row.nivel_precio || "").trim(),
-    price_cop: parseNum(row.price_cop),
+    // price_cop no existe en el sheet — usar price_tier_1 como base
+    price_cop: parseNum(row.price_cop || row.price_tier_1),
     price_tier_1: parseNum(row.price_tier_1),
     price_tier_2: parseNum(row.price_tier_2),
 
@@ -157,8 +158,8 @@ video1: video1,
 
     schedule: row.schedule || "",
     duration: row.duration || "",
-    location: row.location || "",
-    location_en: row.location_en || "",
+    location: row.location || "",           // English (sheet col "location")
+    location_es: row.location_es || row.location || "", // Spanish (sheet col "location_es")
 
     // Bilingual highlights:
     // Sheet columns: "highlights" (Spanish/default), "highlights_en" (English)
@@ -170,8 +171,10 @@ video1: video1,
 
     quickbooksCode: row.quickbooks_code || row.quickbooks || row.billing_code || row.qb_code || "",
 
-    deposit: row.deposit || "",
-    cancellation: row.cancellation || "",
+    deposit:    row.deposit_en || row.deposit || "",    // English
+    deposit_es: row.deposit_es || row.deposit || "",    // Spanish
+    cancellation:    row.cancellation || "",            // English
+    cancellation_es: row.cancellation_es || "",         // Spanish
     menuUrl:   row.menuurl   || row.menu_url   || row["menu url"]   || row.menuUrl   || "",
     mapsUrl:   row.mapsurl   || row.maps_url   || row["maps url"]   || row.mapsUrl   || "",
     // Dress code — shown for bars & nightlife with 👔 icon

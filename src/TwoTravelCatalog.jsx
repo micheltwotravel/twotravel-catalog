@@ -3512,8 +3512,8 @@ setCart([]);
                 <div>
                   <h3 className="font-semibold mb-2">{t.details}</h3>
                   <ul className="space-y-1 text-sm text-gray-600">
-                    {selectedService.location && (
-                      <li>📍 {selectedService.location}</li>
+                    {(selectedService.location || selectedService.location_es) && (
+                      <li>📍 {lang === "es" ? (selectedService.location_es || selectedService.location) : (selectedService.location || selectedService.location_es)}</li>
                     )}
                     {selectedService.schedule && (
                       <li>⏰ {selectedService.schedule}</li>
@@ -3538,17 +3538,25 @@ setCart([]);
                       </li>
                     )}
                     {/* Cancellation policy */}
-                    {selectedService.cancellation && (
+                    {(selectedService.cancellation || selectedService.cancellation_es) && (
                       <li className="flex items-center gap-1.5">
                         <span style={{ fontSize: 14 }}>📋</span>
-                        <span>{lang === "es" ? "Cancelación: " : "Cancellation: "}{selectedService.cancellation}</span>
+                        <span>{lang === "es" ? "Cancelación: " : "Cancellation: "}
+                          {lang === "es"
+                            ? (selectedService.cancellation_es || selectedService.cancellation)
+                            : (selectedService.cancellation || selectedService.cancellation_es)}
+                        </span>
                       </li>
                     )}
                     {/* Deposit */}
-                    {selectedService.deposit && (
+                    {(selectedService.deposit || selectedService.deposit_es) && (
                       <li className="flex items-center gap-1.5">
                         <span style={{ fontSize: 14 }}>💳</span>
-                        <span>{lang === "es" ? "Depósito: " : "Deposit: "}{selectedService.deposit}</span>
+                        <span>{lang === "es" ? "Depósito: " : "Deposit: "}
+                          {lang === "es"
+                            ? (selectedService.deposit_es || selectedService.deposit)
+                            : (selectedService.deposit || selectedService.deposit_es)}
+                        </span>
                       </li>
                     )}
                   </ul>
