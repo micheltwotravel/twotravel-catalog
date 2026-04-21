@@ -1286,8 +1286,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [status, setStatus] = useState(kickoff?.status || "new");
   const [conciergeSummary] = useState(kickoff?.conciergeSummary || "");
   const [internalNotes, setInternalNotes] = useState(kickoff?.internalNotes || "");
-  const [travefyResult, setTravefyResult] = useState(null);
-  const [travefySending, setTravefySending] = useState(false);
 
   // Cover / trip-level fields for Travefy document
   const [tripDates,          setTripDates]          = useState(kickoff?.tripDates          || "");
@@ -1539,72 +1537,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 </div>
         </div>
 
-        {/* Travefy result */}
-        {travefyResult && (
-          <div className={`mx-5 mb-2 rounded-xl p-4 text-sm border ${travefyResult.ok ? "bg-purple-50 border-purple-200 text-purple-900" : "bg-red-50 border-red-200 text-red-800"}`}>
-            {travefyResult.ok ? (
-              <>
-                <p className="font-semibold mb-1">✅ {travefyResult.data?.message || "Enviado a Travefy"}</p>
-
-                {/* Share link */}
-                {travefyResult.data?.shareUrl && (
-                  <a href={travefyResult.data.shareUrl} target="_blank" rel="noreferrer"
-                    className="block text-xs text-purple-700 underline break-all mb-2">
-                    {travefyResult.data.shareUrl}
-                  </a>
-                )}
-
-                {/* Counts */}
-                <p className="text-xs text-purple-700 mb-2">
-                  <span className="font-medium">{travefyResult.data?.matchedServicesCount ?? 0}</span> servicios
-                  {" · "}
-                  <span className="font-medium">{travefyResult.data?.itemCount ?? 0}</span> items en itinerario
-                  {(travefyResult.data?.unmatchedServicesCount ?? 0) > 0 &&
-                    <span className="text-orange-600"> · ⚠️ {travefyResult.data.unmatchedServicesCount} sin match</span>}
-                </p>
-
-                {/* Itinerary summary */}
-                {(travefyResult.data?.summaryLines || []).length > 0 && (
-                  <div className="mb-2 bg-white/60 rounded-lg p-2">
-                    <p className="text-[10px] font-semibold text-purple-500 uppercase tracking-wide mb-1">Itinerario generado</p>
-                    <ul className="space-y-0.5">
-                      {travefyResult.data.summaryLines.map((line, i) => (
-                        <li key={i} className="text-xs text-purple-800 flex gap-1">
-                          <span className="text-purple-400 shrink-0">•</span>
-                          <span>{line}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Structure result */}
-                {travefyResult.data?._structure && (
-                  <div className="mt-2 text-[10px] font-mono bg-purple-100/60 rounded px-2 py-1.5 text-purple-700">
-                    {travefyResult.data._structure.daysAccepted
-                      ? `✅ TripDays aceptados (${travefyResult.data._structure.daysCount} días · ${travefyResult.data._structure.eventsInFirstDay} eventos en día 1)`
-                      : "⚠️ TripDays no devueltos — revisa el trip en Travefy para confirmar"}
-                  </div>
-                )}
-
-                {/* Unmatched services */}
-                {(travefyResult.data?.unmatchedServices || []).length > 0 && (
-                  <ul className="mt-2 space-y-1.5">
-                    {travefyResult.data.unmatchedServices.map((u, i) => (
-                      <li key={i} className="text-xs bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-orange-800">
-                        <span className="font-semibold">{u.name || "?"}</span>
-                        <span className="text-orange-600"> [{u.decision || "unknown"}]</span>
-                        {u.reason && <span className="block text-orange-500 mt-0.5">{u.reason}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </>
-            ) : (
-              <p className="font-semibold">❌ {travefyResult.error}</p>
-            )}
-          </div>
-        )}
 
         <div className="px-5 py-4 border-t bg-neutral-50 flex justify-end gap-2">
           <button
@@ -1633,68 +1565,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               📄 Ver PDF
             </a>
           )}
-          <button
-  type="button"
-  disabled={travefySending || !(kickoff?.cart?.length)}
-  title={!(kickoff?.cart?.length) ? "Agrega servicios al itinerario antes de enviar" : `Enviar ${kickoff.cart.length} servicio(s) a Travefy`}
-  onClick={async () => {
-    setTravefySending(true);
-    setTravefyResult(null);
-    try {
-      const res = await fetch("/api/travefy-send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          kickoffId:         kickoff.id,
-          guestName,
-          tripName,
-          guestContact,
-          lang:              kickoff.lang || "en",
-          cart:              kickoff.cart    || [],
-          dayMeta:           kickoff.dayMeta || [],
-          conciergeSummary,
-          internalNotes,
-          conciergeName:     assignedConcierge,
-          conciergeEmail:    assignedConciergeEmail,
-          // Cover / trip-level fields
-          tripDates,
-          city,
-          groupSize,
-          conciergeTitle,
-          accommodationName,
-          accommodationAddr,
-          checkIn,
-          checkOut,
-          preTripContent,
-        }),
-      });
-
-      const text = await res.text();
-      let data;
-      try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
-      console.log("Travefy response:", data);
-
-      if (!res.ok) throw new Error(data?.error || `Error ${res.status}`);
-
-      setStatus("sent_to_travify");
-      setTravefyResult({ ok: true, data });
-      // Update status without closing drawer
-      try {
-        await (onSilentUpdate || onSave)(kickoff.id, { status: "sent_to_travify" });
-      } catch (e) {
-        console.warn("Status update failed:", e);
-      }
-    } catch (err) {
-      console.error("Error frontend:", err);
-      setTravefyResult({ ok: false, error: err.message || "Error enviando a Travefy" });
-    } finally {
-      setTravefySending(false);
-    }
-  }}
-  className="px-4 py-2 rounded-lg bg-purple-600 text-sm text-white hover:bg-purple-700 disabled:opacity-60"
->
-  {travefySending ? "Enviando..." : `Enviar a Travefy${kickoff?.cart?.length ? ` (${kickoff.cart.length})` : ""}`}
-</button>
         </div>
       </div>
      
