@@ -3243,8 +3243,14 @@ setCart([]);
         {selectedCategory === "all" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {(() => {
+            const CAT_ORDER = ["restaurants","bars","beach-clubs","nightlife","chef","tours","services","transportation"];
+            const sorted = [...filteredServices].sort((a, b) => {
+              const ai = CAT_ORDER.indexOf(normalizeCategory(a.category));
+              const bi = CAT_ORDER.indexOf(normalizeCategory(b.category));
+              return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+            });
             let lastCat = null;
-            return filteredServices.map((s, _svcIdx) => {
+            return sorted.map((s, _svcIdx) => {
               const serviceCategory = normalizeCategory(s.category);
               const effectivePriceCop = getEffectivePriceCop(s, currentClientType);
               const priceConverted = convertPrice(effectivePriceCop);
