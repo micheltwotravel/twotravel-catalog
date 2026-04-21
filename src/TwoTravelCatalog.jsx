@@ -3279,7 +3279,11 @@ setCart([]);
                     </div>
                     <div className="p-3">
                       <p className="text-sm font-semibold">{(lang==="en"&&s.name_en)?s.name_en:s.name}</p>
-                      <p className="text-[11px] text-gray-500">{i18n[lang][s.category]||s.category}</p>
+                      {(s.description?.[lang]||s.description?.es||s.description?.en) && (
+                        <p className="text-[11px] text-gray-500 line-clamp-2 mt-0.5">
+                          {s.description?.[lang]||s.description?.es||s.description?.en}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </React.Fragment>
