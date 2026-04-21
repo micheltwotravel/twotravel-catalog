@@ -2258,7 +2258,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   const [selectedStyle, setSelectedStyle] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [priceRange, setPriceRange] = useState("all");
-  const [showFilters, setShowFilters] = useState(false);
+
   const [imgIndex, setImgIndex] = useState(0);
   const [selectedService, setSelectedService] = useState(null);
 
@@ -3101,7 +3101,8 @@ setCart([]);
 
       {/* Search + filtros */}
       <div className="bg-white sticky top-16 z-30 border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row gap-3">
+        {/* Row 1: Search + price/style toggle */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
@@ -3112,75 +3113,57 @@ setCart([]);
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-
-          <button
-            onClick={() => setShowFilters((s) => !s)}
-            className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
+          {/* Price filter — always visible on the right */}
+          <select
+            value={priceRange}
+            onChange={(e) => setPriceRange(e.target.value)}
+            className="border rounded-lg px-3 py-2 text-sm bg-white"
           >
-            <Filter className="w-5 h-5" />
-            {t.filters}
-            <ChevronDown
-              className={`w-4 h-4 transition-transform ${
-                showFilters ? "rotate-180" : ""
-              }`}
-            />
-          </button>
+            {priceRanges.map((r) => (
+              <option key={r.id} value={r.id}>
+                {lang === "es" ? r.labelEs : r.labelEn}
+              </option>
+            ))}
+          </select>
         </div>
 
-        {/* Panel filtros */}
-        {showFilters && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Categorías */}
-              {categories.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => {
-                    setSelectedCategory(c.id);
-                    setSelectedStyle("");
-                  }}
-                  className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-  selectedCategory === c.id
-    ? "bg-neutral-900 text-white border-neutral-900"
-    : "bg-white text-neutral-800 border-neutral-300 hover:bg-neutral-100"
-}`}
-                >
-                  {i18n[lang][c.id]}
-                </button>
-              ))}
+        {/* Row 2: Category tabs — always visible, horizontally scrollable */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3 overflow-x-auto">
+          <div className="flex gap-2 min-w-max">
+            {categories.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => {
+                  setSelectedCategory(c.id);
+                  setSelectedStyle("");
+                }}
+                className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap ${
+                  selectedCategory === c.id
+                    ? "bg-neutral-900 text-white border-neutral-900"
+                    : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100"
+                }`}
+              >
+                {i18n[lang][c.id]}
+              </button>
+            ))}
+          </div>
+        </div>
 
-              {/* Estilos restaurantes — dropdown */}
-              {selectedCategory === "restaurants" && (
-                <div className="flex items-center gap-2 ml-2">
-                  <span className="text-xs text-gray-600">{t.styles}:</span>
-                  <select
-                    value={selectedStyle}
-                    onChange={(e) => setSelectedStyle(e.target.value)}
-                    className="border rounded-lg px-3 py-1.5 text-xs bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-900/30"
-                  >
-                    <option value="">{lang === "es" ? "Todos los estilos" : "All styles"}</option>
-                    {restaurantStyles.map((s) => (
-                      <option key={s.id} value={s.id}>{s.label[lang]}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Rango de precio */}
-              <div className="ml-auto">
-                <select
-                  value={priceRange}
-                  onChange={(e) => setPriceRange(e.target.value)}
-                  className="px-3 py-1 border rounded-lg text-sm"
-                >
-                  {priceRanges.map((r) => (
-  <option key={r.id} value={r.id}>
-    {t.price}: {lang === "es" ? r.labelEs : r.labelEn}
-  </option>
-))}
-
-                </select>
-              </div>
+        {/* Row 3: Sub-filter for restaurant styles */}
+        {selectedCategory === "restaurants" && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">{t.styles}:</span>
+              <select
+                value={selectedStyle}
+                onChange={(e) => setSelectedStyle(e.target.value)}
+                className="border rounded-lg px-3 py-1.5 text-xs bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-900/30"
+              >
+                <option value="">{lang === "es" ? "Todos los estilos" : "All styles"}</option>
+                {restaurantStyles.map((s) => (
+                  <option key={s.id} value={s.id}>{s.label[lang]}</option>
+                ))}
+              </select>
             </div>
           </div>
         )}
