@@ -2686,6 +2686,7 @@ const payload = {
   lang,
   currency,
   status: "client_submitted",
+  clientSubmittedAt: new Date().toISOString(),
 };
 
 

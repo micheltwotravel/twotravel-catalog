@@ -873,11 +873,11 @@ function SummaryModal({ kickoff, onClose }) {
               )}
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-[11px] text-neutral-500">Creado</p>
-            <p className="text-neutral-900 text-xs sm:text-sm">
-              {formatDateTime(kickoff.createdAt)}
-            </p>
+          <div className="text-right text-[11px] text-neutral-500 space-y-0.5">
+            <p>📅 Creado: <span className="text-neutral-700">{formatDateTime(kickoff.createdAt)}</span></p>
+            {kickoff.clientSubmittedAt && <p>✅ Cliente envió: <span className="text-neutral-700">{formatDateTime(kickoff.clientSubmittedAt)}</span></p>}
+            {kickoff.conciergeEditingAt && <p>✏️ Concierge editó: <span className="text-neutral-700">{formatDateTime(kickoff.conciergeEditingAt)}</span></p>}
+            {kickoff.feedbackAt && <p>💬 Feedback: <span className="text-neutral-700">{formatDateTime(kickoff.feedbackAt)}</span></p>}
           </div>
           <div className="ml-auto">
             <StatusBadge status={kickoff.status} />
@@ -1308,6 +1308,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
       ? "concierge_editing"
       : status;
 
+  const now = new Date().toISOString();
   const updates = {
     guestName: guestName.trim(),
     tripName: tripName.trim(),
@@ -1327,6 +1328,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     checkIn:           checkIn.trim(),
     checkOut:          checkOut.trim(),
     welcomePdfUrl:     welcomePdfUrl.trim(),
+    // Timestamps — only set first time each status is reached
+    ...(autoStatus === "concierge_editing" && !kickoff.conciergeEditingAt ? { conciergeEditingAt: now } : {}),
     // Pre-trip info block (rendered as a page before itinerary days in PDF)
     preTripContent:    preTripContent.trim(),
   };

@@ -335,7 +335,7 @@ const handleSubmit = async (e) => {
 
     // Mark kickoff as feedback submitted (fire-and-forget)
     if (kickoffId) {
-      updateKickoffInSheet(kickoffId, { status: "feedback_submitted" }).catch(
+      updateKickoffInSheet(kickoffId, { status: "feedback_submitted", feedbackAt: new Date().toISOString() }).catch(
         (e) => console.warn("Could not update kickoff status:", e)
       );
     }
