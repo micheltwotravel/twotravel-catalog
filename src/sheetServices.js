@@ -187,6 +187,18 @@ video1: video1,
           .trim()
           .toLowerCase()
       ),
+    vegetarian:
+      ["true", "1", "yes", "si", "sí"].includes(
+        String(row.vegetarian || row.vegetariano || row["veggie"] || "")
+          .trim()
+          .toLowerCase()
+      ),
+    accessibility:
+      ["true", "1", "yes", "si", "sí"].includes(
+        String(row.accessibility || row.accesible || row.accesibilidad || row["wheelchair"] || "")
+          .trim()
+          .toLowerCase()
+      ),
   };
 }
 

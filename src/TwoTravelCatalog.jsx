@@ -2258,6 +2258,12 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   const [selectedStyle, setSelectedStyle] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [priceRange, setPriceRange] = useState("all");
+  // Tags: "family" | "vegetarian" | "accessibility" — puede haber más de uno activo
+  const [activeTags, setActiveTags] = useState([]);
+  const toggleTag = (tag) =>
+    setActiveTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
 
   const [imgIndex, setImgIndex] = useState(0);
   const [selectedService, setSelectedService] = useState(null);
@@ -2392,9 +2398,15 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
         // For tours / transportation / services: no price-level filter applied
       }
 
-      return catOK && stylesOK && searchOK && priceOK;
+      const tagsOK =
+        activeTags.length === 0 ||
+        (activeTags.includes("family")       ? s.family_friendly : true) &&
+        (activeTags.includes("vegetarian")   ? s.vegetarian      : true) &&
+        (activeTags.includes("accessibility") ? s.accessibility   : true);
+
+      return catOK && stylesOK && searchOK && priceOK && tagsOK;
     });
-  }, [services, selectedCategory, selectedStyle, searchTerm, priceRange, currentClientType]);
+  }, [services, selectedCategory, selectedStyle, searchTerm, priceRange, currentClientType, activeTags]);
 
 const vibeLabel = useMemo(() => {
   const map = {
@@ -3149,10 +3161,30 @@ setCart([]);
           </div>
         </div>
 
-        {/* Row 3: Sub-filter for restaurant styles */}
-        {selectedCategory === "restaurants" && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3">
-            <div className="flex items-center gap-2">
+        {/* Row 3: Tag chips + restaurant style sub-filter */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3 flex flex-wrap items-center gap-2">
+          {[
+            { id: "family",       emoji: "👨‍👩‍👧", es: "Familias",     en: "Family Friendly" },
+            { id: "vegetarian",   emoji: "🥗",      es: "Vegetariano",  en: "Vegetarian" },
+            { id: "accessibility",emoji: "♿",       es: "Accesible",    en: "Accessible" },
+          ].map((tag) => (
+            <button
+              key={tag.id}
+              onClick={() => toggleTag(tag.id)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                activeTags.includes(tag.id)
+                  ? "bg-emerald-600 text-white border-emerald-600"
+                  : "bg-white text-neutral-700 border-neutral-300 hover:bg-emerald-50 hover:border-emerald-400"
+              }`}
+            >
+              <span>{tag.emoji}</span>
+              {lang === "es" ? tag.es : tag.en}
+            </button>
+          ))}
+
+          {selectedCategory === "restaurants" && (
+            <>
+              <span className="text-xs text-gray-400">|</span>
               <span className="text-xs text-gray-500">{t.styles}:</span>
               <select
                 value={selectedStyle}
@@ -3164,9 +3196,9 @@ setCart([]);
                   <option key={s.id} value={s.id}>{s.label[lang]}</option>
                 ))}
               </select>
-            </div>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
       {/* Toast: guía al cliente cuando agrega el primer favorito */}
       {cartToast && (
@@ -3333,11 +3365,18 @@ setCart([]);
         <div className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded-full text-xs font-semibold">
           {i18n[lang][serviceCategory] || serviceCategory}
         </div>
-        {s.family_friendly && (
-          <div className="absolute top-2 left-2 bg-emerald-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-            👨‍👩‍👧 {lang === "es" ? "Apto para familias" : "Family Friendly"}
-          </div>
-        )}
+        {/* Tag badges — stacked top-left */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
+          {s.family_friendly && (
+            <span className="bg-emerald-500 text-white px-2 py-0.5 rounded-full text-[10px] font-semibold">👨‍👩‍👧 {lang === "es" ? "Familias" : "Family"}</span>
+          )}
+          {s.vegetarian && (
+            <span className="bg-lime-500 text-white px-2 py-0.5 rounded-full text-[10px] font-semibold">🥗 {lang === "es" ? "Vegetariano" : "Vegetarian"}</span>
+          )}
+          {s.accessibility && (
+            <span className="bg-blue-500 text-white px-2 py-0.5 rounded-full text-[10px] font-semibold">♿ {lang === "es" ? "Accesible" : "Accessible"}</span>
+          )}
+        </div>
         {/* Quick-add heart button */}
         <button
           type="button"
@@ -3501,11 +3540,23 @@ setCart([]);
                 <h2 className="text-2xl font-bold">
                   {selectedService.name}
                 </h2>
-                {selectedService.family_friendly && (
-                  <span className="shrink-0 inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 border border-emerald-300 px-2.5 py-1 rounded-full text-xs font-semibold">
-                    👨‍👩‍👧 {lang === "es" ? "Apto para familias" : "Family Friendly"}
-                  </span>
-                )}
+                <div className="flex flex-wrap gap-1.5 shrink-0">
+                  {selectedService.family_friendly && (
+                    <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 border border-emerald-300 px-2.5 py-1 rounded-full text-xs font-semibold">
+                      👨‍👩‍👧 {lang === "es" ? "Familias" : "Family Friendly"}
+                    </span>
+                  )}
+                  {selectedService.vegetarian && (
+                    <span className="inline-flex items-center gap-1 bg-lime-100 text-lime-700 border border-lime-300 px-2.5 py-1 rounded-full text-xs font-semibold">
+                      🥗 {lang === "es" ? "Vegetariano" : "Vegetarian"}
+                    </span>
+                  )}
+                  {selectedService.accessibility && (
+                    <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 border border-blue-300 px-2.5 py-1 rounded-full text-xs font-semibold">
+                      ♿ {lang === "es" ? "Accesible" : "Accessible"}
+                    </span>
+                  )}
+                </div>
               </div>
               <p className="text-gray-600 mb-4">
   {selectedService.description?.[lang] ||

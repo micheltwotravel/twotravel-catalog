@@ -1069,6 +1069,18 @@ const kickoffId = `ko_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
   return selectedKickoffForLink;
 }
 
+// Order categories consistently in the suggestions panel
+const SUGGESTION_CATS = [
+  { id: "restaurants",   label: "🍽 Restaurantes" },
+  { id: "bars",          label: "🍹 Bares" },
+  { id: "beach-clubs",   label: "🏖 Beach Clubs" },
+  { id: "nightlife",     label: "🎵 Nightlife" },
+  { id: "tours",         label: "🗺 Tours" },
+  { id: "transportation",label: "🚗 Transporte" },
+  { id: "chef",          label: "👨‍🍳 Chef" },
+  { id: "services",      label: "✨ Servicios" },
+];
+
 function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPick }) {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("all");
@@ -1087,6 +1099,16 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
       return sCity === kickoffCity;
     });
   }, [services, kickoffCity]);
+
+  // Suggested: 2 per category, in SUGGESTION_CATS order
+  const suggested = useMemo(() => {
+    return SUGGESTION_CATS.map(({ id, label }) => {
+      const items = cityServices
+        .filter((s) => String(s.category || "").trim() === id)
+        .slice(0, 2);
+      return { id, label, items };
+    }).filter((g) => g.items.length > 0);
+  }, [cityServices]);
 
   const categories = useMemo(() => {
     const set = new Set(
@@ -1159,6 +1181,50 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
             ))}
           </select>
         </div>
+
+        {/* ── Sugeridos por categoría (solo cuando no hay búsqueda activa) ── */}
+        {!q.trim() && category === "all" && suggested.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">
+              ⚡ Picks rápidos — 2 por categoría
+            </p>
+            {suggested.map(({ id, label, items }) => (
+              <div key={id}>
+                <p className="text-xs font-semibold text-neutral-700 mb-1">{label}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {items.map((s) => {
+                    const ct = String(clientType).includes("2") ? 2 : 1;
+                    const price = ct === 2 ? (s.price_tier_2 || s.price_cop) : (s.price_tier_1 || s.price_cop);
+                    const usesLevels = ["restaurants","bars","beach-clubs","nightlife"].includes(id);
+                    const priceDisplay = usesLevels
+                      ? (s.priceLevel || "—")
+                      : price ? new Intl.NumberFormat("es-CO").format(price) + " COP" : "—";
+                    return (
+                      <button
+                        key={s.id || s.sku}
+                        type="button"
+                        onClick={() => onPick(s)}
+                        className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 hover:border-neutral-400 text-left transition-colors"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold text-neutral-900 truncate">{s.name}</div>
+                          {s.subcategory && <div className="text-[10px] text-neutral-500 truncate">{s.subcategory}</div>}
+                        </div>
+                        <div className="shrink-0 flex flex-col items-end gap-0.5">
+                          <span className="text-[10px] text-neutral-500">{priceDisplay}</span>
+                          <span className="text-[10px] bg-neutral-900 text-white px-2 py-0.5 rounded-md">+ Agregar</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            <div className="border-t pt-2">
+              <p className="text-[11px] text-neutral-400">O busca cualquier servicio abajo ↓</p>
+            </div>
+          </div>
+        )}
 
         <div className="text-[11px] text-neutral-500">
           Mostrando {filtered.length} de {(services || []).length} servicios
