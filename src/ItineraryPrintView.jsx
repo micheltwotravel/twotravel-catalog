@@ -461,24 +461,34 @@ const CSS = `
     font-size:9.5px;color:#ccc;line-height:1.6;
   }
   .ev-footer-link{color:#1d4ed8;text-decoration:underline;}
-  /* QuickBooks machine-readable lines — transparent so client can't see,
-     but text is embedded in PDF for bot extraction */
+  /* QuickBooks machine-readable service lines — small gray, always in PDF text layer */
   .ev-qb{
-    color:transparent;
-    font-size:8px;
+    color:#c8c8c8;
+    font-size:7.5px;
     font-family:'Courier New',Courier,monospace;
-    line-height:1.3;
-    margin-top:4px;
-    user-select:text;
+    line-height:1.4;
+    margin-top:3px;
+    letter-spacing:.2px;
   }
-  /* Billing metadata header [1A]–[4A] on cover page */
-  .billing-meta{
-    color:transparent;
+
+  /* ── QB Billing block — last page ── */
+  .qb-billing-block{
+    margin:0 40px 0;
+    padding:10px 14px 8px;
+    border:1px solid #f0f0f0;
+    border-radius:6px;
+    background:#fafafa;
+  }
+  .qb-billing-label{
+    font-size:7px;letter-spacing:2.5px;text-transform:uppercase;
+    color:#ccc;font-weight:600;margin-bottom:6px;
+  }
+  .qb-billing-line{
     font-size:8px;
     font-family:'Courier New',Courier,monospace;
-    line-height:1.5;
-    user-select:text;
-    margin-bottom:0;
+    color:#bbb;
+    line-height:1.7;
+    letter-spacing:.2px;
   }
 
   /* Family Friendly badge */
@@ -561,14 +571,6 @@ function CoverPage({ kickoff, total, lang, editMode }) {
       <PH kickoff={a}/>
 
       <div className="cover-body">
-        {/* ── QuickBooks billing metadata — invisible to client, readable by PDF bot ── */}
-        <div className="billing-meta" aria-hidden="true">
-          <div>{`[1A][${cleanBrackets(a.guestName || "")}]`}</div>
-          <div>{`[2A][${cleanBrackets(a.guestContact || a.email || "")}]`}</div>
-          <div>{`[3A][${formatIsoDate(a.arrivalDate || a.checkIn || "")}]`}</div>
-          <div>{`[4A][${formatIsoDate(a.departureDate || a.checkOut || "")}]`}</div>
-        </div>
-
         {(a.city || a.tripName) && (
           <Editable
             tag="div" className="cover-eyebrow" editMode={editMode}
@@ -1137,9 +1139,57 @@ function CatalogPicker({ catalog, lang, onSelect, onClose }) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   QB BILLING BLOCK
+   Rendered at the bottom of the LAST day page.
+   Small gray monospace text — readable by Slack/PDF bot,
+   subtle enough not to distract the client.
+═══════════════════════════════════════════════════════════ */
+function BillingBlock({ kickoff, allDays }) {
+  const k = kickoff;
+
+  // Collect every service that has a QB code
+  const lines = [];
+  for (const day of (allDays || [])) {
+    for (const it of (day.items || [])) {
+      if (it.qbCode) {
+        const price = it.priceUsd || num(it.price) || "0";
+        lines.push(`[${it.qbCode}][${cleanBrackets(it.title)}][${price}]`);
+      }
+    }
+  }
+
+  if (!k.guestName && !k.guestContact && lines.length === 0) return null;
+
+  return (
+    <div className="qb-billing-block" style={{ marginBottom: 12 }}>
+      <div className="qb-billing-label">billing data</div>
+      <div className="qb-billing-line">
+        {`[1A][${cleanBrackets(k.guestName || "")}]`}
+      </div>
+      <div className="qb-billing-line">
+        {`[2A][${cleanBrackets(k.guestContact || k.email || "")}]`}
+      </div>
+      <div className="qb-billing-line">
+        {`[3A][${formatIsoDate(k.arrivalDate || k.checkIn || "")}]`}
+      </div>
+      <div className="qb-billing-line">
+        {`[4A][${formatIsoDate(k.departureDate || k.checkOut || "")}]`}
+      </div>
+      {lines.length > 0 && (
+        <div style={{ marginTop: 3 }}>
+          {lines.map((l, i) => (
+            <div key={i} className="qb-billing-line">{l}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
    DAY PAGE
 ═══════════════════════════════════════════════════════════ */
-function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onAddItem }) {
+function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onAddItem, billingBlock }) {
   return (
     <div className="page" style={{ position: "relative" }}>
       <PH kickoff={kickoff}/>
@@ -1197,6 +1247,9 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
           </div>
         )}
       </div>
+
+      {/* Billing data block — only on last day page */}
+      {billingBlock}
 
       <PF n={page} total={total}/>
     </div>
@@ -1468,6 +1521,9 @@ export default function ItineraryPrintView() {
           onRemoveDay={editMode ? () => removeDay(di) : undefined}
           onRemoveItem={editMode ? (ii) => removeItem(di, ii) : undefined}
           onAddItem={editMode ? () => openPickerForDay(di) : undefined}
+          billingBlock={di === activeDays.length - 1
+            ? <BillingBlock kickoff={kickoff} allDays={activeDays} />
+            : null}
         />
       ))}
 
