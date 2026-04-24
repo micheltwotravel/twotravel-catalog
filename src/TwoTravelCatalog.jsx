@@ -1771,16 +1771,16 @@ const nightlifeTypes = [
   { id: "nightclubs", label: { es: "Nightclubs · Discoteca",  en: "Nightclubs" } },
 ];
 
-// Estilos de restaurantes con etiquetas bilingües
+// Estilos de restaurantes — IDs must match normalizeSubcategory() output
 const restaurantStyles = [
-  { id: "fine-dining", label: { es: "Fine dining", en: "Fine dining" } },
-  { id: "caribbean", label: { es: "Caribeño", en: "Caribbean" } },
-  { id: "rooftop", label: { es: "Rooftop", en: "Rooftop" } },
-  { id: "japanese", label: { es: "Japonés / Nikkei", en: "Japanese / Nikkei" } },
-  { id: "seafood", label: { es: "Mariscos", en: "Seafood" } },
-  { id: "peruvian", label: { es: "Peruano", en: "Peruvian" } },
-  { id: "contemporary", label: { es: "Contemporáneo", en: "Contemporary" } },
-  { id: "classic", label: { es: "Clásico", en: "Classic" } },
+  { id: "fine-dining",  label: { es: "Fine dining",       en: "Fine dining" } },
+  { id: "caribbean",   label: { es: "Caribeño",           en: "Caribbean" } },
+  { id: "contemporary",label: { es: "Contemporáneo",      en: "Contemporary" } },
+  { id: "classic",     label: { es: "Clásico",            en: "Classic" } },
+  { id: "seafood",     label: { es: "Mariscos",           en: "Seafood" } },
+  { id: "japanese",    label: { es: "Japonés / Nikkei",   en: "Japanese / Nikkei" } },
+  { id: "peruvian",    label: { es: "Peruano",            en: "Peruvian" } },
+  { id: "rooftop",     label: { es: "Rooftop",            en: "Rooftop" } },
 ];
 
 const priceRanges = [
@@ -2375,12 +2375,26 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   /* ---------- filtros ---------- */
   // Normalise subcategory strings coming from the sheet so they always match
   // the restaurantStyles IDs (which use dashes, e.g. "fine-dining").
-  const normalizeSubcategory = (raw) =>
-    String(raw || "").trim().toLowerCase().replace(/\s+/g, "-");
+  // Maps raw subcategory text → canonical style ID used in restaurantStyles
+  // Handles compound names like "Japanese / Nikkei" → "japanese"
+  const normalizeSubcategory = (raw) => {
+    const s = String(raw || "").trim().toLowerCase();
+    // Compound / aliased values
+    if (/japanese|nikkei|japonés|japon/.test(s)) return "japanese";
+    if (/fine.?dining|alta.?cocina|tasting/.test(s)) return "fine-dining";
+    if (/caribean|caribe|caribbean/.test(s)) return "caribbean";
+    if (/contempor/.test(s)) return "contemporary";
+    if (/peruvian|peruano/.test(s)) return "peruvian";
+    if (/seafood|marisco/.test(s)) return "seafood";
+    if (/classic|clásico|clasico/.test(s)) return "classic";
+    if (/rooftop/.test(s)) return "rooftop";
+    // generic: lowercase + dashes
+    return s.replace(/\s+/g, "-");
+  };
 
   const filteredServices = useMemo(() => {
     return services.filter((s) => {
-      // s.category is already normalised when loaded from sheet (line ~2056)
+      // s.category is already normalised when loaded from sheet
       const serviceCategory = s.category || "services";
 
       const catOK =
@@ -2392,11 +2406,9 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
         if (selectedCategory === "restaurants" && selectedStyle)
           return normalizeSubcategory(s.subcategory) === selectedStyle;
         if (selectedCategory === "nightlife" && selectedStyle) {
-          // Match against the service's subcategory column in the sheet
-          // e.g. subcategory = "Rooftop", "Lounge", "Bars", "Nightclub"
           const sub = (s.subcategory || "").toString().trim().toLowerCase();
           if (selectedStyle === "bars")
-            return /bar|cóctel|coctel|cocktail/.test(sub);
+            return /bars?\b|cóctel|coctel|cocktail/.test(sub);
           if (selectedStyle === "rooftop")
             return /rooftop/.test(sub);
           if (selectedStyle === "lounge")

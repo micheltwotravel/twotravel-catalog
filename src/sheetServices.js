@@ -77,10 +77,11 @@ function normalizeCat(raw) {
   if (/beach.?club|playa|clubes?.de.?playa/.test(v)) return "beach-clubs";
   if (/\btour\b|activid|activit|excursion/.test(v)) return "tours";
   if (/transport|transfer|traslado|van\b|suv\b|vehiculo/.test(v)) return "transportation";
-  // nightlife: bars, rooftops, lounges, vida nocturna, discotecas, cocktails
-  if (/night|nocturna|nocturn|noche|discoteca|club\b|\bbar\b|bares|cocteleria|rooftop|lounge|cocktail/.test(v)) return "nightlife";
+  // nightlife: bars/bares/bars (word boundary), rooftops, lounges, vida nocturna, cocktails
+  // Note: \bbars?\b matches "bar" and "bars"; bares catches Spanish plural
+  if (/night|nocturna|nocturn|noche|discoteca|\bclub\b|\bbars?\b|bares|cocteleria|rooftop|lounge|cocktail/.test(v)) return "nightlife";
   if (/serv/.test(v)) return "services";
-  return "services"; // safe fallback — never return raw unknown value
+  return "services"; // safe fallback
 }
 
 function mapRowToService(row, index) {
