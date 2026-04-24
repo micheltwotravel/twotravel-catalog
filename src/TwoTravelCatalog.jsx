@@ -45,7 +45,7 @@ const i18n = {
     tours: "Tours",
     nightlife: "Nightlife",
     chef: "Chef Privado",
-    services: "Servicios",
+    services: "Experiencias",
     styles: "Estilos",
     price: "Precio",
     priceGroup: "por grupo",
@@ -116,7 +116,7 @@ quizEditAnswers: "Editar respuestas",
     nightlife: "Nightlife",
     chef: "Private Chef",
     transportation: "Transportation",
-    services: "Services",
+    services: "Experiences",
     styles: "Styles",
     price: "Price",
     priceGroup: "per group",
@@ -2972,14 +2972,20 @@ setCart([]);
               </p>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { id: "seafood",     es: "Mariscos",           en: "Seafood" },
-                  { id: "caribbean",   es: "Caribeño",           en: "Caribbean" },
-                  { id: "contemporary",es: "Contemporáneo",      en: "Contemporary" },
-                  { id: "fine-dining", es: "Fine dining",        en: "Fine dining" },
-                  { id: "japanese",    es: "Japonés / Nikkei",   en: "Japanese / Nikkei" },
-                  { id: "peruvian",    es: "Peruano",            en: "Peruvian" },
-                  { id: "rooftop",     es: "Rooftop",            en: "Rooftop" },
-                  { id: "classic",     es: "Clásico",            en: "Classic" },
+                  { id: "seafood",       es: "🦞 Mariscos",          en: "🦞 Seafood" },
+                  { id: "caribbean",     es: "🌴 Caribeño",           en: "🌴 Caribbean" },
+                  { id: "contemporary",  es: "✨ Contemporáneo",      en: "✨ Contemporary" },
+                  { id: "fine-dining",   es: "🍷 Fine dining",        en: "🍷 Fine dining" },
+                  { id: "japanese",      es: "🍣 Japonés / Nikkei",   en: "🍣 Japanese / Nikkei" },
+                  { id: "peruvian",      es: "🫙 Peruano",            en: "🫙 Peruvian" },
+                  { id: "italian",       es: "🍝 Italiano",           en: "🍝 Italian" },
+                  { id: "mediterranean", es: "🫒 Mediterráneo",       en: "🫒 Mediterranean" },
+                  { id: "mexican",       es: "🌮 Mexicano",           en: "🌮 Mexican" },
+                  { id: "steakhouse",    es: "🥩 Carnes",             en: "🥩 Steakhouse" },
+                  { id: "vegetarian",    es: "🥗 Vegetariano",        en: "🥗 Vegetarian" },
+                  { id: "street-food",   es: "🌮 Comida callejera",   en: "🌮 Street food" },
+                  { id: "rooftop",       es: "🏙 Rooftop",            en: "🏙 Rooftop" },
+                  { id: "classic",       es: "🍽 Clásico",            en: "🍽 Classic" },
                 ].map((c) => {
                   const active = (quiz.cuisines || []).includes(c.id);
                   return (
@@ -3103,13 +3109,17 @@ setCart([]);
             {/* Botón favoritos (corazón) */}
             <button
               onClick={() => setShowCart(true)}
-              className={`relative p-2 rounded-lg border border-neutral-900 text-neutral-900 bg-white hover:bg-neutral-900 hover:text-white active:bg-neutral-950 focus:outline-none focus:ring-2 focus:ring-neutral-900/40 transition-colors transition-transform ${
-                heartBump ? "scale-110" : ""
-              }`}
+              className={`relative p-2 rounded-xl border-2 transition-transform ${
+                heartBump ? "scale-125" : "scale-100"
+              } ${
+                cart.length > 0
+                  ? "border-rose-400 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white"
+                  : "border-neutral-300 bg-white text-neutral-400 hover:border-rose-400 hover:text-rose-400"
+              } focus:outline-none focus:ring-2 focus:ring-rose-400/40 transition-colors`}
             >
-              <Heart className="w-5 h-5" />
+              <Heart className={`w-6 h-6 ${cart.length > 0 ? "fill-current" : ""}`} />
               {cart.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-neutral-900 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                   {cart.length}
                 </span>
               )}
@@ -3393,13 +3403,13 @@ setCart([]);
             if (!isInCart) addToCart(s);
           }}
           title={isInCart ? (lang === "es" ? "Ya en favoritos" : "Already in favorites") : (lang === "es" ? "Agregar a favoritos" : "Add to favorites")}
-          className={`absolute bottom-2 right-2 w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-colors border ${
+          className={`absolute bottom-2 right-2 w-10 h-10 rounded-full flex items-center justify-center shadow-md transition-all border-2 ${
             isInCart
-              ? "bg-neutral-900 text-white border-neutral-900"
-              : "bg-white/90 text-neutral-700 border-white/60 hover:bg-neutral-900 hover:text-white"
+              ? "bg-rose-500 text-white border-rose-500 scale-110"
+              : "bg-white/95 text-rose-400 border-white/60 hover:bg-rose-500 hover:text-white hover:border-rose-500 hover:scale-110"
           }`}
         >
-          <Heart className={`w-4 h-4 ${isInCart ? "fill-current" : ""}`} />
+          <Heart className={`w-5 h-5 ${isInCart ? "fill-current" : ""}`} />
         </button>
       </div>
 
