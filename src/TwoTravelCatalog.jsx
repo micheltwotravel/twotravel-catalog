@@ -40,10 +40,10 @@ const i18n = {
     filters: "Filtros",
     all: "Todos",
     restaurants: "Restaurantes",
-    bars: "Bares",
     "beach-clubs": "Beach Clubs",
     tours: "Tours",
-    nightlife: "Nightlife",
+    nightlife: "Nightlife & Bares",
+    bars: "Bares · Cócteles",
     chef: "Chef Privado",
     services: "Experiencias",
     styles: "Estilos",
@@ -110,10 +110,10 @@ quizEditAnswers: "Editar respuestas",
     filters: "Filters",
     all: "All",
     restaurants: "Restaurants",
-    bars: "Bars",
     "beach-clubs": "Beach Clubs",
     tours: "Tours",
-    nightlife: "Nightlife",
+    nightlife: "Nightlife & Bars",
+    bars: "Bars · Cocktails",
     chef: "Private Chef",
     transportation: "Transportation",
     services: "Experiences",
@@ -1755,13 +1755,18 @@ const servicesData = [
 const categories = [
   { id: "all" },
   { id: "restaurants" },
-  { id: "bars" },
+  { id: "nightlife" },   // covers bars + nightlife (discotecas)
   { id: "beach-clubs" },
   { id: "tours" },
-  { id: "nightlife" },
   { id: "chef" },
   { id: "services" },
   { id: "transportation" },
+];
+
+// Sub-tipos de nightlife
+const nightlifeTypes = [
+  { id: "bars",       label: { es: "Bares · Cócteles",  en: "Bars · Cocktails" } },
+  { id: "nightclubs", label: { es: "Nightclubs · Disco", en: "Nightclubs" } },
 ];
 
 // Estilos de restaurantes con etiquetas bilingües
@@ -1965,6 +1970,7 @@ const normalizeCategory = (raw) => {
     transporte: "transportation", transfer: "transportation",
     traslado: "transportation",
     services: "services", servicio: "services", servicios: "services",
+    chef: "chef", chefs: "chef", "private chef": "chef", "chef privado": "chef",
   };
   if (EXACT[v]) return EXACT[v];
 
@@ -1973,9 +1979,10 @@ const normalizeCategory = (raw) => {
   if (/\bbar\b/.test(v))                                  return "bars";
   if (/beach|playa/.test(v))                              return "beach-clubs";
   if (/\btour\b|activid|activit/.test(v))                 return "tours";
-  if (/night|noche|discoteca|nightlife/.test(v))          return "nightlife";
+  if (/night|noche|discoteca|nightlife/.test(v))           return "nightlife";
   if (/transport|transfer|traslado|van\b|suv\b/.test(v))  return "transportation";
-  if (/serv/.test(v))                                     return "services";
+  if (/\bchef\b/.test(v))                                  return "chef";
+  if (/serv/.test(v))                                      return "services";
 
   return "services";
 };
@@ -2373,14 +2380,21 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
       const serviceCategory = s.category || "services";
 
       const catOK =
-        selectedCategory === "all" || serviceCategory === selectedCategory;
+        selectedCategory === "all" ||
+        serviceCategory === selectedCategory ||
+        // nightlife tab also shows bars
+        (selectedCategory === "nightlife" && serviceCategory === "bars");
 
-      // Style sub-filter: only relevant when "restaurants" tab is active
-      // Normalise both sides so "fine dining" == "fine-dining"
-      const stylesOK =
-        selectedCategory !== "restaurants" || !selectedStyle
-          ? true
-          : normalizeSubcategory(s.subcategory) === selectedStyle;
+      // Sub-filter: restaurants use style, nightlife uses type (bars/nightclubs)
+      const stylesOK = (() => {
+        if (selectedCategory === "restaurants" && selectedStyle)
+          return normalizeSubcategory(s.subcategory) === selectedStyle;
+        if (selectedCategory === "nightlife" && selectedStyle) {
+          if (selectedStyle === "bars")       return serviceCategory === "bars";
+          if (selectedStyle === "nightclubs") return serviceCategory === "nightlife";
+        }
+        return true;
+      })();
 
       const q = searchTerm.trim().toLowerCase();
       const searchOK =
@@ -3218,6 +3232,22 @@ setCart([]);
               </select>
             </>
           )}
+
+          {selectedCategory === "nightlife" && (
+            <>
+              <span className="text-xs text-gray-400">|</span>
+              <select
+                value={selectedStyle}
+                onChange={(e) => setSelectedStyle(e.target.value)}
+                className="border rounded-lg px-3 py-1.5 text-xs bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-900/30"
+              >
+                <option value="">{lang === "es" ? "Todos" : "All"}</option>
+                {nightlifeTypes.map((t) => (
+                  <option key={t.id} value={t.id}>{t.label[lang]}</option>
+                ))}
+              </select>
+            </>
+          )}
         </div>
       </div>
       {/* Toast: guía al cliente cuando agrega el primer favorito */}
@@ -3407,8 +3437,8 @@ setCart([]);
           title={isInCart ? (lang === "es" ? "Ya en favoritos" : "Already in favorites") : (lang === "es" ? "Agregar a favoritos" : "Add to favorites")}
           className={`absolute bottom-2 right-2 w-10 h-10 rounded-full flex items-center justify-center shadow-md transition-all border-2 ${
             isInCart
-              ? "bg-rose-500 text-white border-rose-500 scale-110"
-              : "bg-white/95 text-rose-400 border-rose-300 hover:bg-rose-500 hover:text-white hover:border-rose-500 hover:scale-110"
+              ? "bg-rose-600 text-white border-rose-600 scale-110"
+              : "bg-rose-500 text-white border-rose-500 hover:bg-rose-700 hover:border-rose-700 hover:scale-110"
           }`}
         >
           <Heart className="w-5 h-5 fill-current" />

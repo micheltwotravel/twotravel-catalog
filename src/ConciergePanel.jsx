@@ -1116,16 +1116,28 @@ const kickoffId = `ko_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
   return selectedKickoffForLink;
 }
 
-// Order categories consistently in the suggestions panel
+// Small normalizer so ConciergePanel picks match any sheet category value
+function normCatPanel(raw) {
+  const v = (raw || "").toString().trim().toLowerCase();
+  if (/chef|private.?chef|chef.?privado/.test(v)) return "chef";
+  if (/restauran|comida|food/.test(v)) return "restaurants";
+  if (/beach.?club|playa/.test(v)) return "beach-clubs";
+  if (/\btour\b|activid|excursion/.test(v)) return "tours";
+  if (/night|discoteca|club\b/.test(v)) return "nightlife";
+  if (/\bbar\b|bares|coctel/.test(v)) return "bars";
+  if (/transport|transfer|traslado/.test(v)) return "transportation";
+  return v;
+}
+
+// Bars + nightlife merged into one section
 const SUGGESTION_CATS = [
-  { id: "restaurants",   label: "🍽 Restaurantes" },
-  { id: "bars",          label: "🍹 Bares" },
-  { id: "beach-clubs",   label: "🏖 Beach Clubs" },
-  { id: "nightlife",     label: "🎵 Nightlife" },
-  { id: "tours",         label: "🗺 Tours" },
-  { id: "transportation",label: "🚗 Transporte" },
-  { id: "chef",          label: "👨‍🍳 Chef" },
-  { id: "services",      label: "✨ Servicios" },
+  { id: "restaurants",    ids: ["restaurants"],              label: "🍽 Restaurantes" },
+  { id: "nightlife",      ids: ["bars","nightlife"],         label: "🍹 Bares & Nightlife" },
+  { id: "beach-clubs",    ids: ["beach-clubs"],              label: "🏖 Beach Clubs" },
+  { id: "tours",          ids: ["tours"],                    label: "🗺 Tours" },
+  { id: "transportation", ids: ["transportation"],           label: "🚗 Transporte" },
+  { id: "chef",           ids: ["chef"],                     label: "👨‍🍳 Chef Privado" },
+  { id: "services",       ids: ["services"],                 label: "✨ Servicios" },
 ];
 
 function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPick }) {
@@ -1149,9 +1161,18 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
 
   // Suggested: 2 per category, in SUGGESTION_CATS order
   const suggested = useMemo(() => {
-    return SUGGESTION_CATS.map(({ id, label }) => {
+    return SUGGESTION_CATS.map(({ id, ids, label }) => {
       const items = cityServices
-        .filter((s) => String(s.category || "").trim() === id)
+        .filter((s) => ids.includes(normCatPanel(s.category)))
+        .sort((a, b) => {
+          // Pin "Duster" first for transportation picks
+          if (id === "transportation") {
+            const aD = /duster/i.test(a.name) ? 0 : 1;
+            const bD = /duster/i.test(b.name) ? 0 : 1;
+            return aD - bD;
+          }
+          return 0;
+        })
         .slice(0, 2);
       return { id, label, items };
     }).filter((g) => g.items.length > 0);

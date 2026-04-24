@@ -69,6 +69,20 @@ function splitHighlights(value) {
     .filter(Boolean);
 }
 
+function normalizeCat(raw) {
+  const v = (raw || "").toString().trim().toLowerCase();
+  if (!v) return "services";
+  if (/chef|private.?chef|chef.?privado/.test(v)) return "chef";
+  if (/restauran|comida|food|dining/.test(v)) return "restaurants";
+  if (/beach.?club|playa/.test(v)) return "beach-clubs";
+  if (/\btour\b|activid|activit|excursion/.test(v)) return "tours";
+  if (/night|noche|discoteca|club\b/.test(v)) return "nightlife";
+  if (/\bbar\b|bares|cocteleria/.test(v)) return "bars";
+  if (/transport|transfer|traslado|van\b|suv\b|vehiculo/.test(v)) return "transportation";
+  if (/serv/.test(v)) return "services";
+  return v; // preserve exact value if nothing matched
+}
+
 function mapRowToService(row, index) {
   // Sheet headers (after PapaParse lowercasing):
   // Primary: "image_source"  (col AF in screenshot)
@@ -104,6 +118,7 @@ const rawVideo = row.video1 || row["video 1"] || row.video || row.video_url || r
     category: row.category || "services",
     subcategory: row.subcategory || "",
     subcategory_en: row.subcategory_en || "",
+    category: normalizeCat(row.category || row.Category || row.categoria || ""),
     city: (row.city || row.ciudad || row.destination || row.destino || "").trim().toLowerCase(),
     images: extraImages,
 video1: video1,
