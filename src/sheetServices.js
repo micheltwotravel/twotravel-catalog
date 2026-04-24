@@ -74,13 +74,13 @@ function normalizeCat(raw) {
   if (!v) return "services";
   if (/chef|private.?chef|chef.?privado/.test(v)) return "chef";
   if (/restauran|comida|food|dining/.test(v)) return "restaurants";
-  if (/beach.?club|playa/.test(v)) return "beach-clubs";
+  if (/beach.?club|playa|clubes?.de.?playa/.test(v)) return "beach-clubs";
   if (/\btour\b|activid|activit|excursion/.test(v)) return "tours";
   if (/transport|transfer|traslado|van\b|suv\b|vehiculo/.test(v)) return "transportation";
-  // bars, rooftops, lounges, cocktail bars → all nightlife (bars is a sub-type, not top-level)
-  if (/night|noche|discoteca|club\b|\bbar\b|bares|cocteleria|rooftop|lounge|cocktail/.test(v)) return "nightlife";
+  // nightlife: bars, rooftops, lounges, vida nocturna, discotecas, cocktails
+  if (/night|nocturna|nocturn|noche|discoteca|club\b|\bbar\b|bares|cocteleria|rooftop|lounge|cocktail/.test(v)) return "nightlife";
   if (/serv/.test(v)) return "services";
-  return v; // preserve exact value if nothing matched
+  return "services"; // safe fallback — never return raw unknown value
 }
 
 function mapRowToService(row, index) {
@@ -115,10 +115,14 @@ const rawVideo = row.video1 || row["video 1"] || row.video || row.video_url || r
     sku: row.sku || "",
     name: row.name || "",
     name_en: row.name_en || row.nombre_en || "",
-    category: row.category || "services",
     subcategory: row.subcategory || "",
     subcategory_en: row.subcategory_en || "",
-    category: normalizeCat(row.category || row.Category || row.categoria || ""),
+    // Prefer category_es (already the normalized English key the sheet has),
+    // then fall back to the Spanish display name and normalize it
+    category: normalizeCat(
+      row.category_es || row.category_en ||
+      row.category    || row.Category    || row.categoria || ""
+    ),
     city: (row.city || row.ciudad || row.destination || row.destino || "").trim().toLowerCase(),
     images: extraImages,
 video1: video1,
