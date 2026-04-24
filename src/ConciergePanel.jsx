@@ -896,6 +896,41 @@ function SummaryModal({ kickoff, onClose }) {
 </div>
 
 
+        {/* ── Quiz answers ── */}
+        {(() => {
+          let q = null;
+          try { q = JSON.parse(kickoff.quizAnswers || "null"); } catch {}
+          if (!q) return null;
+          const vibeMap = { relax:"🏖 Relax", party:"🎉 Nightlife", romantic:"🌹 Romántico", family:"👨‍👩‍👧 Familia", adventure:"🏄 Aventura" };
+          const budgetMap = { low:"$ Económico", mid:"$$ Medio", high:"$$$ Alto" };
+          const rows = [
+            q.groupSize  && { label:"👥 Personas",   val: q.groupSize },
+            q.vibes?.length  && { label:"🎭 Vibe",       val: (q.vibes||[]).map(v=>vibeMap[v]||v).join(", ") },
+            q.budget     && { label:"💰 Presupuesto", val: budgetMap[q.budget] || q.budget },
+            q.kids==="yes"   && { label:"👶 Niños",      val: "Sí" },
+            q.cuisines?.length && { label:"🍽 Cocinas",    val: (q.cuisines||[]).join(", ") },
+            q.interests?.length && { label:"🎯 Intereses",  val: (q.interests||[]).join(", ") },
+          ].filter(Boolean);
+          if (!rows.length) return null;
+          return (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1.5">
+              <p className="text-xs font-semibold text-amber-800">📋 Respuestas del cuestionario</p>
+              {rows.map(({label, val}) => (
+                <div key={label} className="flex gap-2 text-xs">
+                  <span className="text-neutral-500 w-28 shrink-0">{label}</span>
+                  <span className="text-neutral-900 font-medium">{val}</span>
+                </div>
+              ))}
+              {kickoff.additionalNotes && (
+                <div className="flex gap-2 text-xs mt-1 pt-1 border-t border-amber-200">
+                  <span className="text-neutral-500 w-28 shrink-0">📝 Notas extra</span>
+                  <span className="text-neutral-900">{kickoff.additionalNotes}</span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-neutral-900">

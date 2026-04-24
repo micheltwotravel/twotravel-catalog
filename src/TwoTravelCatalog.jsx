@@ -2246,7 +2246,9 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
       maximumFractionDigits: 0,
     }).format(value);
 
-  const unitLabel = (unit) => {
+  const unitLabel = (unit, category) => {
+    if (category === "transportation" || unit === "per vehicle")
+      return lang === "es" ? "por vehículo" : "per vehicle";
     if (unit === "per person") return t.perPerson;
     if (unit === "day pass") return t.dayPass;
     if (unit === "per group") return t.perGroup;
@@ -2339,7 +2341,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
       let priceLine = "";
       if (categoryHasVisiblePrice(item.category) && hasPrice(item.price_cop)) {
         const price = formatPrice(convertPrice(item.price_cop));
-        priceLine = `${price} • ${unitLabel(item.priceUnit)}`;
+        priceLine = `${price} • ${unitLabel(item.priceUnit, item.category)}`;
       } else {
         // Solo mostramos $, $$ o $$$ para restaurantes, bares, beach clubs, nightlife
         const level = getServicePriceLevel(item, item.clientType || currentClientType);
@@ -3449,7 +3451,7 @@ setCart([]);
                 {formatPrice(priceConverted)}
               </span>
               <span className="text-xs text-gray-500 block">
-                {t.approxPrice} • {unitLabel(s.priceUnit)}
+                {t.approxPrice} • {unitLabel(s.priceUnit, s.category)}
               </span>
             </>
           )}
@@ -3702,7 +3704,7 @@ setCart([]);
           {formatPrice(convertPrice(selectedEffectivePriceCop))}
         </span>
         <span className="text-sm text-gray-500 ml-2">
-          · {t.approxPrice} • {unitLabel(selectedService.priceUnit)}
+          · {t.approxPrice} • {unitLabel(selectedService.priceUnit, selectedService.category)}
         </span>
       </>
     ) : (
@@ -3772,7 +3774,7 @@ setCart([]);
     <>
       <span>{formatPrice(convertPrice(item.price_cop))}</span>
       <span className="text-xs text-gray-500">
-        {t.approxPrice} • {unitLabel(item.priceUnit)}
+        {t.approxPrice} • {unitLabel(item.priceUnit, item.category)}
       </span>
     </>
   ) : (
@@ -3965,7 +3967,7 @@ setCart([]);
                         <p className="text-xs text-gray-500">
   {i18n[lang][item.category] || item.category} •{" "}
   {categoryHasVisiblePrice(item.category) && hasPrice(item.price_cop)
-    ? `${formatPrice(convertPrice(item.price_cop))} · ${unitLabel(item.priceUnit)}`
+    ? `${formatPrice(convertPrice(item.price_cop))} · ${unitLabel(item.priceUnit, item.category)}`
     : getServicePriceLevel(item, item.clientType || currentClientType) || t.variablePrice}
 </p>
 
