@@ -76,9 +76,9 @@ function normalizeCat(raw) {
   if (/restauran|comida|food|dining/.test(v)) return "restaurants";
   if (/beach.?club|playa/.test(v)) return "beach-clubs";
   if (/\btour\b|activid|activit|excursion/.test(v)) return "tours";
-  if (/night|noche|discoteca|club\b/.test(v)) return "nightlife";
-  if (/\bbar\b|bares|cocteleria/.test(v)) return "bars";
   if (/transport|transfer|traslado|van\b|suv\b|vehiculo/.test(v)) return "transportation";
+  // bars, rooftops, lounges, cocktail bars → all nightlife (bars is a sub-type, not top-level)
+  if (/night|noche|discoteca|club\b|\bbar\b|bares|cocteleria|rooftop|lounge|cocktail/.test(v)) return "nightlife";
   if (/serv/.test(v)) return "services";
   return v; // preserve exact value if nothing matched
 }

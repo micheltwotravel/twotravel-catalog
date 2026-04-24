@@ -1763,10 +1763,12 @@ const categories = [
   { id: "transportation" },
 ];
 
-// Sub-tipos de nightlife
+// Sub-tipos de nightlife (se filtran por el campo "subcategory" del sheet)
 const nightlifeTypes = [
-  { id: "bars",       label: { es: "Bares · Cócteles",  en: "Bars · Cocktails" } },
-  { id: "nightclubs", label: { es: "Nightclubs · Disco", en: "Nightclubs" } },
+  { id: "bars",       label: { es: "Bares · Cócteles",       en: "Bars · Cocktails" } },
+  { id: "rooftop",    label: { es: "Rooftop",                 en: "Rooftop" } },
+  { id: "lounge",     label: { es: "Lounge",                  en: "Lounge" } },
+  { id: "nightclubs", label: { es: "Nightclubs · Discoteca",  en: "Nightclubs" } },
 ];
 
 // Estilos de restaurantes con etiquetas bilingües
@@ -1960,12 +1962,14 @@ const normalizeCategory = (raw) => {
     restaurant: "restaurants", restaurants: "restaurants",
     restaurante: "restaurants", restaurantes: "restaurants",
     food: "restaurants", comida: "restaurants",
-    bar: "bars", bars: "bars",
+    // bars → nightlife (bars is a nightlife sub-type, not a top-level category)
+    bar: "nightlife", bars: "nightlife", bares: "nightlife",
+    rooftop: "nightlife", lounge: "nightlife", cocktails: "nightlife", cocteleria: "nightlife",
     "beach club": "beach-clubs", "beach clubs": "beach-clubs",
     "beach-club": "beach-clubs", "beach-clubs": "beach-clubs",
     playa: "beach-clubs",
     tour: "tours", tours: "tours", actividad: "tours", activity: "tours",
-    nightlife: "nightlife", noche: "nightlife", discoteca: "nightlife",
+    nightlife: "nightlife", noche: "nightlife", discoteca: "nightlife", club: "nightlife",
     transport: "transportation", transportation: "transportation",
     transporte: "transportation", transfer: "transportation",
     traslado: "transportation",
@@ -1975,14 +1979,14 @@ const normalizeCategory = (raw) => {
   if (EXACT[v]) return EXACT[v];
 
   // Substring fallback — FOOD first so "restaurante de mariscos" never mis-fires as transport
-  if (/restauran|comida|food|dining/.test(v))             return "restaurants";
-  if (/\bbar\b/.test(v))                                  return "bars";
-  if (/beach|playa/.test(v))                              return "beach-clubs";
-  if (/\btour\b|activid|activit/.test(v))                 return "tours";
-  if (/night|noche|discoteca|nightlife/.test(v))           return "nightlife";
-  if (/transport|transfer|traslado|van\b|suv\b/.test(v))  return "transportation";
-  if (/\bchef\b/.test(v))                                  return "chef";
-  if (/serv/.test(v))                                      return "services";
+  if (/restauran|comida|food|dining/.test(v))                         return "restaurants";
+  if (/beach|playa/.test(v))                                          return "beach-clubs";
+  if (/\btour\b|activid|activit/.test(v))                            return "tours";
+  if (/transport|transfer|traslado|van\b|suv\b/.test(v))             return "transportation";
+  if (/\bchef\b/.test(v))                                             return "chef";
+  // bars, rooftops, lounges, cocktail bars → all nightlife
+  if (/night|noche|discoteca|\bbar\b|rooftop|lounge|cocktail/.test(v)) return "nightlife";
+  if (/serv/.test(v))                                                  return "services";
 
   return "services";
 };
@@ -2381,17 +2385,24 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
 
       const catOK =
         selectedCategory === "all" ||
-        serviceCategory === selectedCategory ||
-        // nightlife tab also shows bars
-        (selectedCategory === "nightlife" && serviceCategory === "bars");
+        serviceCategory === selectedCategory;
 
-      // Sub-filter: restaurants use style, nightlife uses type (bars/nightclubs)
+      // Sub-filter: restaurants use style, nightlife uses subcategory field
       const stylesOK = (() => {
         if (selectedCategory === "restaurants" && selectedStyle)
           return normalizeSubcategory(s.subcategory) === selectedStyle;
         if (selectedCategory === "nightlife" && selectedStyle) {
-          if (selectedStyle === "bars")       return serviceCategory === "bars";
-          if (selectedStyle === "nightclubs") return serviceCategory === "nightlife";
+          // Match against the service's subcategory column in the sheet
+          // e.g. subcategory = "Rooftop", "Lounge", "Bars", "Nightclub"
+          const sub = (s.subcategory || "").toString().trim().toLowerCase();
+          if (selectedStyle === "bars")
+            return /bar|cóctel|coctel|cocktail/.test(sub);
+          if (selectedStyle === "rooftop")
+            return /rooftop/.test(sub);
+          if (selectedStyle === "lounge")
+            return /lounge/.test(sub);
+          if (selectedStyle === "nightclubs")
+            return /night|disco|club/.test(sub);
         }
         return true;
       })();
@@ -3413,7 +3424,19 @@ setCart([]);
           onError={e => driveOnError(e, serviceCategory)}
         />
         <div className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded-full text-xs font-semibold">
-          {i18n[lang][serviceCategory] || serviceCategory}
+          {(() => {
+            // For nightlife: prefer subcategory label if set (e.g. "Rooftop", "Lounge", "Bar")
+            if (serviceCategory === "nightlife" && s.subcategory) {
+              const sub = s.subcategory.trim();
+              const found = nightlifeTypes.find(
+                (t) => t.id === sub.toLowerCase() ||
+                       sub.toLowerCase().includes(t.id)
+              );
+              if (found) return found.label[lang] || found.label.es;
+              return sub; // show raw subcategory if not in list
+            }
+            return i18n[lang][serviceCategory] || serviceCategory;
+          })()}
         </div>
         {/* Tag badges — stacked top-left */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">

@@ -1123,16 +1123,16 @@ function normCatPanel(raw) {
   if (/restauran|comida|food/.test(v)) return "restaurants";
   if (/beach.?club|playa/.test(v)) return "beach-clubs";
   if (/\btour\b|activid|excursion/.test(v)) return "tours";
-  if (/night|discoteca|club\b/.test(v)) return "nightlife";
-  if (/\bbar\b|bares|coctel/.test(v)) return "bars";
   if (/transport|transfer|traslado/.test(v)) return "transportation";
+  // bars/rooftop/lounge/cocktail → nightlife (bars is a sub-type)
+  if (/night|discoteca|club\b|\bbar\b|bares|coctel|rooftop|lounge|cocktail/.test(v)) return "nightlife";
   return v;
 }
 
-// Bars + nightlife merged into one section
+// Nightlife covers bars, rooftops, lounges — all under one section
 const SUGGESTION_CATS = [
   { id: "restaurants",    ids: ["restaurants"],              label: "🍽 Restaurantes" },
-  { id: "nightlife",      ids: ["bars","nightlife"],         label: "🍹 Bares & Nightlife" },
+  { id: "nightlife",      ids: ["nightlife"],                label: "🍹 Bares & Nightlife" },
   { id: "beach-clubs",    ids: ["beach-clubs"],              label: "🏖 Beach Clubs" },
   { id: "tours",          ids: ["tours"],                    label: "🗺 Tours" },
   { id: "transportation", ids: ["transportation"],           label: "🚗 Transporte" },
