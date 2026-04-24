@@ -75,7 +75,7 @@ function normalizeCat(raw) {
   if (/chef|private.?chef|chef.?privado/.test(v)) return "chef";
   if (/restauran|comida|food|dining/.test(v)) return "restaurants";
   if (/beach.?club|playa|clubes?.de.?playa/.test(v)) return "beach-clubs";
-  if (/\btour\b|activid|activit|excursion/.test(v)) return "tours";
+  if (/\btours?\b|activid|activit|excursion/.test(v)) return "tours";
   if (/transport|transfer|traslado|van\b|suv\b|vehiculo/.test(v)) return "transportation";
   // nightlife: bars/bares/bars (word boundary), rooftops, lounges, vida nocturna, cocktails
   // Note: \bbars?\b matches "bar" and "bars"; bares catches Spanish plural

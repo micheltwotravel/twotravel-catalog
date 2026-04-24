@@ -1981,7 +1981,7 @@ const normalizeCategory = (raw) => {
   // Substring fallback — FOOD first so "restaurante de mariscos" never mis-fires as transport
   if (/restauran|comida|food|dining/.test(v))                         return "restaurants";
   if (/beach|playa/.test(v))                                          return "beach-clubs";
-  if (/\btour\b|activid|activit/.test(v))                            return "tours";
+  if (/\btours?\b|activid|activit/.test(v))                          return "tours";
   if (/transport|transfer|traslado|van\b|suv\b/.test(v))             return "transportation";
   if (/\bchef\b/.test(v))                                             return "chef";
   // bars, rooftops, lounges, cocktail bars → all nightlife
