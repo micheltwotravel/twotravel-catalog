@@ -38,6 +38,21 @@ function Editable({ value, tag: Tag = "span", className = "", editMode, style })
 const cl  = (v) => String(v ?? "").trim();
 const num = (v) => { const n = Number(cl(v).replace(/[^0-9.-]/g, "")); return isNaN(n) ? 0 : n; };
 
+/** Ensures a date string is YYYY-MM-DD for QB billing fields */
+function formatIsoDate(v) {
+  const s = cl(v);
+  if (!s) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return d.toISOString().slice(0, 10);
+}
+
+/** Strips [ ] from text so they don't break the QB bracket parser */
+function cleanBrackets(v) {
+  return cl(v).replace(/[\[\]]/g, "");
+}
+
 function fmtPrice(v) {
   const n = num(v);
   if (!n) return "";
@@ -86,6 +101,7 @@ function buildDays(matched, lang, dayMeta) {
       address      : service.address    || "",
       city         : service.city       || "",
       price        : service.price_cop  || service.priceCop || service.price_tier_1 || service.priceTier1 || "",
+      priceUsd     : num(service.price_tier_1 || service.priceTier1 || 0),
       priceUnit    : service.priceUnit  || "",
       deposit      : service.deposit    || "",
       cancellation : service.cancellation || "",
@@ -445,10 +461,24 @@ const CSS = `
     font-size:9.5px;color:#ccc;line-height:1.6;
   }
   .ev-footer-link{color:#1d4ed8;text-decoration:underline;}
+  /* QuickBooks machine-readable lines — transparent so client can't see,
+     but text is embedded in PDF for bot extraction */
   .ev-qb{
-    font-size:9px;color:#e0e0e0;
+    color:transparent;
+    font-size:8px;
     font-family:'Courier New',Courier,monospace;
-    margin-top:5px;letter-spacing:.3px;
+    line-height:1.3;
+    margin-top:4px;
+    user-select:text;
+  }
+  /* Billing metadata header [1A]–[4A] on cover page */
+  .billing-meta{
+    color:transparent;
+    font-size:8px;
+    font-family:'Courier New',Courier,monospace;
+    line-height:1.5;
+    user-select:text;
+    margin-bottom:0;
   }
 
   /* Family Friendly badge */
@@ -531,6 +561,14 @@ function CoverPage({ kickoff, total, lang, editMode }) {
       <PH kickoff={a}/>
 
       <div className="cover-body">
+        {/* ── QuickBooks billing metadata — invisible to client, readable by PDF bot ── */}
+        <div className="billing-meta" aria-hidden="true">
+          <div>{`[1A][${cleanBrackets(a.guestName || "")}]`}</div>
+          <div>{`[2A][${cleanBrackets(a.guestContact || a.email || "")}]`}</div>
+          <div>{`[3A][${formatIsoDate(a.arrivalDate || a.checkIn || "")}]`}</div>
+          <div>{`[4A][${formatIsoDate(a.departureDate || a.checkOut || "")}]`}</div>
+        </div>
+
         {(a.city || a.tripName) && (
           <Editable
             tag="div" className="cover-eyebrow" editMode={editMode}
@@ -989,7 +1027,7 @@ function EventBlock({ it, lang, editMode, onRemove }) {
           )}
           {it.qbCode && (
             <div className="ev-qb">
-              [{it.qbCode}][{num(it.price) || ""}]
+              [{it.qbCode}][{cleanBrackets(it.title)}][{it.priceUsd || num(it.price) || "0"}]
             </div>
           )}
         </div>
@@ -1222,6 +1260,7 @@ export default function ItineraryPrintView() {
           address:      svc.address || "",
           city:         svc.city || "",
           price:        svc.price_cop || svc.priceCop || "",
+          priceUsd:     num(svc.price_tier_1 || svc.priceTier1 || 0),
           priceUnit:    svc.priceUnit || "",
           deposit:      svc.deposit || "",
           cancellation: svc.cancellation || "",
