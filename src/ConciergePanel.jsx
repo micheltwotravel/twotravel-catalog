@@ -23,6 +23,18 @@ import {
 
 
 /* =========================================
+   Lista fija de concierges
+   ========================================= */
+const CONCIERGE_LIST = [
+  { name: "Alia Jadad",           email: "alia@two.travel",     city: "CTG" },
+  { name: "Carolina Lopez",       email: "caro@two.travel",     city: "CTG" },
+  { name: "Daniela Becerra",      email: "daniela@two.travel",  city: "MDE" },
+  { name: "Nataly Cruz",          email: "nataly@two.travel",   city: "CDMX" },
+  { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   city: "CDMX" },
+  { name: "Aileen Servin",        email: "aileen@two.travel",   city: "CDMX" },
+];
+
+/* =========================================
    Helpers de formato
    ========================================= */
 
@@ -1886,16 +1898,8 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
   });
   const [submitting, setSubmitting] = React.useState(false);
 
-  // Build concierge list from kickoffs
-  const conciergeList = React.useMemo(() => {
-    const map = new Map();
-    (kickoffs || []).forEach((k) => {
-      const name = String(k.assignedConcierge || "").trim();
-      const email = String(k.assignedConciergeEmail || "").trim();
-      if (name && !map.has(name)) map.set(name, email);
-    });
-    return Array.from(map.entries()).map(([name, email]) => ({ name, email }));
-  }, [kickoffs]);
+  // Use fixed concierge list
+  const conciergeList = CONCIERGE_LIST;
 
   const handleConciergeChange = (e) => {
     const selectedName = e.target.value;
@@ -2015,7 +2019,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
               <option value="">Sin asignar</option>
               {conciergeList.map((c) => (
                 <option key={c.name} value={c.name}>
-                  {c.name}
+                  {c.name}{c.city ? ` · ${c.city}` : ""}
                 </option>
               ))}
             </select>
@@ -2245,14 +2249,10 @@ const loadKickoffs = async () => {
     window.open(link, "_blank", "noopener,noreferrer");
   };
 
+  // Use fixed concierge list for the filter dropdown
   const conciergeOptions = useMemo(() => {
-    const names = new Set(
-      (kickoffs || [])
-        .map((k) => String(k.assignedConcierge || "").trim())
-        .filter(Boolean)
-    );
-    return ["all", ...Array.from(names).sort((a, b) => a.localeCompare(b))];
-  }, [kickoffs]);
+    return ["all", ...CONCIERGE_LIST.map((c) => c.name)];
+  }, []);
 
   const filteredKickoffs = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -2523,7 +2523,10 @@ const loadKickoffs = async () => {
                 >
                   {conciergeOptions.map((c) => (
                     <option key={c} value={c}>
-                      {c === "all" ? "Todos" : c}
+                      {c === "all" ? "Todos" : (() => {
+                        const found = CONCIERGE_LIST.find(x => x.name === c);
+                        return found ? `${found.name} · ${found.city}` : c;
+                      })()}
                     </option>
                   ))}
                 </select>
