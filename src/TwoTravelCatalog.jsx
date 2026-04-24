@@ -3409,7 +3409,7 @@ setCart([]);
               : "bg-white/95 text-rose-400 border-rose-300 hover:bg-rose-500 hover:text-white hover:border-rose-500 hover:scale-110"
           }`}
         >
-          <Heart className={`w-5 h-5 ${isInCart ? "fill-current" : "fill-rose-200 stroke-rose-400"}`} />
+          <Heart className="w-5 h-5 fill-current" />
         </button>
       </div>
 
