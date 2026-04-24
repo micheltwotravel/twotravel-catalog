@@ -1363,14 +1363,34 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   })();
 
   // Cover / trip-level fields for Travefy document
-  const [tripDates,          setTripDates]          = useState(kickoff?.tripDates          || "");
+  // Parse quiz answers saved by client
+  const quizAnswers = (() => {
+    try { return JSON.parse(kickoff?.quizAnswers || "{}"); } catch { return {}; }
+  })();
+
+  // Auto-format tripDates from arrivalDate/departureDate if not already set
+  const autoTripDates = (() => {
+    if (kickoff?.tripDates) return kickoff.tripDates;
+    const a = kickoff?.arrivalDate, d = kickoff?.departureDate;
+    if (!a || !d) return "";
+    try {
+      const fmt = (s) => new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const yr  = new Date(d).getFullYear();
+      return `${fmt(a)} – ${fmt(d)}, ${yr}`;
+    } catch { return ""; }
+  })();
+
+  // Auto-fill groupSize from quiz if concierge hasn't set it yet
+  const autoGroupSize = kickoff?.groupSize || String(quizAnswers?.groupSize || quizAnswers?.pax || "");
+
+  const [tripDates,          setTripDates]          = useState(autoTripDates);
   const [city,               setCity]               = useState(kickoff?.city               || "");
-  const [groupSize,          setGroupSize]          = useState(kickoff?.groupSize          || "");
+  const [groupSize,          setGroupSize]          = useState(autoGroupSize);
   const [conciergeTitle,     setConciergeTitle]     = useState(kickoff?.conciergeTitle     || "");
   const [accommodationName,  setAccommodationName]  = useState(kickoff?.accommodationName  || "");
   const [accommodationAddr,  setAccommodationAddr]  = useState(kickoff?.accommodationAddr  || "");
-  const [checkIn,            setCheckIn]            = useState(kickoff?.checkIn            || "");
-  const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "");
+  const [checkIn,            setCheckIn]            = useState(kickoff?.checkIn            || "3:00 PM");
+  const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "11:00 AM");
   const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "");
   const [preTripContent,     setPreTripContent]     = useState(kickoff?.preTripContent     || DEFAULT_PRE_TRIP);
 
@@ -1468,13 +1488,59 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   />
 </div>
 
-            {/* Dates submitted by client */}
-            {(clientArrival || clientDeparture) && (
-              <div className="col-span-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 text-xs text-blue-800 space-y-0.5">
-                <p className="font-semibold mb-1">📅 Fechas del cliente</p>
-                {clientArrival   && <p>Llegada: <span className="font-medium">{clientArrival}</span></p>}
-                {clientDeparture && <p>Salida: <span className="font-medium">{clientDeparture}</span></p>}
-                {clientNights    && <p>Noches: <span className="font-medium">{clientNights}</span></p>}
+            {/* Dates + quiz answers submitted by client */}
+            {(clientArrival || clientDeparture || Object.keys(quizAnswers).some(k => quizAnswers[k] && quizAnswers[k] !== "no" && !(Array.isArray(quizAnswers[k]) && !quizAnswers[k].length))) && (
+              <div className="col-span-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-3 text-xs text-blue-900 space-y-2">
+                <p className="font-semibold text-[11px] uppercase tracking-wide text-blue-700">📋 Info del cuestionario</p>
+
+                {/* Dates */}
+                {(clientArrival || clientDeparture) && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+                    {clientArrival   && <span>📅 Llegada: <strong>{clientArrival}</strong></span>}
+                    {clientDeparture && <span>✈️ Salida: <strong>{clientDeparture}</strong></span>}
+                    {clientNights    && <span>🌙 <strong>{clientNights} noches</strong></span>}
+                  </div>
+                )}
+
+                {/* Group size */}
+                {(quizAnswers.groupSize || quizAnswers.pax) && (
+                  <p>👥 Personas: <strong>{quizAnswers.groupSize || quizAnswers.pax}</strong></p>
+                )}
+
+                {/* Kids */}
+                {quizAnswers.kids === "yes" && (
+                  <p>🧒 Viajan con niños</p>
+                )}
+
+                {/* Budget */}
+                {quizAnswers.budget && (
+                  <p>💰 Presupuesto: <strong>{
+                    quizAnswers.budget === "low" ? "$ Económico"
+                    : quizAnswers.budget === "mid" ? "$$ Intermedio"
+                    : quizAnswers.budget === "high" ? "$$$ Premium"
+                    : quizAnswers.budget
+                  }</strong></p>
+                )}
+
+                {/* Vibes */}
+                {quizAnswers.vibes?.length > 0 && (
+                  <p>✨ Vibes: <strong>{quizAnswers.vibes.join(", ")}</strong></p>
+                )}
+
+                {/* Cuisines */}
+                {quizAnswers.cuisines?.length > 0 && (
+                  <p>🍴 Cocinas: <strong>{quizAnswers.cuisines.join(", ")}</strong></p>
+                )}
+
+                {/* Additional notes from client */}
+                {kickoff?.additionalNotes && (
+                  <p>📝 Nota del cliente: <strong>{kickoff.additionalNotes}</strong></p>
+                )}
+
+                {/* Group notes from quiz */}
+                {quizAnswers.groupNotes && (
+                  <p>💬 Notas del grupo: <strong>{quizAnswers.groupNotes}</strong></p>
+                )}
               </div>
             )}
 

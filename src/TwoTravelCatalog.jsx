@@ -2279,6 +2279,8 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   const [guestContact, setGuestContact] = useState("");
   const [arrivalDate, setArrivalDate] = useState("");
   const [departureDate, setDepartureDate] = useState("");
+  const [additionalNotes, setAdditionalNotes] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
   const [kickoffSent, setKickoffSent] = useState(false);
     // ✅ Step: quiz -> catalog -> kickoff (tú ya tienes kickoff modal)
@@ -2656,6 +2658,8 @@ useEffect(() => {
     setCart((c) => (c.map((x) => (x.cartId === cartId ? { ...x, notes } : x))));
 
       const handleSendKickoff = async () => {
+  if (isSending) return;
+  setIsSending(true);
   try {
     const params = new URLSearchParams(window.location.search);
     const kickoffIdFromUrl = params.get("kickoffId");
@@ -2724,6 +2728,8 @@ const payload = {
   guestContact: finalGuestContact,
   arrivalDate: arrivalDate.trim(),
   departureDate: departureDate.trim(),
+  additionalNotes: additionalNotes.trim(),
+  quizAnswers: JSON.stringify(quiz),
   cart,
   conciergeSummary,
   lang,
@@ -2748,7 +2754,7 @@ setKickoffSent(true);
 setStep(isCatalogMode ? "catalog" : "quiz");
 setCart([]);
 
-    
+
   } catch (err) {
     console.error(err);
     alert(
@@ -2756,6 +2762,8 @@ setCart([]);
         ? "Hubo un problema enviando tu selección. Intenta de nuevo."
         : "There was a problem sending your selection. Please try again."
     );
+  } finally {
+    setIsSending(false);
   }
 };
 
@@ -3894,6 +3902,9 @@ setCart([]);
       type="date"
       className="w-full border rounded-lg px-3 py-2"
       value={departureDate}
+      min={arrivalDate
+        ? new Date(new Date(arrivalDate).getTime() + 86400000).toISOString().split("T")[0]
+        : undefined}
       onChange={(e) => setDepartureDate(e.target.value)}
     />
   </div>
@@ -3909,6 +3920,21 @@ setCart([]);
   })()}
 </div>
 
+
+              {/* Additional notes */}
+              <div>
+                <label className="text-xs text-gray-500">
+                  {lang === "es" ? "¿Algo más que debamos saber?" : "Anything else we should know?"}
+                </label>
+                <textarea
+                  className="w-full border rounded-lg px-3 py-2 text-sm mt-1 min-h-[80px]"
+                  placeholder={lang === "es"
+                    ? "Alergias, preferencias especiales, celebraciones, solicitudes específicas..."
+                    : "Allergies, special preferences, celebrations, specific requests..."}
+                  value={additionalNotes}
+                  onChange={(e) => setAdditionalNotes(e.target.value)}
+                />
+              </div>
 
               {cart.length === 0 ? (
                 <p className="text-gray-500 text-sm">{t.emptyCart}</p>
@@ -3966,10 +3992,19 @@ setCart([]);
                 {t.backToCart}
               </button>
               <button
-                className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium bg-neutral-900 text-white hover:bg-neutral-950 active:bg-black focus:outline-none focus:ring-2 focus:ring-neutral-900/40 transition-colors"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium bg-neutral-900 text-white hover:bg-neutral-950 active:bg-black focus:outline-none focus:ring-2 focus:ring-neutral-900/40 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 onClick={handleSendKickoff}
+                disabled={isSending}
               >
-                {t.sendKickoff}
+                {isSending ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                    {lang === "es" ? "Enviando..." : "Sending..."}
+                  </>
+                ) : t.sendKickoff}
               </button>
             </div>
           </div>
