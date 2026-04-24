@@ -2245,7 +2245,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   category === "chef";
 
 
-  const hasPrice = (cop) => cop && cop > 0;
+  const hasPrice = (cop) => !!cop && cop > 0; // must return boolean — React renders 0 literally
   
 
 

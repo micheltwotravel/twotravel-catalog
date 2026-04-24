@@ -119,11 +119,17 @@ const rawVideo = row.video1 || row["video 1"] || row.video || row.video_url || r
     subcategory: row.subcategory || "",
     subcategory_en: row.subcategory_en || "",
     // Prefer category_es (already the normalized English key the sheet has),
-    // then fall back to the Spanish display name and normalize it
-    category: normalizeCat(
-      row.category_es || row.category_en ||
-      row.category    || row.Category    || row.categoria || ""
-    ),
+    // then fall back to the Spanish display name and normalize it.
+    // Override: if name contains "chef" but category resolved to services → reclassify to chef
+    category: (() => {
+      const cat = normalizeCat(
+        row.category_es || row.category_en ||
+        row.category    || row.Category    || row.categoria || ""
+      );
+      const nameText = (row.name_en || row.name || "").toLowerCase();
+      if (cat === "services" && /chef/.test(nameText)) return "chef";
+      return cat;
+    })(),
     city: (row.city || row.ciudad || row.destination || row.destino || "").trim().toLowerCase(),
     images: extraImages,
 video1: video1,
