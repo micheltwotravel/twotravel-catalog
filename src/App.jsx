@@ -94,6 +94,9 @@ const translations = {
     stayNotesPlaceholder:
       "If you'd like, leave any extra notes here.",
 
+    scorePoorLabel: "Poor",
+    scoreExceptionalLabel: "Exceptional",
+
     loyaltyTitle: "Would You Come Back?",
     bookAgainLabel: "Would you book with us again?",
     recommendLabel: "Would you recommend us to a friend?",
@@ -213,6 +216,9 @@ const translations = {
       "¿Qué tan personalizada se sintió la experiencia para tu grupo?",
     stayNotesPlaceholder:
       "Si quieres, puedes dejar aquí cualquier comentario adicional.",
+
+    scorePoorLabel: "Malo",
+    scoreExceptionalLabel: "Excepcional",
 
     loyaltyTitle: "¿Volverías?",
     bookAgainLabel: "¿Reservarías con nosotros otra vez?",
@@ -391,41 +397,52 @@ const handleSubmit = async (e) => {
     min = 1,
     max = 10,
     allowNA = false,
+    minLabel,
+    maxLabel,
   }) => {
     const values = Array.from({ length: max - min + 1 }, (_, i) =>
       String(i + min)
     );
 
     return (
-      <div className="mt-3 flex flex-wrap gap-2">
-        {allowNA && (
-          <button
-            type="button"
-            onClick={() => onChange("N/A")}
-            className={`rounded-full px-4 py-2 text-sm transition ${
-              value === "N/A"
-                ? "bg-stone-800 text-white"
-                : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
-            }`}
-          >
-            N/A
-          </button>
-        )}
+      <div className="mt-3">
+        <div className="flex flex-wrap gap-2">
+          {allowNA && (
+            <button
+              type="button"
+              onClick={() => onChange("N/A")}
+              className={`rounded-full px-4 py-2 text-sm transition ${
+                value === "N/A"
+                  ? "bg-stone-800 text-white"
+                  : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+              }`}
+            >
+              N/A
+            </button>
+          )}
 
-        {values.map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onChange(n)}
-            className={`h-11 min-w-11 rounded-full px-4 text-sm font-medium transition ${
-              value === n
-                ? "bg-stone-800 text-white"
-                : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
-            }`}
-          >
-            {n}
-          </button>
-        ))}
+          {values.map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange(n)}
+              className={`h-11 min-w-11 rounded-full px-4 text-sm font-medium transition ${
+                value === n
+                  ? "bg-stone-800 text-white"
+                  : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+
+        {(minLabel || maxLabel) && (
+          <div className="mt-1.5 flex justify-between text-xs text-stone-400">
+            {minLabel && <span>{min} · {minLabel}</span>}
+            {maxLabel && <span>{max} · {maxLabel}</span>}
+          </div>
+        )}
       </div>
     );
   };
@@ -588,6 +605,8 @@ const handleSubmit = async (e) => {
               <ScorePills
                 value={form.overallExperience}
                 onChange={(v) => updateField("overallExperience", v)}
+                minLabel={t.scorePoorLabel}
+                maxLabel={t.scoreExceptionalLabel}
               />
             </div>
 
@@ -657,6 +676,8 @@ const handleSubmit = async (e) => {
                       <ScorePills
                         value={form.organization}
                         onChange={(v) => updateField("organization", v)}
+                        minLabel={t.scorePoorLabel}
+                        maxLabel={t.scoreExceptionalLabel}
                       />
                     </div>
 
@@ -668,6 +689,8 @@ const handleSubmit = async (e) => {
                       <ScorePills
                         value={form.availability}
                         onChange={(v) => updateField("availability", v)}
+                        minLabel={t.scorePoorLabel}
+                        maxLabel={t.scoreExceptionalLabel}
                       />
                     </div>
 
@@ -679,6 +702,8 @@ const handleSubmit = async (e) => {
                       <ScorePills
                         value={form.preparedFactor}
                         onChange={(v) => updateField("preparedFactor", v)}
+                        minLabel={t.scorePoorLabel}
+                        maxLabel={t.scoreExceptionalLabel}
                       />
                     </div>
                   </div>
@@ -694,6 +719,8 @@ const handleSubmit = async (e) => {
                     <ScorePills
                       value={form.propertyRating}
                       onChange={(v) => updateField("propertyRating", v)}
+                      minLabel={t.scorePoorLabel}
+                      maxLabel={t.scoreExceptionalLabel}
                     />
                   </div>
 
@@ -731,6 +758,8 @@ const handleSubmit = async (e) => {
     <ScorePills
       value={form.cancellationPolicy}
       onChange={(v) => updateField("cancellationPolicy", v)}
+      minLabel={t.scorePoorLabel}
+      maxLabel={t.scoreExceptionalLabel}
     />
   </div>
 
@@ -740,6 +769,8 @@ const handleSubmit = async (e) => {
     <ScorePills
       value={form.checkInExperience}
       onChange={(v) => updateField("checkInExperience", v)}
+      minLabel={t.scorePoorLabel}
+      maxLabel={t.scoreExceptionalLabel}
     />
   </div>
 
@@ -749,6 +780,8 @@ const handleSubmit = async (e) => {
     <ScorePills
       value={form.checkOutExperience}
       onChange={(v) => updateField("checkOutExperience", v)}
+      minLabel={t.scorePoorLabel}
+      maxLabel={t.scoreExceptionalLabel}
     />
   </div>
 </div>
@@ -768,6 +801,8 @@ const handleSubmit = async (e) => {
                       <ScorePills
                         value={form.speed}
                         onChange={(v) => updateField("speed", v)}
+                        minLabel={t.scorePoorLabel}
+                        maxLabel={t.scoreExceptionalLabel}
                       />
                     </div>
 
@@ -780,6 +815,8 @@ const handleSubmit = async (e) => {
                         allowNA
                         value={form.problemSolving}
                         onChange={(v) => updateField("problemSolving", v)}
+                        minLabel={t.scorePoorLabel}
+                        maxLabel={t.scoreExceptionalLabel}
                       />
                     </div>
 
@@ -791,6 +828,8 @@ const handleSubmit = async (e) => {
                       <ScorePills
                         value={form.service}
                         onChange={(v) => updateField("service", v)}
+                        minLabel={t.scorePoorLabel}
+                        maxLabel={t.scoreExceptionalLabel}
                       />
                     </div>
                   </div>
