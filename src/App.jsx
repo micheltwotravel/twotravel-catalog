@@ -49,7 +49,7 @@ const translations = {
     moreFeedbackToggleShow: "Click here to share a little more.",
     moreFeedbackToggleHide: "Click here to hide a little more.",
 
-    beforeArrivalTitle: "Before You Arrived",
+    beforeArrivalTitle: "Before Your Arrival",
     beforeArrivalSubtitle: "Planning & Logistics",
     organization: "Organization",
     organizationHint:
@@ -308,6 +308,13 @@ const handleSubmit = async (e) => {
   e.preventDefault();
   if (saving) return;
 
+  if (!form.overallExperience) {
+    alert(lang === "es"
+      ? "Por favor califica tu experiencia general antes de enviar."
+      : "Please rate your overall experience before submitting.");
+    return;
+  }
+
   setSaving(true);
 
   try {
@@ -406,6 +413,13 @@ const handleSubmit = async (e) => {
 
     return (
       <div className="mt-3">
+        {(minLabel || maxLabel) && (
+          <div className="mb-2 flex justify-between text-xs text-stone-400">
+            {minLabel && <span>{min} · {minLabel}</span>}
+            {maxLabel && <span>{max} · {maxLabel}</span>}
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-2">
           {allowNA && (
             <button
@@ -436,13 +450,6 @@ const handleSubmit = async (e) => {
             </button>
           ))}
         </div>
-
-        {(minLabel || maxLabel) && (
-          <div className="mt-1.5 flex justify-between text-xs text-stone-400">
-            {minLabel && <span>{min} · {minLabel}</span>}
-            {maxLabel && <span>{max} · {maxLabel}</span>}
-          </div>
-        )}
       </div>
     );
   };
@@ -598,7 +605,10 @@ const handleSubmit = async (e) => {
             subtitle={t.bigPictureSubtitle}
           >
             <div>
-              <Label>{t.overallExperienceLabel}</Label>
+              <Label>
+                {t.overallExperienceLabel}
+                <span className="ml-2 text-xs font-normal text-red-400">{lang === "es" ? "requerido" : "required"}</span>
+              </Label>
               <p className="mt-2 text-xs text-stone-400">
                 {t.overallExperienceHint}
               </p>

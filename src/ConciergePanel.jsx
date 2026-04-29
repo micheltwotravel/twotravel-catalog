@@ -153,13 +153,16 @@ Clock Tower (Torre del Reloj) — The main entrance to the Walled City. Great ph
    ========================================= */
 
 const STATUS_LABELS = {
-  new: "Nuevo",
-  client_submitted: "Cliente llenó selección",
-  concierge_editing: "Concierge editando",
-  sent_to_travify: "Enviado a Travefy",
-  feedback_submitted: "Cliente llenó feedback",
-  done: "Cerrado",
+  new: { es: "Nuevo", en: "New" },
+  client_submitted: { es: "Cliente llenó selección", en: "Client submitted" },
+  concierge_editing: { es: "Concierge editando", en: "Concierge editing" },
+  sent_to_travify: { es: "Enviado a Travefy", en: "Sent to Travefy" },
+  feedback_submitted: { es: "Cliente llenó feedback", en: "Feedback submitted" },
+  done: { es: "Cerrado", en: "Closed" },
 };
+function statusLabel(status, lang = "es") {
+  return STATUS_LABELS[status]?.[lang] ?? status;
+}
 
 const STATUS_CLASSES = {
   new: "bg-blue-100 text-blue-700 border-blue-300",
@@ -194,7 +197,7 @@ function ClientTypeBadge({ value }) {
 }
 
 
-function StatusBadge({ status }) {
+function StatusBadge({ status, lang = "es" }) {
   const s = String(status || "").trim().toLowerCase();
 
   const normalized =
@@ -203,13 +206,11 @@ function StatusBadge({ status }) {
   s === "concierge editando" ? "concierge_editing" :
   s === "enviado" ? "sent_to_travify" :
   s === "cerrado" ? "done" :
-  // compatibilidad con viejos:
   s === "in-progress" ? "concierge_editing" :
   s === "sent" ? "sent_to_travify" :
   status;
 
-
-  const label = STATUS_LABELS[normalized] || normalized || "—";
+  const label = STATUS_LABELS[normalized]?.[lang] ?? STATUS_LABELS[normalized]?.es ?? normalized ?? "—";
   const cls =
     STATUS_CLASSES[normalized] ||
     "bg-neutral-100 text-neutral-700 border-neutral-300";
@@ -2379,15 +2380,43 @@ const loadKickoffs = async () => {
   }
 };
 
+  const cp = {
+    es: {
+      subtitle: "Gestión interna de kick-offs enviados desde el catálogo.",
+      refresh: "Refrescar", refreshing: "Actualizando...",
+      search: "Buscar por huésped, viaje, ID...",
+      filterStatus: "Estado:", filterConcierge: "Concierge:",
+      all: "Todos",
+      colGuest: "Huésped", colTrip: "Viaje", colType: "Tipo",
+      colContact: "Contacto", colCreated: "Creado",
+      colConcierge: "Concierge", colStatus: "Estado", colActions: "Acciones",
+      loading: "Cargando kick-offs...",
+      empty: "No hay kick-offs que coincidan con el filtro.",
+      linkCatalog: "Link catálogo", linkFeedback: "Link feedback",
+      langBtn: "🌐 Traducir a EN",
+    },
+    en: {
+      subtitle: "Internal kick-off management — sent from the catalog.",
+      refresh: "Refresh", refreshing: "Refreshing...",
+      search: "Search by guest, trip, ID...",
+      filterStatus: "Status:", filterConcierge: "Concierge:",
+      all: "All",
+      colGuest: "Guest", colTrip: "Trip", colType: "Type",
+      colContact: "Contact", colCreated: "Created",
+      colConcierge: "Concierge", colStatus: "Status", colActions: "Actions",
+      loading: "Loading kick-offs...",
+      empty: "No kick-offs match the current filter.",
+      linkCatalog: "Catalog link", linkFeedback: "Feedback link",
+      langBtn: "🌐 Switch to ES",
+    },
+  }[portalLang];
 
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
       <header className="h-14 border-b bg-white flex items-center justify-between px-4 sm:px-6">
         <div>
           <h1 className="font-semibold text-lg">Concierge Panel</h1>
-          <p className="text-[11px] text-neutral-500">
-            Gestión interna de kick-offs enviados desde el catálogo.
-          </p>
+          <p className="text-[11px] text-neutral-500">{cp.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
 
@@ -2398,7 +2427,7 @@ const loadKickoffs = async () => {
     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100 font-medium"
     title="Idioma del catálogo que verá el cliente (no cambia este portal)"
   >
-    Links: {portalLang === "en" ? "🇺🇸 EN" : "🇨🇴 ES"}
+    {portalLang === "en" ? "🇺🇸 Links EN · UI EN" : "🇨🇴 Links ES · UI ES"}
   </button>
 
   <a
@@ -2414,7 +2443,7 @@ const loadKickoffs = async () => {
     className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100 disabled:opacity-50"
   >
     <RefreshCcw className="w-4 h-4" />
-    {loading ? "Actualizando..." : "Refrescar"}
+    {loading ? cp.refreshing : cp.refresh}
   </button>
 
   {/* BOTÓN LINK CUESTIONARIO */}
@@ -2481,7 +2510,7 @@ const loadKickoffs = async () => {
   className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100"
 >
   <ListIcon className="w-4 h-4" />
-  Link catálogo
+  {cp.linkCatalog}
 </button>
 <button
   type="button"
@@ -2496,7 +2525,7 @@ const loadKickoffs = async () => {
   className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100"
 >
   <LinkIcon className="w-4 h-4" />
-  Link feedback
+  {cp.linkFeedback}
 </button>
 
 </div>
@@ -2510,7 +2539,7 @@ const loadKickoffs = async () => {
             <Search className="w-4 h-4 text-neutral-400 absolute left-2 top-1/2 -translate-y-1/2" />
             <input
               className="w-full pl-7 pr-3 py-1.5 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
-              placeholder="Buscar por huésped, viaje, ID..."
+              placeholder={cp.search}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -2518,25 +2547,25 @@ const loadKickoffs = async () => {
 
           <div className="flex flex-wrap items-center gap-3 text-xs">
             <div className="flex items-center gap-2">
-              <span className="text-neutral-500">Estado:</span>
+              <span className="text-neutral-500">{cp.filterStatus}</span>
               <select
                 className="border rounded-lg px-2.5 py-1.5 bg-white text-xs"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
-                <option value="all">Todos</option>
-                <option value="new">{STATUS_LABELS.new}</option>
-                <option value="client_submitted">{STATUS_LABELS.client_submitted}</option>
-                <option value="concierge_editing">{STATUS_LABELS.concierge_editing}</option>
-                <option value="sent_to_travify">{STATUS_LABELS.sent_to_travify}</option>
-                <option value="feedback_submitted">{STATUS_LABELS.feedback_submitted}</option>
-                <option value="done">{STATUS_LABELS.done}</option>
+                <option value="all">{cp.all}</option>
+                <option value="new">{statusLabel("new", portalLang)}</option>
+                <option value="client_submitted">{statusLabel("client_submitted", portalLang)}</option>
+                <option value="concierge_editing">{statusLabel("concierge_editing", portalLang)}</option>
+                <option value="sent_to_travify">{statusLabel("sent_to_travify", portalLang)}</option>
+                <option value="feedback_submitted">{statusLabel("feedback_submitted", portalLang)}</option>
+                <option value="done">{statusLabel("done", portalLang)}</option>
               </select>
             </div>
 
             {conciergeOptions.length > 1 && (
               <div className="flex items-center gap-2">
-                <span className="text-neutral-500">Concierge:</span>
+                <span className="text-neutral-500">{cp.filterConcierge}</span>
                 <select
                   className="border rounded-lg px-2.5 py-1.5 bg-white text-xs"
                   value={conciergeFilter}
@@ -2544,7 +2573,7 @@ const loadKickoffs = async () => {
                 >
                   {conciergeOptions.map((c) => (
                     <option key={c} value={c}>
-                      {c === "all" ? "Todos" : (() => {
+                      {c === "all" ? cp.all : (() => {
                         const found = CONCIERGE_LIST.find(x => x.name === c);
                         return found ? `${found.name} · ${found.city}` : c;
                       })()}
@@ -2567,34 +2596,10 @@ const loadKickoffs = async () => {
             <table className="min-w-full text-sm">
               <thead className="bg-neutral-50 border-b border-neutral-200">
                 <tr>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">
-                    ID
-                  </th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">
-                    Huésped
-                  </th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">
-                    Viaje
-                  </th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">
-  Tipo
-</th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">
-  Contacto
-</th>
-                  
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">
-                    Creado
-                  </th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">
-                    Concierge
-                  </th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">
-                    Estado
-                  </th>
-                  <th className="px-4 py-2 text-right text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">
-                    Acciones
-                  </th>
+                  {["ID", cp.colGuest, cp.colTrip, cp.colType, cp.colContact, cp.colCreated, cp.colConcierge, cp.colStatus].map((h) => (
+                    <th key={h} className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">{h}</th>
+                  ))}
+                  <th className="px-4 py-2 text-right text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">{cp.colActions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -2604,7 +2609,7 @@ const loadKickoffs = async () => {
                       colSpan={9}
                       className="px-4 py-8 text-center text-xs text-neutral-500"
                     >
-                      Cargando kick-offs...
+                      {cp.loading}
                     </td>
                   </tr>
                 )}
@@ -2615,7 +2620,7 @@ const loadKickoffs = async () => {
                       colSpan={9}
                       className="px-4 py-8 text-center text-xs text-neutral-500"
                     >
-                      No hay kick-offs que coincidan con el filtro.
+                      {cp.empty}
                     </td>
                   </tr>
                 )}
@@ -2699,7 +2704,7 @@ const loadKickoffs = async () => {
 </td>
 
 <td className="px-4 py-2">
-  <StatusBadge status={k.status} />
+  <StatusBadge status={k.status} lang={portalLang} />
 </td>
 
 <td className="px-4 py-2 text-right">
