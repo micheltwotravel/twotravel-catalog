@@ -1489,12 +1489,291 @@ function FeedbackDashboard() {
     </div>
   );
 }
+/* ════════════════════════════════════════════════════════
+   SOPORTE TÉCNICO
+════════════════════════════════════════════════════════ */
+const SOPORTE_API =
+  "https://script.google.com/macros/s/AKfycbyS-in9MQit54ZVujzwkKBwppWpr3d4FZx0LrR9jg2Z4p7FJ80y3au9rzcbEOVmLjHy/exec";
+
+function SoportePage() {
+  const [form, setForm]           = useState({ nombre: "", tipo: "", prioridad: "", titulo: "", descripcion: "" });
+  const [saving, setSaving]       = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError]         = useState("");
+
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const TIPOS = [
+    { id: "bug",      label: "🐛 Bug",            desc: "Algo no funciona" },
+    { id: "cambio",   label: "✏️ Modificación",   desc: "Cambiar algo existente" },
+    { id: "nueva",    label: "✨ Nueva función",   desc: "Agregar algo nuevo" },
+    { id: "pregunta", label: "❓ Pregunta",        desc: "Duda o consulta" },
+    { id: "otro",     label: "📌 Otro",            desc: "" },
+  ];
+  const PRIORIDADES = [
+    { id: "alta",  label: "🔴 Alta",  desc: "Bloquea el trabajo" },
+    { id: "media", label: "🟡 Media", desc: "Molesta pero funciona" },
+    { id: "baja",  label: "🟢 Baja",  desc: "Cuando puedas" },
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.tipo || !form.prioridad || !form.titulo.trim() || !form.descripcion.trim()) {
+      setError("Por favor llena todos los campos obligatorios.");
+      return;
+    }
+    setError("");
+    setSaving(true);
+    try {
+      const res = await fetch(SOPORTE_API, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "soporte", payload: { ...form, timestamp: new Date().toISOString() } }),
+      });
+      const text = await res.text();
+      let json = null;
+      try { json = JSON.parse(text); } catch {}
+      if (json?.ok === false) throw new Error(json.error || "Error al enviar");
+      setSubmitted(true);
+    } catch (err) {
+      const subject = encodeURIComponent(`[${form.prioridad}] ${form.tipo}: ${form.titulo}`);
+      const body    = encodeURIComponent(`De: ${form.nombre || "Anónimo"}\n\n${form.descripcion}`);
+      window.open(`mailto:michel@two.travel?subject=${subject}&body=${body}`, "_blank");
+      setSubmitted(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (submitted) return (
+    <div className="min-h-screen bg-stone-50 flex items-center justify-center px-4">
+      <div className="bg-white rounded-[28px] border border-stone-200 shadow-sm p-10 max-w-md w-full text-center">
+        <div className="mx-auto mb-5 h-14 w-14 rounded-full bg-emerald-600 flex items-center justify-center text-white text-2xl">✓</div>
+        <h2 className="text-2xl font-semibold text-stone-800 mb-2">Caso enviado</h2>
+        <p className="text-sm text-stone-500 mb-6">Michel recibirá la notificación por correo.</p>
+        <button onClick={() => setSubmitted(false)} className="text-sm text-stone-500 underline underline-offset-2 hover:text-stone-800">
+          Crear otro caso
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-stone-50 text-stone-800 px-4 py-10">
+      <div className="mx-auto max-w-2xl space-y-6">
+        <div className="rounded-[28px] border border-stone-200 bg-white p-8 shadow-sm">
+          <p className="text-[10px] uppercase tracking-[0.32em] text-stone-400">Two Travel</p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-stone-800">Soporte técnico</h1>
+          <p className="mt-2 text-sm text-stone-500 leading-6">
+            Reporta un bug, pide un cambio o sugiere algo nuevo. Michel recibe un correo con cada caso.
+          </p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
+            <label className="block text-sm font-medium text-stone-700 mb-2">Tu nombre</label>
+            <input value={form.nombre} onChange={e => set("nombre", e.target.value)}
+              placeholder="¿Quién reporta esto?"
+              className="w-full rounded-[14px] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-800 outline-none focus:border-stone-400 focus:bg-white transition" />
+          </div>
+          <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
+            <label className="block text-sm font-medium text-stone-700 mb-3">Tipo de caso <span className="text-red-400">*</span></label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {TIPOS.map(t => (
+                <button key={t.id} type="button" onClick={() => set("tipo", t.id)}
+                  className={`rounded-[14px] border px-4 py-3 text-left text-sm transition ${form.tipo === t.id ? "border-stone-800 bg-stone-100 text-stone-900" : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"}`}>
+                  <div className="font-medium">{t.label}</div>
+                  {t.desc && <div className="text-[11px] text-stone-400 mt-0.5">{t.desc}</div>}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
+            <label className="block text-sm font-medium text-stone-700 mb-3">Prioridad <span className="text-red-400">*</span></label>
+            <div className="grid grid-cols-3 gap-2">
+              {PRIORIDADES.map(p => (
+                <button key={p.id} type="button" onClick={() => set("prioridad", p.id)}
+                  className={`rounded-[14px] border px-4 py-3 text-left text-sm transition ${form.prioridad === p.id ? "border-stone-800 bg-stone-100 text-stone-900" : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"}`}>
+                  <div className="font-medium">{p.label}</div>
+                  <div className="text-[11px] text-stone-400 mt-0.5">{p.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-2">Título del caso <span className="text-red-400">*</span></label>
+              <input value={form.titulo} onChange={e => set("titulo", e.target.value)}
+                placeholder="Resume el problema en una línea"
+                className="w-full rounded-[14px] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-800 outline-none focus:border-stone-400 focus:bg-white transition" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-2">Descripción <span className="text-red-400">*</span></label>
+              <textarea value={form.descripcion} onChange={e => set("descripcion", e.target.value)} rows={5}
+                placeholder="Explica qué pasó, en qué página, qué esperabas que pasara…"
+                className="w-full rounded-[14px] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-800 placeholder:text-stone-400 outline-none focus:border-stone-400 focus:bg-white transition resize-none" />
+            </div>
+          </div>
+          {error && <p className="text-sm text-red-500 px-2">{error}</p>}
+          <button type="submit" disabled={saving}
+            className="w-full rounded-full bg-stone-800 py-3.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
+            {saving ? "Enviando…" : "Enviar caso"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+const STATUS_COLORS_SP = { abierto: "bg-red-100 text-red-700", "en progreso": "bg-amber-100 text-amber-700", cerrado: "bg-emerald-100 text-emerald-700" };
+const PRIORITY_COLORS_SP = { alta: "bg-red-100 text-red-700", media: "bg-amber-100 text-amber-700", baja: "bg-emerald-100 text-emerald-700" };
+const TIPO_LABELS = { bug: "🐛 Bug", cambio: "✏️ Modificación", nueva: "✨ Nueva función", pregunta: "❓ Pregunta", otro: "📌 Otro" };
+
+function SoporteDashboard() {
+  const [cases, setCases]           = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState("");
+  const [selected, setSelected]     = useState(null);
+  const [filterStatus, setFilter]   = useState("todos");
+  const [updatingId, setUpdatingId] = useState(null);
+
+  const load = async () => {
+    setLoading(true); setError("");
+    try {
+      const res  = await fetch(`${SOPORTE_API}?action=listSoporte`);
+      const json = await res.json();
+      if (json.ok === false) throw new Error(json.error || "Error");
+      setCases(json.data || []);
+    } catch { setError("No se pudo cargar los casos. Verifica el Apps Script."); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const updateStatus = async (caso, newStatus) => {
+    setUpdatingId(caso.id);
+    try {
+      await fetch(SOPORTE_API, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "updateSoporte", payload: { id: caso.id, status: newStatus } }),
+      });
+      setCases(prev => prev.map(c => c.id === caso.id ? { ...c, status: newStatus } : c));
+      if (selected?.id === caso.id) setSelected(s => ({ ...s, status: newStatus }));
+    } catch {}
+    setUpdatingId(null);
+  };
+
+  const filtered = filterStatus === "todos" ? cases : cases.filter(c => (c.status || "abierto") === filterStatus);
+  const counts = {
+    todos: cases.length,
+    abierto: cases.filter(c => (c.status || "abierto") === "abierto").length,
+    "en progreso": cases.filter(c => (c.status || "abierto") === "en progreso").length,
+    cerrado: cases.filter(c => (c.status || "abierto") === "cerrado").length,
+  };
+
+  return (
+    <div className="min-h-screen bg-stone-50">
+      <div className="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <a href="/?mode=concierge" className="text-stone-400 hover:text-stone-700 text-sm">← Panel</a>
+          <span className="text-stone-300">|</span>
+          <h1 className="text-base font-semibold text-stone-800">🛠 Soporte Técnico</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={load} className="px-3 py-1.5 text-xs border border-stone-200 rounded-lg text-stone-500 hover:bg-stone-50 transition">↻ Actualizar</button>
+          <a href="/?mode=soporte" target="_blank" rel="noreferrer"
+            className="px-3 py-1.5 text-xs bg-stone-800 text-white rounded-lg hover:opacity-90 transition font-medium">+ Nuevo caso</a>
+        </div>
+      </div>
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {[
+            { key: "todos",       label: "Total",       icon: "📋", color: "border-stone-200 bg-white" },
+            { key: "abierto",     label: "Abiertos",    icon: "🔴", color: "border-red-200 bg-red-50" },
+            { key: "en progreso", label: "En progreso", icon: "🟡", color: "border-amber-200 bg-amber-50" },
+            { key: "cerrado",     label: "Cerrados",    icon: "🟢", color: "border-emerald-200 bg-emerald-50" },
+          ].map(s => (
+            <button key={s.key} onClick={() => setFilter(s.key)}
+              className={`rounded-xl border p-4 text-left transition hover:opacity-80 ${s.color} ${filterStatus === s.key ? "ring-2 ring-stone-400" : ""}`}>
+              <div className="text-xl mb-1">{s.icon}</div>
+              <div className="text-2xl font-bold text-stone-800">{counts[s.key]}</div>
+              <div className="text-xs text-stone-500">{s.label}</div>
+            </button>
+          ))}
+        </div>
+        {loading && <div className="text-center py-16 text-stone-400 text-sm">Cargando casos…</div>}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-600 mb-4">
+            {error} <button onClick={load} className="ml-3 underline">Reintentar</button>
+          </div>
+        )}
+        {!loading && !error && (
+          <div>
+            {filtered.length === 0 ? (
+              <div className="bg-white rounded-xl border border-stone-200 p-10 text-center text-stone-400 text-sm">
+                No hay casos{filterStatus !== "todos" ? ` con estado "${filterStatus}"` : ""}.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filtered.map(c => {
+                  const status = c.status || "abierto";
+                  const isOpen = selected?.id === c.id;
+                  return (
+                    <div key={c.id} onClick={() => setSelected(isOpen ? null : c)}
+                      className={`bg-white rounded-xl border cursor-pointer transition hover:shadow-sm ${isOpen ? "border-stone-400 shadow-sm" : "border-stone-200"}`}>
+                      <div className="px-4 py-3 flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS_SP[status]}`}>
+                              {status.charAt(0).toUpperCase() + status.slice(1)}
+                            </span>
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${PRIORITY_COLORS_SP[c.prioridad] || "bg-stone-100 text-stone-500"}`}>
+                              {c.prioridad ? c.prioridad.charAt(0).toUpperCase() + c.prioridad.slice(1) : "—"}
+                            </span>
+                            <span className="text-[10px] text-stone-400">{TIPO_LABELS[c.tipo] || c.tipo}</span>
+                          </div>
+                          <p className="text-sm font-medium text-stone-800 truncate">{c.titulo || "Sin título"}</p>
+                          <p className="text-xs text-stone-400 mt-0.5">
+                            {c.nombre || "Anónimo"} · {c.timestamp ? new Date(c.timestamp).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                          </p>
+                        </div>
+                        <span className="text-stone-300 text-xs mt-1">{isOpen ? "▲" : "▼"}</span>
+                      </div>
+                      {isOpen && (
+                        <div className="border-t border-stone-100 px-4 py-3" onClick={e => e.stopPropagation()}>
+                          <p className="text-sm text-stone-600 mb-3 whitespace-pre-wrap">{c.descripcion || "Sin descripción."}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs text-stone-400 mr-1">Cambiar estado:</span>
+                            {["abierto", "en progreso", "cerrado"].map(s => (
+                              <button key={s} disabled={updatingId === c.id || status === s}
+                                onClick={() => updateStatus(c, s)}
+                                className={`px-2.5 py-1 text-xs rounded-lg border transition disabled:opacity-40 ${STATUS_COLORS_SP[s] || "bg-stone-50 text-stone-500 border-stone-200"} border-transparent`}>
+                                {s.charAt(0).toUpperCase() + s.slice(1)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const params = new URLSearchParams(window.location.search);
   const mode = params.get("mode");
 
-  if (mode === "dashboard") return <FeedbackDashboard />;
-  if (mode === "concierge") return <ConciergePanel />;
+  if (mode === "dashboard")         return <FeedbackDashboard />;
+  if (mode === "concierge")         return <ConciergePanel />;
+  if (mode === "soporte")           return <SoportePage />;
+  if (mode === "soporte-dashboard") return <SoporteDashboard />;
   if (mode === "catalog" || mode === "questionnaire") return <TwoTravelCatalog />;
   if (mode === "itinerary") return <ItineraryPrintView />;
 

@@ -2528,6 +2528,15 @@ const loadKickoffs = async () => {
   {cp.linkFeedback}
 </button>
 
+<a
+  href="/?mode=soporte-dashboard"
+  target="_blank"
+  rel="noreferrer"
+  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100 text-neutral-700"
+>
+  🛠 Soporte
+</a>
+
 </div>
 
 
