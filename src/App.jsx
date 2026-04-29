@@ -1589,7 +1589,11 @@ function SoporteDashboard() {
     setLoading(true);
     setError("");
     try {
-      const res  = await fetch(`${SOPORTE_API}?action=listSoporte`);
+      const res  = await fetch(SOPORTE_API, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "listSoporte" }),
+      });
       const json = await res.json();
       if (json.ok === false) throw new Error(json.error || "Error");
       setCases(json.data || []);
