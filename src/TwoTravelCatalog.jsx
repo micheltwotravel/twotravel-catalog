@@ -3022,7 +3022,8 @@ setCart([]);
                   { id: "mexican",       es: "🌮 Mexicano",           en: "🌮 Mexican" },
                   { id: "steakhouse",    es: "🥩 Carnes",             en: "🥩 Steakhouse" },
                   { id: "vegetarian",    es: "🥗 Vegetariano",        en: "🥗 Vegetarian" },
-                  { id: "street-food",   es: "🌮 Comida callejera",   en: "🌮 Street food" },
+                  { id: "local",         es: "🇨🇴 Comida local",       en: "🇨🇴 Local food" },
+                  { id: "street-food",   es: "🥙 Comida callejera",   en: "🥙 Street food" },
                   { id: "rooftop",       es: "🏙 Rooftop",            en: "🏙 Rooftop" },
                   { id: "classic",       es: "🍽 Clásico",            en: "🍽 Classic" },
                 ].map((c) => {

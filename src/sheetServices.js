@@ -343,14 +343,18 @@ export async function fetchKickoffsFromSheet() {
   return data.map((k) => ({
     ...k,
     guestContact: String(
-      k?.guestContact ??
-      k?.GuestContact ??
-      k?.guest_contact ??
-      k?.contact ??
-      k?.Contact ??
-      k?.contacto ??
-      k?.Contacto ??
-      ""
+      k?.guestContact ?? k?.GuestContact ?? k?.guest_contact ??
+      k?.contact ?? k?.Contact ?? k?.contacto ?? k?.Contacto ?? ""
+    ).trim(),
+    // Main WhatsApp contact for the concierge assigned to this trip
+    mainContact: String(
+      k?.mainContact ?? k?.main_contact ?? k?.MainContact ??
+      k?.whatsapp ?? k?.Whatsapp ?? k?.conciergePhone ?? ""
+    ).trim(),
+    // Google Maps link for the accommodation address
+    accommodationMapsUrl: String(
+      k?.accommodationMapsUrl ?? k?.accommodation_maps_url ??
+      k?.accommodationMap ?? k?.villaMap ?? k?.house_map ?? ""
     ).trim(),
     clientType: Number(k?.clientType || 1),
   }));

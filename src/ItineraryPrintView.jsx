@@ -597,7 +597,15 @@ function CoverPage({ kickoff, total, lang, editMode }) {
                 </div>
                 <Editable tag="div" className="cover-info-value" editMode={editMode} value={a.accommodationName}/>
                 {a.accommodationAddr && (
-                  <Editable tag="div" className="cover-info-sub" editMode={editMode} value={a.accommodationAddr}/>
+                  a.accommodationMapsUrl ? (
+                    <a href={a.accommodationMapsUrl} target="_blank" rel="noreferrer"
+                      className="cover-info-sub"
+                      style={{ color: "#1d4ed8", textDecoration: "underline", display: "block", fontSize: 11, marginTop: 3 }}>
+                      📍 {a.accommodationAddr}
+                    </a>
+                  ) : (
+                    <Editable tag="div" className="cover-info-sub" editMode={editMode} value={a.accommodationAddr}/>
+                  )
                 )}
               </div>
             )}
@@ -619,6 +627,29 @@ function CoverPage({ kickoff, total, lang, editMode }) {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Main concierge contact — WhatsApp number */}
+        {a.mainContact && (
+          <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              background: "#f0fdf4", border: "1px solid #bbf7d0",
+              borderRadius: 8, padding: "10px 16px", display: "flex", alignItems: "center", gap: 10,
+            }}>
+              <span style={{ fontSize: 18 }}>📱</span>
+              <div>
+                <div style={{ fontSize: 8, letterSpacing: "2px", textTransform: "uppercase", color: "#6b7280", fontWeight: 600, marginBottom: 3 }}>
+                  {isEs ? "Contacto principal" : "Main contact"}
+                </div>
+                <a href={`https://wa.me/${a.mainContact.replace(/\D/g,"")}`}
+                  target="_blank" rel="noreferrer"
+                  style={{ fontSize: 13, fontWeight: 700, color: "#16a34a", textDecoration: "none" }}>
+                  {a.mainContact}
+                </a>
+                <span style={{ fontSize: 10, color: "#9ca3af", marginLeft: 6 }}>WhatsApp</span>
+              </div>
+            </div>
           </div>
         )}
 
