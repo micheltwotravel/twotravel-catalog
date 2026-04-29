@@ -153,12 +153,12 @@ Clock Tower (Torre del Reloj) — The main entrance to the Walled City. Great ph
    ========================================= */
 
 const STATUS_LABELS = {
-  new: { es: "Nuevo", en: "New" },
-  client_submitted: { es: "Cliente llenó selección", en: "Client submitted" },
-  concierge_editing: { es: "Concierge editando", en: "Concierge editing" },
-  sent_to_travify: { es: "Enviado a Travefy", en: "Sent to Travefy" },
-  feedback_submitted: { es: "Cliente llenó feedback", en: "Feedback submitted" },
-  done: { es: "Cerrado", en: "Closed" },
+  new:                { es: "Nuevo",                    en: "New" },
+  client_submitted:   { es: "Cliente llenó selección",  en: "Client submitted" },
+  concierge_editing:  { es: "Concierge editando",       en: "Concierge editing" },
+  sent_to_travify:    { es: "Enviado a Travefy",        en: "Sent to Travefy" },
+  feedback_submitted: { es: "Cliente llenó feedback",   en: "Feedback submitted" },
+  done:               { es: "Cerrado",                  en: "Closed" },
 };
 function statusLabel(status, lang = "es") {
   return STATUS_LABELS[status]?.[lang] ?? status;
@@ -227,7 +227,7 @@ function buildCatalogLink(kickoff, clientType = 1, lang = "en") {
   url.searchParams.set("mode", "catalog");
   url.searchParams.set("kickoffId", kickoff?.id || "");
   url.searchParams.set("clientType", String(clientType));
-  url.searchParams.set("lang", kickoff?.lang || lang);
+  url.searchParams.set("lang", lang); // explicit override — portalLang toggle wins
   url.searchParams.set("guestName", kickoff?.guestName || "");
   url.searchParams.set("tripName", kickoff?.tripName || "");
   if (kickoff?.guestContact) url.searchParams.set("guestContact", kickoff.guestContact);
@@ -240,11 +240,14 @@ function buildFeedbackLink(kickoff, clientType = 1, lang = "en") {
   url.searchParams.set("mode", "feedback");
   url.searchParams.set("kickoffId", kickoff?.id || "");
   url.searchParams.set("clientType", String(clientType));
-  url.searchParams.set("lang", kickoff?.lang || lang);
+  url.searchParams.set("lang", lang); // explicit override — portalLang toggle wins
 
   url.searchParams.set("guestName", kickoff?.guestName || "");
   url.searchParams.set("tripName", kickoff?.tripName || "");
   url.searchParams.set("guestContact", kickoff?.guestContact || "");
+  // Pre-fill destination + concierge in the feedback form
+  if (kickoff?.city)               url.searchParams.set("destination", kickoff.city);
+  if (kickoff?.assignedConcierge)  url.searchParams.set("concierge",   kickoff.assignedConcierge);
 
   return url.toString();
 }
@@ -255,7 +258,7 @@ function buildQuestionnaireLink(kickoff, clientType = 1, lang = "en") {
   url.searchParams.set("mode", "questionnaire");
   url.searchParams.set("kickoffId", kickoff?.id || "");
   url.searchParams.set("clientType", String(clientType));
-  url.searchParams.set("lang", kickoff?.lang || lang);
+  url.searchParams.set("lang", lang); // explicit override — portalLang toggle wins
   url.searchParams.set("guestName", kickoff?.guestName || "");
   url.searchParams.set("tripName", kickoff?.tripName || "");
   if (kickoff?.guestContact) url.searchParams.set("guestContact", kickoff.guestContact);
@@ -286,6 +289,7 @@ const chosen = ct === 2 ? (t2 || base) : (t1 || base);
   dayLabel: "",
   timeLabel: "",
   notes: "",
+  confirmed: true,
 };
 }
 
@@ -306,6 +310,7 @@ function mapManualToCartItem() {
     dayLabel: "",
     timeLabel: "",
     notes: "",
+    confirmed: true,
   };
 }
 
@@ -378,6 +383,14 @@ function ActivityRow({ item, onUpdate, onRemove }) {
         </div>
         {/* Actions */}
         <div className="col-span-1 flex items-center justify-end gap-1.5">
+          <button
+            type="button"
+            onClick={() => onUpdate(item.id, { confirmed: !(item.confirmed !== false) })}
+            title={item.confirmed !== false ? "Marcar como recomendación" : "Marcar como confirmado"}
+            className="text-[13px] leading-none opacity-60 hover:opacity-100 transition-opacity"
+          >
+            {item.confirmed !== false ? "✅" : "📌"}
+          </button>
           <button type="button" onClick={() => setShowNotes(v => !v)}
             title="Notas"
             className="text-[11px] text-neutral-300 hover:text-neutral-600 leading-none">
@@ -891,6 +904,9 @@ function SummaryModal({ kickoff, onClose }) {
             {kickoff.clientSubmittedAt && <p>✅ Cliente envió: <span className="text-neutral-700">{formatDateTime(kickoff.clientSubmittedAt)}</span></p>}
             {kickoff.conciergeEditingAt && <p>✏️ Concierge editó: <span className="text-neutral-700">{formatDateTime(kickoff.conciergeEditingAt)}</span></p>}
             {kickoff.feedbackAt && <p>💬 Feedback: <span className="text-neutral-700">{formatDateTime(kickoff.feedbackAt)}</span></p>}
+            {kickoff.conciergeRating > 0 && (
+              <p>⭐ Rating interno: <span className="text-amber-600 font-semibold">{"★".repeat(Number(kickoff.conciergeRating))}{"☆".repeat(5 - Number(kickoff.conciergeRating))}</span></p>
+            )}
           </div>
           <div className="ml-auto">
             <StatusBadge status={kickoff.status} />
@@ -1014,6 +1030,107 @@ function SummaryModal({ kickoff, onClose }) {
 /* =========================================
    Modal confirmar eliminación
    ========================================= */
+
+/* =========================================
+   Concierge Rating Modal
+   Shown before sharing the feedback link.
+   Saves a 1-5 star internal rating to the kickoff.
+   ========================================= */
+function ConciergeRatingModal({ kickoff, onSave, onClose }) {
+  const [rating, setRating] = useState(kickoff?.conciergeRating || 0);
+  const [hover, setHover]   = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave(rating);
+    setSaving(false);
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 500,
+        background: "rgba(0,0,0,.5)", backdropFilter: "blur(4px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        background: "#fff", borderRadius: 16, padding: "28px 32px",
+        width: 360, boxShadow: "0 8px 40px rgba(0,0,0,.2)",
+        fontFamily: "system-ui, sans-serif",
+      }}>
+        <p style={{ fontSize: 11, letterSpacing: "2px", textTransform: "uppercase", color: "#aaa", marginBottom: 6 }}>
+          Evaluación interna
+        </p>
+        <h3 style={{ fontSize: 17, fontWeight: 700, color: "#111", marginBottom: 4 }}>
+          ¿Cómo salió este trip?
+        </h3>
+        <p style={{ fontSize: 12, color: "#888", marginBottom: 20, lineHeight: 1.6 }}>
+          {kickoff?.guestName && <strong style={{ color: "#444" }}>{kickoff.guestName}</strong>}
+          {kickoff?.tripName  && <span style={{ color: "#bbb" }}> · {kickoff.tripName}</span>}
+          <br/>
+          Esta calificación es solo interna y se guarda en el dashboard.
+        </p>
+
+        {/* Stars */}
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 24 }}>
+          {[1,2,3,4,5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              onClick={() => setRating(star)}
+              onMouseEnter={() => setHover(star)}
+              onMouseLeave={() => setHover(0)}
+              style={{
+                fontSize: 36, cursor: "pointer",
+                background: "none", border: "none", padding: "2px 4px",
+                color: star <= (hover || rating) ? "#f59e0b" : "#e5e7eb",
+                transition: "color .12s",
+              }}
+            >
+              ★
+            </button>
+          ))}
+        </div>
+
+        {rating > 0 && (
+          <p style={{ textAlign: "center", fontSize: 12, color: "#888", marginBottom: 16 }}>
+            {["", "😕 Hubo problemas", "😐 Por mejorar", "🙂 Bien", "😊 Muy bien", "🌟 Perfecto"][rating]}
+          </p>
+        )}
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: "8px 16px", borderRadius: 99, border: "1px solid #e0e0e0",
+              fontSize: 13, cursor: "pointer", background: "#fff", color: "#666",
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              padding: "8px 20px", borderRadius: 99, border: "none",
+              fontSize: 13, fontWeight: 700, cursor: "pointer",
+              background: rating > 0 ? "#111" : "#d1d5db",
+              color: rating > 0 ? "#fff" : "#9ca3af",
+              transition: "background .15s",
+            }}
+          >
+            {saving ? "Guardando…" : "Guardar y copiar link"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 
 async function copyAndOpen(link) {
@@ -1641,12 +1758,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 onChange={(e) => setStatus(e.target.value)}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
               >
-                <option value="new">{STATUS_LABELS.new}</option>
-                <option value="client_submitted">{STATUS_LABELS.client_submitted}</option>
-                <option value="concierge_editing">{STATUS_LABELS.concierge_editing}</option>
-                <option value="sent_to_travify">{STATUS_LABELS.sent_to_travify}</option>
-                <option value="feedback_submitted">{STATUS_LABELS.feedback_submitted}</option>
-                <option value="done">{STATUS_LABELS.done}</option>
+                <option value="new">{STATUS_LABELS.new.es}</option>
+                <option value="client_submitted">{STATUS_LABELS.client_submitted.es}</option>
+                <option value="concierge_editing">{STATUS_LABELS.concierge_editing.es}</option>
+                <option value="sent_to_travify">{STATUS_LABELS.sent_to_travify.es}</option>
+                <option value="feedback_submitted">{STATUS_LABELS.feedback_submitted.es}</option>
+                <option value="done">{STATUS_LABELS.done.es}</option>
               </select>
             </div>
           </div>
@@ -2152,8 +2269,11 @@ export default function ConciergePanel() {
 const [clientTypePickerOpen, setClientTypePickerOpen] = useState(false);
 const [pendingLinkKind, setPendingLinkKind] = useState(null); // "catalog" | "questionnaire" | "feedback"
 const [feedbackPickerOpen, setFeedbackPickerOpen] = useState(false);
+const [ratingModalKickoff, setRatingModalKickoff] = useState(null); // kickoff pending rating before link is shared
 const [portalLang, setPortalLang] = useState("en"); // language for client-facing links
 const [createModalOpen, setCreateModalOpen] = useState(false);
+const [openMenuId, setOpenMenuId] = useState(null); // row actions dropdown
+const [showRatings, setShowRatings] = useState(false); // ratings summary panel
   const normalizeId = (obj) =>
   obj?.id || obj?.kickoffId || obj?.ID || obj?._id || "";
 
@@ -2393,7 +2513,6 @@ const loadKickoffs = async () => {
       loading: "Cargando kick-offs...",
       empty: "No hay kick-offs que coincidan con el filtro.",
       linkCatalog: "Link catálogo", linkFeedback: "Link feedback",
-      langBtn: "🌐 Traducir a EN",
     },
     en: {
       subtitle: "Internal kick-off management — sent from the catalog.",
@@ -2407,7 +2526,6 @@ const loadKickoffs = async () => {
       loading: "Loading kick-offs...",
       empty: "No kick-offs match the current filter.",
       linkCatalog: "Catalog link", linkFeedback: "Feedback link",
-      langBtn: "🌐 Switch to ES",
     },
   }[portalLang];
 
@@ -2514,12 +2632,7 @@ const loadKickoffs = async () => {
 </button>
 <button
   type="button"
-  onClick={async () => {
-    if (!selectedKickoffForLink) {
-      setPendingLinkKind("feedback");
-      setCreateModalOpen(true);
-      return;
-    }
+  onClick={() => {
     setFeedbackPickerOpen(true);
   }}
   className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100"
@@ -2594,6 +2707,96 @@ const loadKickoffs = async () => {
           </div>
         </div>
 
+        {/* ── Ratings summary toggle ── */}
+        <div>
+          <button
+            onClick={() => setShowRatings(v => !v)}
+            className="flex items-center gap-1.5 text-xs text-amber-600 hover:text-amber-800 font-medium py-1"
+          >
+            ⭐ {showRatings ? "Ocultar resumen de ratings" : "Ver resumen de ratings"}
+          </button>
+
+          {showRatings && (() => {
+            const rated = kickoffs.filter(k => Number(k.conciergeRating) > 0);
+            const total = rated.length;
+            const avg   = total ? (rated.reduce((s, k) => s + Number(k.conciergeRating), 0) / total).toFixed(1) : "—";
+
+            // Group by concierge
+            const byC = {};
+            rated.forEach(k => {
+              const name = k.assignedConcierge || k.assignedConciergeName || "Sin asignar";
+              if (!byC[name]) byC[name] = [];
+              byC[name].push(Number(k.conciergeRating));
+            });
+            const conciergeRows = Object.entries(byC)
+              .map(([name, ratings]) => ({
+                name,
+                count: ratings.length,
+                avg: (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1),
+                dist: [1,2,3,4,5].map(n => ratings.filter(r => r === n).length),
+              }))
+              .sort((a, b) => b.avg - a.avg);
+
+            return (
+              <div className="mt-2 bg-white border border-amber-200 rounded-2xl p-4 shadow-sm">
+                <div className="flex items-center gap-4 mb-4 flex-wrap">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-amber-500">{avg}</div>
+                    <div className="text-[10px] text-neutral-500 mt-0.5">Promedio global</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-neutral-700">{total}</div>
+                    <div className="text-[10px] text-neutral-500 mt-0.5">Trips calificados</div>
+                  </div>
+                  <div className="flex-1 min-w-[180px]">
+                    {[5,4,3,2,1].map(n => {
+                      const cnt = rated.filter(k => Number(k.conciergeRating) === n).length;
+                      const pct = total ? Math.round((cnt / total) * 100) : 0;
+                      return (
+                        <div key={n} className="flex items-center gap-2 mb-0.5">
+                          <span className="text-[10px] w-3 text-right text-neutral-500">{n}</span>
+                          <div className="flex-1 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-[10px] text-neutral-400 w-6">{cnt}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {conciergeRows.length > 0 && (
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-[10px] text-neutral-400 uppercase border-b border-neutral-100">
+                        <th className="text-left pb-1 font-medium">Concierge</th>
+                        <th className="text-center pb-1 font-medium">Trips</th>
+                        <th className="text-center pb-1 font-medium">Promedio</th>
+                        <th className="text-left pb-1 font-medium pl-3">Distribución</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {conciergeRows.map(row => (
+                        <tr key={row.name} className="border-b border-neutral-50 last:border-0">
+                          <td className="py-1.5 text-neutral-700 font-medium">{row.name.split(" ").slice(0,2).join(" ")}</td>
+                          <td className="py-1.5 text-center text-neutral-500">{row.count}</td>
+                          <td className="py-1.5 text-center font-bold text-amber-500">{row.avg} ⭐</td>
+                          <td className="py-1.5 pl-3 flex gap-0.5 items-end h-6">
+                            {row.dist.map((cnt, i) => {
+                              const h = row.count ? Math.round((cnt / row.count) * 20) + 2 : 2;
+                              return <div key={i} style={{ height: h }} className="w-2.5 bg-amber-300 rounded-sm" title={`${i+1}★: ${cnt}`} />;
+                            })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+
         {loadError && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
             {loadError}
@@ -2605,7 +2808,7 @@ const loadKickoffs = async () => {
             <table className="min-w-full text-sm">
               <thead className="bg-neutral-50 border-b border-neutral-200">
                 <tr>
-                  {["ID", cp.colGuest, cp.colTrip, cp.colType, cp.colContact, cp.colCreated, cp.colConcierge, cp.colStatus].map((h) => (
+                  {["ID", cp.colGuest, cp.colTrip, cp.colType, cp.colContact, cp.colCreated, cp.colConcierge, cp.colStatus].map(h => (
                     <th key={h} className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">{h}</th>
                   ))}
                   <th className="px-4 py-2 text-right text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">{cp.colActions}</th>
@@ -2714,79 +2917,83 @@ const loadKickoffs = async () => {
 
 <td className="px-4 py-2">
   <StatusBadge status={k.status} lang={portalLang} />
+  {k.conciergeRating > 0 && (
+    <div className="mt-0.5 text-[11px] text-amber-500 font-medium leading-none">
+      {"★".repeat(Number(k.conciergeRating))}{"☆".repeat(5 - Number(k.conciergeRating))}
+    </div>
+  )}
 </td>
 
 <td className="px-4 py-2 text-right">
-  <div className="inline-flex items-center gap-1">
+  <div className="inline-flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
 
+    {/* Primary: Editar */}
     <button
-      onClick={(e) => { e.stopPropagation(); setSelectedForSummary(k); }}
-      className="px-2 py-1 border rounded text-xs"
-    >
-      Ver resumen
-    </button>
-
-    <button
-      onClick={(e) => { e.stopPropagation(); setSelectedForEdit(k); }}
-      className="px-2 py-1 border rounded text-xs"
+      onClick={() => setSelectedForEdit(k)}
+      className="px-2.5 py-1 border border-neutral-200 rounded-lg text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition"
     >
       Editar
     </button>
+
+    {/* Primary: Feedback */}
     <button
-  onClick={async (e) => {
-    e.stopPropagation();
-    const link = buildCatalogLink(k, Number(k.clientType ?? 1));
-
-    try {
-      await navigator.clipboard.writeText(link);
-      alert("Link de catálogo copiado ✅");
-    } catch {
-      prompt("Copia este link:", link);
-    }
-  }}
-  className="px-2 py-1 border rounded text-xs"
->
-  Copiar catálogo
-</button>
-<button
-  onClick={async (e) => {
-    e.stopPropagation();
-    const link = buildQuestionnaireLink(k, Number(k.clientType ?? 1));
-
-    try {
-      await navigator.clipboard.writeText(link);
-      alert("Link de cuestionario copiado ✅");
-    } catch {
-      prompt("Copia este link:", link);
-    }
-  }}
-  className="px-2 py-1 border rounded text-xs"
->
-  Copiar cuestionario
-</button>
-<button
-  onClick={async (e) => {
-    e.stopPropagation();
-    const link = buildFeedbackLink(k, Number(k.clientType ?? 1));
-
-    try {
-      await navigator.clipboard.writeText(link);
-      alert("Link de feedback copiado ✅");
-    } catch {
-      prompt("Copia este link:", link);
-    }
-  }}
-  className="px-2 py-1 border rounded text-xs"
->
-  Copiar feedback
-</button>
-
-    <button
-      onClick={(e) => { e.stopPropagation(); setSelectedForDelete(k); }}
-      className="px-2 py-1 border rounded text-xs text-red-600"
+      onClick={() => setRatingModalKickoff(k)}
+      className="px-2.5 py-1 border border-amber-200 rounded-lg text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 transition"
     >
-      Eliminar
+      ★ Feedback
     </button>
+
+    {/* ⋯ More actions dropdown */}
+    <div className="relative">
+      <button
+        onClick={() => setOpenMenuId(openMenuId === k.id ? null : k.id)}
+        className="px-2 py-1 border border-neutral-200 rounded-lg text-xs text-neutral-500 hover:bg-neutral-50 transition"
+      >
+        ⋯
+      </button>
+      {openMenuId === k.id && (
+        <div
+          className="absolute right-0 top-full mt-1 z-50 bg-white border border-neutral-200 rounded-xl shadow-lg py-1 min-w-[170px]"
+          onMouseLeave={() => setOpenMenuId(null)}
+        >
+          <button
+            onClick={() => { setOpenMenuId(null); setSelectedForSummary(k); }}
+            className="w-full text-left px-4 py-2 text-xs text-neutral-700 hover:bg-neutral-50"
+          >
+            👁 Ver resumen
+          </button>
+          <button
+            onClick={async () => {
+              setOpenMenuId(null);
+              const link = buildCatalogLink(k, Number(k.clientType ?? 1));
+              try { await navigator.clipboard.writeText(link); alert("Link de catálogo copiado ✅"); }
+              catch { prompt("Copia este link:", link); }
+            }}
+            className="w-full text-left px-4 py-2 text-xs text-neutral-700 hover:bg-neutral-50"
+          >
+            📋 Copiar catálogo
+          </button>
+          <button
+            onClick={async () => {
+              setOpenMenuId(null);
+              const link = buildQuestionnaireLink(k, Number(k.clientType ?? 1));
+              try { await navigator.clipboard.writeText(link); alert("Link de cuestionario copiado ✅"); }
+              catch { prompt("Copia este link:", link); }
+            }}
+            className="w-full text-left px-4 py-2 text-xs text-neutral-700 hover:bg-neutral-50"
+          >
+            📝 Copiar cuestionario
+          </button>
+          <div className="border-t border-neutral-100 my-1"/>
+          <button
+            onClick={() => { setOpenMenuId(null); setSelectedForDelete(k); }}
+            className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-50"
+          >
+            🗑 Eliminar
+          </button>
+        </div>
+      )}
+    </div>
 
   </div>
 </td>
@@ -2845,18 +3052,46 @@ const loadKickoffs = async () => {
           kickoffs={kickoffs}
           title="Seleccionar cliente para link de feedback"
           onClose={() => setFeedbackPickerOpen(false)}
-          onSelect={async (k) => {
+          onSelect={(k) => {
             setFeedbackPickerOpen(false);
-            const link = buildFeedbackLink(k, k.clientType || 1);
-            try { await navigator.clipboard.writeText(link); } catch { prompt("Copia este link:", link); }
+            setRatingModalKickoff(k);
+          }}
+        />
+      )}
+
+      {/* ── Concierge rating modal — appears before sharing feedback link ── */}
+      {ratingModalKickoff && (
+        <ConciergeRatingModal
+          kickoff={ratingModalKickoff}
+          onClose={() => setRatingModalKickoff(null)}
+          onSave={async (rating) => {
+            const k = ratingModalKickoff;
+            setRatingModalKickoff(null);
+
+            // Save rating to sheet
+            try {
+              await updateKickoffInSheet(k.id, { conciergeRating: rating });
+              setKickoffs(prev =>
+                prev.map(item => item.id === k.id ? { ...item, conciergeRating: rating } : item)
+              );
+            } catch (err) {
+              console.warn("Could not save concierge rating:", err);
+            }
+
+            // Copy + open the feedback link
+            const link = buildFeedbackLink(k, Number(k.clientType ?? 1), portalLang);
+            try {
+              await navigator.clipboard.writeText(link);
+            } catch {
+              prompt("Copia este link:", link);
+            }
             window.open(link, "_blank", "noopener,noreferrer");
           }}
         />
       )}
 
-
     </div>
   );
-  
+
 
 }

@@ -32,8 +32,8 @@ const translations = {
     overallExperienceLabel:
       "On a scale of 1 to 10, how was your overall experience?",
     overallExperienceHint:
-      "1 = Something went wrong · 5–6 = Could be better · 10 = Perfect experience",
-    overallReasonLabel: "What made you give this score?",
+      "1 = Significant issues · 5–6 = Room for improvement · 10 = Flawless",
+    overallReasonLabel: "What stood out — good or bad?",
     overallReasonPlaceholder: "Tell us what shaped the experience most.",
 
     oneThingTitle: 'The "One Thing"',
@@ -46,56 +46,44 @@ const translations = {
     optional: "Optional",
     moreFeedbackTitle:
       "If you have a bit more time, we'd love to hear more.",
-    moreFeedbackToggleShow: "Click here to share a little more.",
-    moreFeedbackToggleHide: "Click here to hide a little more.",
+    moreFeedbackToggleShow: "Click here to share more.",
+    moreFeedbackToggleHide: "Click here to hide.",
 
     beforeArrivalTitle: "Before Your Arrival",
-    beforeArrivalSubtitle: "Planning & Logistics",
-    organization: "Organization",
-    organizationHint:
-      "How well were your plans and itinerary handled and communicated?",
-    availability: "Availability",
-    availabilityHint:
-      "Was your concierge responsive during the lead-up?",
-    preparedFactor: "Prepared Factor",
-    preparedFactorHint:
-      "Did you feel clear and prepared before arrival?",
+    beforeArrivalSubtitle: "",
+    itinerary: "Itinerary",
+    itineraryHint:
+      "Did your itinerary feel clear, complete, and well-organized?",
+    communication: "Communication",
+    communicationHint:
+      "Was your concierge easy to communicate with before your trip?",
+    readiness: "Readiness",
+    readinessHint:
+      "Did you feel ready and taken care of before your arrival?",
 
-    teamPropertyTitle: "The Team & Property",
-    teamPropertySubtitle: "Accommodation & Stay",
+    teamPropertyTitle: "Your Stay",
+    teamPropertySubtitle: "",
     propertyRatingLabel:
       "How would you rate the property and accommodations?",
     propertyNotesLabel: "Anything else we should know about the property?",
     propertyNotesPlaceholder: "Share anything worth noting.",
 
-    venueTypeLabel: "Venue Type",
-    venueTypeHint: "What type of place did you stay in?",
     amenitiesLabel: "Amenities",
-    amenitiesPlaceholder: "What did you like or miss?",
+    amenitiesPlaceholder: "What did you like? What was missing?",
 
-    cancellationPolicyLabel: "Cancellation Policy",
-    cancellationPolicyHint: "Was it clear and easy to understand?",
-    checkInExperienceLabel: "Check-in Experience",
-    checkInExperienceHint: "How smooth was your arrival?",
-    checkOutExperienceLabel: "Check-out Experience",
-    checkOutExperienceHint: "How smooth was your departure?",
-
-    duringStayTitle: "During Your Stay",
+    duringStayTitle: "During Your Visit",
     duringStaySubtitle: "Execution & Service",
-    speed: "Speed",
-    speedHint:
-      "How quick were the responses to your real-time requests?",
+    responsiveness: "Responsiveness",
+    responsivenessHint:
+      "When you needed something, how quickly did we respond?",
     problemSolving: "Problem Solving",
     problemSolvingHint:
-      "If any issues popped up, how fast were they handled?",
-    service: "The Service",
-    serviceHint:
-      "How personalized did the experience feel to your group?",
+      "If anything came up during your trip, how well did we handle it?",
+    personalTouch: "Personal Touch",
+    personalTouchHint:
+      "How tailored did the experiences feel to your group's preferences?",
     stayNotesPlaceholder:
       "If you'd like, leave any extra notes here.",
-
-    scorePoorLabel: "Poor",
-    scoreExceptionalLabel: "Exceptional",
 
     loyaltyTitle: "Would You Come Back?",
     bookAgainLabel: "Would you book with us again?",
@@ -111,14 +99,14 @@ const translations = {
       "Your notes help us refine every detail of the experience.",
 
     options: {
-      destinations: ["CDMX", "Tulum", "Cartagena", "Medellín"],
-      concierges: ["Nataly", "Caro", "Alia", "Dani", "Aileen", "Giulia"],
+      destinations: ["Cartagena", "CDMX", "Medellín", "Tulum"],
+      concierges: ["Aileen", "Alia", "Caro", "Dani", "Giulia", "Nataly"],
       occasions: [
-        "Family",
-        "Friends Trip",
-        "Birthday",
         "Anniversary",
         "Bachelor/Bachelorette",
+        "Birthday",
+        "Family",
+        "Friends Trip",
         "Just because!",
       ],
       venueTypes: ["Villa", "Hotel", "Yacht", "Apartment", "Other"],
@@ -153,8 +141,8 @@ const translations = {
     overallExperienceLabel:
       "En una escala del 1 al 10, ¿cómo fue tu experiencia general?",
     overallExperienceHint:
-      "1 = Algo salió mal · 5–6 = Podría ser mejor · 10 = Experiencia perfecta",
-    overallReasonLabel: "¿Qué te hizo dar esta calificación?",
+      "1 = Problemas significativos · 5–6 = Hay margen de mejora · 10 = Impecable",
+    overallReasonLabel: "¿Qué destacó — bueno o malo?",
     overallReasonPlaceholder:
       "Cuéntanos qué fue lo que más influyó en tu experiencia.",
 
@@ -168,57 +156,45 @@ const translations = {
     optional: "Opcional",
     moreFeedbackTitle:
       "Si tienes un poco más de tiempo, nos encantaría saber más.",
-    moreFeedbackToggleShow: "Haz clic aquí para compartir un poco más.",
-    moreFeedbackToggleHide: "Haz clic aquí para ocultarlo.",
+    moreFeedbackToggleShow: "Haz clic aquí para compartir más.",
+    moreFeedbackToggleHide: "Haz clic aquí para ocultar.",
 
     beforeArrivalTitle: "Antes de llegar",
-    beforeArrivalSubtitle: "Planeación y logística",
-    organization: "Organización",
-    organizationHint:
-      "¿Qué tan bien se manejaron y comunicaron tus planes e itinerario?",
-    availability: "Disponibilidad",
-    availabilityHint:
-      "¿Tu concierge fue receptivo antes de tu llegada?",
-    preparedFactor: "Nivel de preparación",
-    preparedFactorHint:
-      "¿Te sentiste claro/a y preparado/a antes de llegar?",
+    beforeArrivalSubtitle: "",
+    itinerary: "Itinerario",
+    itineraryHint:
+      "¿Tu itinerario se sintió claro, completo y bien organizado?",
+    communication: "Comunicación",
+    communicationHint:
+      "¿Fue fácil comunicarse con tu concierge antes del viaje?",
+    readiness: "Preparación",
+    readinessHint:
+      "¿Te sentiste listo/a y bien atendido/a antes de tu llegada?",
 
-    teamPropertyTitle: "El equipo y la propiedad",
-    teamPropertySubtitle: "Alojamiento y estadía",
+    teamPropertyTitle: "Tu estadía",
+    teamPropertySubtitle: "",
     propertyRatingLabel:
       "¿Cómo calificarías la propiedad y el alojamiento?",
     propertyNotesLabel:
       "¿Hay algo más que debamos saber sobre la propiedad?",
     propertyNotesPlaceholder: "Comparte cualquier detalle importante.",
 
-    venueTypeLabel: "Tipo de venue",
-    venueTypeHint: "¿En qué tipo de lugar te hospedaste?",
     amenitiesLabel: "Amenidades",
-    amenitiesPlaceholder: "¿Qué te gustó o qué hizo falta?",
+    amenitiesPlaceholder: "¿Qué te gustó? ¿Qué hizo falta?",
 
-    cancellationPolicyLabel: "Política de cancelación",
-    cancellationPolicyHint: "¿Fue clara y fácil de entender?",
-    checkInExperienceLabel: "Experiencia de check-in",
-    checkInExperienceHint: "¿Qué tan fluida fue tu llegada?",
-    checkOutExperienceLabel: "Experiencia de check-out",
-    checkOutExperienceHint: "¿Qué tan fluida fue tu salida?",
-
-    duringStayTitle: "Durante tu estadía",
+    duringStayTitle: "Durante tu visita",
     duringStaySubtitle: "Ejecución y servicio",
-    speed: "Rapidez",
-    speedHint:
-      "¿Qué tan rápidas fueron las respuestas a tus solicitudes en tiempo real?",
+    responsiveness: "Capacidad de respuesta",
+    responsivenessHint:
+      "Cuando necesitabas algo, ¿qué tan rápido respondimos?",
     problemSolving: "Resolución de problemas",
     problemSolvingHint:
-      "Si surgió algún problema, ¿qué tan rápido se resolvió?",
-    service: "El servicio",
-    serviceHint:
-      "¿Qué tan personalizada se sintió la experiencia para tu grupo?",
+      "Si surgió algo durante el viaje, ¿qué tan bien lo manejamos?",
+    personalTouch: "Toque personal",
+    personalTouchHint:
+      "¿Qué tan adaptadas se sintieron las experiencias a las preferencias de tu grupo?",
     stayNotesPlaceholder:
       "Si quieres, puedes dejar aquí cualquier comentario adicional.",
-
-    scorePoorLabel: "Malo",
-    scoreExceptionalLabel: "Excepcional",
 
     loyaltyTitle: "¿Volverías?",
     bookAgainLabel: "¿Reservarías con nosotros otra vez?",
@@ -234,14 +210,14 @@ const translations = {
       "Tus comentarios nos ayudan a mejorar cada detalle de la experiencia.",
 
     options: {
-      destinations: ["CDMX", "Tulum", "Cartagena", "Medellín"],
-      concierges: ["Nataly", "Caro", "Alia", "Dani", "Aileen", "Giulia"],
+      destinations: ["Cartagena", "CDMX", "Medellín", "Tulum"],
+      concierges: ["Aileen", "Alia", "Caro", "Dani", "Giulia", "Nataly"],
       occasions: [
-        "Family",
-        "Friends Trip",
-        "Cumpleaños",
         "Aniversario",
+        "Cumpleaños",
         "Despedida de soltero/a",
+        "Familia",
+        "Viaje con amigos",
         "¡Porque sí!",
       ],
       venueTypes: ["Villa", "Hotel", "Yate", "Apartamento", "Otro"],
@@ -250,11 +226,87 @@ const translations = {
   },
 };
 
+/* ── Shared form components — defined OUTSIDE FeedbackForm so React
+   doesn't remount them on every keystroke (would cause focus loss). ── */
+
+function FbSection({ eyebrow, title, subtitle, children }) {
+  return (
+    <section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
+      {eyebrow && <p className="text-[10px] uppercase tracking-[0.28em] text-stone-400">{eyebrow}</p>}
+      <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-800">{title}</h2>
+      {subtitle && <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">{subtitle}</p>}
+      <div className="mt-6 space-y-6">{children}</div>
+    </section>
+  );
+}
+
+function FbLabel({ children }) {
+  return <label className="block text-sm font-medium text-stone-700">{children}</label>;
+}
+
+function FbTextarea({ value, onChange, placeholder, rows = 5 }) {
+  return (
+    <textarea
+      value={value}
+      onChange={onChange}
+      rows={rows}
+      placeholder={placeholder}
+      className="mt-3 w-full rounded-[18px] border border-stone-200 bg-stone-50 px-4 py-4 text-sm text-stone-800 placeholder:text-stone-400 outline-none transition focus:border-stone-400 focus:bg-white resize-none"
+    />
+  );
+}
+
+const STAR_LABELS = { 1: "⭐ Poor", 2: "⭐⭐ Could be better", 3: "⭐⭐⭐ Good", 4: "⭐⭐⭐⭐ Great", 5: "⭐⭐⭐⭐⭐ Exceptional" };
+
+function FbScorePills({ value, onChange, min = 1, max = 10, allowNA = false }) {
+  const values = Array.from({ length: max - min + 1 }, (_, i) => String(i + min));
+  const showStars = max === 5 && min === 1;
+  return (
+    <div className="mt-3">
+      {/* Anchor labels above the pills */}
+      <div className="mb-2 flex justify-between text-xs text-stone-400">
+        <span>{min} · Poor</span>
+        <span>{max} · Exceptional</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {allowNA && (
+          <button type="button" onClick={() => onChange("N/A")}
+            className={`rounded-full px-4 py-2 text-sm transition ${value === "N/A" ? "bg-stone-800 text-white" : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"}`}>
+            N/A
+          </button>
+        )}
+        {values.map(n => (
+          <button key={n} type="button" onClick={() => onChange(n)}
+            className={`h-11 min-w-11 rounded-full px-4 text-sm font-medium transition ${value === n ? "bg-stone-800 text-white" : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"}`}>
+            {n}
+          </button>
+        ))}
+      </div>
+      {showStars && value && value !== "N/A" && (
+        <p className="mt-2 text-xs text-stone-500">{STAR_LABELS[Number(value)]}</p>
+      )}
+    </div>
+  );
+}
+
+function FbSelect({ value, onChange, options, placeholder, hasError }) {
+  return (
+    <select value={value} onChange={e => onChange(e.target.value)}
+      className={`mt-3 w-full rounded-[18px] border px-4 py-3.5 text-sm text-stone-800 bg-white outline-none transition focus:border-stone-400 appearance-none cursor-pointer ${hasError ? "border-red-400 bg-red-50" : "border-stone-200"}`}>
+      <option value="" disabled>{placeholder || "— Select —"}</option>
+      {options.map(o => <option key={o} value={o}>{o}</option>)}
+    </select>
+  );
+}
+
 function FeedbackForm({ kickoffId }) {
   const params = new URLSearchParams(window.location.search);
   const guestName = params.get("guestName") || "";
   const tripName = params.get("tripName") || "";
   const langParam = params.get("lang");
+  // Pre-fill destination and concierge from URL if present
+  const preDestination = params.get("destination") || params.get("city") || "";
+  const preConcierge = params.get("concierge") || "";
 
   const initialLang =
     langParam === "es" || langParam === "en" ? langParam : "en";
@@ -265,10 +317,11 @@ function FeedbackForm({ kickoffId }) {
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showMoreFeedback, setShowMoreFeedback] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const [form, setForm] = useState({
-  destination: "",
-  concierge: "",
+  destination: preDestination,
+  concierge: preConcierge,
   occasion: "",
 
   overallExperience: "",
@@ -276,23 +329,22 @@ function FeedbackForm({ kickoffId }) {
 
   oneThing: "",
 
-  organization: "",
-  availability: "",
-  preparedFactor: "",
+  // Section 04 – Before You Arrived
+  itinerary: "",
+  communication: "",
+  readiness: "",
 
-  propertyRating: "",
-  propertyNotes: "",
-
-  speed: "",
+  // Section 05 – During Your Visit
+  responsiveness: "",
   problemSolving: "",
-  service: "",
+  personalTouch: "",
   stayNotes: "",
 
-  venueType: "",
+  // Section 06 – Your Stay
+  propertyRating: "",
+  propertyNotes: "",
   amenities: "",
-  cancellationPolicy: "",
-  checkInExperience: "",
-  checkOutExperience: "",
+
   bookAgain: "",
   recommend: "",
 });
@@ -308,12 +360,19 @@ const handleSubmit = async (e) => {
   e.preventDefault();
   if (saving) return;
 
-  if (!form.overallExperience) {
-    alert(lang === "es"
-      ? "Por favor califica tu experiencia general antes de enviar."
-      : "Please rate your overall experience before submitting.");
+  // Required field validation
+  const newErrors = {};
+  if (!form.destination) newErrors.destination = true;
+  if (!form.concierge)   newErrors.concierge   = true;
+  if (!form.overallExperience) newErrors.overallExperience = true;
+  if (Object.keys(newErrors).length > 0) {
+    setErrors(newErrors);
+    // Scroll to first error
+    const first = document.querySelector(".field-error");
+    if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
     return;
   }
+  setErrors({});
 
   setSaving(true);
 
@@ -360,118 +419,12 @@ const handleSubmit = async (e) => {
   }
 };
 
-  const Section = ({ eyebrow, title, subtitle, children }) => (
-    <section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
-      {eyebrow ? (
-        <p className="text-[10px] uppercase tracking-[0.28em] text-stone-400">
-          {eyebrow}
-        </p>
-      ) : null}
-
-      <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-800">
-        {title}
-      </h2>
-
-      {subtitle ? (
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">
-          {subtitle}
-        </p>
-      ) : null}
-
-      <div className="mt-6 space-y-6">{children}</div>
-    </section>
-  );
-
-  const Label = ({ children }) => (
-    <label className="block text-sm font-medium text-stone-700">
-      {children}
-    </label>
-  );
-
-  const Textarea = ({ value, onChange, placeholder, rows = 5 }) => (
-    <textarea
-      value={value}
-      onChange={onChange}
-      rows={rows}
-      placeholder={placeholder}
-      className="mt-3 w-full rounded-[18px] border border-stone-200 bg-stone-50 px-4 py-4 text-sm text-stone-800 placeholder:text-stone-400 outline-none transition focus:border-stone-400 focus:bg-white"
-    />
-  );
-
-  const ScorePills = ({
-    value,
-    onChange,
-    min = 1,
-    max = 10,
-    allowNA = false,
-    minLabel,
-    maxLabel,
-  }) => {
-    const values = Array.from({ length: max - min + 1 }, (_, i) =>
-      String(i + min)
-    );
-
-    return (
-      <div className="mt-3">
-        {(minLabel || maxLabel) && (
-          <div className="mb-2 flex justify-between text-xs text-stone-400">
-            {minLabel && <span>{min} · {minLabel}</span>}
-            {maxLabel && <span>{max} · {maxLabel}</span>}
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-2">
-          {allowNA && (
-            <button
-              type="button"
-              onClick={() => onChange("N/A")}
-              className={`rounded-full px-4 py-2 text-sm transition ${
-                value === "N/A"
-                  ? "bg-stone-800 text-white"
-                  : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
-              }`}
-            >
-              N/A
-            </button>
-          )}
-
-          {values.map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => onChange(n)}
-              className={`h-11 min-w-11 rounded-full px-4 text-sm font-medium transition ${
-                value === n
-                  ? "bg-stone-800 text-white"
-                  : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
-              }`}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const ChoiceCards = ({ value, onChange, options }) => (
-    <div className="mt-3 grid gap-3">
-      {options.map((option) => (
-        <button
-          key={option}
-          type="button"
-          onClick={() => onChange(option)}
-          className={`rounded-[18px] border px-4 py-4 text-left text-sm transition ${
-            value === option
-              ? "border-stone-800 bg-stone-100 text-stone-900"
-              : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50"
-          }`}
-        >
-          {option}
-        </button>
-      ))}
-    </div>
-  );
+  // Use module-level components (Fb*) — avoids remount on every keystroke
+  const Section       = FbSection;
+  const Label         = FbLabel;
+  const Textarea      = FbTextarea;
+  const ScorePills    = FbScorePills;
+  const SelectDropdown = FbSelect;
 
   if (submitted) {
     return (
@@ -570,30 +523,35 @@ const handleSubmit = async (e) => {
             subtitle={t.tripDetailsSubtitle}
           >
             <div className="grid gap-6 md:grid-cols-3">
-              <div>
-                <Label>{t.destination}</Label>
-                <ChoiceCards
+              <div className={errors.destination ? "field-error" : ""}>
+                <Label>{t.destination}{errors.destination && <span className="ml-2 text-red-500 text-xs font-normal">({lang === "es" ? "requerido" : "required"})</span>}</Label>
+                <SelectDropdown
                   value={form.destination}
-                  onChange={(v) => updateField("destination", v)}
+                  onChange={(v) => { updateField("destination", v); setErrors(p => ({...p, destination: false})); }}
                   options={t.options.destinations}
+                  placeholder={t.destination}
+                  hasError={!!errors.destination}
                 />
               </div>
 
-              <div>
-                <Label>{t.concierge}</Label>
-                <ChoiceCards
+              <div className={errors.concierge ? "field-error" : ""}>
+                <Label>{t.concierge}{errors.concierge && <span className="ml-2 text-red-500 text-xs font-normal">({lang === "es" ? "requerido" : "required"})</span>}</Label>
+                <SelectDropdown
                   value={form.concierge}
-                  onChange={(v) => updateField("concierge", v)}
+                  onChange={(v) => { updateField("concierge", v); setErrors(p => ({...p, concierge: false})); }}
                   options={t.options.concierges}
+                  placeholder={t.concierge}
+                  hasError={!!errors.concierge}
                 />
               </div>
 
               <div>
                 <Label>{t.occasion}</Label>
-                <ChoiceCards
+                <SelectDropdown
                   value={form.occasion}
                   onChange={(v) => updateField("occasion", v)}
                   options={t.options.occasions}
+                  placeholder={t.occasion}
                 />
               </div>
             </div>
@@ -604,19 +562,17 @@ const handleSubmit = async (e) => {
             title={t.bigPictureTitle}
             subtitle={t.bigPictureSubtitle}
           >
-            <div>
+            <div className={errors.overallExperience ? "field-error" : ""}>
               <Label>
                 {t.overallExperienceLabel}
-                <span className="ml-2 text-xs font-normal text-red-400">{lang === "es" ? "requerido" : "required"}</span>
+                {errors.overallExperience && <span className="ml-2 text-red-500 text-xs font-normal">({lang === "es" ? "requerido" : "required"})</span>}
               </Label>
-              <p className="mt-2 text-xs text-stone-400">
+              <p className="mt-2 text-xs text-stone-500">
                 {t.overallExperienceHint}
               </p>
               <ScorePills
                 value={form.overallExperience}
-                onChange={(v) => updateField("overallExperience", v)}
-                minLabel={t.scorePoorLabel}
-                maxLabel={t.scoreExceptionalLabel}
+                onChange={(v) => { updateField("overallExperience", v); setErrors(p => ({...p, overallExperience: false})); }}
               />
             </div>
 
@@ -645,7 +601,7 @@ const handleSubmit = async (e) => {
             </div>
           </Section>
 
-          <section className="rounded-[28px] border border-stone-200 bg-white shadow-sm">
+          <section id="more-feedback-section" className="rounded-[28px] border border-stone-200 bg-white shadow-sm">
             <button
               type="button"
               onClick={() => setShowMoreFeedback((prev) => !prev)}
@@ -672,174 +628,81 @@ const handleSubmit = async (e) => {
 
             {showMoreFeedback && (
               <div className="space-y-6 border-t border-stone-200 px-6 pb-6 pt-6">
+
+                {/* 04 — Before You Arrived */}
                 <Section
                   eyebrow="04"
                   title={t.beforeArrivalTitle}
-                  subtitle={t.beforeArrivalSubtitle}
+                  subtitle={t.beforeArrivalSubtitle || undefined}
                 >
                   <div className="grid gap-6 lg:grid-cols-3">
                     <div>
-                      <Label>{t.organization}</Label>
-                      <p className="mt-2 text-xs text-stone-400">
-                        {t.organizationHint}
-                      </p>
+                      <Label>{t.itinerary}</Label>
+                      <p className="mt-2 text-xs text-stone-500">{t.itineraryHint}</p>
                       <ScorePills
-                        value={form.organization}
-                        onChange={(v) => updateField("organization", v)}
-                        minLabel={t.scorePoorLabel}
-                        maxLabel={t.scoreExceptionalLabel}
+                        min={1} max={5}
+                        value={form.itinerary}
+                        onChange={(v) => updateField("itinerary", v)}
                       />
                     </div>
 
                     <div>
-                      <Label>{t.availability}</Label>
-                      <p className="mt-2 text-xs text-stone-400">
-                        {t.availabilityHint}
-                      </p>
+                      <Label>{t.communication}</Label>
+                      <p className="mt-2 text-xs text-stone-500">{t.communicationHint}</p>
                       <ScorePills
-                        value={form.availability}
-                        onChange={(v) => updateField("availability", v)}
-                        minLabel={t.scorePoorLabel}
-                        maxLabel={t.scoreExceptionalLabel}
+                        min={1} max={5}
+                        value={form.communication}
+                        onChange={(v) => updateField("communication", v)}
                       />
                     </div>
 
                     <div>
-                      <Label>{t.preparedFactor}</Label>
-                      <p className="mt-2 text-xs text-stone-400">
-                        {t.preparedFactorHint}
-                      </p>
+                      <Label>{t.readiness}</Label>
+                      <p className="mt-2 text-xs text-stone-500">{t.readinessHint}</p>
                       <ScorePills
-                        value={form.preparedFactor}
-                        onChange={(v) => updateField("preparedFactor", v)}
-                        minLabel={t.scorePoorLabel}
-                        maxLabel={t.scoreExceptionalLabel}
+                        min={1} max={5}
+                        value={form.readiness}
+                        onChange={(v) => updateField("readiness", v)}
                       />
                     </div>
                   </div>
                 </Section>
 
+                {/* 05 — During Your Visit */}
                 <Section
                   eyebrow="05"
-                  title={t.teamPropertyTitle}
-                  subtitle={t.teamPropertySubtitle}
-                >
-                  <div>
-                    <Label>{t.propertyRatingLabel}</Label>
-                    <ScorePills
-                      value={form.propertyRating}
-                      onChange={(v) => updateField("propertyRating", v)}
-                      minLabel={t.scorePoorLabel}
-                      maxLabel={t.scoreExceptionalLabel}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>{t.propertyNotesLabel}</Label>
-                    <Textarea
-                      value={form.propertyNotes}
-                      onChange={(e) => updateField("propertyNotes", e.target.value)}
-                      placeholder={t.propertyNotesPlaceholder}
-                    />
-                  </div>
-                  <div>
-  <Label>{t.venueTypeLabel}</Label>
-  <p className="mt-2 text-xs text-stone-400">{t.venueTypeHint}</p>
-  <ChoiceCards
-    value={form.venueType}
-    onChange={(v) => updateField("venueType", v)}
-    options={t.options.venueTypes}
-  />
-</div>
-
-<div>
-  <Label>{t.amenitiesLabel}</Label>
-  <Textarea
-    value={form.amenities}
-    onChange={(e) => updateField("amenities", e.target.value)}
-    placeholder={t.amenitiesPlaceholder}
-  />
-</div>
-
-<div className="grid gap-6 lg:grid-cols-3">
-  <div>
-    <Label>{t.cancellationPolicyLabel}</Label>
-    <p className="mt-2 text-xs text-stone-400">{t.cancellationPolicyHint}</p>
-    <ScorePills
-      value={form.cancellationPolicy}
-      onChange={(v) => updateField("cancellationPolicy", v)}
-      minLabel={t.scorePoorLabel}
-      maxLabel={t.scoreExceptionalLabel}
-    />
-  </div>
-
-  <div>
-    <Label>{t.checkInExperienceLabel}</Label>
-    <p className="mt-2 text-xs text-stone-400">{t.checkInExperienceHint}</p>
-    <ScorePills
-      value={form.checkInExperience}
-      onChange={(v) => updateField("checkInExperience", v)}
-      minLabel={t.scorePoorLabel}
-      maxLabel={t.scoreExceptionalLabel}
-    />
-  </div>
-
-  <div>
-    <Label>{t.checkOutExperienceLabel}</Label>
-    <p className="mt-2 text-xs text-stone-400">{t.checkOutExperienceHint}</p>
-    <ScorePills
-      value={form.checkOutExperience}
-      onChange={(v) => updateField("checkOutExperience", v)}
-      minLabel={t.scorePoorLabel}
-      maxLabel={t.scoreExceptionalLabel}
-    />
-  </div>
-</div>
-                </Section>
-
-                <Section
-                  eyebrow="06"
                   title={t.duringStayTitle}
-                  subtitle={t.duringStaySubtitle}
+                  subtitle={t.duringStaySubtitle || undefined}
                 >
                   <div className="grid gap-6 lg:grid-cols-3">
                     <div>
-                      <Label>{t.speed}</Label>
-                      <p className="mt-2 text-xs text-stone-400">
-                        {t.speedHint}
-                      </p>
+                      <Label>{t.responsiveness}</Label>
+                      <p className="mt-2 text-xs text-stone-500">{t.responsivenessHint}</p>
                       <ScorePills
-                        value={form.speed}
-                        onChange={(v) => updateField("speed", v)}
-                        minLabel={t.scorePoorLabel}
-                        maxLabel={t.scoreExceptionalLabel}
+                        min={1} max={5}
+                        value={form.responsiveness}
+                        onChange={(v) => updateField("responsiveness", v)}
                       />
                     </div>
 
                     <div>
                       <Label>{t.problemSolving}</Label>
-                      <p className="mt-2 text-xs text-stone-400">
-                        {t.problemSolvingHint}
-                      </p>
+                      <p className="mt-2 text-xs text-stone-500">{t.problemSolvingHint}</p>
                       <ScorePills
+                        min={1} max={5}
                         allowNA
                         value={form.problemSolving}
                         onChange={(v) => updateField("problemSolving", v)}
-                        minLabel={t.scorePoorLabel}
-                        maxLabel={t.scoreExceptionalLabel}
                       />
                     </div>
 
                     <div>
-                      <Label>{t.service}</Label>
-                      <p className="mt-2 text-xs text-stone-400">
-                        {t.serviceHint}
-                      </p>
+                      <Label>{t.personalTouch}</Label>
+                      <p className="mt-2 text-xs text-stone-500">{t.personalTouchHint}</p>
                       <ScorePills
-                        value={form.service}
-                        onChange={(v) => updateField("service", v)}
-                        minLabel={t.scorePoorLabel}
-                        maxLabel={t.scoreExceptionalLabel}
+                        min={1} max={5}
+                        value={form.personalTouch}
+                        onChange={(v) => updateField("personalTouch", v)}
                       />
                     </div>
                   </div>
@@ -852,28 +715,57 @@ const handleSubmit = async (e) => {
                     />
                   </div>
                 </Section>
+
+                {/* 06 — Your Stay */}
+                <Section
+                  eyebrow="06"
+                  title={t.teamPropertyTitle}
+                  subtitle={t.teamPropertySubtitle || undefined}
+                >
+                  <div>
+                    <Label>{t.propertyRatingLabel}</Label>
+                    <ScorePills
+                      min={1} max={5}
+                      value={form.propertyRating}
+                      onChange={(v) => updateField("propertyRating", v)}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>{t.amenitiesLabel}</Label>
+                    <Textarea
+                      value={form.amenities}
+                      onChange={(e) => updateField("amenities", e.target.value)}
+                      placeholder={t.amenitiesPlaceholder}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>{t.propertyNotesLabel}</Label>
+                    <Textarea
+                      value={form.propertyNotes}
+                      onChange={(e) => updateField("propertyNotes", e.target.value)}
+                      placeholder={t.propertyNotesPlaceholder}
+                    />
+                  </div>
+                </Section>
               </div>
             )}
           </section>
 
-<section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
-  <p className="text-[10px] uppercase tracking-[0.28em] text-stone-400">
-    Review
-  </p>
-  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-800">
-    {t.reviewTitle}
-  </h2>
-  <p className="mt-2 text-sm text-stone-500">{t.reviewSubtitle}</p>
-
-  <a
-    href="https://www.tripadvisor.com/UserReviewEdit-g297476-d17750092-Two_Travel-Cartagena_Cartagena_District_Bolivar_Department.html"
-    target="_blank"
-    rel="noreferrer"
-    className="mt-4 inline-block rounded-full bg-stone-800 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-  >
-    {t.reviewButton}
-  </a>
-</section>
+          {/* TripAdvisor — after optional sections */}
+          <section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
+            <p className="text-[10px] uppercase tracking-[0.28em] text-stone-400">Review</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-800">{t.reviewTitle}</h2>
+            <p className="mt-2 text-sm text-stone-500">{t.reviewSubtitle}</p>
+            <a
+              href="https://www.tripadvisor.com/UserReviewEdit-g297476-d17750092-Two_Travel-Cartagena_Cartagena_District_Bolivar_Department.html"
+              target="_blank" rel="noreferrer"
+              className="mt-4 inline-block rounded-full bg-stone-800 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+            >
+              {t.reviewButton}
+            </a>
+          </section>
 
           <div className="sticky bottom-4 z-20">
             <div className="rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm">
@@ -1496,24 +1388,24 @@ const SOPORTE_API =
   "https://script.google.com/macros/s/AKfycbyS-in9MQit54ZVujzwkKBwppWpr3d4FZx0LrR9jg2Z4p7FJ80y3au9rzcbEOVmLjHy/exec";
 
 function SoportePage() {
-  const [form, setForm]           = useState({ nombre: "", tipo: "", prioridad: "", titulo: "", descripcion: "" });
-  const [saving, setSaving]       = useState(false);
+  const [form, setForm]         = useState({ nombre: "", tipo: "", prioridad: "", titulo: "", descripcion: "" });
+  const [saving, setSaving]     = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [error, setError]         = useState("");
+  const [error, setError]       = useState("");
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const TIPOS = [
-    { id: "bug",      label: "🐛 Bug",            desc: "Algo no funciona" },
-    { id: "cambio",   label: "✏️ Modificación",   desc: "Cambiar algo existente" },
-    { id: "nueva",    label: "✨ Nueva función",   desc: "Agregar algo nuevo" },
-    { id: "pregunta", label: "❓ Pregunta",        desc: "Duda o consulta" },
-    { id: "otro",     label: "📌 Otro",            desc: "" },
+    { id: "bug",        label: "🐛 Bug",              desc: "Algo no funciona" },
+    { id: "cambio",     label: "✏️ Modificación",     desc: "Cambiar algo existente" },
+    { id: "nueva",      label: "✨ Nueva función",     desc: "Agregar algo nuevo" },
+    { id: "pregunta",   label: "❓ Pregunta",          desc: "Duda o consulta" },
+    { id: "otro",       label: "📌 Otro",              desc: "" },
   ];
   const PRIORIDADES = [
-    { id: "alta",  label: "🔴 Alta",  desc: "Bloquea el trabajo" },
-    { id: "media", label: "🟡 Media", desc: "Molesta pero funciona" },
-    { id: "baja",  label: "🟢 Baja",  desc: "Cuando puedas" },
+    { id: "alta",   label: "🔴 Alta",   desc: "Bloquea el trabajo" },
+    { id: "media",  label: "🟡 Media",  desc: "Molesta pero funciona" },
+    { id: "baja",   label: "🟢 Baja",   desc: "Cuando puedas" },
   ];
 
   const handleSubmit = async (e) => {
@@ -1528,14 +1420,19 @@ function SoportePage() {
       const res = await fetch(SOPORTE_API, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "soporte", payload: { ...form, timestamp: new Date().toISOString() } }),
+        body: JSON.stringify({
+          action: "soporte",
+          payload: { ...form, timestamp: new Date().toISOString() },
+        }),
       });
       const text = await res.text();
+      // Accept ok:true OR any 2xx (GAS may not have the action yet)
       let json = null;
       try { json = JSON.parse(text); } catch {}
       if (json?.ok === false) throw new Error(json.error || "Error al enviar");
       setSubmitted(true);
     } catch (err) {
+      // Fallback: open mailto so the message still reaches Michel
       const subject = encodeURIComponent(`[${form.prioridad}] ${form.tipo}: ${form.titulo}`);
       const body    = encodeURIComponent(`De: ${form.nombre || "Anónimo"}\n\n${form.descripcion}`);
       window.open(`mailto:michel@two.travel?subject=${subject}&body=${body}`, "_blank");
@@ -1551,7 +1448,8 @@ function SoportePage() {
         <div className="mx-auto mb-5 h-14 w-14 rounded-full bg-emerald-600 flex items-center justify-center text-white text-2xl">✓</div>
         <h2 className="text-2xl font-semibold text-stone-800 mb-2">Caso enviado</h2>
         <p className="text-sm text-stone-500 mb-6">Michel recibirá la notificación por correo.</p>
-        <button onClick={() => setSubmitted(false)} className="text-sm text-stone-500 underline underline-offset-2 hover:text-stone-800">
+        <button onClick={() => setSubmitted(false)}
+          className="text-sm text-stone-500 underline underline-offset-2 hover:text-stone-800">
           Crear otro caso
         </button>
       </div>
@@ -1561,6 +1459,8 @@ function SoportePage() {
   return (
     <div className="min-h-screen bg-stone-50 text-stone-800 px-4 py-10">
       <div className="mx-auto max-w-2xl space-y-6">
+
+        {/* Header */}
         <div className="rounded-[28px] border border-stone-200 bg-white p-8 shadow-sm">
           <p className="text-[10px] uppercase tracking-[0.32em] text-stone-400">Two Travel</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-stone-800">Soporte técnico</h1>
@@ -1568,83 +1468,136 @@ function SoportePage() {
             Reporta un bug, pide un cambio o sugiere algo nuevo. Michel recibe un correo con cada caso.
           </p>
         </div>
+
         <form onSubmit={handleSubmit} className="space-y-5">
+
+          {/* Nombre */}
           <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
             <label className="block text-sm font-medium text-stone-700 mb-2">Tu nombre</label>
-            <input value={form.nombre} onChange={e => set("nombre", e.target.value)}
+            <input
+              value={form.nombre}
+              onChange={e => set("nombre", e.target.value)}
               placeholder="¿Quién reporta esto?"
-              className="w-full rounded-[14px] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-800 outline-none focus:border-stone-400 focus:bg-white transition" />
+              className="w-full rounded-[14px] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-800 outline-none focus:border-stone-400 focus:bg-white transition"
+            />
           </div>
+
+          {/* Tipo */}
           <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
             <label className="block text-sm font-medium text-stone-700 mb-3">Tipo de caso <span className="text-red-400">*</span></label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {TIPOS.map(t => (
                 <button key={t.id} type="button" onClick={() => set("tipo", t.id)}
-                  className={`rounded-[14px] border px-4 py-3 text-left text-sm transition ${form.tipo === t.id ? "border-stone-800 bg-stone-100 text-stone-900" : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"}`}>
+                  className={`rounded-[14px] border px-4 py-3 text-left text-sm transition ${
+                    form.tipo === t.id
+                      ? "border-stone-800 bg-stone-100 text-stone-900"
+                      : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+                  }`}>
                   <div className="font-medium">{t.label}</div>
                   {t.desc && <div className="text-[11px] text-stone-400 mt-0.5">{t.desc}</div>}
                 </button>
               ))}
             </div>
           </div>
+
+          {/* Prioridad */}
           <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
             <label className="block text-sm font-medium text-stone-700 mb-3">Prioridad <span className="text-red-400">*</span></label>
             <div className="grid grid-cols-3 gap-2">
               {PRIORIDADES.map(p => (
                 <button key={p.id} type="button" onClick={() => set("prioridad", p.id)}
-                  className={`rounded-[14px] border px-4 py-3 text-left text-sm transition ${form.prioridad === p.id ? "border-stone-800 bg-stone-100 text-stone-900" : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"}`}>
+                  className={`rounded-[14px] border px-4 py-3 text-left text-sm transition ${
+                    form.prioridad === p.id
+                      ? "border-stone-800 bg-stone-100 text-stone-900"
+                      : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+                  }`}>
                   <div className="font-medium">{p.label}</div>
                   <div className="text-[11px] text-stone-400 mt-0.5">{p.desc}</div>
                 </button>
               ))}
             </div>
           </div>
+
+          {/* Título + Descripción */}
           <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm space-y-4">
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-2">Título del caso <span className="text-red-400">*</span></label>
-              <input value={form.titulo} onChange={e => set("titulo", e.target.value)}
+              <input
+                value={form.titulo}
+                onChange={e => set("titulo", e.target.value)}
                 placeholder="Resume el problema en una línea"
-                className="w-full rounded-[14px] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-800 outline-none focus:border-stone-400 focus:bg-white transition" />
+                className="w-full rounded-[14px] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-800 outline-none focus:border-stone-400 focus:bg-white transition"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-2">Descripción <span className="text-red-400">*</span></label>
-              <textarea value={form.descripcion} onChange={e => set("descripcion", e.target.value)} rows={5}
+              <textarea
+                value={form.descripcion}
+                onChange={e => set("descripcion", e.target.value)}
+                rows={5}
                 placeholder="Explica qué pasó, en qué página, qué esperabas que pasara…"
-                className="w-full rounded-[14px] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-800 placeholder:text-stone-400 outline-none focus:border-stone-400 focus:bg-white transition resize-none" />
+                className="w-full rounded-[14px] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-800 placeholder:text-stone-400 outline-none focus:border-stone-400 focus:bg-white transition resize-none"
+              />
             </div>
           </div>
-          {error && <p className="text-sm text-red-500 px-2">{error}</p>}
+
+          {error && (
+            <p className="text-sm text-red-500 px-2">{error}</p>
+          )}
+
           <button type="submit" disabled={saving}
             className="w-full rounded-full bg-stone-800 py-3.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
             {saving ? "Enviando…" : "Enviar caso"}
           </button>
+
         </form>
       </div>
     </div>
   );
 }
 
-const STATUS_COLORS_SP = { abierto: "bg-red-100 text-red-700", "en progreso": "bg-amber-100 text-amber-700", cerrado: "bg-emerald-100 text-emerald-700" };
-const PRIORITY_COLORS_SP = { alta: "bg-red-100 text-red-700", media: "bg-amber-100 text-amber-700", baja: "bg-emerald-100 text-emerald-700" };
-const TIPO_LABELS = { bug: "🐛 Bug", cambio: "✏️ Modificación", nueva: "✨ Nueva función", pregunta: "❓ Pregunta", otro: "📌 Otro" };
+/* ════════════════════════════════════════════════════════
+   SOPORTE DASHBOARD
+════════════════════════════════════════════════════════ */
+const STATUS_COLORS = {
+  abierto:      "bg-red-100 text-red-700",
+  "en progreso":"bg-amber-100 text-amber-700",
+  cerrado:      "bg-emerald-100 text-emerald-700",
+};
+const PRIORITY_COLORS = {
+  alta:  "bg-red-100 text-red-700",
+  media: "bg-amber-100 text-amber-700",
+  baja:  "bg-emerald-100 text-emerald-700",
+};
+const TIPO_LABELS = {
+  bug:      "🐛 Bug",
+  cambio:   "✏️ Modificación",
+  nueva:    "✨ Nueva función",
+  pregunta: "❓ Pregunta",
+  otro:     "📌 Otro",
+};
 
 function SoporteDashboard() {
-  const [cases, setCases]           = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState("");
-  const [selected, setSelected]     = useState(null);
-  const [filterStatus, setFilter]   = useState("todos");
+  const [cases, setCases]         = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState("");
+  const [selected, setSelected]   = useState(null);
+  const [filterStatus, setFilter] = useState("todos");
   const [updatingId, setUpdatingId] = useState(null);
 
   const load = async () => {
-    setLoading(true); setError("");
+    setLoading(true);
+    setError("");
     try {
       const res  = await fetch(`${SOPORTE_API}?action=listSoporte`);
       const json = await res.json();
       if (json.ok === false) throw new Error(json.error || "Error");
       setCases(json.data || []);
-    } catch { setError("No se pudo cargar los casos. Verifica el Apps Script."); }
-    finally { setLoading(false); }
+    } catch (e) {
+      setError("No se pudo cargar los casos. Verifica el Apps Script.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -1663,16 +1616,20 @@ function SoporteDashboard() {
     setUpdatingId(null);
   };
 
-  const filtered = filterStatus === "todos" ? cases : cases.filter(c => (c.status || "abierto") === filterStatus);
+  const filtered = filterStatus === "todos"
+    ? cases
+    : cases.filter(c => (c.status || "abierto") === filterStatus);
+
   const counts = {
-    todos: cases.length,
-    abierto: cases.filter(c => (c.status || "abierto") === "abierto").length,
-    "en progreso": cases.filter(c => (c.status || "abierto") === "en progreso").length,
-    cerrado: cases.filter(c => (c.status || "abierto") === "cerrado").length,
+    todos:        cases.length,
+    abierto:      cases.filter(c => (c.status || "abierto") === "abierto").length,
+    "en progreso":cases.filter(c => (c.status || "abierto") === "en progreso").length,
+    cerrado:      cases.filter(c => (c.status || "abierto") === "cerrado").length,
   };
 
   return (
     <div className="min-h-screen bg-stone-50">
+      {/* Header */}
       <div className="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <a href="/?mode=concierge" className="text-stone-400 hover:text-stone-700 text-sm">← Panel</a>
@@ -1680,18 +1637,25 @@ function SoporteDashboard() {
           <h1 className="text-base font-semibold text-stone-800">🛠 Soporte Técnico</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={load} className="px-3 py-1.5 text-xs border border-stone-200 rounded-lg text-stone-500 hover:bg-stone-50 transition">↻ Actualizar</button>
+          <button onClick={load}
+            className="px-3 py-1.5 text-xs border border-stone-200 rounded-lg text-stone-500 hover:bg-stone-50 transition">
+            ↻ Actualizar
+          </button>
           <a href="/?mode=soporte" target="_blank" rel="noreferrer"
-            className="px-3 py-1.5 text-xs bg-stone-800 text-white rounded-lg hover:opacity-90 transition font-medium">+ Nuevo caso</a>
+            className="px-3 py-1.5 text-xs bg-stone-800 text-white rounded-lg hover:opacity-90 transition font-medium">
+            + Nuevo caso
+          </a>
         </div>
       </div>
+
       <div className="max-w-6xl mx-auto px-4 py-6">
+        {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {[
-            { key: "todos",       label: "Total",       icon: "📋", color: "border-stone-200 bg-white" },
-            { key: "abierto",     label: "Abiertos",    icon: "🔴", color: "border-red-200 bg-red-50" },
-            { key: "en progreso", label: "En progreso", icon: "🟡", color: "border-amber-200 bg-amber-50" },
-            { key: "cerrado",     label: "Cerrados",    icon: "🟢", color: "border-emerald-200 bg-emerald-50" },
+            { key: "todos",         label: "Total",       icon: "📋", color: "border-stone-200 bg-white" },
+            { key: "abierto",       label: "Abiertos",    icon: "🔴", color: "border-red-200 bg-red-50" },
+            { key: "en progreso",   label: "En progreso", icon: "🟡", color: "border-amber-200 bg-amber-50" },
+            { key: "cerrado",       label: "Cerrados",    icon: "🟢", color: "border-emerald-200 bg-emerald-50" },
           ].map(s => (
             <button key={s.key} onClick={() => setFilter(s.key)}
               className={`rounded-xl border p-4 text-left transition hover:opacity-80 ${s.color} ${filterStatus === s.key ? "ring-2 ring-stone-400" : ""}`}>
@@ -1701,64 +1665,77 @@ function SoporteDashboard() {
             </button>
           ))}
         </div>
-        {loading && <div className="text-center py-16 text-stone-400 text-sm">Cargando casos…</div>}
+
+        {loading && (
+          <div className="text-center py-16 text-stone-400 text-sm">Cargando casos…</div>
+        )}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-600 mb-4">
-            {error} <button onClick={load} className="ml-3 underline">Reintentar</button>
+            {error}
+            <button onClick={load} className="ml-3 underline">Reintentar</button>
           </div>
         )}
+
         {!loading && !error && (
-          <div>
-            {filtered.length === 0 ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-10 text-center text-stone-400 text-sm">
-                No hay casos{filterStatus !== "todos" ? ` con estado "${filterStatus}"` : ""}.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filtered.map(c => {
-                  const status = c.status || "abierto";
-                  const isOpen = selected?.id === c.id;
-                  return (
-                    <div key={c.id} onClick={() => setSelected(isOpen ? null : c)}
-                      className={`bg-white rounded-xl border cursor-pointer transition hover:shadow-sm ${isOpen ? "border-stone-400 shadow-sm" : "border-stone-200"}`}>
-                      <div className="px-4 py-3 flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS_SP[status]}`}>
-                              {status.charAt(0).toUpperCase() + status.slice(1)}
-                            </span>
-                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${PRIORITY_COLORS_SP[c.prioridad] || "bg-stone-100 text-stone-500"}`}>
-                              {c.prioridad ? c.prioridad.charAt(0).toUpperCase() + c.prioridad.slice(1) : "—"}
-                            </span>
-                            <span className="text-[10px] text-stone-400">{TIPO_LABELS[c.tipo] || c.tipo}</span>
+          <div className="flex gap-4">
+            {/* Cases list */}
+            <div className="flex-1 min-w-0">
+              {filtered.length === 0 ? (
+                <div className="bg-white rounded-xl border border-stone-200 p-10 text-center text-stone-400 text-sm">
+                  No hay casos {filterStatus !== "todos" ? `con estado "${filterStatus}"` : ""}.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filtered.map(c => {
+                    const status = c.status || "abierto";
+                    const isOpen = selected?.id === c.id;
+                    return (
+                      <div key={c.id}
+                        onClick={() => setSelected(isOpen ? null : c)}
+                        className={`bg-white rounded-xl border cursor-pointer transition hover:shadow-sm ${isOpen ? "border-stone-400 shadow-sm" : "border-stone-200"}`}>
+                        <div className="px-4 py-3 flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[status]}`}>
+                                {status.charAt(0).toUpperCase() + status.slice(1)}
+                              </span>
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${PRIORITY_COLORS[c.prioridad] || "bg-stone-100 text-stone-500"}`}>
+                                {c.prioridad ? c.prioridad.charAt(0).toUpperCase() + c.prioridad.slice(1) : "—"}
+                              </span>
+                              <span className="text-[10px] text-stone-400">
+                                {TIPO_LABELS[c.tipo] || c.tipo}
+                              </span>
+                            </div>
+                            <p className="text-sm font-medium text-stone-800 truncate">{c.titulo || "Sin título"}</p>
+                            <p className="text-xs text-stone-400 mt-0.5">
+                              {c.nombre || "Anónimo"} · {c.timestamp ? new Date(c.timestamp).toLocaleDateString("es-CO", { day:"2-digit", month:"short", year:"numeric" }) : "—"}
+                            </p>
                           </div>
-                          <p className="text-sm font-medium text-stone-800 truncate">{c.titulo || "Sin título"}</p>
-                          <p className="text-xs text-stone-400 mt-0.5">
-                            {c.nombre || "Anónimo"} · {c.timestamp ? new Date(c.timestamp).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
-                          </p>
+                          <span className="text-stone-300 text-xs mt-1">{isOpen ? "▲" : "▼"}</span>
                         </div>
-                        <span className="text-stone-300 text-xs mt-1">{isOpen ? "▲" : "▼"}</span>
+
+                        {/* Expanded detail */}
+                        {isOpen && (
+                          <div className="border-t border-stone-100 px-4 py-3" onClick={e => e.stopPropagation()}>
+                            <p className="text-sm text-stone-600 mb-3 whitespace-pre-wrap">{c.descripcion || "Sin descripción."}</p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs text-stone-400 mr-1">Cambiar estado:</span>
+                              {["abierto","en progreso","cerrado"].map(s => (
+                                <button key={s} disabled={updatingId === c.id || status === s}
+                                  onClick={() => updateStatus(c, s)}
+                                  className={`px-2.5 py-1 text-xs rounded-lg border transition disabled:opacity-40 ${STATUS_COLORS[s] || "bg-stone-50 text-stone-500 border-stone-200"} border-transparent`}>
+                                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      {isOpen && (
-                        <div className="border-t border-stone-100 px-4 py-3" onClick={e => e.stopPropagation()}>
-                          <p className="text-sm text-stone-600 mb-3 whitespace-pre-wrap">{c.descripcion || "Sin descripción."}</p>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs text-stone-400 mr-1">Cambiar estado:</span>
-                            {["abierto", "en progreso", "cerrado"].map(s => (
-                              <button key={s} disabled={updatingId === c.id || status === s}
-                                onClick={() => updateStatus(c, s)}
-                                className={`px-2.5 py-1 text-xs rounded-lg border transition disabled:opacity-40 ${STATUS_COLORS_SP[s] || "bg-stone-50 text-stone-500 border-stone-200"} border-transparent`}>
-                                {s.charAt(0).toUpperCase() + s.slice(1)}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -1770,12 +1747,12 @@ function App() {
   const params = new URLSearchParams(window.location.search);
   const mode = params.get("mode");
 
-  if (mode === "dashboard")         return <FeedbackDashboard />;
-  if (mode === "concierge")         return <ConciergePanel />;
-  if (mode === "soporte")           return <SoportePage />;
-  if (mode === "soporte-dashboard") return <SoporteDashboard />;
+  if (mode === "dashboard")          return <FeedbackDashboard />;
+  if (mode === "concierge")          return <ConciergePanel />;
+  if (mode === "soporte")            return <SoportePage />;
+  if (mode === "soporte-dashboard")  return <SoporteDashboard />;
   if (mode === "catalog" || mode === "questionnaire") return <TwoTravelCatalog />;
-  if (mode === "itinerary") return <ItineraryPrintView />;
+  if (mode === "itinerary")          return <ItineraryPrintView />;
 
   return <FeedbackForm kickoffId={params.get("kickoffId") || ""} />;
 }
