@@ -258,15 +258,18 @@ function FbTextarea({ value, onChange, placeholder, rows = 5 }) {
 
 const STAR_LABELS = { 1: "⭐ Poor", 2: "⭐⭐ Could be better", 3: "⭐⭐⭐ Good", 4: "⭐⭐⭐⭐ Great", 5: "⭐⭐⭐⭐⭐ Exceptional" };
 
-function FbScorePills({ value, onChange, min = 1, max = 10, allowNA = false }) {
+function FbScorePills({ value, onChange, min = 1, max = 10, allowNA = false, lang = "en" }) {
   const values = Array.from({ length: max - min + 1 }, (_, i) => String(i + min));
   const showStars = max === 5 && min === 1;
+  const minLabel = lang === "es" ? "Malo" : "Poor";
+  const maxLabel = max === 10
+    ? (lang === "es" ? "Impecable" : "Flawless")
+    : (lang === "es" ? "Excepcional" : "Exceptional");
   return (
     <div className="mt-3">
-      {/* Anchor labels above the pills */}
       <div className="mb-2 flex justify-between text-xs text-stone-400">
-        <span>{min} · Poor</span>
-        <span>{max} · Exceptional</span>
+        <span>{min} · {minLabel}</span>
+        <span>{max} · {maxLabel}</span>
       </div>
       <div className="flex flex-wrap gap-2">
         {allowNA && (
@@ -550,6 +553,7 @@ const handleSubmit = async (e) => {
                 <SelectDropdown
                   value={form.occasion}
                   onChange={(v) => updateField("occasion", v)}
+                lang={lang}
                   options={t.options.occasions}
                   placeholder={t.occasion}
                 />
@@ -565,7 +569,9 @@ const handleSubmit = async (e) => {
             <div className={errors.overallExperience ? "field-error" : ""}>
               <Label>
                 {t.overallExperienceLabel}
-                {errors.overallExperience && <span className="ml-2 text-red-500 text-xs font-normal">({lang === "es" ? "requerido" : "required"})</span>}
+                <span className={`ml-2 text-xs font-normal ${errors.overallExperience ? "text-red-500" : "text-stone-400"}`}>
+                  ({lang === "es" ? "requerido" : "required"})
+                </span>
               </Label>
               <p className="mt-2 text-xs text-stone-500">
                 {t.overallExperienceHint}
@@ -573,6 +579,7 @@ const handleSubmit = async (e) => {
               <ScorePills
                 value={form.overallExperience}
                 onChange={(v) => { updateField("overallExperience", v); setErrors(p => ({...p, overallExperience: false})); }}
+                lang={lang}
               />
             </div>
 
@@ -643,6 +650,7 @@ const handleSubmit = async (e) => {
                         min={1} max={5}
                         value={form.itinerary}
                         onChange={(v) => updateField("itinerary", v)}
+                lang={lang}
                       />
                     </div>
 
@@ -653,6 +661,7 @@ const handleSubmit = async (e) => {
                         min={1} max={5}
                         value={form.communication}
                         onChange={(v) => updateField("communication", v)}
+                lang={lang}
                       />
                     </div>
 
@@ -663,6 +672,7 @@ const handleSubmit = async (e) => {
                         min={1} max={5}
                         value={form.readiness}
                         onChange={(v) => updateField("readiness", v)}
+                lang={lang}
                       />
                     </div>
                   </div>
@@ -682,6 +692,7 @@ const handleSubmit = async (e) => {
                         min={1} max={5}
                         value={form.responsiveness}
                         onChange={(v) => updateField("responsiveness", v)}
+                lang={lang}
                       />
                     </div>
 
@@ -693,6 +704,7 @@ const handleSubmit = async (e) => {
                         allowNA
                         value={form.problemSolving}
                         onChange={(v) => updateField("problemSolving", v)}
+                lang={lang}
                       />
                     </div>
 
@@ -703,6 +715,7 @@ const handleSubmit = async (e) => {
                         min={1} max={5}
                         value={form.personalTouch}
                         onChange={(v) => updateField("personalTouch", v)}
+                lang={lang}
                       />
                     </div>
                   </div>
@@ -728,6 +741,7 @@ const handleSubmit = async (e) => {
                       min={1} max={5}
                       value={form.propertyRating}
                       onChange={(v) => updateField("propertyRating", v)}
+                lang={lang}
                     />
                   </div>
 
