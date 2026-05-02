@@ -290,6 +290,9 @@ const chosen = ct === 2 ? (t2 || base) : (t1 || base);
   timeLabel: "",
   notes: "",
   confirmed: true,
+  confirmation: "",
+  dressCode: "",
+  passengers: "",
 };
 }
 
@@ -311,6 +314,9 @@ function mapManualToCartItem() {
     timeLabel: "",
     notes: "",
     confirmed: true,
+    confirmation: "",
+    dressCode: "",
+    passengers: "",
   };
 }
 
@@ -326,11 +332,13 @@ function buildTravifyTextFromCart(kickoff) {
       const price = it.priceOverride_cop ?? it.price_cop;
       const when = [it.dayLabel, it.timeLabel].filter(Boolean).join(" · ");
       const notes = it.notes ? `Notas: ${it.notes}` : "";
+      const confirmation = it.confirmation ? `Confirm: ${it.confirmation}` : "";
 
       return [
         `${i + 1}. ${name}`,
         when ? `   ${when}` : "",
         price ? `   Precio ref: ${fmt(price)} COP` : "",
+        confirmation ? `   ${confirmation}` : "",
         notes ? `   ${notes}` : "",
       ]
         .filter(Boolean)
@@ -342,7 +350,7 @@ function buildTravifyTextFromCart(kickoff) {
    ACTIVITY ROW — inline-editable row inside a day section
 ═══════════════════════════════════════════════════════════════ */
 function ActivityRow({ item, onUpdate, onRemove }) {
-  const [showNotes, setShowNotes] = useState(!!(item.notes));
+  const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation));
   return (
     <div className="px-4 py-2.5 hover:bg-neutral-50 transition-colors">
       <div className="grid grid-cols-12 gap-x-2 items-center">
@@ -404,13 +412,49 @@ function ActivityRow({ item, onUpdate, onRemove }) {
         </div>
       </div>
       {showNotes && (
-        <input
-          value={item.notes || ""}
-          onChange={e => onUpdate(item.id, { notes: e.target.value })}
-          placeholder="Notas: mesa, alergias, confirmación, prepago…"
-          className="mt-1.5 w-full text-xs text-neutral-400 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 col-span-12"
-          autoFocus
-        />
+        <div className="mt-1.5 flex flex-col gap-1 pl-0.5">
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Confirm.</span>
+            <input
+              value={item.confirmation || ""}
+              onChange={e => onUpdate(item.id, { confirmation: e.target.value })}
+              placeholder="# confirmación / Confirmed by…"
+              className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
+              autoFocus
+            />
+          </div>
+          {["restaurants","bars","nightlife","beach-clubs"].includes(String(item.category || "").toLowerCase()) && (
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Dress code</span>
+              <input
+                value={item.dressCode || ""}
+                onChange={e => onUpdate(item.id, { dressCode: e.target.value })}
+                placeholder="Formal / Smart casual / No shorts…"
+                className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
+              />
+            </div>
+          )}
+          {String(item.category || "").toLowerCase().includes("transport") && (
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Pasajeros</span>
+              <input
+                value={item.passengers || ""}
+                onChange={e => onUpdate(item.id, { passengers: e.target.value })}
+                placeholder="Juan, María, Sam…"
+                className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
+              />
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Notas</span>
+            <input
+              value={item.notes || ""}
+              onChange={e => onUpdate(item.id, { notes: e.target.value })}
+              placeholder="Mesa, alergias, instrucciones…"
+              className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
+            />
+          </div>
+        </div>
       )}
     </div>
   );

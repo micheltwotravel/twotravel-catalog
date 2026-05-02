@@ -100,9 +100,9 @@ function buildDays(matched, lang, dayMeta) {
       location     : service.location   || "",
       address      : service.address    || "",
       city         : service.city       || "",
-      price        : service.price_cop  || service.priceCop || service.price_tier_1 || service.priceTier1 || "",
-      priceUsd     : num(service.price_tier_1 || service.priceTier1 || 0),
-      priceUnit    : service.priceUnit  || "",
+      price        : num(cartItem.priceOverride_cop) || service.price_cop || service.priceCop || service.price_tier_1 || service.priceTier1 || "",
+      priceUsd     : num(cartItem.priceOverride_cop) || num(service.price_tier_1 || service.priceTier1 || 0),
+      priceUnit    : cartItem.priceUnit || service.priceUnit  || "",
       deposit      : service.deposit    || "",
       cancellation : service.cancellation || "",
       menuUrl      : service.menuUrl    || "",
@@ -111,6 +111,11 @@ function buildDays(matched, lang, dayMeta) {
       qbCode       : service.quickbooksCode || service.quickbooks_code || "",
       category     : service.category   || "",
       familyFriendly: !!(service.family_friendly),
+      confirmed    : cartItem.confirmed !== false,
+      confirmation : cl(cartItem.confirmation || ""),
+      dressCode    : cl(cartItem.dressCode || service.dressCode || service.dress_code || ""),
+      passengers   : cl(cartItem.passengers || ""),
+      cartNotes    : cl(cartItem.notes || ""),
     });
   });
   // Respect dayMeta order if provided
@@ -454,6 +459,28 @@ const CSS = `
     border-top:1px solid #f5f5f5;
   }
   .ev-terms b{color:#888;font-weight:600;}
+
+  /* Confirmation number */
+  .ev-confirm{
+    font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+    color:#16a34a;margin-bottom:5px;
+  }
+  .ev-confirm span{font-weight:400;color:#333;text-transform:none;letter-spacing:0;font-size:10px;}
+
+  /* Dress code */
+  .ev-dressCode{font-size:10px;color:#555;margin-bottom:5px;line-height:1.5;}
+  .ev-dressCode b{color:#111;font-weight:600;}
+
+  /* Passengers */
+  .ev-passengers{font-size:10px;color:#555;margin-bottom:5px;line-height:1.5;}
+  .ev-passengers b{color:#111;font-weight:600;}
+
+  /* Concierge notes */
+  .ev-cart-notes{
+    font-size:10px;color:#444;margin-top:7px;margin-bottom:6px;
+    padding:6px 10px;background:#f9f9f9;border-radius:5px;
+    border-left:2px solid #ddd;line-height:1.6;
+  }
 
   /* Footer */
   .ev-footer{
@@ -977,6 +1004,30 @@ function EventBlock({ it, lang, editMode, onRemove }) {
           <Editable value={it.location} tag="div" className="ev-location" editMode={editMode} />
         )}
 
+        {/* Confirmation number */}
+        {it.confirmation && (
+          <div className="ev-confirm">
+            {isEs ? "CONFIRMACIÓN:" : "CONFIRMATION:"}{" "}
+            <span><Editable value={it.confirmation} editMode={editMode} /></span>
+          </div>
+        )}
+
+        {/* Dress code */}
+        {it.dressCode && (
+          <div className="ev-dressCode">
+            <b>{isEs ? "Vestimenta:" : "Dress code:"}</b>{" "}
+            <Editable value={it.dressCode} editMode={editMode} />
+          </div>
+        )}
+
+        {/* Passengers */}
+        {it.passengers && (
+          <div className="ev-passengers">
+            <b>{isEs ? "Pasajeros:" : "Passengers:"}</b>{" "}
+            <Editable value={it.passengers} editMode={editMode} />
+          </div>
+        )}
+
         {/* Family Friendly badge */}
         {it.familyFriendly && (
           <span className="ev-ff">
@@ -1040,6 +1091,13 @@ function EventBlock({ it, lang, editMode, onRemove }) {
           <div className="ev-terms">
             <b>{isEs ? "Cancelación: " : "Cancellation: "}</b>
             <Editable value={it.cancellation} editMode={editMode} />
+          </div>
+        )}
+
+        {/* Concierge notes */}
+        {it.cartNotes && (
+          <div className="ev-cart-notes">
+            <Editable value={it.cartNotes} editMode={editMode} />
           </div>
         )}
 
