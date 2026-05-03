@@ -272,36 +272,48 @@ const CSS = `
     font-size:8.5px;letter-spacing:3.5px;text-transform:uppercase;color:#ccc;
     border-bottom:1px solid #ebebeb;flex-shrink:0;font-weight:500;
   }
+  .section-subtitle{
+    padding:0 40px 14px;
+    font-size:12px;color:#888;font-style:italic;margin-top:-10px;
+  }
   .section-title{
-    padding:14px 40px 18px;
+    padding:14px 40px 6px;
     font-family:'Playfair Display','Georgia',serif;
     font-size:22px;font-weight:700;letter-spacing:-.2px;color:#111;
   }
 
   .sum-body{padding:4px 40px 24px;flex:1;}
-  .sum-day-block{margin-bottom:22px;}
+  .sum-day-block{
+    margin-bottom:20px;padding-left:16px;
+    border-left:2px solid #111;position:relative;
+  }
+  .sum-day-block::before{
+    content:"";position:absolute;left:-5px;top:4px;
+    width:8px;height:8px;background:#111;border-radius:50%;
+  }
   .sum-day-header{
     display:flex;align-items:center;gap:10px;
-    margin-bottom:9px;padding-bottom:6px;
-    border-bottom:1px solid #f0f0f0;
+    margin-bottom:7px;
   }
   .sum-day-num{
     font-size:8px;letter-spacing:2px;text-transform:uppercase;
-    color:#bbb;font-weight:600;flex-shrink:0;
+    color:#aaa;font-weight:600;flex-shrink:0;
   }
   .sum-day-label{font-size:12.5px;font-weight:700;color:#111;}
-  .sum-day-sub{font-size:10px;color:#bbb;margin-left:6px;text-transform:uppercase;letter-spacing:.8px;}
+  .sum-day-sub{font-size:10px;color:#aaa;margin-left:6px;text-transform:uppercase;letter-spacing:.8px;}
   .sum-svc-row{
     display:flex;gap:12px;
     font-size:11px;color:#666;
-    padding:3.5px 0 3.5px 0;
+    padding:2.5px 0;
     align-items:baseline;
+    border-bottom:1px solid #f8f8f8;
   }
+  .sum-svc-row:last-child{border-bottom:none;}
   .sum-svc-time{
-    min-width:48px;color:#ccc;flex-shrink:0;
-    font-variant-numeric:tabular-nums;font-size:10px;font-weight:500;
+    min-width:52px;color:#aaa;flex-shrink:0;
+    font-variant-numeric:tabular-nums;font-size:10px;font-weight:600;
   }
-  .sum-svc-name{flex:1;color:#333;font-weight:500;}
+  .sum-svc-name{flex:1;color:#222;font-weight:500;}
   .sum-svc-loc{color:#ccc;font-size:10px;flex-shrink:0;}
 
   /* ══════════════════════════════════════
@@ -605,9 +617,6 @@ function CoverPage({ kickoff, total, lang, editMode }) {
           />
         )}
         <Editable tag="div" className="cover-title" editMode={editMode} value={titleLine}/>
-        {subtitle && (
-          <Editable tag="div" className="cover-subtitle" editMode={editMode} value={subtitle}/>
-        )}
         {a.tripDates && (
           <Editable tag="div" className="cover-dates" editMode={editMode} value={a.tripDates}/>
         )}
@@ -716,10 +725,10 @@ function SummaryPage({ kickoff, days, page, total, lang, editMode }) {
             </div>
             {day.items.map((it, i) => (
               <div key={i} className="sum-svc-row">
-                <span className="sum-svc-time">{it.time || "—"}</span>
+                <Editable value={it.time || "—"} tag="span" className="sum-svc-time" editMode={editMode}/>
                 <Editable value={it.title} tag="span" className="sum-svc-name" editMode={editMode}/>
                 {it.location && (
-                  <span className="sum-svc-loc">· {it.location}</span>
+                  <Editable value={it.location} tag="span" className="sum-svc-loc" editMode={editMode}/>
                 )}
               </div>
             ))}
@@ -743,54 +752,51 @@ function InfoPage({ kickoff, lang, page, total, editMode }) {
       <PH kickoff={kickoff}/>
       <div className="section-eyebrow">{isEs ? "Bienvenida" : "Welcome"}</div>
       <div className="section-title">
-        {isEs ? "Información y Documentos" : "Information & Documents"}
+        {isEs ? `Bienvenido a ${city} – Two Travel` : `Welcome to ${city} – Two Travel`}
+      </div>
+      <div className="section-subtitle">
+        {isEs ? "Por favor revisa este PDF antes de tu llegada." : "Please take a look at this PDF before your arrival."}
       </div>
 
       <div className="info-body">
         <div className="info-block">
-          <div className="info-h3">{isEs ? "Bienvenido" : "Welcome"}</div>
-          <Editable
-            tag="p" className="info-p" editMode={editMode}
-            style={{ fontWeight: 600 }}
-            value={isEs ? `Bienvenido a ${city} — Two Travel.` : `Welcome to ${city} — Two Travel.`}
-          />
-          <Editable
-            tag="p" className="info-p" editMode={editMode}
-            value={isEs
-              ? "Por favor revisa este itinerario antes de tu llegada. Contiene información útil para tu viaje."
-              : "Please review this itinerary before your arrival. It contains helpful information for your trip."}
-          />
-        </div>
-
-        <div className="info-block">
-          <div className="info-h3">
-            {isEs ? "Sobre este itinerario" : "About This Itinerary"}
-          </div>
+          <div className="info-h3">{isEs ? "Sobre este itinerario" : "About This Itinerary"}</div>
           <Editable
             tag="p" className="info-p" editMode={editMode}
             value={isEs
               ? "Este es un itinerario en borrador — todo puede ajustarse. Podemos cambiar, agregar o eliminar experiencias según lo que más te emocione. En nuestra próxima reunión lo revisaremos juntos."
-              : "This is a draft itinerary — everything can be adjusted. We can change, add, or remove experiences based on what excites you most. In our next meeting we will review it together and refine it accordingly."}
+              : "This is a draft itinerary — everything can be adjusted. We can change, add, or remove experiences based on what excites you most. In our next meeting we will review it together."}
           />
         </div>
 
         <div className="info-block">
-          <div className="info-h3">Promo</div>
+          <div className="info-h3">{isEs ? "Documentos" : "Documents"}</div>
+          <p className="info-p">
+            <a href="https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=drivesdk"
+              target="_blank" rel="noreferrer"
+              style={{ color: "#1d4ed8", fontSize: 12, textDecoration: "underline" }}>
+              {isEs ? "📄 Documento de bienvenida Two Travel →" : "📄 Two Travel Welcome Document →"}
+            </a>
+          </p>
+        </div>
+
+        <div className="info-block">
+          <div className="info-h3">{isEs ? "Promo" : "Promo"}</div>
           <Editable
             tag="p" className="info-p" editMode={editMode}
             value={isEs
               ? "Comparte tu experiencia con Two Travel en Instagram o TikTok y obtén descuento en servicios seleccionados."
               : "Share your experience with Two Travel on Instagram or TikTok and receive a discount on select services."}
           />
-          <p className="info-p" style={{ marginBottom: 4 }}>
+          <p className="info-p">
             <a href="https://www.instagram.com/twotravelconcierge" target="_blank" rel="noreferrer"
               style={{ color: "#1d4ed8", fontWeight: 600, textDecoration: "underline", fontSize: 12 }}>
               @twotravelconcierge
             </a>
-            <span style={{ color: "#bbb", fontSize: 10.5 }}>
+            <span style={{ color: "#999", fontSize: 10.5 }}>
               {isEs
-                ? " · La publicación debe realizarse durante tu estadía · Un tag por persona requerido · Para servicios grupales, todos los miembros deben participar."
-                : " · Tag must be posted during your stay · One tag per person required · For group services, all members must participate."}
+                ? " · Tag durante tu estadía · Un tag por persona · Grupos: todos deben participar."
+                : " · Tag during your stay · One tag per person · Groups: all members must participate."}
             </span>
           </p>
         </div>
@@ -1236,18 +1242,24 @@ function CatalogPicker({ catalog, lang, onSelect, onClose }) {
 function BillingBlock({ kickoff, allDays }) {
   const k = kickoff;
 
-  // Collect every service that has a QB code
+  // Collect every service that has a QB code — deduplicate by qbCode
+  const seenCodes = new Set();
   const lines = [];
   for (const day of (allDays || [])) {
     for (const it of (day.items || [])) {
-      if (it.qbCode) {
+      if (it.qbCode && !seenCodes.has(it.qbCode)) {
+        seenCodes.add(it.qbCode);
         const price = it.priceUsd || num(it.price) || "0";
         lines.push(`[${it.qbCode}][${cleanBrackets(it.title)}][${price}]`);
       }
     }
   }
 
-  if (!k.guestName && !k.guestContact && lines.length === 0) return null;
+  // Resolve guest email: prefer a field that looks like an email
+  const guestEmail = [k.email, k.guestEmail, k.guestContact]
+    .find(v => v && String(v).includes("@")) || "";
+
+  if (!k.guestName && !guestEmail && lines.length === 0) return null;
 
   return (
     <div className="qb-billing-block" style={{ marginBottom: 12 }}>
@@ -1256,7 +1268,7 @@ function BillingBlock({ kickoff, allDays }) {
         {`[1A][${cleanBrackets(k.guestName || "")}]`}
       </div>
       <div className="qb-billing-line">
-        {`[2A][${cleanBrackets(k.guestContact || k.email || "")}]`}
+        {`[2A][${cleanBrackets(guestEmail)}]`}
       </div>
       <div className="qb-billing-line">
         {`[3A][${formatIsoDate(k.arrivalDate || k.checkIn || "")}]`}
@@ -1626,12 +1638,6 @@ export default function ItineraryPrintView() {
         />
       )}
 
-      <div className="no-print" style={{
-        textAlign: "center", padding: "20px 16px",
-        fontSize: 11, color: "#ccc",
-      }}>
-        Two Travel · two.travel
-      </div>
     </div>
   );
 }
