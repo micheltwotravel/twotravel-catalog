@@ -2073,6 +2073,7 @@ function KickoffPickerModal({ kickoffs, title, onClose, onSelect }) {
 function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
   const [form, setForm] = React.useState({
     guestName: "",
+    email: "",
     tripName: "",
     guestContact: "",
     city: "",
@@ -2100,11 +2101,11 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const handleSubmit = async () => {
-    if (!form.guestName.trim()) return;
+    if (!form.guestName.trim() || !form.email.trim() || !form.city) return;
     setSubmitting(true);
     try {
       await onSubmit(form);
-      setForm({ guestName: "", tripName: "", guestContact: "", city: "", concierge: "", conciergeEmail: "", clientType: 1 });
+      setForm({ guestName: "", email: "", tripName: "", guestContact: "", city: "", concierge: "", conciergeEmail: "", clientType: 1 });
     } finally {
       setSubmitting(false);
     }
@@ -2141,6 +2142,20 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
             />
           </div>
 
+          {/* Email del cliente */}
+          <div>
+            <label className="block text-xs font-medium text-neutral-600 mb-1">
+              Email del cliente <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={handleField("email")}
+              placeholder="Ej: maria@email.com"
+              className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10 ${!form.email.trim() ? "border-red-300 bg-red-50" : "border-neutral-300"}`}
+            />
+          </div>
+
           {/* Ciudad */}
           <div>
             <label className="block text-xs font-medium text-neutral-600 mb-1">
@@ -2149,7 +2164,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
             <select
               value={form.city}
               onChange={handleField("city")}
-              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+              className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900/10 ${!form.city ? "border-red-300 bg-red-50" : "border-neutral-300"}`}
             >
               <option value="">Seleccionar ciudad</option>
               <option value="CTG">Cartagena (CTG)</option>
@@ -2257,7 +2272,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={submitting || !form.guestName.trim()}
+            disabled={submitting || !form.guestName.trim() || !form.email.trim() || !form.city}
             className="px-4 py-2 rounded-lg bg-neutral-900 text-sm text-white hover:bg-neutral-950 disabled:opacity-50"
           >
             {submitting ? "Creando..." : "Crear y abrir link"}
@@ -2394,6 +2409,7 @@ const loadKickoffs = async () => {
   const handleCreateAndOpenLink = async (form) => {
     const {
       guestName,
+      email,
       tripName,
       guestContact,
       city,
@@ -2407,6 +2423,7 @@ const loadKickoffs = async () => {
     const created = await saveKickoffToSheet({
       id: kickoffId,
       guestName,
+      email,
       tripName,
       guestContact,
       city,
@@ -2426,6 +2443,7 @@ const loadKickoffs = async () => {
       ...created,
       id: created?.id || kickoffId,
       guestName,
+      email,
       tripName,
       guestContact,
       city,
