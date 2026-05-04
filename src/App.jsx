@@ -1430,11 +1430,7 @@ function SoportePage() {
       await createSoporteCase({ ...form, timestamp: new Date().toISOString() });
       setSubmitted(true);
     } catch (err) {
-      // Fallback: open mailto so the message still reaches Michel
-      const subject = encodeURIComponent(`[${form.prioridad}] ${form.tipo}: ${form.titulo}`);
-      const body    = encodeURIComponent(`De: ${form.nombre || "Anónimo"}\n\n${form.descripcion}`);
-      window.open(`mailto:michel@two.travel?subject=${subject}&body=${body}`, "_blank");
-      setSubmitted(true);
+      setError("No se pudo guardar el caso. Verifica tu conexión e intenta de nuevo.");
     } finally {
       setSaving(false);
     }
@@ -1444,8 +1440,8 @@ function SoportePage() {
     <div className="min-h-screen bg-stone-50 flex items-center justify-center px-4">
       <div className="bg-white rounded-[28px] border border-stone-200 shadow-sm p-10 max-w-md w-full text-center">
         <div className="mx-auto mb-5 h-14 w-14 rounded-full bg-emerald-600 flex items-center justify-center text-white text-2xl">✓</div>
-        <h2 className="text-2xl font-semibold text-stone-800 mb-2">Caso enviado</h2>
-        <p className="text-sm text-stone-500 mb-6">Michel recibirá la notificación por correo.</p>
+        <h2 className="text-2xl font-semibold text-stone-800 mb-2">Caso registrado</h2>
+        <p className="text-sm text-stone-500 mb-6">Tu caso fue guardado en el sistema. El equipo lo revisará pronto.</p>
         <button onClick={() => setSubmitted(false)}
           className="text-sm text-stone-500 underline underline-offset-2 hover:text-stone-800">
           Crear otro caso
@@ -1463,7 +1459,7 @@ function SoportePage() {
           <p className="text-[10px] uppercase tracking-[0.32em] text-stone-400">Two Travel</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-stone-800">Soporte técnico</h1>
           <p className="mt-2 text-sm text-stone-500 leading-6">
-            Reporta un bug, pide un cambio o sugiere algo nuevo. Michel recibe un correo con cada caso.
+            Reporta un bug, pide un cambio o sugiere algo nuevo. El equipo lo verá directamente en el panel de soporte.
           </p>
         </div>
 
@@ -1582,6 +1578,8 @@ function SoporteDashboard() {
   const [selected, setSelected]   = useState(null);
   const [filterStatus, setFilter] = useState("todos");
   const [updatingId, setUpdatingId] = useState(null);
+  const [notesById, setNotesById] = useState({});
+  const [savingNotesId, setSavingNotesId] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -1601,11 +1599,31 @@ function SoporteDashboard() {
   const updateStatus = async (caso, newStatus) => {
     setUpdatingId(caso.id);
     try {
-      await updateSoporteCase(caso.id, newStatus);
+      await updateSoporteCase(caso.id, { status: newStatus });
       setCases(prev => prev.map(c => c.id === caso.id ? { ...c, status: newStatus } : c));
       if (selected?.id === caso.id) setSelected(s => ({ ...s, status: newStatus }));
     } catch {}
     setUpdatingId(null);
+  };
+
+  const updatePriority = async (caso, newPriority) => {
+    setUpdatingId(caso.id);
+    try {
+      await updateSoporteCase(caso.id, { prioridad: newPriority });
+      setCases(prev => prev.map(c => c.id === caso.id ? { ...c, prioridad: newPriority } : c));
+      if (selected?.id === caso.id) setSelected(s => ({ ...s, prioridad: newPriority }));
+    } catch {}
+    setUpdatingId(null);
+  };
+
+  const saveNotes = async (caso, notes) => {
+    setSavingNotesId(caso.id);
+    try {
+      await updateSoporteCase(caso.id, { notes });
+      setCases(prev => prev.map(c => c.id === caso.id ? { ...c, notes } : c));
+      if (selected?.id === caso.id) setSelected(s => ({ ...s, notes }));
+    } catch {}
+    setSavingNotesId(null);
   };
 
   const filtered = filterStatus === "todos"
@@ -1708,18 +1726,82 @@ function SoporteDashboard() {
 
                         {/* Expanded detail */}
                         {isOpen && (
-                          <div className="border-t border-stone-100 px-4 py-3" onClick={e => e.stopPropagation()}>
-                            <p className="text-sm text-stone-600 mb-3 whitespace-pre-wrap">{c.descripcion || "Sin descripción."}</p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs text-stone-400 mr-1">Cambiar estado:</span>
-                              {["abierto","en progreso","cerrado"].map(s => (
-                                <button key={s} disabled={updatingId === c.id || status === s}
-                                  onClick={() => updateStatus(c, s)}
-                                  className={`px-2.5 py-1 text-xs rounded-lg border transition disabled:opacity-40 ${STATUS_COLORS[s] || "bg-stone-50 text-stone-500 border-stone-200"} border-transparent`}>
-                                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                                </button>
-                              ))}
+                          <div className="border-t border-stone-100 px-4 py-4 space-y-4" onClick={e => e.stopPropagation()}>
+
+                            {/* Description */}
+                            <div>
+                              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Descripción</p>
+                              <p className="text-sm text-stone-700 whitespace-pre-wrap">{c.descripcion || "Sin descripción."}</p>
                             </div>
+
+                            {/* Contact info if available */}
+                            {(c.nombre || c.email || c.trip) && (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                                {c.nombre && <div><span className="text-stone-400">Cliente: </span><span className="text-stone-700 font-medium">{c.nombre}</span></div>}
+                                {c.email  && <div><span className="text-stone-400">Email: </span><span className="text-stone-700">{c.email}</span></div>}
+                                {c.trip   && <div><span className="text-stone-400">Trip: </span><span className="text-stone-700">{c.trip}</span></div>}
+                              </div>
+                            )}
+
+                            {/* Status */}
+                            <div>
+                              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1.5">Estado</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {["abierto","en progreso","cerrado"].map(s => (
+                                  <button key={s} disabled={updatingId === c.id || status === s}
+                                    onClick={() => updateStatus(c, s)}
+                                    className={`px-3 py-1 text-xs rounded-lg font-medium transition disabled:opacity-40 ${status === s ? STATUS_COLORS[s] + " ring-2 ring-offset-1 ring-current" : "bg-stone-100 text-stone-500 hover:bg-stone-200"}`}>
+                                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Priority */}
+                            <div>
+                              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1.5">Prioridad</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {["alta","media","baja"].map(p => (
+                                  <button key={p} disabled={updatingId === c.id || c.prioridad === p}
+                                    onClick={() => updatePriority(c, p)}
+                                    className={`px-3 py-1 text-xs rounded-lg font-medium transition disabled:opacity-40 ${c.prioridad === p ? (PRIORITY_COLORS[p] || "bg-stone-100 text-stone-500") + " ring-2 ring-offset-1 ring-current" : "bg-stone-100 text-stone-500 hover:bg-stone-200"}`}>
+                                    {p.charAt(0).toUpperCase() + p.slice(1)}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Internal notes */}
+                            <div>
+                              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1.5">Notas internas</p>
+                              <textarea
+                                rows={3}
+                                defaultValue={c.notes || ""}
+                                placeholder="Agrega notas internas para el equipo…"
+                                onChange={e => setNotesById(prev => ({ ...prev, [c.id]: e.target.value }))}
+                                className="w-full text-sm border border-stone-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-stone-300 text-stone-700 placeholder:text-stone-300"
+                              />
+                              <div className="flex justify-end mt-1.5">
+                                <button
+                                  disabled={savingNotesId === c.id}
+                                  onClick={() => saveNotes(c, notesById[c.id] ?? c.notes ?? "")}
+                                  className="px-3 py-1 text-xs bg-stone-800 text-white rounded-lg hover:opacity-90 transition disabled:opacity-40 font-medium">
+                                  {savingNotesId === c.id ? "Guardando…" : "Guardar notas"}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Resolve shortcut */}
+                            {status !== "cerrado" && (
+                              <div className="pt-1 border-t border-stone-100">
+                                <button
+                                  disabled={updatingId === c.id}
+                                  onClick={() => updateStatus(c, "cerrado")}
+                                  className="w-full py-2 text-sm font-medium bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition disabled:opacity-40">
+                                  ✓ Marcar como resuelto
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
