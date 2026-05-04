@@ -2170,8 +2170,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
               <option value="CTG">Cartagena (CTG)</option>
               <option value="MDE">Medellín (MDE)</option>
               <option value="CDMX">Ciudad de México (CDMX)</option>
-              <option value="BOG">Bogotá (BOG)</option>
-              <option value="BAQ">Barranquilla (BAQ)</option>
+              <option value="TUL">Tulum (TUL)</option>
             </select>
           </div>
 
@@ -2595,7 +2594,7 @@ const loadKickoffs = async () => {
       all: "Todos",
       colGuest: "Huésped", colTrip: "Viaje", colType: "Tipo",
       colContact: "Contacto", colCreated: "Creado",
-      colConcierge: "Concierge", colStatus: "Estado", colActions: "Acciones",
+      colConcierge: "Concierge", colCity: "Ciudad", colStatus: "Estado", colActions: "Acciones",
       loading: "Cargando kick-offs...",
       empty: "No hay kick-offs que coincidan con el filtro.",
       linkCatalog: "Link catálogo", linkFeedback: "Link feedback",
@@ -2608,7 +2607,7 @@ const loadKickoffs = async () => {
       all: "All",
       colGuest: "Guest", colTrip: "Trip", colType: "Type",
       colContact: "Contact", colCreated: "Created",
-      colConcierge: "Concierge", colStatus: "Status", colActions: "Actions",
+      colConcierge: "Concierge", colCity: "City", colStatus: "Status", colActions: "Actions",
       loading: "Loading kick-offs...",
       empty: "No kick-offs match the current filter.",
       linkCatalog: "Catalog link", linkFeedback: "Feedback link",
@@ -2894,7 +2893,7 @@ const loadKickoffs = async () => {
             <table className="min-w-full text-sm">
               <thead className="bg-neutral-50 border-b border-neutral-200">
                 <tr>
-                  {["ID", cp.colGuest, cp.colTrip, cp.colType, cp.colContact, cp.colCreated, cp.colConcierge, cp.colStatus].map(h => (
+                  {["ID", cp.colGuest, cp.colTrip, cp.colType, cp.colContact, cp.colCreated, cp.colConcierge, cp.colCity, cp.colStatus].map(h => (
                     <th key={h} className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">{h}</th>
                   ))}
                   <th className="px-4 py-2 text-right text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">{cp.colActions}</th>
@@ -2904,7 +2903,7 @@ const loadKickoffs = async () => {
                 {loading && filteredKickoffs.length === 0 && (
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={10}
                       className="px-4 py-8 text-center text-xs text-neutral-500"
                     >
                       {cp.loading}
@@ -2915,7 +2914,7 @@ const loadKickoffs = async () => {
                 {!loading && filteredKickoffs.length === 0 && (
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={10}
                       className="px-4 py-8 text-center text-xs text-neutral-500"
                     >
                       {cp.empty}
@@ -2999,6 +2998,14 @@ const loadKickoffs = async () => {
 
 <td className="px-4 py-2 text-xs text-neutral-700">
   {k.assignedConcierge || <span className="text-neutral-400 italic">—</span>}
+</td>
+
+<td className="px-4 py-2 text-xs font-medium text-neutral-700">
+  {k.city ? (
+    <span className="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 text-[11px] font-semibold">{k.city}</span>
+  ) : (
+    <span className="text-neutral-400 italic">—</span>
+  )}
 </td>
 
 <td className="px-4 py-2">
