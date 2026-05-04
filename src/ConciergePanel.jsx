@@ -2075,6 +2075,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
     guestName: "",
     tripName: "",
     guestContact: "",
+    city: "",
     concierge: "",
     conciergeEmail: "",
     clientType: 1,
@@ -2091,6 +2092,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
       ...prev,
       concierge: selectedName,
       conciergeEmail: match ? match.email : "",
+      city: prev.city || (match ? match.city : ""),
     }));
   };
 
@@ -2102,7 +2104,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
     setSubmitting(true);
     try {
       await onSubmit(form);
-      setForm({ guestName: "", tripName: "", guestContact: "", concierge: "", conciergeEmail: "", clientType: 1 });
+      setForm({ guestName: "", tripName: "", guestContact: "", city: "", concierge: "", conciergeEmail: "", clientType: 1 });
     } finally {
       setSubmitting(false);
     }
@@ -2137,6 +2139,25 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
               placeholder="Ej: María García"
               className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
             />
+          </div>
+
+          {/* Ciudad */}
+          <div>
+            <label className="block text-xs font-medium text-neutral-600 mb-1">
+              Ciudad <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={form.city}
+              onChange={handleField("city")}
+              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+            >
+              <option value="">Seleccionar ciudad</option>
+              <option value="CTG">Cartagena (CTG)</option>
+              <option value="MDE">Medellín (MDE)</option>
+              <option value="CDMX">Ciudad de México (CDMX)</option>
+              <option value="BOG">Bogotá (BOG)</option>
+              <option value="BAQ">Barranquilla (BAQ)</option>
+            </select>
           </div>
 
           {/* Nombre del viaje */}
@@ -2375,6 +2396,7 @@ const loadKickoffs = async () => {
       guestName,
       tripName,
       guestContact,
+      city,
       concierge: assignedConciergeName,
       conciergeEmail: assignedConciergeEmail,
       clientType,
@@ -2387,6 +2409,7 @@ const loadKickoffs = async () => {
       guestName,
       tripName,
       guestContact,
+      city,
       clientType,
       assignedConcierge: assignedConciergeName,
       assignedConciergeName,
@@ -2405,6 +2428,7 @@ const loadKickoffs = async () => {
       guestName,
       tripName,
       guestContact,
+      city,
       clientType,
       assignedConcierge: assignedConciergeName,
       assignedConciergeName,

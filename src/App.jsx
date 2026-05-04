@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import ConciergePanel from "./ConciergePanel";
 import TwoTravelCatalog from "./TwoTravelCatalog";
 import ItineraryPrintView from "./ItineraryPrintView";
-import { updateKickoffInSheet, fetchKickoffsFromSheet } from "./sheetServices";
+import { updateKickoffInSheet, fetchKickoffsFromSheet, fetchSoporteCases, createSoporteCase, updateSoporteCase } from "./sheetServices";
 
 const translations = {
   en: {
@@ -267,10 +267,6 @@ function FbScorePills({ value, onChange, min = 1, max = 10, allowNA = false, lan
     : (lang === "es" ? "Excepcional" : "Exceptional");
   return (
     <div className="mt-3">
-      <div className="mb-2 flex justify-between text-xs text-stone-400">
-        <span>{min} · {minLabel}</span>
-        <span>{max} · {maxLabel}</span>
-      </div>
       <div className="flex flex-wrap gap-2">
         {allowNA && (
           <button type="button" onClick={() => onChange("N/A")}
@@ -410,7 +406,7 @@ const handleSubmit = async (e) => {
 
     // Mark kickoff as feedback submitted (fire-and-forget)
     if (kickoffId) {
-      updateKickoffInSheet(kickoffId, { status: "feedback_submitted", feedbackAt: new Date().toISOString() }).catch(
+      updateKickoffInSheet(kickoffId, { status: "feedback_submitted", feedbackAt: new Date().toISOString(), overallExperience: form.overallExperience || "" }).catch(
         (e) => console.warn("Could not update kickoff status:", e)
       );
     }
@@ -1431,19 +1427,7 @@ function SoportePage() {
     setError("");
     setSaving(true);
     try {
-      const res = await fetch(SOPORTE_API, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({
-          action: "soporte",
-          payload: { ...form, timestamp: new Date().toISOString() },
-        }),
-      });
-      const text = await res.text();
-      // Accept ok:true OR any 2xx (GAS may not have the action yet)
-      let json = null;
-      try { json = JSON.parse(text); } catch {}
-      if (json?.ok === false) throw new Error(json.error || "Error al enviar");
+      await createSoporteCase({ ...form, timestamp: new Date().toISOString() });
       setSubmitted(true);
     } catch (err) {
       // Fallback: open mailto so the message still reaches Michel
@@ -1603,14 +1587,8 @@ function SoporteDashboard() {
     setLoading(true);
     setError("");
     try {
-      const res  = await fetch(SOPORTE_API, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "listSoporte" }),
-      });
-      const json = await res.json();
-      if (json.ok === false) throw new Error(json.error || "Error");
-      setCases(json.data || []);
+      const data = await fetchSoporteCases();
+      setCases(data);
     } catch (e) {
       setError("No se pudo cargar los casos. Verifica el Apps Script.");
     } finally {
@@ -1623,11 +1601,7 @@ function SoporteDashboard() {
   const updateStatus = async (caso, newStatus) => {
     setUpdatingId(caso.id);
     try {
-      await fetch(SOPORTE_API, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "updateSoporte", payload: { id: caso.id, status: newStatus } }),
-      });
+      await updateSoporteCase(caso.id, newStatus);
       setCases(prev => prev.map(c => c.id === caso.id ? { ...c, status: newStatus } : c));
       if (selected?.id === caso.id) setSelected(s => ({ ...s, status: newStatus }));
     } catch {}
