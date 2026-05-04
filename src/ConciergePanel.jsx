@@ -2332,6 +2332,8 @@ export default function ConciergePanel() {
   
   const [kickoffs, setKickoffs] = useState([]);
   const [selectedKickoffForLink, setSelectedKickoffForLink] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -2480,6 +2482,45 @@ const loadKickoffs = async () => {
   const conciergeOptions = useMemo(() => {
     return ["all", ...CONCIERGE_LIST.map((c) => c.name)];
   }, []);
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (filtered) => {
+    if (selectedIds.size === filtered.length && filtered.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(k => k.id)));
+    }
+  };
+
+  const bulkArchive = async () => {
+    if (!selectedIds.size) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all([...selectedIds].map(id => updateKickoffInSheet(id, { status: "cerrado" })));
+      setKickoffs(prev => prev.map(k => selectedIds.has(k.id) ? { ...k, status: "cerrado" } : k));
+      setSelectedIds(new Set());
+    } catch {}
+    setBulkLoading(false);
+  };
+
+  const bulkDelete = async () => {
+    if (!selectedIds.size) return;
+    if (!window.confirm(`¿Eliminar ${selectedIds.size} cliente(s)? Esta acción no se puede deshacer.`)) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all([...selectedIds].map(id => deleteKickoff(id)));
+      setKickoffs(prev => prev.filter(k => !selectedIds.has(k.id)));
+      setSelectedIds(new Set());
+    } catch {}
+    setBulkLoading(false);
+  };
 
   const filteredKickoffs = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -2888,11 +2929,37 @@ const loadKickoffs = async () => {
           </div>
         )}
 
+        {/* Bulk action bar */}
+        {selectedIds.size > 0 && (
+          <div className="mb-3 flex items-center gap-3 bg-neutral-900 text-white rounded-xl px-4 py-2.5">
+            <span className="text-sm font-medium flex-1">{selectedIds.size} cliente{selectedIds.size !== 1 ? "s" : ""} seleccionado{selectedIds.size !== 1 ? "s" : ""}</span>
+            <button onClick={bulkArchive} disabled={bulkLoading}
+              className="px-3 py-1 text-xs bg-white/10 hover:bg-white/20 rounded-lg transition disabled:opacity-40 font-medium">
+              {bulkLoading ? "…" : "✓ Marcar cerrados"}
+            </button>
+            <button onClick={bulkDelete} disabled={bulkLoading}
+              className="px-3 py-1 text-xs bg-red-500 hover:bg-red-400 rounded-lg transition disabled:opacity-40 font-medium">
+              {bulkLoading ? "…" : "🗑 Eliminar"}
+            </button>
+            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-white/50 hover:text-white transition ml-1">
+              Cancelar
+            </button>
+          </div>
+        )}
+
         <div className="bg-white border border-neutral-200 rounded-2xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-neutral-50 border-b border-neutral-200">
                 <tr>
+                  <th className="px-3 py-2 w-8">
+                    <input type="checkbox"
+                      checked={selectedIds.size > 0 && selectedIds.size === filteredKickoffs.length}
+                      ref={el => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < filteredKickoffs.length; }}
+                      onChange={() => toggleSelectAll(filteredKickoffs)}
+                      className="w-3.5 h-3.5 cursor-pointer accent-neutral-900"
+                    />
+                  </th>
                   {["ID", cp.colGuest, cp.colTrip, cp.colType, cp.colContact, cp.colCreated, cp.colConcierge, cp.colCity, cp.colStatus].map(h => (
                     <th key={h} className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">{h}</th>
                   ))}
@@ -2903,7 +2970,7 @@ const loadKickoffs = async () => {
                 {loading && filteredKickoffs.length === 0 && (
                   <tr>
                     <td
-                      colSpan={10}
+                      colSpan={11}
                       className="px-4 py-8 text-center text-xs text-neutral-500"
                     >
                       {cp.loading}
@@ -2914,7 +2981,7 @@ const loadKickoffs = async () => {
                 {!loading && filteredKickoffs.length === 0 && (
                   <tr>
                     <td
-                      colSpan={10}
+                      colSpan={11}
                       className="px-4 py-8 text-center text-xs text-neutral-500"
                     >
                       {cp.empty}
@@ -2925,15 +2992,20 @@ const loadKickoffs = async () => {
                 {filteredKickoffs.map((k) => (
                   <tr
   key={k.id}
-
   onClick={() => setSelectedKickoffForLink(k)}
   className={
     "border-t border-neutral-100 hover:bg-neutral-50/70 cursor-pointer " +
+    (selectedIds.has(k.id) ? "bg-neutral-100/60 " : "") +
     (selectedKickoffForLink?.id === k.id ? "bg-neutral-100" : "")
   }
-   
 >
-
+                    <td className="px-3 py-2 w-8" onClick={e => e.stopPropagation()}>
+                      <input type="checkbox"
+                        checked={selectedIds.has(k.id)}
+                        onChange={() => toggleSelect(k.id)}
+                        className="w-3.5 h-3.5 cursor-pointer accent-neutral-900"
+                      />
+                    </td>
 
                     <td className="px-4 py-2 text-xs text-neutral-700 font-mono">
   {k.id}
