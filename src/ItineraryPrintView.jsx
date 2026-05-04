@@ -1505,7 +1505,16 @@ export default function ItineraryPrintView() {
   // Use editDays when in edit mode (allows add/remove), fallback to computed days
   const activeDays = (editMode && editDays) ? editDays : days;
 
-  const hasPreTrip = !!(kickoff.preTripContent || "").trim();
+  // Apply defaults for fields that may not be saved in older kickoffs
+  const DEFAULT_WELCOME_PDF = "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=drivesdk";
+  const DEFAULT_PRETRIP = `Take a look before your arrival — it has helpful info for your trip.\n\nPre Check-in Form: https://forms.gle/REPLACE_WITH_FORM_LINK\nDrink Calculator: https://two.travel/drinks\nWhatsApp Concierge: https://wa.me/573001234567\n\nPromo!\nShare @twotravelconcierge on Instagram and TikTok during your stay and get a discount on select experiences.\n\nNote: one tag per person required to redeem. For group services all members must participate.`;
+  const renderKickoff = {
+    ...kickoff,
+    welcomePdfUrl: kickoff.welcomePdfUrl || DEFAULT_WELCOME_PDF,
+    preTripContent: kickoff.preTripContent || DEFAULT_PRETRIP,
+  };
+
+  const hasPreTrip = !!(renderKickoff.preTripContent || "").trim();
   const hasSummary = activeDays.length > 0;
   const total = 1 + (hasSummary ? 1 : 0) + 1 + (hasPreTrip ? 1 : 0) + activeDays.length;
   let pageNum = 1;
@@ -1575,7 +1584,7 @@ export default function ItineraryPrintView() {
 
       {/* ── Pages ── */}
       <CoverPage
-        kickoff={kickoff}
+        kickoff={renderKickoff}
         total={total}
         lang={lang}
         editMode={editMode}
@@ -1583,7 +1592,7 @@ export default function ItineraryPrintView() {
 
       {hasSummary && (
         <SummaryPage
-          kickoff={kickoff}
+          kickoff={renderKickoff}
           days={activeDays}
           page={++pageNum}
           total={total}
@@ -1593,7 +1602,7 @@ export default function ItineraryPrintView() {
       )}
 
       <InfoPage
-        kickoff={kickoff}
+        kickoff={renderKickoff}
         lang={lang}
         page={++pageNum}
         total={total}
@@ -1602,7 +1611,7 @@ export default function ItineraryPrintView() {
 
       {hasPreTrip && (
         <PreTripPage
-          kickoff={kickoff}
+          kickoff={renderKickoff}
           lang={lang}
           page={++pageNum}
           total={total}
@@ -1613,7 +1622,7 @@ export default function ItineraryPrintView() {
       {activeDays.map((day, di) => (
         <DayPage
           key={`${day.label}-${di}`}
-          kickoff={kickoff}
+          kickoff={renderKickoff}
           day={day}
           page={++pageNum}
           total={total}
@@ -1623,7 +1632,7 @@ export default function ItineraryPrintView() {
           onRemoveItem={editMode ? (ii) => removeItem(di, ii) : undefined}
           onAddItem={editMode ? () => openPickerForDay(di) : undefined}
           billingBlock={di === activeDays.length - 1
-            ? <BillingBlock kickoff={kickoff} allDays={activeDays} />
+            ? <BillingBlock kickoff={renderKickoff} allDays={activeDays} />
             : null}
         />
       ))}

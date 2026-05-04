@@ -1621,7 +1621,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [accommodationAddr,  setAccommodationAddr]  = useState(kickoff?.accommodationAddr  || "");
   const [checkIn,            setCheckIn]            = useState(kickoff?.checkIn            || "3:00 PM");
   const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "11:00 AM");
-  const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "");
+  const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=drivesdk");
   const [preTripContent,     setPreTripContent]     = useState(kickoff?.preTripContent     || DEFAULT_PRE_TRIP);
 
   if (!kickoff) return null;
@@ -2425,6 +2425,7 @@ const loadKickoffs = async () => {
       id: kickoffId,
       guestName,
       email,
+      guestEmail: email,   // alias — Apps Script may use either column name
       tripName,
       guestContact,
       city,
@@ -2438,6 +2439,8 @@ const loadKickoffs = async () => {
       travifyText: "",
       internalNotes: "",
       cart: [],
+      welcomePdfUrl: "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=drivesdk",
+      preTripContent: DEFAULT_PRE_TRIP,
     });
 
     const kickoff = {

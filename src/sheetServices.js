@@ -342,6 +342,9 @@ export async function fetchKickoffsFromSheet() {
 
   return data.map((k) => ({
     ...k,
+    email: String(
+      k?.email ?? k?.guestEmail ?? k?.Email ?? k?.GuestEmail ?? ""
+    ).trim(),
     guestContact: String(
       k?.guestContact ?? k?.GuestContact ?? k?.guest_contact ??
       k?.contact ?? k?.Contact ?? k?.contacto ?? k?.Contacto ?? ""
@@ -422,7 +425,7 @@ export async function createSoporteCase(payload) {
   return json.data;
 }
 
-export async function updateSoporteCase(id, status) {
-  const json = await postToKickoffAPI({ action: "updateSoporte", payload: { id, status } });
+export async function updateSoporteCase(id, updates) {
+  const json = await postToKickoffAPI({ action: "updateSoporte", payload: { id, ...updates } });
   return json.ok === true;
 }
