@@ -349,22 +349,25 @@ function buildTravifyTextFromCart(kickoff) {
 /* ═══════════════════════════════════════════════════════════════
    ACTIVITY ROW — inline-editable row inside a day section
 ═══════════════════════════════════════════════════════════════ */
-function ActivityRow({ item, onUpdate, onRemove }) {
+function ActivityRow({ item, onUpdate, onRemove, onMoveToDay, dayLabels, currentDay }) {
   const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation));
+  const [showDayPicker, setShowDayPicker] = useState(false);
+  const otherDays = (dayLabels || []).filter(d => d !== currentDay);
+
   return (
-    <div className="px-4 py-2.5 hover:bg-neutral-50 transition-colors">
+    <div className="px-4 py-2.5 hover:bg-neutral-50 transition-colors relative">
       <div className="grid grid-cols-12 gap-x-2 items-center">
         {/* Time */}
         <div className="col-span-2">
           <input
             value={item.timeLabel || ""}
             onChange={e => onUpdate(item.id, { timeLabel: e.target.value })}
-            placeholder="Hora"
+            placeholder="9:00 AM"
             className="w-full text-xs text-neutral-500 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
           />
         </div>
         {/* Name */}
-        <div className="col-span-6">
+        <div className="col-span-5">
           <input
             value={item.displayName || item.name || ""}
             onChange={e => onUpdate(item.id, { displayName: e.target.value })}
@@ -390,7 +393,35 @@ function ActivityRow({ item, onUpdate, onRemove }) {
           />
         </div>
         {/* Actions */}
-        <div className="col-span-1 flex items-center justify-end gap-1.5">
+        <div className="col-span-2 flex items-center justify-end gap-1.5">
+          {/* Move to day */}
+          {otherDays.length > 0 && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowDayPicker(v => !v)}
+                title="Mover a otro día"
+                className="text-[11px] text-neutral-300 hover:text-blue-500 leading-none"
+              >
+                ⇄
+              </button>
+              {showDayPicker && (
+                <div className="absolute right-0 top-5 z-20 bg-white border border-neutral-200 rounded-xl shadow-lg min-w-[140px] py-1">
+                  <p className="text-[9px] text-neutral-400 uppercase tracking-wider px-3 pt-1 pb-0.5">Mover a:</p>
+                  {otherDays.map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => { onMoveToDay(item.id, d); setShowDayPicker(false); }}
+                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-neutral-50 text-neutral-800"
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <button
             type="button"
             onClick={() => onUpdate(item.id, { confirmed: !(item.confirmed !== false) })}
@@ -463,9 +494,9 @@ function ActivityRow({ item, onUpdate, onRemove }) {
 /* ═══════════════════════════════════════════════════════════════
    DAY SECTION — one per day, collapsible, with editable header
 ═══════════════════════════════════════════════════════════════ */
-function DaySection({ label, meta, items, loadingServices,
+function DaySection({ label, meta, items, loadingServices, dayLabels,
   onUpdateMeta, onRenameLabel, onRemoveDay,
-  onUpdateItem, onRemoveItem, onAddManual, onAddFromCatalog }) {
+  onUpdateItem, onRemoveItem, onAddManual, onAddFromCatalog, onMoveToDay }) {
 
   const [editingLabel, setEditingLabel] = useState(false);
   const [localLabel,   setLocalLabel]   = useState(label);
@@ -530,7 +561,8 @@ function DaySection({ label, meta, items, loadingServices,
             <div className="divide-y divide-neutral-100 bg-white">
               {items.map(item => (
                 <ActivityRow key={item.id} item={item}
-                  onUpdate={onUpdateItem} onRemove={onRemoveItem}/>
+                  onUpdate={onUpdateItem} onRemove={onRemoveItem}
+                  onMoveToDay={onMoveToDay} dayLabels={dayLabels} currentDay={label}/>
               ))}
             </div>
           )}
@@ -639,6 +671,9 @@ function ItineraryCanvas({ kickoff, onSave }) {
   const removeItem = (id) =>
     setCart(prev => prev.filter(i => i.id !== id));
 
+  const moveItemToDay = (id, targetDay) =>
+    setCart(prev => prev.map(i => i.id === id ? { ...i, dayLabel: targetDay } : i));
+
   const addManualToDay = (dayLabel) => {
     const count = cart.filter(i => (i.dayLabel || "Sin día") === dayLabel).length;
     setCart(prev => [...prev, { ...mapManualToCartItem(), dayLabel, sortOrder: count }]);
@@ -707,17 +742,19 @@ function ItineraryCanvas({ kickoff, onSave }) {
           meta={meta}
           items={items}
           loadingServices={loadingServices}
+          dayLabels={days.map(d => d.label)}
           onUpdateMeta={patch => upsertDayMeta(label, patch)}
           onRenameLabel={newLabel => renameDayLabel(label, newLabel)}
           onRemoveDay={() => removeDay(label)}
           onUpdateItem={updateItem}
           onRemoveItem={removeItem}
+          onMoveToDay={moveItemToDay}
           onAddManual={() => addManualToDay(label)}
           onAddFromCatalog={() => setCatalogTargetDay(label)}
         />
       ))}
 
-      {/* Catalog picker modal (per-day) */}
+      {/* Catalog picker modal (per-day) — stays open so multiple items can be added */}
       {catalogTargetDay && (
         <CatalogPickerModal
           services={services}
@@ -731,7 +768,7 @@ function ItineraryCanvas({ kickoff, onSave }) {
               dayLabel: catalogTargetDay,
               sortOrder: count,
             }]);
-            setCatalogTargetDay(null);
+            // Keep modal open — user can add more items and close manually
           }}
         />
       )}
@@ -1305,6 +1342,7 @@ const SUGGESTION_CATS = [
 function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPick }) {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("all");
+  const [addedIds, setAddedIds] = useState(new Set());
 
   // Normalise city for comparison (lowercase, no accents on common names)
   const normalizeCity = (v) => String(v || "").trim().toLowerCase();
@@ -1321,24 +1359,32 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
     });
   }, [services, kickoffCity]);
 
-  // Suggested: 2 per category, in SUGGESTION_CATS order
+  const isMexicanCity = /cdmx|ciudad de mexico|mexico city|guadalajara|monterrey|oaxaca|puebla/.test(kickoffCity);
+
+  // Suggested: 3 per category (1 for transportation), preferred providers pinned first
   const suggested = useMemo(() => {
     return SUGGESTION_CATS.map(({ id, ids, label }) => {
+      const limit = id === "transportation" ? 1 : 3;
       const items = cityServices
-        .filter((s) => ids.includes(normCatPanel(s.category)))
-        .sort((a, b) => {
-          // Pin "Duster" first for transportation picks
-          if (id === "transportation") {
-            const aD = /duster/i.test(a.name) ? 0 : 1;
-            const bD = /duster/i.test(b.name) ? 0 : 1;
-            return aD - bD;
-          }
-          return 0;
+        .filter((s) => {
+          if (!ids.includes(normCatPanel(s.category))) return false;
+          if (/agua.?de.?le[oó]n/i.test(s.name) && !isMexicanCity) return false;
+          return true;
         })
-        .slice(0, 2);
+        .sort((a, b) => {
+          const pinScore = (s) => {
+            const nm = (s.name || "").toLowerCase();
+            if (id === "transportation" && /duster/i.test(nm)) return -10;
+            if (/sal[oó]n.?tropical|salon tropical/i.test(nm)) return -9;
+            if (/\bcarmen\b/i.test(nm)) return -8;
+            return 0;
+          };
+          return pinScore(a) - pinScore(b);
+        })
+        .slice(0, limit);
       return { id, label, items };
     }).filter((g) => g.items.length > 0);
-  }, [cityServices]);
+  }, [cityServices, isMexicanCity]);
 
   const categories = useMemo(() => {
     const set = new Set(
@@ -1416,7 +1462,7 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
         {!q.trim() && category === "all" && suggested.length > 0 && (
           <div className="space-y-3">
             <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">
-              ⚡ Picks rápidos — 2 por categoría
+              ⚡ Picks rápidos
             </p>
             {suggested.map(({ id, label, items }) => (
               <div key={id}>
@@ -1433,7 +1479,7 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
                       <button
                         key={s.id || s.sku}
                         type="button"
-                        onClick={() => onPick(s)}
+                        onClick={() => { onPick(s); setAddedIds(prev => new Set([...prev, s.id || s.sku])); }}
                         className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 hover:border-neutral-400 text-left transition-colors"
                       >
                         <div className="min-w-0">
@@ -1442,7 +1488,10 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
                         </div>
                         <div className="shrink-0 flex flex-col items-end gap-0.5">
                           <span className="text-[10px] text-neutral-500">{priceDisplay}</span>
-                          <span className="text-[10px] bg-neutral-900 text-white px-2 py-0.5 rounded-md">+ Agregar</span>
+                          {addedIds.has(s.id || s.sku)
+                            ? <span className="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded-md">✓ Agregado</span>
+                            : <span className="text-[10px] bg-neutral-900 text-white px-2 py-0.5 rounded-md">+ Agregar</span>
+                          }
                         </div>
                       </button>
                     );
@@ -1488,7 +1537,7 @@ const priceDisplay = usesLevels
                   <button
                     key={s.id || s.sku || name}
                     type="button"
-                    onClick={() => onPick(s)}
+                    onClick={() => { onPick(s); setAddedIds(prev => new Set([...prev, s.id || s.sku])); }}
                     className="w-full text-left px-4 py-3 hover:bg-neutral-50 flex items-start justify-between gap-3"
                   >
                     <div className="min-w-0">
@@ -1504,9 +1553,10 @@ const priceDisplay = usesLevels
 
                     <div className="shrink-0 text-xs text-neutral-800 whitespace-nowrap">
                       {priceDisplay}
-                      <span className="ml-2 inline-flex items-center px-2 py-1 rounded-lg bg-neutral-900 text-white text-[11px]">
-                        Agregar
-                      </span>
+                      {addedIds.has(s.id || s.sku)
+                        ? <span className="ml-2 inline-flex items-center px-2 py-1 rounded-lg bg-emerald-600 text-white text-[11px]">✓ Agregado</span>
+                        : <span className="ml-2 inline-flex items-center px-2 py-1 rounded-lg bg-neutral-900 text-white text-[11px]">Agregar</span>
+                      }
                     </div>
                   </button>
                 );
@@ -1577,11 +1627,21 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [guestName, setGuestName] = useState(kickoff?.guestName || "");
   const [tripName, setTripName] = useState(kickoff?.tripName || "");
   const [guestContact, setGuestContact] = useState(kickoff?.guestContact || "");
+  const guestEmail = kickoff?.email || kickoff?.guestEmail || "";
   const [assignedConcierge, setAssignedConcierge] = useState(kickoff?.assignedConciergeName || kickoff?.assignedConcierge || "");
   const [assignedConciergeEmail, setAssignedConciergeEmail] = useState(kickoff?.assignedConciergeEmail || "");
   const [status, setStatus] = useState(kickoff?.status || "new");
   const [conciergeSummary] = useState(kickoff?.conciergeSummary || "");
   const [internalNotes, setInternalNotes] = useState(kickoff?.internalNotes || "");
+  const [flightArrival,   setFlightArrival]   = useState(kickoff?.flightArrival   || "");
+  const [flightDeparture, setFlightDeparture] = useState(kickoff?.flightDeparture || "");
+
+  const handleConciergeChange = (e) => {
+    const name = e.target.value;
+    setAssignedConcierge(name);
+    const match = CONCIERGE_LIST.find((c) => c.name === name);
+    if (match) setAssignedConciergeEmail(match.email);
+  };
 
   // Read-only: dates submitted by client in questionnaire
   const clientArrival   = kickoff?.arrivalDate   || "";
@@ -1627,6 +1687,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   if (!kickoff) return null;
 
   const handleSave = async () => {
+  if (!assignedConcierge.trim()) {
+    alert("Por favor selecciona el concierge asignado antes de guardar.");
+    return;
+  }
   // Auto-advance status when concierge saves from "new" or "client_submitted"
   const autoStatus =
     status === "new" || status === "client_submitted"
@@ -1653,9 +1717,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     checkIn:           checkIn.trim(),
     checkOut:          checkOut.trim(),
     welcomePdfUrl:     welcomePdfUrl.trim(),
+    flightArrival:     flightArrival.trim(),
+    flightDeparture:   flightDeparture.trim(),
     // Timestamps — only set first time each status is reached
     ...(autoStatus === "concierge_editing" && !kickoff.conciergeEditingAt ? { conciergeEditingAt: now } : {}),
-    // Pre-trip info block (rendered as a page before itinerary days in PDF)
     preTripContent:    preTripContent.trim(),
   };
 
@@ -1774,14 +1839,30 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               </div>
             )}
 
+            {/* Email del cliente — read-only, for QuickBooks */}
+            {guestEmail && (
+              <div className="col-span-2">
+                <label className="text-[11px] text-neutral-500">Email del cliente</label>
+                <div className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-neutral-50 text-neutral-700 select-all">
+                  {guestEmail}
+                </div>
+              </div>
+            )}
+
             <div>
-              <label className="text-[11px] text-neutral-500">Concierge asignado (nombre)</label>
-              <input
+              <label className="text-[11px] text-neutral-500">
+                Concierge asignado <span className="text-red-500">*</span>
+              </label>
+              <select
                 value={assignedConcierge}
-                onChange={(e) => setAssignedConcierge(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="Nombre del concierge"
-              />
+                onChange={handleConciergeChange}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+              >
+                <option value="">— Seleccionar —</option>
+                {CONCIERGE_LIST.map((c) => (
+                  <option key={c.name} value={c.name}>{c.name} ({c.city})</option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -1790,8 +1871,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 type="email"
                 value={assignedConciergeEmail}
                 onChange={(e) => setAssignedConciergeEmail(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="concierge@email.com"
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-neutral-50"
+                placeholder="auto-filled al seleccionar"
+                readOnly={!!CONCIERGE_LIST.find(c => c.name === assignedConcierge)}
               />
             </div>
 
@@ -1822,9 +1904,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             />
           </div>
 
-          {/* ── Cover Info ─────────────────────────────── */}
+          {/* ── Info del viaje ─────────────────────────────── */}
           <div className="border rounded-2xl p-4 bg-neutral-50 space-y-3">
-            <p className="text-xs font-semibold text-neutral-700">Portada del itinerario (PDF)</p>
+            <p className="text-xs font-semibold text-neutral-700">Info del viaje</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] text-neutral-500">Fechas del viaje</label>
@@ -1842,7 +1924,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 <label className="text-[11px] text-neutral-500">Personas en el grupo</label>
                 <input value={groupSize} onChange={(e) => setGroupSize(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="5 people" />
+                  placeholder="4 personas" />
               </div>
               <div>
                 <label className="text-[11px] text-neutral-500">Título del concierge</label>
@@ -1850,14 +1932,19 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="Senior Concierge Medellín" />
               </div>
-              <div className="col-span-2">
-                <label className="text-[11px] text-neutral-500">Nombre del alojamiento</label>
-                <input value={accommodationName} onChange={(e) => setAccommodationName(e.target.value)}
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="Edificio Los Eucaliptos" />
+
+              {/* Alojamiento */}
+              <div className="col-span-2 pt-1">
+                <p className="text-[11px] font-semibold text-neutral-600 mb-2">🏠 Alojamiento</p>
               </div>
               <div className="col-span-2">
-                <label className="text-[11px] text-neutral-500">Dirección del alojamiento</label>
+                <label className="text-[11px] text-neutral-500">Nombre (casa / hotel)</label>
+                <input value={accommodationName} onChange={(e) => setAccommodationName(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="Ej. Casa del Río / Hotel 5ta Avenida" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-[11px] text-neutral-500">Dirección</label>
                 <input value={accommodationAddr} onChange={(e) => setAccommodationAddr(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="Calle 10 # 29-34, Medellín, Antioquia" />
@@ -1874,30 +1961,24 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="11:00 AM" />
               </div>
+
+              {/* Vuelos */}
+              <div className="col-span-2 pt-1">
+                <p className="text-[11px] font-semibold text-neutral-600 mb-2">✈️ Vuelos</p>
+              </div>
               <div className="col-span-2">
-                <label className="text-[11px] text-neutral-500">Welcome PDF URL (link que aparece en el itinerario)</label>
-                <input value={welcomePdfUrl} onChange={(e) => setWelcomePdfUrl(e.target.value)}
+                <label className="text-[11px] text-neutral-500">Llegada (vuelo + hora)</label>
+                <input value={flightArrival} onChange={(e) => setFlightArrival(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="https://drive.google.com/file/d/.../view" />
+                  placeholder="AA 1234 · May 22 · 2:30 PM · BOG → MDE" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-[11px] text-neutral-500">Salida (vuelo + hora)</label>
+                <input value={flightDeparture} onChange={(e) => setFlightDeparture(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="AA 5678 · May 28 · 6:00 PM · MDE → MIA" />
               </div>
             </div>
-          </div>
-
-          {/* PRE-TRIP INFO — page that appears before itinerary days in PDF */}
-          <div className="border rounded-2xl p-4 bg-neutral-50 space-y-2">
-            <p className="text-xs font-semibold text-neutral-700">Pre-Trip Information</p>
-            <p className="text-[11px] text-neutral-400 leading-relaxed">
-              This block appears as a full page <em>before</em> the itinerary days in the PDF.
-              Include links (forms, WhatsApp, PDFs), notes, recommendations, promo info, etc.
-              One item per line. Lines starting with http/https render as clickable links.
-            </p>
-            <textarea
-              value={preTripContent}
-              onChange={(e) => setPreTripContent(e.target.value)}
-              rows={8}
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm min-h-[140px] font-mono bg-white"
-              placeholder={`Pre Check-in Form: https://form.link/checkin\nDrink Calculator: https://two.travel/drinks\nCartagena City Guide: https://two.travel/guide.pdf\nWhatsApp Concierge: https://wa.me/573001234567\n\nPromo: Share @twotravelconcierge and get a discount on select experiences.\n\nCoffee recommendations: Amor Perfecto, Pergamino\nRooftop recommendations: Aloft, Alma`}
-            />
           </div>
 
           {/* ITINERARIO — canvas con edición inline por día */}
@@ -2101,7 +2182,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const handleSubmit = async () => {
-    if (!form.guestName.trim() || !form.email.trim() || !form.city) return;
+    if (!form.guestName.trim() || !form.email.trim() || !form.city || !form.concierge) return;
     setSubmitting(true);
     try {
       await onSubmit(form);
@@ -2224,17 +2305,17 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
             </div>
           </div>
 
-          {/* Concierge dropdown */}
+          {/* Concierge dropdown — required */}
           <div>
             <label className="block text-xs font-medium text-neutral-600 mb-1">
-              Concierge asignado
+              Concierge asignado <span className="text-red-500">*</span>
             </label>
             <select
               value={form.concierge}
               onChange={handleConciergeChange}
-              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+              className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900/10 ${!form.concierge ? "border-red-300 bg-red-50" : "border-neutral-300"}`}
             >
-              <option value="">Sin asignar</option>
+              <option value="">— Seleccionar concierge —</option>
               {conciergeList.map((c) => (
                 <option key={c.name} value={c.name}>
                   {c.name}{c.city ? ` · ${c.city}` : ""}

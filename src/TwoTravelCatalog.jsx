@@ -1924,6 +1924,7 @@ export default function TwoTravelCatalog() {
 
   // Auto-switch currency when language changes (unless user manually set it)
   const [currencyManuallySet, setCurrencyManuallySet] = useState(false);
+  const [kickoffCity, setKickoffCity] = useState("");
   useEffect(() => {
     if (!currencyManuallySet) setCurrency(lang === "es" ? "COP" : "USD");
   }, [lang]);
@@ -2545,9 +2546,21 @@ const vibeLabel = useMemo(() => {
       return pts;
     };
 
+    const isMexicanCity = /cdmx|ciudad de mexico|mexico city|guadalajara|monterrey|oaxaca|puebla/.test(kickoffCity);
+
     // Scored picks (max 6)
     const scored = services
-      .map((s) => ({ s, pts: score(s) }))
+      .map((s) => {
+        let pts = score(s);
+        const nm = (s.name || "").toLowerCase();
+        // Agua de León only for Mexican clients
+        if (/agua.?de.?le[oó]n/.test(nm) && !isMexicanCity) pts = -99;
+        // Preferred picks: always boost Salon Tropical for all clients
+        if (/sal[oó]n.?tropical|salon tropical/.test(nm)) pts += 8;
+        // Carmen: great pick unless client is on a low budget
+        if (/\bcarmen\b/.test(nm) && quiz.budget !== "low") pts += 6;
+        return { s, pts };
+      })
       .filter((x) => x.pts > 0)
       .sort((a, b) => b.pts - a.pts)
       .slice(0, 6)
@@ -2560,7 +2573,7 @@ const vibeLabel = useMemo(() => {
       .slice(0, 2);
 
     return [...scored, ...transportPicks];
-  }, [quiz, services]);
+  }, [quiz, services, kickoffCity]);
 
 
 const selectedServiceCategory = selectedService
@@ -2656,8 +2669,9 @@ if (ko.arrivalDate) setArrivalDate(String(ko.arrivalDate).trim());
 if (ko.departureDate) setDepartureDate(String(ko.departureDate).trim());
 
       // Auto-currency based on kickoff city
+      const koCity = String(ko.city || "").trim().toLowerCase();
+      setKickoffCity(koCity);
       if (!currencyManuallySet) {
-        const koCity = String(ko.city || "").trim().toLowerCase();
         if (koCity === "tulum") setCurrency("USD");
         else if (koCity === "cdmx" || koCity === "mexico" || koCity === "ciudad de mexico") setCurrency("MXN");
         else if (koCity === "cartagena") setCurrency("COP");
@@ -2790,7 +2804,7 @@ console.log("Kickoff actualizado:", idToUse);
 
 setShowKickoff(false);
 setKickoffSent(true);
-setStep(isCatalogMode ? "catalog" : "quiz");
+setStep("catalog");
 setCart([]);
 
 
@@ -3319,7 +3333,9 @@ setCart([]);
             </div>
 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {recommendedServices.map((s) => (
+              {recommendedServices.map((s) => {
+  const isInCart = cart.some((c) => c.id === s.id);
+  return (
   <div
     key={`rec-${s.id}`}
     className="group border rounded-2xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer bg-white"
@@ -3336,13 +3352,27 @@ setCart([]);
   onError={e => driveOnError(e, s.category)}
 />
 
-      {/* ✅ BADGE */}
+      {/* Badge */}
       <div className="absolute top-2 left-2">
         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/90 border border-neutral-200">
           <span className="w-1.5 h-1.5 rounded-full bg-neutral-900" />
           {lang === "es" ? "Concierge pick" : "Concierge pick"}
         </span>
       </div>
+
+      {/* Heart button */}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); if (!isInCart) addToCart(s); }}
+        title={isInCart ? (lang === "es" ? "Ya en favoritos" : "Already in favorites") : (lang === "es" ? "Agregar a favoritos" : "Add to favorites")}
+        className={`absolute bottom-2 right-2 w-9 h-9 rounded-full flex items-center justify-center shadow-md border-2 transition-all ${
+          isInCart
+            ? "bg-rose-500 text-white border-rose-500 scale-110"
+            : "bg-white/90 text-neutral-400 border-white hover:border-rose-400 hover:text-rose-400"
+        }`}
+      >
+        <Heart className={`w-4 h-4 ${isInCart ? "fill-current" : ""}`} />
+      </button>
     </div>
 
     <div className="p-3">
@@ -3352,7 +3382,8 @@ setCart([]);
       </p>
     </div>
   </div>
-))}
+  );
+})}
 
             </div>
           </div>
@@ -3396,7 +3427,7 @@ setCart([]);
                   >
                     <div className="relative h-48">
                       <img src={safeImg(s.image, serviceCategory)} alt={s.name} className="w-full h-full object-cover"/>
-                      <button onClick={(e)=>{e.stopPropagation();if(!isInCart)addToCart(s);}} className={`absolute bottom-2 right-2 w-9 h-9 rounded-full flex items-center justify-center shadow-md border transition-colors ${isInCart?"bg-neutral-900 text-white border-neutral-900":"bg-white/90 text-neutral-600 border-white hover:bg-neutral-100"}`}>
+                      <button onClick={(e)=>{e.stopPropagation();if(!isInCart)addToCart(s);}} className={`absolute bottom-2 right-2 w-9 h-9 rounded-full flex items-center justify-center shadow-md border-2 transition-all ${isInCart?"bg-rose-500 text-white border-rose-500 scale-110":"bg-white/90 text-neutral-400 border-white hover:border-rose-400 hover:text-rose-400"}`}>
                         <Heart className={`w-4 h-4 ${isInCart?"fill-current":""}`}/>
                       </button>
                     </div>
@@ -3473,11 +3504,11 @@ setCart([]);
           title={isInCart ? (lang === "es" ? "Ya en favoritos" : "Already in favorites") : (lang === "es" ? "Agregar a favoritos" : "Add to favorites")}
           className={`absolute bottom-2 right-2 w-10 h-10 rounded-full flex items-center justify-center shadow-md transition-all border-2 ${
             isInCart
-              ? "bg-rose-600 text-white border-rose-600 scale-110"
-              : "bg-rose-500 text-white border-rose-500 hover:bg-rose-700 hover:border-rose-700 hover:scale-110"
+              ? "bg-rose-500 text-white border-rose-500 scale-110"
+              : "bg-white/90 text-neutral-400 border-white hover:border-rose-400 hover:text-rose-400"
           }`}
         >
-          <Heart className="w-5 h-5 fill-current" />
+          <Heart className={`w-5 h-5 ${isInCart ? "fill-current" : ""}`} />
         </button>
       </div>
 
@@ -3553,8 +3584,16 @@ setCart([]);
 
       {/* Modal detalle servicio */}
       {selectedService && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full overflow-hidden">
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedService(null)}
+          onKeyDown={(e) => { if (e.key === "Escape") setSelectedService(null); }}
+          tabIndex={-1}
+        >
+          <div
+            className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="relative">
               <div className="relative">
                 <img
