@@ -522,26 +522,40 @@ const handleSubmit = async (e) => {
             subtitle={t.tripDetailsSubtitle}
           >
             <div className="grid gap-6 md:grid-cols-3">
+              {/* Destination — read-only chip when pre-filled from link */}
               <div className={errors.destination ? "field-error" : ""}>
                 <Label>{t.destination}{errors.destination && <span className="ml-2 text-red-500 text-xs font-normal">({lang === "es" ? "requerido" : "required"})</span>}</Label>
-                <SelectDropdown
-                  value={form.destination}
-                  onChange={(v) => { updateField("destination", v); setErrors(p => ({...p, destination: false})); }}
-                  options={t.options.destinations}
-                  placeholder={t.destination}
-                  hasError={!!errors.destination}
-                />
+                {preDestination ? (
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm font-medium text-stone-700">
+                    📍 {preDestination}
+                  </div>
+                ) : (
+                  <SelectDropdown
+                    value={form.destination}
+                    onChange={(v) => { updateField("destination", v); setErrors(p => ({...p, destination: false})); }}
+                    options={t.options.destinations}
+                    placeholder={t.destination}
+                    hasError={!!errors.destination}
+                  />
+                )}
               </div>
 
+              {/* Concierge — read-only chip when pre-filled from link */}
               <div className={errors.concierge ? "field-error" : ""}>
                 <Label>{t.concierge}{errors.concierge && <span className="ml-2 text-red-500 text-xs font-normal">({lang === "es" ? "requerido" : "required"})</span>}</Label>
-                <SelectDropdown
-                  value={form.concierge}
-                  onChange={(v) => { updateField("concierge", v); setErrors(p => ({...p, concierge: false})); }}
-                  options={t.options.concierges}
-                  placeholder={t.concierge}
-                  hasError={!!errors.concierge}
-                />
+                {preConcierge ? (
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm font-medium text-stone-700">
+                    👤 {preConcierge}
+                  </div>
+                ) : (
+                  <SelectDropdown
+                    value={form.concierge}
+                    onChange={(v) => { updateField("concierge", v); setErrors(p => ({...p, concierge: false})); }}
+                    options={t.options.concierges}
+                    placeholder={t.concierge}
+                    hasError={!!errors.concierge}
+                  />
+                )}
               </div>
 
               <div>
@@ -549,7 +563,7 @@ const handleSubmit = async (e) => {
                 <SelectDropdown
                   value={form.occasion}
                   onChange={(v) => updateField("occasion", v)}
-                lang={lang}
+                  lang={lang}
                   options={t.options.occasions}
                   placeholder={t.occasion}
                 />

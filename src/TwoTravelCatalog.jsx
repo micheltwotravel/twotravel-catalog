@@ -2909,8 +2909,14 @@ setCart([]);
       : "In 30 seconds, we'll understand your style and show concierge-curated recommendations."}
   </p>
 
-  <div className="text-xs text-neutral-500 flex items-center gap-2">
-    <span className="inline-block w-1.5 h-1.5 rounded-full bg-neutral-400" />
+  <p className="text-sm text-neutral-700 font-medium">
+    {lang === "es"
+      ? "Elige cómo te sientes más identificado — solo toma 30 segundos."
+      : "Pick how you feel most like — takes just 30 seconds."}
+  </p>
+
+  <div className="text-xs text-neutral-400 flex items-center gap-2">
+    <span className="inline-block w-1.5 h-1.5 rounded-full bg-neutral-300" />
     <span>
       {lang === "es"
         ? "No vendemos tus datos. Esto solo se usa para personalizar tu catálogo."
@@ -2932,7 +2938,7 @@ setCart([]);
             <div className="grid md:grid-cols-3 gap-3 text-sm">
               {/* Vibe — multi-select chips (pick one or more) */}
               <div className="space-y-1 md:col-span-3">
-                <label className="text-[11px] text-neutral-600">
+                <label className="text-sm font-medium text-neutral-700">
                   {lang === "es" ? "¿Cuál es tu vibe? (elige uno o más)" : "What's your vibe? (pick one or more)"}
                 </label>
                 <div className="flex flex-wrap gap-2 pt-1">
@@ -3020,7 +3026,7 @@ setCart([]);
             </div>
 
             <div className="space-y-2">
-              <p className="text-[11px] text-neutral-600">
+              <p className="text-sm font-medium text-neutral-700">
                 {lang === "es" ? "Cocinas favoritas (opcional)" : "Favorite cuisines (optional)"}
               </p>
               <div className="flex flex-wrap gap-2">
