@@ -342,9 +342,6 @@ export async function fetchKickoffsFromSheet() {
 
   return data.map((k) => ({
     ...k,
-    email: String(
-      k?.email ?? k?.guestEmail ?? k?.Email ?? k?.GuestEmail ?? ""
-    ).trim(),
     guestContact: String(
       k?.guestContact ?? k?.GuestContact ?? k?.guest_contact ??
       k?.contact ?? k?.Contact ?? k?.contacto ?? k?.Contacto ?? ""
@@ -407,25 +404,5 @@ export async function updateKickoffInSheet(id, updates) {
  */
 export async function deleteKickoff(id) {
   const json = await postToKickoffAPI({ action: "deleteKickoff", id });
-  return json.ok === true;
-}
-
-/* ============================================================
-   3) SOPORTE – Apps Script (misma URL que kickoffs)
-   ============================================================ */
-
-export async function fetchSoporteCases() {
-  const json = await postToKickoffAPI({ action: "listSoporte" });
-  return Array.isArray(json.data) ? json.data : [];
-}
-
-export async function createSoporteCase(payload) {
-  const json = await postToKickoffAPI({ action: "soporte", payload });
-  if (!json.ok) throw new Error(json.error || "Error creando caso de soporte");
-  return json.data;
-}
-
-export async function updateSoporteCase(id, updates) {
-  const json = await postToKickoffAPI({ action: "updateSoporte", payload: { id, ...updates } });
   return json.ok === true;
 }

@@ -23,6 +23,217 @@ import {
 
 
 /* =========================================
+   Slack billing — PDF upload
+   ========================================= */
+const SLACK_BOT_TOKEN = import.meta.env.VITE_SLACK_BOT_TOKEN || "";
+const SLACK_CHANNEL_ID = import.meta.env.VITE_SLACK_CHANNEL_ID || "C094NE421NV";
+const BILLING_GAS_URL = "https://script.google.com/macros/s/AKfycbwZJudfRGEZm9hx_WiyOif4Nu3RL9NecJTP7gIrFqyHukU146-sdaLqAafZz0gdR7KVvw/exec";
+
+// Categories that NEVER get a QB code (restaurants, bars, nightlife, beach clubs)
+const NO_QB = new Set(["restaurants","bars","nightlife","beach-clubs","beach clubs","beachclubs"]);
+// Categories where price × pax (tours, services, chef)
+const PAX_MULTIPLIES = new Set(["tours","tour","services","service","chef","private chef","chef privado"]);
+
+async function sendBillingPdfToSlack(kickoff, currency = "USD") {
+  const { jsPDF } = await import("jspdf");
+
+  const cartRaw = kickoff.cart;
+  const cart = Array.isArray(cartRaw) ? cartRaw
+    : (typeof cartRaw === "string" && cartRaw.trim().startsWith("["))
+      ? (() => { try { return JSON.parse(cartRaw); } catch { return []; } })()
+      : [];
+
+  const fmtAmt = (n) => currency === "COP"
+    ? `$${Number(n).toLocaleString("es-CO",{maximumFractionDigits:0})} COP`
+    : `$${Number(n).toLocaleString("en-US",{maximumFractionDigits:0})} USD`;
+
+  const dayMap = new Map();
+  cart.forEach(it => {
+    const day = String(it.dayLabel || it.day || "Itinerario").trim();
+    if (!dayMap.has(day)) dayMap.set(day, []);
+    dayMap.get(day).push(it);
+  });
+
+  const fmtDate = (v) => {
+    if (!v) return "—";
+    try { return new Date(v).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }); }
+    catch { return String(v); }
+  };
+
+  const doc  = new jsPDF({ unit: "pt", format: "letter" });
+  const PW = 612, PH = 792, ML = 50, MR = PW - 50, TW = MR - ML;
+  let y = 0;
+  const newPage = () => { doc.addPage(); y = 50; };
+  const checkY  = (need = 30) => { if (y + need > PH - 50) newPage(); };
+  const txt = (t, x, size = 10, bold = false, color = [30,30,30]) => {
+    doc.setFontSize(size); doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setTextColor(...color); doc.text(String(t ?? ""), x, y);
+  };
+  const ln = (n = 14) => { y += n; };
+
+  // Portada
+  doc.setFillColor(15, 15, 15); doc.rect(0, 0, PW, 80, "F");
+  doc.setFontSize(20); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
+  doc.text("TWO TRAVEL", ML, 38);
+  doc.setFontSize(10); doc.setFont("helvetica","normal");
+  doc.text("Concierge Itinerary", ML, 56);
+  doc.setFontSize(9); doc.setTextColor(180,180,180);
+  doc.text(new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}), MR, 56, { align:"right" });
+
+  y = 110;
+  doc.setFontSize(16); doc.setFont("helvetica","bold"); doc.setTextColor(15,15,15);
+  doc.text(kickoff.guestName || "—", ML, y); ln(22);
+  doc.setFontSize(11); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
+  doc.text(kickoff.tripName || "", ML, y); ln(28);
+
+  const infoRows = [
+    ["Arrival",   fmtDate(kickoff.arrivalDate)],
+    ["Departure", fmtDate(kickoff.departureDate)],
+    ["Email",     kickoff.email || kickoff.guestEmail || "—"],
+    ["WhatsApp",  kickoff.guestContact || "—"],
+    ["Concierge", kickoff.assignedConciergeName || kickoff.assignedConcierge || "—"],
+  ];
+  infoRows.forEach(([label, val]) => {
+    doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(120,120,120);
+    doc.text(label.toUpperCase(), ML, y);
+    doc.setFont("helvetica","normal"); doc.setTextColor(30,30,30);
+    doc.text(String(val), ML + 90, y); ln(16);
+  });
+
+  // Billing header block
+  y += 10;
+  doc.setDrawColor(200,200,200); doc.line(ML, y, MR, y); y += 14;
+  doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(150,150,150);
+  doc.text("BILLING DATA — QUICKBOOKS", ML, y); ln(14);
+  doc.setFont("helvetica","normal"); doc.setTextColor(30,30,30); doc.setFontSize(9);
+  const cleanB = (v) => String(v || "").replace(/[\[\]]/g,"");
+  const fmtIso = (v) => { const s=String(v||"").trim(); if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s; try{return new Date(s).toISOString().slice(0,10);}catch{return s;} };
+  [
+    `[1A][${cleanB(kickoff.guestName)}]`,
+    `[2A][${cleanB(kickoff.email||kickoff.guestEmail||kickoff.guestContact||"")}]`,
+    `[3A][${fmtIso(kickoff.arrivalDate)}]`,
+    `[4A][${fmtIso(kickoff.departureDate)}]`,
+    `[CIUDAD][${cleanB(kickoff.city||"")}]`,
+  ].forEach(line => { doc.text(line, ML, y); ln(13); });
+
+  // Servicios por día
+  y += 10;
+  doc.setDrawColor(200,200,200); doc.line(ML, y, MR, y); y += 16;
+  let grandTotal = 0;
+
+  dayMap.forEach((items, dayLabel) => {
+    checkY(40);
+    doc.setFillColor(240,240,240); doc.rect(ML, y - 12, TW, 18, "F");
+    doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(30,30,30);
+    doc.text(dayLabel, ML + 4, y); ln(22);
+
+    items.forEach(it => {
+      const cat    = (it.category || "").toLowerCase();
+      const isNoQb = NO_QB.has(cat);
+      const qb     = isNoQb ? "" : (it.quickbooksCode || "");
+      const pax    = PAX_MULTIPLIES.has(cat) ? Math.max(1, Number(it.pax || 1)) : 1;
+      const unitP  = currency === "COP"
+        ? Number(it.priceOverride_cop ?? it.price_cop ?? 0)
+        : Number(it.priceUsd ?? 0);
+      const totalP = unitP * pax;
+      const name   = String(it.name_en || it.displayName || it.name || "").slice(0, 50);
+      const time   = it.timeLabel || it.time || "";
+      const rawPax = Number(it.pax || 0);
+      const paxNote = !PAX_MULTIPLIES.has(cat) && rawPax > 0 ? ` · ${rawPax} pax` : "";
+
+      checkY(qb ? 32 : 22);
+      doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(30,30,30);
+      doc.text((time ? `${time}  ` : "") + name + paxNote, ML + 8, y);
+      if (totalP > 0) {
+        grandTotal += totalP;
+        doc.setFont("helvetica","bold"); doc.setTextColor(30,120,60);
+        const priceLabel = pax > 1 ? `${pax} × ${fmtAmt(unitP)} = ${fmtAmt(totalP)}` : fmtAmt(totalP);
+        doc.text(priceLabel, MR, y, { align:"right" });
+        doc.setFont("helvetica","normal");
+      }
+      ln(14);
+      if (qb) {
+        doc.setFontSize(8); doc.setTextColor(80,80,160);
+        doc.text(`[${qb}]`, ML + 8, y);
+        doc.setTextColor(30,30,30); doc.setFontSize(9); ln(14);
+      }
+    });
+    ln(6);
+  });
+
+  // Total
+  checkY(40);
+  doc.setDrawColor(150,150,150); doc.line(ML, y, MR, y); y += 16;
+  doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(30,30,30);
+  doc.text("TOTAL", ML, y);
+  doc.setTextColor(30,120,60);
+  doc.text(fmtAmt(grandTotal), MR, y, { align:"right" });
+
+  // Footer en cada página
+  const pageCount = doc.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(180,180,180);
+    doc.text("Two Travel · twotravelvip.com", PW/2, PH - 20, { align:"center" });
+    doc.text(`${p} / ${pageCount}`, MR, PH - 20, { align:"right" });
+  }
+
+  // ── MACHINE-READABLE DATA PAGE ────────────────────────────
+  // Each doc.text() = one complete line → PyMuPDF reads full pattern [CODE][Name][Price]
+  doc.addPage();
+  const DY = 20;
+  let dy = 40;
+  const dln = () => { dy += DY; };
+  doc.setFontSize(7); doc.setFont("helvetica","bold"); doc.setTextColor(180,180,180);
+  doc.text("MACHINE DATA — DO NOT EDIT", ML, dy); dln();
+  doc.setFont("helvetica","normal"); doc.setTextColor(50,50,50);
+  const cleanTag = (v) => String(v || "").replace(/[\[\]]/g, "");
+  const fmtIso2 = (v) => { const s=String(v||"").trim(); if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s; try{return new Date(s).toISOString().slice(0,10);}catch{return s;} };
+  [
+    `[1A][${cleanTag(kickoff.guestName)}]`,
+    `[2A][${cleanTag(kickoff.email || kickoff.guestEmail || kickoff.guestContact || "")}]`,
+    `[3A][${fmtIso2(kickoff.arrivalDate)}]`,
+    `[4A][${fmtIso2(kickoff.departureDate)}]`,
+    `[CIUDAD][${cleanTag(kickoff.city || "")}]`,
+  ].forEach(line => { doc.text(line, ML, dy); dln(); });
+  dln();
+  // [QB_CODE][Name][TotalPrice] — one per line, only items with explicit QB code
+  cart.forEach(it => {
+    const c2  = (it.category || "").toLowerCase();
+    const qb2 = NO_QB.has(c2) ? "" : (it.quickbooksCode || "");
+    if (!qb2) return;
+    const pax2  = PAX_MULTIPLIES.has(c2) ? Math.max(1, Number(it.pax || 1)) : 1;
+    const unit2 = currency === "COP"
+      ? Number(it.priceOverride_cop ?? it.price_cop ?? 0)
+      : Number(it.priceUsd ?? 0);
+    const tot2  = unit2 * pax2;
+    const nm2   = String(it.name_en || it.displayName || it.name || "").replace(/[\[\]]/g,"");
+    doc.text(`[${qb2}][${nm2}][${Math.round(tot2)}]`, ML, dy); dln();
+  });
+
+  // Enviar a Slack vía GAS
+  const pdfBlob   = doc.output("blob");
+  const pdfSize   = pdfBlob.size;
+  const pdfBase64 = await new Promise(res => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(",")[1]);
+    r.readAsDataURL(pdfBlob);
+  });
+  const filename = `Itinerary_${(kickoff.guestName||"client").replace(/\s+/g,"-")}_${new Date().toISOString().slice(0,10)}.pdf`;
+  const resp = await fetch(BILLING_GAS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({
+      action: "sendBillingToSlack",
+      payload: { pdfBase64, pdfSize, filename, comment: "",
+        slackToken: SLACK_BOT_TOKEN, channelId: SLACK_CHANNEL_ID },
+    }),
+  });
+  const data = await resp.json();
+  if (!data.ok) throw new Error(data.error || "Error enviando a Slack");
+}
+
+/* =========================================
    Lista fija de concierges
    ========================================= */
 const CONCIERGE_LIST = [
@@ -286,6 +497,8 @@ const chosen = ct === 2 ? (t2 || base) : (t1 || base);
   priceUnit: service?.priceUnit || "",
   displayName: service?.name || "",
   priceOverride_cop: null,
+  quickbooksCode: service?.quickbooksCode || "",
+  priceUsd: service?.priceUsd ?? null,
   dayLabel: "",
   timeLabel: "",
   notes: "",
@@ -301,15 +514,16 @@ function mapManualToCartItem() {
     id: `manual_${Date.now()}`,
     sku: "",
     name: "Ítem manual",
-    category: "manual",
+    category: "services",
     subcategory: "",
     price_cop: 0,
     price_tier_1: 0,
     price_tier_2: 0,
     priceUnit: "",
-
     displayName: "",
     priceOverride_cop: null,
+    quickbooksCode: "",
+    priceUsd: null,
     dayLabel: "",
     timeLabel: "",
     notes: "",
@@ -409,6 +623,27 @@ function ActivityRow({ item, onUpdate, onRemove }) {
             className="text-[11px] text-neutral-300 hover:text-red-500 leading-none">
             ✕
           </button>
+        </div>
+      </div>
+      {/* QB billing row — always visible */}
+      <div className="flex gap-3 mt-1 items-center">
+        <input
+          value={item.quickbooksCode || ""}
+          onChange={e => onUpdate(item.id, { quickbooksCode: e.target.value.toUpperCase() })}
+          placeholder="QB code"
+          className="w-20 text-[10px] font-mono text-indigo-500 border-b border-dashed border-indigo-200 focus:border-indigo-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 uppercase"
+          title="Código QuickBooks (ej: CS010, SE022)"
+        />
+        <div className="flex items-center gap-0.5">
+          <span className="text-[9px] text-neutral-300">$</span>
+          <input
+            type="number"
+            value={item.priceUsd ?? ""}
+            onChange={e => onUpdate(item.id, { priceUsd: e.target.value === "" ? null : Number(e.target.value) })}
+            placeholder="USD"
+            className="w-16 text-[10px] text-right text-emerald-600 border-b border-dashed border-emerald-200 focus:border-emerald-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
+            title="Precio en USD para QuickBooks"
+          />
         </div>
       </div>
       {showNotes && (
@@ -1582,6 +1817,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [status, setStatus] = useState(kickoff?.status || "new");
   const [conciergeSummary] = useState(kickoff?.conciergeSummary || "");
   const [internalNotes, setInternalNotes] = useState(kickoff?.internalNotes || "");
+  const [billingCurrency, setBillingCurrency] = useState("USD");
+  const [billingSending, setBillingSending] = useState(false);
 
   // Read-only: dates submitted by client in questionnaire
   const clientArrival   = kickoff?.arrivalDate   || "";
@@ -1956,6 +2193,37 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             >
               📄 Ver PDF
             </a>
+          )}
+          {/* Billing — send to Slack */}
+          {kickoff?.cart?.length > 0 && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setBillingCurrency(c => c === "USD" ? "COP" : "USD")}
+                className="px-2 py-2 rounded-l-lg border border-r-0 border-indigo-300 text-[11px] font-mono text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
+                title="Cambiar moneda"
+              >
+                {billingCurrency}
+              </button>
+              <button
+                type="button"
+                disabled={billingSending}
+                onClick={async () => {
+                  setBillingSending(true);
+                  try {
+                    await sendBillingPdfToSlack(kickoff, billingCurrency);
+                    alert("✅ PDF enviado a Slack");
+                  } catch (e) {
+                    alert("❌ " + e.message);
+                  } finally {
+                    setBillingSending(false);
+                  }
+                }}
+                className="px-3 py-2 rounded-r-lg border border-indigo-300 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50"
+              >
+                {billingSending ? "Enviando…" : "💰 Facturar"}
+              </button>
+            </div>
           )}
         </div>
       </div>

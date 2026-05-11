@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import ConciergePanel from "./ConciergePanel";
 import TwoTravelCatalog from "./TwoTravelCatalog";
 import ItineraryPrintView from "./ItineraryPrintView";
-import { updateKickoffInSheet, fetchKickoffsFromSheet, fetchSoporteCases, createSoporteCase, updateSoporteCase } from "./sheetServices";
+import { updateKickoffInSheet, fetchKickoffsFromSheet } from "./sheetServices";
 
 const translations = {
   en: {
@@ -32,8 +32,8 @@ const translations = {
     overallExperienceLabel:
       "On a scale of 1 to 10, how was your overall experience?",
     overallExperienceHint:
-      "1 = Significant issues · 5–6 = Room for improvement · 10 = Flawless",
-    overallReasonLabel: "What stood out — good or bad?",
+      "1 = Something went wrong · 5–6 = Could be better · 10 = Perfect experience",
+    overallReasonLabel: "What made you give this score?",
     overallReasonPlaceholder: "Tell us what shaped the experience most.",
 
     oneThingTitle: 'The "One Thing"',
@@ -46,42 +46,51 @@ const translations = {
     optional: "Optional",
     moreFeedbackTitle:
       "If you have a bit more time, we'd love to hear more.",
-    moreFeedbackToggleShow: "Click here to share more.",
-    moreFeedbackToggleHide: "Click here to hide.",
+    moreFeedbackToggleShow: "Click here to share a little more.",
+    moreFeedbackToggleHide: "Click here to hide a little more.",
 
-    beforeArrivalTitle: "Before Your Arrival",
-    beforeArrivalSubtitle: "",
-    itinerary: "Itinerary",
-    itineraryHint:
-      "Did your itinerary feel clear, complete, and well-organized?",
-    communication: "Communication",
-    communicationHint:
-      "Was your concierge easy to communicate with before your trip?",
-    readiness: "Readiness",
-    readinessHint:
-      "Did you feel ready and taken care of before your arrival?",
+    beforeArrivalTitle: "Before You Arrived",
+    beforeArrivalSubtitle: "Planning & Logistics",
+    organization: "Organization",
+    organizationHint:
+      "How well were your plans and itinerary handled and communicated?",
+    availability: "Availability",
+    availabilityHint:
+      "Was your concierge responsive during the lead-up?",
+    preparedFactor: "Prepared Factor",
+    preparedFactorHint:
+      "Did you feel clear and prepared before arrival?",
 
-    teamPropertyTitle: "Your Stay",
-    teamPropertySubtitle: "",
+    teamPropertyTitle: "The Team & Property",
+    teamPropertySubtitle: "Accommodation & Stay",
     propertyRatingLabel:
       "How would you rate the property and accommodations?",
     propertyNotesLabel: "Anything else we should know about the property?",
     propertyNotesPlaceholder: "Share anything worth noting.",
 
+    venueTypeLabel: "Venue Type",
+    venueTypeHint: "What type of place did you stay in?",
     amenitiesLabel: "Amenities",
-    amenitiesPlaceholder: "What did you like? What was missing?",
+    amenitiesPlaceholder: "What did you like or miss?",
 
-    duringStayTitle: "During Your Visit",
+    cancellationPolicyLabel: "Cancellation Policy",
+    cancellationPolicyHint: "Was it clear and easy to understand?",
+    checkInExperienceLabel: "Check-in Experience",
+    checkInExperienceHint: "How smooth was your arrival?",
+    checkOutExperienceLabel: "Check-out Experience",
+    checkOutExperienceHint: "How smooth was your departure?",
+
+    duringStayTitle: "During Your Stay",
     duringStaySubtitle: "Execution & Service",
-    responsiveness: "Responsiveness",
-    responsivenessHint:
-      "When you needed something, how quickly did we respond?",
+    speed: "Speed",
+    speedHint:
+      "How quick were the responses to your real-time requests?",
     problemSolving: "Problem Solving",
     problemSolvingHint:
-      "If anything came up during your trip, how well did we handle it?",
-    personalTouch: "Personal Touch",
-    personalTouchHint:
-      "How tailored did the experiences feel to your group's preferences?",
+      "If any issues popped up, how fast were they handled?",
+    service: "The Service",
+    serviceHint:
+      "How personalized did the experience feel to your group?",
     stayNotesPlaceholder:
       "If you'd like, leave any extra notes here.",
 
@@ -99,14 +108,14 @@ const translations = {
       "Your notes help us refine every detail of the experience.",
 
     options: {
-      destinations: ["Cartagena", "CDMX", "Medellín", "Tulum"],
-      concierges: ["Aileen", "Alia", "Caro", "Dani", "Giulia", "Nataly"],
+      destinations: ["CDMX", "Tulum", "Cartagena", "Medellín"],
+      concierges: ["Nataly", "Caro", "Alia", "Dani", "Aileen", "Giulia"],
       occasions: [
-        "Anniversary",
-        "Bachelor/Bachelorette",
-        "Birthday",
         "Family",
         "Friends Trip",
+        "Birthday",
+        "Anniversary",
+        "Bachelor/Bachelorette",
         "Just because!",
       ],
       venueTypes: ["Villa", "Hotel", "Yacht", "Apartment", "Other"],
@@ -141,8 +150,8 @@ const translations = {
     overallExperienceLabel:
       "En una escala del 1 al 10, ¿cómo fue tu experiencia general?",
     overallExperienceHint:
-      "1 = Problemas significativos · 5–6 = Hay margen de mejora · 10 = Impecable",
-    overallReasonLabel: "¿Qué destacó — bueno o malo?",
+      "1 = Algo salió mal · 5–6 = Podría ser mejor · 10 = Experiencia perfecta",
+    overallReasonLabel: "¿Qué te hizo dar esta calificación?",
     overallReasonPlaceholder:
       "Cuéntanos qué fue lo que más influyó en tu experiencia.",
 
@@ -156,43 +165,52 @@ const translations = {
     optional: "Opcional",
     moreFeedbackTitle:
       "Si tienes un poco más de tiempo, nos encantaría saber más.",
-    moreFeedbackToggleShow: "Haz clic aquí para compartir más.",
-    moreFeedbackToggleHide: "Haz clic aquí para ocultar.",
+    moreFeedbackToggleShow: "Haz clic aquí para compartir un poco más.",
+    moreFeedbackToggleHide: "Haz clic aquí para ocultarlo.",
 
     beforeArrivalTitle: "Antes de llegar",
-    beforeArrivalSubtitle: "",
-    itinerary: "Itinerario",
-    itineraryHint:
-      "¿Tu itinerario se sintió claro, completo y bien organizado?",
-    communication: "Comunicación",
-    communicationHint:
-      "¿Fue fácil comunicarse con tu concierge antes del viaje?",
-    readiness: "Preparación",
-    readinessHint:
-      "¿Te sentiste listo/a y bien atendido/a antes de tu llegada?",
+    beforeArrivalSubtitle: "Planeación y logística",
+    organization: "Organización",
+    organizationHint:
+      "¿Qué tan bien se manejaron y comunicaron tus planes e itinerario?",
+    availability: "Disponibilidad",
+    availabilityHint:
+      "¿Tu concierge fue receptivo antes de tu llegada?",
+    preparedFactor: "Nivel de preparación",
+    preparedFactorHint:
+      "¿Te sentiste claro/a y preparado/a antes de llegar?",
 
-    teamPropertyTitle: "Tu estadía",
-    teamPropertySubtitle: "",
+    teamPropertyTitle: "El equipo y la propiedad",
+    teamPropertySubtitle: "Alojamiento y estadía",
     propertyRatingLabel:
       "¿Cómo calificarías la propiedad y el alojamiento?",
     propertyNotesLabel:
       "¿Hay algo más que debamos saber sobre la propiedad?",
     propertyNotesPlaceholder: "Comparte cualquier detalle importante.",
 
+    venueTypeLabel: "Tipo de venue",
+    venueTypeHint: "¿En qué tipo de lugar te hospedaste?",
     amenitiesLabel: "Amenidades",
-    amenitiesPlaceholder: "¿Qué te gustó? ¿Qué hizo falta?",
+    amenitiesPlaceholder: "¿Qué te gustó o qué hizo falta?",
 
-    duringStayTitle: "Durante tu visita",
+    cancellationPolicyLabel: "Política de cancelación",
+    cancellationPolicyHint: "¿Fue clara y fácil de entender?",
+    checkInExperienceLabel: "Experiencia de check-in",
+    checkInExperienceHint: "¿Qué tan fluida fue tu llegada?",
+    checkOutExperienceLabel: "Experiencia de check-out",
+    checkOutExperienceHint: "¿Qué tan fluida fue tu salida?",
+
+    duringStayTitle: "Durante tu estadía",
     duringStaySubtitle: "Ejecución y servicio",
-    responsiveness: "Capacidad de respuesta",
-    responsivenessHint:
-      "Cuando necesitabas algo, ¿qué tan rápido respondimos?",
+    speed: "Rapidez",
+    speedHint:
+      "¿Qué tan rápidas fueron las respuestas a tus solicitudes en tiempo real?",
     problemSolving: "Resolución de problemas",
     problemSolvingHint:
-      "Si surgió algo durante el viaje, ¿qué tan bien lo manejamos?",
-    personalTouch: "Toque personal",
-    personalTouchHint:
-      "¿Qué tan adaptadas se sintieron las experiencias a las preferencias de tu grupo?",
+      "Si surgió algún problema, ¿qué tan rápido se resolvió?",
+    service: "El servicio",
+    serviceHint:
+      "¿Qué tan personalizada se sintió la experiencia para tu grupo?",
     stayNotesPlaceholder:
       "Si quieres, puedes dejar aquí cualquier comentario adicional.",
 
@@ -210,14 +228,14 @@ const translations = {
       "Tus comentarios nos ayudan a mejorar cada detalle de la experiencia.",
 
     options: {
-      destinations: ["Cartagena", "CDMX", "Medellín", "Tulum"],
-      concierges: ["Aileen", "Alia", "Caro", "Dani", "Giulia", "Nataly"],
+      destinations: ["CDMX", "Tulum", "Cartagena", "Medellín"],
+      concierges: ["Nataly", "Caro", "Alia", "Dani", "Aileen", "Giulia"],
       occasions: [
-        "Aniversario",
+        "Family",
+        "Friends Trip",
         "Cumpleaños",
+        "Aniversario",
         "Despedida de soltero/a",
-        "Familia",
-        "Viaje con amigos",
         "¡Porque sí!",
       ],
       venueTypes: ["Villa", "Hotel", "Yate", "Apartamento", "Otro"],
@@ -226,86 +244,11 @@ const translations = {
   },
 };
 
-/* ── Shared form components — defined OUTSIDE FeedbackForm so React
-   doesn't remount them on every keystroke (would cause focus loss). ── */
-
-function FbSection({ eyebrow, title, subtitle, children }) {
-  return (
-    <section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
-      {eyebrow && <p className="text-[10px] uppercase tracking-[0.28em] text-stone-400">{eyebrow}</p>}
-      <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-800">{title}</h2>
-      {subtitle && <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">{subtitle}</p>}
-      <div className="mt-6 space-y-6">{children}</div>
-    </section>
-  );
-}
-
-function FbLabel({ children }) {
-  return <label className="block text-sm font-medium text-stone-700">{children}</label>;
-}
-
-function FbTextarea({ value, onChange, placeholder, rows = 5 }) {
-  return (
-    <textarea
-      value={value}
-      onChange={onChange}
-      rows={rows}
-      placeholder={placeholder}
-      className="mt-3 w-full rounded-[18px] border border-stone-200 bg-stone-50 px-4 py-4 text-sm text-stone-800 placeholder:text-stone-400 outline-none transition focus:border-stone-400 focus:bg-white resize-none"
-    />
-  );
-}
-
-const STAR_LABELS = { 1: "⭐ Poor", 2: "⭐⭐ Could be better", 3: "⭐⭐⭐ Good", 4: "⭐⭐⭐⭐ Great", 5: "⭐⭐⭐⭐⭐ Exceptional" };
-
-function FbScorePills({ value, onChange, min = 1, max = 10, allowNA = false, lang = "en" }) {
-  const values = Array.from({ length: max - min + 1 }, (_, i) => String(i + min));
-  const showStars = max === 5 && min === 1;
-  const minLabel = lang === "es" ? "Malo" : "Poor";
-  const maxLabel = max === 10
-    ? (lang === "es" ? "Impecable" : "Flawless")
-    : (lang === "es" ? "Excepcional" : "Exceptional");
-  return (
-    <div className="mt-3">
-      <div className="flex flex-wrap gap-2">
-        {allowNA && (
-          <button type="button" onClick={() => onChange("N/A")}
-            className={`rounded-full px-4 py-2 text-sm transition ${value === "N/A" ? "bg-stone-800 text-white" : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"}`}>
-            N/A
-          </button>
-        )}
-        {values.map(n => (
-          <button key={n} type="button" onClick={() => onChange(n)}
-            className={`h-11 min-w-11 rounded-full px-4 text-sm font-medium transition ${value === n ? "bg-stone-800 text-white" : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"}`}>
-            {n}
-          </button>
-        ))}
-      </div>
-      {showStars && value && value !== "N/A" && (
-        <p className="mt-2 text-xs text-stone-500">{STAR_LABELS[Number(value)]}</p>
-      )}
-    </div>
-  );
-}
-
-function FbSelect({ value, onChange, options, placeholder, hasError }) {
-  return (
-    <select value={value} onChange={e => onChange(e.target.value)}
-      className={`mt-3 w-full rounded-[18px] border px-4 py-3.5 text-sm text-stone-800 bg-white outline-none transition focus:border-stone-400 appearance-none cursor-pointer ${hasError ? "border-red-400 bg-red-50" : "border-stone-200"}`}>
-      <option value="" disabled>{placeholder || "— Select —"}</option>
-      {options.map(o => <option key={o} value={o}>{o}</option>)}
-    </select>
-  );
-}
-
 function FeedbackForm({ kickoffId }) {
   const params = new URLSearchParams(window.location.search);
   const guestName = params.get("guestName") || "";
   const tripName = params.get("tripName") || "";
   const langParam = params.get("lang");
-  // Pre-fill destination and concierge from URL if present
-  const preDestination = params.get("destination") || params.get("city") || "";
-  const preConcierge = params.get("concierge") || "";
 
   const initialLang =
     langParam === "es" || langParam === "en" ? langParam : "en";
@@ -316,11 +259,10 @@ function FeedbackForm({ kickoffId }) {
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showMoreFeedback, setShowMoreFeedback] = useState(false);
-  const [errors, setErrors] = useState({});
 
   const [form, setForm] = useState({
-  destination: preDestination,
-  concierge: preConcierge,
+  destination: "",
+  concierge: "",
   occasion: "",
 
   overallExperience: "",
@@ -328,22 +270,23 @@ function FeedbackForm({ kickoffId }) {
 
   oneThing: "",
 
-  // Section 04 – Before You Arrived
-  itinerary: "",
-  communication: "",
-  readiness: "",
+  organization: "",
+  availability: "",
+  preparedFactor: "",
 
-  // Section 05 – During Your Visit
-  responsiveness: "",
-  problemSolving: "",
-  personalTouch: "",
-  stayNotes: "",
-
-  // Section 06 – Your Stay
   propertyRating: "",
   propertyNotes: "",
-  amenities: "",
 
+  speed: "",
+  problemSolving: "",
+  service: "",
+  stayNotes: "",
+
+  venueType: "",
+  amenities: "",
+  cancellationPolicy: "",
+  checkInExperience: "",
+  checkOutExperience: "",
   bookAgain: "",
   recommend: "",
 });
@@ -358,20 +301,6 @@ function FeedbackForm({ kickoffId }) {
 const handleSubmit = async (e) => {
   e.preventDefault();
   if (saving) return;
-
-  // Required field validation
-  const newErrors = {};
-  if (!form.destination) newErrors.destination = true;
-  if (!form.concierge)   newErrors.concierge   = true;
-  if (!form.overallExperience) newErrors.overallExperience = true;
-  if (Object.keys(newErrors).length > 0) {
-    setErrors(newErrors);
-    // Scroll to first error
-    const first = document.querySelector(".field-error");
-    if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
-    return;
-  }
-  setErrors({});
 
   setSaving(true);
 
@@ -406,7 +335,7 @@ const handleSubmit = async (e) => {
 
     // Mark kickoff as feedback submitted (fire-and-forget)
     if (kickoffId) {
-      updateKickoffInSheet(kickoffId, { status: "feedback_submitted", feedbackAt: new Date().toISOString(), overallExperience: form.overallExperience || "" }).catch(
+      updateKickoffInSheet(kickoffId, { status: "feedback_submitted", feedbackAt: new Date().toISOString() }).catch(
         (e) => console.warn("Could not update kickoff status:", e)
       );
     }
@@ -418,12 +347,107 @@ const handleSubmit = async (e) => {
   }
 };
 
-  // Use module-level components (Fb*) — avoids remount on every keystroke
-  const Section       = FbSection;
-  const Label         = FbLabel;
-  const Textarea      = FbTextarea;
-  const ScorePills    = FbScorePills;
-  const SelectDropdown = FbSelect;
+  const Section = ({ eyebrow, title, subtitle, children }) => (
+    <section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
+      {eyebrow ? (
+        <p className="text-[10px] uppercase tracking-[0.28em] text-stone-400">
+          {eyebrow}
+        </p>
+      ) : null}
+
+      <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-800">
+        {title}
+      </h2>
+
+      {subtitle ? (
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">
+          {subtitle}
+        </p>
+      ) : null}
+
+      <div className="mt-6 space-y-6">{children}</div>
+    </section>
+  );
+
+  const Label = ({ children }) => (
+    <label className="block text-sm font-medium text-stone-700">
+      {children}
+    </label>
+  );
+
+  const Textarea = ({ value, onChange, placeholder, rows = 5 }) => (
+    <textarea
+      value={value}
+      onChange={onChange}
+      rows={rows}
+      placeholder={placeholder}
+      className="mt-3 w-full rounded-[18px] border border-stone-200 bg-stone-50 px-4 py-4 text-sm text-stone-800 placeholder:text-stone-400 outline-none transition focus:border-stone-400 focus:bg-white"
+    />
+  );
+
+  const ScorePills = ({
+    value,
+    onChange,
+    min = 1,
+    max = 10,
+    allowNA = false,
+  }) => {
+    const values = Array.from({ length: max - min + 1 }, (_, i) =>
+      String(i + min)
+    );
+
+    return (
+      <div className="mt-3 flex flex-wrap gap-2">
+        {allowNA && (
+          <button
+            type="button"
+            onClick={() => onChange("N/A")}
+            className={`rounded-full px-4 py-2 text-sm transition ${
+              value === "N/A"
+                ? "bg-stone-800 text-white"
+                : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+            }`}
+          >
+            N/A
+          </button>
+        )}
+
+        {values.map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            className={`h-11 min-w-11 rounded-full px-4 text-sm font-medium transition ${
+              value === n
+                ? "bg-stone-800 text-white"
+                : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+            }`}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const ChoiceCards = ({ value, onChange, options }) => (
+    <div className="mt-3 grid gap-3">
+      {options.map((option) => (
+        <button
+          key={option}
+          type="button"
+          onClick={() => onChange(option)}
+          className={`rounded-[18px] border px-4 py-4 text-left text-sm transition ${
+            value === option
+              ? "border-stone-800 bg-stone-100 text-stone-900"
+              : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50"
+          }`}
+        >
+          {option}
+        </button>
+      ))}
+    </div>
+  );
 
   if (submitted) {
     return (
@@ -522,36 +546,30 @@ const handleSubmit = async (e) => {
             subtitle={t.tripDetailsSubtitle}
           >
             <div className="grid gap-6 md:grid-cols-3">
-              <div className={errors.destination ? "field-error" : ""}>
-                <Label>{t.destination}{errors.destination && <span className="ml-2 text-red-500 text-xs font-normal">({lang === "es" ? "requerido" : "required"})</span>}</Label>
-                <SelectDropdown
+              <div>
+                <Label>{t.destination}</Label>
+                <ChoiceCards
                   value={form.destination}
-                  onChange={(v) => { updateField("destination", v); setErrors(p => ({...p, destination: false})); }}
+                  onChange={(v) => updateField("destination", v)}
                   options={t.options.destinations}
-                  placeholder={t.destination}
-                  hasError={!!errors.destination}
                 />
               </div>
 
-              <div className={errors.concierge ? "field-error" : ""}>
-                <Label>{t.concierge}{errors.concierge && <span className="ml-2 text-red-500 text-xs font-normal">({lang === "es" ? "requerido" : "required"})</span>}</Label>
-                <SelectDropdown
+              <div>
+                <Label>{t.concierge}</Label>
+                <ChoiceCards
                   value={form.concierge}
-                  onChange={(v) => { updateField("concierge", v); setErrors(p => ({...p, concierge: false})); }}
+                  onChange={(v) => updateField("concierge", v)}
                   options={t.options.concierges}
-                  placeholder={t.concierge}
-                  hasError={!!errors.concierge}
                 />
               </div>
 
               <div>
                 <Label>{t.occasion}</Label>
-                <SelectDropdown
+                <ChoiceCards
                   value={form.occasion}
                   onChange={(v) => updateField("occasion", v)}
-                lang={lang}
                   options={t.options.occasions}
-                  placeholder={t.occasion}
                 />
               </div>
             </div>
@@ -562,20 +580,14 @@ const handleSubmit = async (e) => {
             title={t.bigPictureTitle}
             subtitle={t.bigPictureSubtitle}
           >
-            <div className={errors.overallExperience ? "field-error" : ""}>
-              <Label>
-                {t.overallExperienceLabel}
-                <span className={`ml-2 text-xs font-normal ${errors.overallExperience ? "text-red-500" : "text-stone-400"}`}>
-                  ({lang === "es" ? "requerido" : "required"})
-                </span>
-              </Label>
-              <p className="mt-2 text-xs text-stone-500">
+            <div>
+              <Label>{t.overallExperienceLabel}</Label>
+              <p className="mt-2 text-xs text-stone-400">
                 {t.overallExperienceHint}
               </p>
               <ScorePills
                 value={form.overallExperience}
-                onChange={(v) => { updateField("overallExperience", v); setErrors(p => ({...p, overallExperience: false})); }}
-                lang={lang}
+                onChange={(v) => updateField("overallExperience", v)}
               />
             </div>
 
@@ -604,7 +616,7 @@ const handleSubmit = async (e) => {
             </div>
           </Section>
 
-          <section id="more-feedback-section" className="rounded-[28px] border border-stone-200 bg-white shadow-sm">
+          <section className="rounded-[28px] border border-stone-200 bg-white shadow-sm">
             <button
               type="button"
               onClick={() => setShowMoreFeedback((prev) => !prev)}
@@ -631,87 +643,154 @@ const handleSubmit = async (e) => {
 
             {showMoreFeedback && (
               <div className="space-y-6 border-t border-stone-200 px-6 pb-6 pt-6">
-
-                {/* 04 — Before You Arrived */}
                 <Section
                   eyebrow="04"
                   title={t.beforeArrivalTitle}
-                  subtitle={t.beforeArrivalSubtitle || undefined}
+                  subtitle={t.beforeArrivalSubtitle}
                 >
                   <div className="grid gap-6 lg:grid-cols-3">
                     <div>
-                      <Label>{t.itinerary}</Label>
-                      <p className="mt-2 text-xs text-stone-500">{t.itineraryHint}</p>
+                      <Label>{t.organization}</Label>
+                      <p className="mt-2 text-xs text-stone-400">
+                        {t.organizationHint}
+                      </p>
                       <ScorePills
-                        min={1} max={5}
-                        value={form.itinerary}
-                        onChange={(v) => updateField("itinerary", v)}
-                lang={lang}
+                        value={form.organization}
+                        onChange={(v) => updateField("organization", v)}
                       />
                     </div>
 
                     <div>
-                      <Label>{t.communication}</Label>
-                      <p className="mt-2 text-xs text-stone-500">{t.communicationHint}</p>
+                      <Label>{t.availability}</Label>
+                      <p className="mt-2 text-xs text-stone-400">
+                        {t.availabilityHint}
+                      </p>
                       <ScorePills
-                        min={1} max={5}
-                        value={form.communication}
-                        onChange={(v) => updateField("communication", v)}
-                lang={lang}
+                        value={form.availability}
+                        onChange={(v) => updateField("availability", v)}
                       />
                     </div>
 
                     <div>
-                      <Label>{t.readiness}</Label>
-                      <p className="mt-2 text-xs text-stone-500">{t.readinessHint}</p>
+                      <Label>{t.preparedFactor}</Label>
+                      <p className="mt-2 text-xs text-stone-400">
+                        {t.preparedFactorHint}
+                      </p>
                       <ScorePills
-                        min={1} max={5}
-                        value={form.readiness}
-                        onChange={(v) => updateField("readiness", v)}
-                lang={lang}
+                        value={form.preparedFactor}
+                        onChange={(v) => updateField("preparedFactor", v)}
                       />
                     </div>
                   </div>
                 </Section>
 
-                {/* 05 — During Your Visit */}
                 <Section
                   eyebrow="05"
+                  title={t.teamPropertyTitle}
+                  subtitle={t.teamPropertySubtitle}
+                >
+                  <div>
+                    <Label>{t.propertyRatingLabel}</Label>
+                    <ScorePills
+                      value={form.propertyRating}
+                      onChange={(v) => updateField("propertyRating", v)}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>{t.propertyNotesLabel}</Label>
+                    <Textarea
+                      value={form.propertyNotes}
+                      onChange={(e) => updateField("propertyNotes", e.target.value)}
+                      placeholder={t.propertyNotesPlaceholder}
+                    />
+                  </div>
+                  <div>
+  <Label>{t.venueTypeLabel}</Label>
+  <p className="mt-2 text-xs text-stone-400">{t.venueTypeHint}</p>
+  <ChoiceCards
+    value={form.venueType}
+    onChange={(v) => updateField("venueType", v)}
+    options={t.options.venueTypes}
+  />
+</div>
+
+<div>
+  <Label>{t.amenitiesLabel}</Label>
+  <Textarea
+    value={form.amenities}
+    onChange={(e) => updateField("amenities", e.target.value)}
+    placeholder={t.amenitiesPlaceholder}
+  />
+</div>
+
+<div className="grid gap-6 lg:grid-cols-3">
+  <div>
+    <Label>{t.cancellationPolicyLabel}</Label>
+    <p className="mt-2 text-xs text-stone-400">{t.cancellationPolicyHint}</p>
+    <ScorePills
+      value={form.cancellationPolicy}
+      onChange={(v) => updateField("cancellationPolicy", v)}
+    />
+  </div>
+
+  <div>
+    <Label>{t.checkInExperienceLabel}</Label>
+    <p className="mt-2 text-xs text-stone-400">{t.checkInExperienceHint}</p>
+    <ScorePills
+      value={form.checkInExperience}
+      onChange={(v) => updateField("checkInExperience", v)}
+    />
+  </div>
+
+  <div>
+    <Label>{t.checkOutExperienceLabel}</Label>
+    <p className="mt-2 text-xs text-stone-400">{t.checkOutExperienceHint}</p>
+    <ScorePills
+      value={form.checkOutExperience}
+      onChange={(v) => updateField("checkOutExperience", v)}
+    />
+  </div>
+</div>
+                </Section>
+
+                <Section
+                  eyebrow="06"
                   title={t.duringStayTitle}
-                  subtitle={t.duringStaySubtitle || undefined}
+                  subtitle={t.duringStaySubtitle}
                 >
                   <div className="grid gap-6 lg:grid-cols-3">
                     <div>
-                      <Label>{t.responsiveness}</Label>
-                      <p className="mt-2 text-xs text-stone-500">{t.responsivenessHint}</p>
+                      <Label>{t.speed}</Label>
+                      <p className="mt-2 text-xs text-stone-400">
+                        {t.speedHint}
+                      </p>
                       <ScorePills
-                        min={1} max={5}
-                        value={form.responsiveness}
-                        onChange={(v) => updateField("responsiveness", v)}
-                lang={lang}
+                        value={form.speed}
+                        onChange={(v) => updateField("speed", v)}
                       />
                     </div>
 
                     <div>
                       <Label>{t.problemSolving}</Label>
-                      <p className="mt-2 text-xs text-stone-500">{t.problemSolvingHint}</p>
+                      <p className="mt-2 text-xs text-stone-400">
+                        {t.problemSolvingHint}
+                      </p>
                       <ScorePills
-                        min={1} max={5}
                         allowNA
                         value={form.problemSolving}
                         onChange={(v) => updateField("problemSolving", v)}
-                lang={lang}
                       />
                     </div>
 
                     <div>
-                      <Label>{t.personalTouch}</Label>
-                      <p className="mt-2 text-xs text-stone-500">{t.personalTouchHint}</p>
+                      <Label>{t.service}</Label>
+                      <p className="mt-2 text-xs text-stone-400">
+                        {t.serviceHint}
+                      </p>
                       <ScorePills
-                        min={1} max={5}
-                        value={form.personalTouch}
-                        onChange={(v) => updateField("personalTouch", v)}
-                lang={lang}
+                        value={form.service}
+                        onChange={(v) => updateField("service", v)}
                       />
                     </div>
                   </div>
@@ -724,58 +803,28 @@ const handleSubmit = async (e) => {
                     />
                   </div>
                 </Section>
-
-                {/* 06 — Your Stay */}
-                <Section
-                  eyebrow="06"
-                  title={t.teamPropertyTitle}
-                  subtitle={t.teamPropertySubtitle || undefined}
-                >
-                  <div>
-                    <Label>{t.propertyRatingLabel}</Label>
-                    <ScorePills
-                      min={1} max={5}
-                      value={form.propertyRating}
-                      onChange={(v) => updateField("propertyRating", v)}
-                lang={lang}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>{t.amenitiesLabel}</Label>
-                    <Textarea
-                      value={form.amenities}
-                      onChange={(e) => updateField("amenities", e.target.value)}
-                      placeholder={t.amenitiesPlaceholder}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>{t.propertyNotesLabel}</Label>
-                    <Textarea
-                      value={form.propertyNotes}
-                      onChange={(e) => updateField("propertyNotes", e.target.value)}
-                      placeholder={t.propertyNotesPlaceholder}
-                    />
-                  </div>
-                </Section>
               </div>
             )}
           </section>
 
-          {/* TripAdvisor — after optional sections */}
-          <section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="text-[10px] uppercase tracking-[0.28em] text-stone-400">Review</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-800">{t.reviewTitle}</h2>
-            <p className="mt-2 text-sm text-stone-500">{t.reviewSubtitle}</p>
-            <a
-              href="https://www.tripadvisor.com/UserReviewEdit-g297476-d17750092-Two_Travel-Cartagena_Cartagena_District_Bolivar_Department.html"
-              target="_blank" rel="noreferrer"
-              className="mt-4 inline-block rounded-full bg-stone-800 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-            >
-              {t.reviewButton}
-            </a>
-          </section>
+<section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
+  <p className="text-[10px] uppercase tracking-[0.28em] text-stone-400">
+    Review
+  </p>
+  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-800">
+    {t.reviewTitle}
+  </h2>
+  <p className="mt-2 text-sm text-stone-500">{t.reviewSubtitle}</p>
+
+  <a
+    href="https://www.tripadvisor.com/UserReviewEdit-g297476-d17750092-Two_Travel-Cartagena_Cartagena_District_Bolivar_Department.html"
+    target="_blank"
+    rel="noreferrer"
+    className="mt-4 inline-block rounded-full bg-stone-800 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+  >
+    {t.reviewButton}
+  </a>
+</section>
 
           <div className="sticky bottom-4 z-20">
             <div className="rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm">
@@ -1391,442 +1440,14 @@ function FeedbackDashboard() {
     </div>
   );
 }
-/* ════════════════════════════════════════════════════════
-   SOPORTE TÉCNICO
-════════════════════════════════════════════════════════ */
-const SOPORTE_API =
-  "https://script.google.com/macros/s/AKfycbyS-in9MQit54ZVujzwkKBwppWpr3d4FZx0LrR9jg2Z4p7FJ80y3au9rzcbEOVmLjHy/exec";
-
-function SoportePage() {
-  const [form, setForm]         = useState({ nombre: "", tipo: "", prioridad: "", titulo: "", descripcion: "" });
-  const [saving, setSaving]     = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [error, setError]       = useState("");
-
-  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
-
-  const TIPOS = [
-    { id: "bug",        label: "🐛 Bug",              desc: "Algo no funciona" },
-    { id: "cambio",     label: "✏️ Modificación",     desc: "Cambiar algo existente" },
-    { id: "nueva",      label: "✨ Nueva función",     desc: "Agregar algo nuevo" },
-    { id: "pregunta",   label: "❓ Pregunta",          desc: "Duda o consulta" },
-    { id: "otro",       label: "📌 Otro",              desc: "" },
-  ];
-  const PRIORIDADES = [
-    { id: "alta",   label: "🔴 Alta",   desc: "Bloquea el trabajo" },
-    { id: "media",  label: "🟡 Media",  desc: "Molesta pero funciona" },
-    { id: "baja",   label: "🟢 Baja",   desc: "Cuando puedas" },
-  ];
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.tipo || !form.prioridad || !form.titulo.trim() || !form.descripcion.trim()) {
-      setError("Por favor llena todos los campos obligatorios.");
-      return;
-    }
-    setError("");
-    setSaving(true);
-    try {
-      await createSoporteCase({ ...form, timestamp: new Date().toISOString() });
-      setSubmitted(true);
-    } catch (err) {
-      setError("No se pudo guardar el caso. Verifica tu conexión e intenta de nuevo.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (submitted) return (
-    <div className="min-h-screen bg-stone-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-[28px] border border-stone-200 shadow-sm p-10 max-w-md w-full text-center">
-        <div className="mx-auto mb-5 h-14 w-14 rounded-full bg-emerald-600 flex items-center justify-center text-white text-2xl">✓</div>
-        <h2 className="text-2xl font-semibold text-stone-800 mb-2">Caso registrado</h2>
-        <p className="text-sm text-stone-500 mb-6">Tu caso fue guardado en el sistema. El equipo lo revisará pronto.</p>
-        <button onClick={() => setSubmitted(false)}
-          className="text-sm text-stone-500 underline underline-offset-2 hover:text-stone-800">
-          Crear otro caso
-        </button>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="min-h-screen bg-stone-50 text-stone-800 px-4 py-10">
-      <div className="mx-auto max-w-2xl space-y-6">
-
-        {/* Header */}
-        <div className="rounded-[28px] border border-stone-200 bg-white p-8 shadow-sm">
-          <p className="text-[10px] uppercase tracking-[0.32em] text-stone-400">Two Travel</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-stone-800">Soporte técnico</h1>
-          <p className="mt-2 text-sm text-stone-500 leading-6">
-            Reporta un bug, pide un cambio o sugiere algo nuevo. El equipo lo verá directamente en el panel de soporte.
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-
-          {/* Nombre */}
-          <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
-            <label className="block text-sm font-medium text-stone-700 mb-2">Tu nombre</label>
-            <input
-              value={form.nombre}
-              onChange={e => set("nombre", e.target.value)}
-              placeholder="¿Quién reporta esto?"
-              className="w-full rounded-[14px] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-800 outline-none focus:border-stone-400 focus:bg-white transition"
-            />
-          </div>
-
-          {/* Tipo */}
-          <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
-            <label className="block text-sm font-medium text-stone-700 mb-3">Tipo de caso <span className="text-red-400">*</span></label>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {TIPOS.map(t => (
-                <button key={t.id} type="button" onClick={() => set("tipo", t.id)}
-                  className={`rounded-[14px] border px-4 py-3 text-left text-sm transition ${
-                    form.tipo === t.id
-                      ? "border-stone-800 bg-stone-100 text-stone-900"
-                      : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
-                  }`}>
-                  <div className="font-medium">{t.label}</div>
-                  {t.desc && <div className="text-[11px] text-stone-400 mt-0.5">{t.desc}</div>}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Prioridad */}
-          <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
-            <label className="block text-sm font-medium text-stone-700 mb-3">Prioridad <span className="text-red-400">*</span></label>
-            <div className="grid grid-cols-3 gap-2">
-              {PRIORIDADES.map(p => (
-                <button key={p.id} type="button" onClick={() => set("prioridad", p.id)}
-                  className={`rounded-[14px] border px-4 py-3 text-left text-sm transition ${
-                    form.prioridad === p.id
-                      ? "border-stone-800 bg-stone-100 text-stone-900"
-                      : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
-                  }`}>
-                  <div className="font-medium">{p.label}</div>
-                  <div className="text-[11px] text-stone-400 mt-0.5">{p.desc}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Título + Descripción */}
-          <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-2">Título del caso <span className="text-red-400">*</span></label>
-              <input
-                value={form.titulo}
-                onChange={e => set("titulo", e.target.value)}
-                placeholder="Resume el problema en una línea"
-                className="w-full rounded-[14px] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-800 outline-none focus:border-stone-400 focus:bg-white transition"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-2">Descripción <span className="text-red-400">*</span></label>
-              <textarea
-                value={form.descripcion}
-                onChange={e => set("descripcion", e.target.value)}
-                rows={5}
-                placeholder="Explica qué pasó, en qué página, qué esperabas que pasara…"
-                className="w-full rounded-[14px] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-800 placeholder:text-stone-400 outline-none focus:border-stone-400 focus:bg-white transition resize-none"
-              />
-            </div>
-          </div>
-
-          {error && (
-            <p className="text-sm text-red-500 px-2">{error}</p>
-          )}
-
-          <button type="submit" disabled={saving}
-            className="w-full rounded-full bg-stone-800 py-3.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
-            {saving ? "Enviando…" : "Enviar caso"}
-          </button>
-
-        </form>
-      </div>
-    </div>
-  );
-}
-
-/* ════════════════════════════════════════════════════════
-   SOPORTE DASHBOARD
-════════════════════════════════════════════════════════ */
-const STATUS_COLORS = {
-  abierto:      "bg-red-100 text-red-700",
-  "en progreso":"bg-amber-100 text-amber-700",
-  cerrado:      "bg-emerald-100 text-emerald-700",
-};
-const PRIORITY_COLORS = {
-  alta:  "bg-red-100 text-red-700",
-  media: "bg-amber-100 text-amber-700",
-  baja:  "bg-emerald-100 text-emerald-700",
-};
-const TIPO_LABELS = {
-  bug:      "🐛 Bug",
-  cambio:   "✏️ Modificación",
-  nueva:    "✨ Nueva función",
-  pregunta: "❓ Pregunta",
-  otro:     "📌 Otro",
-};
-
-function SoporteDashboard() {
-  const [cases, setCases]         = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState("");
-  const [selected, setSelected]   = useState(null);
-  const [filterStatus, setFilter] = useState("todos");
-  const [updatingId, setUpdatingId] = useState(null);
-  const [notesById, setNotesById] = useState({});
-  const [savingNotesId, setSavingNotesId] = useState(null);
-
-  const load = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await fetchSoporteCases();
-      setCases(data);
-    } catch (e) {
-      setError("No se pudo cargar los casos. Verifica el Apps Script.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const updateStatus = async (caso, newStatus) => {
-    setUpdatingId(caso.id);
-    try {
-      await updateSoporteCase(caso.id, { status: newStatus });
-      setCases(prev => prev.map(c => c.id === caso.id ? { ...c, status: newStatus } : c));
-      if (selected?.id === caso.id) setSelected(s => ({ ...s, status: newStatus }));
-    } catch {}
-    setUpdatingId(null);
-  };
-
-  const updatePriority = async (caso, newPriority) => {
-    setUpdatingId(caso.id);
-    try {
-      await updateSoporteCase(caso.id, { prioridad: newPriority });
-      setCases(prev => prev.map(c => c.id === caso.id ? { ...c, prioridad: newPriority } : c));
-      if (selected?.id === caso.id) setSelected(s => ({ ...s, prioridad: newPriority }));
-    } catch {}
-    setUpdatingId(null);
-  };
-
-  const saveNotes = async (caso, notes) => {
-    setSavingNotesId(caso.id);
-    try {
-      await updateSoporteCase(caso.id, { notes });
-      setCases(prev => prev.map(c => c.id === caso.id ? { ...c, notes } : c));
-      if (selected?.id === caso.id) setSelected(s => ({ ...s, notes }));
-    } catch {}
-    setSavingNotesId(null);
-  };
-
-  const filtered = filterStatus === "todos"
-    ? cases
-    : cases.filter(c => (c.status || "abierto") === filterStatus);
-
-  const counts = {
-    todos:        cases.length,
-    abierto:      cases.filter(c => (c.status || "abierto") === "abierto").length,
-    "en progreso":cases.filter(c => (c.status || "abierto") === "en progreso").length,
-    cerrado:      cases.filter(c => (c.status || "abierto") === "cerrado").length,
-  };
-
-  return (
-    <div className="min-h-screen bg-stone-50">
-      {/* Header */}
-      <div className="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <a href="/?mode=concierge" className="text-stone-400 hover:text-stone-700 text-sm">← Panel</a>
-          <span className="text-stone-300">|</span>
-          <h1 className="text-base font-semibold text-stone-800">🛠 Soporte Técnico</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={load}
-            className="px-3 py-1.5 text-xs border border-stone-200 rounded-lg text-stone-500 hover:bg-stone-50 transition">
-            ↻ Actualizar
-          </button>
-          <a href="/?mode=soporte" target="_blank" rel="noreferrer"
-            className="px-3 py-1.5 text-xs bg-stone-800 text-white rounded-lg hover:opacity-90 transition font-medium">
-            + Nuevo caso
-          </a>
-        </div>
-      </div>
-
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        {/* Stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          {[
-            { key: "todos",         label: "Total",       icon: "📋", color: "border-stone-200 bg-white" },
-            { key: "abierto",       label: "Abiertos",    icon: "🔴", color: "border-red-200 bg-red-50" },
-            { key: "en progreso",   label: "En progreso", icon: "🟡", color: "border-amber-200 bg-amber-50" },
-            { key: "cerrado",       label: "Cerrados",    icon: "🟢", color: "border-emerald-200 bg-emerald-50" },
-          ].map(s => (
-            <button key={s.key} onClick={() => setFilter(s.key)}
-              className={`rounded-xl border p-4 text-left transition hover:opacity-80 ${s.color} ${filterStatus === s.key ? "ring-2 ring-stone-400" : ""}`}>
-              <div className="text-xl mb-1">{s.icon}</div>
-              <div className="text-2xl font-bold text-stone-800">{counts[s.key]}</div>
-              <div className="text-xs text-stone-500">{s.label}</div>
-            </button>
-          ))}
-        </div>
-
-        {loading && (
-          <div className="text-center py-16 text-stone-400 text-sm">Cargando casos…</div>
-        )}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-600 mb-4">
-            {error}
-            <button onClick={load} className="ml-3 underline">Reintentar</button>
-          </div>
-        )}
-
-        {!loading && !error && (
-          <div className="flex gap-4">
-            {/* Cases list */}
-            <div className="flex-1 min-w-0">
-              {filtered.length === 0 ? (
-                <div className="bg-white rounded-xl border border-stone-200 p-10 text-center text-stone-400 text-sm">
-                  No hay casos {filterStatus !== "todos" ? `con estado "${filterStatus}"` : ""}.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {filtered.map(c => {
-                    const status = c.status || "abierto";
-                    const isOpen = selected?.id === c.id;
-                    return (
-                      <div key={c.id}
-                        onClick={() => setSelected(isOpen ? null : c)}
-                        className={`bg-white rounded-xl border cursor-pointer transition hover:shadow-sm ${isOpen ? "border-stone-400 shadow-sm" : "border-stone-200"}`}>
-                        <div className="px-4 py-3 flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap mb-1">
-                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[status]}`}>
-                                {status.charAt(0).toUpperCase() + status.slice(1)}
-                              </span>
-                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${PRIORITY_COLORS[c.prioridad] || "bg-stone-100 text-stone-500"}`}>
-                                {c.prioridad ? c.prioridad.charAt(0).toUpperCase() + c.prioridad.slice(1) : "—"}
-                              </span>
-                              <span className="text-[10px] text-stone-400">
-                                {TIPO_LABELS[c.tipo] || c.tipo}
-                              </span>
-                            </div>
-                            <p className="text-sm font-medium text-stone-800 truncate">{c.titulo || "Sin título"}</p>
-                            <p className="text-xs text-stone-400 mt-0.5">
-                              {c.nombre || "Anónimo"} · {c.timestamp ? new Date(c.timestamp).toLocaleDateString("es-CO", { day:"2-digit", month:"short", year:"numeric" }) : "—"}
-                            </p>
-                          </div>
-                          <span className="text-stone-300 text-xs mt-1">{isOpen ? "▲" : "▼"}</span>
-                        </div>
-
-                        {/* Expanded detail */}
-                        {isOpen && (
-                          <div className="border-t border-stone-100 px-4 py-4 space-y-4" onClick={e => e.stopPropagation()}>
-
-                            {/* Description */}
-                            <div>
-                              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Descripción</p>
-                              <p className="text-sm text-stone-700 whitespace-pre-wrap">{c.descripcion || "Sin descripción."}</p>
-                            </div>
-
-                            {/* Contact info if available */}
-                            {(c.nombre || c.email || c.trip) && (
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                                {c.nombre && <div><span className="text-stone-400">Cliente: </span><span className="text-stone-700 font-medium">{c.nombre}</span></div>}
-                                {c.email  && <div><span className="text-stone-400">Email: </span><span className="text-stone-700">{c.email}</span></div>}
-                                {c.trip   && <div><span className="text-stone-400">Trip: </span><span className="text-stone-700">{c.trip}</span></div>}
-                              </div>
-                            )}
-
-                            {/* Status */}
-                            <div>
-                              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1.5">Estado</p>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {["abierto","en progreso","cerrado"].map(s => (
-                                  <button key={s} disabled={updatingId === c.id || status === s}
-                                    onClick={() => updateStatus(c, s)}
-                                    className={`px-3 py-1 text-xs rounded-lg font-medium transition disabled:opacity-40 ${status === s ? STATUS_COLORS[s] + " ring-2 ring-offset-1 ring-current" : "bg-stone-100 text-stone-500 hover:bg-stone-200"}`}>
-                                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Priority */}
-                            <div>
-                              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1.5">Prioridad</p>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {["alta","media","baja"].map(p => (
-                                  <button key={p} disabled={updatingId === c.id || c.prioridad === p}
-                                    onClick={() => updatePriority(c, p)}
-                                    className={`px-3 py-1 text-xs rounded-lg font-medium transition disabled:opacity-40 ${c.prioridad === p ? (PRIORITY_COLORS[p] || "bg-stone-100 text-stone-500") + " ring-2 ring-offset-1 ring-current" : "bg-stone-100 text-stone-500 hover:bg-stone-200"}`}>
-                                    {p.charAt(0).toUpperCase() + p.slice(1)}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Internal notes */}
-                            <div>
-                              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1.5">Notas internas</p>
-                              <textarea
-                                rows={3}
-                                defaultValue={c.notes || ""}
-                                placeholder="Agrega notas internas para el equipo…"
-                                onChange={e => setNotesById(prev => ({ ...prev, [c.id]: e.target.value }))}
-                                className="w-full text-sm border border-stone-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-stone-300 text-stone-700 placeholder:text-stone-300"
-                              />
-                              <div className="flex justify-end mt-1.5">
-                                <button
-                                  disabled={savingNotesId === c.id}
-                                  onClick={() => saveNotes(c, notesById[c.id] ?? c.notes ?? "")}
-                                  className="px-3 py-1 text-xs bg-stone-800 text-white rounded-lg hover:opacity-90 transition disabled:opacity-40 font-medium">
-                                  {savingNotesId === c.id ? "Guardando…" : "Guardar notas"}
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Resolve shortcut */}
-                            {status !== "cerrado" && (
-                              <div className="pt-1 border-t border-stone-100">
-                                <button
-                                  disabled={updatingId === c.id}
-                                  onClick={() => updateStatus(c, "cerrado")}
-                                  className="w-full py-2 text-sm font-medium bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition disabled:opacity-40">
-                                  ✓ Marcar como resuelto
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function App() {
   const params = new URLSearchParams(window.location.search);
   const mode = params.get("mode");
 
-  if (mode === "dashboard")          return <FeedbackDashboard />;
-  if (mode === "concierge")          return <ConciergePanel />;
-  if (mode === "soporte")            return <SoportePage />;
-  if (mode === "soporte-dashboard")  return <SoporteDashboard />;
+  if (mode === "dashboard") return <FeedbackDashboard />;
+  if (mode === "concierge") return <ConciergePanel />;
   if (mode === "catalog" || mode === "questionnaire") return <TwoTravelCatalog />;
-  if (mode === "itinerary")          return <ItineraryPrintView />;
+  if (mode === "itinerary") return <ItineraryPrintView />;
 
   return <FeedbackForm kickoffId={params.get("kickoffId") || ""} />;
 }
