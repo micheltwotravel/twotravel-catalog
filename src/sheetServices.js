@@ -291,7 +291,7 @@ export async function fetchKickoffById(kickoffId) {
    ============================================================ */
 
 const KICKOFF_API_URL =
-  "https://script.google.com/macros/s/AKfycbyS-in9MQit54ZVujzwkKBwppWpr3d4FZx0LrR9jg2Z4p7FJ80y3au9rzcbEOVmLjHy/exec";
+  "https://script.google.com/macros/s/AKfycbwZJudfRGEZm9hx_WiyOif4Nu3RL9NecJTP7gIrFqyHukU146-sdaLqAafZz0gdR7KVvw/exec";
 
 
 

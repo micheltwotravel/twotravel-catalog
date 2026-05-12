@@ -38,6 +38,14 @@ function Editable({ value, tag: Tag = "span", className = "", editMode, style })
 const cl  = (v) => String(v ?? "").trim();
 const num = (v) => { const n = Number(cl(v).replace(/[^0-9.-]/g, "")); return isNaN(n) ? 0 : n; };
 
+/* Default pre-trip content shown when concierge hasn't filled the block yet */
+const DEFAULT_PRETRIP_PDF = `Pre Check-in Form: https://forms.gle/REPLACE_WITH_FORM_LINK
+Drink Calculator: https://two.travel/drinks
+WhatsApp Concierge: https://wa.me/573001234567
+
+Promo!
+Share your experience with Two Travel on Instagram @twotravelconcierge or TikTok @twotravelvip and receive a discount on select services. Tag must be posted during your stay. One tag per person required.`;
+
 /** Ensures a date string is YYYY-MM-DD for QB billing fields */
 function formatIsoDate(v) {
   const s = cl(v);
@@ -61,9 +69,19 @@ function fmtPrice(v) {
     : `$${n.toLocaleString("en-US")} USD`;
 }
 
-function matchCart(cart, catalog) {
+function parseJsonField(v) {
+  if (Array.isArray(v)) return v;
+  if (typeof v === "string" && v.trim().startsWith("[")) {
+    try { return JSON.parse(v); } catch { return []; }
+  }
+  if (typeof v === "object" && v !== null) return Object.values(v);
+  return [];
+}
+
+function matchCart(cartRaw, catalog) {
+  const cart = parseJsonField(cartRaw);
   const out = [];
-  for (const item of (cart || [])) {
+  for (const item of cart) {
     const sku = cl(item.sku);
     const id  = cl(item.id);
     const nl  = cl(item.name || item.displayName).toLowerCase();
@@ -95,9 +113,13 @@ function buildDays(matched, lang, dayMeta) {
       duration     : cl(service.duration || ""),
       title        : cl(cartItem.displayName || cartItem.title || cartItem.name || service.name),
       description  : desc,
-      highlights   : service.highlights || [],
+      highlights   : lang === "es"
+        ? (service.highlights    || [])
+        : (service.highlights_en || service.highlights || []),
       includes     : service.includes   || "",
-      location     : service.location   || "",
+      location     : lang === "es"
+        ? (service.location_es || service.location || "")
+        : (service.location    || ""),
       address      : service.address    || "",
       city         : service.city       || "",
       price        : service.price_cop  || service.priceCop || service.price_tier_1 || service.priceTier1 || "",
@@ -111,6 +133,7 @@ function buildDays(matched, lang, dayMeta) {
       qbCode       : service.quickbooksCode || service.quickbooks_code || "",
       category     : service.category   || "",
       familyFriendly: !!(service.family_friendly),
+      confirmed    : cartItem.confirmed !== false,
     });
   });
   // Respect dayMeta order if provided
@@ -499,6 +522,18 @@ const CSS = `
     margin-bottom:9px;letter-spacing:.3px;
   }
 
+  /* Recommendation badge — shown when item is NOT confirmed */
+  .ev-rec-badge{
+    display:inline-flex;align-items:center;gap:5px;
+    background:#fefce8;border:1px solid #fde68a;color:#92400e;
+    border-radius:6px;padding:4px 10px;font-size:9.5px;font-weight:600;
+    margin-bottom:10px;letter-spacing:.3px;
+  }
+  /* Recommendation card gets a subtle amber left border */
+  .ev-recommendation{
+    border-left:3px solid #fbbf24;
+  }
+
   /* ── Edit mode ── */
   .edit-mode-bar{
     position:fixed;top:0;left:0;right:0;z-index:200;
@@ -530,7 +565,6 @@ function PH({ kickoff }) {
         {title && <span>{title}</span>}
         {!name && <span>Two Travel Concierge</span>}
       </div>
-      <div className="ph-right">Two Travel</div>
     </div>
   );
 }
@@ -688,9 +722,12 @@ function SummaryPage({ kickoff, days, page, total, lang, editMode }) {
               )}
             </div>
             {day.items.map((it, i) => (
-              <div key={i} className="sum-svc-row">
+              <div key={i} className="sum-svc-row" style={it.confirmed === false ? { opacity: 0.55 } : {}}>
                 <span className="sum-svc-time">{it.time || "—"}</span>
-                <Editable value={it.title} tag="span" className="sum-svc-name" editMode={editMode}/>
+                <Editable
+                  value={it.confirmed === false ? `📌 ${it.title}` : it.title}
+                  tag="span" className="sum-svc-name" editMode={editMode}
+                />
                 {it.location && (
                   <span className="sum-svc-loc">· {it.location}</span>
                 )}
@@ -706,11 +743,41 @@ function SummaryPage({ kickoff, days, page, total, lang, editMode }) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   PAGE 3: INFORMATION & DOCUMENTS
+   PAGE 3: INFORMATION & DOCUMENTS  +  PRE-TRIP CONTENT
+   Merged into one page. Concierge edits pre-trip inline.
 ═══════════════════════════════════════════════════════════ */
-function InfoPage({ kickoff, lang, page, total, editMode }) {
+function parsePretripSections(raw) {
+  const rawLines = raw.split("\n");
+  const sections = [];
+  let sec = { heading: "", items: [] };
+  const isUrl      = (s) => /^https?:\/\//i.test(s.trim());
+  const isLabelUrl = (s) => /^.{1,60}?:\s*https?:\/\//i.test(s.trim());
+  const isHeading  = (s) =>
+    /^[A-ZÀ-ɏ!].{0,80}$/.test(s.trim()) &&
+    !isUrl(s) && !isLabelUrl(s) &&
+    s.trim().length <= 80 && !s.trim().includes(".");
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i].trim();
+    if (!line) {
+      if (sec.items.length || sec.heading) { sections.push({ ...sec }); sec = { heading: "", items: [] }; }
+      continue;
+    }
+    if (isUrl(line)) sec.items.push({ kind: "link", url: line });
+    else if (isLabelUrl(line)) { const m = line.match(/^(.+?):\s*(https?:\/\/.+)$/i); sec.items.push({ kind: "labelLink", label: m[1].trim(), url: m[2].trim() }); }
+    else if (!sec.heading && !sec.items.length && isHeading(line)) sec.heading = line;
+    else sec.items.push({ kind: "text", text: line });
+  }
+  if (sec.heading || sec.items.length) sections.push(sec);
+  return sections;
+}
+
+function WelcomePage({ kickoff, lang, page, total, editMode, localPreTrip, setLocalPreTrip }) {
   const city = kickoff.city || (lang === "es" ? "tu destino" : "your destination");
   const isEs = lang === "es";
+  const rawPreTrip = (localPreTrip !== null && localPreTrip !== undefined)
+    ? localPreTrip
+    : (cl(kickoff.preTripContent || "") || DEFAULT_PRETRIP_PDF);
+  const sections = parsePretripSections(rawPreTrip);
   return (
     <div className="page">
       <PH kickoff={kickoff}/>
@@ -768,122 +835,12 @@ function InfoPage({ kickoff, lang, page, total, editMode }) {
           </p>
         </div>
 
-        {kickoff.welcomePdfUrl && (
-          <div className="info-block">
-            <div className="info-h3">{isEs ? "Documento de bienvenida" : "Welcome Document"}</div>
-            <p className="info-p">
-              {isEs ? "Antes de llegar, por favor revisa este documento:" : "Before your arrival, please review this document:"}
-            </p>
-            <a href={kickoff.welcomePdfUrl} target="_blank" rel="noreferrer"
-              style={{ color: "#1d4ed8", fontSize: 12, textDecoration: "underline", display: "block", marginTop: 4 }}>
-              {isEs ? "📄 Ver documento de bienvenida →" : "📄 View Welcome Document →"}
-            </a>
-          </div>
-        )}
-
         {kickoff.internalNotes && (
           <div className="info-block">
             <div className="info-h3">{isEs ? "Notas adicionales" : "Additional Notes"}</div>
             <Editable tag="p" className="info-p" editMode={editMode} value={kickoff.internalNotes}/>
           </div>
         )}
-      </div>
-
-      <PF n={page} total={total}/>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════
-   PRE-TRIP PAGE — links, forms, resources, recommendations
-   Matches the "Pre-Trip and General Information" section
-   from the Two Travel reference PDF.
-═══════════════════════════════════════════════════════════ */
-function PreTripPage({ kickoff, lang, page, total, editMode }) {
-  const isEs = lang === "es";
-  const raw  = cl(kickoff.preTripContent || "");
-  if (!raw) return null;
-
-  // ── Smart line parser ─────────────────────────────────
-  // Blank line   → section separator
-  // "Label: URL" → clickable row with bold label
-  // "https://…"  → bare link
-  // "Header"     → bold heading if ≤60 chars and followed by content
-  // anything else → regular text
-  const rawLines = raw.split("\n");
-  const sections = [];          // [{heading, items}]
-  let sec = { heading: "", items: [] };
-
-  const isUrl = (s) => /^https?:\/\//i.test(s.trim());
-  const isLabelUrl = (s) => /^.{1,60}?:\s*https?:\/\//i.test(s.trim());
-  const isHeading  = (s) => /^[A-Z\u00C0-\u024F!].{0,80}$/.test(s.trim()) && !isUrl(s) && !isLabelUrl(s) && s.trim().length <= 80 && !s.trim().includes(".");
-
-  for (let i = 0; i < rawLines.length; i++) {
-    const line = rawLines[i].trim();
-    if (!line) {
-      if (sec.items.length || sec.heading) {
-        sections.push({ ...sec });
-        sec = { heading: "", items: [] };
-      }
-      continue;
-    }
-    if (isUrl(line)) {
-      sec.items.push({ kind: "link", url: line });
-    } else if (isLabelUrl(line)) {
-      const m = line.match(/^(.+?):\s*(https?:\/\/.+)$/i);
-      sec.items.push({ kind: "labelLink", label: m[1].trim(), url: m[2].trim() });
-    } else if (!sec.heading && !sec.items.length && isHeading(line)) {
-      sec.heading = line;
-    } else {
-      sec.items.push({ kind: "text", text: line });
-    }
-  }
-  if (sec.heading || sec.items.length) sections.push(sec);
-
-  return (
-    <div className="page">
-      <PH kickoff={kickoff}/>
-      <div className="section-eyebrow">
-        {isEs ? "Antes de llegar" : "General Information"}
-      </div>
-      <div className="section-title">
-        {isEs ? "Información Previa al Viaje" : "Pre-Trip and General Information"}
-      </div>
-
-      <div className="pretrip-body">
-        {sections.map((sec, si) => (
-          <div key={si} className="pretrip-block">
-            {sec.heading && (
-              <Editable
-                value={sec.heading}
-                tag="div"
-                className="pretrip-h3"
-                editMode={editMode}
-              />
-            )}
-            {sec.items.map((item, ii) => {
-              if (item.kind === "labelLink") return (
-                <div key={ii} style={{ display: "flex", gap: 6, alignItems: "baseline", padding: "3px 0" }}>
-                  <strong style={{ fontSize: 12, color: "#111", fontWeight: 600, flexShrink: 0 }}>
-                    {item.label}:
-                  </strong>
-                  <a href={item.url} className="pretrip-link" target="_blank" rel="noreferrer"
-                    style={{ display: "inline", padding: 0 }}>
-                    {item.url}
-                  </a>
-                </div>
-              );
-              if (item.kind === "link") return (
-                <a key={ii} href={item.url} className="pretrip-link" target="_blank" rel="noreferrer">
-                  {item.url}
-                </a>
-              );
-              return (
-                <Editable key={ii} value={item.text} tag="p" className="pretrip-line" editMode={editMode}/>
-              );
-            })}
-          </div>
-        ))}
       </div>
 
       <PF n={page} total={total}/>
@@ -899,7 +856,8 @@ function PreTripPage({ kickoff, lang, page, total, editMode }) {
 const HIDE_PRICE_CATS = new Set(["restaurants","bars","nightlife","beach-clubs","beach clubs","beachclubs"]);
 
 function EventBlock({ it, lang, editMode, onRemove }) {
-  const showPrice = !HIDE_PRICE_CATS.has(String(it.category || "").trim().toLowerCase());
+  const isConfirmed = it.confirmed !== false;
+  const showPrice = isConfirmed && !HIDE_PRICE_CATS.has(String(it.category || "").trim().toLowerCase());
   const price    = showPrice ? fmtPrice(it.price) : "";
   const hiList   = splitList(it.highlights);
   const incList  = splitList(it.includes);
@@ -912,7 +870,7 @@ function EventBlock({ it, lang, editMode, onRemove }) {
   const metaParts = [timePart, durPart, tzPart].filter(Boolean);
 
   return (
-    <div className="ev" style={{ position: "relative" }}>
+    <div className={`ev${isConfirmed ? "" : " ev-recommendation"}`} style={{ position: "relative" }}>
       {/* ── Remove button (edit mode only) ── */}
       {editMode && onRemove && (
         <button
@@ -958,6 +916,13 @@ function EventBlock({ it, lang, editMode, onRemove }) {
                 {" · "}{tzPart}
               </>
             ) : metaParts.join(" · ")}
+          </div>
+        )}
+
+        {/* Recommendation badge */}
+        {!isConfirmed && (
+          <div className="ev-rec-badge">
+            📌 {isEs ? "Recomendación" : "Recommendation"}
           </div>
         )}
 
@@ -1058,7 +1023,7 @@ function EventBlock({ it, lang, editMode, onRemove }) {
               )}
             </span>
           )}
-          {it.qbCode && (
+          {it.qbCode && isConfirmed && !HIDE_PRICE_CATS.has(it.category) && (
             <div className="ev-qb">
               [{it.qbCode}][{cleanBrackets(it.title)}][{it.priceUsd || num(it.price) || "0"}]
             </div>
@@ -1175,21 +1140,9 @@ function CatalogPicker({ catalog, lang, onSelect, onClose }) {
    Small gray monospace text — readable by Slack/PDF bot,
    subtle enough not to distract the client.
 ═══════════════════════════════════════════════════════════ */
-function BillingBlock({ kickoff, allDays }) {
+function BillingBlock({ kickoff }) {
   const k = kickoff;
-
-  // Collect every service that has a QB code
-  const lines = [];
-  for (const day of (allDays || [])) {
-    for (const it of (day.items || [])) {
-      if (it.qbCode) {
-        const price = it.priceUsd || num(it.price) || "0";
-        lines.push(`[${it.qbCode}][${cleanBrackets(it.title)}][${price}]`);
-      }
-    }
-  }
-
-  if (!k.guestName && !k.guestContact && lines.length === 0) return null;
+  if (!k.guestName && !k.guestContact && !k.email) return null;
 
   return (
     <div className="qb-billing-block" style={{ marginBottom: 12 }}>
@@ -1198,21 +1151,28 @@ function BillingBlock({ kickoff, allDays }) {
         {`[1A][${cleanBrackets(k.guestName || "")}]`}
       </div>
       <div className="qb-billing-line">
-        {`[2A][${cleanBrackets(k.guestContact || k.email || "")}]`}
+        {`[2A][${cleanBrackets(k.email || k.guestEmail || k.guestContact || "")}]`}
       </div>
       <div className="qb-billing-line">
-        {`[3A][${formatIsoDate(k.arrivalDate || k.checkIn || "")}]`}
+        {`[3A][${formatIsoDate(k.arrivalDate || "")}]`}
       </div>
       <div className="qb-billing-line">
-        {`[4A][${formatIsoDate(k.departureDate || k.checkOut || "")}]`}
+        {`[4A][${formatIsoDate(k.departureDate || "")}]`}
       </div>
-      {lines.length > 0 && (
-        <div style={{ marginTop: 3 }}>
-          {lines.map((l, i) => (
-            <div key={i} className="qb-billing-line">{l}</div>
-          ))}
+    </div>
+  );
+}
+
+function BillingPage({ kickoff }) {
+  return (
+    <div className="page" style={{ position: "relative" }}>
+      <PH kickoff={kickoff} />
+      <div style={{ padding: "32px 40px 24px" }}>
+        <div style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "#999", marginBottom: 6 }}>
+          Internal · QuickBooks
         </div>
-      )}
+        <BillingBlock kickoff={kickoff} />
+      </div>
     </div>
   );
 }
@@ -1304,11 +1264,13 @@ export default function ItineraryPrintView() {
   const [editDays,  setEditDays]  = useState(null);
   // Catalog picker: { dayIndex } when open, null when closed
   const [pickerForDay, setPickerForDay] = useState(null);
+  const [localPreTrip, setLocalPreTrip] = useState(null);
 
   // Sync editDays from computed days each time editMode is activated
   useEffect(() => {
     if (editMode) {
       setEditDays(JSON.parse(JSON.stringify(days)));
+      setLocalPreTrip(null); // reset so it reads from kickoff
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode]);
@@ -1354,6 +1316,7 @@ export default function ItineraryPrintView() {
           qbCode:       svc.quickbooksCode || "",
           category:     svc.category || "",
           familyFriendly: !!(svc.family_friendly),
+          confirmed:    true,
           sort:         day.items.length,
         }]
       }
@@ -1389,7 +1352,7 @@ export default function ItineraryPrintView() {
 
   const days = useMemo(() => {
     if (!kickoff || !catalog.length) return [];
-    return buildDays(matchCart(kickoff.cart, catalog), lang, kickoff.dayMeta || []);
+    return buildDays(matchCart(kickoff.cart, catalog), lang, parseJsonField(kickoff.dayMeta));
   }, [kickoff, catalog, lang]);
 
   // First available service image → cover hero
@@ -1435,9 +1398,9 @@ export default function ItineraryPrintView() {
   // Use editDays when in edit mode (allows add/remove), fallback to computed days
   const activeDays = (editMode && editDays) ? editDays : days;
 
-  const hasPreTrip = !!(kickoff.preTripContent || "").trim();
+  const hasPreTrip = true; // always shown — falls back to DEFAULT_PRETRIP_PDF when empty
   const hasSummary = activeDays.length > 0;
-  const total = 1 + (hasSummary ? 1 : 0) + 1 + (hasPreTrip ? 1 : 0) + activeDays.length;
+  const total = 1 + (hasSummary ? 1 : 0) + 1 + activeDays.length + 1; // +1 = billing page
   let pageNum = 1;
 
   const ctrl = {
@@ -1522,23 +1485,17 @@ export default function ItineraryPrintView() {
         />
       )}
 
-      <InfoPage
+      <WelcomePage
         kickoff={kickoff}
         lang={lang}
         page={++pageNum}
         total={total}
         editMode={editMode}
+        localPreTrip={localPreTrip}
+        setLocalPreTrip={setLocalPreTrip}
       />
 
-      {hasPreTrip && (
-        <PreTripPage
-          kickoff={kickoff}
-          lang={lang}
-          page={++pageNum}
-          total={total}
-          editMode={editMode}
-        />
-      )}
+      
 
       {activeDays.map((day, di) => (
         <DayPage
@@ -1552,11 +1509,12 @@ export default function ItineraryPrintView() {
           onRemoveDay={editMode ? () => removeDay(di) : undefined}
           onRemoveItem={editMode ? (ii) => removeItem(di, ii) : undefined}
           onAddItem={editMode ? () => openPickerForDay(di) : undefined}
-          billingBlock={di === activeDays.length - 1
-            ? <BillingBlock kickoff={kickoff} allDays={activeDays} />
-            : null}
+          billingBlock={null}
         />
       ))}
+
+      {/* ── Billing page (last, internal/QB use) ── */}
+      <BillingPage kickoff={kickoff} />
 
       {/* Catalog picker modal */}
       {editMode && pickerForDay !== null && (

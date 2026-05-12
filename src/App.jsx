@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import ConciergePanel from "./ConciergePanel";
 import TwoTravelCatalog from "./TwoTravelCatalog";
 import ItineraryPrintView from "./ItineraryPrintView";
-import { updateKickoffInSheet, fetchKickoffsFromSheet } from "./sheetServices";
+import { updateKickoffInSheet, fetchKickoffsFromSheet, saveKickoffToSheet } from "./sheetServices";
 
 const translations = {
   en: {
@@ -2246,16 +2246,147 @@ function DrinksCatalog() {
   );
 }
 
+/* ================================================================
+   WELCOME CATALOG PAGE
+   Shown when someone opens ?mode=catalog without a kickoffId.
+   Collects basic client info, creates a kickoff, then redirects.
+================================================================ */
+const CITY_OPTIONS = [
+  { code: "CTG",  label: "🇨🇴 Cartagena" },
+  { code: "MDE",  label: "🇨🇴 Medellín" },
+  { code: "CDMX", label: "🇲🇽 Ciudad de México" },
+  { code: "TUL",  label: "🇲🇽 Tulum" },
+  { code: "BOG",  label: "🇨🇴 Bogotá" },
+];
+
+function WelcomeCatalogPage({ mode }) {
+  const [name,    setName]    = useState("");
+  const [city,    setCity]    = useState("");
+  const [contact, setContact] = useState("");
+  const [saving,  setSaving]  = useState(false);
+  const [error,   setError]   = useState("");
+
+  const handleStart = async (e) => {
+    e.preventDefault();
+    if (!name.trim())  { setError("Por favor ingresa tu nombre."); return; }
+    if (!city)         { setError("Por favor selecciona tu destino."); return; }
+    setError("");
+    setSaving(true);
+    try {
+      const result = await saveKickoffToSheet({
+        guestName:    name.trim(),
+        city,
+        guestContact: contact.trim(),
+        status:       "catalog",
+        createdAt:    new Date().toISOString(),
+      });
+      if (!result?.id) throw new Error("No se pudo crear el cliente");
+      const url = new URL(window.location.href);
+      url.searchParams.set("kickoffId", result.id);
+      url.searchParams.set("mode", "catalog");
+      window.location.href = url.toString();
+    } catch (err) {
+      setError("Error al guardar. Intenta de nuevo.");
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center px-4 py-12">
+      {/* Logo */}
+      <div className="mb-8 text-center">
+        <div className="text-white text-3xl font-bold tracking-tight mb-1">TWO TRAVEL</div>
+        <div className="text-neutral-400 text-sm">Concierge Experience</div>
+      </div>
+
+      {/* Card */}
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-8">
+        <h1 className="text-xl font-bold text-neutral-900 mb-1">Bienvenido 👋</h1>
+        <p className="text-sm text-neutral-500 mb-6">
+          Dinos quién eres y a dónde vas, y te mostramos el catálogo personalizado.
+        </p>
+
+        <form onSubmit={handleStart} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-wide">
+              Tu nombre *
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Ej: María García"
+              className="w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-wide">
+              Destino *
+            </label>
+            <select
+              value={city}
+              onChange={e => setCity(e.target.value)}
+              className="w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 bg-white"
+              required
+            >
+              <option value="">Selecciona tu ciudad…</option>
+              {CITY_OPTIONS.map(c => (
+                <option key={c.code} value={c.code}>{c.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-wide">
+              WhatsApp (opcional)
+            </label>
+            <input
+              type="tel"
+              value={contact}
+              onChange={e => setContact(e.target.value)}
+              placeholder="+57 300 000 0000"
+              className="w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900"
+            />
+          </div>
+
+          {error && (
+            <p className="text-xs text-red-500 font-medium">{error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full bg-neutral-900 text-white rounded-lg py-3 text-sm font-semibold hover:bg-neutral-800 disabled:opacity-50 transition-colors"
+          >
+            {saving ? "Creando tu catálogo…" : "Ver mi catálogo →"}
+          </button>
+        </form>
+
+        <p className="text-center text-[10px] text-neutral-400 mt-5">
+          Two Travel · twotravelvip.com
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const params = new URLSearchParams(window.location.search);
   const mode = params.get("mode");
+  const kickoffId = params.get("kickoffId") || "";
 
   if (mode === "dashboard" || mode === "kpi") return <UnifiedDashboard />;
   if (mode === "concierge")          return <ConciergePanel />;
   if (mode === "soporte")            return <SoportePage />;
   if (mode === "soporte-dashboard")  return <SoporteDashboard />;
   if (mode === "tasks")              return <TaskTracker />;
-  if (mode === "catalog" || mode === "questionnaire") return <TwoTravelCatalog />;
+  if (mode === "catalog" || mode === "questionnaire") {
+    // If no kickoffId → show welcome/intake page first
+    if (!kickoffId) return <WelcomeCatalogPage mode={mode} />;
+    return <TwoTravelCatalog />;
+  }
   if (mode === "drinks")             return <DrinksCatalog />;
   if (mode === "itinerary")          return <ItineraryPrintView />;
 
