@@ -240,12 +240,12 @@ async function sendBillingPdfToSlack(kickoff, currency = "USD") {
    Lista fija de concierges
    ========================================= */
 const CONCIERGE_LIST = [
-  { name: "Alia Jadad",           email: "alia@two.travel",     phone: "+57 300 0000001", city: "CTG" },
-  { name: "Carolina Lopez",       email: "caro@two.travel",     phone: "+57 300 0000002", city: "CTG" },
-  { name: "Daniela Becerra",      email: "daniela@two.travel",  phone: "+57 300 0000003", city: "MDE" },
-  { name: "Nataly Cruz",          email: "nataly@two.travel",   phone: "+52 55 0000001",  city: "CDMX" },
-  { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   phone: "+52 55 0000002",  city: "CDMX" },
-  { name: "Aileen Servin",        email: "aileen@two.travel",   phone: "+52 55 0000003",  city: "CDMX" },
+  { name: "Alia Jadad",           email: "alia@two.travel",     phone: "+57 301 7618012", city: "CTG" },
+  { name: "Carolina Lopez",       email: "caro@two.travel",     phone: "+57 300 8192062", city: "CTG" },
+  { name: "Daniela Becerra",      email: "daniela@two.travel",  phone: "+57 304 4445285", city: "MDE" },
+  { name: "Nataly Cruz",          email: "nataly@two.travel",   phone: "+52 1 55 2337 7241", city: "CDMX" },
+  { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   phone: "+52 1 55 4344 1382", city: "CDMX" },
+  { name: "Aileen Servin",        email: "aileen@two.travel",   phone: "",                city: "CDMX" },
 ];
 
 /* =========================================
