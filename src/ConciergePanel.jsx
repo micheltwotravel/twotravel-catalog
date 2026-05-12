@@ -1071,6 +1071,27 @@ function TierPickerModal({ title, kickoff, kind, onClose }) {
 
 
 
+/* Small reusable "copy link" button with ✓ feedback */
+function CopyLinkButton({ url, label = "🔗 Link" }) {
+  const [copied, setCopied] = React.useState(false);
+  const handle = async () => {
+    try { await navigator.clipboard.writeText(url); }
+    catch { prompt("Copia este link:", url); }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      type="button"
+      onClick={handle}
+      className="px-3 py-2 rounded-r-lg border border-l-0 border-gray-300 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-1 transition-colors"
+      title="Copiar link para compartir con el cliente — siempre muestra el itinerario actualizado"
+    >
+      {copied ? "✓ Copiado" : label}
+    </button>
+  );
+}
+
 function Modal({ title, children, footer, onClose, maxWidth = "max-w-3xl" }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -2259,18 +2280,25 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           >
             Guardar
           </button>
-          {/* Preview PDF button */}
-          {kickoff?.cart?.length > 0 && (
-            <a
-              href={`/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff.lang || "en"}`}
-              target="_blank"
-              rel="noreferrer"
-              className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-1.5"
-              title="Previsualizar itinerario como PDF"
-            >
-              📄 Ver PDF
-            </a>
-          )}
+          {/* Itinerary: PDF download + shareable link */}
+          {kickoff?.cart?.length > 0 && (() => {
+            const itinUrl = `${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff.lang || "en"}`;
+            return (
+              <div className="flex items-center gap-1">
+                {/* PDF: open in new tab → Ctrl+P to save */}
+                <a
+                  href={itinUrl}
+                  target="_blank" rel="noreferrer"
+                  className="px-3 py-2 rounded-l-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-1"
+                  title="Abrir itinerario — Ctrl+P para guardar como PDF"
+                >
+                  📄 PDF
+                </a>
+                {/* Copy link — client views online, always latest */}
+                <CopyLinkButton url={itinUrl} />
+              </div>
+            );
+          })()}
           {/* Drinks catalog link */}
           <a
             href={`/?mode=drinks&kickoffId=${kickoff.id}`}
