@@ -33,6 +33,9 @@ const BILLING_GAS_URL = "https://script.google.com/macros/s/AKfycbwZJudfRGEZm9hx
 const NO_QB = new Set(["restaurants","bars","nightlife","beach-clubs","beach clubs","beachclubs"]);
 // Categories where price × pax (tours, services, chef)
 const PAX_MULTIPLIES = new Set(["tours","tour","services","service","chef","private chef","chef privado"]);
+// City code → full name for PDF and QuickBooks
+const CITY_NAMES = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" };
+const cityFullName = (code) => CITY_NAMES[String(code||"").trim().toUpperCase()] || String(code||"").trim();
 
 async function sendBillingPdfToSlack(kickoff, currency = "USD") {
   const { jsPDF } = await import("jspdf");
@@ -113,7 +116,7 @@ async function sendBillingPdfToSlack(kickoff, currency = "USD") {
     `[2A][${cleanB(kickoff.email||kickoff.guestEmail||kickoff.guestContact||"")}]`,
     `[3A][${fmtIso(kickoff.arrivalDate)}]`,
     `[4A][${fmtIso(kickoff.departureDate)}]`,
-    `[CIUDAD][${cleanB(kickoff.city||"")}]`,
+    `[CIUDAD][${cleanB(cityFullName(kickoff.city))}]`,
   ].forEach(line => { doc.text(line, ML, y); ln(13); });
 
   // Servicios por día
@@ -194,7 +197,7 @@ async function sendBillingPdfToSlack(kickoff, currency = "USD") {
     `[2A][${cleanTag(kickoff.email || kickoff.guestEmail || kickoff.guestContact || "")}]`,
     `[3A][${fmtIso2(kickoff.arrivalDate)}]`,
     `[4A][${fmtIso2(kickoff.departureDate)}]`,
-    `[CIUDAD][${cleanTag(kickoff.city || "")}]`,
+    `[CIUDAD][${cleanTag(cityFullName(kickoff.city))}]`,
   ].forEach(line => { doc.text(line, ML, dy); dln(); });
   dln();
   // [QB_CODE][Name][TotalPrice] — one per line, only items with explicit QB code
@@ -1852,6 +1855,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
   const [tripDates,          setTripDates]          = useState(autoTripDates);
   const [city,               setCity]               = useState(kickoff?.city               || "");
+  const [guestEmailState,    setGuestEmailState]    = useState(kickoff?.email || kickoff?.guestEmail || "");
   const [groupSize,          setGroupSize]          = useState(autoGroupSize);
   const [conciergeTitle,     setConciergeTitle]     = useState(kickoff?.conciergeTitle     || "");
   const [accommodationName,  setAccommodationName]  = useState(kickoff?.accommodationName  || "");
@@ -1898,6 +1902,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
   const c = guestContact.trim();
   if (c) updates.guestContact = c;
+  const em = guestEmailState.trim();
+  if (em) { updates.email = em; updates.guestEmail = em; }
 
   await onSave(kickoff.id, updates);
   setStatus(autoStatus);
@@ -1954,6 +1960,16 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     placeholder="WhatsApp o email"
   />
 </div>
+            <div>
+              <label className="text-[11px] text-neutral-500">Email del cliente</label>
+              <input
+                type="email"
+                value={guestEmailState}
+                onChange={(e) => setGuestEmailState(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                placeholder="cliente@email.com"
+              />
+            </div>
 
             {/* Dates + quiz answers submitted by client */}
             {(clientArrival || clientDeparture || Object.keys(quizAnswers).some(k => quizAnswers[k] && quizAnswers[k] !== "no" && !(Array.isArray(quizAnswers[k]) && !quizAnswers[k].length))) && (
@@ -2211,7 +2227,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 onClick={async () => {
                   setBillingSending(true);
                   try {
-                    await sendBillingPdfToSlack(kickoff, billingCurrency);
+                    // Merge live EditDrawer state so email/city are always current
+                    await sendBillingPdfToSlack({
+                      ...kickoff,
+                      email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
+                      city: city || kickoff.city || "",
+                    }, billingCurrency);
                     alert("✅ PDF enviado a Slack");
                   } catch (e) {
                     alert("❌ " + e.message);

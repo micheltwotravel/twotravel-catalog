@@ -25,6 +25,27 @@ import {
 import logo from "./assets/logo.png";
 
 /* ================================
+   0) CITY CONFIG
+================================== */
+// Maps city code (stored in kickoff.city) → display name + currency + aliases
+const CITY_CONFIG = {
+  CTG:  { name: "Cartagena",           currency: "COP", aliases: ["ctg","cartagena","cartagena de indias"] },
+  MDE:  { name: "Medellín",            currency: "COP", aliases: ["mde","medellin","medellín"] },
+  CDMX: { name: "Ciudad de México",    currency: "MXN", aliases: ["cdmx","mexico","ciudad de mexico","ciudad de méxico"] },
+  TUL:  { name: "Tulum",              currency: "USD", aliases: ["tul","tulum"] },
+  BOG:  { name: "Bogotá",             currency: "COP", aliases: ["bog","bogota","bogotá"] },
+};
+// Given a raw city string (code OR name), return the canonical code or ""
+function toCityCode(raw) {
+  const v = String(raw || "").trim().toLowerCase();
+  if (!v) return "";
+  for (const [code, cfg] of Object.entries(CITY_CONFIG)) {
+    if (cfg.aliases.includes(v)) return code;
+  }
+  return v.toUpperCase(); // fallback: uppercase as-is
+}
+
+/* ================================
    1) CONFIG: tasa de cambio
    Se actualiza en vivo desde Frankfurter API (tasa oficial - 2%).
    Fallback: 4200 COP/USD si la API falla.
@@ -42,7 +63,7 @@ const i18n = {
     restaurants: "Restaurantes",
     "beach-clubs": "Beach Clubs",
     tours: "Tours",
-    nightlife: "Nightlife & Bares",
+    nightlife: "Vida Nocturna & Bares",
     bars: "Bares · Cócteles",
     chef: "Chef Privado",
     services: "Experiencias",
@@ -89,7 +110,7 @@ const i18n = {
     kickoffSentTitle: "¡Resumen enviado!",
     kickoffSentBody:
       "Tu selección fue enviada a nuestro equipo de concierge. En las próximas horas te contactaremos para afinar detalles y avanzar con las reservas.",
-      quizTitle: "Diseñemos tus Experiences en Cartagena",
+      quizTitle: "Diseñemos tus Experiencias",
 quizSubtitle: "En 30 segundos, entendemos tu estilo y te mostramos recomendaciones curadas por nuestro concierge.",
 quizNote: "No vendemos tus datos. Esto solo se usa para personalizar tu catálogo.",
 quizVibeLabel: "Mood del viaje",
@@ -130,7 +151,7 @@ variablePrice: "Variable pricing",
     approxPrice: "Approx. price",
     perPerson: "per person",
     dayPass: "day pass",
-    quizTitle: "Let's design your Cartagena Experiences!",
+    quizTitle: "Let's design your Experiences",
 quizSubtitle: "In 30 seconds, we'll understand your style and show concierge-curated recommendations.",
 quizNote: "We don't sell your data. This is only used to personalize your catalog.",
 quizVibeLabel: "Trip vibe",
@@ -2290,6 +2311,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   const [kickoffLoaded, setKickoffLoaded] = useState(false);
   const [tripName, setTripName] = useState("");
   const [guestContact, setGuestContact] = useState("");
+  const [kickoffCity, setKickoffCity] = useState(""); // e.g. "Cartagena", "Medellín"
   const [arrivalDate, setArrivalDate] = useState("");
   const [departureDate, setDepartureDate] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
@@ -2445,9 +2467,21 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
         (activeTags.includes("vegetarian")   ? s.vegetarian      : true) &&
         (activeTags.includes("accessibility") ? s.accessibility   : true);
 
-      return catOK && stylesOK && searchOK && priceOK && tagsOK;
+      // City filter: only show services matching the kickoff's city
+      // Services with no city tag default to CTG (Cartagena = legacy catalog)
+      const cityOK = (() => {
+        if (!kickoffCity) return true; // no kickoff city = show all
+        const kickoffAliases = CITY_CONFIG[kickoffCity]?.aliases || [kickoffCity.toLowerCase()];
+        const sCity = String(s.city || "").trim();
+        if (!sCity) return kickoffCity === "CTG"; // untagged → Cartagena only
+        // Support comma-separated multi-city: "CTG,MDE" or "Cartagena,Medellin"
+        const sCities = sCity.split(",").map(c => c.trim().toLowerCase());
+        return sCities.some(c => kickoffAliases.includes(c) || toCityCode(c) === kickoffCity);
+      })();
+
+      return catOK && stylesOK && searchOK && priceOK && tagsOK && cityOK;
     });
-  }, [services, selectedCategory, selectedStyle, searchTerm, priceRange, currentClientType, activeTags]);
+  }, [services, selectedCategory, selectedStyle, searchTerm, priceRange, currentClientType, activeTags, kickoffCity]);
 
 const vibeLabel = useMemo(() => {
   const map = {
@@ -2655,13 +2689,14 @@ setGuestContact(
 if (ko.arrivalDate) setArrivalDate(String(ko.arrivalDate).trim());
 if (ko.departureDate) setDepartureDate(String(ko.departureDate).trim());
 
-      // Auto-currency based on kickoff city
-      if (!currencyManuallySet) {
-        const koCity = String(ko.city || "").trim().toLowerCase();
-        if (koCity === "tulum") setCurrency("USD");
-        else if (koCity === "cdmx" || koCity === "mexico" || koCity === "ciudad de mexico") setCurrency("MXN");
-        else if (koCity === "cartagena") setCurrency("COP");
-        else if (koCity === "medellin" || koCity === "medellín") setCurrency("COP");
+      // Store city as canonical code (CTG, MDE, CDMX, TUL…)
+      const rawCity = String(ko.city || "").trim();
+      const cityCode = toCityCode(rawCity);
+      if (cityCode) setKickoffCity(cityCode);
+
+      // Auto-currency based on city config
+      if (!currencyManuallySet && cityCode && CITY_CONFIG[cityCode]) {
+        setCurrency(CITY_CONFIG[cityCode].currency);
       }
 
     } catch (e) {
@@ -2679,16 +2714,9 @@ const getKickoffById = async (id) => {
 };
 
 useEffect(() => {
-  if (isCatalogMode) {
-    setStep("catalog");
-    setShowKickoff(false);
-  } else if (isQuestionnaireMode) {
-    setStep("quiz");
-    setShowKickoff(false);
-  } else {
-    setStep("quiz");
-    setShowKickoff(false);
-  }
+  // All modes start at welcome — CTA button decides what comes next
+  setStep("welcome");
+  setShowKickoff(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [isCatalogMode, isQuestionnaireMode]);
 
@@ -2790,7 +2818,7 @@ console.log("Kickoff actualizado:", idToUse);
 
 setShowKickoff(false);
 setKickoffSent(true);
-setStep(isCatalogMode ? "catalog" : "quiz");
+setStep("catalog");
 setCart([]);
 
 
@@ -2829,6 +2857,65 @@ setCart([]);
 }
 
 
+
+  // ✅ PASO B: Welcome page — shown before quiz
+  if (step === "welcome") {
+    return (
+      <div className="min-h-screen bg-neutral-950 flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5">
+          <img src={logo} alt="Two Travel" className="h-7 object-contain brightness-0 invert" />
+          {/* Lang toggle */}
+          <div className="flex border border-neutral-700 rounded-lg overflow-hidden text-xs font-medium">
+            {["en","es"].map(l => (
+              <button key={l} type="button" onClick={() => setLang(l)}
+                className={`px-3 py-1.5 uppercase transition-colors ${
+                  lang === l ? "bg-white text-neutral-900" : "text-neutral-400 hover:text-white"
+                }`}>
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Hero */}
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center max-w-2xl mx-auto">
+          <p className="text-neutral-500 text-xs font-semibold uppercase tracking-[0.2em] mb-6">
+            {lang === "es" ? "Tu experiencia personalizada" : "Your personalized experience"}
+          </p>
+          <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight mb-6">
+            {lang === "es"
+              ? <>Tu catálogo <br className="hidden sm:block"/>de experiencias</>
+              : <>Your curated <br className="hidden sm:block"/>experience guide</>}
+          </h1>
+          <p className="text-neutral-400 text-base leading-relaxed mb-10 max-w-lg">
+            {lang === "es"
+              ? "Tu concierge de Two Travel ha preparado una selección de experiencias pensadas especialmente para tu viaje. Responde unas preguntas rápidas para que podamos personalizar las recomendaciones."
+              : "Your Two Travel concierge has curated a selection of experiences tailored to your trip. Answer a few quick questions so we can personalize your recommendations."}
+          </p>
+          <button
+            type="button"
+            onClick={() => setStep(isCatalogMode ? "catalog" : "quiz")}
+            className="px-8 py-4 rounded-2xl bg-white text-neutral-900 text-sm font-semibold hover:bg-neutral-100 transition-colors shadow-lg"
+          >
+            {lang === "es" ? "Comenzar →" : "Get started →"}
+          </button>
+          {!isCatalogMode && (
+            <p className="mt-6 text-neutral-600 text-xs">
+              {lang === "es"
+                ? "Solo toma 2 minutos · Sin registro necesario"
+                : "Takes 2 minutes · No sign-up required"}
+            </p>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="text-center py-6">
+          <p className="text-neutral-700 text-[11px]">Two Travel · twotravelvip.com</p>
+        </div>
+      </div>
+    );
+  }
 
   // ✅ PASO C: Quiz antes de entrar al catálogo
   if (step === "quiz") {
@@ -2885,8 +2972,8 @@ setCart([]);
 
   <h1 className="text-3xl sm:text-4xl font-semibold text-neutral-900 leading-tight">
     {lang === "es"
-      ? "Diseñemos tus Experiences en Cartagena"
-      : "Let's design your Cartagena Experiences!"}
+      ? `Diseñemos tus Experiencias${kickoffCity ? ` en ${CITY_CONFIG[kickoffCity]?.name || kickoffCity}` : ""}`
+      : `Let's design your${kickoffCity ? ` ${CITY_CONFIG[kickoffCity]?.name || kickoffCity}` : ""} Experiences`}
   </h1>
 
   <p className="text-sm sm:text-base text-neutral-600 max-w-2xl">
@@ -3014,7 +3101,7 @@ setCart([]);
                   { id: "seafood",       es: "🦞 Mariscos",          en: "🦞 Seafood" },
                   { id: "caribbean",     es: "🌴 Caribeño",           en: "🌴 Caribbean" },
                   { id: "contemporary",  es: "✨ Contemporáneo",      en: "✨ Contemporary" },
-                  { id: "fine-dining",   es: "🍷 Fine dining",        en: "🍷 Fine dining" },
+                  { id: "fine-dining",   es: "🍷 Alta cocina",        en: "🍷 Fine dining" },
                   { id: "japanese",      es: "🍣 Japonés / Nikkei",   en: "🍣 Japanese / Nikkei" },
                   { id: "peruvian",      es: "🫙 Peruano",            en: "🫙 Peruvian" },
                   { id: "italian",       es: "🍝 Italiano",           en: "🍝 Italian" },
@@ -3319,7 +3406,9 @@ setCart([]);
             </div>
 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {recommendedServices.map((s) => (
+              {recommendedServices.map((s) => {
+  const isInCart = cart.some((c) => c.id === s.id);
+  return (
   <div
     key={`rec-${s.id}`}
     className="group border rounded-2xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer bg-white"
@@ -3343,6 +3432,13 @@ setCart([]);
           {lang === "es" ? "Concierge pick" : "Concierge pick"}
         </span>
       </div>
+      <button
+        onClick={(e) => { e.stopPropagation(); if (!isInCart) addToCart(s); }}
+        className={`absolute bottom-2 right-2 w-9 h-9 rounded-full flex items-center justify-center shadow-md border transition-colors ${isInCart ? "bg-white/90 text-red-500 border-white" : "bg-white/90 text-neutral-400 border-white hover:text-red-400"}`}
+        title={isInCart ? (lang === "es" ? "Ya en favoritos" : "Already in favorites") : (lang === "es" ? "Agregar a favoritos" : "Add to favorites")}
+      >
+        <Heart className={`w-4 h-4 ${isInCart ? "fill-current" : ""}`} />
+      </button>
     </div>
 
     <div className="p-3">
@@ -3352,7 +3448,8 @@ setCart([]);
       </p>
     </div>
   </div>
-))}
+  );
+})}
 
             </div>
           </div>
@@ -3396,7 +3493,7 @@ setCart([]);
                   >
                     <div className="relative h-48">
                       <img src={safeImg(s.image, serviceCategory)} alt={s.name} className="w-full h-full object-cover"/>
-                      <button onClick={(e)=>{e.stopPropagation();if(!isInCart)addToCart(s);}} className={`absolute bottom-2 right-2 w-9 h-9 rounded-full flex items-center justify-center shadow-md border transition-colors ${isInCart?"bg-neutral-900 text-white border-neutral-900":"bg-white/90 text-neutral-600 border-white hover:bg-neutral-100"}`}>
+                      <button onClick={(e)=>{e.stopPropagation();if(!isInCart)addToCart(s);}} className={`absolute bottom-2 right-2 w-9 h-9 rounded-full flex items-center justify-center shadow-md border transition-colors ${isInCart?"bg-white/90 text-red-500 border-white":"bg-white/90 text-neutral-400 border-white hover:text-red-400"}`}>
                         <Heart className={`w-4 h-4 ${isInCart?"fill-current":""}`}/>
                       </button>
                     </div>
@@ -3471,13 +3568,9 @@ setCart([]);
             if (!isInCart) addToCart(s);
           }}
           title={isInCart ? (lang === "es" ? "Ya en favoritos" : "Already in favorites") : (lang === "es" ? "Agregar a favoritos" : "Add to favorites")}
-          className={`absolute bottom-2 right-2 w-10 h-10 rounded-full flex items-center justify-center shadow-md transition-all border-2 ${
-            isInCart
-              ? "bg-rose-600 text-white border-rose-600 scale-110"
-              : "bg-rose-500 text-white border-rose-500 hover:bg-rose-700 hover:border-rose-700 hover:scale-110"
-          }`}
+          className={`absolute bottom-2 right-2 w-9 h-9 rounded-full flex items-center justify-center shadow-md border transition-colors ${isInCart ? "bg-white/90 text-red-500 border-white" : "bg-white/90 text-neutral-400 border-white hover:text-red-400"}`}
         >
-          <Heart className="w-5 h-5 fill-current" />
+          <Heart className={`w-4 h-4 ${isInCart ? "fill-current" : ""}`} />
         </button>
       </div>
 
@@ -3553,8 +3646,14 @@ setCart([]);
 
       {/* Modal detalle servicio */}
       {selectedService && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full overflow-hidden">
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setSelectedService(null); }}
+          onKeyDown={(e) => { if (e.key === "Escape") setSelectedService(null); }}
+          tabIndex={-1}
+          ref={el => el?.focus()}
+        >
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="relative">
               <div className="relative">
                 <img
