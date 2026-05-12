@@ -240,12 +240,12 @@ async function sendBillingPdfToSlack(kickoff, currency = "USD") {
    Lista fija de concierges
    ========================================= */
 const CONCIERGE_LIST = [
-  { name: "Alia Jadad",           email: "alia@two.travel",     city: "CTG" },
-  { name: "Carolina Lopez",       email: "caro@two.travel",     city: "CTG" },
-  { name: "Daniela Becerra",      email: "daniela@two.travel",  city: "MDE" },
-  { name: "Nataly Cruz",          email: "nataly@two.travel",   city: "CDMX" },
-  { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   city: "CDMX" },
-  { name: "Aileen Servin",        email: "aileen@two.travel",   city: "CDMX" },
+  { name: "Alia Jadad",           email: "alia@two.travel",     phone: "+57 300 0000001", city: "CTG" },
+  { name: "Carolina Lopez",       email: "caro@two.travel",     phone: "+57 300 0000002", city: "CTG" },
+  { name: "Daniela Becerra",      email: "daniela@two.travel",  phone: "+57 300 0000003", city: "MDE" },
+  { name: "Nataly Cruz",          email: "nataly@two.travel",   phone: "+52 55 0000001",  city: "CDMX" },
+  { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   phone: "+52 55 0000002",  city: "CDMX" },
+  { name: "Aileen Servin",        email: "aileen@two.travel",   phone: "+52 55 0000003",  city: "CDMX" },
 ];
 
 /* =========================================
@@ -1533,7 +1533,7 @@ function normCatPanel(raw) {
 const SUGGESTION_CATS = [
   { id: "restaurants",    ids: ["restaurants"],              label: "🍽 Restaurantes" },
   { id: "nightlife",      ids: ["nightlife"],                label: "🍹 Bares & Nightlife" },
-  { id: "beach-clubs",    ids: ["beach-clubs"],              label: "🏖 Beach Clubs" },
+  { id: "beach-clubs",    ids: ["beach-clubs","boating"],    label: "⛵ Boating & Beach" },
   { id: "tours",          ids: ["tours"],                    label: "🗺 Tours" },
   { id: "transportation", ids: ["transportation"],           label: "🚗 Transporte" },
   { id: "chef",           ids: ["chef"],                     label: "👨‍🍳 Chef Privado" },
@@ -1627,27 +1627,39 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
       }
     >
       <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm"
-            placeholder="Buscar: nombre, SKU, categoría…"
-            autoFocus
-          />
-
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="border rounded-lg px-3 py-2 text-sm bg-white sm:w-64"
-            title="Filtrar por categoría"
-          >
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c === "all" ? "Todas las categorías" : c}
-              </option>
-            ))}
-          </select>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="w-full border rounded-lg px-3 py-2 text-sm"
+          placeholder="Buscar: nombre, SKU, categoría…"
+          autoFocus
+        />
+        {/* Category pill filters */}
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            { id: "all",            label: "Todos" },
+            { id: "restaurants",    label: "🍽 Restaurantes" },
+            { id: "bars",           label: "🍸 Bares" },
+            { id: "nightlife",      label: "🌙 Nightlife" },
+            { id: "beach-clubs",    label: "⛵ Boating & Beach" },
+            { id: "tours",          label: "🗺 Tours" },
+            { id: "transportation", label: "🚗 Transporte" },
+            { id: "chef",           label: "👨‍🍳 Chef" },
+            { id: "services",       label: "✨ Servicios" },
+          ].map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setCategory(id)}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                category === id
+                  ? "bg-neutral-900 text-white border-neutral-900"
+                  : "bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* ── Sugeridos por categoría (solo cuando no hay búsqueda activa) ── */}
@@ -1855,6 +1867,13 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
   const [tripDates,          setTripDates]          = useState(autoTripDates);
   const [city,               setCity]               = useState(kickoff?.city               || "");
+  // Multiple arrivals: [{name, date, time, flight, notes}]
+  const [arrivals, setArrivals] = useState(() => {
+    try { return JSON.parse(kickoff?.arrivals || "[]"); } catch { return []; }
+  });
+  const addArrival  = () => setArrivals(a => [...a, { name:"", date:"", time:"", flight:"" }]);
+  const removeArrival = (i) => setArrivals(a => a.filter((_,idx) => idx !== i));
+  const patchArrival = (i, patch) => setArrivals(a => a.map((row,idx) => idx === i ? {...row,...patch} : row));
   const [guestEmailState,    setGuestEmailState]    = useState(kickoff?.email || kickoff?.guestEmail || "");
   const [groupSize,          setGroupSize]          = useState(autoGroupSize);
   const [conciergeTitle,     setConciergeTitle]     = useState(kickoff?.conciergeTitle     || "");
@@ -1898,6 +1917,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     ...(autoStatus === "concierge_editing" && !kickoff.conciergeEditingAt ? { conciergeEditingAt: now } : {}),
     // Pre-trip info block (rendered as a page before itinerary days in PDF)
     preTripContent:    preTripContent.trim(),
+    // Multiple arrivals
+    arrivals: JSON.stringify(arrivals.filter(a => a.name || a.date || a.flight)),
   };
 
   const c = guestContact.trim();
@@ -2136,6 +2157,46 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             </div>
           </div>
 
+          {/* ── LLEGADAS MÚLTIPLES ─────────────────────────────── */}
+          <div className="border rounded-2xl p-4 bg-neutral-50 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-neutral-700">✈️ Llegadas del grupo</p>
+              <button type="button" onClick={addArrival}
+                className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-900 text-white hover:bg-neutral-700">
+                + Agregar llegada
+              </button>
+            </div>
+            {arrivals.length === 0 && (
+              <p className="text-[11px] text-neutral-400">Sin llegadas registradas. Úsalo cuando el grupo llega en vuelos distintos.</p>
+            )}
+            {arrivals.map((a, i) => (
+              <div key={i} className="grid grid-cols-12 gap-1.5 items-center bg-white border border-neutral-200 rounded-xl px-3 py-2">
+                <div className="col-span-4">
+                  <input value={a.name} onChange={e => patchArrival(i,{name:e.target.value})}
+                    placeholder="Quién (ej: Juan + María)"
+                    className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300" />
+                </div>
+                <div className="col-span-2">
+                  <input type="date" value={a.date} onChange={e => patchArrival(i,{date:e.target.value})}
+                    className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent" />
+                </div>
+                <div className="col-span-2">
+                  <input type="time" value={a.time} onChange={e => patchArrival(i,{time:e.target.value})}
+                    className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent" />
+                </div>
+                <div className="col-span-3">
+                  <input value={a.flight} onChange={e => patchArrival(i,{flight:e.target.value})}
+                    placeholder="Vuelo / detalles"
+                    className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300" />
+                </div>
+                <div className="col-span-1 flex justify-end">
+                  <button type="button" onClick={() => removeArrival(i)}
+                    className="text-neutral-300 hover:text-red-500 text-xs">✕</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* PRE-TRIP INFO — page that appears before itinerary days in PDF */}
           <div className="border rounded-2xl p-4 bg-neutral-50 space-y-2">
             <p className="text-xs font-semibold text-neutral-700">Pre-Trip Information</p>
@@ -2210,6 +2271,29 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               📄 Ver PDF
             </a>
           )}
+          {/* Drinks catalog link */}
+          <a
+            href={`/?mode=drinks&kickoffId=${kickoff.id}`}
+            target="_blank" rel="noreferrer"
+            className="px-3 py-2 rounded-lg border border-teal-300 text-sm text-teal-700 bg-teal-50 hover:bg-teal-100 flex items-center gap-1.5"
+            title="Abrir catálogo de bebidas del cliente"
+          >
+            🍹 Bebidas
+          </a>
+          {/* Concierge WhatsApp quick dial */}
+          {kickoff.assignedConciergeName && (() => {
+            const c = CONCIERGE_LIST.find(x => x.name === kickoff.assignedConciergeName);
+            return c?.phone ? (
+              <a
+                href={`https://wa.me/${c.phone.replace(/\D/g,"")}`}
+                target="_blank" rel="noreferrer"
+                className="px-3 py-2 rounded-lg border border-green-300 text-sm text-green-700 bg-green-50 hover:bg-green-100 flex items-center gap-1.5"
+                title={`WhatsApp ${c.name}`}
+              >
+                📱 {c.phone}
+              </a>
+            ) : null;
+          })()}
           {/* Billing — send to Slack */}
           {kickoff?.cart?.length > 0 && (
             <div className="flex items-center gap-1">
