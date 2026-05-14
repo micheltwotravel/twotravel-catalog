@@ -27,7 +27,7 @@ import {
    ========================================= */
 const SLACK_BOT_TOKEN = import.meta.env.VITE_SLACK_BOT_TOKEN || "";
 const SLACK_CHANNEL_ID = import.meta.env.VITE_SLACK_CHANNEL_ID || "C094NE421NV";
-const BILLING_GAS_URL = "https://script.google.com/macros/s/AKfycbwZJudfRGEZm9hx_WiyOif4Nu3RL9NecJTP7gIrFqyHukU146-sdaLqAafZz0gdR7KVvw/exec";
+const BILLING_GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
 // Categories that NEVER get a QB code (restaurants, bars, nightlife, beach clubs)
 const NO_QB = new Set(["restaurants","bars","nightlife","beach-clubs","beach clubs","beachclubs"]);
