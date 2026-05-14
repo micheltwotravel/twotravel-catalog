@@ -39,12 +39,11 @@ const CITY_NAMES = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México",
 const cityFullName = (code) => CITY_NAMES[String(code||"").trim().toUpperCase()] || String(code||"").trim();
 
 /* ─────────────────────────────────────────────────────────────
-   sendItineraryPdfToSlack
-   Generates a client-facing itinerary PDF (same content the
-   client sees in ItineraryPrintView) + a hidden billing page,
-   then uploads to Slack via GAS.
+   buildItineraryPdf / sendItineraryPdfToSlack
+   mode = "slack"   → uploads PDF to Slack via GAS (default)
+   mode = "preview" → opens PDF in a new browser tab
 ───────────────────────────────────────────────────────────── */
-async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD") {
+async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", mode = "slack") {
   const { jsPDF } = await import("jspdf");
 
   // ── helpers ─────────────────────────────────────────────────
@@ -318,7 +317,16 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD") {
     doc.text(`[${qb2}][${nm2}][${Math.round(tot2)}]`, ML, dy); dln();
   });
 
-  // ── send to Slack via GAS ───────────────────────────────────
+  const filename = `Itinerary_${cl(kickoff.guestName||"client").replace(/\s+/g,"-")}_${new Date().toISOString().slice(0,10)}.pdf`;
+
+  // ── preview: open in browser tab ────────────────────────────
+  if (mode === "preview") {
+    const url = doc.output("bloburl");
+    window.open(url, "_blank");
+    return;
+  }
+
+  // ── slack: upload via GAS ────────────────────────────────────
   const pdfBlob   = doc.output("blob");
   const pdfSize   = pdfBlob.size;
   const pdfBase64 = await new Promise(res => {
@@ -326,7 +334,6 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD") {
     r.onload = () => res(r.result.split(",")[1]);
     r.readAsDataURL(pdfBlob);
   });
-  const filename = `Itinerary_${cl(kickoff.guestName||"client").replace(/\s+/g,"-")}_${new Date().toISOString().slice(0,10)}.pdf`;
   const resp = await fetch(BILLING_GAS_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -2444,12 +2451,34 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 onClick={async () => {
                   setBillingSending(true);
                   try {
+                    await sendItineraryPdfToSlack({
+                      ...kickoff,
+                      email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
+                      city: city || kickoff.city || "",
+                    }, kickoff.lang || "en", billingCurrency, "preview");
+                  } catch (e) {
+                    alert("❌ " + e.message);
+                  } finally {
+                    setBillingSending(false);
+                  }
+                }}
+                className="px-3 py-2 border-t border-b border-indigo-300 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50"
+                title="Ver PDF antes de mandar"
+              >
+                {billingSending ? "…" : "👁"}
+              </button>
+              <button
+                type="button"
+                disabled={billingSending}
+                onClick={async () => {
+                  setBillingSending(true);
+                  try {
                     // Merge live EditDrawer state so email/city are always current
                     await sendItineraryPdfToSlack({
                       ...kickoff,
                       email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
                       city: city || kickoff.city || "",
-                    }, kickoff.lang || "en", billingCurrency);
+                    }, kickoff.lang || "en", billingCurrency, "slack");
                     alert("✅ PDF enviado a Slack");
                   } catch (e) {
                     alert("❌ " + e.message);
