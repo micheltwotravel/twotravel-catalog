@@ -2994,8 +2994,8 @@ const loadKickoffs = async () => {
 
     setSelectedForEdit(null);
   } catch (err) {
-    console.error(err);
-    alert("No se pudieron guardar los cambios.");
+    console.error("handleSaveEdit error:", err);
+    alert("No se pudieron guardar los cambios.\n\nDetalle: " + (err?.message || String(err)));
   } finally {
     setRowLoadingId(null);
   }
