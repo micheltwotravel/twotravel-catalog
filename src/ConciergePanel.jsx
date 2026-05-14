@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import {
   fetchKickoffsFromSheet,
+  fetchServicesFromSheet,
   updateKickoffInSheet,
   deleteKickoff,
   saveKickoffToSheet,
@@ -37,184 +38,287 @@ const PAX_MULTIPLIES = new Set(["tours","tour","services","service","chef","priv
 const CITY_NAMES = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" };
 const cityFullName = (code) => CITY_NAMES[String(code||"").trim().toUpperCase()] || String(code||"").trim();
 
-async function sendBillingPdfToSlack(kickoff, currency = "USD") {
+/* ─────────────────────────────────────────────────────────────
+   sendItineraryPdfToSlack
+   Generates a client-facing itinerary PDF (same content the
+   client sees in ItineraryPrintView) + a hidden billing page,
+   then uploads to Slack via GAS.
+───────────────────────────────────────────────────────────── */
+async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD") {
   const { jsPDF } = await import("jspdf");
 
-  const cartRaw = kickoff.cart;
-  const cart = Array.isArray(cartRaw) ? cartRaw
-    : (typeof cartRaw === "string" && cartRaw.trim().startsWith("["))
-      ? (() => { try { return JSON.parse(cartRaw); } catch { return []; } })()
-      : [];
-
-  const fmtAmt = (n) => currency === "COP"
-    ? `$${Number(n).toLocaleString("es-CO",{maximumFractionDigits:0})} COP`
-    : `$${Number(n).toLocaleString("en-US",{maximumFractionDigits:0})} USD`;
-
-  const dayMap = new Map();
-  cart.forEach(it => {
-    const day = String(it.dayLabel || it.day || "Itinerario").trim();
-    if (!dayMap.has(day)) dayMap.set(day, []);
-    dayMap.get(day).push(it);
-  });
-
+  // ── helpers ─────────────────────────────────────────────────
+  const cl = (v) => String(v ?? "").trim();
+  const parseJ = (v) => {
+    if (Array.isArray(v)) return v;
+    if (typeof v === "string" && v.trim().startsWith("[")) {
+      try { return JSON.parse(v); } catch { return []; }
+    }
+    return [];
+  };
   const fmtDate = (v) => {
     if (!v) return "—";
-    try { return new Date(v).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }); }
+    try { return new Date(v).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric", year:"numeric" }); }
     catch { return String(v); }
   };
-
-  const doc  = new jsPDF({ unit: "pt", format: "letter" });
-  const PW = 612, PH = 792, ML = 50, MR = PW - 50, TW = MR - ML;
-  let y = 0;
-  const newPage = () => { doc.addPage(); y = 50; };
-  const checkY  = (need = 30) => { if (y + need > PH - 50) newPage(); };
-  const txt = (t, x, size = 10, bold = false, color = [30,30,30]) => {
-    doc.setFontSize(size); doc.setFont("helvetica", bold ? "bold" : "normal");
-    doc.setTextColor(...color); doc.text(String(t ?? ""), x, y);
+  const fmtIso = (v) => {
+    const s = cl(v);
+    if (!s) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    try { return new Date(s).toISOString().slice(0, 10); } catch { return s; }
   };
-  const ln = (n = 14) => { y += n; };
+  const cleanTag = (v) => cl(v).replace(/[\[\]]/g, "");
+  const fmtAmt = (n) => currency === "COP"
+    ? `$${Number(n).toLocaleString("es-CO", { maximumFractionDigits:0 })} COP`
+    : `$${Number(n).toLocaleString("en-US", { maximumFractionDigits:0 })} USD`;
 
-  // Portada
-  doc.setFillColor(15, 15, 15); doc.rect(0, 0, PW, 80, "F");
-  doc.setFontSize(20); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-  doc.text("TWO TRAVEL", ML, 38);
-  doc.setFontSize(10); doc.setFont("helvetica","normal");
-  doc.text("Concierge Itinerary", ML, 56);
-  doc.setFontSize(9); doc.setTextColor(180,180,180);
-  doc.text(new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}), MR, 56, { align:"right" });
+  // ── parse cart + dayMeta ────────────────────────────────────
+  const cart    = parseJ(kickoff.cart);
+  const dayMeta = parseJ(kickoff.dayMeta || kickoff.day_meta || []);
 
-  y = 110;
-  doc.setFontSize(16); doc.setFont("helvetica","bold"); doc.setTextColor(15,15,15);
-  doc.text(kickoff.guestName || "—", ML, y); ln(22);
-  doc.setFontSize(11); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
-  doc.text(kickoff.tripName || "", ML, y); ln(28);
+  // ── fetch catalog & match each cart item ────────────────────
+  let catalog = [];
+  try { catalog = await fetchServicesFromSheet(); } catch { /* offline – show names only */ }
 
-  const infoRows = [
-    ["Arrival",   fmtDate(kickoff.arrivalDate)],
-    ["Departure", fmtDate(kickoff.departureDate)],
-    ["Email",     kickoff.email || kickoff.guestEmail || "—"],
-    ["WhatsApp",  kickoff.guestContact || "—"],
-    ["Concierge", kickoff.assignedConciergeName || kickoff.assignedConcierge || "—"],
-  ];
-  infoRows.forEach(([label, val]) => {
-    doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(120,120,120);
-    doc.text(label.toUpperCase(), ML, y);
-    doc.setFont("helvetica","normal"); doc.setTextColor(30,30,30);
-    doc.text(String(val), ML + 90, y); ln(16);
-  });
+  const matchSvc = (item) => {
+    const sku = cl(item.sku);
+    const id  = cl(String(item.id ?? ""));
+    const nl  = cl(item.name || item.displayName || "").toLowerCase();
+    return (
+      (sku && catalog.find(s => s.sku === sku)) ||
+      (id  && catalog.find(s => String(s.id) === id)) ||
+      (nl  && catalog.find(s => s.name.toLowerCase() === nl)) ||
+      null
+    );
+  };
 
-  // Billing header block
-  y += 10;
-  doc.setDrawColor(200,200,200); doc.line(ML, y, MR, y); y += 14;
-  doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(150,150,150);
-  doc.text("BILLING DATA — QUICKBOOKS", ML, y); ln(14);
-  doc.setFont("helvetica","normal"); doc.setTextColor(30,30,30); doc.setFontSize(9);
-  const cleanB = (v) => String(v || "").replace(/[\[\]]/g,"");
-  const fmtIso = (v) => { const s=String(v||"").trim(); if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s; try{return new Date(s).toISOString().slice(0,10);}catch{return s;} };
-  [
-    `[1A][${cleanB(kickoff.guestName)}]`,
-    `[2A][${cleanB(kickoff.email||kickoff.guestEmail||kickoff.guestContact||"")}]`,
-    `[3A][${fmtIso(kickoff.arrivalDate)}]`,
-    `[4A][${fmtIso(kickoff.departureDate)}]`,
-    `[CIUDAD][${cleanB(cityFullName(kickoff.city))}]`,
-  ].forEach(line => { doc.text(line, ML, y); ln(13); });
-
-  // Servicios por día
-  y += 10;
-  doc.setDrawColor(200,200,200); doc.line(ML, y, MR, y); y += 16;
-  let grandTotal = 0;
-
-  dayMap.forEach((items, dayLabel) => {
-    checkY(40);
-    doc.setFillColor(240,240,240); doc.rect(ML, y - 12, TW, 18, "F");
-    doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(30,30,30);
-    doc.text(dayLabel, ML + 4, y); ln(22);
-
-    items.forEach(it => {
-      const cat    = (it.category || "").toLowerCase();
-      const isNoQb = NO_QB.has(cat);
-      const qb     = isNoQb ? "" : (it.quickbooksCode || "");
-      const pax    = PAX_MULTIPLIES.has(cat) ? Math.max(1, Number(it.pax || 1)) : 1;
-      const unitP  = currency === "COP"
-        ? Number(it.priceOverride_cop ?? it.price_cop ?? 0)
-        : Number(it.priceUsd ?? 0);
-      const totalP = unitP * pax;
-      const name   = String(it.name_en || it.displayName || it.name || "").slice(0, 50);
-      const time   = it.timeLabel || it.time || "";
-      const rawPax = Number(it.pax || 0);
-      const paxNote = !PAX_MULTIPLIES.has(cat) && rawPax > 0 ? ` · ${rawPax} pax` : "";
-
-      checkY(qb ? 32 : 22);
-      doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(30,30,30);
-      doc.text((time ? `${time}  ` : "") + name + paxNote, ML + 8, y);
-      if (totalP > 0) {
-        grandTotal += totalP;
-        doc.setFont("helvetica","bold"); doc.setTextColor(30,120,60);
-        const priceLabel = pax > 1 ? `${pax} × ${fmtAmt(unitP)} = ${fmtAmt(totalP)}` : fmtAmt(totalP);
-        doc.text(priceLabel, MR, y, { align:"right" });
-        doc.setFont("helvetica","normal");
-      }
-      ln(14);
-      if (qb) {
-        doc.setFontSize(8); doc.setTextColor(80,80,160);
-        doc.text(`[${qb}]`, ML + 8, y);
-        doc.setTextColor(30,30,30); doc.setFontSize(9); ln(14);
-      }
+  // ── build ordered day map ───────────────────────────────────
+  const rawMap = new Map();
+  cart.forEach((item, idx) => {
+    const key = cl(item.dayLabel || item.day || (lang === "es" ? "Itinerario" : "Itinerary"));
+    if (!rawMap.has(key)) rawMap.set(key, []);
+    const svc = matchSvc(item);
+    rawMap.get(key).push({
+      sort       : Number(item.sortOrder ?? idx),
+      time       : cl(item.timeLabel || item.time || svc?.schedule || ""),
+      name       : cl(item.displayName || item.name_en || item.name || svc?.name_en || svc?.name || ""),
+      location   : lang === "es"
+        ? cl(svc?.location_es || svc?.location || "")
+        : cl(svc?.location    || ""),
+      description: svc
+        ? (lang === "es"
+            ? (svc.description?.es || svc.description?.en || "")
+            : (svc.description?.en || svc.description?.es || ""))
+        : "",
+      highlights : svc
+        ? (lang === "es"
+            ? (svc.highlights    || [])
+            : (svc.highlights_en?.length ? svc.highlights_en : svc.highlights || []))
+        : [],
+      category   : cl(item.category || svc?.category || ""),
+      pax        : Number(item.pax   || 0),
+      priceUsd   : Number(item.priceUsd ?? 0),
+      price_cop  : Number(item.priceOverride_cop ?? item.price_cop ?? 0),
+      qbCode     : cl(item.quickbooksCode || svc?.quickbooksCode || ""),
     });
-    ln(6);
   });
 
-  // Total
-  checkY(40);
-  doc.setDrawColor(150,150,150); doc.line(ML, y, MR, y); y += 16;
-  doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(30,30,30);
-  doc.text("TOTAL", ML, y);
-  doc.setTextColor(30,120,60);
-  doc.text(fmtAmt(grandTotal), MR, y, { align:"right" });
+  // Respect dayMeta order
+  const metaLabels  = dayMeta.map(dm => cl(dm.label)).filter(Boolean);
+  const extraLabels = [...rawMap.keys()].filter(k => !metaLabels.includes(k));
+  const orderedDays = [
+    ...metaLabels.filter(l => rawMap.has(l)).map(l => ({
+      label: l,
+      title: dayMeta.find(dm => cl(dm.label) === l)?.title || "",
+    })),
+    ...extraLabels.map(l => ({ label: l, title: "" })),
+  ];
 
-  // Footer en cada página
-  const pageCount = doc.getNumberOfPages();
-  for (let p = 1; p <= pageCount; p++) {
-    doc.setPage(p);
+  // ── PDF setup ───────────────────────────────────────────────
+  const doc = new jsPDF({ unit: "pt", format: "letter" });
+  const PW = 612, PH = 792, ML = 50, MR = 562, TW = 512;
+  let y = 0;
+  let pageNum = 1;
+
+  const addMiniHeader = () => {
+    doc.setDrawColor(230, 230, 230);
+    doc.setLineWidth(0.5);
+    doc.line(ML, 30, MR, 30);
     doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(180,180,180);
-    doc.text("Two Travel · twotravelvip.com", PW/2, PH - 20, { align:"center" });
-    doc.text(`${p} / ${pageCount}`, MR, PH - 20, { align:"right" });
+    doc.text("TWO TRAVEL", ML, 22);
+    doc.text(cl(kickoff.guestName), PW / 2, 22, { align:"center" });
+    doc.text(`${pageNum}`, MR, 22, { align:"right" });
+  };
+  const newPage = () => {
+    doc.addPage(); pageNum++; y = 52; addMiniHeader();
+  };
+  const checkY = (need = 30) => { if (y + need > PH - 48) newPage(); };
+
+  // ── COVER ───────────────────────────────────────────────────
+  // Header band
+  doc.setFillColor(10, 10, 10);
+  doc.rect(0, 0, PW, 76, "F");
+  doc.setFontSize(20); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
+  doc.text("TWO TRAVEL", ML, 36);
+  doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(160,160,160);
+  doc.text("PRIVATE CONCIERGE", ML, 54);
+  doc.text(new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}), MR, 54, { align:"right" });
+
+  y = 112;
+  // Eyebrow
+  doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(170,170,170);
+  doc.text("YOUR ITINERARY", ML, y); y += 18;
+
+  // Guest name
+  doc.setFontSize(28); doc.setFont("helvetica","bold"); doc.setTextColor(12,12,12);
+  doc.text(cl(kickoff.guestName) || "Guest", ML, y); y += 12;
+
+  // Trip name
+  if (kickoff.tripName) {
+    doc.setFontSize(13); doc.setFont("helvetica","normal"); doc.setTextColor(90,90,90);
+    doc.text(cl(kickoff.tripName), ML, y + 6); y += 22;
+  }
+  y += 14;
+
+  // Thin rule
+  doc.setDrawColor(12,12,12); doc.setLineWidth(1.5);
+  doc.line(ML, y, ML + 60, y); doc.setLineWidth(0.5); y += 22;
+
+  // Info rows
+  const infoRows = [
+    [lang === "es" ? "Llegada"    : "Arrival",    fmtDate(kickoff.arrivalDate)],
+    [lang === "es" ? "Salida"     : "Departure",  fmtDate(kickoff.departureDate)],
+    [lang === "es" ? "Ciudad"     : "City",        cityFullName(kickoff.city) || ""],
+    ["Concierge",                                   cl(kickoff.assignedConciergeName || kickoff.assignedConcierge || "")],
+    [lang === "es" ? "Contacto"   : "WhatsApp",   cl(kickoff.guestContact || "")],
+  ].filter(([, v]) => v);
+
+  infoRows.forEach(([label, val]) => {
+    doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(160,160,160);
+    doc.text(label.toUpperCase(), ML, y);
+    doc.setFontSize(10.5); doc.setFont("helvetica","normal"); doc.setTextColor(20,20,20);
+    doc.text(val, ML + 100, y); y += 18;
+  });
+
+  // Concierge summary / notes (optional)
+  if (kickoff.conciergeSummary) {
+    y += 12;
+    doc.setDrawColor(230,230,230); doc.line(ML, y, MR, y); y += 16;
+    doc.setFontSize(7.5); doc.setFont("helvetica","bold"); doc.setTextColor(160,160,160);
+    doc.text(lang === "es" ? "NOTAS DE TU CONCIERGE" : "FROM YOUR CONCIERGE", ML, y); y += 14;
+    const summaryLines = doc.splitTextToSize(cl(kickoff.conciergeSummary).slice(0,900), TW);
+    summaryLines.slice(0,14).forEach(line => {
+      doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(50,50,50);
+      doc.text(line, ML, y); y += 13;
+    });
   }
 
-  // ── MACHINE-READABLE DATA PAGE ────────────────────────────
-  // Each doc.text() = one complete line → PyMuPDF reads full pattern [CODE][Name][Price]
+  // Cover footer
+  doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(200,200,200);
+  doc.text("Two Travel · twotravelvip.com", PW/2, PH - 22, { align:"center" });
+
+  // ── DAY PAGES ───────────────────────────────────────────────
+  orderedDays.forEach(({ label, title }) => {
+    const items = (rawMap.get(label) || []).sort((a,b) => a.sort - b.sort);
+    if (!items.length) return;
+
+    newPage();
+
+    // Day header band
+    doc.setFillColor(238,238,238);
+    doc.rect(ML - 12, y - 14, TW + 24, 26, "F");
+    doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(20,20,20);
+    doc.text(label, ML, y);
+    if (title) {
+      doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(120,120,120);
+      doc.text(cl(title), MR, y, { align:"right" });
+    }
+    y += 24;
+
+    items.forEach((item, itemIdx) => {
+      // Estimate height needed
+      const descLines = item.description
+        ? doc.splitTextToSize(item.description.replace(/\n+/g," "), TW - 12).slice(0,3)
+        : [];
+      const hlCount = Math.min((item.highlights || []).length, 4);
+      const need = 18 + (item.location ? 14 : 0) + descLines.length * 12 + hlCount * 12 + 16;
+      checkY(need);
+
+      // Time + Name
+      const timePart = item.time ? `${item.time}   ` : "";
+      doc.setFontSize(10.5); doc.setFont("helvetica","bold"); doc.setTextColor(15,15,15);
+      doc.text(timePart + item.name, ML, y); y += 15;
+
+      // Location
+      if (item.location) {
+        doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(120,120,120);
+        doc.text("📍 " + item.location, ML + 2, y); y += 13;
+      }
+
+      // Description (max 3 lines)
+      descLines.forEach(line => {
+        checkY(13);
+        doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(65,65,65);
+        doc.text(line, ML + 4, y); y += 12;
+      });
+
+      // Highlights
+      (item.highlights || []).slice(0,4).forEach(hl => {
+        checkY(13);
+        doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(90,90,90);
+        doc.text("·  " + cl(hl), ML + 4, y); y += 12;
+      });
+
+      y += 10;
+      // Divider between services (not after last)
+      if (itemIdx < items.length - 1 && y < PH - 60) {
+        doc.setDrawColor(235,235,235); doc.setLineWidth(0.4);
+        doc.line(ML, y, MR, y); y += 9;
+      }
+    });
+  });
+
+  // Page footers
+  const totalPages = doc.getNumberOfPages();
+  for (let p = 2; p <= totalPages; p++) {
+    doc.setPage(p);
+    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(200,200,200);
+    doc.text("Two Travel · twotravelvip.com", PW/2, PH - 22, { align:"center" });
+  }
+
+  // ── MACHINE-READABLE BILLING PAGE (last, hidden from client) ─
   doc.addPage();
-  const DY = 20;
   let dy = 40;
-  const dln = () => { dy += DY; };
-  doc.setFontSize(7); doc.setFont("helvetica","bold"); doc.setTextColor(180,180,180);
-  doc.text("MACHINE DATA — DO NOT EDIT", ML, dy); dln();
-  doc.setFont("helvetica","normal"); doc.setTextColor(50,50,50);
-  const cleanTag = (v) => String(v || "").replace(/[\[\]]/g, "");
-  const fmtIso2 = (v) => { const s=String(v||"").trim(); if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s; try{return new Date(s).toISOString().slice(0,10);}catch{return s;} };
+  const dln = (n = 16) => { dy += n; };
+  doc.setFontSize(7); doc.setFont("helvetica","bold"); doc.setTextColor(210,210,210);
+  doc.text("BILLING DATA — DO NOT EDIT", ML, dy); dln();
+  doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
+
   [
     `[1A][${cleanTag(kickoff.guestName)}]`,
     `[2A][${cleanTag(kickoff.email || kickoff.guestEmail || kickoff.guestContact || "")}]`,
-    `[3A][${fmtIso2(kickoff.arrivalDate)}]`,
-    `[4A][${fmtIso2(kickoff.departureDate)}]`,
+    `[3A][${fmtIso(kickoff.arrivalDate)}]`,
+    `[4A][${fmtIso(kickoff.departureDate)}]`,
     `[CIUDAD][${cleanTag(cityFullName(kickoff.city))}]`,
-  ].forEach(line => { doc.text(line, ML, dy); dln(); });
-  dln();
-  // [QB_CODE][Name][TotalPrice] — one per line, only items with explicit QB code
+  ].forEach(line => { doc.setFontSize(7.5); doc.text(line, ML, dy); dln(); });
+  dln(4);
+
   cart.forEach(it => {
-    const c2  = (it.category || "").toLowerCase();
-    const qb2 = NO_QB.has(c2) ? "" : (it.quickbooksCode || "");
+    const c2   = cl(it.category || "").toLowerCase();
+    const isNQ = NO_QB.has(c2);
+    const qb2  = isNQ ? "" : cl(it.quickbooksCode || matchSvc(it)?.quickbooksCode || "");
     if (!qb2) return;
     const pax2  = PAX_MULTIPLIES.has(c2) ? Math.max(1, Number(it.pax || 1)) : 1;
     const unit2 = currency === "COP"
       ? Number(it.priceOverride_cop ?? it.price_cop ?? 0)
       : Number(it.priceUsd ?? 0);
     const tot2  = unit2 * pax2;
-    const nm2   = String(it.name_en || it.displayName || it.name || "").replace(/[\[\]]/g,"");
+    const nm2   = cl(it.name_en || it.displayName || it.name || "").replace(/[\[\]]/g,"");
+    doc.setFontSize(7.5);
     doc.text(`[${qb2}][${nm2}][${Math.round(tot2)}]`, ML, dy); dln();
   });
 
-  // Enviar a Slack vía GAS
+  // ── send to Slack via GAS ───────────────────────────────────
   const pdfBlob   = doc.output("blob");
   const pdfSize   = pdfBlob.size;
   const pdfBase64 = await new Promise(res => {
@@ -222,7 +326,7 @@ async function sendBillingPdfToSlack(kickoff, currency = "USD") {
     r.onload = () => res(r.result.split(",")[1]);
     r.readAsDataURL(pdfBlob);
   });
-  const filename = `Itinerary_${(kickoff.guestName||"client").replace(/\s+/g,"-")}_${new Date().toISOString().slice(0,10)}.pdf`;
+  const filename = `Itinerary_${cl(kickoff.guestName||"client").replace(/\s+/g,"-")}_${new Date().toISOString().slice(0,10)}.pdf`;
   const resp = await fetch(BILLING_GAS_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -2341,11 +2445,11 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   setBillingSending(true);
                   try {
                     // Merge live EditDrawer state so email/city are always current
-                    await sendBillingPdfToSlack({
+                    await sendItineraryPdfToSlack({
                       ...kickoff,
                       email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
                       city: city || kickoff.city || "",
-                    }, billingCurrency);
+                    }, kickoff.lang || "en", billingCurrency);
                     alert("✅ PDF enviado a Slack");
                   } catch (e) {
                     alert("❌ " + e.message);
