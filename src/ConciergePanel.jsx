@@ -183,13 +183,24 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   doc.setDrawColor(12,12,12); doc.setLineWidth(1.5);
   doc.line(ML, y, ML + 60, y); doc.setLineWidth(0.5); y += 22;
 
+  // Lookup concierge phone from CONCIERGE_LIST
+  const conciergePhone = (() => {
+    const name = cl(kickoff.assignedConciergeName || kickoff.assignedConcierge || "");
+    if (!name) return "";
+    const found = CONCIERGE_LIST.find(c => c.name === name);
+    return found?.phone || cl(kickoff.mainContact || "");
+  })();
+
   // Info rows
   const infoRows = [
-    [lang === "es" ? "Llegada"    : "Arrival",    fmtDate(kickoff.arrivalDate)],
-    [lang === "es" ? "Salida"     : "Departure",  fmtDate(kickoff.departureDate)],
-    [lang === "es" ? "Ciudad"     : "City",        cityFullName(kickoff.city) || ""],
-    ["Concierge",                                   cl(kickoff.assignedConciergeName || kickoff.assignedConcierge || "")],
-    [lang === "es" ? "Contacto"   : "WhatsApp",   cl(kickoff.guestContact || "")],
+    [lang === "es" ? "Llegada"      : "Arrival",     fmtDate(kickoff.arrivalDate)],
+    [lang === "es" ? "Salida"       : "Departure",   fmtDate(kickoff.departureDate)],
+    [lang === "es" ? "Destino"      : "Destination", cityFullName(kickoff.city) || ""],
+    [lang === "es" ? "Alojamiento"  : "Accommodation", cl(kickoff.accommodationName || "")],
+    [lang === "es" ? "Dirección"    : "Address",       cl(kickoff.accommodationAddr || "")],
+    ["Concierge",                                      cl(kickoff.assignedConciergeName || kickoff.assignedConcierge || "")],
+    ["WhatsApp Concierge",                             conciergePhone],
+    [lang === "es" ? "Tu WhatsApp"  : "Your WhatsApp", cl(kickoff.guestContact || "")],
   ].filter(([, v]) => v);
 
   infoRows.forEach(([label, val]) => {
