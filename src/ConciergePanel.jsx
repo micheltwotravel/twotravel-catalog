@@ -2069,25 +2069,25 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               </div>
             )}
 
-            <div>
-              <label className="text-[11px] text-neutral-500">Concierge asignado (nombre)</label>
-              <input
+            <div className="sm:col-span-2">
+              <label className="text-[11px] text-neutral-500">Concierge asignado</label>
+              <select
                 value={assignedConcierge}
-                onChange={(e) => setAssignedConcierge(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="Nombre del concierge"
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] text-neutral-500">Email del concierge</label>
-              <input
-                type="email"
-                value={assignedConciergeEmail}
-                onChange={(e) => setAssignedConciergeEmail(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="concierge@email.com"
-              />
+                onChange={(e) => {
+                  const name = e.target.value;
+                  setAssignedConcierge(name);
+                  const found = CONCIERGE_LIST.find(c => c.name === name);
+                  if (found) setAssignedConciergeEmail(found.email);
+                }}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+              >
+                <option value="">— Sin asignar —</option>
+                {CONCIERGE_LIST.map(c => (
+                  <option key={c.email} value={c.name}>
+                    {c.name} · {c.city}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="sm:col-span-2">
@@ -2282,20 +2282,21 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           </button>
           {/* Itinerary: PDF download + shareable link */}
           {kickoff?.cart?.length > 0 && (() => {
-            const itinUrl = `${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff.lang || "en"}`;
+            const clientUrl    = `${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff.lang || "en"}`;
+            const conciergeUrl = clientUrl + "&edit=1";
             return (
               <div className="flex items-center gap-1">
-                {/* PDF: open in new tab → Ctrl+P to save */}
+                {/* PDF: concierge opens with edit=1 → can edit then Ctrl+P */}
                 <a
-                  href={itinUrl}
+                  href={conciergeUrl}
                   target="_blank" rel="noreferrer"
                   className="px-3 py-2 rounded-l-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-1"
-                  title="Abrir itinerario — Ctrl+P para guardar como PDF"
+                  title="Abrir itinerario (modo edición) — Ctrl+P para guardar como PDF"
                 >
                   📄 PDF
                 </a>
-                {/* Copy link — client views online, always latest */}
-                <CopyLinkButton url={itinUrl} />
+                {/* Copy link — client link, read-only, no edit button */}
+                <CopyLinkButton url={clientUrl} />
               </div>
             );
           })()}

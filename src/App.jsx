@@ -2184,7 +2184,7 @@ function DrinksCatalog() {
       {/* Header */}
       <div className="bg-neutral-950 text-white px-6 py-5">
         <p className="text-xs text-neutral-400 uppercase tracking-widest mb-1">Two Travel</p>
-        <h1 className="text-xl font-semibold">🍹 Drink List</h1>
+        <h1 className="text-xl font-semibold">🍹 Lista de Bebidas</h1>
         <p className="text-sm text-neutral-400 mt-1">Selecciona las bebidas y cantidades para tu estadía.</p>
       </div>
 
@@ -2239,7 +2239,7 @@ function DrinksCatalog() {
           disabled={sending || !hasSelection}
           className="w-full max-w-xl py-3 rounded-xl bg-neutral-950 text-white font-semibold text-sm disabled:opacity-40 hover:bg-neutral-800"
         >
-          {sending ? "Enviando…" : "✅ Enviar mi drink list al concierge"}
+          {sending ? "Enviando…" : "✅ Enviar lista al concierge"}
         </button>
       </div>
     </div>

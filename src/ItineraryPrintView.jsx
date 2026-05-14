@@ -1252,8 +1252,10 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
 ═══════════════════════════════════════════════════════════ */
 export default function ItineraryPrintView() {
   const params    = new URLSearchParams(window.location.search);
-  const kickoffId = params.get("kickoffId");
-  const lang      = params.get("lang") === "es" ? "es" : "en";
+  const kickoffId   = params.get("kickoffId");
+  const lang        = params.get("lang") === "es" ? "es" : "en";
+  // Edit mode ONLY when concierge explicitly adds ?edit=1 — client link never has this
+  const canEdit     = params.get("edit") === "1";
 
   const [kickoff,   setKickoff]   = useState(null);
   const [catalog,   setCatalog]   = useState([]);
@@ -1443,20 +1445,22 @@ export default function ItineraryPrintView() {
             textDecoration: "none", boxShadow: "0 1px 4px rgba(0,0,0,.08)" }}>
           {lang === "en" ? "🇨🇴 ES" : "🇺🇸 EN"}
         </a>
-        <button onClick={() => setEditMode(v => !v)}
-          style={{ ...ctrl,
-            background: editMode ? "#1d4ed8" : "#fff",
-            color: editMode ? "#fff" : "#333",
-            border: editMode ? "none" : "1px solid #ddd",
-            fontWeight: 600, boxShadow: "0 1px 4px rgba(0,0,0,.08)",
-          }}>
-          {editMode ? "✏️ Editing" : "✏️ Edit"}
-        </button>
-        {editMode && (
+        {canEdit && (
+          <button onClick={() => setEditMode(v => !v)}
+            style={{ ...ctrl,
+              background: editMode ? "#1d4ed8" : "#fff",
+              color: editMode ? "#fff" : "#333",
+              border: editMode ? "none" : "1px solid #ddd",
+              fontWeight: 600, boxShadow: "0 1px 4px rgba(0,0,0,.08)",
+            }}>
+            {editMode ? "✏️ Editando" : "✏️ Editar"}
+          </button>
+        )}
+        {canEdit && editMode && (
           <button onClick={addBlankDay}
             style={{ ...ctrl, background: "#ecfdf5", color: "#065f46",
               border: "1px solid #a7f3d0", fontWeight: 600 }}>
-            + Add Day
+            + Día
           </button>
         )}
         <button onClick={() => window.print()}
