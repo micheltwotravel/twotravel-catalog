@@ -907,8 +907,9 @@ function DaySection({ label, meta, items, loadingServices,
    Both are persisted on save and drive PDF + Travefy output.
 ═══════════════════════════════════════════════════════════════ */
 function ItineraryCanvas({ kickoff, onSave }) {
-  const [cart,     setCart]     = useState(kickoff?.cart     || []);
-  const [dayMeta,  setDayMeta]  = useState(kickoff?.dayMeta  || []);
+  const safeArr = (v) => Array.isArray(v) ? v : [];
+  const [cart,     setCart]     = useState(safeArr(kickoff?.cart));
+  const [dayMeta,  setDayMeta]  = useState(safeArr(kickoff?.dayMeta));
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(false);
   const [saving,   setSaving]   = useState(false);
@@ -2904,10 +2905,16 @@ const loadKickoffs = async () => {
       const id = normalizeId(k);
       const safeId = String(id || `row-${idx}`);
 
-      const rawCart = k?.cart ?? k?.Cart ?? k?.itinerary ?? [];
-      const cart = Array.isArray(rawCart)
-        ? rawCart
-        : (() => { try { return JSON.parse(rawCart) || []; } catch { return []; } })();
+      const parseJsonArr = (v) => {
+        if (Array.isArray(v)) return v;
+        if (typeof v === "string" && v.trim().startsWith("[")) {
+          try { return JSON.parse(v) || []; } catch { return []; }
+        }
+        return [];
+      };
+
+      const cart    = parseJsonArr(k?.cart    ?? k?.Cart    ?? k?.itinerary ?? []);
+      const dayMeta = parseJsonArr(k?.dayMeta ?? k?.day_meta ?? []);
 
       return {
         ...k,
@@ -2920,6 +2927,7 @@ const loadKickoffs = async () => {
         ).trim(),
         assignedConcierge: String(k?.assignedConcierge || k?.AssignedConcierge || k?.concierge || "").trim(),
         cart,
+        dayMeta,
       };
     });
 
