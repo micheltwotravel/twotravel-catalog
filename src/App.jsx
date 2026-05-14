@@ -1,4 +1,24 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, Component } from "react";
+
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{padding:32,fontFamily:"monospace",background:"#fff1f1",minHeight:"100vh"}}>
+          <h2 style={{color:"#c00",marginBottom:12}}>⚠️ Runtime Error</h2>
+          <pre style={{whiteSpace:"pre-wrap",fontSize:13,color:"#333"}}>
+            {this.state.error?.message || String(this.state.error)}
+            {"\n\n"}
+            {this.state.error?.stack}
+          </pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import ConciergePanel from "./ConciergePanel";
 import TwoTravelCatalog from "./TwoTravelCatalog";
 import ItineraryPrintView from "./ItineraryPrintView";
@@ -2377,11 +2397,11 @@ function App() {
   const mode = params.get("mode");
   const kickoffId = params.get("kickoffId") || "";
 
-  if (mode === "dashboard" || mode === "kpi") return <UnifiedDashboard />;
-  if (mode === "concierge")          return <ConciergePanel />;
-  if (mode === "soporte")            return <SoportePage />;
-  if (mode === "soporte-dashboard")  return <SoporteDashboard />;
-  if (mode === "tasks")              return <TaskTracker />;
+  if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard /></ErrorBoundary>;
+  if (mode === "concierge")          return <ErrorBoundary><ConciergePanel /></ErrorBoundary>;
+  if (mode === "soporte")            return <ErrorBoundary><SoportePage /></ErrorBoundary>;
+  if (mode === "soporte-dashboard")  return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
+  if (mode === "tasks")              return <ErrorBoundary><TaskTracker /></ErrorBoundary>;
   if (mode === "catalog" || mode === "questionnaire") {
     // If no kickoffId → show welcome/intake page first
     if (!kickoffId) return <WelcomeCatalogPage mode={mode} />;
