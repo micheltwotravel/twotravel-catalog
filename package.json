@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "googleapis": "^171.4.0",
+    "jspdf": "^4.2.1",
     "lucide-react": "^0.453.0",
     "papaparse": "^5.5.3",
     "react": "^18.3.1",
