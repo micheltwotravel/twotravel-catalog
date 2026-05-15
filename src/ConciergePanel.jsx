@@ -227,6 +227,35 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(200,200,200);
   doc.text("Two Travel · twotravelvip.com", PW/2, PH - 22, { align:"center" });
 
+  // ── PRE-TRIP CONTENT PAGE ───────────────────────────────────
+  const preTripText = cl(kickoff.preTripContent || kickoff.preTrip || kickoff.pre_trip || "");
+  if (preTripText) {
+    newPage();
+    doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(12,12,12);
+    doc.text(lang === "es" ? "ANTES DE TU LLEGADA" : "BEFORE YOUR ARRIVAL", ML, y); y += 20;
+    doc.setDrawColor(12,12,12); doc.setLineWidth(1.2);
+    doc.line(ML, y, ML + 50, y); doc.setLineWidth(0.5); y += 16;
+
+    preTripText.split("\n").forEach(line => {
+      const l = cl(line);
+      if (!l) { checkY(8); y += 6; return; }
+      checkY(14);
+      const isUrl = l.startsWith("http");
+      const isLabel = l.includes(": http");
+      if (isUrl || isLabel) {
+        doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(30,100,200);
+      } else if (l.toUpperCase() === l && l.length < 60) {
+        // ALL CAPS line = section header
+        doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(120,120,120);
+        y += 4;
+      } else {
+        doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40);
+      }
+      const wrapped = doc.splitTextToSize(l, TW);
+      wrapped.forEach(wl => { checkY(13); doc.text(wl, ML, y); y += 13; });
+    });
+  }
+
   // ── DAY PAGES ───────────────────────────────────────────────
   orderedDays.forEach(({ label, title }) => {
     const items = (rawMap.get(label) || []).sort((a,b) => a.sort - b.sort);
@@ -688,12 +717,12 @@ function buildTravifyTextFromCart(kickoff) {
 /* ═══════════════════════════════════════════════════════════════
    ACTIVITY ROW — inline-editable row inside a day section
 ═══════════════════════════════════════════════════════════════ */
-function ActivityRow({ item, onUpdate, onRemove }) {
+function ActivityRow({ item, onUpdate, onRemove, availableDays = [] }) {
   const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation));
   return (
     <div className="px-4 py-2.5 hover:bg-neutral-50 transition-colors">
       <div className="grid grid-cols-12 gap-x-2 items-center">
-        {/* Time */}
+        {/* Time — free text */}
         <div className="col-span-2">
           <input
             value={item.timeLabel || ""}
@@ -750,8 +779,19 @@ function ActivityRow({ item, onUpdate, onRemove }) {
           </button>
         </div>
       </div>
-      {/* QB billing row — always visible */}
-      <div className="flex gap-3 mt-1 items-center">
+      {/* QB billing row + day selector */}
+      <div className="flex gap-3 mt-1 items-center flex-wrap">
+        {/* Move to another day */}
+        {availableDays.length > 1 && (
+          <select
+            value={item.dayLabel || ""}
+            onChange={e => onUpdate(item.id, { dayLabel: e.target.value })}
+            className="text-[10px] text-violet-600 border-b border-dashed border-violet-200 focus:border-violet-400 focus:outline-none py-0.5 bg-transparent max-w-[120px]"
+            title="Mover a otro día"
+          >
+            {availableDays.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        )}
         <input
           value={item.quickbooksCode || ""}
           onChange={e => onUpdate(item.id, { quickbooksCode: e.target.value.toUpperCase() })}
@@ -823,7 +863,7 @@ function ActivityRow({ item, onUpdate, onRemove }) {
 /* ═══════════════════════════════════════════════════════════════
    DAY SECTION — one per day, collapsible, with editable header
 ═══════════════════════════════════════════════════════════════ */
-function DaySection({ label, meta, items, loadingServices,
+function DaySection({ label, meta, items, loadingServices, availableDays,
   onUpdateMeta, onRenameLabel, onRemoveDay,
   onUpdateItem, onRemoveItem, onAddManual, onAddFromCatalog }) {
 
@@ -890,6 +930,7 @@ function DaySection({ label, meta, items, loadingServices,
             <div className="divide-y divide-neutral-100 bg-white">
               {items.map(item => (
                 <ActivityRow key={item.id} item={item}
+                  availableDays={availableDays}
                   onUpdate={onUpdateItem} onRemove={onRemoveItem}/>
               ))}
             </div>
@@ -1068,6 +1109,7 @@ function ItineraryCanvas({ kickoff, onSave }) {
           meta={meta}
           items={items}
           loadingServices={loadingServices}
+          availableDays={days.map(d => d.label)}
           onUpdateMeta={patch => upsertDayMeta(label, patch)}
           onRenameLabel={newLabel => renameDayLabel(label, newLabel)}
           onRemoveDay={() => removeDay(label)}
@@ -1688,20 +1730,34 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("all");
 
-  // Normalise city for comparison (lowercase, no accents on common names)
-  const normalizeCity = (v) => String(v || "").trim().toLowerCase();
-  const kickoffCity = normalizeCity(city);
+  // Resolve city code (CTG, MDE, CDMX, TUL, BOG) from any format
+  const CITY_ALIASES = {
+    CTG:  ["ctg","cartagena","cartagena de indias"],
+    MDE:  ["mde","medellin","medellín"],
+    CDMX: ["cdmx","mexico","ciudad de mexico","ciudad de méxico","cdmx"],
+    TUL:  ["tul","tulum"],
+    BOG:  ["bog","bogota","bogotá"],
+  };
+  const toCityCode = (raw) => {
+    const v = String(raw || "").trim().toLowerCase();
+    if (!v) return "";
+    for (const [code, aliases] of Object.entries(CITY_ALIASES)) {
+      if (aliases.includes(v) || v === code.toLowerCase()) return code;
+    }
+    return v.toUpperCase();
+  };
+  const kickoffCityCode = toCityCode(city); // e.g. "CTG", "CDMX"
 
-  // Base list: filter by city when kickoff has one and service has city tagged
+  // Base list: filter by city using canonical codes
   const cityServices = useMemo(() => {
-    if (!kickoffCity) return services || [];
+    if (!kickoffCityCode) return services || [];
     return (services || []).filter((s) => {
-      const sCity = normalizeCity(s.city);
-      // If service has no city tag → show it (backward-compat for untagged rows)
-      if (!sCity) return true;
-      return sCity === kickoffCity;
+      const sCity = String(s.city || "").trim();
+      // Untagged services → only show for CTG (legacy catalog)
+      if (!sCity) return kickoffCityCode === "CTG";
+      return toCityCode(sCity) === kickoffCityCode;
     });
-  }, [services, kickoffCity]);
+  }, [services, kickoffCityCode]);
 
   // Suggested: 2 per category, in SUGGESTION_CATS order
   const suggested = useMemo(() => {
@@ -1757,7 +1813,7 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
 
   return (
     <Modal
-      title={kickoffCity ? `Agregar desde Catálogo · ${kickoffCity.charAt(0).toUpperCase() + kickoffCity.slice(1)}` : "Agregar desde Catálogo"}
+      title={kickoffCityCode ? `Agregar desde Catálogo · ${kickoffCityCode}` : "Agregar desde Catálogo"}
       onClose={onClose}
       maxWidth="max-w-4xl"
       footer={
@@ -2262,12 +2318,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="5 people" />
               </div>
-              <div>
-                <label className="text-[11px] text-neutral-500">Título del concierge</label>
-                <input value={conciergeTitle} onChange={(e) => setConciergeTitle(e.target.value)}
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="Senior Concierge Medellín" />
-              </div>
               <div className="col-span-2">
                 <label className="text-[11px] text-neutral-500">Nombre del alojamiento</label>
                 <input value={accommodationName} onChange={(e) => setAccommodationName(e.target.value)}
@@ -2432,20 +2482,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           >
             🍹 Bebidas
           </a>
-          {/* Concierge WhatsApp quick dial */}
-          {kickoff.assignedConciergeName && (() => {
-            const c = CONCIERGE_LIST.find(x => x.name === kickoff.assignedConciergeName);
-            return c?.phone ? (
-              <a
-                href={`https://wa.me/${c.phone.replace(/\D/g,"")}`}
-                target="_blank" rel="noreferrer"
-                className="px-3 py-2 rounded-lg border border-green-300 text-sm text-green-700 bg-green-50 hover:bg-green-100 flex items-center gap-1.5"
-                title={`WhatsApp ${c.name}`}
-              >
-                📱 {c.phone}
-              </a>
-            ) : null;
-          })()}
           {/* Billing — send to Slack */}
           {kickoff?.cart?.length > 0 && (
             <div className="flex items-center gap-1">
