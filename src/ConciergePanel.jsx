@@ -191,23 +191,38 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     return found?.phone || cl(kickoff.mainContact || "");
   })();
 
-  // Info rows
-  const infoRows = [
-    [lang === "es" ? "Llegada"      : "Arrival",     fmtDate(kickoff.arrivalDate)],
-    [lang === "es" ? "Salida"       : "Departure",   fmtDate(kickoff.departureDate)],
-    [lang === "es" ? "Destino"      : "Destination", cityFullName(kickoff.city) || ""],
-    [lang === "es" ? "Alojamiento"  : "Accommodation", cl(kickoff.accommodationName || "")],
-    [lang === "es" ? "Dirección"    : "Address",       cl(kickoff.accommodationAddr || "")],
-    ["Concierge",                                      cl(kickoff.assignedConciergeName || kickoff.assignedConcierge || "")],
-    ["WhatsApp Concierge",                             conciergePhone],
-    [lang === "es" ? "Tu WhatsApp"  : "Your WhatsApp", cl(kickoff.guestContact || "")],
-  ].filter(([, v]) => v);
+  // Build WhatsApp URL from concierge phone
+  const waDigits = conciergePhone.replace(/[^0-9]/g, "");
+  const waUrl    = waDigits ? `https://wa.me/${waDigits}` : null;
 
-  infoRows.forEach(([label, val]) => {
+  // Build accommodation URL (Airbnb / Booking link if concierge set one)
+  const accomUrl = cl(kickoff.accommodationUrl || "");
+
+  // Info rows — each: { label, val, url? }
+  const infoRows = [
+    { label: lang === "es" ? "Llegada"      : "Arrival",        val: fmtDate(kickoff.arrivalDate) },
+    { label: lang === "es" ? "Salida"       : "Departure",      val: fmtDate(kickoff.departureDate) },
+    { label: lang === "es" ? "Destino"      : "Destination",    val: cityFullName(kickoff.city) || "" },
+    { label: lang === "es" ? "Huéspedes"    : "Guests",         val: cl(kickoff.groupSize || "") },
+    { label: lang === "es" ? "Alojamiento"  : "Accommodation",  val: cl(kickoff.accommodationName || ""), url: accomUrl || null },
+    { label: lang === "es" ? "Dirección"    : "Address",        val: cl(kickoff.accommodationAddr || "") },
+    { label: "Concierge",                                        val: cl(kickoff.assignedConciergeName || kickoff.assignedConcierge || "") },
+    { label: "WhatsApp Concierge",                               val: conciergePhone, url: waUrl },
+    { label: lang === "es" ? "Tu WhatsApp"  : "Your WhatsApp",  val: cl(kickoff.guestContact || "") },
+  ].filter(r => r.val);
+
+  infoRows.forEach(({ label, val, url }) => {
     doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(160,160,160);
     doc.text(label.toUpperCase(), ML, y);
-    doc.setFontSize(10.5); doc.setFont("helvetica","normal"); doc.setTextColor(20,20,20);
-    doc.text(val, ML + 100, y); y += 18;
+    doc.setFontSize(10.5); doc.setFont("helvetica","normal");
+    if (url) {
+      doc.setTextColor(30, 100, 200);
+      doc.textWithLink(val, ML + 100, y, { url });
+    } else {
+      doc.setTextColor(20, 20, 20);
+      doc.text(val, ML + 100, y);
+    }
+    y += 18;
   });
 
   // Concierge summary / notes (optional)
@@ -2079,6 +2094,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [conciergeTitle,     setConciergeTitle]     = useState(kickoff?.conciergeTitle     || "");
   const [accommodationName,  setAccommodationName]  = useState(kickoff?.accommodationName  || "");
   const [accommodationAddr,  setAccommodationAddr]  = useState(kickoff?.accommodationAddr  || "");
+  const [accommodationUrl,   setAccommodationUrl]   = useState(kickoff?.accommodationUrl   || "");
   const [checkIn,            setCheckIn]            = useState(kickoff?.checkIn            || "3:00 PM");
   const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "11:00 AM");
   const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=drivesdk");
@@ -2110,6 +2126,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     conciergeTitle:    conciergeTitle.trim(),
     accommodationName: accommodationName.trim(),
     accommodationAddr: accommodationAddr.trim(),
+    accommodationUrl:  accommodationUrl.trim(),
     checkIn:           checkIn.trim(),
     checkOut:          checkOut.trim(),
     welcomePdfUrl:     welcomePdfUrl.trim(),
@@ -2329,6 +2346,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 <input value={accommodationAddr} onChange={(e) => setAccommodationAddr(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="Calle 10 # 29-34, Medellín, Antioquia" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-[11px] text-neutral-500">Link del alojamiento (Airbnb, Booking, etc.)</label>
+                <input value={accommodationUrl} onChange={(e) => setAccommodationUrl(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="https://www.airbnb.com/rooms/12345" />
               </div>
               <div>
                 <label className="text-[11px] text-neutral-500">Check-in</label>

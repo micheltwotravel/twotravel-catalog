@@ -629,7 +629,15 @@ function CoverPage({ kickoff, total, lang, editMode }) {
                 <div className="cover-info-label">
                   {isEs ? "Alojamiento" : "Accommodation"}
                 </div>
-                <Editable tag="div" className="cover-info-value" editMode={editMode} value={a.accommodationName}/>
+                {a.accommodationUrl ? (
+                  <a href={a.accommodationUrl} target="_blank" rel="noreferrer"
+                    className="cover-info-value"
+                    style={{ color: "#1d4ed8", textDecoration: "underline", display: "block" }}>
+                    {a.accommodationName}
+                  </a>
+                ) : (
+                  <Editable tag="div" className="cover-info-value" editMode={editMode} value={a.accommodationName}/>
+                )}
                 {a.accommodationAddr && (
                   a.accommodationMapsUrl ? (
                     <a href={a.accommodationMapsUrl} target="_blank" rel="noreferrer"
@@ -649,15 +657,18 @@ function CoverPage({ kickoff, total, lang, editMode }) {
                   {isEs ? "Detalles de Estadía" : "Stay Details"}
                 </div>
                 {a.groupSize && (
-                  <Editable tag="div" className="cover-info-value" editMode={editMode} value={a.groupSize}/>
+                  <div className="cover-info-value" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <span>👥</span>
+                    <span>{a.groupSize}</span>
+                  </div>
                 )}
                 {a.checkIn  && (
                   <Editable tag="div" className="cover-info-sub" editMode={editMode}
-                    value={`${isEs ? "Check-in" : "Check-in"}: ${a.checkIn}`}/>
+                    value={`Check-in: ${a.checkIn}`}/>
                 )}
                 {a.checkOut && (
                   <Editable tag="div" className="cover-info-sub" editMode={editMode}
-                    value={`${isEs ? "Check-out" : "Check-out"}: ${a.checkOut}`}/>
+                    value={`Check-out: ${a.checkOut}`}/>
                 )}
               </div>
             )}
@@ -742,8 +753,25 @@ function SummaryPage({ kickoff, days, page, total, lang, editMode }) {
   );
 }
 
+/* ─── Per-city social media handles ────────────────────────
+   Update these when the accounts change.
+   ig = Instagram, tt = TikTok
+──────────────────────────────────────────────────────────── */
+const CITY_SOCIAL = {
+  CTG:  { ig: "@twotravelconcierge",    igUrl: "https://www.instagram.com/twotravelconcierge",    tt: "@twotravelconcierge",    ttUrl: "https://www.tiktok.com/@twotravelconcierge" },
+  MDE:  { ig: "@twotravelconcierge",    igUrl: "https://www.instagram.com/twotravelconcierge",    tt: "@twotravelconcierge",    ttUrl: "https://www.tiktok.com/@twotravelconcierge" },
+  CDMX: { ig: "@twotravelconcierge.mx", igUrl: "https://www.instagram.com/twotravelconcierge.mx", tt: "@twotravelconcierge.mx", ttUrl: "https://www.tiktok.com/@twotravelconcierge.mx" },
+  TUL:  { ig: "@twotravelconcierge.mx", igUrl: "https://www.instagram.com/twotravelconcierge.mx", tt: "@twotravelconcierge.mx", ttUrl: "https://www.tiktok.com/@twotravelconcierge.mx" },
+  BOG:  { ig: "@twotravelconcierge",    igUrl: "https://www.instagram.com/twotravelconcierge",    tt: "@twotravelconcierge",    ttUrl: "https://www.tiktok.com/@twotravelconcierge" },
+  DEFAULT: { ig: "@twotravelconcierge", igUrl: "https://www.instagram.com/twotravelconcierge",    tt: "@twotravelconcierge",    ttUrl: "https://www.tiktok.com/@twotravelconcierge" },
+};
+const getCitySocial = (city) => {
+  const code = String(city || "").trim().toUpperCase();
+  return CITY_SOCIAL[code] || CITY_SOCIAL.DEFAULT;
+};
+
 /* ═══════════════════════════════════════════════════════════
-   PAGE 3: INFORMATION & DOCUMENTS  +  PRE-TRIP CONTENT
+   PAGE 3: BEFORE YOUR ARRIVAL  +  PRE-TRIP CONTENT
    Merged into one page. Concierge edits pre-trip inline.
 ═══════════════════════════════════════════════════════════ */
 function parsePretripSections(raw) {
@@ -778,17 +806,19 @@ function WelcomePage({ kickoff, lang, page, total, editMode, localPreTrip, setLo
     ? localPreTrip
     : (cl(kickoff.preTripContent || "") || DEFAULT_PRETRIP_PDF);
   const sections = parsePretripSections(rawPreTrip);
+  const social = getCitySocial(kickoff.city);
+
   return (
     <div className="page">
       <PH kickoff={kickoff}/>
-      <div className="section-eyebrow">{isEs ? "Bienvenida" : "Welcome"}</div>
+      <div className="section-eyebrow">{isEs ? "Antes de tu llegada" : "Before Your Arrival"}</div>
       <div className="section-title">
-        {isEs ? "Información y Documentos" : "Information & Documents"}
+        {isEs ? "Bienvenida" : "Welcome"}
       </div>
 
       <div className="info-body">
         <div className="info-block">
-          <div className="info-h3">{isEs ? "Bienvenido" : "Welcome"}</div>
+          <div className="info-h3">{isEs ? "¡Bienvenido!" : "Welcome!"}</div>
           <Editable
             tag="p" className="info-p" editMode={editMode}
             style={{ fontWeight: 600 }}
@@ -797,20 +827,8 @@ function WelcomePage({ kickoff, lang, page, total, editMode, localPreTrip, setLo
           <Editable
             tag="p" className="info-p" editMode={editMode}
             value={isEs
-              ? "Por favor revisa este itinerario antes de tu llegada. Contiene información útil para tu viaje."
-              : "Please review this itinerary before your arrival. It contains helpful information for your trip."}
-          />
-        </div>
-
-        <div className="info-block">
-          <div className="info-h3">
-            {isEs ? "Sobre este itinerario" : "About This Itinerary"}
-          </div>
-          <Editable
-            tag="p" className="info-p" editMode={editMode}
-            value={isEs
-              ? "Este es un itinerario en borrador — todo puede ajustarse. Podemos cambiar, agregar o eliminar experiencias según lo que más te emocione. En nuestra próxima reunión lo revisaremos juntos."
-              : "This is a draft itinerary — everything can be adjusted. We can change, add, or remove experiences based on what excites you most. In our next meeting we will review it together and refine it accordingly."}
+              ? "Por favor revisa esta información antes de tu llegada. Tu concierge está disponible en todo momento para cualquier ajuste, adición o pregunta que tengas."
+              : "Please review this information before your arrival. Your concierge is available at any time for any adjustments, additions, or questions you may have."}
           />
         </div>
 
@@ -819,19 +837,29 @@ function WelcomePage({ kickoff, lang, page, total, editMode, localPreTrip, setLo
           <Editable
             tag="p" className="info-p" editMode={editMode}
             value={isEs
-              ? "Comparte tu experiencia con Two Travel en Instagram o TikTok y obtén descuento en servicios seleccionados."
-              : "Share your experience with Two Travel on Instagram or TikTok and receive a discount on select services."}
+              ? "Comparte tu experiencia con Two Travel en Instagram y TikTok y obtén descuento en servicios seleccionados."
+              : "Share your experience with Two Travel on Instagram and TikTok and receive a discount on select services."}
           />
-          <p className="info-p" style={{ marginBottom: 4 }}>
-            <a href="https://www.instagram.com/twotravelconcierge" target="_blank" rel="noreferrer"
-              style={{ color: "#1d4ed8", fontWeight: 600, textDecoration: "underline", fontSize: 12 }}>
-              @twotravelconcierge
-            </a>
-            <span style={{ color: "#bbb", fontSize: 10.5 }}>
-              {isEs
-                ? " · La publicación debe realizarse durante tu estadía · Un tag por persona requerido · Para servicios grupales, todos los miembros deben participar."
-                : " · Tag must be posted during your stay · One tag per person required · For group services, all members must participate."}
+          <p className="info-p" style={{ marginBottom: 4, display: "flex", flexWrap: "wrap", gap: "6px 16px", alignItems: "center" }}>
+            <span>
+              <span style={{ fontSize: 10, color: "#9ca3af", letterSpacing: "1.5px", textTransform: "uppercase", marginRight: 4 }}>Instagram</span>
+              <a href={social.igUrl} target="_blank" rel="noreferrer"
+                style={{ color: "#1d4ed8", fontWeight: 600, textDecoration: "underline", fontSize: 12 }}>
+                {social.ig}
+              </a>
             </span>
+            <span>
+              <span style={{ fontSize: 10, color: "#9ca3af", letterSpacing: "1.5px", textTransform: "uppercase", marginRight: 4 }}>TikTok</span>
+              <a href={social.ttUrl} target="_blank" rel="noreferrer"
+                style={{ color: "#1d4ed8", fontWeight: 600, textDecoration: "underline", fontSize: 12 }}>
+                {social.tt}
+              </a>
+            </span>
+          </p>
+          <p className="info-p" style={{ color: "#bbb", fontSize: 10.5 }}>
+            {isEs
+              ? "La publicación debe realizarse durante tu estadía · Un tag por persona requerido · Para servicios grupales, todos los miembros deben participar."
+              : "Tag must be posted during your stay · One tag per person required · For group services, all members must participate."}
           </p>
         </div>
 
