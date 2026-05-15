@@ -2673,6 +2673,84 @@ function KickoffPickerModal({ kickoffs, title, onClose, onSelect }) {
 }
 
 /* =========================================
+   NewClientLinksModal — shows both catalog + questionnaire
+   links after creating a new client
+   ========================================= */
+function NewClientLinksModal({ kickoff, lang = "en", onClose }) {
+  if (!kickoff) return null;
+
+  const links = [
+    {
+      label:    "📋 Cuestionario",
+      desc:     lang === "es" ? "El cliente llena sus preferencias antes del viaje" : "Client fills in their preferences before the trip",
+      url:      buildQuestionnaireLink(kickoff, kickoff.clientType || 1, lang),
+      color:    "border-violet-200 bg-violet-50",
+      btnColor: "bg-violet-600 hover:bg-violet-700 text-white",
+    },
+    {
+      label:    "🛒 Catálogo de servicios",
+      desc:     lang === "es" ? "El cliente escoge sus experiencias del catálogo" : "Client picks their experiences from the catalog",
+      url:      buildCatalogLink(kickoff, kickoff.clientType || 1, lang),
+      color:    "border-emerald-200 bg-emerald-50",
+      btnColor: "bg-emerald-600 hover:bg-emerald-700 text-white",
+    },
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white max-w-lg w-full rounded-2xl shadow-xl overflow-hidden">
+        {/* Header */}
+        <div className="px-5 py-4 border-b flex items-center justify-between bg-neutral-900">
+          <div>
+            <p className="text-xs text-neutral-400">Cliente creado ✓</p>
+            <p className="text-sm font-semibold text-white">{kickoff.guestName}</p>
+          </div>
+          <button type="button" onClick={onClose} className="text-neutral-400 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Links */}
+        <div className="p-5 space-y-3">
+          <p className="text-xs text-neutral-500 mb-1">Copia y comparte los links con el cliente por WhatsApp:</p>
+          {links.map(({ label, desc, url, color, btnColor }) => (
+            <div key={label} className={`border rounded-xl p-4 ${color}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-neutral-900 mb-0.5">{label}</p>
+                  <p className="text-[11px] text-neutral-500 mb-2">{desc}</p>
+                  <p className="text-[10px] font-mono text-neutral-400 break-all leading-relaxed">{url}</p>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <CopyLinkButton url={url} label="📋 Copiar" />
+                <button
+                  type="button"
+                  onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
+                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium ${btnColor}`}
+                >
+                  Abrir →
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="px-5 pb-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 text-sm text-neutral-700 hover:bg-neutral-100"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================
    CreateClientModal — reemplaza el prompt() chain
    ========================================= */
 
@@ -3020,6 +3098,9 @@ const loadKickoffs = async () => {
   useEffect(() => {
     loadKickoffs();
   }, []);
+  // After creating a new client, store the kickoff here so we can show both links
+  const [newClientKickoff, setNewClientKickoff] = useState(null);
+
   const handleCreateAndOpenLink = async (form) => {
     const {
       guestName,
@@ -3038,7 +3119,7 @@ const loadKickoffs = async () => {
       id: kickoffId,
       guestName,
       email,
-      guestEmail: email,   // alias — Apps Script may use either column name
+      guestEmail: email,
       tripName,
       guestContact,
       city,
@@ -3059,39 +3140,31 @@ const loadKickoffs = async () => {
     const kickoff = {
       ...created,
       id: created?.id || kickoffId,
-      guestName,
-      email,
-      tripName,
-      guestContact,
-      city,
-      clientType,
+      guestName, email, tripName, guestContact, city, clientType,
       assignedConcierge: assignedConciergeName,
-      assignedConciergeName,
-      assignedConciergeEmail,
+      assignedConciergeName, assignedConciergeEmail,
     };
 
     setKickoffs((prev) => [kickoff, ...(prev || [])]);
     setSelectedKickoffForLink(kickoff);
-
-    // Capture pendingLinkKind before clearing it
-    const linkKind = pendingLinkKind;
     setCreateModalOpen(false);
     setPendingLinkKind(null);
 
-    const link =
-      linkKind === "questionnaire"
-        ? buildQuestionnaireLink(kickoff, clientType, portalLang)
-        : linkKind === "feedback"
-        ? buildFeedbackLink(kickoff, clientType, portalLang)
-        : buildCatalogLink(kickoff, clientType, portalLang);
-
-    try {
-      await navigator.clipboard.writeText(link);
-    } catch {
-      // fallback: just open the link
+    // If triggered from a specific link button, open just that link
+    const linkKind = pendingLinkKind;
+    if (linkKind && linkKind !== "both") {
+      const link =
+        linkKind === "questionnaire"
+          ? buildQuestionnaireLink(kickoff, clientType, portalLang)
+          : linkKind === "feedback"
+          ? buildFeedbackLink(kickoff, clientType, portalLang)
+          : buildCatalogLink(kickoff, clientType, portalLang);
+      try { await navigator.clipboard.writeText(link); } catch {}
+      window.open(link, "_blank", "noopener,noreferrer");
+    } else {
+      // Default: show both links modal
+      setNewClientKickoff(kickoff);
     }
-
-    window.open(link, "_blank", "noopener,noreferrer");
   };
 
   // Use fixed concierge list for the filter dropdown
@@ -3304,6 +3377,15 @@ const loadKickoffs = async () => {
   >
     <RefreshCcw className="w-4 h-4" />
     {loading ? cp.refreshing : cp.refresh}
+  </button>
+
+  {/* ── BOTÓN NUEVO CLIENTE ── */}
+  <button
+    type="button"
+    onClick={() => { setPendingLinkKind("both"); setCreateModalOpen(true); }}
+    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 font-semibold"
+  >
+    + Nuevo cliente
   </button>
 
   {/* BOTÓN LINK CUESTIONARIO */}
@@ -3827,6 +3909,14 @@ const loadKickoffs = async () => {
         onSubmit={handleCreateAndOpenLink}
         kickoffs={kickoffs}
       />
+
+      {newClientKickoff && (
+        <NewClientLinksModal
+          kickoff={newClientKickoff}
+          lang={portalLang}
+          onClose={() => setNewClientKickoff(null)}
+        />
+      )}
 
       {feedbackPickerOpen && (
         <KickoffPickerModal

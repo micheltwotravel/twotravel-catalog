@@ -758,12 +758,12 @@ function SummaryPage({ kickoff, days, page, total, lang, editMode }) {
    ig = Instagram, tt = TikTok
 ──────────────────────────────────────────────────────────── */
 const CITY_SOCIAL = {
-  CTG:  { ig: "@twotravelconcierge",    igUrl: "https://www.instagram.com/twotravelconcierge",    tt: "@twotravelconcierge",    ttUrl: "https://www.tiktok.com/@twotravelconcierge" },
-  MDE:  { ig: "@twotravelconcierge",    igUrl: "https://www.instagram.com/twotravelconcierge",    tt: "@twotravelconcierge",    ttUrl: "https://www.tiktok.com/@twotravelconcierge" },
-  CDMX: { ig: "@twotravelconcierge.mx", igUrl: "https://www.instagram.com/twotravelconcierge.mx", tt: "@twotravelconcierge.mx", ttUrl: "https://www.tiktok.com/@twotravelconcierge.mx" },
-  TUL:  { ig: "@twotravelconcierge.mx", igUrl: "https://www.instagram.com/twotravelconcierge.mx", tt: "@twotravelconcierge.mx", ttUrl: "https://www.tiktok.com/@twotravelconcierge.mx" },
-  BOG:  { ig: "@twotravelconcierge",    igUrl: "https://www.instagram.com/twotravelconcierge",    tt: "@twotravelconcierge",    ttUrl: "https://www.tiktok.com/@twotravelconcierge" },
-  DEFAULT: { ig: "@twotravelconcierge", igUrl: "https://www.instagram.com/twotravelconcierge",    tt: "@twotravelconcierge",    ttUrl: "https://www.tiktok.com/@twotravelconcierge" },
+  DEFAULT: {
+    ig:    "@twotravelconcierge",
+    igUrl: "https://www.instagram.com/twotravelconcierge/",
+    tt:    "@twotravelconcierge",
+    ttUrl: "https://www.tiktok.com/@twotravelconcierge",
+  },
 };
 const getCitySocial = (city) => {
   const code = String(city || "").trim().toUpperCase();
