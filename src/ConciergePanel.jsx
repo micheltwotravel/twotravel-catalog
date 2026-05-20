@@ -2676,66 +2676,84 @@ function KickoffPickerModal({ kickoffs, title, onClose, onSelect }) {
 }
 
 /* =========================================
-   NewClientLinksModal — step-by-step wizard
-   Welcome → Questionnaire → Catalog → Yachts
+   NewClientLinksModal
+   Shows all 3 links at once (no step pagination) with
+   a ready-to-send WhatsApp message per step.
+   Order: Welcome → Questionnaire → Catalog
    ========================================= */
 function NewClientLinksModal({ kickoff, lang = "en", onClose }) {
-  const [step, setStep] = React.useState(0);
-  const [copied, setCopied] = React.useState(false);
+  // Track which "copy message" button was last clicked
+  const [copiedIdx, setCopiedIdx] = React.useState(null);
+  const [copiedLink, setCopiedLink] = React.useState(null);
 
   if (!kickoff) return null;
 
-  const ct  = kickoff.clientType || 1;
-  const isEs = lang === "es";
+  const ct    = kickoff.clientType || 1;
+  const isEs  = lang === "es";
+  const name  = (kickoff.guestName || "").split(" ")[0] || (isEs ? "viajero" : "traveler");
 
-  // Build ordered steps — welcome first if URL exists
-  const welcomeUrl = (kickoff.welcomePdfUrl || "").trim();
-  const allSteps = [
+  const welcomeUrl       = (kickoff.welcomePdfUrl || "").trim();
+  const questionnaireUrl = buildQuestionnaireLink(kickoff, ct, lang);
+  const catalogUrl       = buildCatalogLink(kickoff, ct, lang);
+
+  // Pre-written messages the concierge sends to the client
+  const steps = [
     welcomeUrl && {
-      icon: "👋",
-      label: isEs ? "Bienvenida" : "Welcome",
-      desc:  isEs ? "Envía este documento primero — info general del viaje" : "Send this first — general trip info document",
-      url:   welcomeUrl,
-      bg:    "bg-blue-50 border-blue-200",
+      icon:    "👋",
+      label:   isEs ? "Página de bienvenida" : "Welcome page",
+      hint:    isEs
+        ? "Lo primero que ve el cliente — resumen del viaje y cómo funciona Two Travel. Envíalo antes de cualquier otra cosa."
+        : "First thing the client sees — trip summary and how Two Travel works. Send this before anything else.",
+      url:     welcomeUrl,
+      bg:      "bg-blue-50 border-blue-200",
+      msgEs:   `Hola ${name} 👋 Bienvenido/a a Two Travel. Te comparto tu página de bienvenida con toda la información de tu estadía:\n\n${welcomeUrl}`,
+      msgEn:   `Hi ${name} 👋 Welcome to Two Travel! Here's your welcome page with all the details about your stay:\n\n${welcomeUrl}`,
     },
     {
-      icon:  "📋",
-      label: isEs ? "Cuestionario" : "Questionnaire",
-      desc:  isEs ? "El cliente llena sus preferencias antes del viaje" : "Client fills in their preferences before the trip",
-      url:   buildQuestionnaireLink(kickoff, ct, lang),
-      bg:    "bg-violet-50 border-violet-200",
+      icon:    "📋",
+      label:   isEs ? "Cuestionario" : "Questionnaire",
+      hint:    isEs
+        ? "El cliente llena sus preferencias — dietas, actividades, estilo de viaje. Envíalo antes del catálogo."
+        : "Client fills in preferences — diet, activities, travel style. Send before the catalog.",
+      url:     questionnaireUrl,
+      bg:      "bg-violet-50 border-violet-200",
+      msgEs:   `${name}, para preparar la mejor experiencia para ti te pido que llenes este breve cuestionario:\n\n${questionnaireUrl} 📋`,
+      msgEn:   `${name}, to make your trip as perfect as possible, please fill out this short questionnaire:\n\n${questionnaireUrl} 📋`,
     },
     {
-      icon:  "🛒",
-      label: isEs ? "Catálogo de servicios" : "Services Catalog",
-      desc:  isEs ? "El cliente escoge sus experiencias" : "Client picks their experiences from the catalog",
-      url:   buildCatalogLink(kickoff, ct, lang),
-      bg:    "bg-emerald-50 border-emerald-200",
+      icon:    "🛒",
+      label:   isEs ? "Catálogo de servicios" : "Services catalog",
+      hint:    isEs
+        ? "El cliente escoge restaurantes, tours, experiencias y más desde aquí."
+        : "Client picks restaurants, tours, experiences and more from here.",
+      url:     catalogUrl,
+      bg:      "bg-emerald-50 border-emerald-200",
+      msgEs:   `¡Ya puedes explorar y escoger tus experiencias ${name}! Aquí tienes el catálogo con todo lo disponible para tu viaje:\n\n${catalogUrl} 🛒`,
+      msgEn:   `You can now explore and pick your experiences ${name}! Here's the catalog with everything available for your trip:\n\n${catalogUrl} 🛒`,
     },
   ].filter(Boolean);
 
-  const current = allSteps[step];
-  const total   = allSteps.length;
-  const isLast  = step === total - 1;
-
-  const handleCopy = async () => {
-    try { await navigator.clipboard.writeText(current.url); } catch {
-      prompt("Copia este link:", current.url);
-    }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copyMsg = async (idx) => {
+    const msg = isEs ? steps[idx].msgEs : steps[idx].msgEn;
+    try { await navigator.clipboard.writeText(msg); } catch { prompt("Copia este mensaje:", msg); }
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 2000);
   };
 
-  const goNext = () => { setStep(s => s + 1); setCopied(false); };
+  const copyLink = async (idx) => {
+    try { await navigator.clipboard.writeText(steps[idx].url); } catch { prompt("Copia este link:", steps[idx].url); }
+    setCopiedLink(idx);
+    setTimeout(() => setCopiedLink(null), 2000);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white max-w-md w-full rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-white max-w-lg w-full rounded-2xl shadow-xl flex flex-col max-h-[90vh]">
 
         {/* ── Header ── */}
-        <div className="px-5 py-4 bg-neutral-900 flex items-center justify-between">
+        <div className="px-5 py-4 bg-neutral-900 flex items-center justify-between rounded-t-2xl shrink-0">
           <div>
-            <p className="text-[11px] text-neutral-400">✓ Cliente creado</p>
+            <p className="text-[11px] text-neutral-400">✓ {isEs ? "Cliente creado" : "Client created"}</p>
             <p className="text-sm font-semibold text-white">{kickoff.guestName}</p>
           </div>
           <button type="button" onClick={onClose} className="text-neutral-400 hover:text-white">
@@ -2743,55 +2761,56 @@ function NewClientLinksModal({ kickoff, lang = "en", onClose }) {
           </button>
         </div>
 
-        {/* ── Progress bar ── */}
-        <div className="px-5 pt-4 pb-2">
-          <div className="flex gap-1 mb-1">
-            {allSteps.map((_, i) => (
-              <div key={i}
-                className={`h-1 flex-1 rounded-full transition-all ${i <= step ? "bg-neutral-900" : "bg-neutral-200"}`}
-              />
-            ))}
-          </div>
-          <p className="text-[10px] text-neutral-400">{isEs ? "Paso" : "Step"} {step + 1} {isEs ? "de" : "of"} {total}</p>
-        </div>
+        {/* ── Instruction line ── */}
+        <p className="px-5 pt-3 pb-1 text-[11px] text-neutral-500 shrink-0">
+          {isEs
+            ? "Envía los mensajes al cliente en este orden 👇"
+            : "Send these messages to the client in this order 👇"}
+        </p>
 
-        {/* ── Current step ── */}
-        <div className="px-5 pb-4">
-          <div className={`border rounded-2xl p-5 ${current.bg}`}>
-            <div className="flex items-start gap-3 mb-3">
-              <span className="text-3xl leading-none mt-0.5">{current.icon}</span>
-              <div>
-                <p className="text-base font-bold text-neutral-900 leading-tight">{current.label}</p>
-                <p className="text-[11px] text-neutral-500 mt-0.5">{current.desc}</p>
+        {/* ── Steps — scrollable ── */}
+        <div className="overflow-y-auto px-5 pb-2 space-y-3 flex-1">
+          {steps.map((s, i) => (
+            <div key={i} className={`border rounded-2xl p-4 ${s.bg}`}>
+
+              {/* Step label */}
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg leading-none">{s.icon}</span>
+                <p className="text-sm font-bold text-neutral-900">{i + 1}. {s.label}</p>
+              </div>
+              <p className="text-[11px] text-neutral-500 mb-3">{s.hint}</p>
+
+              {/* Message preview */}
+              <div className="bg-white/70 rounded-xl px-3 py-2 mb-2 text-[11px] text-neutral-700 whitespace-pre-wrap leading-relaxed">
+                {isEs ? s.msgEs : s.msgEn}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <button type="button" onClick={() => copyMsg(i)}
+                  className="flex-1 px-3 py-1.5 rounded-lg border border-neutral-300 bg-white text-xs font-semibold hover:bg-neutral-50 transition-colors">
+                  {copiedIdx === i ? "✓ Mensaje copiado" : isEs ? "📋 Copiar mensaje" : "📋 Copy message"}
+                </button>
+                <button type="button" onClick={() => copyLink(i)}
+                  className="px-3 py-1.5 rounded-lg border border-neutral-300 bg-white text-xs hover:bg-neutral-50 transition-colors">
+                  {copiedLink === i ? "✓" : "🔗"}
+                </button>
+                <button type="button"
+                  onClick={() => window.open(s.url, "_blank", "noopener,noreferrer")}
+                  className="px-3 py-1.5 rounded-lg border border-neutral-300 bg-white text-xs hover:bg-neutral-50 transition-colors">
+                  ↗
+                </button>
               </div>
             </div>
-            <p className="text-[10px] font-mono text-neutral-400 break-all leading-relaxed mb-3">{current.url}</p>
-            <div className="flex gap-2">
-              <button type="button" onClick={handleCopy}
-                className="flex-1 px-3 py-2 rounded-lg border border-neutral-300 bg-white text-sm font-medium hover:bg-neutral-50 transition-colors">
-                {copied ? "✓ Copiado" : "📋 Copiar link"}
-              </button>
-              <button type="button"
-                onClick={() => window.open(current.url, "_blank", "noopener,noreferrer")}
-                className="px-3 py-2 rounded-lg border border-neutral-300 bg-white text-sm hover:bg-neutral-50 transition-colors">
-                Abrir →
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* ── Navigation ── */}
-        <div className="px-5 pb-5 flex gap-2">
+        {/* ── Footer ── */}
+        <div className="px-5 py-4 shrink-0">
           <button type="button" onClick={onClose}
-            className="px-4 py-2.5 rounded-lg border border-neutral-300 text-sm text-neutral-600 hover:bg-neutral-100">
-            {isLast ? "✓ Listo" : isEs ? "Omitir" : "Skip"}
+            className="w-full px-4 py-2.5 rounded-xl bg-neutral-900 text-white text-sm font-semibold hover:bg-neutral-800 transition-colors">
+            ✓ {isEs ? "Listo" : "Done"}
           </button>
-          {!isLast && (
-            <button type="button" onClick={goNext}
-              className="flex-1 px-4 py-2.5 rounded-lg bg-neutral-900 text-white text-sm font-semibold hover:bg-neutral-800 transition-colors">
-              {isEs ? "Siguiente →" : "Next →"}
-            </button>
-          )}
         </div>
 
       </div>
