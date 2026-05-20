@@ -3195,21 +3195,15 @@ setCart([]);
 
             <div className="flex items-center justify-between pt-2">
               <button
-  className={btn.linkBtn}
-  onClick={() => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("mode", "catalog");
-    if (kickoffId) url.searchParams.set("kickoffId", kickoffId);
-    window.location.href = url.toString();
-  }}
->
-  {lang === "es" ? "Ver catálogo sin personalizar" : "Browse without personalization"}
-</button>
-
+                className={btn.linkBtn}
+                onClick={() => setStep("catalog")}
+              >
+                {lang === "es" ? "Ver catálogo sin personalizar" : "Browse without personalization"}
+              </button>
 
               <button className={btn.filled} onClick={() => setStep("catalog")}>
-  {lang === "es" ? "Ver recomendaciones →" : "See recommendations →"}
-</button>
+                {lang === "es" ? "Ver catálogo →" : "See catalog →"}
+              </button>
             </div>
           </div>
         </div>
