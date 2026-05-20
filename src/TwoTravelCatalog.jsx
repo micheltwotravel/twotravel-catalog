@@ -3293,6 +3293,10 @@ setCart([]);
                 onClick={() => {
                   setSelectedCategory(c.id);
                   setSelectedStyle("");
+                  // Clear vegetarian tag when switching to a non-food category
+                  if (c.id !== "all" && c.id !== "restaurants") {
+                    setActiveTags(prev => prev.filter(t => t !== "vegetarian"));
+                  }
                 }}
                 className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap ${
                   selectedCategory === c.id
@@ -3309,10 +3313,15 @@ setCart([]);
         {/* Row 3: Tag chips + restaurant style sub-filter */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3 flex flex-wrap items-center gap-2">
           {[
-            { id: "family",       emoji: "👨‍👩‍👧", es: "Familias",     en: "Family Friendly" },
-            { id: "vegetarian",   emoji: "🥗",      es: "Vegetariano",  en: "Vegetarian" },
-            { id: "accessibility",emoji: "♿",       es: "Accesible",    en: "Accessible" },
-          ].map((tag) => (
+            { id: "family",       emoji: "👨‍👩‍👧", es: "Familias",     en: "Family Friendly", showAlways: true },
+            // Vegetarian only makes sense for food categories
+            { id: "vegetarian",   emoji: "🥗",      es: "Vegetariano",  en: "Vegetarian",      showAlways: false },
+            { id: "accessibility",emoji: "♿",       es: "Accesible",    en: "Accessible",      showAlways: true },
+          ].filter(tag =>
+            // Vegetarian: only show when restaurants (or "all") is selected
+            tag.showAlways ||
+            (tag.id === "vegetarian" && (selectedCategory === "all" || selectedCategory === "restaurants"))
+          ).map((tag) => (
             <button
               key={tag.id}
               onClick={() => toggleTag(tag.id)}

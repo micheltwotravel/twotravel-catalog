@@ -30,6 +30,11 @@ const SLACK_BOT_TOKEN = import.meta.env.VITE_SLACK_BOT_TOKEN || "";
 const SLACK_CHANNEL_ID = import.meta.env.VITE_SLACK_CHANNEL_ID || "C094NE421NV";
 const BILLING_GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
+// ── Yachts & Speedboats PDF ──────────────────────────────────────────────────
+// TODO: upload YATCH & SPEEDBOATS.pdf to Google Drive → share "Anyone with link"
+//       then paste the share link here
+const YACHTS_PDF_URL = "https://drive.google.com/file/d/REPLACE_WITH_YOUR_DRIVE_FILE_ID/view?usp=sharing";
+
 // Categories that NEVER get a QB code (restaurants, bars, nightlife, beach clubs)
 const NO_QB = new Set(["restaurants","bars","nightlife","beach-clubs","beach clubs","beachclubs"]);
 // Categories where price × pax (tours, services, chef)
@@ -2673,36 +2678,73 @@ function KickoffPickerModal({ kickoffs, title, onClose, onSelect }) {
 }
 
 /* =========================================
-   NewClientLinksModal — shows both catalog + questionnaire
-   links after creating a new client
+   NewClientLinksModal — step-by-step wizard
+   Welcome → Questionnaire → Catalog → Yachts
    ========================================= */
 function NewClientLinksModal({ kickoff, lang = "en", onClose }) {
+  const [step, setStep] = React.useState(0);
+  const [copied, setCopied] = React.useState(false);
+
   if (!kickoff) return null;
 
-  const links = [
-    {
-      label:    "📋 Cuestionario",
-      desc:     lang === "es" ? "El cliente llena sus preferencias antes del viaje" : "Client fills in their preferences before the trip",
-      url:      buildQuestionnaireLink(kickoff, kickoff.clientType || 1, lang),
-      color:    "border-violet-200 bg-violet-50",
-      btnColor: "bg-violet-600 hover:bg-violet-700 text-white",
+  const ct  = kickoff.clientType || 1;
+  const isEs = lang === "es";
+
+  // Build ordered steps — welcome first if URL exists
+  const welcomeUrl = (kickoff.welcomePdfUrl || "").trim();
+  const allSteps = [
+    welcomeUrl && {
+      icon: "👋",
+      label: isEs ? "Bienvenida" : "Welcome",
+      desc:  isEs ? "Envía este documento primero — info general del viaje" : "Send this first — general trip info document",
+      url:   welcomeUrl,
+      bg:    "bg-blue-50 border-blue-200",
     },
     {
-      label:    "🛒 Catálogo de servicios",
-      desc:     lang === "es" ? "El cliente escoge sus experiencias del catálogo" : "Client picks their experiences from the catalog",
-      url:      buildCatalogLink(kickoff, kickoff.clientType || 1, lang),
-      color:    "border-emerald-200 bg-emerald-50",
-      btnColor: "bg-emerald-600 hover:bg-emerald-700 text-white",
+      icon:  "📋",
+      label: isEs ? "Cuestionario" : "Questionnaire",
+      desc:  isEs ? "El cliente llena sus preferencias antes del viaje" : "Client fills in their preferences before the trip",
+      url:   buildQuestionnaireLink(kickoff, ct, lang),
+      bg:    "bg-violet-50 border-violet-200",
     },
-  ];
+    {
+      icon:  "🛒",
+      label: isEs ? "Catálogo de servicios" : "Services Catalog",
+      desc:  isEs ? "El cliente escoge sus experiencias" : "Client picks their experiences from the catalog",
+      url:   buildCatalogLink(kickoff, ct, lang),
+      bg:    "bg-emerald-50 border-emerald-200",
+    },
+    YACHTS_PDF_URL && !YACHTS_PDF_URL.includes("REPLACE_WITH") && {
+      icon:  "🛥",
+      label: isEs ? "Yates & Lanchas" : "Yachts & Speedboats",
+      desc:  isEs ? "Catálogo de embarcaciones para el día" : "Boat rental catalog for a day on the water",
+      url:   YACHTS_PDF_URL,
+      bg:    "bg-sky-50 border-sky-200",
+    },
+  ].filter(Boolean);
+
+  const current = allSteps[step];
+  const total   = allSteps.length;
+  const isLast  = step === total - 1;
+
+  const handleCopy = async () => {
+    try { await navigator.clipboard.writeText(current.url); } catch {
+      prompt("Copia este link:", current.url);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const goNext = () => { setStep(s => s + 1); setCopied(false); };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white max-w-lg w-full rounded-2xl shadow-xl overflow-hidden">
-        {/* Header */}
-        <div className="px-5 py-4 border-b flex items-center justify-between bg-neutral-900">
+      <div className="bg-white max-w-md w-full rounded-2xl shadow-xl overflow-hidden">
+
+        {/* ── Header ── */}
+        <div className="px-5 py-4 bg-neutral-900 flex items-center justify-between">
           <div>
-            <p className="text-xs text-neutral-400">Cliente creado ✓</p>
+            <p className="text-[11px] text-neutral-400">✓ Cliente creado</p>
             <p className="text-sm font-semibold text-white">{kickoff.guestName}</p>
           </div>
           <button type="button" onClick={onClose} className="text-neutral-400 hover:text-white">
@@ -2710,41 +2752,57 @@ function NewClientLinksModal({ kickoff, lang = "en", onClose }) {
           </button>
         </div>
 
-        {/* Links */}
-        <div className="p-5 space-y-3">
-          <p className="text-xs text-neutral-500 mb-1">Copia y comparte los links con el cliente por WhatsApp:</p>
-          {links.map(({ label, desc, url, color, btnColor }) => (
-            <div key={label} className={`border rounded-xl p-4 ${color}`}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-neutral-900 mb-0.5">{label}</p>
-                  <p className="text-[11px] text-neutral-500 mb-2">{desc}</p>
-                  <p className="text-[10px] font-mono text-neutral-400 break-all leading-relaxed">{url}</p>
-                </div>
-              </div>
-              <div className="flex gap-2 mt-3">
-                <CopyLinkButton url={url} label="📋 Copiar" />
-                <button
-                  type="button"
-                  onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
-                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium ${btnColor}`}
-                >
-                  Abrir →
-                </button>
-              </div>
-            </div>
-          ))}
+        {/* ── Progress bar ── */}
+        <div className="px-5 pt-4 pb-2">
+          <div className="flex gap-1 mb-1">
+            {allSteps.map((_, i) => (
+              <div key={i}
+                className={`h-1 flex-1 rounded-full transition-all ${i <= step ? "bg-neutral-900" : "bg-neutral-200"}`}
+              />
+            ))}
+          </div>
+          <p className="text-[10px] text-neutral-400">{isEs ? "Paso" : "Step"} {step + 1} {isEs ? "de" : "of"} {total}</p>
         </div>
 
+        {/* ── Current step ── */}
         <div className="px-5 pb-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 text-sm text-neutral-700 hover:bg-neutral-100"
-          >
-            Cerrar
-          </button>
+          <div className={`border rounded-2xl p-5 ${current.bg}`}>
+            <div className="flex items-start gap-3 mb-3">
+              <span className="text-3xl leading-none mt-0.5">{current.icon}</span>
+              <div>
+                <p className="text-base font-bold text-neutral-900 leading-tight">{current.label}</p>
+                <p className="text-[11px] text-neutral-500 mt-0.5">{current.desc}</p>
+              </div>
+            </div>
+            <p className="text-[10px] font-mono text-neutral-400 break-all leading-relaxed mb-3">{current.url}</p>
+            <div className="flex gap-2">
+              <button type="button" onClick={handleCopy}
+                className="flex-1 px-3 py-2 rounded-lg border border-neutral-300 bg-white text-sm font-medium hover:bg-neutral-50 transition-colors">
+                {copied ? "✓ Copiado" : "📋 Copiar link"}
+              </button>
+              <button type="button"
+                onClick={() => window.open(current.url, "_blank", "noopener,noreferrer")}
+                className="px-3 py-2 rounded-lg border border-neutral-300 bg-white text-sm hover:bg-neutral-50 transition-colors">
+                Abrir →
+              </button>
+            </div>
+          </div>
         </div>
+
+        {/* ── Navigation ── */}
+        <div className="px-5 pb-5 flex gap-2">
+          <button type="button" onClick={onClose}
+            className="px-4 py-2.5 rounded-lg border border-neutral-300 text-sm text-neutral-600 hover:bg-neutral-100">
+            {isLast ? "✓ Listo" : isEs ? "Omitir" : "Skip"}
+          </button>
+          {!isLast && (
+            <button type="button" onClick={goNext}
+              className="flex-1 px-4 py-2.5 rounded-lg bg-neutral-900 text-white text-sm font-semibold hover:bg-neutral-800 transition-colors">
+              {isEs ? "Siguiente →" : "Next →"}
+            </button>
+          )}
+        </div>
+
       </div>
     </div>
   );
@@ -3147,11 +3205,13 @@ const loadKickoffs = async () => {
 
     setKickoffs((prev) => [kickoff, ...(prev || [])]);
     setSelectedKickoffForLink(kickoff);
+
+    // ⚠ Capture BEFORE clearing state — React batches don't apply mid-function
+    const linkKind = pendingLinkKind;
     setCreateModalOpen(false);
     setPendingLinkKind(null);
 
     // If triggered from a specific link button, open just that link
-    const linkKind = pendingLinkKind;
     if (linkKind && linkKind !== "both") {
       const link =
         linkKind === "questionnaire"
