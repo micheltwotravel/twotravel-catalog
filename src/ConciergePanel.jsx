@@ -17,8 +17,6 @@ import {
   Copy,
   Clock,
   X,
-  Link as LinkIcon,
-  List as ListIcon,
 } from "lucide-react";
 
 
@@ -3440,100 +3438,6 @@ const loadKickoffs = async () => {
   >
     + Nuevo cliente
   </button>
-
-  {/* BOTÓN LINK CUESTIONARIO */}
-<button
-  type="button"
-  onClick={async () => {
-  if (!selectedKickoffForLink) {
-    setPendingLinkKind("questionnaire");
-    setCreateModalOpen(true);
-    return;
-  }
-
-  const kickoff = await ensureKickoffReady(
-    selectedKickoffForLink,
-    setKickoffs,
-    setSelectedKickoffForLink
-  );
-  if (!kickoff) return;
-
-  const link = buildQuestionnaireLink(kickoff, kickoff.clientType || 1, portalLang);
-
-  try {
-    await navigator.clipboard.writeText(link);
-  } catch {
-    prompt("Copia este link:", link);
-  }
-
-  window.open(link, "_blank", "noopener,noreferrer");
-}}
-  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100"
->
-  <LinkIcon className="w-4 h-4" />
-  Link cuestionario
-</button>
-
-
-  {/* BOTÓN LINK CATÁLOGO */}
-  <button
-  type="button"
-  onClick={async () => {
-  if (!selectedKickoffForLink) {
-    setPendingLinkKind("catalog");
-    setCreateModalOpen(true);
-    return;
-  }
-
-  const kickoff = await ensureKickoffReady(
-    selectedKickoffForLink,
-    setKickoffs,
-    setSelectedKickoffForLink
-  );
-  if (!kickoff) return;
-
-  const link = buildCatalogLink(kickoff, kickoff.clientType || 1, portalLang);
-
-  try {
-    await navigator.clipboard.writeText(link);
-  } catch {
-    prompt("Copia este link:", link);
-  }
-
-  window.open(link, "_blank", "noopener,noreferrer");
-}}
-  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100"
->
-  <ListIcon className="w-4 h-4" />
-  {cp.linkCatalog}
-</button>
-<button
-  type="button"
-  onClick={() => {
-    setFeedbackPickerOpen(true);
-  }}
-  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100"
->
-  <LinkIcon className="w-4 h-4" />
-  {cp.linkFeedback}
-</button>
-
-{/* ── BOTÓN YATES & LANCHAS ── */}
-<button
-  type="button"
-  onClick={() => {
-    if (YACHTS_PDF_URL.includes("REPLACE_WITH")) {
-      alert("⚠️ Sube el PDF a Google Drive y actualiza YACHTS_PDF_URL en ConciergePanel.jsx");
-      return;
-    }
-    try { navigator.clipboard.writeText(YACHTS_PDF_URL); } catch {}
-    window.open(YACHTS_PDF_URL, "_blank", "noopener,noreferrer");
-  }}
-  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-700 font-medium"
-  title="Copiar y abrir catálogo de Yates & Lanchas"
->
-  🛥 Yates
-</button>
 
 {/* ── BOTÓN EQUIPO DE VENTAS ── */}
 <a

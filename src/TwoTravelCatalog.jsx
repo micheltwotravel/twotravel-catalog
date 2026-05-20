@@ -24,6 +24,11 @@ import {
 } from "lucide-react";
 import logo from "./assets/logo.png";
 
+// ── Yachts & Speedboats PDF ──────────────────────────────────────────────────
+// TODO: upload YATCH & SPEEDBOATS.pdf to Google Drive → share "Anyone with link"
+//       then paste the file ID here (the long alphanumeric string in the Drive URL)
+const YACHTS_PDF_URL = "https://drive.google.com/file/d/REPLACE_WITH_YOUR_DRIVE_FILE_ID/view?usp=sharing";
+
 /* ================================
    0) CITY CONFIG
 ================================== */
@@ -3307,6 +3312,16 @@ setCart([]);
                 {i18n[lang][c.id]}
               </button>
             ))}
+
+            {/* ── Yates & Lanchas — opens PDF catalog ── */}
+            {!YACHTS_PDF_URL.includes("REPLACE_WITH") && (
+              <button
+                onClick={() => window.open(YACHTS_PDF_URL, "_blank", "noopener,noreferrer")}
+                className="px-4 py-1.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap bg-white text-sky-700 border-sky-300 hover:bg-sky-50"
+              >
+                🛥 {lang === "es" ? "Yates & Lanchas" : "Yachts & Boats"}
+              </button>
+            )}
           </div>
         </div>
 
