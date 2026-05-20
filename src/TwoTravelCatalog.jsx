@@ -1933,7 +1933,7 @@ const normalizeCapacity = (raw) => {
   return { min, max };
 };
 export default function TwoTravelCatalog() {
-  const [step, setStep] = useState("quiz"); // "quiz" | "catalog"
+  const [step, setStep] = useState("welcome"); // "welcome" | "quiz" | "catalog"
   const [fadeIn, setFadeIn] = useState(false);
 
   const [lang, setLang] = useState(() => {
@@ -2719,11 +2719,13 @@ const getKickoffById = async (id) => {
 };
 
 useEffect(() => {
-  // All modes start at welcome — CTA button decides what comes next
+  // Initialize on mount only — deps (isCatalogMode, isQuestionnaireMode) are derived
+  // from the URL which never changes, but listing them caused re-fires on every
+  // re-render triggered by async fetches, resetting step back to "welcome".
   setStep("welcome");
   setShowKickoff(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [isCatalogMode, isQuestionnaireMode]);
+}, []); // ← empty: run once on mount, never again
 
 
   const updateCartNotes = (cartId, notes) =>
