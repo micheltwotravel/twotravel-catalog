@@ -2865,17 +2865,18 @@ setCart([]);
 
   // ✅ PASO B: Welcome page — shown before quiz
   if (step === "welcome") {
+    const welcomePdfUrl = params.get("welcome") || "";
     return (
-      <div className="min-h-screen bg-neutral-950 flex flex-col">
+      <div className="min-h-screen bg-white flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5">
-          <img src={logo} alt="Two Travel" className="h-7 object-contain brightness-0 invert" />
+        <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-100">
+          <img src={logo} alt="Two Travel" className="h-7 object-contain" />
           {/* Lang toggle */}
-          <div className="flex border border-neutral-700 rounded-lg overflow-hidden text-xs font-medium">
+          <div className="flex border border-neutral-200 rounded-lg overflow-hidden text-xs font-medium">
             {["en","es"].map(l => (
               <button key={l} type="button" onClick={() => setLang(l)}
                 className={`px-3 py-1.5 uppercase transition-colors ${
-                  lang === l ? "bg-white text-neutral-900" : "text-neutral-400 hover:text-white"
+                  lang === l ? "bg-neutral-900 text-white" : "text-neutral-500 hover:text-neutral-900"
                 }`}>
                 {l}
               </button>
@@ -2884,29 +2885,42 @@ setCart([]);
         </div>
 
         {/* Hero */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center max-w-2xl mx-auto">
-          <p className="text-neutral-500 text-xs font-semibold uppercase tracking-[0.2em] mb-6">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center max-w-2xl mx-auto py-16">
+          <p className="text-neutral-400 text-xs font-semibold uppercase tracking-[0.2em] mb-6">
             {lang === "es" ? "Tu experiencia personalizada" : "Your personalized experience"}
           </p>
-          <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight mb-6">
+          <h1 className="text-4xl sm:text-5xl font-bold text-neutral-900 leading-tight mb-6">
             {lang === "es"
-              ? <>Tu catálogo <br className="hidden sm:block"/>de experiencias</>
-              : <>Your curated <br className="hidden sm:block"/>experience guide</>}
+              ? <>Bienvenido/a a <br className="hidden sm:block"/>Two Travel</>
+              : <>Welcome to <br className="hidden sm:block"/>Two Travel</>}
           </h1>
-          <p className="text-neutral-400 text-base leading-relaxed mb-10 max-w-lg">
+          <p className="text-neutral-500 text-base leading-relaxed mb-8 max-w-lg">
             {lang === "es"
-              ? "Tu concierge de Two Travel ha preparado una selección de experiencias pensadas especialmente para tu viaje. Responde unas preguntas rápidas para que podamos personalizar las recomendaciones."
-              : "Your Two Travel concierge has curated a selection of experiences tailored to your trip. Answer a few quick questions so we can personalize your recommendations."}
+              ? "Tu concierge ha preparado una selección de experiencias especialmente para tu viaje. En un momento llenarás un cuestionario rápido y luego podrás escoger todo lo que quieras disfrutar."
+              : "Your concierge has curated a selection of experiences just for your trip. You'll fill out a quick questionnaire and then explore everything available for you."}
           </p>
+
+          {/* Welcome PDF button — only shown if URL was passed */}
+          {welcomePdfUrl && (
+            <a
+              href={welcomePdfUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-neutral-200 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors mb-6"
+            >
+              📄 {lang === "es" ? "Ver página de bienvenida" : "View welcome page"}
+            </a>
+          )}
+
           <button
             type="button"
             onClick={() => setStep(isCatalogMode ? "catalog" : "quiz")}
-            className="px-8 py-4 rounded-2xl bg-white text-neutral-900 text-sm font-semibold hover:bg-neutral-100 transition-colors shadow-lg"
+            className="px-8 py-4 rounded-2xl bg-neutral-900 text-white text-sm font-semibold hover:bg-neutral-800 transition-colors shadow-sm"
           >
             {lang === "es" ? "Comenzar →" : "Get started →"}
           </button>
           {!isCatalogMode && (
-            <p className="mt-6 text-neutral-600 text-xs">
+            <p className="mt-5 text-neutral-400 text-xs">
               {lang === "es"
                 ? "Solo toma 2 minutos · Sin registro necesario"
                 : "Takes 2 minutes · No sign-up required"}
@@ -2915,8 +2929,8 @@ setCart([]);
         </div>
 
         {/* Footer */}
-        <div className="text-center py-6">
-          <p className="text-neutral-700 text-[11px]">Two Travel · twotravelvip.com</p>
+        <div className="text-center py-6 border-t border-neutral-100">
+          <p className="text-neutral-400 text-[11px]">Two Travel · twotravelvip.com</p>
         </div>
       </div>
     );
