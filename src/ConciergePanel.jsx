@@ -2714,13 +2714,6 @@ function NewClientLinksModal({ kickoff, lang = "en", onClose }) {
       url:   buildCatalogLink(kickoff, ct, lang),
       bg:    "bg-emerald-50 border-emerald-200",
     },
-    YACHTS_PDF_URL && !YACHTS_PDF_URL.includes("REPLACE_WITH") && {
-      icon:  "🛥",
-      label: isEs ? "Yates & Lanchas" : "Yachts & Speedboats",
-      desc:  isEs ? "Catálogo de embarcaciones para el día" : "Boat rental catalog for a day on the water",
-      url:   YACHTS_PDF_URL,
-      bg:    "bg-sky-50 border-sky-200",
-    },
   ].filter(Boolean);
 
   const current = allSteps[step];
@@ -3524,6 +3517,34 @@ const loadKickoffs = async () => {
   <LinkIcon className="w-4 h-4" />
   {cp.linkFeedback}
 </button>
+
+{/* ── BOTÓN YATES & LANCHAS ── */}
+<button
+  type="button"
+  onClick={() => {
+    if (YACHTS_PDF_URL.includes("REPLACE_WITH")) {
+      alert("⚠️ Sube el PDF a Google Drive y actualiza YACHTS_PDF_URL en ConciergePanel.jsx");
+      return;
+    }
+    try { navigator.clipboard.writeText(YACHTS_PDF_URL); } catch {}
+    window.open(YACHTS_PDF_URL, "_blank", "noopener,noreferrer");
+  }}
+  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-700 font-medium"
+  title="Copiar y abrir catálogo de Yates & Lanchas"
+>
+  🛥 Yates
+</button>
+
+{/* ── BOTÓN EQUIPO DE VENTAS ── */}
+<a
+  href="https://www.twotravelvip.com/agent.html"
+  target="_blank"
+  rel="noreferrer"
+  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium"
+  title="Abrir herramienta del equipo de ventas"
+>
+  👥 Ventas
+</a>
 
 <a
   href="/?mode=soporte-dashboard"
