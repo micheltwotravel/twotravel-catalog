@@ -1998,6 +1998,7 @@ function TaskTracker() {
   const [filterKickoff, setFilterKickoff]   = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
   const [searchName, setSearchName]         = useState("");
+  const [showCompleted, setShowCompleted]   = useState(false);
   const [loadError, setLoadError]           = useState("");
   const [form, setForm] = useState({
     taskName:"", assignedTo:"", assignedEmail:"", dueDate:"",
@@ -2078,6 +2079,7 @@ function TaskTracker() {
   const now = new Date(); now.setHours(0,0,0,0);
 
   const filtered = tasks.filter(t => {
+    if (!showCompleted && t.status === "completed") return false;
     if (filterUser !== "all"     && t.assignedTo !== filterUser)   return false;
     if (filterStatus !== "all"   && t.status !== filterStatus)     return false;
     if (filterKickoff !== "all"  && t.kickoffId !== filterKickoff) return false;
@@ -2279,6 +2281,12 @@ function TaskTracker() {
                   </button>
                 ))}
               </div>
+              <button onClick={()=>setShowCompleted(v=>!v)}
+                className={`px-2.5 py-1 text-xs rounded-lg border transition ${showCompleted?"bg-stone-200 text-stone-600 border-stone-300":"bg-white border-stone-200 text-stone-400 hover:bg-stone-50"}`}>
+                {showCompleted
+                  ? `Ocultar completadas (${tasks.filter(t=>t.status==="completed").length})`
+                  : `+ Mostrar completadas (${tasks.filter(t=>t.status==="completed").length})`}
+              </button>
               <button onClick={load} className="ml-auto text-xs text-stone-400 hover:text-stone-700">↻</button>
             </div>
 
