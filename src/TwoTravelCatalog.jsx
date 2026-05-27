@@ -1783,7 +1783,6 @@ const servicesData = [
 const categories = [
   { id: "all" },
   { id: "restaurants" },
-  { id: "brunch" },
   { id: "nightlife" },   // covers bars + nightlife (discotecas)
   { id: "beach-clubs" },
   { id: "tours" },
@@ -1802,6 +1801,7 @@ const nightlifeTypes = [
 
 // Estilos de restaurantes — IDs must match normalizeSubcategory() output
 const restaurantStyles = [
+  { id: "brunch",      label: { es: "Brunch & Café",      en: "Brunch & Café" } },
   { id: "fine-dining",  label: { es: "Fine dining",       en: "Fine dining" } },
   { id: "caribbean",   label: { es: "Caribeño",           en: "Caribbean" } },
   { id: "contemporary",label: { es: "Contemporáneo",      en: "Contemporary" } },
@@ -2410,6 +2410,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   const normalizeSubcategory = (raw) => {
     const s = String(raw || "").trim().toLowerCase();
     // Compound / aliased values
+    if (/brunch|café|cafe|bakery|panadería/.test(s)) return "brunch";
     if (/japanese|nikkei|japonés|japon/.test(s)) return "japanese";
     if (/fine.?dining|alta.?cocina|tasting/.test(s)) return "fine-dining";
     if (/caribean|caribe|caribbean/.test(s)) return "caribbean";
@@ -2427,22 +2428,27 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
       // s.category is already normalised when loaded from sheet
       const serviceCategory = s.category || "services";
 
-      // "brunch" category matches services tagged "brunch" OR restaurants with brunch subcategory
+      // Brunch detection — matches items tagged "brunch" OR restaurants with brunch subcategory/description
+      const isBrunchItem =
+        serviceCategory === "brunch" ||
+        (serviceCategory === "restaurants" && (
+          (s.subcategory || "").toLowerCase().includes("brunch") ||
+          (s.description?.es || s.description?.en || "").toLowerCase().includes("brunch") ||
+          /café|cafe|bakery|panadería/.test((s.subcategory || "").toLowerCase())
+        ));
+
+      // Brunch is a sub-category of restaurants — no longer a top-level tab
       const catOK =
         selectedCategory === "all" ||
         serviceCategory === selectedCategory ||
-        (selectedCategory === "brunch" && (
-          serviceCategory === "brunch" ||
-          (serviceCategory === "restaurants" && (
-            (s.subcategory || "").toLowerCase().includes("brunch") ||
-            (s.description?.es || s.description?.en || "").toLowerCase().includes("brunch")
-          ))
-        ));
+        (selectedCategory === "restaurants" && isBrunchItem);
 
-      // Sub-filter: restaurants use style, nightlife uses subcategory field
+      // Sub-filter: restaurants use style dropdown (includes "brunch"), nightlife uses subcategory field
       const stylesOK = (() => {
-        if (selectedCategory === "restaurants" && selectedStyle)
+        if (selectedCategory === "restaurants" && selectedStyle) {
+          if (selectedStyle === "brunch") return isBrunchItem;
           return normalizeSubcategory(s.subcategory) === selectedStyle;
+        }
         if (selectedCategory === "nightlife" && selectedStyle) {
           const sub = (s.subcategory || "").toString().trim().toLowerCase();
           if (selectedStyle === "bars")
@@ -3423,7 +3429,7 @@ setCart([]);
           ].filter(tag =>
             // Vegetarian: only show when restaurants (or "all") is selected
             tag.showAlways ||
-            (tag.id === "vegetarian" && (selectedCategory === "all" || selectedCategory === "restaurants" || selectedCategory === "brunch"))
+            (tag.id === "vegetarian" && (selectedCategory === "all" || selectedCategory === "restaurants"))
           ).map((tag) => (
             <button
               key={tag.id}
