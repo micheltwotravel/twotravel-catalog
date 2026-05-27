@@ -66,6 +66,7 @@ const i18n = {
     filters: "Filtros",
     all: "Todos",
     restaurants: "Restaurantes",
+    brunch: "Brunch & Café",
     "beach-clubs": "Boating & Beach",
     tours: "Tours",
     nightlife: "Vida Nocturna & Bares",
@@ -136,6 +137,7 @@ quizEditAnswers: "Editar respuestas",
     filters: "Filters",
     all: "All",
     restaurants: "Restaurants",
+    brunch: "Brunch & Café",
     "beach-clubs": "Boating & Beach",
     tours: "Tours",
     nightlife: "Nightlife & Bars",
@@ -1781,6 +1783,7 @@ const servicesData = [
 const categories = [
   { id: "all" },
   { id: "restaurants" },
+  { id: "brunch" },
   { id: "nightlife" },   // covers bars + nightlife (discotecas)
   { id: "beach-clubs" },
   { id: "tours" },
@@ -2424,9 +2427,17 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
       // s.category is already normalised when loaded from sheet
       const serviceCategory = s.category || "services";
 
+      // "brunch" category matches services tagged "brunch" OR restaurants with brunch subcategory
       const catOK =
         selectedCategory === "all" ||
-        serviceCategory === selectedCategory;
+        serviceCategory === selectedCategory ||
+        (selectedCategory === "brunch" && (
+          serviceCategory === "brunch" ||
+          (serviceCategory === "restaurants" && (
+            (s.subcategory || "").toLowerCase().includes("brunch") ||
+            (s.description?.es || s.description?.en || "").toLowerCase().includes("brunch")
+          ))
+        ));
 
       // Sub-filter: restaurants use style, nightlife uses subcategory field
       const stylesOK = (() => {
@@ -2472,16 +2483,21 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
         (activeTags.includes("vegetarian")   ? s.vegetarian      : true) &&
         (activeTags.includes("accessibility") ? s.accessibility   : true);
 
-      // City filter: only show services matching the kickoff's city
-      // Services with no city tag default to CTG (Cartagena = legacy catalog)
+      // City filter — kickoffCity may be a comma-separated list e.g. "CTG,MDE"
       const cityOK = (() => {
-        if (!kickoffCity) return true; // no kickoff city = show all
-        const kickoffAliases = CITY_CONFIG[kickoffCity]?.aliases || [kickoffCity.toLowerCase()];
+        if (!kickoffCity) return true; // no city set = show all
+        // Parse the kickoff's city list (may be single "CTG" or multi "CTG,MDE")
+        const kickoffCodes = kickoffCity.split(",").map(c => c.trim().toUpperCase()).filter(Boolean);
+        const kickoffAliasSet = new Set(
+          kickoffCodes.flatMap(code => CITY_CONFIG[code]?.aliases || [code.toLowerCase()])
+        );
         const sCity = String(s.city || "").trim();
-        if (!sCity) return kickoffCity === "CTG"; // untagged → Cartagena only
-        // Support comma-separated multi-city: "CTG,MDE" or "Cartagena,Medellin"
-        const sCities = sCity.split(",").map(c => c.trim().toLowerCase());
-        return sCities.some(c => kickoffAliases.includes(c) || toCityCode(c) === kickoffCity);
+        // Untagged services → only show for Cartagena (legacy)
+        if (!sCity) return kickoffCodes.includes("CTG");
+        // Service may also be tagged with multiple cities
+        const sCodes = sCity.split(",").map(c => toCityCode(c.trim())).filter(Boolean);
+        return sCodes.some(code => kickoffCodes.includes(code))
+          || sCity.split(",").some(c => kickoffAliasSet.has(c.trim().toLowerCase()));
       })();
 
       return catOK && stylesOK && searchOK && priceOK && tagsOK && cityOK;
@@ -2572,6 +2588,7 @@ const vibeLabel = useMemo(() => {
       // ✅ Interests (mapeo rápido) — alineado con categorías del catálogo
       const interests = new Set(quiz.interests || []);
       if (interests.has("food") && cat === "restaurants") pts += 3;
+      if (interests.has("brunch") && (cat === "brunch" || (cat === "restaurants" && (sub.includes("brunch") || desc.includes("brunch"))))) pts += 4;
       if (interests.has("beach") && cat === "beach-clubs") pts += 3;
       if (interests.has("night") && (cat === "nightlife" || cat === "bars")) pts += 3;
       // Culture → prioritize cultural tours; also history/art mentions
@@ -2584,13 +2601,37 @@ const vibeLabel = useMemo(() => {
       return pts;
     };
 
-    // Scored picks (max 6)
+    // Group size for transport recommendation
+    const groupSize = (() => {
+      const raw = String(kickoffCity || "");
+      // groupSize comes from quiz or kickoff — parse number
+      const n = parseInt(quiz.groupSize || "0", 10);
+      return isNaN(n) ? 0 : n;
+    })();
+
+    // Scored picks — max 2 per category, 8 total
     const scored = services
-      .map((s) => ({ s, pts: score(s) }))
+      .map((s) => {
+        let pts = score(s);
+        // Transport: boost based on group size match
+        if (s.category === "transportation") {
+          const cap = s.capacity || {};
+          const min = cap.min || 1;
+          const max = cap.max || 99;
+          if (groupSize >= min && groupSize <= max) pts += 3;
+          else if (groupSize > 0) pts -= 2; // wrong size
+        }
+        return { s, pts };
+      })
       .filter((x) => x.pts > 0)
       .sort((a, b) => b.pts - a.pts)
-      .slice(0, 6)
-      .map((x) => x.s);
+      .reduce((acc, { s }) => {
+        // Max 2 per category
+        const catCount = acc.filter(x => x.category === s.category).length;
+        if (catCount < 2) acc.push(s);
+        return acc;
+      }, [])
+      .slice(0, 8);
 
     // Airport / transfer always pinned at the end (max 2 transport services)
     const scoredIds = new Set(scored.map((s) => s.id));
@@ -2694,14 +2735,17 @@ setGuestContact(
 if (ko.arrivalDate) setArrivalDate(String(ko.arrivalDate).trim());
 if (ko.departureDate) setDepartureDate(String(ko.departureDate).trim());
 
-      // Store city as canonical code (CTG, MDE, CDMX, TUL…)
+      // Store city — support comma-separated multi-city "CTG,MDE"
       const rawCity = String(ko.city || "").trim();
-      const cityCode = toCityCode(rawCity);
+      const cityCode = rawCity.includes(",")
+        ? rawCity.split(",").map(c => toCityCode(c.trim())).filter(Boolean).join(",")
+        : toCityCode(rawCity);
       if (cityCode) setKickoffCity(cityCode);
 
-      // Auto-currency based on city config
-      if (!currencyManuallySet && cityCode && CITY_CONFIG[cityCode]) {
-        setCurrency(CITY_CONFIG[cityCode].currency);
+      // Auto-currency based on FIRST city config
+      const firstCode = cityCode.split(",")[0];
+      if (!currencyManuallySet && firstCode && CITY_CONFIG[firstCode]) {
+        setCurrency(CITY_CONFIG[firstCode].currency);
       }
 
     } catch (e) {
@@ -2821,7 +2865,41 @@ console.log("SENDING PAYLOAD TO KICKOFF:", payload);
 console.log("CONTACTO QUE SE ENVIA:", finalGuestContact);
 console.log("PAYLOAD QUE SE ENVIA:", payload);
 await updateKickoffInSheet(idToUse, payload);
-console.log("Kickoff actualizado:", idToUse);
+
+// ── Auto-create concierge tasks based on cart ─────────────────────────────
+const TASK_API_URL = "https://script.google.com/macros/s/AKfycbwZJudfRGEZm9hx_WiyOif4Nu3RL9NecJTP7gIrFqyHukU146-sdaLqAafZz0gdR7KVvw/exec";
+const autoTaskLabel = (item) => {
+  const cat = (item.category || "").toLowerCase();
+  const name = item.name || "servicio";
+  if (cat === "restaurants" || cat === "brunch") return `Reservar: ${name}`;
+  if (cat === "tours")       return `Coordinar tour: ${name}`;
+  if (cat === "transportation") return `Coordinar transporte: ${name}`;
+  if (cat === "beach-clubs") return `Reservar beach club: ${name}`;
+  if (cat === "nightlife" || cat === "bars") return `Reservar: ${name}`;
+  if (cat === "chef")        return `Coordinar chef privado: ${name}`;
+  return `Gestionar: ${name}`;
+};
+const dueDate = arrivalDate.trim() || new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+const conciergeEmail = currentKickoff?.assignedConciergeEmail || "";
+const conciergeName  = currentKickoff?.assignedConcierge || currentKickoff?.assignedConciergeName || "";
+// Fire auto-tasks without blocking UI
+Promise.all(cart.map(item => fetch(TASK_API_URL, {
+  method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+  body: JSON.stringify({
+    action:"saveTask",
+    payload:{
+      taskName:      autoTaskLabel(item),
+      assignedTo:    conciergeName,
+      assignedEmail: conciergeEmail,
+      dueDate,
+      notes:         `Cliente: ${cleanGuestName} · Viaje: ${cleanTripName || idToUse}`,
+      status:        "pending",
+      kickoffId:     idToUse,
+      autoGenerated: true,
+      createdAt:     new Date().toISOString(),
+    }
+  })
+}))).catch(()=>{});
 
 setShowKickoff(false);
 setKickoffSent(true);
@@ -2949,11 +3027,12 @@ setCart([]);
     };
 
     const interestOptions = [
-      { id: "food", es: "Comida", en: "Food" },
-      { id: "beach", es: "Playa", en: "Beach" },
-      { id: "night", es: "Rumba", en: "Nightlife" },
-      { id: "culture", es: "Cultura", en: "Culture" },
-      { id: "adventure", es: "Aventura", en: "Adventure" },
+      { id: "food",      es: "Restaurantes",  en: "Restaurants"  },
+      { id: "brunch",    es: "Brunch & Café", en: "Brunch & Café" },
+      { id: "beach",     es: "Playa & Botes", en: "Beach & Boats" },
+      { id: "night",     es: "Rumba",          en: "Nightlife"    },
+      { id: "culture",   es: "Cultura & Tours",en: "Culture & Tours" },
+      { id: "adventure", es: "Aventura",       en: "Adventure"    },
     ];
     
 
@@ -3345,7 +3424,7 @@ setCart([]);
           ].filter(tag =>
             // Vegetarian: only show when restaurants (or "all") is selected
             tag.showAlways ||
-            (tag.id === "vegetarian" && (selectedCategory === "all" || selectedCategory === "restaurants"))
+            (tag.id === "vegetarian" && (selectedCategory === "all" || selectedCategory === "restaurants" || selectedCategory === "brunch"))
           ).map((tag) => (
             <button
               key={tag.id}

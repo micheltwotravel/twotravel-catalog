@@ -42,7 +42,7 @@ const translations = {
     privateTrip: "Curated Experience",
 
     tripDetailsTitle: "Trip Details",
-    tripDetailsSubtitle: "Quick context about your experience.",
+    tripDetailsSubtitle: "Choose what information applies to you from the drop down menu.",
     destination: "Destination",
     concierge: "Your Concierge",
     occasion: "The Occasion",
@@ -120,7 +120,7 @@ const translations = {
 
     options: {
       destinations: ["Cartagena", "CDMX", "Medellín", "Tulum"],
-      concierges: ["Aileen", "Alia", "Caro", "Dani", "Giulia", "Nataly"],
+      concierges: ["Alia", "Caro", "Dani", "Giulia", "Natalia", "Nataly"],
       occasions: [
         "Anniversary",
         "Bachelor/Bachelorette",
@@ -151,7 +151,7 @@ const translations = {
     privateTrip: "Experiencia curada",
 
     tripDetailsTitle: "Detalles del viaje",
-    tripDetailsSubtitle: "Un poco de contexto sobre tu experiencia.",
+    tripDetailsSubtitle: "Selecciona la información que aplique a tu experiencia en el menú desplegable.",
     destination: "Destino",
     concierge: "Tu concierge",
     occasion: "La ocasión",
@@ -231,7 +231,7 @@ const translations = {
 
     options: {
       destinations: ["Cartagena", "CDMX", "Medellín", "Tulum"],
-      concierges: ["Aileen", "Alia", "Caro", "Dani", "Giulia", "Nataly"],
+      concierges: ["Alia", "Caro", "Dani", "Giulia", "Natalia", "Nataly"],
       occasions: [
         "Aniversario",
         "Cumpleaños",
@@ -1093,15 +1093,69 @@ function UnifiedDashboard() {
     kpiByConcierge[name].svcs    += kpiServiceCounts[i];
     if (Number(k.conciergeRating) > 0) kpiByConcierge[name].ratings.push(Number(k.conciergeRating));
   });
+  // ── Time metrics helpers ─────────────────────────────────────
+  const daysBetween = (a, b) => {
+    const ta = new Date(a), tb = new Date(b);
+    if (isNaN(ta) || isNaN(tb)) return null;
+    return Math.round(Math.abs(tb - ta) / 86400000 * 10) / 10;
+  };
+  const avgDays = (arr) => {
+    const valid = arr.filter(v => v !== null);
+    return valid.length ? (valid.reduce((a,b) => a+b, 0) / valid.length).toFixed(1) : "—";
+  };
+
+  // Time: link created → concierge editing
+  const daysToEdit = kpiFiltered.map(k =>
+    k.conciergeEditingAt ? daysBetween(k.createdAt, k.conciergeEditingAt) : null
+  );
+  // Time: link created → sent to Travefy (itinerary ready = contabilidad)
+  const daysToSend = kpiFiltered.map(k =>
+    k.sentToTravifyAt ? daysBetween(k.createdAt, k.sentToTravifyAt) : null
+  );
+  // Time: concierge editing → sent to Travefy
+  const daysEditToSend = kpiFiltered.map(k =>
+    k.conciergeEditingAt && k.sentToTravifyAt ? daysBetween(k.conciergeEditingAt, k.sentToTravifyAt) : null
+  );
+  const avgDaysToEdit    = avgDays(daysToEdit);
+  const avgDaysToSend    = avgDays(daysToSend);
+  const avgDaysEditToSend = avgDays(daysEditToSend);
+  const sentCount        = kpiFiltered.filter(k => k.sentToTravifyAt).length;
+
   const kpiConciergeRows = Object.entries(kpiByConcierge)
-    .map(([name, d]) => ({
-      name,
-      clients:   d.clients,
-      revenue:   d.revenue,
-      avgSvcs:   d.clients ? (d.svcs / d.clients).toFixed(1) : "0",
-      avgRating: d.ratings.length ? (d.ratings.reduce((a,b)=>a+b,0)/d.ratings.length).toFixed(1) : "—",
-    }))
+    .map(([name, d]) => {
+      const myKickoffs = kpiFiltered.filter(k => (k.assignedConcierge || k.assignedConciergeName) === name);
+      const myDays = myKickoffs.map(k => k.sentToTravifyAt ? daysBetween(k.createdAt, k.sentToTravifyAt) : null);
+      return {
+        name,
+        clients:   d.clients,
+        revenue:   d.revenue,
+        avgSvcs:   d.clients ? (d.svcs / d.clients).toFixed(1) : "0",
+        avgDays:   avgDays(myDays),
+        avgRating: d.ratings.length ? (d.ratings.reduce((a,b)=>a+b,0)/d.ratings.length).toFixed(1) : "—",
+      };
+    })
     .sort((a, b) => b.revenue - a.revenue);
+
+  // ── Pending tasks per concierge ──────────────────────────────
+  const pendingByConcierge = {};
+  kpiFiltered.forEach(k => {
+    const name = k.assignedConcierge || k.assignedConciergeName || "Sin asignar";
+    if (!pendingByConcierge[name]) pendingByConcierge[name] = { editing: [], total: 0 };
+    pendingByConcierge[name].total++;
+    if (k.status === "concierge_editing" || k.status === "client_submitted") {
+      pendingByConcierge[name].editing.push(k);
+    }
+  });
+  const pendingRows = Object.entries(pendingByConcierge)
+    .map(([name, d]) => {
+      const oldest = d.editing.length
+        ? Math.max(...d.editing.map(k => daysBetween(k.createdAt, new Date()) || 0))
+        : null;
+      return { name, pending: d.editing.length, total: d.total, oldestDays: oldest };
+    })
+    .filter(r => r.pending > 0)
+    .sort((a, b) => b.oldestDays - a.oldestDays);
+
   const kpiStatusMap = {};
   kpiFiltered.forEach(k => { const s = k.status || "new"; kpiStatusMap[s] = (kpiStatusMap[s]||0)+1; });
   const fmtRev = v => v >= 10000 ? "$" + Math.round(v).toLocaleString("es-CO") + " COP" : "$" + v.toLocaleString("en-US",{maximumFractionDigits:0}) + " USD";
@@ -1186,6 +1240,82 @@ function UnifiedDashboard() {
                   <KpiCard label="Total servicios" value={kpiServiceCounts.reduce((a,b)=>a+b,0)} sub="en todos los kickoffs filtrados"/>
                 </div>
 
+                {/* ── Timing metrics ── */}
+                <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-4">
+                  <h2 className="text-sm font-semibold text-stone-700 mb-1">⏱ Tiempos promedio del proceso</h2>
+                  <p className="text-[11px] text-stone-400 mb-4">Desde creación del link (kickoff/meeting) hasta cada etapa</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-stone-50 rounded-xl p-4 border border-stone-100">
+                      <div className="text-xl font-bold text-stone-800">{avgDaysToEdit} <span className="text-sm font-normal text-stone-400">días</span></div>
+                      <div className="text-xs text-stone-500 mt-1">Link → Concierge empieza</div>
+                      <div className="text-[10px] text-stone-400 mt-0.5">{daysToEdit.filter(v=>v!==null).length} trips con dato</div>
+                    </div>
+                    <div className="bg-stone-50 rounded-xl p-4 border border-stone-100">
+                      <div className="text-xl font-bold text-blue-700">{avgDaysEditToSend} <span className="text-sm font-normal text-stone-400">días</span></div>
+                      <div className="text-xs text-stone-500 mt-1">Edición → Itinerario listo</div>
+                      <div className="text-[10px] text-stone-400 mt-0.5">{daysEditToSend.filter(v=>v!==null).length} trips con dato</div>
+                    </div>
+                    <div className="bg-stone-50 rounded-xl p-4 border border-stone-100">
+                      <div className="text-xl font-bold text-emerald-700">{avgDaysToSend} <span className="text-sm font-normal text-stone-400">días</span></div>
+                      <div className="text-xs text-stone-500 mt-1">Link → Enviado a contabilidad</div>
+                      <div className="text-[10px] text-stone-400 mt-0.5">Total link → QuickBooks</div>
+                    </div>
+                    <div className="bg-stone-50 rounded-xl p-4 border border-stone-100">
+                      <div className="text-xl font-bold text-amber-600">{sentCount}</div>
+                      <div className="text-xs text-stone-500 mt-1">Enviados a contabilidad</div>
+                      <div className="text-[10px] text-stone-400 mt-0.5">de {kpiFiltered.length} en el período</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Pending tasks ── */}
+                {pendingRows.length > 0 && (
+                  <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden mb-4">
+                    <div className="px-5 py-3 border-b border-stone-100 flex items-center justify-between">
+                      <h2 className="text-sm font-semibold text-stone-700">📋 Pendientes por concierge</h2>
+                      <span className="text-xs text-stone-400">Clientes en edición o listos para procesar</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-stone-50 text-[11px] text-stone-400 uppercase tracking-wide">
+                          <tr>
+                            <th className="px-5 py-2 text-left font-medium">Concierge</th>
+                            <th className="px-5 py-2 text-center font-medium">Pendientes</th>
+                            <th className="px-5 py-2 text-center font-medium">Más antiguo</th>
+                            <th className="px-5 py-2 text-left font-medium">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-50">
+                          {pendingRows.map(row => (
+                            <tr key={row.name} className="hover:bg-stone-50">
+                              <td className="px-5 py-3 font-medium text-stone-800">{row.name}</td>
+                              <td className="px-5 py-3 text-center">
+                                <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${row.pending >= 3 ? "bg-red-100 text-red-700" : row.pending === 2 ? "bg-amber-100 text-amber-700" : "bg-blue-50 text-blue-700"}`}>
+                                  {row.pending}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3 text-center">
+                                {row.oldestDays !== null ? (
+                                  <span className={`text-xs font-semibold ${row.oldestDays > 5 ? "text-red-600" : row.oldestDays > 2 ? "text-amber-600" : "text-stone-500"}`}>
+                                    {row.oldestDays}d
+                                  </span>
+                                ) : "—"}
+                              </td>
+                              <td className="px-5 py-3">
+                                <div className="flex gap-1 flex-wrap">
+                                  {row.oldestDays > 5 && <span className="text-[10px] bg-red-50 text-red-600 border border-red-200 rounded px-2 py-0.5">⚠ Urgente</span>}
+                                  {row.oldestDays > 2 && row.oldestDays <= 5 && <span className="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 rounded px-2 py-0.5">Revisar</span>}
+                                  {row.oldestDays <= 2 && <span className="text-[10px] bg-green-50 text-green-600 border border-green-200 rounded px-2 py-0.5">Al día</span>}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
                 {/* Status breakdown */}
                 <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-4">
                   <h2 className="text-sm font-semibold text-stone-700 mb-3">Estado de clientes</h2>
@@ -1213,6 +1343,7 @@ function UnifiedDashboard() {
                             <th className="px-5 py-2 text-center font-medium">Clientes</th>
                             <th className="px-5 py-2 text-right font-medium">Revenue</th>
                             <th className="px-5 py-2 text-center font-medium">Svcs/cliente</th>
+                            <th className="px-5 py-2 text-center font-medium">Días promedio</th>
                             <th className="px-5 py-2 text-center font-medium">Rating ⭐</th>
                           </tr>
                         </thead>
@@ -1223,6 +1354,7 @@ function UnifiedDashboard() {
                               <td className="px-5 py-3 text-center text-stone-600">{row.clients}</td>
                               <td className="px-5 py-3 text-right font-semibold text-emerald-700">{fmtRev(row.revenue)}</td>
                               <td className="px-5 py-3 text-center text-stone-600">{row.avgSvcs}</td>
+                              <td className="px-5 py-3 text-center text-blue-600 font-medium">{row.avgDays === "—" ? "—" : row.avgDays + "d"}</td>
                               <td className="px-5 py-3 text-center text-amber-500 font-semibold">{row.avgRating}</td>
                             </tr>
                           ))}
@@ -1823,8 +1955,17 @@ function SoporteDashboard() {
 ════════════════════════════════════════════════════════ */
 const CONCIERGE_NAMES = [
   "Alia Jadad","Carolina Lopez","Daniela Becerra",
-  "Nataly Cruz","Giulia Lorini Serrato","Aileen Servin",
+  "Nataly Cruz","Giulia Lorini Serrato","Natalia",
 ];
+// Email map for task assignment
+const CONCIERGE_EMAILS = {
+  "Alia Jadad":            "alia@two.travel",
+  "Carolina Lopez":        "caro@two.travel",
+  "Daniela Becerra":       "daniela@two.travel",
+  "Nataly Cruz":           "nataly@two.travel",
+  "Giulia Lorini Serrato": "giulia@two.travel",
+  "Natalia":               "natalia@two.travel",
+};
 
 /* ════════════════════════════════════════════════════════
    TASK TRACKER  (?mode=tasks)
@@ -1845,7 +1986,8 @@ function TaskTracker() {
   const [saving, setSaving]     = useState(false);
   const [filterUser, setFilterUser] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [form, setForm] = useState({ taskName:"", assignedTo:"", dueDate:"", notes:"" });
+  const [form, setForm] = useState({ taskName:"", assignedTo:"", assignedEmail:"", dueDate:"", notes:"" });
+  const [searchName, setSearchName] = useState("");
 
   const setF = (k,v) => setForm(p=>({...p,[k]:v}));
 
@@ -1880,16 +2022,21 @@ function TaskTracker() {
     if (!form.taskName.trim() || !form.assignedTo || !form.dueDate) return alert("Llena nombre, asignado y fecha.");
     setSaving(true);
     try {
+      const payload = {
+        ...form,
+        assignedEmail: form.assignedEmail || CONCIERGE_EMAILS[form.assignedTo] || "",
+        status:"pending",
+        createdAt: new Date().toISOString()
+      };
       const res = await fetch(TASK_API, {
         method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"saveTask", payload:{ ...form, status:"pending", createdAt: new Date().toISOString() } }),
+        body: JSON.stringify({ action:"saveTask", payload }),
       });
       const text = await res.text();
       let json = {};
       try { json = JSON.parse(text); } catch {}
-      console.log("saveTask response:", json);
       if (json?.ok === false) { alert("Error GAS: " + (json.error || "unknown")); setSaving(false); return; }
-      setForm({ taskName:"", assignedTo:"", dueDate:"", notes:"" });
+      setForm({ taskName:"", assignedTo:"", assignedEmail:"", dueDate:"", notes:"" });
       setShowForm(false);
       await load();
     } catch(err) { alert("Error al guardar: " + err.message); }
@@ -1911,6 +2058,11 @@ function TaskTracker() {
   const filtered = tasks.filter(t => {
     if (filterUser !== "all" && t.assignedTo !== filterUser) return false;
     if (filterStatus !== "all" && t.status !== filterStatus) return false;
+    if (searchName.trim()) {
+      const q = searchName.trim().toLowerCase();
+      if (!String(t.assignedTo||"").toLowerCase().includes(q) &&
+          !String(t.taskName||"").toLowerCase().includes(q)) return false;
+    }
     return true;
   });
 
@@ -1954,11 +2106,21 @@ function TaskTracker() {
               </div>
               <div>
                 <label className="text-[11px] text-stone-500">Asignado a *</label>
-                <select value={form.assignedTo} onChange={e=>setF("assignedTo",e.target.value)}
+                <select value={form.assignedTo} onChange={e=>{
+                  const name = e.target.value;
+                  setF("assignedTo", name);
+                  setF("assignedEmail", CONCIERGE_EMAILS[name] || "");
+                }}
                   className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-white">
                   <option value="">Seleccionar…</option>
                   {CONCIERGE_NAMES.map(c=><option key={c} value={c}>{c}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className="text-[11px] text-stone-500">Email (auto)</label>
+                <input value={form.assignedEmail} onChange={e=>setF("assignedEmail",e.target.value)}
+                  className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50"
+                  placeholder="se llena automático"/>
               </div>
               <div>
                 <label className="text-[11px] text-stone-500">Fecha límite *</label>
@@ -1988,10 +2150,15 @@ function TaskTracker() {
           <div className="lg:col-span-2 space-y-3">
             {/* Filters */}
             <div className="flex flex-wrap gap-2 items-center">
+              <input
+                value={searchName} onChange={e=>setSearchName(e.target.value)}
+                placeholder="Buscar concierge o tarea…"
+                className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white w-44"
+              />
               <select value={filterUser} onChange={e=>setFilterUser(e.target.value)}
                 className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white">
-                <option value="all">Todos</option>
-                {allUsers.map(u=><option key={u} value={u}>{u.split(" ")[0]}</option>)}
+                <option value="all">Todas las concierges</option>
+                {CONCIERGE_NAMES.map(u=><option key={u} value={u}>{u.split(" ")[0]}</option>)}
               </select>
               {["all","pending","late","completed"].map(s=>(
                 <button key={s} onClick={()=>setFilterStatus(s)}

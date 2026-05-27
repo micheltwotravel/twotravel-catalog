@@ -409,12 +409,12 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
    Lista fija de concierges
    ========================================= */
 const CONCIERGE_LIST = [
-  { name: "Alia Jadad",           email: "alia@two.travel",     phone: "+57 301 7618012", city: "CTG" },
-  { name: "Carolina Lopez",       email: "caro@two.travel",     phone: "+57 300 8192062", city: "CTG" },
-  { name: "Daniela Becerra",      email: "daniela@two.travel",  phone: "+57 304 4445285", city: "MDE" },
-  { name: "Nataly Cruz",          email: "nataly@two.travel",   phone: "+52 1 55 2337 7241", city: "CDMX" },
-  { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   phone: "+52 1 55 4344 1382", city: "CDMX" },
-  { name: "Aileen Servin",        email: "aileen@two.travel",   phone: "",                city: "CDMX" },
+  { name: "Alia Jadad",           email: "alia@two.travel",     phone: "+57 301 7618012",   city: "CTG"  },
+  { name: "Carolina Lopez",       email: "caro@two.travel",     phone: "+57 300 8192062",   city: "CTG"  },
+  { name: "Daniela Becerra",      email: "daniela@two.travel",  phone: "+57 304 4445285",   city: "MDE"  },
+  { name: "Nataly Cruz",          email: "nataly@two.travel",   phone: "+52 1 55 2337 7241",city: "CDMX" },
+  { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   phone: "+52 1 55 4344 1382",city: "CDMX" },
+  { name: "Natalia",              email: "natalia@two.travel",  phone: "",                  city: "CDMX" },
 ];
 
 /* =========================================
@@ -539,7 +539,7 @@ const STATUS_LABELS = {
   new:                { es: "Nuevo",                    en: "New" },
   client_submitted:   { es: "Cliente llenó selección",  en: "Client submitted" },
   concierge_editing:  { es: "Concierge editando",       en: "Concierge editing" },
-  sent_to_travify:    { es: "Enviado a Travefy",        en: "Sent to Travefy" },
+  sent_to_travify:    { es: "Enviado a contabilidad",   en: "Sent to accounting" },
   feedback_submitted: { es: "Cliente llenó feedback",   en: "Feedback submitted" },
   done:               { es: "Cerrado",                  en: "Closed" },
 };
@@ -604,9 +604,11 @@ function StatusBadge({ status, lang = "es" }) {
     </span>
   );
 }
+// Always use the production domain so shared links never show Vercel/GitHub URLs
+const CLIENT_BASE_URL = "https://www.twotravelvip.com";
+
 function buildCatalogLink(kickoff, clientType = 1, lang = "en") {
-  const base = window.location.origin;
-  const url = new URL("/", base);
+  const url = new URL("/", CLIENT_BASE_URL);
   url.searchParams.set("mode", "catalog");
   url.searchParams.set("kickoffId", kickoff?.id || "");
   url.searchParams.set("clientType", String(clientType));
@@ -617,8 +619,7 @@ function buildCatalogLink(kickoff, clientType = 1, lang = "en") {
   return url.toString();
 }
 function buildFeedbackLink(kickoff, clientType = 1, lang = "en") {
-  const base = window.location.origin;
-  const url = new URL("/", base);
+  const url = new URL("/", CLIENT_BASE_URL);
 
   url.searchParams.set("mode", "feedback");
   url.searchParams.set("kickoffId", kickoff?.id || "");
@@ -636,8 +637,7 @@ function buildFeedbackLink(kickoff, clientType = 1, lang = "en") {
 }
 
 function buildQuestionnaireLink(kickoff, clientType = 1, lang = "en") {
-  const base = window.location.origin;
-  const url = new URL("/", base);
+  const url = new URL("/", CLIENT_BASE_URL);
   url.searchParams.set("mode", "questionnaire");
   url.searchParams.set("kickoffId", kickoff?.id || "");
   url.searchParams.set("clientType", String(clientType));
@@ -2056,8 +2056,19 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [guestName, setGuestName] = useState(kickoff?.guestName || "");
   const [tripName, setTripName] = useState(kickoff?.tripName || "");
   const [guestContact, setGuestContact] = useState(kickoff?.guestContact || "");
-  const [assignedConcierge, setAssignedConcierge] = useState(kickoff?.assignedConciergeName || kickoff?.assignedConcierge || "");
-  const [assignedConciergeEmail, setAssignedConciergeEmail] = useState(kickoff?.assignedConciergeEmail || "");
+  // Multi-concierge: stored as comma-separated names; edit as array of names
+  const parseMultiConcierge = (raw) => {
+    if (!raw) return [];
+    return String(raw).split(",").map(s => s.trim()).filter(Boolean);
+  };
+  const [assignedConcierges, setAssignedConcierges] = useState(
+    parseMultiConcierge(kickoff?.assignedConcierge || kickoff?.assignedConciergeName || "")
+  );
+  // Derived single values for backward compat
+  const assignedConcierge      = assignedConcierges[0] || "";
+  const assignedConciergeEmail = assignedConcierges
+    .map(n => CONCIERGE_LIST.find(c => c.name === n)?.email || "")
+    .filter(Boolean).join(",");
   const [status, setStatus] = useState(kickoff?.status || "new");
   const [conciergeSummary] = useState(kickoff?.conciergeSummary || "");
   const [internalNotes, setInternalNotes] = useState(kickoff?.internalNotes || "");
@@ -2130,9 +2141,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     status: autoStatus,
     conciergeSummary,
     internalNotes,
-    assignedConcierge: assignedConcierge.trim(),
-    assignedConciergeName: assignedConcierge.trim(),
-    assignedConciergeEmail: assignedConciergeEmail.trim(),
+    assignedConcierge:      assignedConcierges.join(", "),
+    assignedConciergeName:  assignedConcierges.join(", "),
+    assignedConciergeEmail: assignedConciergeEmail,
     // Cover fields
     tripDates:         tripDates.trim(),
     city:              city.trim(),
@@ -2146,6 +2157,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     welcomePdfUrl:     welcomePdfUrl.trim(),
     // Timestamps — only set first time each status is reached
     ...(autoStatus === "concierge_editing" && !kickoff.conciergeEditingAt ? { conciergeEditingAt: now } : {}),
+    ...(autoStatus === "sent_to_travify"   && !kickoff.sentToTravifyAt    ? { sentToTravifyAt: now }    : {}),
+    ...(autoStatus === "done"              && !kickoff.doneAt              ? { doneAt: now }              : {}),
     // Pre-trip info block (rendered as a page before itinerary days in PDF)
     preTripContent:    preTripContent.trim(),
     // Multiple arrivals
@@ -2280,24 +2293,33 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             )}
 
             <div className="sm:col-span-2">
-              <label className="text-[11px] text-neutral-500">Concierge asignado</label>
-              <select
-                value={assignedConcierge}
-                onChange={(e) => {
-                  const name = e.target.value;
-                  setAssignedConcierge(name);
-                  const found = CONCIERGE_LIST.find(c => c.name === name);
-                  if (found) setAssignedConciergeEmail(found.email);
-                }}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-              >
-                <option value="">— Sin asignar —</option>
-                {CONCIERGE_LIST.map(c => (
-                  <option key={c.email} value={c.name}>
-                    {c.name} · {c.city}
-                  </option>
-                ))}
-              </select>
+              <label className="text-[11px] text-neutral-500 mb-1 block">
+                Concierge(s) asignado(s)
+                {assignedConcierges.length > 0 && (
+                  <span className="ml-1 text-neutral-400">({assignedConcierges.join(", ")})</span>
+                )}
+              </label>
+              <div className="border rounded-lg divide-y bg-white max-h-40 overflow-y-auto">
+                {CONCIERGE_LIST.map(c => {
+                  const checked = assignedConcierges.includes(c.name);
+                  return (
+                    <label key={c.email} className="flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          setAssignedConcierges(prev =>
+                            checked ? prev.filter(n => n !== c.name) : [...prev, c.name]
+                          );
+                        }}
+                        className="rounded"
+                      />
+                      <span className="flex-1">{c.name}</span>
+                      <span className="text-[10px] text-neutral-400">{c.city}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="sm:col-span-2">
@@ -2874,22 +2896,39 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
             />
           </div>
 
-          {/* Ciudad */}
+          {/* Ciudad(es) — multi-select */}
           <div>
             <label className="block text-xs font-medium text-neutral-600 mb-1">
-              Ciudad <span className="text-red-500">*</span>
+              Ciudad(es) <span className="text-red-500">*</span>
+              {form.city && <span className="ml-1 text-neutral-400 font-normal">({form.city})</span>}
             </label>
-            <select
-              value={form.city}
-              onChange={handleField("city")}
-              className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900/10 ${!form.city ? "border-red-300 bg-red-50" : "border-neutral-300"}`}
-            >
-              <option value="">Seleccionar ciudad</option>
-              <option value="CTG">Cartagena (CTG)</option>
-              <option value="MDE">Medellín (MDE)</option>
-              <option value="CDMX">Ciudad de México (CDMX)</option>
-              <option value="TUL">Tulum (TUL)</option>
-            </select>
+            <div className={`border rounded-lg divide-y bg-white ${!form.city ? "border-red-300" : "border-neutral-300"}`}>
+              {[
+                { code: "CTG",  label: "Cartagena" },
+                { code: "MDE",  label: "Medellín" },
+                { code: "CDMX", label: "Ciudad de México" },
+                { code: "TUL",  label: "Tulum" },
+                { code: "BOG",  label: "Bogotá" },
+              ].map(({ code, label }) => {
+                const cities = form.city ? form.city.split(",").map(s=>s.trim()) : [];
+                const checked = cities.includes(code);
+                return (
+                  <label key={code} className="flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => {
+                        const next = checked
+                          ? cities.filter(c => c !== code)
+                          : [...cities, code];
+                        setForm(p => ({ ...p, city: next.join(",") }));
+                      }}
+                    />
+                    {label} <span className="text-neutral-400 text-[10px]">{code}</span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
 
           {/* Nombre del viaje */}
@@ -3404,6 +3443,13 @@ const loadKickoffs = async () => {
     className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100"
   >
     Dashboard
+  </a>
+
+  <a
+    href="?mode=tasks"
+    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-violet-200 bg-violet-50 hover:bg-violet-100 text-violet-700 font-medium"
+  >
+    📋 Tareas
   </a>
 
   <button
