@@ -1999,12 +1999,8 @@ function TaskTracker() {
     setLoading(true);
     setLoadError("");
     try {
-      const res  = await fetch(TASK_API, {
-
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "listTasks" }),
-      });
+      // GET avoids the CORS preflight that blocks POST reads from the browser
+      const res  = await fetch(`${TASK_API}?action=listTasks`);
       const text = await res.text();
       let json = {};
       try { json = JSON.parse(text); } catch {
@@ -2016,13 +2012,13 @@ function TaskTracker() {
         setLoading(false); return;
       }
       const now = new Date(); now.setHours(0,0,0,0);
-      const tasks = (Array.isArray(json.data) ? json.data : []).map(t => ({
+      const loaded = (Array.isArray(json.data) ? json.data : []).map(t => ({
         ...t,
         status: t.status === "completed" ? "completed"
               : (t.dueDate && new Date(t.dueDate) < now) ? "late"
               : t.status || "pending",
       }));
-      setTasks(tasks);
+      setTasks(loaded);
     } catch(err) {
       setLoadError("No se pudo conectar al script: " + err.message);
     }
