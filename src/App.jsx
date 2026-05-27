@@ -1991,8 +1991,11 @@ function TaskTracker() {
 
   const setF = (k,v) => setForm(p=>({...p,[k]:v}));
 
+  const [loadError, setLoadError] = useState("");
+
   const load = async () => {
     setLoading(true);
+    setLoadError("");
     try {
       const res  = await fetch(TASK_API, {
         method: "POST",
@@ -2001,9 +2004,14 @@ function TaskTracker() {
       });
       const text = await res.text();
       let json = {};
-      try { json = JSON.parse(text); } catch { console.error("listTasks parse error:", text?.slice(0,300)); }
-      console.log("listTasks response:", json);
-      // Auto-compute Late status client-side
+      try { json = JSON.parse(text); } catch {
+        setLoadError("Respuesta inválida del script: " + text?.slice(0, 200));
+        setLoading(false); return;
+      }
+      if (json?.ok === false) {
+        setLoadError("Error del script: " + (json.error || "desconocido"));
+        setLoading(false); return;
+      }
       const now = new Date(); now.setHours(0,0,0,0);
       const tasks = (Array.isArray(json.data) ? json.data : []).map(t => ({
         ...t,
@@ -2012,7 +2020,9 @@ function TaskTracker() {
               : t.status || "pending",
       }));
       setTasks(tasks);
-    } catch(err) { console.error("load tasks error:", err); }
+    } catch(err) {
+      setLoadError("No se pudo conectar al script: " + err.message);
+    }
     setLoading(false);
   };
 
@@ -2172,6 +2182,12 @@ function TaskTracker() {
               <button onClick={load} className="ml-auto text-xs text-stone-400 hover:text-stone-700">↻</button>
             </div>
 
+            {loadError && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-xs text-red-700 font-mono break-all">
+                <p className="font-semibold mb-1">Error cargando tareas:</p>
+                {loadError}
+              </div>
+            )}
             {loading ? (
               <div className="text-center py-10 text-stone-400 text-sm">Cargando…</div>
             ) : filtered.length === 0 ? (
