@@ -204,8 +204,13 @@ video1: video1,
     menuUrl:   row.menuurl   || row.menu_url   || row["menu url"]   || row.menuUrl   || "",
     mapsUrl:   row.mapsurl   || row.maps_url   || row["maps url"]   || row.mapsUrl   || "",
     // Dress code — shown for bars & nightlife with 👔 icon
-    dressCode: row.dress_code || row["dress code"] || row.dresscode || row.codigo_vestimenta || "",
-    dressCode_en: row.dress_code_en || row["dress code en"] || "",
+    // ES: dress_code_es (preferred) → dress_code → codigo_vestimenta
+    // EN: dress_code_en → dress_code (fallback if no ES column exists)
+    dressCode: row.dress_code_es || row["dress code es"] ||
+               row.dress_code    || row["dress code"]    ||
+               row.dresscode     || row.codigo_vestimenta || "",
+    dressCode_en: row.dress_code_en || row["dress code en"] ||
+                  row.dress_code    || row["dress code"]    || "",
     clientType: row.clientType || "",
     family_friendly:
       ["true", "1", "yes", "si", "sí"].includes(
