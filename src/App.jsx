@@ -1586,7 +1586,7 @@ function UnifiedDashboard() {
    SOPORTE TÉCNICO
 ════════════════════════════════════════════════════════ */
 const SOPORTE_API =
-  "https://script.google.com/macros/s/AKfycbwZJudfRGEZm9hx_WiyOif4Nu3RL9NecJTP7gIrFqyHukU146-sdaLqAafZz0gdR7KVvw/exec";
+  "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
 function SoportePage() {
   const [form, setForm]         = useState({ nombre: "", tipo: "", prioridad: "", titulo: "", descripcion: "" });
@@ -1971,7 +1971,7 @@ const CONCIERGE_EMAILS = {
    TASK TRACKER  (?mode=tasks)
    Tasks live in a "Tasks" sheet tab, managed via GAS.
 ════════════════════════════════════════════════════════ */
-const TASK_API = "https://script.google.com/macros/s/AKfycbwZJudfRGEZm9hx_WiyOif4Nu3RL9NecJTP7gIrFqyHukU146-sdaLqAafZz0gdR7KVvw/exec";
+const TASK_API = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
 const TASK_STATUS = {
   pending:   { label: "Pendiente",   cls: "bg-amber-100 text-amber-700" },
@@ -2400,7 +2400,7 @@ function DrinksCatalog() {
     const text = `🍹 *Drink List* ${guestName ? `(${guestName})` : ""} · kickoff: ${kickoffId}\n${lines.join("\n")}`;
     try {
       // Send to Slack via GAS proxy — same endpoint as billing
-      await fetch("https://script.google.com/macros/s/AKfycbwZJudfRGEZm9hx_WiyOif4Nu3RL9NecJTP7gIrFqyHukU146-sdaLqAafZz0gdR7KVvw/exec", {
+      await fetch("https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec", {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action: "sendSlackMessage", payload: { text, channelId: "C094NE421NV", slackToken: import.meta.env.VITE_SLACK_BOT_TOKEN || "" } }),
