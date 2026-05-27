@@ -1785,6 +1785,7 @@ function SoporteDashboard() {
   const [selected, setSelected]   = useState(null);
   const [filterStatus, setFilter] = useState("todos");
   const [updatingId, setUpdatingId] = useState(null);
+  const [showClosed, setShowClosed] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -1813,7 +1814,7 @@ function SoporteDashboard() {
       await fetch(SOPORTE_API, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "updateSoporte", payload: { id: caso.id, status: newStatus } }),
+        body: JSON.stringify({ action: "updateSoporte", id: caso.id, updates: { status: newStatus } }),
       });
       setCases(prev => prev.map(c => c.id === caso.id ? { ...c, status: newStatus } : c));
       if (selected?.id === caso.id) setSelected(s => ({ ...s, status: newStatus }));
@@ -1821,9 +1822,12 @@ function SoporteDashboard() {
     setUpdatingId(null);
   };
 
-  const filtered = filterStatus === "todos"
-    ? cases
-    : cases.filter(c => (c.status || "abierto") === filterStatus);
+  const filtered = cases.filter(c => {
+    const st = c.status || "abierto";
+    if (!showClosed && st === "cerrado") return false;
+    if (filterStatus !== "todos" && st !== filterStatus) return false;
+    return true;
+  });
 
   const counts = {
     todos:        cases.length,
@@ -1845,6 +1849,12 @@ function SoporteDashboard() {
           <button onClick={load}
             className="px-3 py-1.5 text-xs border border-stone-200 rounded-lg text-stone-500 hover:bg-stone-50 transition">
             ↻ Actualizar
+          </button>
+          <button onClick={() => setShowClosed(v => !v)}
+            className={`px-3 py-1.5 text-xs border rounded-lg transition ${showClosed ? "bg-stone-200 text-stone-600 border-stone-300" : "bg-white border-stone-200 text-stone-400 hover:bg-stone-50"}`}>
+            {showClosed
+              ? `Ocultar cerrados (${cases.filter(c=>(c.status||"abierto")==="cerrado").length})`
+              : `+ Mostrar cerrados (${cases.filter(c=>(c.status||"abierto")==="cerrado").length})`}
           </button>
           <a href="/?mode=soporte" target="_blank" rel="noreferrer"
             className="px-3 py-1.5 text-xs bg-stone-800 text-white rounded-lg hover:opacity-90 transition font-medium">
