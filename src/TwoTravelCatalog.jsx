@@ -3915,10 +3915,15 @@ setCart([]);
                       </>
                     )}
                     {/* Dress code — restaurants, bars & nightlife */}
-                    {["restaurants","bars","nightlife","beach-clubs"].includes(selectedServiceCategory) && selectedService.dressCode && (
+                    {["restaurants","bars","nightlife","beach-clubs"].includes(selectedServiceCategory) && (selectedService.dressCode || selectedService.dressCode_en) && (
                       <li className="flex items-center gap-1.5">
                         <span style={{ fontSize: 14 }}>👔</span>
-                        <span>{lang === "es" ? "Dress code: " : "Dress code: "}{selectedService.dressCode}</span>
+                        <span>
+                          {lang === "es" ? "Código de vestimenta: " : "Dress code: "}
+                          {lang === "es"
+                            ? (selectedService.dressCode || selectedService.dressCode_en || "")
+                            : (selectedService.dressCode_en || selectedService.dressCode || "")}
+                        </span>
                       </li>
                     )}
                     {/* Cancellation policy */}
