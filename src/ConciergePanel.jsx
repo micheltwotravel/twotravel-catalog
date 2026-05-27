@@ -2876,24 +2876,21 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
     tripName: "",
     guestContact: "",
     city: "",
-    concierge: "",
-    conciergeEmail: "",
     clientType: 1,
   });
+  const [selectedConcierges, setSelectedConcierges] = React.useState([]);
   const [submitting, setSubmitting] = React.useState(false);
 
-  // Use fixed concierge list
-  const conciergeList = CONCIERGE_LIST;
-
-  const handleConciergeChange = (e) => {
-    const selectedName = e.target.value;
-    const match = conciergeList.find((c) => c.name === selectedName);
-    setForm((prev) => ({
-      ...prev,
-      concierge: selectedName,
-      conciergeEmail: match ? match.email : "",
-      city: prev.city || (match ? match.city : ""),
-    }));
+  const toggleConcierge = (name) => {
+    setSelectedConcierges(prev => {
+      const next = prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name];
+      // Auto-fill city from first concierge if not set
+      if (!prev.includes(name) && !form.city) {
+        const match = CONCIERGE_LIST.find(c => c.name === name);
+        if (match?.city) setForm(f => ({ ...f, city: f.city || match.city }));
+      }
+      return next;
+    });
   };
 
   const handleField = (field) => (e) =>
@@ -2903,8 +2900,16 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
     if (!form.guestName.trim() || !form.email.trim() || !form.city) return;
     setSubmitting(true);
     try {
-      await onSubmit(form);
-      setForm({ guestName: "", email: "", tripName: "", guestContact: "", city: "", concierge: "", conciergeEmail: "", clientType: 1 });
+      const conciergeEmail = selectedConcierges
+        .map(n => CONCIERGE_LIST.find(c => c.name === n)?.email || "")
+        .filter(Boolean).join(",");
+      await onSubmit({
+        ...form,
+        concierge: selectedConcierges.join(", "),
+        conciergeEmail,
+      });
+      setForm({ guestName: "", email: "", tripName: "", guestContact: "", city: "", clientType: 1 });
+      setSelectedConcierges([]);
     } finally {
       setSubmitting(false);
     }
@@ -3040,40 +3045,32 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
             </div>
           </div>
 
-          {/* Concierge dropdown */}
+          {/* Concierge checkboxes — multi-select */}
           <div>
             <label className="block text-xs font-medium text-neutral-600 mb-1">
-              Concierge asignado
+              Concierge(s) asignado(s)
+              {selectedConcierges.length > 0 && (
+                <span className="ml-2 text-neutral-400 font-normal">
+                  {selectedConcierges.join(", ")}
+                </span>
+              )}
             </label>
-            <select
-              value={form.concierge}
-              onChange={handleConciergeChange}
-              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
-            >
-              <option value="">Sin asignar</option>
-              {conciergeList.map((c) => (
-                <option key={c.name} value={c.name}>
-                  {c.name}{c.city ? ` · ${c.city}` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Email del concierge — solo si hay nombre */}
-          {form.concierge && (
-            <div>
-              <label className="block text-xs font-medium text-neutral-600 mb-1">
-                Email del concierge
-              </label>
-              <input
-                type="email"
-                value={form.conciergeEmail}
-                onChange={handleField("conciergeEmail")}
-                placeholder="concierge@empresa.com"
-                className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
-              />
+            <div className="border border-neutral-200 rounded-lg divide-y bg-white max-h-40 overflow-y-auto">
+              {CONCIERGE_LIST.map(c => {
+                const checked = selectedConcierges.includes(c.name);
+                return (
+                  <label key={c.name}
+                    className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm transition ${checked ? "bg-neutral-50" : "hover:bg-neutral-50"}`}>
+                    <input type="checkbox" checked={checked}
+                      onChange={() => toggleConcierge(c.name)}
+                      className="accent-neutral-900"/>
+                    <span className="flex-1">{c.name}</span>
+                    {c.city && <span className="text-xs text-neutral-400">{c.city}</span>}
+                  </label>
+                );
+              })}
             </div>
-          )}
+          </div>
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-2">
