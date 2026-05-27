@@ -3420,7 +3420,6 @@ setCart([]);
             { id: "family",       emoji: "👨‍👩‍👧", es: "Familias",     en: "Family Friendly", showAlways: true },
             // Vegetarian only makes sense for food categories
             { id: "vegetarian",   emoji: "🥗",      es: "Vegetariano",  en: "Vegetarian",      showAlways: false },
-            { id: "accessibility",emoji: "♿",       es: "Accesible",    en: "Accessible",      showAlways: true },
           ].filter(tag =>
             // Vegetarian: only show when restaurants (or "all") is selected
             tag.showAlways ||
