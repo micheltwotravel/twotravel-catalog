@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 
+const TASK_API_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+
 import {
   fetchKickoffsFromSheet,
   fetchServicesFromSheet,
@@ -1075,6 +1077,58 @@ function ItineraryCanvas({ kickoff, onSave }) {
     setCart(prev => [...prev, { ...mapManualToCartItem(), dayLabel, sortOrder: count }]);
   };
 
+  /* ── Generate tasks from cart ── */
+  const [generating, setGenerating] = useState(false);
+  const handleGenerateTasks = async () => {
+    if (!cart.length) return alert("No hay servicios en el itinerario.");
+    const concierge = kickoff?.assignedConciergeName || kickoff?.assignedConcierge || "";
+    const email     = CONCIERGE_LIST.find(c => c.name === concierge)?.email || kickoff?.assignedConciergeEmail || "";
+    const guestName = kickoff?.guestName || kickoff?.tripName || "";
+    const arrival   = kickoff?.arrivalDate || kickoff?.checkIn || "";
+    // Due date = arrival - 2 days, or empty
+    const dueDate = (() => {
+      if (!arrival) return "";
+      const d = new Date(arrival);
+      if (isNaN(d)) return "";
+      d.setDate(d.getDate() - 2);
+      return d.toISOString().slice(0, 10);
+    })();
+    const priorityFor = (cat) => {
+      const c = String(cat||"").toLowerCase();
+      if (/restauran|chef|food|dining/.test(c)) return "alta";
+      if (/tour|activit|excursion/.test(c))     return "media";
+      return "media";
+    };
+    setGenerating(true);
+    let count = 0;
+    for (const item of cart) {
+      const name = item.name || item.serviceName || "";
+      if (!name) continue;
+      const payload = {
+        taskName:     `Confirmar: ${name}`,
+        assignedTo:   concierge,
+        assignedEmail: email,
+        dueDate,
+        status:       "pending",
+        priority:     priorityFor(item.category),
+        notes:        item.dayLabel ? `Día: ${item.dayLabel}` : "",
+        kickoffId:    kickoff?.id   || "",
+        kickoffName:  guestName,
+        createdAt:    new Date().toISOString(),
+      };
+      try {
+        await fetch(TASK_API_URL, {
+          method: "POST", mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "saveTask", payload }),
+        });
+        count++;
+      } catch {}
+    }
+    setGenerating(false);
+    alert(`✅ ${count} tarea${count!==1?"s":""} generada${count!==1?"s":""} en el Task Tracker.`);
+  };
+
   /* ── Save ── */
   const handleSave = async () => {
     try {
@@ -1111,6 +1165,11 @@ function ItineraryCanvas({ kickoff, onSave }) {
           <button type="button" onClick={addDay}
             className="px-3 py-1.5 rounded-lg border border-neutral-200 text-xs hover:bg-neutral-50 text-neutral-600">
             + Agregar día
+          </button>
+          <button type="button" onClick={handleGenerateTasks} disabled={generating || !cart.length}
+            title="Crea una tarea de confirmación por cada servicio del itinerario"
+            className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs hover:bg-blue-100 disabled:opacity-40 transition">
+            {generating ? "Generando…" : "✨ Generar tareas"}
           </button>
           <button type="button" onClick={handleSave} disabled={saving}
             className="px-3 py-1.5 rounded-lg bg-neutral-900 text-white text-xs hover:bg-neutral-800 disabled:opacity-50">
