@@ -1981,12 +1981,14 @@ const TASK_STATUS = {
 
 function TaskTracker() {
   const [tasks, setTasks]       = useState([]);
+  const [kickoffs, setKickoffs] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving]     = useState(false);
-  const [filterUser, setFilterUser] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [form, setForm] = useState({ taskName:"", assignedTo:"", assignedEmail:"", dueDate:"", notes:"" });
+  const [filterUser, setFilterUser]       = useState("all");
+  const [filterStatus, setFilterStatus]   = useState("all");
+  const [filterKickoff, setFilterKickoff] = useState("all");
+  const [form, setForm] = useState({ taskName:"", assignedTo:"", assignedEmail:"", dueDate:"", notes:"", kickoffId:"", kickoffName:"" });
   const [searchName, setSearchName] = useState("");
 
   const setF = (k,v) => setForm(p=>({...p,[k]:v}));
@@ -1998,6 +2000,7 @@ function TaskTracker() {
     setLoadError("");
     try {
       const res  = await fetch(TASK_API, {
+
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action: "listTasks" }),
@@ -2026,7 +2029,16 @@ function TaskTracker() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    fetchKickoffsFromSheet()
+      .then(data => setKickoffs(
+        (Array.isArray(data) ? data : [])
+          .filter(k => k.status !== "done" && k.status !== "cerrado")
+          .sort((a, b) => (a.guestName || "").localeCompare(b.guestName || ""))
+      ))
+      .catch(() => {});
+  }, []);
 
   const saveTask = async () => {
     if (!form.taskName.trim() || !form.assignedTo || !form.dueDate) return alert("Llena nombre, asignado y fecha.");
@@ -2038,15 +2050,13 @@ function TaskTracker() {
         status: "pending",
         createdAt: new Date().toISOString(),
       };
-      // Use no-cors so GAS CORS restrictions don't block the request.
-      // The response will be opaque (unreadable) but the data reaches the sheet.
       await fetch(TASK_API, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action: "saveTask", payload }),
       });
-      setForm({ taskName:"", assignedTo:"", assignedEmail:"", dueDate:"", notes:"" });
+      setForm({ taskName:"", assignedTo:"", assignedEmail:"", dueDate:"", notes:"", kickoffId:"", kickoffName:"" });
       setShowForm(false);
       // Give the sheet ~1.5 s to process before reloading the list
       setTimeout(() => load(), 1500);
@@ -2071,10 +2081,12 @@ function TaskTracker() {
   const filtered = tasks.filter(t => {
     if (filterUser !== "all" && t.assignedTo !== filterUser) return false;
     if (filterStatus !== "all" && t.status !== filterStatus) return false;
+    if (filterKickoff !== "all" && t.kickoffId !== filterKickoff) return false;
     if (searchName.trim()) {
       const q = searchName.trim().toLowerCase();
       if (!String(t.assignedTo||"").toLowerCase().includes(q) &&
-          !String(t.taskName||"").toLowerCase().includes(q)) return false;
+          !String(t.taskName||"").toLowerCase().includes(q) &&
+          !String(t.kickoffName||"").toLowerCase().includes(q)) return false;
     }
     return true;
   });
@@ -2112,6 +2124,22 @@ function TaskTracker() {
           <div className="bg-white rounded-2xl border border-stone-200 p-5 space-y-3">
             <h2 className="text-sm font-semibold text-stone-700">Nueva tarea</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Trip selector */}
+              <div className="sm:col-span-2">
+                <label className="text-[11px] text-stone-500">Trip / Deal</label>
+                <select value={form.kickoffId} onChange={e => {
+                  const k = kickoffs.find(k => k.id === e.target.value);
+                  setF("kickoffId", e.target.value);
+                  setF("kickoffName", k ? (k.guestName || k.tripName || "") : "");
+                }} className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-white">
+                  <option value="">Sin trip asignado</option>
+                  {kickoffs.map(k => (
+                    <option key={k.id} value={k.id}>
+                      {k.guestName || "—"}{k.tripName ? ` · ${k.tripName}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="sm:col-span-2">
                 <label className="text-[11px] text-stone-500">Nombre de la tarea *</label>
                 <input value={form.taskName} onChange={e=>setF("taskName",e.target.value)}
@@ -2128,12 +2156,6 @@ function TaskTracker() {
                   <option value="">Seleccionar…</option>
                   {CONCIERGE_NAMES.map(c=><option key={c} value={c}>{c}</option>)}
                 </select>
-              </div>
-              <div>
-                <label className="text-[11px] text-stone-500">Email (auto)</label>
-                <input value={form.assignedEmail} onChange={e=>setF("assignedEmail",e.target.value)}
-                  className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50"
-                  placeholder="se llena automático"/>
               </div>
               <div>
                 <label className="text-[11px] text-stone-500">Fecha límite *</label>
@@ -2165,9 +2187,19 @@ function TaskTracker() {
             <div className="flex flex-wrap gap-2 items-center">
               <input
                 value={searchName} onChange={e=>setSearchName(e.target.value)}
-                placeholder="Buscar concierge o tarea…"
+                placeholder="Buscar tarea o cliente…"
                 className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white w-44"
               />
+              {/* Trip filter */}
+              <select value={filterKickoff} onChange={e=>setFilterKickoff(e.target.value)}
+                className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white max-w-[160px]">
+                <option value="all">Todos los trips</option>
+                {kickoffs.map(k=>(
+                  <option key={k.id} value={k.id}>
+                    {k.guestName || k.tripName || k.id}
+                  </option>
+                ))}
+              </select>
               <select value={filterUser} onChange={e=>setFilterUser(e.target.value)}
                 className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white">
                 <option value="all">Todas las concierges</option>
@@ -2211,6 +2243,11 @@ function TaskTracker() {
                             </span>
                           )}
                         </div>
+                        {t.kickoffName && (
+                          <span className="inline-block text-[10px] bg-blue-50 text-blue-600 border border-blue-100 rounded px-1.5 py-0.5 mb-1">
+                            ✈️ {t.kickoffName}
+                          </span>
+                        )}
                         <p className="text-sm font-medium text-stone-800">{t.taskName}</p>
                         <p className="text-xs text-stone-400 mt-0.5">
                           👤 {t.assignedTo} · 📅 {t.dueDate || "—"}
