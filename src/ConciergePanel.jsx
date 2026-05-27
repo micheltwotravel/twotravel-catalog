@@ -414,7 +414,7 @@ const CONCIERGE_LIST = [
   { name: "Daniela Becerra",      email: "daniela@two.travel",  phone: "+57 304 4445285",   city: "MDE"  },
   { name: "Nataly Cruz",          email: "nataly@two.travel",   phone: "+52 1 55 2337 7241",city: "CDMX" },
   { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   phone: "+52 1 55 4344 1382",city: "CDMX" },
-  { name: "Natalia",              email: "natalia@two.travel",  phone: "",                  city: "CDMX" },
+  { name: "Natalia Peniche",       email: "natalia@two.travel",  phone: "",                  city: "CDMX" },
 ];
 
 /* =========================================

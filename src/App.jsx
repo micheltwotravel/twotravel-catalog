@@ -1955,7 +1955,7 @@ function SoporteDashboard() {
 ════════════════════════════════════════════════════════ */
 const CONCIERGE_NAMES = [
   "Alia Jadad","Carolina Lopez","Daniela Becerra",
-  "Nataly Cruz","Giulia Lorini Serrato","Natalia",
+  "Nataly Cruz","Giulia Lorini Serrato","Natalia Peniche",
 ];
 // Email map for task assignment
 const CONCIERGE_EMAILS = {
@@ -1964,7 +1964,7 @@ const CONCIERGE_EMAILS = {
   "Daniela Becerra":       "daniela@two.travel",
   "Nataly Cruz":           "nataly@two.travel",
   "Giulia Lorini Serrato": "giulia@two.travel",
-  "Natalia":               "natalia@two.travel",
+  "Natalia Peniche":       "natalia@two.travel",
 };
 
 /* ════════════════════════════════════════════════════════

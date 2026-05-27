@@ -2639,11 +2639,20 @@ const vibeLabel = useMemo(() => {
       }, [])
       .slice(0, 8);
 
-    // Airport / transfer always pinned at the end (max 2 transport services)
+    // Pin transport at end only if none were already scored by group-size logic.
+    // Also filter by capacity so a small car never appears for a large group.
     const scoredIds = new Set(scored.map((s) => s.id));
-    const transportPicks = services
-      .filter((s) => s.category === "transportation" && !scoredIds.has(s.id))
-      .slice(0, 2);
+    const scoredHasTransport = scored.some((x) => x.category === "transportation");
+    const transportPicks = scoredHasTransport ? [] : services
+      .filter((s) => {
+        if (s.category !== "transportation" || scoredIds.has(s.id)) return false;
+        if (groupSize > 0) {
+          const cap = s.capacity || {};
+          return groupSize <= (cap.max || 99);
+        }
+        return true;
+      })
+      .slice(0, 1);
 
     return [...scored, ...transportPicks];
   }, [quiz, services]);
