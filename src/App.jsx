@@ -1974,9 +1974,16 @@ const CONCIERGE_EMAILS = {
 const TASK_API = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
 const TASK_STATUS = {
-  pending:   { label: "Pendiente",   cls: "bg-amber-100 text-amber-700" },
-  completed: { label: "Completado",  cls: "bg-emerald-100 text-emerald-700" },
-  late:      { label: "Vencida",     cls: "bg-red-100 text-red-700" },
+  pending:     { label: "Pendiente",   cls: "bg-amber-100 text-amber-700" },
+  in_progress: { label: "En progreso", cls: "bg-blue-100 text-blue-700" },
+  blocked:     { label: "Bloqueado",   cls: "bg-orange-100 text-orange-700" },
+  completed:   { label: "Completado",  cls: "bg-emerald-100 text-emerald-700" },
+  late:        { label: "Vencida",     cls: "bg-red-100 text-red-700" },
+};
+const TASK_PRIORITY = {
+  alta:  { label: "🔴 Alta",  cls: "text-red-600 bg-red-50 border-red-200" },
+  media: { label: "🟡 Media", cls: "text-amber-600 bg-amber-50 border-amber-200" },
+  baja:  { label: "⚪ Baja",  cls: "text-stone-500 bg-stone-50 border-stone-200" },
 };
 
 function TaskTracker() {
@@ -1985,43 +1992,41 @@ function TaskTracker() {
   const [loading, setLoading]   = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving]     = useState(false);
-  const [filterUser, setFilterUser]       = useState("all");
-  const [filterStatus, setFilterStatus]   = useState("all");
-  const [filterKickoff, setFilterKickoff] = useState("all");
-  const [form, setForm] = useState({ taskName:"", assignedTo:"", assignedEmail:"", dueDate:"", notes:"", kickoffId:"", kickoffName:"" });
-  const [searchName, setSearchName] = useState("");
-
+  const [view, setView]         = useState("table"); // "table" | "cards"
+  const [filterUser, setFilterUser]         = useState("all");
+  const [filterStatus, setFilterStatus]     = useState("all");
+  const [filterKickoff, setFilterKickoff]   = useState("all");
+  const [filterPriority, setFilterPriority] = useState("all");
+  const [searchName, setSearchName]         = useState("");
+  const [loadError, setLoadError]           = useState("");
+  const [form, setForm] = useState({
+    taskName:"", assignedTo:"", assignedEmail:"", dueDate:"",
+    notes:"", kickoffId:"", kickoffName:"", priority:"media",
+  });
   const setF = (k,v) => setForm(p=>({...p,[k]:v}));
 
-  const [loadError, setLoadError] = useState("");
-
   const load = async () => {
-    setLoading(true);
-    setLoadError("");
+    setLoading(true); setLoadError("");
     try {
-      // GET avoids the CORS preflight that blocks POST reads from the browser
       const res  = await fetch(`${TASK_API}?action=listTasks`);
       const text = await res.text();
       let json = {};
       try { json = JSON.parse(text); } catch {
-        setLoadError("Respuesta inválida del script: " + text?.slice(0, 200));
+        setLoadError("Respuesta inválida: " + text?.slice(0, 200));
         setLoading(false); return;
       }
-      if (json?.ok === false) {
-        setLoadError("Error del script: " + (json.error || "desconocido"));
-        setLoading(false); return;
-      }
-      const now = new Date(); now.setHours(0,0,0,0);
+      if (json?.ok === false) { setLoadError("Error: " + (json.error||"desconocido")); setLoading(false); return; }
+      const now2 = new Date(); now2.setHours(0,0,0,0);
       const loaded = (Array.isArray(json.data) ? json.data : []).map(t => ({
         ...t,
-        status: t.status === "completed" ? "completed"
-              : (t.dueDate && new Date(t.dueDate) < now) ? "late"
+        status: t.status === "completed"  ? "completed"
+              : t.status === "in_progress" ? "in_progress"
+              : t.status === "blocked"     ? "blocked"
+              : (t.dueDate && new Date(t.dueDate) < now2) ? "late"
               : t.status || "pending",
       }));
       setTasks(loaded);
-    } catch(err) {
-      setLoadError("No se pudo conectar al script: " + err.message);
-    }
+    } catch(err) { setLoadError("No se pudo conectar al script: " + err.message); }
     setLoading(false);
   };
 
@@ -2031,13 +2036,13 @@ function TaskTracker() {
       .then(data => setKickoffs(
         (Array.isArray(data) ? data : [])
           .filter(k => k.status !== "done" && k.status !== "cerrado")
-          .sort((a, b) => (a.guestName || "").localeCompare(b.guestName || ""))
-      ))
-      .catch(() => {});
+          .sort((a,b) => (a.guestName||"").localeCompare(b.guestName||""))
+      )).catch(()=>{});
   }, []);
 
   const saveTask = async () => {
-    if (!form.taskName.trim() || !form.assignedTo || !form.dueDate) return alert("Llena nombre, asignado y fecha.");
+    if (!form.taskName.trim() || !form.assignedTo || !form.dueDate)
+      return alert("Llena nombre, asignado y fecha.");
     setSaving(true);
     try {
       const payload = {
@@ -2046,38 +2051,37 @@ function TaskTracker() {
         status: "pending",
         createdAt: new Date().toISOString(),
       };
-      await fetch(TASK_API, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "saveTask", payload }),
+      await fetch(TASK_API, { method:"POST", mode:"no-cors",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body: JSON.stringify({ action:"saveTask", payload }),
       });
-      setForm({ taskName:"", assignedTo:"", assignedEmail:"", dueDate:"", notes:"", kickoffId:"", kickoffName:"" });
+      setForm({ taskName:"", assignedTo:"", assignedEmail:"", dueDate:"", notes:"", kickoffId:"", kickoffName:"", priority:"media" });
       setShowForm(false);
-      // Give the sheet ~1.5 s to process before reloading the list
       setTimeout(() => load(), 1500);
     } catch(err) { alert("Error al guardar: " + err.message); }
     setSaving(false);
   };
 
-  const updateStatus = async (id, status) => {
+  const updateTaskField = async (id, updates) => {
     try {
-      await fetch(TASK_API, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action:"updateTask", payload:{ id, status, completedAt: status==="completed"?new Date().toISOString():"" } }),
+      await fetch(TASK_API, { method:"POST", mode:"no-cors",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body: JSON.stringify({ action:"updateTask", payload:{
+          id, ...updates,
+          ...(updates.status==="completed" ? { completedAt: new Date().toISOString() } : {}),
+        }}),
       });
-      setTasks(prev => prev.map(t => t.id===id ? {...t, status} : t));
+      setTasks(prev => prev.map(t => t.id===id ? {...t,...updates} : t));
     } catch {}
   };
 
   const now = new Date(); now.setHours(0,0,0,0);
 
   const filtered = tasks.filter(t => {
-    if (filterUser !== "all" && t.assignedTo !== filterUser) return false;
-    if (filterStatus !== "all" && t.status !== filterStatus) return false;
-    if (filterKickoff !== "all" && t.kickoffId !== filterKickoff) return false;
+    if (filterUser !== "all"     && t.assignedTo !== filterUser)   return false;
+    if (filterStatus !== "all"   && t.status !== filterStatus)     return false;
+    if (filterKickoff !== "all"  && t.kickoffId !== filterKickoff) return false;
+    if (filterPriority !== "all" && t.priority !== filterPriority) return false;
     if (searchName.trim()) {
       const q = searchName.trim().toLowerCase();
       if (!String(t.assignedTo||"").toLowerCase().includes(q) &&
@@ -2087,16 +2091,53 @@ function TaskTracker() {
     return true;
   });
 
-  // Leaderboard — pending + late tasks per user
+  // Group by trip for table view
+  const grouped = (() => {
+    const map = new Map();
+    filtered.forEach(t => {
+      const key  = t.kickoffId || "__none__";
+      const name = t.kickoffName || (t.kickoffId ? t.kickoffId : "Sin trip asignado");
+      if (!map.has(key)) map.set(key, { name, tasks:[] });
+      map.get(key).tasks.push(t);
+    });
+    return [...map.entries()].sort(([ka],[kb]) => {
+      if (ka==="__none__") return 1;
+      if (kb==="__none__") return -1;
+      return map.get(ka).name.localeCompare(map.get(kb).name);
+    });
+  })();
+
+  // Leaderboard
   const leaderboard = {};
   tasks.forEach(t => {
-    if (t.status === "completed") return;
+    if (t.status==="completed") return;
     const u = t.assignedTo || "?";
     leaderboard[u] = (leaderboard[u]||0)+1;
   });
   const lbRows = Object.entries(leaderboard).sort((a,b)=>b[1]-a[1]);
 
-  const allUsers = [...new Set(tasks.map(t=>t.assignedTo).filter(Boolean))];
+  const StatusSelect = ({ t }) => (
+    <select value={t.status==="late"?"pending":t.status}
+      onChange={e => updateTaskField(t.id, { status: e.target.value })}
+      className={`text-[11px] font-semibold border rounded-full px-2 py-0.5 cursor-pointer focus:outline-none ${(TASK_STATUS[t.status]||TASK_STATUS.pending).cls}`}>
+      {Object.entries(TASK_STATUS).filter(([k])=>k!=="late").map(([k,v])=>(
+        <option key={k} value={k}>{v.label}</option>
+      ))}
+    </select>
+  );
+
+  const PriorityBadge = ({ t }) => {
+    const p = TASK_PRIORITY[t.priority] || TASK_PRIORITY.media;
+    return (
+      <select value={t.priority||"media"}
+        onChange={e => updateTaskField(t.id, { priority: e.target.value })}
+        className={`text-[10px] border rounded px-1.5 py-0.5 cursor-pointer focus:outline-none ${p.cls}`}>
+        {Object.entries(TASK_PRIORITY).map(([k,v])=>(
+          <option key={k} value={k}>{v.label}</option>
+        ))}
+      </select>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -2106,22 +2147,36 @@ function TaskTracker() {
           <a href="/?mode=concierge" className="text-stone-400 hover:text-stone-700 text-sm">← Panel</a>
           <span className="text-stone-300">|</span>
           <h1 className="text-base font-semibold text-stone-800">✅ Task Tracker</h1>
+          <span className="text-xs text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">
+            {tasks.filter(t=>t.status!=="completed").length} activas
+          </span>
         </div>
-        <button onClick={()=>setShowForm(v=>!v)}
-          className="px-3 py-1.5 text-xs bg-stone-800 text-white rounded-lg hover:opacity-90 font-medium">
-          + Nueva tarea
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex border border-stone-200 rounded-lg overflow-hidden text-xs">
+            <button onClick={()=>setView("table")}
+              className={`px-3 py-1.5 ${view==="table"?"bg-stone-800 text-white":"bg-white text-stone-500 hover:bg-stone-50"}`}>
+              ☰ Tabla
+            </button>
+            <button onClick={()=>setView("cards")}
+              className={`px-3 py-1.5 ${view==="cards"?"bg-stone-800 text-white":"bg-white text-stone-500 hover:bg-stone-50"}`}>
+              ▦ Cards
+            </button>
+          </div>
+          <button onClick={()=>setShowForm(v=>!v)}
+            className="px-3 py-1.5 text-xs bg-stone-800 text-white rounded-lg hover:opacity-90 font-medium">
+            + Nueva tarea
+          </button>
+        </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
 
         {/* ── New task form ── */}
         {showForm && (
           <div className="bg-white rounded-2xl border border-stone-200 p-5 space-y-3">
             <h2 className="text-sm font-semibold text-stone-700">Nueva tarea</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Trip selector */}
-              <div className="sm:col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-3">
                 <label className="text-[11px] text-stone-500">Trip / Deal</label>
                 <select value={form.kickoffId} onChange={e => {
                   const k = kickoffs.find(k => k.id === e.target.value);
@@ -2136,19 +2191,18 @@ function TaskTracker() {
                   ))}
                 </select>
               </div>
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-3">
                 <label className="text-[11px] text-stone-500">Nombre de la tarea *</label>
                 <input value={form.taskName} onChange={e=>setF("taskName",e.target.value)}
-                  className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="Ej: Confirmar reserva Celele para Martínez"/>
+                  className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
+                  placeholder="Ej: Confirmar reserva Celele para Martínez"/>
               </div>
               <div>
                 <label className="text-[11px] text-stone-500">Asignado a *</label>
                 <select value={form.assignedTo} onChange={e=>{
-                  const name = e.target.value;
-                  setF("assignedTo", name);
-                  setF("assignedEmail", CONCIERGE_EMAILS[name] || "");
-                }}
-                  className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-white">
+                  setF("assignedTo", e.target.value);
+                  setF("assignedEmail", CONCIERGE_EMAILS[e.target.value]||"");
+                }} className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-white">
                   <option value="">Seleccionar…</option>
                   {CONCIERGE_NAMES.map(c=><option key={c} value={c}>{c}</option>)}
                 </select>
@@ -2158,7 +2212,16 @@ function TaskTracker() {
                 <input type="date" value={form.dueDate} onChange={e=>setF("dueDate",e.target.value)}
                   className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"/>
               </div>
-              <div className="sm:col-span-2">
+              <div>
+                <label className="text-[11px] text-stone-500">Prioridad</label>
+                <select value={form.priority} onChange={e=>setF("priority",e.target.value)}
+                  className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-white">
+                  <option value="alta">🔴 Alta</option>
+                  <option value="media">🟡 Media</option>
+                  <option value="baja">⚪ Baja</option>
+                </select>
+              </div>
+              <div className="sm:col-span-3">
                 <label className="text-[11px] text-stone-500">Notas</label>
                 <textarea value={form.notes} onChange={e=>setF("notes",e.target.value)} rows={2}
                   className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm resize-none"/>
@@ -2169,129 +2232,206 @@ function TaskTracker() {
                 className="px-4 py-2 text-xs bg-stone-800 text-white rounded-lg hover:opacity-90 disabled:opacity-50">
                 {saving?"Guardando…":"Guardar tarea"}
               </button>
-              <button onClick={()=>setShowForm(false)} className="px-4 py-2 text-xs border border-stone-200 rounded-lg text-stone-500 hover:bg-stone-50">
+              <button onClick={()=>setShowForm(false)}
+                className="px-4 py-2 text-xs border border-stone-200 rounded-lg text-stone-500 hover:bg-stone-50">
                 Cancelar
               </button>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* ── Task list ── */}
-          <div className="lg:col-span-2 space-y-3">
-            {/* Filters */}
-            <div className="flex flex-wrap gap-2 items-center">
-              <input
-                value={searchName} onChange={e=>setSearchName(e.target.value)}
-                placeholder="Buscar tarea o cliente…"
-                className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white w-44"
-              />
-              {/* Trip filter */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+          {/* ── Main content ── */}
+          <div className="lg:col-span-3 space-y-3">
+
+            {/* Filters bar */}
+            <div className="flex flex-wrap gap-2 items-center bg-white border border-stone-200 rounded-xl px-3 py-2">
+              <input value={searchName} onChange={e=>setSearchName(e.target.value)}
+                placeholder="Buscar…"
+                className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white w-32"/>
               <select value={filterKickoff} onChange={e=>setFilterKickoff(e.target.value)}
-                className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white max-w-[160px]">
+                className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white max-w-[140px]">
                 <option value="all">Todos los trips</option>
                 {kickoffs.map(k=>(
-                  <option key={k.id} value={k.id}>
-                    {k.guestName || k.tripName || k.id}
-                  </option>
+                  <option key={k.id} value={k.id}>{k.guestName||k.tripName||k.id}</option>
                 ))}
               </select>
               <select value={filterUser} onChange={e=>setFilterUser(e.target.value)}
                 className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white">
-                <option value="all">Todas las concierges</option>
+                <option value="all">Todas</option>
                 {CONCIERGE_NAMES.map(u=><option key={u} value={u}>{u.split(" ")[0]}</option>)}
               </select>
-              {["all","pending","late","completed"].map(s=>(
-                <button key={s} onClick={()=>setFilterStatus(s)}
-                  className={`px-2.5 py-1 text-xs rounded-lg border transition ${filterStatus===s?"bg-stone-800 text-white border-stone-800":"bg-white border-stone-200 text-stone-500 hover:bg-stone-50"}`}>
-                  {s==="all"?"Todas":s==="pending"?"Pendientes":s==="late"?"Vencidas":"Completadas"}
-                </button>
-              ))}
+              <select value={filterPriority} onChange={e=>setFilterPriority(e.target.value)}
+                className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white">
+                <option value="all">Prioridad</option>
+                <option value="alta">🔴 Alta</option>
+                <option value="media">🟡 Media</option>
+                <option value="baja">⚪ Baja</option>
+              </select>
+              <div className="flex gap-1 flex-wrap">
+                {[
+                  ["all","Todas"],["pending","Pendientes"],["in_progress","En progreso"],
+                  ["blocked","Bloqueadas"],["late","Vencidas"],["completed","Completadas"]
+                ].map(([s,lbl])=>(
+                  <button key={s} onClick={()=>setFilterStatus(s)}
+                    className={`px-2 py-1 text-xs rounded-lg border transition ${filterStatus===s?"bg-stone-800 text-white border-stone-800":"bg-white border-stone-200 text-stone-500 hover:bg-stone-50"}`}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
               <button onClick={load} className="ml-auto text-xs text-stone-400 hover:text-stone-700">↻</button>
             </div>
 
             {loadError && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-xs text-red-700 font-mono break-all">
-                <p className="font-semibold mb-1">Error cargando tareas:</p>
-                {loadError}
+                <p className="font-semibold mb-1">Error cargando tareas:</p>{loadError}
               </div>
             )}
+
             {loading ? (
               <div className="text-center py-10 text-stone-400 text-sm">Cargando…</div>
             ) : filtered.length === 0 ? (
               <div className="bg-white rounded-xl border border-stone-200 p-8 text-center text-stone-400 text-sm">
                 No hay tareas con estos filtros.
               </div>
+            ) : view === "table" ? (
+              /* ══ TABLE VIEW — grouped by trip ══ */
+              <div className="space-y-4">
+                {grouped.map(([key, group]) => (
+                  <div key={key} className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+                    {/* Group header */}
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-stone-100 bg-stone-50">
+                      <span className="text-xs font-semibold text-stone-700">
+                        {key==="__none__" ? "📋 Sin trip" : `✈️ ${group.name}`}
+                      </span>
+                      <span className="text-[10px] text-stone-400 bg-white border border-stone-200 rounded-full px-2 py-0.5">
+                        {group.tasks.length} {group.tasks.length===1?"tarea":"tareas"}
+                      </span>
+                      <span className="text-[10px] text-emerald-600 ml-auto">
+                        {group.tasks.filter(t=>t.status==="completed").length}/{group.tasks.length} completadas
+                      </span>
+                    </div>
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-stone-100 text-[10px] text-stone-400 uppercase tracking-wide">
+                          <th className="text-left px-4 py-2 font-medium">Tarea</th>
+                          <th className="text-left px-3 py-2 font-medium">Asignado</th>
+                          <th className="text-left px-3 py-2 font-medium">Fecha</th>
+                          <th className="text-left px-3 py-2 font-medium">Prioridad</th>
+                          <th className="text-left px-3 py-2 font-medium">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.tasks.map(t => {
+                          const due = t.dueDate ? new Date(t.dueDate) : null;
+                          const dl  = due ? Math.round((due-now)/86400000) : null;
+                          return (
+                            <tr key={t.id} className={`border-b border-stone-50 last:border-0 hover:bg-stone-50/50 transition ${t.status==="completed"?"opacity-50":""}`}>
+                              <td className="px-4 py-2.5 max-w-[200px]">
+                                <p className={`font-medium text-stone-800 truncate ${t.status==="completed"?"line-through":""}`}>{t.taskName}</p>
+                                {t.notes && <p className="text-stone-400 text-[10px] mt-0.5 truncate">{t.notes}</p>}
+                              </td>
+                              <td className="px-3 py-2.5 text-stone-600 whitespace-nowrap">{t.assignedTo?.split(" ")[0]||"—"}</td>
+                              <td className="px-3 py-2.5 whitespace-nowrap">
+                                <span className={dl!==null&&dl<0&&t.status!=="completed"?"text-red-500":dl!==null&&dl<=2&&t.status!=="completed"?"text-amber-600":"text-stone-500"}>
+                                  {t.dueDate||"—"}
+                                  {dl!==null&&t.status!=="completed"&&dl<=2&&dl>=0&&(
+                                    <span className="ml-1 text-[10px]">{dl===0?"· hoy":`· ${dl}d`}</span>
+                                  )}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2.5"><PriorityBadge t={t}/></td>
+                              <td className="px-3 py-2.5"><StatusSelect t={t}/></td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+              </div>
             ) : (
-              filtered.map(t => {
-                const st = TASK_STATUS[t.status] || TASK_STATUS.pending;
-                const due = t.dueDate ? new Date(t.dueDate) : null;
-                const daysLeft = due ? Math.round((due - now)/86400000) : null;
-                return (
-                  <div key={t.id} className={`bg-white rounded-xl border p-4 ${t.status==="late"?"border-red-200":"border-stone-200"}`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
-                          {daysLeft !== null && t.status !== "completed" && (
-                            <span className={`text-[10px] ${daysLeft < 0?"text-red-500":daysLeft<=2?"text-amber-600":"text-stone-400"}`}>
-                              {daysLeft < 0 ? `Venció hace ${Math.abs(daysLeft)}d` : daysLeft===0?"Vence hoy":`${daysLeft}d restantes`}
+              /* ══ CARD VIEW ══ */
+              <div className="space-y-3">
+                {filtered.map(t => {
+                  const st  = TASK_STATUS[t.status] || TASK_STATUS.pending;
+                  const due = t.dueDate ? new Date(t.dueDate) : null;
+                  const dl  = due ? Math.round((due-now)/86400000) : null;
+                  return (
+                    <div key={t.id} className={`bg-white rounded-xl border p-4 ${t.status==="late"||t.status==="blocked"?"border-red-200":"border-stone-200"}`}>
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <StatusSelect t={t}/>
+                            <PriorityBadge t={t}/>
+                            {dl!==null&&t.status!=="completed"&&(
+                              <span className={`text-[10px] ${dl<0?"text-red-500":dl<=2?"text-amber-600":"text-stone-400"}`}>
+                                {dl<0?`Venció hace ${Math.abs(dl)}d`:dl===0?"Vence hoy":`${dl}d restantes`}
+                              </span>
+                            )}
+                          </div>
+                          {t.kickoffName&&(
+                            <span className="inline-block text-[10px] bg-blue-50 text-blue-600 border border-blue-100 rounded px-1.5 py-0.5 mb-1">
+                              ✈️ {t.kickoffName}
                             </span>
                           )}
+                          <p className={`text-sm font-medium text-stone-800 ${t.status==="completed"?"line-through opacity-60":""}`}>{t.taskName}</p>
+                          <p className="text-xs text-stone-400 mt-0.5">👤 {t.assignedTo} · 📅 {t.dueDate||"—"}</p>
+                          {t.notes&&<p className="text-xs text-stone-500 mt-1">{t.notes}</p>}
                         </div>
-                        {t.kickoffName && (
-                          <span className="inline-block text-[10px] bg-blue-50 text-blue-600 border border-blue-100 rounded px-1.5 py-0.5 mb-1">
-                            ✈️ {t.kickoffName}
-                          </span>
-                        )}
-                        <p className="text-sm font-medium text-stone-800">{t.taskName}</p>
-                        <p className="text-xs text-stone-400 mt-0.5">
-                          👤 {t.assignedTo} · 📅 {t.dueDate || "—"}
-                        </p>
-                        {t.notes && <p className="text-xs text-stone-500 mt-1">{t.notes}</p>}
                       </div>
-                      {t.status !== "completed" && (
-                        <button onClick={()=>updateStatus(t.id,"completed")}
-                          className="flex-shrink-0 px-2.5 py-1 text-xs border border-emerald-200 text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition">
-                          ✓ Completar
-                        </button>
-                      )}
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             )}
           </div>
 
-          {/* ── Leaderboard (pending tasks) ── */}
+          {/* ── Sidebar ── */}
           <div className="space-y-3">
             <div className="bg-white rounded-2xl border border-stone-200 p-4">
-              <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Tareas pendientes por persona</h2>
-              {lbRows.length === 0 ? (
-                <p className="text-xs text-stone-400">Sin tareas pendientes 🎉</p>
-              ) : (
-                lbRows.map(([user, cnt], i) => (
-                  <div key={user} className={`flex items-center justify-between py-2 ${i<lbRows.length-1?"border-b border-stone-50":""}`}>
-                    <span className={`text-xs font-medium ${i===0&&cnt>2?"text-red-600":"text-stone-700"}`}>
-                      {i===0&&cnt>2?"🔴 ":""}{user.split(" ")[0]}
-                    </span>
-                    <span className={`text-sm font-bold ${i===0&&cnt>2?"text-red-600":"text-stone-700"}`}>{cnt}</span>
-                  </div>
-                ))
-              )}
+              <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Carga por persona</h2>
+              {lbRows.length===0 ? (
+                <p className="text-xs text-stone-400">Sin pendientes 🎉</p>
+              ) : lbRows.map(([user,cnt],i) => (
+                <div key={user} className={`flex items-center justify-between py-2 ${i<lbRows.length-1?"border-b border-stone-50":""}`}>
+                  <span className={`text-xs font-medium ${cnt>3?"text-red-600":"text-stone-700"}`}>
+                    {cnt>3?"🔴 ":""}{user.split(" ")[0]}
+                  </span>
+                  <span className={`text-sm font-bold ${cnt>3?"text-red-600":"text-stone-700"}`}>{cnt}</span>
+                </div>
+              ))}
             </div>
 
             <div className="bg-white rounded-2xl border border-stone-200 p-4">
               <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Resumen</h2>
               {[
-                { label:"Total",      value: tasks.length },
-                { label:"Pendientes", value: tasks.filter(t=>t.status==="pending").length, color:"text-amber-600" },
-                { label:"Vencidas",   value: tasks.filter(t=>t.status==="late").length,    color:"text-red-600" },
-                { label:"Completadas",value: tasks.filter(t=>t.status==="completed").length, color:"text-emerald-600" },
+                { label:"Total",        value: tasks.length },
+                { label:"Pendientes",   value: tasks.filter(t=>t.status==="pending").length,     color:"text-amber-600" },
+                { label:"En progreso",  value: tasks.filter(t=>t.status==="in_progress").length, color:"text-blue-600" },
+                { label:"Bloqueadas",   value: tasks.filter(t=>t.status==="blocked").length,     color:"text-orange-600" },
+                { label:"Vencidas",     value: tasks.filter(t=>t.status==="late").length,        color:"text-red-600" },
+                { label:"Completadas",  value: tasks.filter(t=>t.status==="completed").length,   color:"text-emerald-600" },
               ].map(r => (
                 <div key={r.label} className="flex items-center justify-between py-1.5 border-b border-stone-50 last:border-0">
                   <span className="text-xs text-stone-500">{r.label}</span>
                   <span className={`text-sm font-bold ${r.color||"text-stone-700"}`}>{r.value}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-stone-200 p-4">
+              <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-2">Por prioridad</h2>
+              {[
+                { label:"🔴 Alta",  key:"alta",  color:"text-red-600" },
+                { label:"🟡 Media", key:"media", color:"text-amber-600" },
+                { label:"⚪ Baja",  key:"baja",  color:"text-stone-500" },
+              ].map(r => (
+                <div key={r.key} className="flex items-center justify-between py-1.5 border-b border-stone-50 last:border-0">
+                  <span className="text-xs text-stone-500">{r.label}</span>
+                  <span className={`text-sm font-bold ${r.color}`}>
+                    {tasks.filter(t=>t.priority===r.key&&t.status!=="completed").length}
+                  </span>
                 </div>
               ))}
             </div>
