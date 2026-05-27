@@ -2025,20 +2025,21 @@ function TaskTracker() {
       const payload = {
         ...form,
         assignedEmail: form.assignedEmail || CONCIERGE_EMAILS[form.assignedTo] || "",
-        status:"pending",
-        createdAt: new Date().toISOString()
+        status: "pending",
+        createdAt: new Date().toISOString(),
       };
-      const res = await fetch(TASK_API, {
-        method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"saveTask", payload }),
+      // Use no-cors so GAS CORS restrictions don't block the request.
+      // The response will be opaque (unreadable) but the data reaches the sheet.
+      await fetch(TASK_API, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "saveTask", payload }),
       });
-      const text = await res.text();
-      let json = {};
-      try { json = JSON.parse(text); } catch {}
-      if (json?.ok === false) { alert("Error GAS: " + (json.error || "unknown")); setSaving(false); return; }
       setForm({ taskName:"", assignedTo:"", assignedEmail:"", dueDate:"", notes:"" });
       setShowForm(false);
-      await load();
+      // Give the sheet ~1.5 s to process before reloading the list
+      setTimeout(() => load(), 1500);
     } catch(err) { alert("Error al guardar: " + err.message); }
     setSaving(false);
   };
@@ -2046,7 +2047,9 @@ function TaskTracker() {
   const updateStatus = async (id, status) => {
     try {
       await fetch(TASK_API, {
-        method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action:"updateTask", payload:{ id, status, completedAt: status==="completed"?new Date().toISOString():"" } }),
       });
       setTasks(prev => prev.map(t => t.id===id ? {...t, status} : t));
