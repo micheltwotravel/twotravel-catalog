@@ -2463,61 +2463,60 @@ function TaskTracker() {
 /* ============================================================
    DRINKS CATALOG — client-facing drink selection page
    ============================================================ */
-// img: pega aquí el URL directo de la foto del producto (https://...).
-// Si el campo está vacío, no se muestra imagen. Puede ser Google Drive o cualquier https://.
+// img: URL directo de la foto. priceCOP/priceUSD: precio por unidad/botella.
 const DRINK_CATEGORIES = [
   {
     id: "spirits", label: "🥃 Spirits / Licores",
     items: [
-      { name: "Ron Medellín 8 años",         img: "https://images.rappi.com/products/7459a9d1-4ff4-4f70-9565-a72059e43a57.png", qty: "", note: "" },
-      { name: "Ron Dictador 12",              img: "https://dictador.com/wp-content/uploads/2024/11/Dictador_12_Blend_40vol_floating-1024x1024.png", qty: "", note: "" },
-      { name: "Aguardiente Antioqueño",       img: "https://images.rappi.com/products/5b8bb9ae-d1bc-4c32-b9f2-77e0a065a9f9.png", qty: "", note: "" },
-      { name: "Tequila Patrón Silver",        img: "https://images.rappi.com/products/patron-silver-750ml.png", qty: "", note: "" },
-      { name: "Vodka Grey Goose",             img: "https://images.rappi.com/products/grey-goose-vodka-750ml.png", qty: "", note: "" },
-      { name: "Whisky Johnnie Walker Black",  img: "https://images.rappi.com/products/fd4d2736-e8a2-4e32-ba40-7513f0e3e2e4.png", qty: "", note: "" },
-      { name: "Gin Hendricks",                img: "https://images.rappi.com/products/hendricks-gin-750ml.png", qty: "", note: "" },
-      { name: "Champagne Moët & Chandon",     img: "https://upload.wikimedia.org/wikipedia/commons/0/0c/A_bottle_of_Prosecco.jpg", qty: "", note: "" },
+      { name: "Ron Medellín 8 años",        img: "https://images.rappi.com/products/7459a9d1-4ff4-4f70-9565-a72059e43a57.png", priceCOP: 110000, priceUSD: 27.50, qty: "", note: "" },
+      { name: "Ron Dictador 12",             img: "https://dictador.com/wp-content/uploads/2024/11/Dictador_12_Blend_40vol_floating-1024x1024.png", priceCOP: 295000, priceUSD: 73.75, qty: "", note: "" },
+      { name: "Aguardiente Antioqueño",      img: "https://images.rappi.com/products/5b8bb9ae-d1bc-4c32-b9f2-77e0a065a9f9.png", priceCOP: 55000, priceUSD: 13.75, qty: "", note: "" },
+      { name: "Tequila Patrón Silver",       img: "https://images.rappi.com/products/patron-silver-750ml.png", priceCOP: 258000, priceUSD: 64.50, qty: "", note: "" },
+      { name: "Vodka Grey Goose",            img: "https://images.rappi.com/products/grey-goose-vodka-750ml.png", priceCOP: 240200, priceUSD: 60.05, qty: "", note: "" },
+      { name: "Whisky Johnnie Walker Black", img: "https://images.rappi.com/products/fd4d2736-e8a2-4e32-ba40-7513f0e3e2e4.png", priceCOP: 158000, priceUSD: 39.50, qty: "", note: "" },
+      { name: "Gin Hendricks",               img: "https://images.rappi.com/products/hendricks-gin-750ml.png", priceCOP: 276000, priceUSD: 69.00, qty: "", note: "" },
+      { name: "Champagne Moët & Chandon",    img: "https://upload.wikimedia.org/wikipedia/commons/0/0c/A_bottle_of_Prosecco.jpg", priceCOP: 485000, priceUSD: 121.25, qty: "", note: "" },
     ],
   },
   {
     id: "beer", label: "🍺 Cerveza / Beer",
     items: [
-      { name: "Águila",        img: "https://images.rappi.com/products/e412dd24-23e9-438f-814b-a4e8925ebaf0.png", qty: "", note: "" },
-      { name: "Club Colombia", img: "https://images.rappi.com/products/f2b59539-ba5b-409f-8f9b-b067b5347374.png", qty: "", note: "" },
-      { name: "Corona",        img: "https://images.rappi.com/products/corona-extra-330ml.png", qty: "", note: "" },
-      { name: "Heineken",      img: "https://upload.wikimedia.org/wikipedia/en/thumb/4/4e/Heineken_lager_beer_can.png/200px-Heineken_lager_beer_can.png", qty: "", note: "" },
-      { name: "Poker",         img: "https://images.rappi.com/products/414428019836_rxaaltnmrzon_476705357483_txldxmllacvr_50644_1.jpeg", qty: "", note: "" },
+      { name: "Águila",        img: "https://images.rappi.com/products/e412dd24-23e9-438f-814b-a4e8925ebaf0.png", priceCOP: 4500, priceUSD: 1.13, qty: "", note: "" },
+      { name: "Club Colombia", img: "https://images.rappi.com/products/f2b59539-ba5b-409f-8f9b-b067b5347374.png", priceCOP: 4500, priceUSD: 1.13, qty: "", note: "" },
+      { name: "Corona",        img: "https://images.rappi.com/products/corona-extra-330ml.png", priceCOP: 7000, priceUSD: 1.75, qty: "", note: "" },
+      { name: "Heineken",      img: "https://upload.wikimedia.org/wikipedia/en/thumb/4/4e/Heineken_lager_beer_can.png/200px-Heineken_lager_beer_can.png", priceCOP: 6000, priceUSD: 1.50, qty: "", note: "" },
+      { name: "Poker",         img: "https://images.rappi.com/products/414428019836_rxaaltnmrzon_476705357483_txldxmllacvr_50644_1.jpeg", priceCOP: 4500, priceUSD: 1.13, qty: "", note: "" },
     ],
   },
   {
     id: "wine", label: "🍷 Vino / Wine",
     items: [
-      { name: "Vino tinto (botella)",  img: "https://images.rappi.com/products/851855029156_wvpoxqeunfmh_378174607221_vtrwvvhcgsar_1265_1.jpeg", qty: "", note: "" },
-      { name: "Vino blanco (botella)", img: "https://images.rappi.com/products/e1443858-0c4e-4541-894c-b7bd8eb4bd20.jpg", qty: "", note: "" },
-      { name: "Vino rosado (botella)", img: "https://images.rappi.com/products/800ac89d-5ce8-46a0-84ff-b8ff127a7af7.jpg", qty: "", note: "" },
-      { name: "Espumante / Prosecco",  img: "https://upload.wikimedia.org/wikipedia/commons/0/0c/A_bottle_of_Prosecco.jpg", qty: "", note: "" },
+      { name: "Vino tinto (botella)",  img: "https://images.rappi.com/products/851855029156_wvpoxqeunfmh_378174607221_vtrwvvhcgsar_1265_1.jpeg", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
+      { name: "Vino blanco (botella)", img: "https://images.rappi.com/products/e1443858-0c4e-4541-894c-b7bd8eb4bd20.jpg", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
+      { name: "Vino rosado (botella)", img: "https://images.rappi.com/products/800ac89d-5ce8-46a0-84ff-b8ff127a7af7.jpg", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
+      { name: "Espumante / Prosecco",  img: "https://upload.wikimedia.org/wikipedia/commons/0/0c/A_bottle_of_Prosecco.jpg", priceCOP: 85000, priceUSD: 21.25, qty: "", note: "" },
     ],
   },
   {
     id: "mixers", label: "🥤 Mezcladores / Mixers",
     items: [
-      { name: "Coca-Cola",       img: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/CocaColaBottle.svg/200px-CocaColaBottle.svg.png", qty: "", note: "" },
-      { name: "Agua tónica",     img: "https://upload.wikimedia.org/wikipedia/commons/b/b3/Schweppes_Indian_Tonic_Water_%28front%29.jpg", qty: "", note: "" },
-      { name: "Ginger ale",      img: "https://upload.wikimedia.org/wikipedia/commons/6/64/Canada_Dry_ginger_ale_can.jpg", qty: "", note: "" },
-      { name: "Jugo de naranja", img: "https://upload.wikimedia.org/wikipedia/commons/0/04/Cappy_Orange.jpg", qty: "", note: "" },
-      { name: "Agua con gas",    img: "", qty: "", note: "" },
-      { name: "Agua sin gas",    img: "", qty: "", note: "" },
-      { name: "Red Bull",        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Red_bull_energy_drink.jpg/200px-Red_bull_energy_drink.jpg", qty: "", note: "" },
+      { name: "Coca-Cola",          img: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/CocaColaBottle.svg/200px-CocaColaBottle.svg.png", priceCOP: 3800, priceUSD: 0.95, qty: "", note: "" },
+      { name: "Agua tónica",        img: "https://upload.wikimedia.org/wikipedia/commons/b/b3/Schweppes_Indian_Tonic_Water_%28front%29.jpg", priceCOP: 3000, priceUSD: 0.75, qty: "", note: "" },
+      { name: "Ginger ale",         img: "https://upload.wikimedia.org/wikipedia/commons/6/64/Canada_Dry_ginger_ale_can.jpg", priceCOP: 4000, priceUSD: 1.00, qty: "", note: "" },
+      { name: "Jugo de naranja",    img: "https://upload.wikimedia.org/wikipedia/commons/0/04/Cappy_Orange.jpg", priceCOP: 20000, priceUSD: 5.00, qty: "", note: "" },
+      { name: "Agua con gas",       img: "", priceCOP: 36000, priceUSD: 9.00, qty: "", note: "" },
+      { name: "Agua sin gas",       img: "", priceCOP: 25600, priceUSD: 6.40, qty: "", note: "" },
+      { name: "Red Bull",           img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Red_bull_energy_drink.jpg/200px-Red_bull_energy_drink.jpg", priceCOP: 9400, priceUSD: 2.35, qty: "", note: "" },
     ],
   },
   {
     id: "snacks", label: "🍿 Snacks",
     items: [
-      { name: "Papas / Chips",   img: "", qty: "", note: "" },
-      { name: "Maní / Peanuts",  img: "", qty: "", note: "" },
-      { name: "Tabla de quesos", img: "", qty: "", note: "" },
-      { name: "Fruta picada",    img: "", qty: "", note: "" },
-      { name: "Crudités",        img: "", qty: "", note: "" },
+      { name: "Papas / Chips",   img: "", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
+      { name: "Maní / Peanuts",  img: "", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
+      { name: "Tabla de quesos", img: "", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
+      { name: "Fruta picada",    img: "", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
+      { name: "Crudités",        img: "", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
     ],
   },
 ];
@@ -2546,6 +2545,13 @@ function DrinksCatalog() {
 
   const hasSelection = items.some(cat => cat.items.some(it => Number(it.qty) > 0));
 
+  // Running totals
+  const allItems = items.flatMap(c => c.items);
+  const totalCOP = allItems.reduce((s, it) => s + (it.priceCOP || 0) * (Number(it.qty) || 0), 0);
+  const totalUSD = allItems.reduce((s, it) => s + (it.priceUSD || 0) * (Number(it.qty) || 0), 0);
+  const fmtCOP = n => n.toLocaleString("es-CO");
+  const fmtUSD = n => n.toFixed(2);
+
   const handleSend = async () => {
     if (!hasSelection) return;
     setSending(true);
@@ -2554,9 +2560,13 @@ function DrinksCatalog() {
       const selected = cat.items.filter(it => Number(it.qty) > 0);
       if (!selected.length) return;
       lines.push(`\n*${cat.label}*`);
-      selected.forEach(it => lines.push(`  • ${it.name}: *${it.qty}* ${it.note ? `— ${it.note}` : ""}`));
+      selected.forEach(it => {
+        const price = it.priceCOP > 0 ? ` · COP ${fmtCOP(it.priceCOP * Number(it.qty))}` : "";
+        lines.push(`  • ${it.name}: *${it.qty}*${price}${it.note ? ` — ${it.note}` : ""}`);
+      });
     });
     if (extra) lines.push(`\n📝 Extra: ${extra}`);
+    if (totalCOP > 0) lines.push(`\n💰 *Total estimado: COP ${fmtCOP(totalCOP)} (~USD ${fmtUSD(totalUSD)})*`);
     const text = `🍹 *Drink List* ${guestName ? `(${guestName})` : ""} · kickoff: ${kickoffId}\n${lines.join("\n")}`;
     try {
       // Send to Slack via GAS proxy — same endpoint as billing
@@ -2615,7 +2625,14 @@ function DrinksCatalog() {
                   ) : (
                     <div className="w-10 h-10 rounded-lg bg-neutral-100 flex-shrink-0" />
                   )}
-                  <span className="flex-1 text-sm text-neutral-800">{it.name}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-neutral-800 leading-snug">{it.name}</p>
+                    {it.priceCOP > 0 && (
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        COP {fmtCOP(it.priceCOP)} · <span className="text-neutral-400">${fmtUSD(it.priceUSD)}</span>
+                      </p>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1.5">
                     <button type="button"
                       onClick={() => patchItem(ci, ii, { qty: String(Math.max(0, Number(it.qty||0)-1)||"") })}
@@ -2630,6 +2647,18 @@ function DrinksCatalog() {
             </div>
           </div>
         ))}
+
+        {/* Running total */}
+        {hasSelection && (
+          <div className="bg-neutral-900 text-white rounded-2xl px-5 py-4 flex justify-between items-center">
+            <div>
+              <p className="text-xs text-neutral-400 uppercase tracking-wider mb-0.5">Total estimado</p>
+              <p className="text-lg font-semibold">COP {fmtCOP(totalCOP)}</p>
+              <p className="text-xs text-neutral-400">≈ USD {fmtUSD(totalUSD)}</p>
+            </div>
+            <div className="text-3xl">🧾</div>
+          </div>
+        )}
 
         {/* Notes */}
         <textarea
