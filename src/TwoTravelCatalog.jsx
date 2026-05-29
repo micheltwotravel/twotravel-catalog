@@ -2749,6 +2749,7 @@ setGuestContact(
 
 if (ko.arrivalDate) setArrivalDate(String(ko.arrivalDate).trim());
 if (ko.departureDate) setDepartureDate(String(ko.departureDate).trim());
+setKickoffLoaded(true);
 
       // Store city — support comma-separated multi-city "CTG,MDE"
       const rawCity = String(ko.city || "").trim();
@@ -4161,80 +4162,68 @@ setCart([]);
 
             <div className="flex-1 overflow-auto p-4 space-y-4">
               <p className="text-sm text-gray-600">{t.kickoffIntro}</p>
-              <div className="grid sm:grid-cols-2 gap-3">
-  <div>
-    <label className="text-xs text-gray-500">
-      {lang === "es" ? "Nombre del huésped" : "Guest name"}
-    </label>
-    <input
-  className="w-full border rounded-lg px-3 py-2"
-  value={guestName}
-  onChange={(e) => setGuestName(e.target.value)}
-/>
-  </div>
 
-  <div>
-    <label className="text-xs text-gray-500">
-      {lang === "es" ? "Nombre del viaje / villa" : "Trip / villa name"}
-    </label>
-    <input
-  className="w-full border rounded-lg px-3 py-2"
-  value={tripName}
-  onChange={(e) => setTripName(e.target.value)}
-/>
-  </div>
+              {/* Pre-filled info card — shown when concierge set up the data */}
+              {kickoffLoaded && (guestName || arrivalDate || departureDate || guestContact) && (
+                <div className="bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 space-y-2">
+                  {guestName && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-neutral-400 text-sm">👤</span>
+                      <span className="text-sm font-medium text-neutral-800">{guestName}</span>
+                      {tripName && <span className="text-sm text-neutral-400">· {tripName}</span>}
+                    </div>
+                  )}
+                  {guestContact && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-neutral-400 text-sm">📱</span>
+                      <span className="text-sm text-neutral-600">{guestContact}</span>
+                    </div>
+                  )}
+                  {(arrivalDate || departureDate) && (
+                    <div className="flex items-center gap-3">
+                      <span className="text-neutral-400 text-sm">📅</span>
+                      <span className="text-sm text-neutral-600">
+                        {arrivalDate && new Date(arrivalDate + "T12:00:00").toLocaleDateString(lang === "en" ? "en-US" : "es-CO", { month: "short", day: "numeric" })}
+                        {arrivalDate && departureDate && " → "}
+                        {departureDate && new Date(departureDate + "T12:00:00").toLocaleDateString(lang === "en" ? "en-US" : "es-CO", { month: "short", day: "numeric" })}
+                        {arrivalDate && departureDate && (() => {
+                          const n = Math.round((new Date(departureDate) - new Date(arrivalDate)) / 86400000);
+                          return n > 0 ? ` · 🌙 ${n} ${lang === "en" ? (n === 1 ? "night" : "nights") : (n === 1 ? "noche" : "noches")}` : null;
+                        })()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
-  <div className="sm:col-span-2">
-    <label className="text-xs text-gray-500">
-      {lang === "es" ? "Contacto (WhatsApp o email)" : "Contact (WhatsApp or email)"}
-    </label>
-    <input
-  id="guestContactInput"
-  name="guestContact"
-  autoComplete="tel"
-  className="w-full border rounded-lg px-3 py-2"
-  value={guestContact}
-  onChange={(e) => setGuestContact(e.target.value)}
-/>
-  </div>
+              {/* Editable fields — only shown when not pre-filled by concierge */}
+              {!kickoffLoaded && (
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500">{lang === "es" ? "Nombre del huésped" : "Guest name"}</label>
+                    <input className="w-full border rounded-lg px-3 py-2" value={guestName} onChange={(e) => setGuestName(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">{lang === "es" ? "Nombre del viaje / villa" : "Trip / villa name"}</label>
+                    <input className="w-full border rounded-lg px-3 py-2" value={tripName} onChange={(e) => setTripName(e.target.value)} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs text-gray-500">{lang === "es" ? "Contacto (WhatsApp o email)" : "Contact (WhatsApp or email)"}</label>
+                    <input id="guestContactInput" name="guestContact" autoComplete="tel" className="w-full border rounded-lg px-3 py-2" value={guestContact} onChange={(e) => setGuestContact(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">{lang === "es" ? "Fecha de llegada" : "Arrival date"}</label>
+                    <input type="date" className="w-full border rounded-lg px-3 py-2" value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">{lang === "es" ? "Fecha de salida" : "Departure date"}</label>
+                    <input type="date" className="w-full border rounded-lg px-3 py-2" value={departureDate}
+                      min={arrivalDate ? new Date(new Date(arrivalDate).getTime() + 86400000).toISOString().split("T")[0] : undefined}
+                      onChange={(e) => setDepartureDate(e.target.value)} />
+                  </div>
+                </div>
+              )}
 
-  {/* Travel dates */}
-  <div>
-    <label className="text-xs text-gray-500">
-      {lang === "es" ? "Fecha de llegada" : "Arrival date"}
-    </label>
-    <input
-      type="date"
-      className="w-full border rounded-lg px-3 py-2"
-      value={arrivalDate}
-      onChange={(e) => setArrivalDate(e.target.value)}
-    />
-  </div>
-  <div>
-    <label className="text-xs text-gray-500">
-      {lang === "es" ? "Fecha de salida" : "Departure date"}
-    </label>
-    <input
-      type="date"
-      className="w-full border rounded-lg px-3 py-2"
-      value={departureDate}
-      min={arrivalDate
-        ? new Date(new Date(arrivalDate).getTime() + 86400000).toISOString().split("T")[0]
-        : undefined}
-      onChange={(e) => setDepartureDate(e.target.value)}
-    />
-  </div>
-
-  {/* Nights count */}
-  {arrivalDate && departureDate && (() => {
-    const n = Math.round((new Date(departureDate) - new Date(arrivalDate)) / 86400000);
-    return n > 0 ? (
-      <div className="sm:col-span-2 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
-        🌙 {n} {lang === "es" ? (n === 1 ? "noche" : "noches") : (n === 1 ? "night" : "nights")}
-      </div>
-    ) : null;
-  })()}
-</div>
 
 
               {/* Additional notes */}
@@ -4285,14 +4274,6 @@ setCart([]);
                     ))}
                   </ul>
 
-                  <div className="mt-4 border-t pt-4 text-sm text-gray-700 space-y-1">
-                    <h4 className="font-semibold">
-                      {t.kickoffNextStepsTitle}
-                    </h4>
-                    <p className="text-xs text-gray-600">
-                      {t.kickoffNextStepsBody}
-                    </p>
-                  </div>
                 </>
               )}
             </div>
