@@ -2941,12 +2941,7 @@ setCart([]);
       <div className="bg-white border rounded-2xl p-8 max-w-lg w-full text-center space-y-4">
         <div className="text-3xl">✅</div>
         <h2 className="text-xl font-bold">{t.kickoffSentTitle}</h2>
-        <p className="text-sm text-gray-600">{t.kickoffSentBody}</p>
-
-        <div className="border-t pt-4 text-left space-y-1">
-          <h4 className="text-sm font-semibold text-gray-800">{t.kickoffNextStepsTitle}</h4>
-          <p className="text-xs text-gray-500">{t.kickoffNextStepsBody}</p>
-        </div>
+        <p className="text-sm text-gray-500">{t.kickoffNextStepsBody}</p>
 
         <button
           className={btn.filled}
