@@ -3545,7 +3545,7 @@ const loadKickoffs = async () => {
 
 {/* ── BOTÓN EQUIPO DE VENTAS ── */}
 <a
-  href="https://www.twotravelvip.com/agent.html"
+  href="https://www.twotravelvip.com/api/agent"
   target="_blank"
   rel="noreferrer"
   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium"

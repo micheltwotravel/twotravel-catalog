@@ -4,12 +4,12 @@
   "framework": "vite",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/agent.html", "destination": "/agent.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!.*\\.html$).*)", "destination": "/index.html" }
   ],
   "functions": {
     "api/chat.js":         { "maxDuration": 60 },
     "api/apify.js":        { "maxDuration": 60 },
-    "api/travefy-send.js": { "maxDuration": 60 }
+    "api/travefy-send.js": { "maxDuration": 60 },
+    "api/agent.js":        { "maxDuration": 10 }
   }
 }
