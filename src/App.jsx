@@ -2540,8 +2540,8 @@ function DrinksCatalog() {
     totalLabel:   "Estimated total",
     sendBtn:      "✅ Send list to concierge",
     sending:      "Sending…",
-    successTitle: "List received!",
-    successBody:  "Your concierge will have everything ready for your arrival.",
+    successTitle: "Thanks for submitting!",
+    successBody:  "We'll review this together on your kick-off call.",
   } : {
     brand:        "Two Travel",
     heading:      "🍹 Lista de Bebidas",
@@ -2551,8 +2551,8 @@ function DrinksCatalog() {
     totalLabel:   "Total estimado",
     sendBtn:      "✅ Enviar lista al concierge",
     sending:      "Enviando…",
-    successTitle: "¡Lista recibida!",
-    successBody:  "Tu concierge se encargará de tener todo listo para tu llegada.",
+    successTitle: "¡Gracias por enviarlo!",
+    successBody:  "Lo revisaremos juntos en tu kick-off call.",
   };
 
   const itemName = (it) => (lang === "en" && it.name_en) ? it.name_en : it.name;
