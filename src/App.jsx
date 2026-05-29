@@ -2463,59 +2463,61 @@ function TaskTracker() {
 /* ============================================================
    DRINKS CATALOG — client-facing drink selection page
    ============================================================ */
+// img: pega aquí el URL directo de la foto del producto (https://...).
+// Si el campo está vacío, no se muestra imagen. Puede ser Google Drive o cualquier https://.
 const DRINK_CATEGORIES = [
   {
     id: "spirits", label: "🥃 Spirits / Licores",
     items: [
-      { name: "Ron Medellín 8 años",    qty: "", note: "" },
-      { name: "Ron Dictador 12",         qty: "", note: "" },
-      { name: "Aguardiente Antioqueño", qty: "", note: "" },
-      { name: "Tequila Patrón Silver",  qty: "", note: "" },
-      { name: "Vodka Grey Goose",        qty: "", note: "" },
-      { name: "Whisky Johnnie Walker Black", qty: "", note: "" },
-      { name: "Gin Hendricks",           qty: "", note: "" },
-      { name: "Champagne Moët & Chandon",qty: "", note: "" },
+      { name: "Ron Medellín 8 años",         img: "", qty: "", note: "" },
+      { name: "Ron Dictador 12",              img: "", qty: "", note: "" },
+      { name: "Aguardiente Antioqueño",       img: "", qty: "", note: "" },
+      { name: "Tequila Patrón Silver",        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Patron_Silver.jpg/200px-Patron_Silver.jpg", qty: "", note: "" },
+      { name: "Vodka Grey Goose",             img: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Grey_Goose_Original.jpg/200px-Grey_Goose_Original.jpg", qty: "", note: "" },
+      { name: "Whisky Johnnie Walker Black",  img: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Johnnie_Walker_Black_Label_12_Year_Old.jpg/200px-Johnnie_Walker_Black_Label_12_Year_Old.jpg", qty: "", note: "" },
+      { name: "Gin Hendricks",                img: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Hendrick%27s_Gin_Bottle.jpg/200px-Hendrick%27s_Gin_Bottle.jpg", qty: "", note: "" },
+      { name: "Champagne Moët & Chandon",     img: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Mo%C3%ABt_%26_Chandon_Br%C3%BCt_Imp%C3%A9rial.jpg/200px-Mo%C3%ABt_%26_Chandon_Br%C3%BCt_Imp%C3%A9rial.jpg", qty: "", note: "" },
     ],
   },
   {
     id: "beer", label: "🍺 Cerveza / Beer",
     items: [
-      { name: "Águila",       qty: "", note: "" },
-      { name: "Club Colombia",qty: "", note: "" },
-      { name: "Corona",       qty: "", note: "" },
-      { name: "Heineken",     qty: "", note: "" },
-      { name: "Poker",        qty: "", note: "" },
+      { name: "Águila",        img: "", qty: "", note: "" },
+      { name: "Club Colombia", img: "", qty: "", note: "" },
+      { name: "Corona",        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/CoronaExtraBeer.jpg/200px-CoronaExtraBeer.jpg", qty: "", note: "" },
+      { name: "Heineken",      img: "https://upload.wikimedia.org/wikipedia/en/thumb/4/4e/Heineken_lager_beer_can.png/200px-Heineken_lager_beer_can.png", qty: "", note: "" },
+      { name: "Poker",         img: "", qty: "", note: "" },
     ],
   },
   {
     id: "wine", label: "🍷 Vino / Wine",
     items: [
-      { name: "Vino tinto (botella)",   qty: "", note: "" },
-      { name: "Vino blanco (botella)",  qty: "", note: "" },
-      { name: "Vino rosado (botella)",  qty: "", note: "" },
-      { name: "Espumante / Prosecco",   qty: "", note: "" },
+      { name: "Vino tinto (botella)",  img: "", qty: "", note: "" },
+      { name: "Vino blanco (botella)", img: "", qty: "", note: "" },
+      { name: "Vino rosado (botella)", img: "", qty: "", note: "" },
+      { name: "Espumante / Prosecco",  img: "", qty: "", note: "" },
     ],
   },
   {
     id: "mixers", label: "🥤 Mezcladores / Mixers",
     items: [
-      { name: "Coca-Cola",       qty: "", note: "" },
-      { name: "Agua tónica",     qty: "", note: "" },
-      { name: "Ginger ale",      qty: "", note: "" },
-      { name: "Jugo de naranja", qty: "", note: "" },
-      { name: "Agua con gas",    qty: "", note: "" },
-      { name: "Agua sin gas",    qty: "", note: "" },
-      { name: "Red Bull",        qty: "", note: "" },
+      { name: "Coca-Cola",       img: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/CocaColaBottle.svg/200px-CocaColaBottle.svg.png", qty: "", note: "" },
+      { name: "Agua tónica",     img: "", qty: "", note: "" },
+      { name: "Ginger ale",      img: "", qty: "", note: "" },
+      { name: "Jugo de naranja", img: "", qty: "", note: "" },
+      { name: "Agua con gas",    img: "", qty: "", note: "" },
+      { name: "Agua sin gas",    img: "", qty: "", note: "" },
+      { name: "Red Bull",        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Red_bull_energy_drink.jpg/200px-Red_bull_energy_drink.jpg", qty: "", note: "" },
     ],
   },
   {
     id: "snacks", label: "🍿 Snacks",
     items: [
-      { name: "Papas / Chips",     qty: "", note: "" },
-      { name: "Maní / Peanuts",    qty: "", note: "" },
-      { name: "Tabla de quesos",   qty: "", note: "" },
-      { name: "Fruta picada",      qty: "", note: "" },
-      { name: "Crudités",          qty: "", note: "" },
+      { name: "Papas / Chips",   img: "", qty: "", note: "" },
+      { name: "Maní / Peanuts",  img: "", qty: "", note: "" },
+      { name: "Tabla de quesos", img: "", qty: "", note: "" },
+      { name: "Fruta picada",    img: "", qty: "", note: "" },
+      { name: "Crudités",        img: "", qty: "", note: "" },
     ],
   },
 ];
@@ -2602,6 +2604,17 @@ function DrinksCatalog() {
             <div className="divide-y divide-neutral-100">
               {cat.items.map((it, ii) => (
                 <div key={ii} className="flex items-center gap-3 px-4 py-2.5">
+                  {/* product image — only rendered when img URL is set */}
+                  {it.img ? (
+                    <img
+                      src={it.img}
+                      alt={it.name}
+                      className="w-10 h-10 object-contain rounded-lg flex-shrink-0 bg-neutral-50"
+                      onError={e => { e.target.style.display = "none"; }}
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-neutral-100 flex-shrink-0" />
+                  )}
                   <span className="flex-1 text-sm text-neutral-800">{it.name}</span>
                   <div className="flex items-center gap-1.5">
                     <button type="button"
