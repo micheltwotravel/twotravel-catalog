@@ -2541,7 +2541,7 @@ function DrinksCatalog() {
     sendBtn:      "✅ Send list to concierge",
     sending:      "Sending…",
     successTitle: "Thanks for submitting!",
-    successBody:  "Your concierge will review this with you.",
+    successBody:  "Your concierge will review this with you on your kick-off call.",
   } : {
     brand:        "Two Travel",
     heading:      "🍹 Lista de Bebidas",
@@ -2552,7 +2552,7 @@ function DrinksCatalog() {
     sendBtn:      "✅ Enviar lista al concierge",
     sending:      "Enviando…",
     successTitle: "¡Gracias por enviarlo!",
-    successBody:  "Tu concierge lo revisará contigo.",
+    successBody:  "Tu concierge lo revisará contigo en tu kick-off call.",
   };
 
   const itemName = (it) => (lang === "en" && it.name_en) ? it.name_en : it.name;
