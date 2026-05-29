@@ -182,10 +182,12 @@ video1: video1,
     vehicle_type: row.vehicle_type || "",
     route: row.route || row.route_detail || "",
 
-    schedule: row.schedule || "",
-    duration: row.duration || "",
-    location: row.location || "",           // English (sheet col "location")
-    location_es: row.location_es || row.location || "", // Spanish (sheet col "location_es")
+    schedule:    row.schedule    || "",
+    schedule_es: row.schedule_es || row.horarios_es || row.horario_es || row.horario || "",
+    duration:    row.duration    || "",
+    duration_es: row.duration_es || row.duracion_es || row.duracion   || "",
+    location:    row.location    || "",           // English
+    location_es: row.location_es || row.location  || "", // Spanish
 
     // Bilingual highlights:
     // Sheet columns: "highlights" (Spanish/default), "highlights_en" (English)

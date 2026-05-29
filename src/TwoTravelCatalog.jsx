@@ -3715,10 +3715,10 @@ setCart([]);
         {/* Duration + capacity — hidden for restaurants & bars (not relevant for dining/nightlife) */}
         {!["restaurants","bars","nightlife"].includes(serviceCategory) && (
           <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
-            {s.duration && (
+            {(s.duration || s.duration_es) && (
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                {s.duration}
+                {lang === "es" ? (s.duration_es || s.duration) : (s.duration || s.duration_es)}
               </span>
             )}
             <span className="flex items-center gap-1">
@@ -3899,14 +3899,20 @@ setCart([]);
                     {(selectedService.location || selectedService.location_es) && (
                       <li>📍 {lang === "es" ? (selectedService.location_es || selectedService.location) : (selectedService.location || selectedService.location_es)}</li>
                     )}
-                    {selectedService.schedule && (
-                      <li>⏰ {selectedService.schedule}</li>
+                    {(selectedService.schedule || selectedService.schedule_es) && (
+                      <li>⏰ {lang === "es"
+                        ? (selectedService.schedule_es || selectedService.schedule)
+                        : (selectedService.schedule    || selectedService.schedule_es)}
+                      </li>
                     )}
                     {/* Duration & capacity: hidden for restaurants, bars, nightlife */}
                     {!["restaurants","bars","nightlife"].includes(selectedServiceCategory) && (
                       <>
-                        {selectedService.duration && (
-                          <li>⏱️ {selectedService.duration}</li>
+                        {(selectedService.duration || selectedService.duration_es) && (
+                          <li>⏱️ {lang === "es"
+                            ? (selectedService.duration_es || selectedService.duration)
+                            : (selectedService.duration    || selectedService.duration_es)}
+                          </li>
                         )}
                         <li>
                           👥 {(selectedService.capacity?.min ?? "?")}-
