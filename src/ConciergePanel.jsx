@@ -2975,147 +2975,138 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1 px-6 py-4 space-y-3">
-          {/* Nombre del cliente */}
-          <div>
-            <label className="block text-xs font-medium text-neutral-600 mb-1">
-              Nombre del cliente <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={form.guestName}
-              onChange={handleField("guestName")}
-              placeholder="Ej: María García"
-              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
-            />
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
+
+          {/* Nombre + Email en fila */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+                Nombre <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={form.guestName}
+                onChange={handleField("guestName")}
+                placeholder="María García"
+                className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+                Email <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={handleField("email")}
+                placeholder="maria@email.com"
+                className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10 ${!form.email.trim() ? "border-red-300 bg-red-50" : "border-neutral-300"}`}
+              />
+            </div>
           </div>
 
-          {/* Email del cliente */}
+          {/* Ciudad — pills compactos */}
           <div>
-            <label className="block text-xs font-medium text-neutral-600 mb-1">
-              Email del cliente <span className="text-red-500">*</span>
+            <label className="block text-[11px] font-medium text-neutral-500 mb-1.5">
+              Ciudad(es) <span className="text-red-400">*</span>
             </label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={handleField("email")}
-              placeholder="Ej: maria@email.com"
-              className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10 ${!form.email.trim() ? "border-red-300 bg-red-50" : "border-neutral-300"}`}
-            />
-          </div>
-
-          {/* Ciudad(es) — multi-select */}
-          <div>
-            <label className="block text-xs font-medium text-neutral-600 mb-1">
-              Ciudad(es) <span className="text-red-500">*</span>
-              {form.city && <span className="ml-1 text-neutral-400 font-normal">({form.city})</span>}
-            </label>
-            <div className={`border rounded-lg divide-y bg-white ${!form.city ? "border-red-300" : "border-neutral-300"}`}>
+            <div className="flex flex-wrap gap-1.5">
               {[
                 { code: "CTG",  label: "Cartagena" },
                 { code: "MDE",  label: "Medellín" },
-                { code: "CDMX", label: "Ciudad de México" },
+                { code: "CDMX", label: "Cdmx" },
                 { code: "TUL",  label: "Tulum" },
                 { code: "BOG",  label: "Bogotá" },
               ].map(({ code, label }) => {
                 const cities = form.city ? form.city.split(",").map(s=>s.trim()) : [];
-                const checked = cities.includes(code);
+                const active = cities.includes(code);
                 return (
-                  <label key={code} className="flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 cursor-pointer text-sm">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => {
-                        const next = checked
-                          ? cities.filter(c => c !== code)
-                          : [...cities, code];
-                        setForm(p => ({ ...p, city: next.join(",") }));
-                      }}
-                    />
-                    {label} <span className="text-neutral-400 text-[10px]">{code}</span>
-                  </label>
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => {
+                      const next = active ? cities.filter(c => c !== code) : [...cities, code];
+                      setForm(p => ({ ...p, city: next.join(",") }));
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                      active
+                        ? "bg-neutral-900 text-white border-neutral-900"
+                        : "bg-white text-neutral-600 border-neutral-300 hover:border-neutral-500"
+                    }`}
+                  >
+                    {label}
+                  </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Nombre del viaje */}
-          <div>
-            <label className="block text-xs font-medium text-neutral-600 mb-1">
-              Nombre del viaje
-            </label>
-            <input
-              type="text"
-              value={form.tripName}
-              onChange={handleField("tripName")}
-              placeholder="Ej: Cartagena Junio 2025"
-              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
-            />
-          </div>
-
-          {/* Contacto */}
-          <div>
-            <label className="block text-xs font-medium text-neutral-600 mb-1">
-              Contacto WhatsApp / email
-            </label>
-            <input
-              type="text"
-              value={form.guestContact}
-              onChange={handleField("guestContact")}
-              placeholder="Ej: +57 300 1234567"
-              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
-            />
-          </div>
-
-          {/* Tipo de cliente */}
-          <div>
-            <label className="block text-xs font-medium text-neutral-600 mb-1">
-              Tipo de cliente
-            </label>
-            <div className="flex items-center gap-4">
-              {[1, 2].map((t) => (
-                <label key={t} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                  <input
-                    type="radio"
-                    name="clientType"
-                    value={t}
-                    checked={form.clientType === t}
-                    onChange={() => setForm((prev) => ({ ...prev, clientType: t }))}
-                    className="accent-neutral-900"
-                  />
-                  Tipo {t}
-                </label>
-              ))}
+          {/* Nombre del viaje + WhatsApp en fila */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[11px] font-medium text-neutral-500 mb-1">Viaje</label>
+              <input
+                type="text"
+                value={form.tripName}
+                onChange={handleField("tripName")}
+                placeholder="Cartagena Jun 2025"
+                className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-neutral-500 mb-1">WhatsApp</label>
+              <input
+                type="text"
+                value={form.guestContact}
+                onChange={handleField("guestContact")}
+                placeholder="+57 300 1234567"
+                className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+              />
             </div>
           </div>
 
-          {/* Concierge checkboxes — multi-select */}
-          <div>
-            <label className="block text-xs font-medium text-neutral-600 mb-1">
-              Concierge(s) asignado(s)
-              {selectedConcierges.length > 0 && (
-                <span className="ml-2 text-neutral-400 font-normal">
-                  {selectedConcierges.join(", ")}
-                </span>
-              )}
-            </label>
-            <div className="border border-neutral-200 rounded-lg divide-y bg-white max-h-40 overflow-y-auto">
-              {CONCIERGE_LIST.map(c => {
-                const checked = selectedConcierges.includes(c.name);
-                return (
-                  <label key={c.name}
-                    className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm transition ${checked ? "bg-neutral-50" : "hover:bg-neutral-50"}`}>
-                    <input type="checkbox" checked={checked}
-                      onChange={() => toggleConcierge(c.name)}
-                      className="accent-neutral-900"/>
-                    <span className="flex-1">{c.name}</span>
-                    {c.city && <span className="text-xs text-neutral-400">{c.city}</span>}
-                  </label>
-                );
-              })}
+          {/* Tipo + Concierge en fila */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[11px] font-medium text-neutral-500 mb-1.5">Tipo</label>
+              <div className="flex gap-2">
+                {[1, 2].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setForm(p => ({ ...p, clientType: t }))}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                      form.clientType === t
+                        ? "bg-neutral-900 text-white border-neutral-900"
+                        : "bg-white text-neutral-600 border-neutral-300 hover:border-neutral-500"
+                    }`}
+                  >
+                    Tipo {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-neutral-500 mb-1.5">
+                Concierge
+              </label>
+              <div className="border border-neutral-200 rounded-lg bg-white max-h-28 overflow-y-auto divide-y divide-neutral-100">
+                {CONCIERGE_LIST.map(c => {
+                  const checked = selectedConcierges.includes(c.name);
+                  return (
+                    <label key={c.name}
+                      className={`flex items-center gap-1.5 px-2 py-1.5 cursor-pointer text-xs transition ${checked ? "bg-neutral-50 font-medium" : "hover:bg-neutral-50"}`}>
+                      <input type="checkbox" checked={checked}
+                        onChange={() => toggleConcierge(c.name)}
+                        className="accent-neutral-900 w-3 h-3"/>
+                      <span className="flex-1 truncate">{c.name}</span>
+                      {c.city && <span className="text-[10px] text-neutral-400">{c.city}</span>}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
 
         </div>
 
