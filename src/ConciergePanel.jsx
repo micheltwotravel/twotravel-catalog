@@ -2933,8 +2933,8 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white max-w-md w-full rounded-2xl shadow-xl p-6 space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-white max-w-md w-full rounded-2xl shadow-xl flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b flex-shrink-0">
           <h2 className="text-base font-semibold text-neutral-900">Nuevo cliente</h2>
           <button
             type="button"
@@ -2945,7 +2945,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
           </button>
         </div>
 
-        <div className="space-y-3">
+        <div className="overflow-y-auto flex-1 px-6 py-4 space-y-3">
           {/* Nombre del cliente */}
           <div>
             <label className="block text-xs font-medium text-neutral-600 mb-1">
@@ -3087,7 +3087,10 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 pt-2">
+        </div>
+
+        {/* Footer fijo siempre visible */}
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t bg-neutral-50 flex-shrink-0">
           <button
             type="button"
             onClick={onClose}
