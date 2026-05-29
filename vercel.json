@@ -9,6 +9,9 @@
     "api/chat.js":         { "maxDuration": 60 },
     "api/apify.js":        { "maxDuration": 60 },
     "api/travefy-send.js": { "maxDuration": 60 },
+    "api/hubspot.js":      { "maxDuration": 30 },
+    "api/notion.js":       { "maxDuration": 30 },
+    "api/properties.js":   { "maxDuration": 30 },
     "api/agent.js":        { "maxDuration": 10 }
   }
 }
