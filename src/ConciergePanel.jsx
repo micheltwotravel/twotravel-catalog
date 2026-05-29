@@ -2135,12 +2135,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [billingCurrency, setBillingCurrency] = useState("USD");
   const [billingSending, setBillingSending] = useState(false);
 
-  // Read-only: dates submitted by client in questionnaire
-  const clientArrival   = kickoff?.arrivalDate   || "";
-  const clientDeparture = kickoff?.departureDate || "";
+  // Editable arrival/departure dates (concierge sets these)
+  const [arrivalDate,   setArrivalDate]   = useState(kickoff?.arrivalDate   || "");
+  const [departureDate, setDepartureDate] = useState(kickoff?.departureDate || "");
   const clientNights    = (() => {
-    if (!clientArrival || !clientDeparture) return null;
-    const n = Math.round((new Date(clientDeparture) - new Date(clientArrival)) / 86400000);
+    if (!arrivalDate || !departureDate) return null;
+    const n = Math.round((new Date(departureDate) - new Date(arrivalDate)) / 86400000);
     return n > 0 ? n : null;
   })();
 
@@ -2223,6 +2223,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     preTripContent:    preTripContent.trim(),
     // Multiple arrivals
     arrivals: JSON.stringify(arrivals.filter(a => a.name || a.date || a.flight)),
+    // Stay dates (set by concierge)
+    arrivalDate:   arrivalDate.trim(),
+    departureDate: departureDate.trim(),
   };
 
   const c = guestContact.trim();
@@ -2296,19 +2299,38 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               />
             </div>
 
-            {/* Dates + quiz answers submitted by client */}
-            {(clientArrival || clientDeparture || Object.keys(quizAnswers).some(k => quizAnswers[k] && quizAnswers[k] !== "no" && !(Array.isArray(quizAnswers[k]) && !quizAnswers[k].length))) && (
+            {/* ── FECHAS DE ESTADÍA (editables por el concierge) ── */}
+            <div className="col-span-2 border border-neutral-200 rounded-xl px-3 py-3 space-y-2 bg-white">
+              <p className="text-[11px] font-semibold text-neutral-600 uppercase tracking-wide">📅 Fechas de estadía</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
+                  <input
+                    type="date"
+                    value={arrivalDate}
+                    onChange={e => setArrivalDate(e.target.value)}
+                    className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-neutral-500 mb-1">Salida</label>
+                  <input
+                    type="date"
+                    value={departureDate}
+                    onChange={e => setDepartureDate(e.target.value)}
+                    className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+                  />
+                </div>
+              </div>
+              {clientNights && (
+                <p className="text-[10px] text-neutral-500">🌙 {clientNights} noche{clientNights !== 1 ? "s" : ""}</p>
+              )}
+            </div>
+
+            {/* Quiz answers submitted by client */}
+            {(Object.keys(quizAnswers).some(k => quizAnswers[k] && quizAnswers[k] !== "no" && !(Array.isArray(quizAnswers[k]) && !quizAnswers[k].length))) && (
               <div className="col-span-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-3 text-xs text-blue-900 space-y-2">
                 <p className="font-semibold text-[11px] uppercase tracking-wide text-blue-700">📋 Info del cuestionario</p>
-
-                {/* Dates */}
-                {(clientArrival || clientDeparture) && (
-                  <div className="flex flex-wrap gap-x-4 gap-y-0.5">
-                    {clientArrival   && <span>📅 Llegada: <strong>{clientArrival}</strong></span>}
-                    {clientDeparture && <span>✈️ Salida: <strong>{clientDeparture}</strong></span>}
-                    {clientNights    && <span>🌙 <strong>{clientNights} noches</strong></span>}
-                  </div>
-                )}
 
                 {/* Group size */}
                 {(quizAnswers.groupSize || quizAnswers.pax) && (
@@ -2607,7 +2629,15 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           })()}
           {/* Drinks catalog link */}
           <a
-            href={`/?mode=drinks&kickoffId=${kickoff.id}`}
+            href={(() => {
+              const u = new URL("/?mode=drinks", window.location.origin);
+              u.searchParams.set("kickoffId", kickoff.id);
+              if (kickoff.guestName)    u.searchParams.set("guestName",    kickoff.guestName);
+              if (kickoff.arrivalDate)  u.searchParams.set("arrivalDate",  kickoff.arrivalDate);
+              if (kickoff.departureDate) u.searchParams.set("departureDate", kickoff.departureDate);
+              if (kickoff.guestContact) u.searchParams.set("guestContact", kickoff.guestContact);
+              return u.toString();
+            })()}
             target="_blank" rel="noreferrer"
             className="px-3 py-2 rounded-lg border border-teal-300 text-sm text-teal-700 bg-teal-50 hover:bg-teal-100 flex items-center gap-1.5"
             title="Abrir catálogo de bebidas del cliente"

@@ -2522,9 +2522,13 @@ const DRINK_CATEGORIES = [
 ];
 
 function DrinksCatalog() {
-  const params   = new URLSearchParams(window.location.search);
-  const kickoffId= params.get("kickoffId") || "";
-  const lang     = params.get("lang") === "en" ? "en" : "es";
+  const params        = new URLSearchParams(window.location.search);
+  const kickoffId     = params.get("kickoffId")     || "";
+  const lang          = params.get("lang") === "en" ? "en" : "es";
+  // Pre-filled by the concierge when they generate the link
+  const prefillName   = params.get("guestName")     || "";
+  const prefillArrival= params.get("arrivalDate")   || "";
+  const prefillDepart = params.get("departureDate")  || "";
 
   // UI strings
   const T = lang === "en" ? {
@@ -2563,7 +2567,7 @@ function DrinksCatalog() {
   const [extra,    setExtra]    = React.useState("");
   const [sent,     setSent]     = React.useState(false);
   const [sending,  setSending]  = React.useState(false);
-  const [guestName,setGuestName]= React.useState("");
+  const [guestName,setGuestName]= React.useState(prefillName);
 
   const patchItem = (catIdx, itemIdx, patch) =>
     setItems(prev => prev.map((cat, ci) =>
@@ -2643,13 +2647,65 @@ function DrinksCatalog() {
       </div>
 
       <div className="max-w-xl mx-auto px-4 pt-5 space-y-5">
-        {/* Guest name */}
-        <input
-          value={guestName}
-          onChange={e => setGuestName(e.target.value)}
-          placeholder={T.namePlaceholder}
-          className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
-        />
+
+        {/* Stay dates banner — shown when concierge pre-filled them */}
+        {(prefillArrival || prefillDepart) && (
+          <div className="bg-white border border-neutral-200 rounded-2xl px-5 py-4 flex items-center gap-4">
+            {prefillArrival && (
+              <div className="flex-1 text-center">
+                <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-0.5">
+                  {lang === "en" ? "Check-in" : "Llegada"}
+                </p>
+                <p className="text-sm font-semibold text-neutral-900">
+                  {new Date(prefillArrival + "T12:00:00").toLocaleDateString(
+                    lang === "en" ? "en-US" : "es-CO",
+                    { weekday: "short", month: "short", day: "numeric" }
+                  )}
+                </p>
+              </div>
+            )}
+            {prefillArrival && prefillDepart && (
+              <div className="text-neutral-300 text-xl">→</div>
+            )}
+            {prefillDepart && (
+              <div className="flex-1 text-center">
+                <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-0.5">
+                  {lang === "en" ? "Check-out" : "Salida"}
+                </p>
+                <p className="text-sm font-semibold text-neutral-900">
+                  {new Date(prefillDepart + "T12:00:00").toLocaleDateString(
+                    lang === "en" ? "en-US" : "es-CO",
+                    { weekday: "short", month: "short", day: "numeric" }
+                  )}
+                </p>
+              </div>
+            )}
+            {prefillArrival && prefillDepart && (() => {
+              const nights = Math.round((new Date(prefillDepart) - new Date(prefillArrival)) / 86400000);
+              return nights > 0 ? (
+                <div className="text-center border-l pl-4">
+                  <p className="text-lg font-bold text-neutral-900">{nights}</p>
+                  <p className="text-[10px] text-neutral-400">{lang === "en" ? "nights" : "noches"}</p>
+                </div>
+              ) : null;
+            })()}
+          </div>
+        )}
+
+        {/* Guest name — read-only if pre-filled, editable otherwise */}
+        {prefillName ? (
+          <div className="bg-white border border-neutral-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
+            <span className="text-base">👤</span>
+            <span className="text-sm text-neutral-800 font-medium">{prefillName}</span>
+          </div>
+        ) : (
+          <input
+            value={guestName}
+            onChange={e => setGuestName(e.target.value)}
+            placeholder={T.namePlaceholder}
+            className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+          />
+        )}
 
         {items.map((cat, ci) => (
           <div key={cat.id} className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
