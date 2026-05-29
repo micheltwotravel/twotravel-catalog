@@ -2131,6 +2131,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [status, setStatus] = useState(kickoff?.status || "new");
   const [conciergeSummary] = useState(kickoff?.conciergeSummary || "");
   const [internalNotes, setInternalNotes] = useState(kickoff?.internalNotes || "");
+  const drinkOrder = kickoff?.drinkOrder || "";
   const [billingCurrency, setBillingCurrency] = useState("USD");
   const [billingSending, setBillingSending] = useState(false);
 
@@ -2407,6 +2408,19 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               placeholder="Notas internas"
             />
           </div>
+
+          {/* ── Drink Order (read-only, submitted by client) ── */}
+          {drinkOrder && (
+            <div className="border border-teal-200 rounded-xl bg-teal-50 p-3">
+              <p className="text-[11px] font-semibold text-teal-700 mb-1.5">🍹 Orden de bebidas (enviada por el cliente)</p>
+              <pre className="text-xs text-teal-900 whitespace-pre-wrap font-sans leading-relaxed">{drinkOrder}</pre>
+              {kickoff?.drinkOrderAt && (
+                <p className="text-[10px] text-teal-500 mt-1.5">
+                  Recibido: {new Date(kickoff.drinkOrderAt).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* ── Cover Info ─────────────────────────────── */}
           <div className="border rounded-2xl p-4 bg-neutral-50 space-y-3">

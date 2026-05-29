@@ -2568,13 +2568,28 @@ function DrinksCatalog() {
     if (extra) lines.push(`\n📝 Extra: ${extra}`);
     if (totalCOP > 0) lines.push(`\n💰 *Total estimado: COP ${fmtCOP(totalCOP)} (~USD ${fmtUSD(totalUSD)})*`);
     const text = `🍹 *Drink List* ${guestName ? `(${guestName})` : ""} · kickoff: ${kickoffId}\n${lines.join("\n")}`;
+    // Plain-text summary for the concierge panel
+    const drinkSummaryLines = [];
+    items.forEach(cat => {
+      const selected = cat.items.filter(it => Number(it.qty) > 0);
+      if (!selected.length) return;
+      drinkSummaryLines.push(`${cat.label}`);
+      selected.forEach(it => drinkSummaryLines.push(`  • ${it.name}: ${it.qty}`));
+    });
+    if (extra) drinkSummaryLines.push(`Notas: ${extra}`);
+    if (totalCOP > 0) drinkSummaryLines.push(`Total: COP ${fmtCOP(totalCOP)} (~USD ${fmtUSD(totalUSD)})`);
+    const drinkOrder = drinkSummaryLines.join("\n");
     try {
-      // Send to Slack via GAS proxy — same endpoint as billing
+      // 1) Send to Slack
       await fetch("https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec", {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action: "sendSlackMessage", payload: { text, channelId: "C094NE421NV", slackToken: import.meta.env.VITE_SLACK_BOT_TOKEN || "" } }),
       });
+      // 2) Save drink order to kickoff so concierge can see it in the panel
+      if (kickoffId) {
+        updateKickoffInSheet(kickoffId, { drinkOrder, drinkOrderAt: new Date().toISOString() }).catch(() => {});
+      }
       setSent(true);
     } catch { setSent(true); } // show success regardless
     setSending(false);
@@ -2614,17 +2629,17 @@ function DrinksCatalog() {
             <div className="divide-y divide-neutral-100">
               {cat.items.map((it, ii) => (
                 <div key={ii} className="flex items-center gap-3 px-4 py-2.5">
-                  {/* product image — only rendered when img URL is set */}
-                  {it.img ? (
-                    <img
-                      src={it.img}
-                      alt={it.name}
-                      className="w-10 h-10 object-contain rounded-lg flex-shrink-0 bg-neutral-50"
-                      onError={e => { e.target.style.display = "none"; }}
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-lg bg-neutral-100 flex-shrink-0" />
-                  )}
+                  {/* product image — always shows a 40×40 slot; falls back to gray box on error */}
+                  <div className="w-10 h-10 rounded-lg bg-neutral-100 flex-shrink-0 overflow-hidden">
+                    {it.img && (
+                      <img
+                        src={it.img}
+                        alt={it.name}
+                        className="w-full h-full object-contain"
+                        onError={e => { e.target.style.display = "none"; }}
+                      />
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-neutral-800 leading-snug">{it.name}</p>
                     {it.priceCOP > 0 && (
