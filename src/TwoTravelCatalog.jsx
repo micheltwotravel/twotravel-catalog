@@ -2938,9 +2938,15 @@ setCart([]);
   if (kickoffSent) {
   return (
     <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">
-      <div className="bg-white border rounded-2xl p-6 max-w-lg w-full text-center">
-        <h2 className="text-xl font-bold mb-2">{t.kickoffSentTitle}</h2>
-        <p className="text-sm text-gray-600 mb-4">{t.kickoffSentBody}</p>
+      <div className="bg-white border rounded-2xl p-8 max-w-lg w-full text-center space-y-4">
+        <div className="text-3xl">✅</div>
+        <h2 className="text-xl font-bold">{t.kickoffSentTitle}</h2>
+        <p className="text-sm text-gray-600">{t.kickoffSentBody}</p>
+
+        <div className="border-t pt-4 text-left space-y-1">
+          <h4 className="text-sm font-semibold text-gray-800">{t.kickoffNextStepsTitle}</h4>
+          <p className="text-xs text-gray-500">{t.kickoffNextStepsBody}</p>
+        </div>
 
         <button
           className={btn.filled}
