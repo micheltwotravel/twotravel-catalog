@@ -537,6 +537,11 @@ const handleSubmit = async (e) => {
             title={t.tripDetailsTitle}
             subtitle={t.tripDetailsSubtitle}
           >
+            <p className="text-xs text-amber-600 font-medium -mt-2">
+              {lang === "es"
+                ? "Por favor asegúrate de que la información es correcta."
+                : "Please make sure the information is correct."}
+            </p>
             <div className="grid gap-6 md:grid-cols-3">
               <div className={errors.destination ? "field-error" : ""}>
                 <Label>{t.destination}{errors.destination && <span className="ml-2 text-red-500 text-xs font-normal">({lang === "es" ? "requerido" : "required"})</span>}</Label>
@@ -1125,8 +1130,17 @@ function UnifiedDashboard() {
     .map(([name, d]) => {
       const myKickoffs = kpiFiltered.filter(k => (k.assignedConcierge || k.assignedConciergeName) === name);
       const myDays = myKickoffs.map(k => k.sentToTravifyAt ? daysBetween(k.createdAt, k.sentToTravifyAt) : null);
+      // Derive city: prefer lookup, fall back to majority city in kickoffs
+      const cityFromMap = CONCIERGE_CITIES[name] || "";
+      const cityFromKickoffs = (() => {
+        const freq = {};
+        myKickoffs.forEach(k => { const c = k.city || ""; if (c) freq[c] = (freq[c]||0)+1; });
+        const sorted = Object.entries(freq).sort((a,b)=>b[1]-a[1]);
+        return sorted[0]?.[0] || "";
+      })();
       return {
         name,
+        city:      cityFromMap || cityFromKickoffs,
         clients:   d.clients,
         revenue:   d.revenue,
         avgSvcs:   d.clients ? (d.svcs / d.clients).toFixed(1) : "0",
@@ -1224,6 +1238,14 @@ function UnifiedDashboard() {
                     <option value="all">Todos los concierges</option>
                     {CONCIERGE_NAMES.map(c=><option key={c} value={c}>{c}</option>)}
                   </select>
+                  {/* Excel export */}
+                  <button
+                    onClick={() => exportKpiCsv(kickoffs, kpiPeriod)}
+                    className="ml-auto px-3 py-1 text-xs rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium flex items-center gap-1"
+                    title="Descargar datos como CSV (abre en Excel)"
+                  >
+                    📥 Exportar Excel
+                  </button>
                 </div>
 
                 {/* Main KPI cards */}
@@ -1332,14 +1354,21 @@ function UnifiedDashboard() {
                 {/* Per-concierge table */}
                 {kpiConciergeRows.length > 0 && (
                   <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
-                    <div className="px-5 py-3 border-b border-stone-100">
+                    <div className="px-5 py-3 border-b border-stone-100 flex items-center justify-between">
                       <h2 className="text-sm font-semibold text-stone-700">Breakdown por concierge</h2>
+                      <button
+                        onClick={() => exportKpiCsv(kickoffs, kpiPeriod)}
+                        className="px-3 py-1 text-xs rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium"
+                      >
+                        📥 Exportar
+                      </button>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-sm">
                         <thead className="bg-stone-50 text-[11px] text-stone-400 uppercase tracking-wide">
                           <tr>
                             <th className="px-5 py-2 text-left font-medium">Concierge</th>
+                            <th className="px-5 py-2 text-left font-medium">Ciudad</th>
                             <th className="px-5 py-2 text-center font-medium">Clientes</th>
                             <th className="px-5 py-2 text-right font-medium">Revenue</th>
                             <th className="px-5 py-2 text-center font-medium">Svcs/cliente</th>
@@ -1351,6 +1380,11 @@ function UnifiedDashboard() {
                           {kpiConciergeRows.map(row => (
                             <tr key={row.name} className="hover:bg-stone-50">
                               <td className="px-5 py-3 font-medium text-stone-800">{row.name}</td>
+                              <td className="px-5 py-3">
+                                {row.city ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 text-[11px] font-semibold">{row.city}</span>
+                                ) : <span className="text-stone-400">—</span>}
+                              </td>
                               <td className="px-5 py-3 text-center text-stone-600">{row.clients}</td>
                               <td className="px-5 py-3 text-right font-semibold text-emerald-700">{fmtRev(row.revenue)}</td>
                               <td className="px-5 py-3 text-center text-stone-600">{row.avgSvcs}</td>
@@ -1976,6 +2010,69 @@ const CONCIERGE_EMAILS = {
   "Giulia Lorini Serrato": "giulia@two.travel",
   "Natalia Peniche":       "natalia@two.travel",
 };
+// City map for KPI breakdown
+const CONCIERGE_CITIES = {
+  "Alia Jadad":            "CTG",
+  "Carolina Lopez":        "CTG",
+  "Daniela Becerra":       "MDE",
+  "Nataly Cruz":           "CDMX",
+  "Giulia Lorini Serrato": "CDMX",
+  "Natalia Peniche":       "CDMX",
+};
+
+// Export KPI data as CSV download
+function exportKpiCsv(kickoffs, period = "all") {
+  const now = new Date();
+  const filtered = kickoffs.filter(k => {
+    if (period === "all") return true;
+    const d = new Date(k.createdAt || "");
+    if (isNaN(d)) return false;
+    const diffDays = (now - d) / 86400000;
+    if (period === "week")  return diffDays <= 7;
+    if (period === "month") return diffDays <= 30;
+    return true;
+  });
+
+  const headers = [
+    "ID","Huésped","Viaje","Ciudad","Concierge","Estado","Tipo",
+    "Llegada","Salida","Servicios","Revenue USD","Rating","Creado",
+  ];
+
+  const rows = filtered.map(k => {
+    const cart = Array.isArray(k.cart) ? k.cart
+      : (typeof k.cart === "string" ? (() => { try { return JSON.parse(k.cart); } catch { return []; } })() : []);
+    const services = cart.filter(it => it.confirmed !== false).length;
+    const revenue  = cart.filter(it => it.confirmed !== false)
+      .reduce((s, it) => s + Number(it.priceUsd || it.price_tier_1 || it.price || 0), 0);
+    return [
+      k.id || "",
+      k.guestName || "",
+      k.tripName || "",
+      k.city || "",
+      k.assignedConcierge || k.assignedConciergeName || "",
+      k.status || "",
+      k.clientType || "1",
+      k.arrivalDate || "",
+      k.departureDate || "",
+      services,
+      revenue.toFixed(0),
+      k.conciergeRating || "",
+      (k.createdAt || "").slice(0, 10),
+    ];
+  });
+
+  const csv = [headers, ...rows]
+    .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `TwoTravel_KPI_${period}_${now.toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 /* ════════════════════════════════════════════════════════
    TASK TRACKER  (?mode=tasks)
