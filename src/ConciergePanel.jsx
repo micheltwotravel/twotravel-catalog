@@ -2444,6 +2444,45 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             </div>
           )}
 
+          {/* ── Group Submissions (catalog selections per person) ── */}
+          {(() => {
+            let subs = [];
+            try { subs = JSON.parse(kickoff?.groupSubmissions || "[]"); } catch {}
+            if (!subs.length) return null;
+            return (
+              <div className="border border-indigo-200 rounded-xl bg-indigo-50 p-3 space-y-3">
+                <p className="text-[11px] font-semibold text-indigo-700 uppercase tracking-wide">
+                  🛍️ Selecciones del grupo ({subs.length} {subs.length === 1 ? "persona" : "personas"})
+                </p>
+                {subs.map((s, i) => (
+                  <div key={i} className="bg-white rounded-lg px-3 py-2.5 border border-indigo-100 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-indigo-800">👤 {s.name}</p>
+                      {s.submittedAt && (
+                        <p className="text-[10px] text-indigo-400">
+                          {new Date(s.submittedAt).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}
+                        </p>
+                      )}
+                    </div>
+                    {Array.isArray(s.cart) && s.cart.length > 0 && (
+                      <ul className="space-y-0.5">
+                        {s.cart.map((item, j) => (
+                          <li key={j} className="text-xs text-indigo-900 flex gap-1.5">
+                            <span className="text-indigo-400">•</span>
+                            <span>{item.name}{item.notes ? <span className="text-indigo-400"> — {item.notes}</span> : null}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {s.additionalNotes && (
+                      <p className="text-[11px] text-indigo-500 italic">📝 {s.additionalNotes}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
           {/* ── Cover Info ─────────────────────────────── */}
           <div className="border rounded-2xl p-4 bg-neutral-50 space-y-3">
             <p className="text-xs font-semibold text-neutral-700">Portada del itinerario (PDF)</p>

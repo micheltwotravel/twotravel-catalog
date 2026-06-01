@@ -2855,6 +2855,23 @@ const calcDayMeta = (arrival, departure) => {
 
 const generatedDayMeta = calcDayMeta(arrivalDate, departureDate);
 
+// ── Group submissions: append this person's cart to existing array ──
+const existingSubmissions = (() => {
+  try { return JSON.parse(currentKickoff?.groupSubmissions || "[]"); }
+  catch { return []; }
+})();
+const thisSubmission = {
+  name:        cleanGuestName || (lang === "es" ? "Invitado" : "Guest"),
+  submittedAt: new Date().toISOString(),
+  cart,
+  additionalNotes: additionalNotes.trim(),
+};
+// Remove any previous entry from same person (by name), then append
+const updatedSubmissions = [
+  ...existingSubmissions.filter(s => s.name !== thisSubmission.name),
+  thisSubmission,
+];
+
 const payload = {
   id: idToUse,
   guestName: cleanGuestName,
@@ -2864,7 +2881,8 @@ const payload = {
   departureDate: departureDate.trim(),
   additionalNotes: additionalNotes.trim(),
   quizAnswers: JSON.stringify(quiz),
-  cart,
+  cart,                                          // last person's cart (backward compat)
+  groupSubmissions: JSON.stringify(updatedSubmissions), // all people's carts
   conciergeSummary,
   lang,
   currency,
