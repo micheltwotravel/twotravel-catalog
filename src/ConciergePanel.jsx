@@ -2231,6 +2231,155 @@ function ConfirmDeleteModal({ kickoff, onCancel, onConfirm, loading }) {
   );
 }
 
+/* =========================================
+   FeedbackResponseCard — shows what the
+   client answered in the feedback form,
+   fetched from the TwoTravel Feedback sheet
+   matched by kickoffId.
+   ========================================= */
+const FEEDBACK_SHEET_ID = "1Tyv5cPTN0MjxezyWRjo-XuIRqOgaPwP-z1heZfgGiuQ";
+
+function FeedbackResponseCard({ kickoffId }) {
+  const [data,    setData]    = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch(
+          `https://opensheet.elk.sh/${FEEDBACK_SHEET_ID}/feedback`
+        );
+        if (!res.ok) throw new Error("No se pudo cargar el sheet");
+        const rows = await res.json();
+        const match = Array.isArray(rows)
+          ? rows.find(r => String(r.kickoffId || r.kickofId || "").trim() === String(kickoffId).trim())
+          : null;
+        if (alive) setData(match || null);
+      } catch (e) {
+        if (alive) setError(e.message);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [kickoffId]);
+
+  if (loading) return (
+    <p className="text-xs text-teal-500 animate-pulse py-1">Cargando respuestas…</p>
+  );
+  if (error) return (
+    <p className="text-xs text-red-500 py-1">Error: {error}</p>
+  );
+  if (!data) return (
+    <p className="text-xs text-teal-400 italic py-1">No se encontraron respuestas para este cliente.</p>
+  );
+
+  const score     = Number(data.overallExperience) || 0;
+  const scoreColor = score >= 8 ? "#16a34a" : score >= 6 ? "#d97706" : "#dc2626";
+
+  const SubScoreRow = ({ label, val }) => {
+    const n = Number(val);
+    if (!val || val === "N/A" || isNaN(n)) return null;
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] text-teal-600 w-28 shrink-0">{label}</span>
+        <span className="text-[11px] font-bold text-teal-900">{n}/5</span>
+        <div className="flex gap-0.5">
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className={`w-2.5 h-1.5 rounded-sm ${i <= n ? "bg-teal-600" : "bg-teal-100"}`} />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Overall score */}
+      {score > 0 && (
+        <div className="flex items-center gap-3">
+          <div className="text-4xl font-bold leading-none" style={{ color: scoreColor }}>
+            {score}
+          </div>
+          <div>
+            <div className="text-[11px] text-teal-600">Score general / 10</div>
+            <div className="flex gap-0.5 mt-1">
+              {Array.from({ length: 10 }, (_, i) => (
+                <div key={i} className="w-3 h-1.5 rounded-sm"
+                  style={{ background: i < score ? scoreColor : "#d1fae5" }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* What stood out */}
+      {data.overallReason && (
+        <div>
+          <p className="text-[10px] font-semibold text-teal-600 uppercase tracking-wide">¿Qué destacó?</p>
+          <p className="text-xs text-teal-900 mt-0.5 leading-relaxed">"{data.overallReason}"</p>
+        </div>
+      )}
+
+      {/* One thing to improve */}
+      {data.oneThing && (
+        <div>
+          <p className="text-[10px] font-semibold text-teal-600 uppercase tracking-wide">Una cosa a mejorar</p>
+          <p className="text-xs text-teal-900 mt-0.5 leading-relaxed">"{data.oneThing}"</p>
+        </div>
+      )}
+
+      {/* Extra notes */}
+      {data.stayNotes && (
+        <div>
+          <p className="text-[10px] font-semibold text-teal-600 uppercase tracking-wide">Notas extra</p>
+          <p className="text-xs text-teal-900 mt-0.5 leading-relaxed">"{data.stayNotes}"</p>
+        </div>
+      )}
+
+      {/* Sub-scores */}
+      <div className="space-y-1 pt-1 border-t border-teal-100">
+        <SubScoreRow label="Itinerario"        val={data.itinerary} />
+        <SubScoreRow label="Comunicación"      val={data.communication} />
+        <SubScoreRow label="Preparación"       val={data.readiness} />
+        <SubScoreRow label="Capacidad respuesta" val={data.responsiveness} />
+        <SubScoreRow label="Toque personal"    val={data.personalTouch} />
+        <SubScoreRow label="Propiedad"         val={data.propertyRating} />
+      </div>
+
+      {/* Would book again / recommend */}
+      {(data.bookAgain || data.recommend) && (
+        <div className="flex gap-4 pt-1">
+          {data.bookAgain && (
+            <div className="text-center">
+              <div className="text-base">
+                {["Yes","Sí","yes","si","sí"].includes(data.bookAgain) ? "✅" : "❌"}
+              </div>
+              <div className="text-[10px] text-teal-600 mt-0.5">Volvería a reservar</div>
+            </div>
+          )}
+          {data.recommend && (
+            <div className="text-center">
+              <div className="text-base">
+                {["Yes","Sí","yes","si","sí"].includes(data.recommend) ? "✅" : "❌"}
+              </div>
+              <div className="text-[10px] text-teal-600 mt-0.5">Nos recomienda</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <p className="text-[10px] text-teal-400">
+        Enviado: {data.submittedAt
+          ? new Date(data.submittedAt).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })
+          : "—"}
+      </p>
+    </div>
+  );
+}
+
 function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [guestName, setGuestName] = useState(kickoff?.guestName || "");
   const [tripName, setTripName] = useState(kickoff?.tripName || "");
@@ -2550,6 +2699,16 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               placeholder="Notas internas"
             />
           </div>
+
+          {/* ── Feedback del cliente (respuestas del formulario) ── */}
+          {(kickoff.status === "feedback_submitted" || kickoff.feedbackAt) && (
+            <div className="border border-teal-300 rounded-xl bg-teal-50 p-3">
+              <p className="text-[11px] font-semibold text-teal-700 uppercase tracking-wide mb-2">
+                💬 Respuestas del formulario de feedback
+              </p>
+              <FeedbackResponseCard kickoffId={kickoff.id} />
+            </div>
+          )}
 
           {/* ── Drink Order (read-only, submitted by client) ── */}
           {drinkOrder && (
