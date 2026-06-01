@@ -1089,6 +1089,9 @@ function UnifiedDashboard() {
   const kpiPct2plus  = (kpiFiltered.filter((_, i) => kpiServiceCounts[i] >= 2).length / kpiN) * 100;
   const kpiRated     = kpiFiltered.filter(k => Number(k.conciergeRating) > 0);
   const kpiAvgRating = kpiRated.length ? (kpiRated.reduce((s, k) => s + Number(k.conciergeRating), 0) / kpiRated.length).toFixed(1) : "—";
+  // Feedback-specific metrics (separate from business KPIs)
+  const kpiFeedbackSubmitted = kpiFiltered.filter(k => k.feedbackAt || k.status === "feedback_submitted");
+  const kpiFeedbackRate = kpiFiltered.length ? Math.round((kpiFeedbackSubmitted.length / kpiFiltered.length) * 100) : 0;
   const kpiByConcierge = {};
   kpiFiltered.forEach((k, i) => {
     const name = k.assignedConcierge || k.assignedConciergeName || "Sin asignar";
@@ -1249,12 +1252,11 @@ function UnifiedDashboard() {
                 </div>
 
                 {/* Main KPI cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                   <KpiCard label="Clientes en período" value={kpiFiltered.length} />
                   <KpiCard label="Revenue total" value={fmtRev(kpiTotalRev)} color="text-emerald-700"/>
                   <KpiCard label="ARPC" value={fmtRev(kpiArpc)} sub="avg revenue/cliente"/>
                   <KpiCard label="Servicios promedio" value={kpiAvgSvcs.toFixed(1)} sub="por cliente"/>
-                  <KpiCard label="Rating ⭐" value={kpiAvgRating} sub={kpiRated.length + " trips calificados"} color="text-amber-600"/>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
                   <KpiCard label="Clientes con 2+ servicios" value={kpiPct2plus.toFixed(0) + "%"} sub={kpiFiltered.filter((_,i)=>kpiServiceCounts[i]>=2).length + " de " + kpiFiltered.length}/>
@@ -1351,6 +1353,56 @@ function UnifiedDashboard() {
                   </div>
                 </div>
 
+                {/* ── Feedback section ── */}
+                <div className="bg-white rounded-2xl border border-violet-200 overflow-hidden mb-4">
+                  <div className="px-5 py-3 border-b border-violet-100 bg-violet-50 flex items-center gap-2">
+                    <span className="text-sm font-semibold text-violet-800">💬 Feedback de clientes</span>
+                    <span className="ml-auto text-[11px] text-violet-500">Basado en ratings del concierge</span>
+                  </div>
+                  <div className="p-5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                      <div className="bg-violet-50 rounded-xl border border-violet-100 p-4">
+                        <div className="text-2xl font-bold text-violet-700">{kpiFeedbackSubmitted.length}</div>
+                        <div className="text-xs text-stone-500 mt-1">Formularios recibidos</div>
+                        <div className="text-[10px] text-stone-400 mt-0.5">{kpiFeedbackRate}% de clientes del período</div>
+                      </div>
+                      <div className="bg-amber-50 rounded-xl border border-amber-100 p-4">
+                        <div className="text-2xl font-bold text-amber-600">{kpiAvgRating} <span className="text-sm font-normal text-stone-400">/ 5 ⭐</span></div>
+                        <div className="text-xs text-stone-500 mt-1">Rating promedio</div>
+                        <div className="text-[10px] text-stone-400 mt-0.5">{kpiRated.length} trips calificados</div>
+                      </div>
+                      <div className="bg-teal-50 rounded-xl border border-teal-100 p-4">
+                        <div className="text-2xl font-bold text-teal-700">{kpiRated.filter(k=>Number(k.conciergeRating)>=4).length}</div>
+                        <div className="text-xs text-stone-500 mt-1">Ratings positivos (4–5 ⭐)</div>
+                        <div className="text-[10px] text-stone-400 mt-0.5">
+                          {kpiRated.length ? Math.round(kpiRated.filter(k=>Number(k.conciergeRating)>=4).length / kpiRated.length * 100) : 0}% satisfacción alta
+                        </div>
+                      </div>
+                    </div>
+                    {/* Per-concierge rating breakdown */}
+                    {kpiConciergeRows.some(r => r.avgRating !== "—") && (
+                      <div>
+                        <p className="text-[11px] font-semibold text-stone-400 uppercase tracking-wide mb-2">Rating por concierge</p>
+                        <div className="space-y-2">
+                          {kpiConciergeRows.filter(r => r.avgRating !== "—").map(row => {
+                            const pct = (Number(row.avgRating) / 5) * 100;
+                            const color = Number(row.avgRating) >= 4 ? "bg-teal-400" : Number(row.avgRating) >= 3 ? "bg-amber-400" : "bg-red-400";
+                            return (
+                              <div key={row.name} className="flex items-center gap-3">
+                                <span className="text-xs text-stone-600 w-36 truncate">{row.name}</span>
+                                <div className="flex-1 h-2 rounded-full bg-stone-100 overflow-hidden">
+                                  <div className={"h-full rounded-full " + color} style={{ width: pct + "%" }} />
+                                </div>
+                                <span className="text-xs font-semibold text-stone-700 w-8 text-right">{row.avgRating} ⭐</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Per-concierge table */}
                 {kpiConciergeRows.length > 0 && (
                   <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
@@ -1373,7 +1425,6 @@ function UnifiedDashboard() {
                             <th className="px-5 py-2 text-right font-medium">Revenue</th>
                             <th className="px-5 py-2 text-center font-medium">Svcs/cliente</th>
                             <th className="px-5 py-2 text-center font-medium">Días promedio</th>
-                            <th className="px-5 py-2 text-center font-medium">Rating ⭐</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-stone-50">
@@ -1389,7 +1440,6 @@ function UnifiedDashboard() {
                               <td className="px-5 py-3 text-right font-semibold text-emerald-700">{fmtRev(row.revenue)}</td>
                               <td className="px-5 py-3 text-center text-stone-600">{row.avgSvcs}</td>
                               <td className="px-5 py-3 text-center text-blue-600 font-medium">{row.avgDays === "—" ? "—" : row.avgDays + "d"}</td>
-                              <td className="px-5 py-3 text-center text-amber-500 font-semibold">{row.avgRating}</td>
                             </tr>
                           ))}
                         </tbody>
