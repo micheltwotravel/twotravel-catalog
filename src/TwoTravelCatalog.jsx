@@ -2159,10 +2159,14 @@ useEffect(() => {
         price_cop: priceCop,
         priceLevel: levelFromSheet ?? null,
 
-        description:
-          typeof s.description === "string"
-            ? { es: s.description, en: s.description }
-            : s.description ?? { es: "", en: "" },
+        description: (() => {
+          // Support separate description_es / description_en columns in Sheet
+          const descEs = String(s.description_es ?? s.description ?? "").trim();
+          const descEn = String(s.description_en ?? "").trim();
+          if (descEn) return { es: descEs || descEn, en: descEn };
+          if (typeof s.description === "object" && s.description !== null) return s.description;
+          return { es: descEs, en: descEs }; // single col: same for both langs
+        })(),
 
         highlights: Array.isArray(s.highlights)
   ? s.highlights
