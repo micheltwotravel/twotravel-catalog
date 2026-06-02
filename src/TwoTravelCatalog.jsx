@@ -2169,11 +2169,19 @@ useEffect(() => {
         })(),
 
         highlights: Array.isArray(s.highlights)
-  ? s.highlights
-  : String(s.highlights ?? "")
-      .split(/,|\n/)
-      .map((x) => x.trim())
-      .filter(Boolean),
+          ? s.highlights
+          : String(s.highlights ?? "").split(/,|\n/).map(x => x.trim()).filter(Boolean),
+        highlights_en: Array.isArray(s.highlights_en)
+          ? s.highlights_en
+          : String(s.highlights_en ?? "").split(/,|\n/).map(x => x.trim()).filter(Boolean),
+
+        // snake_case → camelCase for dress code (Sheet uses dress_code / dress_code_en)
+        dressCode:    String(s.dress_code    ?? s.dressCode    ?? "").trim(),
+        dressCode_en: String(s.dress_code_en ?? s.dressCode_en ?? "").trim(),
+
+        // Explicit bilingual deposit fields
+        deposit_en: String(s.deposit_en ?? "").trim(),
+        deposit_es: String(s.deposit_es ?? s.deposit ?? "").trim(),
 
         capacity: normalizeCapacity(s.capacity ?? s.Capacity ?? s.capacidad),
         duration: String(s.duration ?? ""),
@@ -3970,13 +3978,13 @@ setCart([]);
                       </li>
                     )}
                     {/* Deposit */}
-                    {(selectedService.deposit || selectedService.deposit_es) && (
+                    {(selectedService.deposit_en || selectedService.deposit_es) && (
                       <li className="flex items-center gap-1.5">
                         <span style={{ fontSize: 14 }}>💳</span>
                         <span>{lang === "es" ? "Depósito: " : "Deposit: "}
                           {lang === "es"
-                            ? (selectedService.deposit_es || selectedService.deposit)
-                            : (selectedService.deposit || selectedService.deposit_es)}
+                            ? (selectedService.deposit_es || selectedService.deposit_en)
+                            : (selectedService.deposit_en || selectedService.deposit_es)}
                         </span>
                       </li>
                     )}
