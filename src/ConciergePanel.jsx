@@ -625,20 +625,52 @@ function buildCatalogLink(kickoff, clientType = 1, lang = "en") {
   if (kickoff?.guestContact) url.searchParams.set("guestContact", kickoff.guestContact);
   return url.toString();
 }
+// Maps city codes / raw values → feedback form dropdown option labels
+const CITY_TO_DESTINATION = {
+  CTG:       "Cartagena",
+  MDE:       "Medellín",
+  CDMX:      "CDMX",
+  TUL:       "Tulum",
+  BOG:       "Bogotá",
+  cartagena: "Cartagena",
+  medellin:  "Medellín",
+  medellín:  "Medellín",
+  tulum:     "Tulum",
+  bogota:    "Bogotá",
+  bogotá:    "Bogotá",
+};
+
+// Maps full concierge names → dropdown short names
+const CONCIERGE_TO_SHORT = {
+  "Alia Jadad":            "Alia",
+  "Carolina Lopez":        "Caro",
+  "Daniela Becerra":       "Dani",
+  "Nataly Cruz":           "Nataly",
+  "Giulia Lorini Serrato": "Giulia",
+  "Natalia Peniche":       "Natalia",
+};
+
 function buildFeedbackLink(kickoff, clientType = 1, lang = "en") {
   const url = new URL("/", CLIENT_BASE_URL);
 
   url.searchParams.set("mode", "feedback");
   url.searchParams.set("kickoffId", kickoff?.id || "");
   url.searchParams.set("clientType", String(clientType));
-  url.searchParams.set("lang", lang); // explicit override — portalLang toggle wins
+  url.searchParams.set("lang", lang);
 
   url.searchParams.set("guestName", kickoff?.guestName || "");
   url.searchParams.set("tripName", kickoff?.tripName || "");
   url.searchParams.set("guestContact", kickoff?.guestContact || "");
-  // Pre-fill destination + concierge in the feedback form
-  if (kickoff?.city)               url.searchParams.set("destination", kickoff.city);
-  if (kickoff?.assignedConcierge)  url.searchParams.set("concierge",   kickoff.assignedConcierge);
+
+  // Map city code → dropdown label (e.g. "CTG" → "Cartagena")
+  const rawCity = kickoff?.city || "";
+  const destination = CITY_TO_DESTINATION[rawCity] || CITY_TO_DESTINATION[rawCity.toLowerCase()] || rawCity;
+  if (destination) url.searchParams.set("destination", destination);
+
+  // Map full concierge name → dropdown short name (e.g. "Alia Jadad" → "Alia")
+  const rawConcierge = kickoff?.assignedConcierge || "";
+  const concierge = CONCIERGE_TO_SHORT[rawConcierge] || rawConcierge.split(" ")[0] || "";
+  if (concierge) url.searchParams.set("concierge", concierge);
 
   return url.toString();
 }
