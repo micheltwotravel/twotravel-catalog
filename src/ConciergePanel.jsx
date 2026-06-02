@@ -748,7 +748,7 @@ function buildTravifyTextFromCart(kickoff) {
 /* ═══════════════════════════════════════════════════════════════
    ACTIVITY ROW — inline-editable row inside a day section
 ═══════════════════════════════════════════════════════════════ */
-function ActivityRow({ item, onUpdate, onRemove, availableDays = [] }) {
+function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize = 1 }) {
   const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation));
   return (
     <div className="px-4 py-2.5 hover:bg-neutral-50 transition-colors">
@@ -787,6 +787,18 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [] }) {
             placeholder={String(item.price_cop || "Precio COP")}
             className="w-full text-xs text-right text-neutral-500 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
           />
+          {(() => {
+            const isPerPerson = String(item.priceUnit || "").toLowerCase().includes("person");
+            const pax = parseInt(groupSize, 10);
+            const unitPrice = Number(item.priceOverride_cop ?? item.price_cop ?? 0);
+            if (!isPerPerson || pax < 2 || !unitPrice) return null;
+            const total = new Intl.NumberFormat("es-CO").format(unitPrice * pax);
+            return (
+              <span className="block text-right text-[9px] text-indigo-500 leading-tight mt-0.5">
+                × {pax} pers = {total}
+              </span>
+            );
+          })()}
         </div>
         {/* Actions */}
         <div className="col-span-1 flex items-center justify-end gap-1.5">
@@ -896,7 +908,7 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [] }) {
 ═══════════════════════════════════════════════════════════════ */
 function DaySection({ label, meta, items, loadingServices, availableDays,
   onUpdateMeta, onRenameLabel, onRemoveDay,
-  onUpdateItem, onRemoveItem, onAddManual, onAddFromCatalog }) {
+  onUpdateItem, onRemoveItem, onAddManual, onAddFromCatalog, groupSize = 1 }) {
 
   const [editingLabel, setEditingLabel] = useState(false);
   const [localLabel,   setLocalLabel]   = useState(label);
@@ -962,6 +974,7 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
               {items.map(item => (
                 <ActivityRow key={item.id} item={item}
                   availableDays={availableDays}
+                  groupSize={groupSize}
                   onUpdate={onUpdateItem} onRemove={onRemoveItem}/>
               ))}
             </div>
@@ -1198,6 +1211,7 @@ function ItineraryCanvas({ kickoff, onSave }) {
           items={items}
           loadingServices={loadingServices}
           availableDays={days.map(d => d.label)}
+          groupSize={parseInt(groupSize, 10) || 1}
           onUpdateMeta={patch => upsertDayMeta(label, patch)}
           onRenameLabel={newLabel => renameDayLabel(label, newLabel)}
           onRemoveDay={() => removeDay(label)}

@@ -1074,9 +1074,15 @@ function UnifiedDashboard() {
   const kpiN = kpiFiltered.length || 1;
   const kpiRevenues = kpiFiltered.map(k => {
     const cart = Array.isArray(k.cart) ? k.cart : (typeof k.cart === "string" ? (() => { try { return JSON.parse(k.cart); } catch(e) { return []; } })() : []);
+    const pax = (() => {
+      const n = parseInt(k.groupSize || ((() => { try { return JSON.parse(k.quizAnswers || "{}"); } catch(e) { return {}; } })()).groupSize || 1, 10);
+      return isNaN(n) || n < 1 ? 1 : n;
+    })();
     return cart.filter(it => it.confirmed !== false).reduce((s, it) => {
       const p = Number(it.priceUsd || it.price_tier_1 || it.price || 0);
-      return s + (isNaN(p) ? 0 : p);
+      if (isNaN(p)) return s;
+      const isPerPerson = String(it.priceUnit || "").toLowerCase().includes("person");
+      return s + (isPerPerson ? p * pax : p);
     }, 0);
   });
   const kpiServiceCounts = kpiFiltered.map(k => {
