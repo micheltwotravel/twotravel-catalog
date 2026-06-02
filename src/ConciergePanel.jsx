@@ -48,7 +48,7 @@ const cityFullName = (code) => CITY_NAMES[String(code||"").trim().toUpperCase()]
    mode = "slack"   → uploads PDF to Slack via GAS (default)
    mode = "preview" → opens PDF in a new browser tab
 ───────────────────────────────────────────────────────────── */
-async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", mode = "slack") {
+async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", mode = "slack", fxRate = 3489) {
   const { jsPDF } = await import("jspdf");
 
   // ── helpers ─────────────────────────────────────────────────
@@ -370,7 +370,12 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     const pax2  = PAX_MULTIPLIES.has(c2) ? Math.max(1, Number(it.pax || 1)) : 1;
     const unit2 = currency === "COP"
       ? Number(it.priceOverride_cop ?? it.price_cop ?? 0)
-      : Number(it.priceUsd ?? 0);
+      : (() => {
+          const manual = Number(it.priceUsd ?? 0);
+          if (manual > 0) return manual;
+          const cop = Number(it.priceOverride_cop ?? it.price_cop ?? 0);
+          return cop > 0 ? Math.round(cop / fxRate) : 0;
+        })();
     const tot2  = unit2 * pax2;
     const nm2   = cl(it.name_en || it.displayName || it.name || "").replace(/[\[\]]/g,"");
     doc.setFontSize(7.5);
@@ -2417,6 +2422,13 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const drinkOrder = kickoff?.drinkOrder || "";
   const [billingCurrency, setBillingCurrency] = useState("USD");
   const [billingSending, setBillingSending] = useState(false);
+  const [liveFxRate, setLiveFxRate] = useState(3489); // 3560 TRM - 2%
+  useEffect(() => {
+    fetch("https://api.frankfurter.app/latest?from=USD&to=COP")
+      .then(r => r.json())
+      .then(d => { const r = d?.rates?.COP; if (r > 500) setLiveFxRate(Math.round(r * 0.98)); })
+      .catch(() => {});
+  }, []);
 
   // Editable arrival/departure dates (concierge sets these)
   const [arrivalDate,   setArrivalDate]   = useState(kickoff?.arrivalDate   || "");
@@ -2997,7 +3009,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       ...kickoff,
                       email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
                       city: city || kickoff.city || "",
-                    }, kickoff.lang || "en", billingCurrency, "preview");
+                    }, kickoff.lang || "en", billingCurrency, "preview", liveFxRate);
                   } catch (e) {
                     alert("❌ " + e.message);
                   } finally {
@@ -3020,7 +3032,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       ...kickoff,
                       email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
                       city: city || kickoff.city || "",
-                    }, kickoff.lang || "en", billingCurrency, "slack");
+                    }, kickoff.lang || "en", billingCurrency, "slack", liveFxRate);
                     alert("✅ PDF enviado a Slack");
                   } catch (e) {
                     alert("❌ " + e.message);

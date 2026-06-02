@@ -53,9 +53,10 @@ function toCityCode(raw) {
 /* ================================
    1) CONFIG: tasa de cambio
    Se actualiza en vivo desde Frankfurter API (tasa oficial - 2%).
-   Fallback: 4200 COP/USD si la API falla.
+   Fallback: TRM aproximada COP/USD si la API falla.
+   Actualizar FX_FALLBACK cuando la TRM cambie significativamente.
 ================================== */
-const FX_FALLBACK = 4200;
+const FX_FALLBACK = 3560;   // TRM junio 2026 — actualizar si cambia >5%
 
 /* ================================
    2) I18N (textos de interfaz)
