@@ -1648,8 +1648,9 @@ function ConciergeRatingModal({ kickoff, onSave, onClose }) {
   const [hover,         setHover]         = useState(0);
   const [saving,        setSaving]        = useState(false);
   const [msgLang,       setMsgLang]       = useState("en");
-  const [copiedStep1,   setCopiedStep1]   = useState(false);
+  const [copiedStep1,    setCopiedStep1]    = useState(false);
   const [copiedFollowUp, setCopiedFollowUp] = useState(false);
+  const [copiedNoReply,  setCopiedNoReply]  = useState(false);
 
   // Build feedback link (includes form link for follow-up messages)
   const feedbackLink = kickoff
@@ -1669,8 +1670,12 @@ function ConciergeRatingModal({ kickoff, onSave, onClose }) {
     en: `Thank you so much for the feedback, and we truly apologize for not meeting your expectations.\n\nIf you have time, we would really appreciate a bit more detail to help us understand what could have gone better — we promise it'll take under 2 minutes:\n\n${feedbackLink}`,
     es: `Muchas gracias por tus comentarios y realmente te pedimos disculpas por no haber cumplido con tus expectativas.\n\nSi tienes unos minutos, agradeceríamos muchísimo que pudieras compartir un poco más de feedback para ayudarnos a entender qué podría mejorar — te prometemos que tomará menos de 2 minutos:\n\n${feedbackLink}`,
   };
+  const FOLLOW_NO_REPLY = {
+    en: `We noticed you haven't had a chance to share your thoughts — and we completely understand, life gets busy! ✨\n\nIf you have a moment, we'd love to hear how everything went. It'll take under 2 minutes:\n\n${feedbackLink}`,
+    es: `Notamos que aún no has tenido la oportunidad de compartir tus comentarios, y lo entendemos perfectamente — ¡el tiempo vuela! ✨\n\nSi en algún momento tienes un minuto, nos encantaría saber cómo salió todo. Prometemos que no se demora más de 2 minutos:\n\n${feedbackLink}`,
+  };
 
-  const isPositive  = rating >= 3;
+  const isPositive  = rating >= 4;   // 1-3 = bajo, 4-5 = alto
   const step1Msg    = STEP1[msgLang];
   const followUpMsg = isPositive ? FOLLOW_POSITIVE[msgLang] : FOLLOW_LOW[msgLang];
 
@@ -1800,8 +1805,8 @@ function ConciergeRatingModal({ kickoff, onSave, onClose }) {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: isPositive ? "#15803d" : "#c2410c", margin: 0 }}>
                   {isPositive
-                    ? "Respuesta positiva (3–5 ⭐) — Follow-up"
-                    : "Respuesta baja (1–2 ⭐) — Follow-up"}
+                    ? "Respuesta positiva (4–5 ⭐) — Follow-up"
+                    : "Respuesta baja (1–3 ⭐) — Follow-up"}
                 </p>
                 <button type="button" onClick={() => copyText(followUpMsg, setCopiedFollowUp)} style={{
                   padding: "4px 12px", borderRadius: 8, fontSize: 11, cursor: "pointer",
@@ -1833,6 +1838,36 @@ function ConciergeRatingModal({ kickoff, onSave, onClose }) {
               </p>
             </div>
           )}
+
+          {/* Third message — no reply / suspected dissatisfaction — always visible */}
+          <div style={{
+            background: "#f8f8f8", borderRadius: 12, padding: "10px 12px",
+            marginBottom: 10, border: "1px solid #e5e7eb",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", margin: 0 }}>
+                🔕 Sin respuesta — Follow-up
+              </p>
+              <button type="button" onClick={() => copyText(FOLLOW_NO_REPLY[msgLang], setCopiedNoReply)} style={{
+                padding: "4px 12px", borderRadius: 8, fontSize: 11, cursor: "pointer",
+                background: copiedNoReply ? "#16a34a" : "#6b7280",
+                color: "#fff", border: "none", fontWeight: 600, whiteSpace: "nowrap",
+                transition: "background .15s", flexShrink: 0,
+              }}>
+                {copiedNoReply ? "✓ Copiado" : "Copiar"}
+              </button>
+            </div>
+            <pre style={{
+              fontSize: 11, color: "#4b5563", whiteSpace: "pre-wrap", margin: 0,
+              fontFamily: "system-ui, sans-serif", lineHeight: 1.6,
+              maxHeight: 100, overflowY: "auto",
+            }}>
+              {FOLLOW_NO_REPLY[msgLang]}
+            </pre>
+            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 5, marginBottom: 0 }}>
+              💡 Usar si el cliente no respondió el Paso 1 (posible insatisfacción)
+            </p>
+          </div>
         </div>
 
         {/* ── Footer buttons ── */}
