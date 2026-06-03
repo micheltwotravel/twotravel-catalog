@@ -1249,7 +1249,7 @@ function UnifiedDashboard() {
                   </select>
                   {/* Excel export */}
                   <button
-                    onClick={() => exportKpiCsv(kickoffs, kpiPeriod)}
+                    onClick={() => exportKpiCsv(kickoffs, kpiPeriod, kpiConcierge)}
                     className="ml-auto px-3 py-1 text-xs rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium flex items-center gap-1"
                     title="Descargar datos como CSV (abre en Excel)"
                   >
@@ -1415,7 +1415,7 @@ function UnifiedDashboard() {
                     <div className="px-5 py-3 border-b border-stone-100 flex items-center justify-between">
                       <h2 className="text-sm font-semibold text-stone-700">Breakdown por concierge</h2>
                       <button
-                        onClick={() => exportKpiCsv(kickoffs, kpiPeriod)}
+                        onClick={() => exportKpiCsv(kickoffs, kpiPeriod, kpiConcierge)}
                         className="px-3 py-1 text-xs rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium"
                       >
                         📥 Exportar
@@ -1431,6 +1431,7 @@ function UnifiedDashboard() {
                             <th className="px-5 py-2 text-right font-medium">Revenue</th>
                             <th className="px-5 py-2 text-center font-medium">Svcs/cliente</th>
                             <th className="px-5 py-2 text-center font-medium">Días promedio</th>
+                            <th className="px-5 py-2 text-center font-medium"></th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-stone-50">
@@ -1446,6 +1447,15 @@ function UnifiedDashboard() {
                               <td className="px-5 py-3 text-right font-semibold text-emerald-700">{fmtRev(row.revenue)}</td>
                               <td className="px-5 py-3 text-center text-stone-600">{row.avgSvcs}</td>
                               <td className="px-5 py-3 text-center text-blue-600 font-medium">{row.avgDays === "—" ? "—" : row.avgDays + "d"}</td>
+                              <td className="px-3 py-3 text-center">
+                                <button
+                                  onClick={() => exportKpiCsv(kickoffs, kpiPeriod, row.name)}
+                                  title={`Exportar solo ${row.name.split(" ")[0]}`}
+                                  className="px-2 py-1 text-[11px] rounded-lg border border-stone-200 bg-white text-stone-500 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition"
+                                >
+                                  📥
+                                </button>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -2077,15 +2087,20 @@ const CONCIERGE_CITIES = {
 };
 
 // Export KPI data as CSV download
-function exportKpiCsv(kickoffs, period = "all") {
+function exportKpiCsv(kickoffs, period = "all", conciergeFilter = "all") {
   const now = new Date();
   const filtered = kickoffs.filter(k => {
-    if (period === "all") return true;
-    const d = new Date(k.createdAt || "");
-    if (isNaN(d)) return false;
-    const diffDays = (now - d) / 86400000;
-    if (period === "week")  return diffDays <= 7;
-    if (period === "month") return diffDays <= 30;
+    if (period !== "all") {
+      const d = new Date(k.createdAt || "");
+      if (isNaN(d)) return false;
+      const diffDays = (now - d) / 86400000;
+      if (period === "week"  && diffDays > 7)  return false;
+      if (period === "month" && diffDays > 30) return false;
+    }
+    if (conciergeFilter !== "all") {
+      const name = k.assignedConcierge || k.assignedConciergeName || "";
+      if (name !== conciergeFilter) return false;
+    }
     return true;
   });
 
@@ -2125,7 +2140,8 @@ function exportKpiCsv(kickoffs, period = "all") {
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
   a.href     = url;
-  a.download = `TwoTravel_KPI_${period}_${now.toISOString().slice(0,10)}.csv`;
+  const suffix = conciergeFilter !== "all" ? `_${conciergeFilter.split(" ")[0]}` : "";
+  a.download = `TwoTravel_KPI_${period}${suffix}_${now.toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
