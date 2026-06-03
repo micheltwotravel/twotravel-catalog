@@ -2194,7 +2194,8 @@ useEffect(() => {
       };
     });
 
-    setServices(normalized);
+    // Filter out rows with no name (empty/incomplete Sheet rows)
+    setServices(normalized.filter(s => s.name && s.name.trim().length > 0));
     setServicesError(null);
   })
   .catch((err) => {
