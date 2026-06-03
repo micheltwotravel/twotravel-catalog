@@ -2004,6 +2004,7 @@ const normalizeCategory = (raw) => {
     transporte: "transportation", transfer: "transportation",
     traslado: "transportation",
     services: "services", servicio: "services", servicios: "services",
+    experience: "services", experiences: "services", experiencia: "services", experiencias: "services",
     chef: "chef", chefs: "chef", "private chef": "chef", "chef privado": "chef",
   };
   if (EXACT[v]) return EXACT[v];
@@ -2170,10 +2171,10 @@ useEffect(() => {
 
         highlights: Array.isArray(s.highlights)
           ? s.highlights
-          : String(s.highlights ?? "").split(/,|\n/).map(x => x.trim()).filter(Boolean),
+          : String(s.highlights ?? "").split(/\n/).map(x => x.trim()).filter(Boolean),
         highlights_en: Array.isArray(s.highlights_en)
           ? s.highlights_en
-          : String(s.highlights_en ?? "").split(/,|\n/).map(x => x.trim()).filter(Boolean),
+          : String(s.highlights_en ?? "").split(/\n/).map(x => x.trim()).filter(Boolean),
 
         // snake_case → camelCase for dress code (Sheet uses dress_code / dress_code_en)
         dressCode:    String(s.dress_code    ?? s.dressCode    ?? "").trim(),
@@ -3953,9 +3954,8 @@ setCart([]);
                         </li>
                       </>
                     )}
-                    {/* Dress code — restaurants, bars & nightlife */}
-                    {["restaurants","bars","nightlife","beach-clubs"].includes(selectedServiceCategory) &&
-                     (lang === "es" ? selectedService.dressCode : selectedService.dressCode_en) && (
+                    {/* Dress code — shows whenever the field is filled in Sheet */}
+                    {(lang === "es" ? selectedService.dressCode : selectedService.dressCode_en) && (
                       <li className="flex items-center gap-1.5">
                         <span style={{ fontSize: 14 }}>👔</span>
                         <span>
