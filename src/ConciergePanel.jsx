@@ -4031,22 +4031,28 @@ const loadKickoffs = async () => {
             </div>
 
             {conciergeOptions.length > 1 && (
-              <div className="flex items-center gap-2">
-                <span className="text-neutral-500">{cp.filterConcierge}</span>
-                <select
-                  className="border rounded-lg px-2.5 py-1.5 bg-white text-xs"
-                  value={conciergeFilter}
-                  onChange={(e) => setConciergeFilter(e.target.value)}
-                >
-                  {conciergeOptions.map((c) => (
-                    <option key={c} value={c}>
-                      {c === "all" ? cp.all : (() => {
-                        const found = CONCIERGE_LIST.find(x => x.name === c);
-                        return found ? `${found.name} · ${found.city}` : c;
-                      })()}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {conciergeOptions.map((c) => {
+                  const found = CONCIERGE_LIST.find(x => x.name === c);
+                  const label = c === "all"
+                    ? "Todos"
+                    : (found?.name.split(" ")[0] || c);
+                  const city  = found?.city || "";
+                  const active = conciergeFilter === c;
+                  return (
+                    <button
+                      key={c}
+                      onClick={() => setConciergeFilter(c)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition border ${
+                        active
+                          ? "bg-neutral-900 text-white border-neutral-900"
+                          : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                      }`}
+                    >
+                      {label}{city && !active ? <span className="ml-1 opacity-50 text-[10px]">{city}</span> : null}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
