@@ -827,8 +827,9 @@ function UnifiedDashboard() {
   const [kickoffs, setKickoffs] = useState([]);
   const [kLoading, setKLoading] = useState(true);
   // KPI filters
-  const [kpiPeriod, setKpiPeriod]       = useState("all");
-  const [kpiConcierge, setKpiConcierge] = useState("all");
+  const [kpiPeriod, setKpiPeriod]           = useState("all");
+  const [kpiConcierge, setKpiConcierge]     = useState("all");
+  const [kpiExportType, setKpiExportType]   = useState("all");
 
   const FEEDBACK_SHEET_ID = "1Tyv5cPTN0MjxezyWRjo-XuIRqOgaPwP-z1heZfgGiuQ";
 
@@ -1247,14 +1248,26 @@ function UnifiedDashboard() {
                     <option value="all">Todos los concierges</option>
                     {CONCIERGE_NAMES.map(c=><option key={c} value={c}>{c}</option>)}
                   </select>
-                  {/* Excel export */}
-                  <button
-                    onClick={() => exportKpiCsv(kickoffs, kpiPeriod, kpiConcierge)}
-                    className="ml-auto px-3 py-1 text-xs rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium flex items-center gap-1"
-                    title="Descargar datos como CSV (abre en Excel)"
-                  >
-                    📥 Exportar Excel
-                  </button>
+                  {/* KPI type selector + export */}
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <select
+                      value={kpiExportType}
+                      onChange={e => setKpiExportType(e.target.value)}
+                      className="text-xs border border-stone-200 rounded-lg px-2 py-1 bg-white text-stone-600"
+                      title="Qué KPI exportar"
+                    >
+                      {Object.entries(KPI_EXPORT_TYPES).map(([k, v]) => (
+                        <option key={k} value={k}>{v.label}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => exportKpiCsv(kickoffs, kpiPeriod, kpiConcierge, kpiExportType)}
+                      className="px-3 py-1 text-xs rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium flex items-center gap-1"
+                      title="Descargar datos como CSV (abre en Excel)"
+                    >
+                      📥 Exportar
+                    </button>
+                  </div>
                 </div>
 
                 {/* Main KPI cards */}
@@ -1449,7 +1462,7 @@ function UnifiedDashboard() {
                               <td className="px-5 py-3 text-center text-blue-600 font-medium">{row.avgDays === "—" ? "—" : row.avgDays + "d"}</td>
                               <td className="px-3 py-3 text-center">
                                 <button
-                                  onClick={() => exportKpiCsv(kickoffs, kpiPeriod, row.name)}
+                                  onClick={() => exportKpiCsv(kickoffs, kpiPeriod, row.name, kpiExportType)}
                                   title={`Exportar solo ${row.name.split(" ")[0]}`}
                                   className="px-2 py-1 text-[11px] rounded-lg border border-stone-200 bg-white text-stone-500 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition"
                                 >
@@ -2086,8 +2099,23 @@ const CONCIERGE_CITIES = {
   "Natalia Peniche":       "CDMX",
 };
 
-// Export KPI data as CSV download
-function exportKpiCsv(kickoffs, period = "all", conciergeFilter = "all") {
+// KPI export presets — each defines which columns to include
+const KPI_EXPORT_TYPES = {
+  all:      { label: "📊 Completo",    emoji: "📊", cols: ["id","guestName","tripName","city","concierge","status","clientType","arrivalDate","departureDate","services","revenue","rating","createdAt"] },
+  ratings:  { label: "⭐ Ratings",     emoji: "⭐", cols: ["guestName","tripName","city","concierge","arrivalDate","rating","createdAt"] },
+  revenue:  { label: "💰 Revenue",     emoji: "💰", cols: ["guestName","tripName","city","concierge","arrivalDate","departureDate","services","revenue","status"] },
+  services: { label: "🛎 Servicios",   emoji: "🛎", cols: ["guestName","tripName","city","concierge","services","status","arrivalDate"] },
+  feedback: { label: "💬 Feedback",    emoji: "💬", cols: ["guestName","tripName","city","concierge","rating","status","arrivalDate","createdAt"] },
+};
+
+const COL_HEADERS = {
+  id: "ID", guestName: "Huésped", tripName: "Viaje", city: "Ciudad",
+  concierge: "Concierge", status: "Estado", clientType: "Tipo",
+  arrivalDate: "Llegada", departureDate: "Salida", services: "Servicios",
+  revenue: "Revenue USD", rating: "Rating ⭐", createdAt: "Creado",
+};
+
+function exportKpiCsv(kickoffs, period = "all", conciergeFilter = "all", kpiType = "all") {
   const now = new Date();
   const filtered = kickoffs.filter(k => {
     if (period !== "all") {
@@ -2101,36 +2129,40 @@ function exportKpiCsv(kickoffs, period = "all", conciergeFilter = "all") {
       const name = k.assignedConcierge || k.assignedConciergeName || "";
       if (name !== conciergeFilter) return false;
     }
+    // For ratings export: only include rows that have a rating
+    if (kpiType === "ratings" || kpiType === "feedback") {
+      if (!k.conciergeRating) return false;
+    }
     return true;
   });
 
-  const headers = [
-    "ID","Huésped","Viaje","Ciudad","Concierge","Estado","Tipo",
-    "Llegada","Salida","Servicios","Revenue USD","Rating","Creado",
-  ];
+  const preset = KPI_EXPORT_TYPES[kpiType] || KPI_EXPORT_TYPES.all;
+  const cols   = preset.cols;
 
-  const rows = filtered.map(k => {
+  const getVal = (k, col) => {
     const cart = Array.isArray(k.cart) ? k.cart
       : (typeof k.cart === "string" ? (() => { try { return JSON.parse(k.cart); } catch { return []; } })() : []);
-    const services = cart.filter(it => it.confirmed !== false).length;
-    const revenue  = cart.filter(it => it.confirmed !== false)
-      .reduce((s, it) => s + Number(it.priceUsd || it.price_tier_1 || it.price || 0), 0);
-    return [
-      k.id || "",
-      k.guestName || "",
-      k.tripName || "",
-      k.city || "",
-      k.assignedConcierge || k.assignedConciergeName || "",
-      k.status || "",
-      k.clientType || "1",
-      k.arrivalDate || "",
-      k.departureDate || "",
-      services,
-      revenue.toFixed(0),
-      k.conciergeRating || "",
-      (k.createdAt || "").slice(0, 10),
-    ];
-  });
+    const confirmedCart = cart.filter(it => it.confirmed !== false);
+    switch (col) {
+      case "id":           return k.id || "";
+      case "guestName":    return k.guestName || "";
+      case "tripName":     return k.tripName || "";
+      case "city":         return k.city || "";
+      case "concierge":    return k.assignedConcierge || k.assignedConciergeName || "";
+      case "status":       return k.status || "";
+      case "clientType":   return k.clientType || "1";
+      case "arrivalDate":  return k.arrivalDate || "";
+      case "departureDate":return k.departureDate || "";
+      case "services":     return confirmedCart.length;
+      case "revenue":      return confirmedCart.reduce((s, it) => s + Number(it.priceUsd || it.price_tier_1 || it.price || 0), 0).toFixed(0);
+      case "rating":       return k.conciergeRating || "";
+      case "createdAt":    return (k.createdAt || "").slice(0, 10);
+      default:             return "";
+    }
+  };
+
+  const headers = cols.map(c => COL_HEADERS[c] || c);
+  const rows    = filtered.map(k => cols.map(c => getVal(k, c)));
 
   const csv = [headers, ...rows]
     .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
@@ -2141,7 +2173,8 @@ function exportKpiCsv(kickoffs, period = "all", conciergeFilter = "all") {
   const a    = document.createElement("a");
   a.href     = url;
   const suffix = conciergeFilter !== "all" ? `_${conciergeFilter.split(" ")[0]}` : "";
-  a.download = `TwoTravel_KPI_${period}${suffix}_${now.toISOString().slice(0,10)}.csv`;
+  const typeSuffix = kpiType !== "all" ? `_${kpiType}` : "";
+  a.download = `TwoTravel_KPI${typeSuffix}${suffix}_${period}_${now.toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
