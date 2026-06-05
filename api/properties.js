@@ -1,309 +1,267 @@
 // api/properties.js — Two Travel Property Database Bridge
-// Queries all Notion property DBs and returns unified data for the Sales Agent
+// SINGLE DATABASE: "TT Villas - All Cities" — all cities, all property types
 // Vercel serverless function
 
-const NOTION_BASE = "https://api.notion.com/v1";
+const NOTION_BASE    = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
-// ── DB Registry ────────────────────────────────────────────────────────────────
-// Each entry maps a Notion database to a city + type + field mapping
-const PROPERTY_DBS = [
-  {
-    id: "bb76cfeb628e461db7fa98c77ba9dacf",
-    city: "cartagena",
-    type: "villa",
-    map: {
-      name:          "House",
-      maxPax:        "MAX PAX",
-      bedrooms:      "BEDROOMS",
-      bathrooms:     "BATHROOMS",
-      clientPrice:   "CLIENT PRICE",
-      ourPrice:      "OUR PRICE",
-      priceRange:    "PRICE RANGE",
-      photos:        "PHOTOS LINK",
-      airbnb:        "AIR BNB LINK",
-      partyFriendly: "PARTY FRIENDLY",
-      notes:         "NOTES",
-      aiSummary:     "Resumen generado por la IA",
-    },
-  },
-  {
-    // New Cartagena villa DB — shared by user as having better villa info
-    id: "313ca3b33271807385ecf3ec138861f0",
-    city: "cartagena",
-    type: "villa",
-    map: {
-      name:          "House",
-      maxPax:        "MAX PAX",
-      bedrooms:      "BEDROOMS",
-      bathrooms:     "BATHROOMS",
-      clientPrice:   "CLIENT PRICE",
-      ourPrice:      "OUR PRICE",
-      priceRange:    "PRICE RANGE",
-      photos:        "PHOTOS LINK",
-      airbnb:        "AIR BNB LINK",
-      partyFriendly: "PARTY FRIENDLY",
-      notes:         "NOTES",
-      aiSummary:     "Resumen generado por la IA",
-    },
-  },
-  {
-    id: "a3ba0034ca4f49f2939d43a88e6851b1",
-    city: "medellin",
-    type: "villa",
-    map: {
-      name:          "House",
-      maxPax:        "MAX PAX",
-      bedrooms:      "BEDROOMS",
-      bathrooms:     "BATHROOMS",
-      clientPrice:   "CLIENT PRICE",
-      photos:        "PHOTOS LINK",
-      airbnb:        "AIRBNB LINK",
-      partyFriendly: "PARTY / BACHELOR FRIENDLY",
-      notes:         "NOTES",
-    },
-  },
-  {
-    id: "166ca3b3327180b09b06f9d87380882e",
-    city: "mexico_city",
-    type: "villa",
-    map: {
-      name:          "",            // title field has no name — extracted differently
-      maxPax:        "MAX PAX",
-      bedrooms:      "BEDROOMS",
-      bathrooms:     "BATHROOMS",
-      clientPrice:   "CLIENT PRICE",
-      ourPrice:      "OUR PRICE",
-      photos:        "PHOTOS LINK",
-      airbnb:        "AIR BNB LINK",
-      partyFriendly: "PARTY FRIENDLY",
-      notes:         "NOTES",
-      aiSummary:     "Resumen generado por la IA",
-    },
-  },
-  {
-    id: "35e8c4427f834ed382fee905a1327b01",
-    city: "tulum",
-    type: "villa",
-    map: {
-      name:          "House",
-      maxPax:        "MAX PAX",
-      bedrooms:      " BEDROOMS",   // note leading space in Notion
-      bathrooms:     "BATHROOMS",
-      photos:        "PHOTOS",
-      location:      "LOCATION",
-    },
-  },
-  {
-    id: "120ca3b33271808dba5bcad79d256db3",
-    city: "cartagena",
-    type: "yacht",                  // covers yachts + catamarans
-    map: {
-      name:          "YACHT NAME",
-      maxPax:        "CAPACITY",
-      feet:          "FEET",
-      boatType:      "TYPE",        // Power Catamaran / Luxury Yacht / Sailing Catamaran
-      clientPrice:   "CLIENT PRICE",
-      ourPrice:      "OUR PRICE",
-      photos:        "PHOTOS",
-      dock:          "DOCK",
-    },
-  },
-  {
-    id: "914ade1922c04885a9fee6fcf2339ef1",
-    city: "cartagena",
-    type: "speedboat",
-    map: {
-      name:          "Name",        // generic fallback
-      maxPax:        "CAPACITY",
-      clientPrice:   "CLIENT PRICE",
-      ourPrice:      "OUR PRICE",
-      photos:        "PHOTOS",
-    },
-  },
-  {
-    id: "de81e3eafd8c414d882c3fa86451f6ec",
-    city: "cartagena",
-    type: "wedding_venue",
-    map: {
-      name:          "Venue",
-      capacity:      "Capacidad Venue",   // multi_select
-      venueType:     "Tipo de espacio",
-      price:         "Precio por noche / Evento + exclusividad",
-      description:   "Description",
-      photos:        "PHOTOS LINK",
-      location:      "Location",
-      quote:         "Quote 2025",
-    },
-  },
-];
+// ── Single master DB ──────────────────────────────────────────────────────────
+// All properties live here. Fields:
+//   Villa Name    (title)      — property name
+//   City          (select)     — Cartagena | Medellín | Mexico City | Tulum | etc.
+//   Property Type (select)     — Villa | Boat | Speedboat | Wedding Venue | Penthouse
+//   Neighborhood  (rich_text)
+//   Status        (select)     — Active | Inactive | Coming Soon
+//   Max Pax       (number)
+//   Bedrooms      (number)
+//   Bathrooms     (number)
+//   CLIENT PRICE  (rich_text)
+//   OUR PRICE     (rich_text)
+//   AIR BNB LINK  (url)
+//   Photos Link   (url)
+//   Bachelor Friendly (checkbox)
+//   Description   (rich_text)
+//   Amenities     (multi_select)
+const MASTER_DB = (process.env.NOTION_PROPERTIES_DB || "313ca3b33271807385ecf3ec138861f0").trim();
+
+// City name normalizations (what Notion stores → what we use internally)
+const CITY_MAP = {
+  "cartagena":    "cartagena",
+  "medellín":     "medellin",
+  "medellin":     "medellin",
+  "medellín":     "medellin",
+  "mexico city":  "mexico_city",
+  "ciudad de méxico": "mexico_city",
+  "cdmx":         "mexico_city",
+  "tulum":        "tulum",
+  "bogotá":       "bogota",
+  "bogota":       "bogota",
+  "santa marta":  "santa_marta",
+};
+
+// Type name normalizations
+const TYPE_MAP = {
+  "villa":         "villa",
+  "penthouse":     "villa",
+  "casa":          "villa",
+  "boat":          "boat",
+  "yacht":         "boat",
+  "catamaran":     "boat",
+  "speedboat":     "speedboat",
+  "lancha":        "speedboat",
+  "wedding venue": "wedding_venue",
+  "venue":         "wedding_venue",
+};
 
 // ── Notion API helpers ─────────────────────────────────────────────────────────
-async function notionQuery(dbId, filter = null, token) {
-  const body = { page_size: 100 };
-  if (filter) body.filter = filter;
+async function notionQuery(dbId, filter, token, limit = 100) {
+  let allResults = [];
+  let cursor = undefined;
 
-  const res = await fetch(`${NOTION_BASE}/databases/${dbId}/query`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Notion-Version": NOTION_VERSION,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  do {
+    const body = { page_size: Math.min(limit - allResults.length, 100) };
+    if (filter) body.filter = filter;
+    if (cursor) body.start_cursor = cursor;
 
-  if (!res.ok) {
-    const err = await res.text();
-    console.error(`Notion query error for DB ${dbId}:`, err.slice(0, 200));
-    return [];
-  }
+    const res = await fetch(`${NOTION_BASE}/databases/${dbId}/query`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Notion-Version": NOTION_VERSION,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
 
-  const data = await res.json();
-  return data.results || [];
+    if (!res.ok) {
+      const err = await res.text();
+      console.error(`[Properties] Notion query error:`, err.slice(0, 200));
+      break;
+    }
+
+    const data = await res.json();
+    allResults = allResults.concat(data.results || []);
+    cursor = data.has_more ? data.next_cursor : undefined;
+  } while (cursor && allResults.length < limit);
+
+  return allResults;
 }
 
 // ── Property value extractors ─────────────────────────────────────────────────
 function extractProp(props, fieldName) {
-  if (!fieldName && fieldName !== "") return null;
+  if (!fieldName) return null;
   const p = props[fieldName];
   if (!p) return null;
 
   switch (p.type) {
-    case "title":
-      return p.title?.map(t => t.plain_text).join("") || null;
-    case "rich_text":
-      return p.rich_text?.map(t => t.plain_text).join("") || null;
-    case "text":
-      return p.rich_text?.map(t => t.plain_text).join("") || null;
-    case "number":
-      return p.number ?? null;
-    case "select":
-      return p.select?.name || null;
-    case "multi_select":
-      return p.multi_select?.map(o => o.name).join(", ") || null;
-    case "url":
-      return p.url || null;
-    case "phone_number":
-      return p.phone_number || null;
-    case "email":
-      return p.email || null;
-    case "checkbox":
-      return p.checkbox ?? null;
-    default:
-      return null;
+    case "title":       return p.title?.map(t => t.plain_text).join("").trim() || null;
+    case "rich_text":   return p.rich_text?.map(t => t.plain_text).join("").trim() || null;
+    case "number":      return p.number ?? null;
+    case "select":      return p.select?.name || null;
+    case "multi_select":return p.multi_select?.map(o => o.name).join(", ") || null;
+    case "url":         return p.url?.trim() || null;
+    case "checkbox":    return p.checkbox ?? null;
+    case "email":       return p.email || null;
+    case "phone_number":return p.phone_number || null;
+    default:            return null;
   }
 }
 
 function extractTitle(props) {
-  // Finds the title property regardless of its field name
   for (const key of Object.keys(props)) {
     if (props[key].type === "title") {
-      return props[key].title?.map(t => t.plain_text).join("") || null;
+      return props[key].title?.map(t => t.plain_text).join("").trim() || null;
     }
   }
   return null;
 }
 
-// ── Map a single Notion page to a unified property object ─────────────────────
-function mapPage(page, dbConfig) {
-  const props = page.properties || {};
-  const m = dbConfig.map;
-
-  // Name: try mapped field first, then auto-detect title
-  const name = (m.name !== undefined && m.name !== "")
-    ? extractProp(props, m.name)
-    : extractTitle(props);
-
-  if (!name) return null; // skip unnamed entries
-
-  const obj = {
-    id: page.id,
-    notionUrl: page.url,
-    name,
-    city: dbConfig.city,
-    type: dbConfig.type,
-    lastEdited: page.last_edited_time,
-  };
-
-  // Common numeric fields
-  if (m.maxPax)    obj.maxPax    = extractProp(props, m.maxPax);
-  if (m.bedrooms)  obj.bedrooms  = extractProp(props, m.bedrooms);
-  if (m.bathrooms) obj.bathrooms = extractProp(props, m.bathrooms);
-  if (m.feet)      obj.feet      = extractProp(props, m.feet);
-
-  // Pricing
-  if (m.clientPrice) obj.clientPrice = extractProp(props, m.clientPrice);
-  if (m.ourPrice)    obj.ourPrice    = extractProp(props, m.ourPrice);
-  if (m.priceRange)  obj.priceRange  = extractProp(props, m.priceRange);
-  if (m.price)       obj.price       = extractProp(props, m.price);
-  if (m.quote)       obj.quote       = extractProp(props, m.quote);
-
-  // Links / media
-  if (m.photos)  obj.photos  = extractProp(props, m.photos);
-  if (m.airbnb)  obj.airbnb  = extractProp(props, m.airbnb);
-  if (m.location) obj.location = extractProp(props, m.location);
-  if (m.dock)    obj.dock    = extractProp(props, m.dock);
-
-  // Attributes
-  if (m.partyFriendly) {
-    const val = extractProp(props, m.partyFriendly);
-    obj.partyFriendly = val === "YES" || val === "Yes" || val === "yes";
-  }
-  if (m.boatType)   obj.boatType   = extractProp(props, m.boatType);
-  if (m.venueType)  obj.venueType  = extractProp(props, m.venueType);
-  if (m.capacity)   obj.capacity   = extractProp(props, m.capacity);  // wedding pax range
-
-  // Text content
-  if (m.notes)       obj.notes      = extractProp(props, m.notes);
-  if (m.aiSummary)   obj.aiSummary  = extractProp(props, m.aiSummary);
-  if (m.description) obj.description = extractProp(props, m.description);
-
-  // Completeness audit flags
-  obj._audit = {
-    missingPrice:  !obj.clientPrice && !obj.ourPrice && !obj.price,
-    missingPhotos: !obj.photos,
-    missingPax:    obj.maxPax === null && obj.capacity === null,
-    missingDescription: !obj.aiSummary && !obj.notes && !obj.description,
-  };
-
-  return obj;
+// Clean and normalize a URL from Notion (may have spaces, line breaks, query params we don't need)
+function cleanUrl(raw) {
+  if (!raw) return null;
+  const s = raw.trim().replace(/\s+/g, "");
+  return s.startsWith("http") ? s : s ? "https://" + s : null;
 }
 
-// ── Format a property as a readable string for Claude ─────────────────────────
+// ── Map a Notion page → unified property object ────────────────────────────────
+function mapPage(page) {
+  const props = page.properties || {};
+
+  const name = extractProp(props, "Villa Name") || extractTitle(props);
+  if (!name) return null;
+
+  // City: normalize to internal key
+  const cityRaw  = (extractProp(props, "City") || "").toLowerCase().trim();
+  const city     = CITY_MAP[cityRaw] || cityRaw.replace(/\s+/g, "_") || "unknown";
+
+  // Property type: normalize
+  const typeRaw  = (extractProp(props, "Property Type") || "villa").toLowerCase().trim();
+  const type     = TYPE_MAP[typeRaw] || typeRaw.replace(/\s+/g, "_") || "villa";
+
+  const status   = extractProp(props, "Status") || "Active";
+
+  const airbnbRaw = extractProp(props, "AIR BNB LINK");
+  const photosRaw = extractProp(props, "Photos Link");
+
+  return {
+    id:           page.id,
+    notionUrl:    page.url,
+    name,
+    city,
+    type,
+    status,
+    lastEdited:   page.last_edited_time,
+
+    // Capacity & rooms
+    maxPax:       extractProp(props, "Max Pax"),
+    bedrooms:     extractProp(props, "Bedrooms"),
+    bathrooms:    extractProp(props, "Bathrooms"),
+
+    // Pricing
+    clientPrice:  extractProp(props, "CLIENT PRICE"),
+    ourPrice:     extractProp(props, "OUR PRICE"),
+
+    // Links
+    airbnb:       cleanUrl(airbnbRaw),
+    photos:       cleanUrl(photosRaw),
+
+    // Details
+    neighborhood: extractProp(props, "Neighborhood"),
+    description:  extractProp(props, "Description"),
+    amenities:    extractProp(props, "Amenities"),
+    partyFriendly: (() => {
+      const val = extractProp(props, "Bachelor Friendly");
+      return val === true || val === "YES" || val === "Yes" || val === "yes";
+    })(),
+
+    // Completeness audit
+    _audit: {
+      missingPrice:       !extractProp(props, "CLIENT PRICE"),
+      missingPhotos:      !photosRaw,
+      missingPax:         extractProp(props, "Max Pax") === null,
+      missingDescription: !extractProp(props, "Description"),
+      missingAirbnb:      !airbnbRaw,
+    },
+  };
+}
+
+// ── Build Notion filter from search params ────────────────────────────────────
+function buildFilter(cityNorm, typeNorm, partyFriendly, statusFilter) {
+  const filters = [];
+
+  // City filter
+  if (cityNorm) {
+    // Try to find the display name Notion uses from the normalized key
+    const cityDisplay = Object.entries(CITY_MAP).find(([, v]) => v === cityNorm)?.[0];
+    const cityNames = cityDisplay
+      ? [cityDisplay, cityNorm]
+      : [cityNorm];
+
+    // Use OR across possible city name formats
+    const cityFilters = cityNames.map(cn => ({
+      property: "City",
+      select: { equals: cn.charAt(0).toUpperCase() + cn.slice(1) },
+    }));
+    if (cityFilters.length === 1) {
+      filters.push(cityFilters[0]);
+    } else {
+      filters.push({ or: cityFilters });
+    }
+  }
+
+  // Type filter
+  if (typeNorm && typeNorm !== "all") {
+    // Map normalized type back to Notion display values
+    const typeDisplayMap = {
+      "villa":         ["Villa", "Penthouse", "Casa"],
+      "boat":          ["Boat", "Yacht", "Catamaran"],
+      "speedboat":     ["Speedboat", "Lancha"],
+      "wedding_venue": ["Wedding Venue", "Venue"],
+    };
+    const displayVals = typeDisplayMap[typeNorm] || [typeNorm];
+    if (displayVals.length === 1) {
+      filters.push({ property: "Property Type", select: { equals: displayVals[0] } });
+    } else {
+      filters.push({ or: displayVals.map(v => ({ property: "Property Type", select: { equals: v } })) });
+    }
+  }
+
+  // Party friendly filter
+  if (partyFriendly === true) {
+    filters.push({ property: "Bachelor Friendly", checkbox: { equals: true } });
+  }
+
+  // Status filter (default: only Active)
+  if (statusFilter !== "all") {
+    filters.push({
+      or: [
+        { property: "Status", select: { equals: "Active" } },
+        { property: "Status", select: { is_empty: true } },
+      ]
+    });
+  }
+
+  if (filters.length === 0) return null;
+  if (filters.length === 1) return filters[0];
+  return { and: filters };
+}
+
+// ── Format a property for Claude ──────────────────────────────────────────────
 function formatForClaude(p) {
-  const parts = [`**${p.name}**`];
-  if (p.city) parts.push(`📍 ${p.city.replace("_", " ").replace(/\b\w/g, c => c.toUpperCase())}`);
-
-  if (p.boatType) parts.push(`Type: ${p.boatType}`);
-  if (p.venueType) parts.push(`Venue type: ${p.venueType}`);
-
-  if (p.maxPax)    parts.push(`Max guests: ${p.maxPax}`);
-  if (p.capacity)  parts.push(`Capacity: ${p.capacity}`);
-  if (p.bedrooms)  parts.push(`Bedrooms: ${p.bedrooms}`);
-  if (p.bathrooms) parts.push(`Bathrooms: ${p.bathrooms}`);
-  if (p.feet)      parts.push(`${p.feet} ft`);
-  if (p.dock)      parts.push(`Dock: ${p.dock}`);
-
-  if (p.clientPrice) parts.push(`Client price: ${p.clientPrice}`);
-  else if (p.ourPrice) parts.push(`Price (internal): ${p.ourPrice}`);
-  else if (p.price)  parts.push(`Price: ${p.price.toLocaleString()} COP`);
-  if (p.priceRange)  parts.push(`Price range: ${p.priceRange}`);
-  if (p.quote)       parts.push(`Quote 2025: ${p.quote}`);
-
-  if (p.partyFriendly === true) parts.push("✅ Party/bachelor friendly");
-  if (p.partyFriendly === false) parts.push("❌ Not party friendly");
-
-  if (p.location)    parts.push(`Location: ${p.location}`);
-
-  if (p.aiSummary)   parts.push(`\n${p.aiSummary}`);
-  else if (p.description) parts.push(`\n${p.description}`);
-  else if (p.notes)  parts.push(`\n${p.notes}`);
-
-  if (p.photos)   parts.push(`Photos: ${p.photos}`);
-  if (p.airbnb)   parts.push(`Airbnb: ${p.airbnb}`);
-  if (p.notionUrl) parts.push(`Notion: ${p.notionUrl}`);
-
+  const cityLabel = p.city.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const typeLabel = p.type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const parts = [`**${p.name}** (${typeLabel})`];
+  parts.push(`📍 ${cityLabel}${p.neighborhood ? " · " + p.neighborhood : ""}`);
+  if (p.maxPax)     parts.push(`👥 Max guests: ${p.maxPax}`);
+  if (p.bedrooms)   parts.push(`🛏 Bedrooms: ${p.bedrooms}`);
+  if (p.bathrooms)  parts.push(`🚿 Bathrooms: ${p.bathrooms}`);
+  if (p.clientPrice) parts.push(`💵 Client price: ${p.clientPrice}`);
+  if (p.partyFriendly) parts.push(`🎉 Party/bachelor friendly`);
+  if (p.amenities)  parts.push(`✨ Amenities: ${p.amenities}`);
+  if (p.description) parts.push(`\n${p.description}`);
+  if (p.photos)     parts.push(`📸 Photos: ${p.photos}`);
+  if (p.airbnb)     parts.push(`🏠 Airbnb: ${p.airbnb}`);
+  if (p.notionUrl)  parts.push(`📋 Notion: ${p.notionUrl}`);
   return parts.join("\n");
 }
 
@@ -318,126 +276,83 @@ export default async function handler(req, res) {
   const token = (process.env.NOTION_TOKEN || "").trim();
   if (!token) return res.status(503).json({ error: "NOTION_TOKEN not configured" });
 
-  const { action, city, type, maxPax, partyFriendly, limit = 5 } = req.body || {};
+  const { action, city, type, maxPax, partyFriendly, limit = 5, statusFilter } = req.body || {};
 
   // ── SEARCH ─────────────────────────────────────────────────────────────────
   if (!action || action === "search") {
     const cityNorm = (city || "").toLowerCase().replace(/\s+/g, "_");
-    const typeNorm = (type || "").toLowerCase();
+    const typeNorm = (type || "").toLowerCase().replace(/\s+/g, "_");
 
-    // Select which DBs to query
-    const dbs = PROPERTY_DBS.filter(db => {
-      if (cityNorm && db.city !== cityNorm) return false;
-      if (typeNorm && typeNorm !== "all") {
-        // Flexible matching: "boat" matches yacht + speedboat + catamaran
-        if (typeNorm === "boat" || typeNorm === "boats") {
-          return db.type === "yacht" || db.type === "speedboat" || db.type === "catamaran";
-        }
-        if (typeNorm === "wedding" || typeNorm === "weddings") {
-          return db.type === "wedding_venue";
-        }
-        if (!db.type.includes(typeNorm.replace("s", ""))) return false;
-      }
-      return true;
-    });
+    // Boat aliases
+    const resolvedType = (typeNorm === "boat" || typeNorm === "boats") ? "boat"
+      : (typeNorm === "wedding" || typeNorm === "weddings") ? "wedding_venue"
+      : typeNorm;
 
-    if (dbs.length === 0) {
-      return res.status(200).json({ properties: [], formatted: "No matching databases for those filters." });
+    const filter = buildFilter(cityNorm, resolvedType, partyFriendly === true, statusFilter);
+
+    let pages = [];
+    try {
+      pages = await notionQuery(MASTER_DB, filter, token, 200);
+    } catch (err) {
+      console.error("[Properties] Query failed:", err.message);
+      return res.status(500).json({ error: "Failed to query Notion", message: err.message });
     }
 
-    // Query all matching DBs in parallel
-    const results = await Promise.all(
-      dbs.map(async db => {
-        try {
-          const pages = await notionQuery(db.id, null, token);
-          return pages
-            .map(p => mapPage(p, db))
-            .filter(Boolean);
-        } catch (err) {
-          console.error(`Error querying DB ${db.id}:`, err.message);
-          return [];
-        }
-      })
-    );
+    let properties = pages.map(mapPage).filter(Boolean);
 
-    let properties = results.flat();
-
-    // Filter by pax if specified
+    // Additional in-memory filters (for fields not indexed by Notion)
     if (maxPax) {
       const paxNum = parseInt(maxPax);
-      const withPax = properties.filter(p => p.maxPax >= paxNum || p.capacity);
+      const withPax = properties.filter(p => p.maxPax != null && p.maxPax >= paxNum);
       if (withPax.length > 0) properties = withPax;
     }
 
-    // Filter by party friendly
-    if (partyFriendly === true) {
-      const party = properties.filter(p => p.partyFriendly === true);
-      if (party.length > 0) properties = party;
-    }
-
-    // Sort by completeness (properties with more info first)
+    // Sort: party-friendly first if requested, then by completeness
     properties.sort((a, b) => {
-      const scoreA = [a.clientPrice, a.photos, a.aiSummary, a.maxPax].filter(Boolean).length;
-      const scoreB = [b.clientPrice, b.photos, b.aiSummary, b.maxPax].filter(Boolean).length;
+      const scoreA = [a.clientPrice, a.photos, a.airbnb, a.description, a.maxPax].filter(Boolean).length;
+      const scoreB = [b.clientPrice, b.photos, b.airbnb, b.description, b.maxPax].filter(Boolean).length;
       return scoreB - scoreA;
     });
 
-    // Limit results
-    const top = properties.slice(0, Math.min(limit, 10));
+    const top = properties.slice(0, Math.min(limit, 20));
 
     return res.status(200).json({
-      count: top.length,
-      total: properties.length,
+      count:      top.length,
+      total:      properties.length,
+      db:         MASTER_DB,
       properties: top,
-      formatted: top.map(formatForClaude).join("\n\n---\n\n"),
+      formatted:  top.map(formatForClaude).join("\n\n---\n\n"),
     });
   }
 
   // ── AUDIT ──────────────────────────────────────────────────────────────────
   if (action === "audit") {
-    const allResults = await Promise.all(
-      PROPERTY_DBS.map(async db => {
-        try {
-          const pages = await notionQuery(db.id, null, token);
-          return pages.map(p => mapPage(p, db)).filter(Boolean);
-        } catch (err) {
-          return [];
-        }
-      })
-    );
+    const pages = await notionQuery(MASTER_DB, null, token, 500);
+    const all   = pages.map(mapPage).filter(Boolean);
 
-    const all = allResults.flat();
     const issues = all
       .filter(p => Object.values(p._audit).some(Boolean))
       .map(p => ({
-        name: p.name,
-        city: p.city,
-        type: p.type,
+        name:     p.name,
+        city:     p.city,
+        type:     p.type,
         notionUrl: p.notionUrl,
-        issues: Object.entries(p._audit)
+        issues:   Object.entries(p._audit)
           .filter(([, v]) => v)
           .map(([k]) => k.replace("missing", "Missing ")),
       }));
 
-    const summary = {
-      total: all.length,
-      withIssues: issues.length,
-      complete: all.length - issues.length,
-      byCity: {},
-      byIssue: {},
-    };
-
+    const byCity = {};
+    const byType = {};
     all.forEach(p => {
-      summary.byCity[p.city] = (summary.byCity[p.city] || 0) + 1;
+      byCity[p.city] = (byCity[p.city] || 0) + 1;
+      byType[p.type] = (byType[p.type] || 0) + 1;
     });
 
-    issues.forEach(p => {
-      p.issues.forEach(issue => {
-        summary.byIssue[issue] = (summary.byIssue[issue] || 0) + 1;
-      });
+    return res.status(200).json({
+      summary: { total: all.length, withIssues: issues.length, complete: all.length - issues.length, byCity, byType },
+      issues,
     });
-
-    return res.status(200).json({ summary, issues });
   }
 
   return res.status(400).json({ error: `Unknown action: ${action}` });

@@ -108,13 +108,16 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const apifyToken  = (process.env.APIFY_TOKEN  || "").trim();
-  const actorId     = (process.env.APIFY_ACTOR_ID || "").trim(); // e.g. "twotravel/availability-checker"
+  const actorId     = (process.env.APIFY_ACTOR_ID || "").trim();
   const notionToken = (process.env.NOTION_TOKEN   || "").trim();
 
-  if (!apifyToken) return res.status(503).json({ error: "APIFY_TOKEN not configured" });
-  if (!actorId)    return res.status(503).json({ error: "APIFY_ACTOR_ID not configured" });
+  const { action, city, type, checkIn, checkOut, guests = 2, properties, runId, airbnbUrl } = req.body || {};
 
-  const { action, city, type, checkIn, checkOut, guests = 2, properties, runId } = req.body || {};
+  // check_single has its own token check with friendly messaging — skip global block
+  if (action !== "check_single") {
+    if (!apifyToken) return res.status(503).json({ error: "APIFY_TOKEN not configured" });
+    if (!actorId)    return res.status(503).json({ error: "APIFY_ACTOR_ID not configured" });
+  }
 
   // ── CHECK STATUS of a running actor run ─────────────────────────────────
   if (action === "status" && runId) {
@@ -202,5 +205,106 @@ export default async function handler(req, res) {
     });
   }
 
+  // ── CHECK SINGLE PROPERTY ─────────────────────────────────────────────────
+  // Uses Apify's Airbnb Scraper actor to get calendar availability
+  // Airbnb's public iCal endpoint is blocked — Apify is the reliable path
+  if (action === "check_single") {
+    // airbnbUrl, checkIn, checkOut already destructured from req.body above
+
+    if (!apifyToken) {
+      return res.status(503).json({
+        error: "APIFY_TOKEN not configured",
+        hint: "Add APIFY_TOKEN to Vercel environment variables to enable availability checking",
+        demo: true,
+      });
+    }
+
+    const listingId = extractListingId(airbnbUrl);
+    if (!listingId) {
+      return res.status(400).json({ error: "Invalid Airbnb URL. Expected: https://www.airbnb.com/rooms/LISTING_ID" });
+    }
+
+    const listingUrl = `https://www.airbnb.com/rooms/${listingId}`;
+    const propertyName = req.body.propertyName || listingUrl;
+    console.log(`[Apify] check_single → Two Travel actor | listingId=${listingId} checkIn=${checkIn} checkOut=${checkOut}`);
+
+    // Use the custom Two Travel availability checker actor (Playwright-based, reliable)
+    const TT_ACTOR_ID = "8zK2KWODS6lzeckj2";   // fascinating_gadget/twotravel-availability-checker
+    // run-sync-get-dataset-items: blocks until done, max 120s
+    const runUrl = `${APIFY_BASE}/acts/${TT_ACTOR_ID}/run-sync-get-dataset-items?token=${apifyToken}&timeout=120&memory=1024`;
+
+    let results = null;
+    try {
+      const runRes = await fetch(runUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          properties: [{ name: propertyName, airbnbUrl: listingUrl, notionPageId: req.body.notionPageId || "" }],
+          checkIn:     checkIn  || null,
+          checkOut:    checkOut || null,
+          notionToken: notionToken || null,
+          maxConcurrency: 1,
+        }),
+      });
+
+      const text = await runRes.text();
+      try { results = JSON.parse(text); } catch { results = null; }
+
+      if (!runRes.ok || !Array.isArray(results) || results.length === 0) {
+        console.error("[Apify] TT actor error:", text.slice(0, 400));
+        return res.status(502).json({
+          error: "Availability check failed — actor returned no data",
+          listingId,
+          listingUrl,
+          hint: "The Airbnb listing may be unlisted or the actor timed out. Try again.",
+          raw: text.slice(0, 200),
+        });
+      }
+    } catch (err) {
+      return res.status(502).json({ error: "Apify request failed", message: err.message, listingId });
+    }
+
+    const result = results[0];
+
+    // Map Two Travel actor output to our response format
+    const rangeAvailable = result.available ?? null;
+    const totalNights = result.totalNights
+      || (checkIn && checkOut ? Math.ceil((new Date(checkOut) - new Date(checkIn)) / 86400000) : null);
+
+    return res.status(200).json({
+      listingId,
+      listingUrl,
+      listingName:     result.name       || propertyName,
+      checkIn:         result.checkIn    || checkIn  || null,
+      checkOut:        result.checkOut   || checkOut || null,
+      totalNights,
+      rangeAvailable,
+      pricePerNight:   result.pricePerNight  || null,
+      totalPrice:      result.totalPrice     || null,
+      currency:        result.currency       || "USD",
+      minStay:         result.minStay        || null,
+      conflictDates:   [],   // TT actor returns available:bool, not day-by-day
+      checkedAt:       result.checkedAt      || new Date().toISOString(),
+    });
+  }
+
   return res.status(400).json({ error: `Unknown action: ${action}` });
+}
+
+// Helper: add 1 day to an ISO date string (YYYY-MM-DD)
+function nextDay(isoDate) {
+  const d = new Date(isoDate + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+// Helper: extract Airbnb listing ID from a URL or bare number string
+function extractListingId(url) {
+  if (!url) return null;
+  const s = String(url).trim();
+  const m = s.match(/airbnb\.[a-z.]+\/rooms\/(\d+)/i)
+         || s.match(/airbnb\.[a-z.]+\/h\/[^?/]+\?.*?listing_id=(\d+)/i);
+  if (m) return m[1];
+  if (/^\d+$/.test(s)) return s;
+  return null;
 }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -155,9 +155,9 @@ textarea::placeholder{color:var(--ink3)}
 <div id="login-screen">
   <div class="login-box">
     <div class="login-brand">Two Travel</div>
-    <div class="login-sub" id="login-sub">Portal de ventas</div>
-    <div class="demo-badge" id="demo-badge">Demo · Portafolio cargado</div>
-    <div class="login-label" id="login-label">Selecciona tu perfil</div>
+    <div class="login-sub" id="login-sub">Sales Portal</div>
+    <div class="demo-badge" id="demo-badge">Demo · Portfolio loaded</div>
+    <div class="login-label" id="login-label">Select your profile</div>
     <div class="agent-btns">
       <button class="agent-btn" onclick="login('Ray')">
         <div class="ag-av" style="background:#dceef7;color:#3a7ab8">RA</div> Ray
@@ -177,11 +177,15 @@ textarea::placeholder{color:var(--ink3)}
     <div class="hright">
       <div class="portfolio-badge">
         <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-        Portafolio cargado · 565 propiedades
+        Portfolio loaded · 565 properties
       </div>
       <div id="int-status" style="display:flex;gap:5px;align-items:center"></div>
-      <button class="lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
-      <div class="online"><div class="dot"></div> <span id="hd-online">En línea</span></div>
+      <a href="/admin.html" target="_blank" style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;text-decoration:none;border:1px solid var(--gold3);padding:4px 10px;background:rgba(154,125,82,.05);transition:all .12s" onmouseover="this.style.background='rgba(154,125,82,.12)'" onmouseout="this.style.background='rgba(154,125,82,.05)'">
+        <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Portfolio
+      </a>
+      <button class="lang-btn" id="lang-btn" onclick="toggleLang()">ES</button>
+      <div class="online"><div class="dot"></div> <span id="hd-online">Online</span></div>
       <div class="agent-pill" onclick="logout()">
         <div class="pill-av" id="pill-av"></div>
         <span id="pill-name"></span>
@@ -196,21 +200,21 @@ textarea::placeholder{color:var(--ink3)}
       <input class="srch" id="srch" placeholder="Buscar..." oninput="filterClients(this.value)">
       <div style="display:flex;gap:4px;margin-top:6px">
         <select id="filter-stage" onchange="filterClients(document.getElementById('srch').value)" style="flex:1;padding:5px 7px;background:var(--sand);border:1px solid var(--border);font-family:'Jost',sans-serif;font-size:10px;color:var(--ink2);outline:none;letter-spacing:.03em">
-          <option value="">— Todos los stages —</option>
-          <optgroup label="Activos">
+          <option value="">— All stages —</option>
+          <optgroup label="Active">
             <option value="requirementsreceived">📋 Requirements Received</option>
             <option value="callscheduled">📞 Call Scheduled</option>
             <option value="houseoptionssent">🏠 House Options Sent</option>
             <option value="boatoptionssent">⛵ Boat Options Sent</option>
             <option value="contractsent">📄 Contract Sent</option>
-            <option value="conciergeSelling">🎯 Concierge Selling</option>
+            <option value="conciergeselling">🎯 Concierge Selling</option>
           </optgroup>
-          <optgroup label="Cerrados">
+          <optgroup label="Closed">
             <option value="closedwon">✅ Closed Won</option>
             <option value="closedlost">❌ Closed Lost</option>
           </optgroup>
         </select>
-        <button id="btn-refresh" onclick="loadClientsFromHubSpot(agent)" title="Recargar desde HubSpot" style="padding:5px 8px;border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--ink3);font-size:11px;transition:all .1s" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--ink3)'">↻</button>
+        <button id="btn-refresh" onclick="loadClientsFromHubSpot(agent)" title="Reload from HubSpot" style="padding:5px 8px;border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--ink3);font-size:11px;transition:all .1s" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--ink3)'">↻</button>
       </div>
       <div id="pipeline-summary" style="display:flex;flex-wrap:wrap;gap:3px;margin-top:6px"></div>
       <button class="add-btn" onclick="openNewClient()" style="margin-top:6px">
@@ -232,6 +236,7 @@ textarea::placeholder{color:var(--ink3)}
         <div class="det-ag" id="det-ag"></div>
         <div class="det-acts">
           <button class="d-btn" id="btn-edit" onclick="editClient()">Editar</button>
+          <button class="d-btn" id="btn-wa" onclick="openWA()" style="display:none">💬 WA</button>
           <button class="d-btn pri" id="btn-assistant" onclick="focusChat()">Asistente ↗</button>
         </div>
       </div>
@@ -241,16 +246,16 @@ textarea::placeholder{color:var(--ink3)}
 
   <div class="col-chat">
     <div class="ctx-bar">
-      <span class="ctx-lbl" id="ctx-lbl">Contexto</span>
+      <span class="ctx-lbl" id="ctx-lbl">Context</span>
       <span class="ctx-sep">·</span>
-      <span class="ctx-val" id="ctx-client">Sin cliente activo</span>
+      <span class="ctx-val" id="ctx-client">No active client</span>
       <span class="ctx-sep" id="ctx-sep2" style="display:none">·</span>
       <span class="ctx-val" id="ctx-info"></span>
     </div>
     <div class="msgs" id="msgs"></div>
     <div class="iarea">
       <div class="irow">
-        <textarea id="cinput" rows="1" placeholder="Pide opciones del portafolio, arma una propuesta, consulta disponibilidad..." onkeydown="handleKey(event)" oninput="autoR(this)" data-ph-es="Pide opciones del portafolio, arma una propuesta, consulta disponibilidad..." data-ph-en="Ask for portfolio options, build a proposal, check availability..."></textarea>
+        <textarea id="cinput" rows="1" placeholder="Ask for portfolio options, build a proposal, check availability..." onkeydown="handleKey(event)" oninput="autoR(this)" data-ph-es="Pide opciones del portafolio, arma una propuesta, consulta disponibilidad..." data-ph-en="Ask for portfolio options, build a proposal, check availability..."></textarea>
         <button class="sbtn" id="sbtn" onclick="send()">
           <svg width="14" height="14" fill="none" stroke="white" stroke-width="1.8" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
@@ -268,19 +273,19 @@ textarea::placeholder{color:var(--ink3)}
 
 <div class="mbg hidden" id="client-modal">
   <div class="mbox">
-    <div class="mttl" id="mttl">Nuevo cliente</div>
-    <label id="ml-name">Nombre completo</label><input id="m-n" placeholder="Ej: Juan Pérez">
-    <label id="ml-contact">WhatsApp / Email</label><input id="m-c" placeholder="Ej: +57 300 000 0000">
-    <label id="ml-dest">Destino de interés</label><input id="m-d" placeholder="Ej: Cartagena">
-    <label id="ml-dates">Fechas tentativas</label><input id="m-f" placeholder="Ej: Dic 20-25">
-    <label id="ml-budget">Presupuesto</label><input id="m-b" placeholder="Ej: USD 5,000">
-    <label id="ml-status">Estado</label>
-    <select id="m-s"><option value="new" id="mopt-new">Nuevo</option><option value="hot" id="mopt-hot">Caliente</option><option value="cold" id="mopt-cold">Frío</option></select>
-    <label id="ml-notes">Notas del agente</label>
-    <textarea id="m-no" rows="3" placeholder="Info relevante del cliente..."></textarea>
+    <div class="mttl" id="mttl">New client</div>
+    <label id="ml-name">Full name</label><input id="m-n" placeholder="e.g. John Smith">
+    <label id="ml-contact">WhatsApp / Email</label><input id="m-c" placeholder="e.g. +1 305 000 0000">
+    <label id="ml-dest">Destination</label><input id="m-d" placeholder="e.g. Cartagena">
+    <label id="ml-dates">Tentative dates</label><input id="m-f" placeholder="e.g. Dec 20-25">
+    <label id="ml-budget">Budget</label><input id="m-b" placeholder="e.g. USD 5,000">
+    <label id="ml-status">Status</label>
+    <select id="m-s"><option value="new" id="mopt-new">New</option><option value="hot" id="mopt-hot">Hot</option><option value="cold" id="mopt-cold">Cold</option></select>
+    <label id="ml-notes">Agent notes</label>
+    <textarea id="m-no" rows="3" placeholder="Relevant client info..."></textarea>
     <div class="macts">
-      <button class="mbtn" id="ml-cancel" onclick="closeClientModal()">Cancelar</button>
-      <button class="mbtn ok" id="ml-save" onclick="saveClient()">Guardar</button>
+      <button class="mbtn" id="ml-cancel" onclick="closeClientModal()">Cancel</button>
+      <button class="mbtn ok" id="ml-save" onclick="saveClient()">Save</button>
     </div>
   </div>
 </div>
@@ -447,14 +452,28 @@ async function login(name){
 // Pipeline stage ID → label map fetched from HubSpot
 let HS_STAGE_MAP={};
 
+function isClosedDeal(stageId){
+  if(!stageId) return false;
+  const label=(HS_STAGE_MAP[stageId]||stageId||'').toLowerCase();
+  return label.includes('closed')||label.includes('lost')||label.includes('completed')||
+         label.includes('check-in complete')||label.includes('boat sold')||
+         label.includes('wedding complete')||label.includes('google review')||
+         label==='closedwon'||label==='closedlost';
+}
+
 function mapDealStage(s){
   if(!s)return'new';
   const label=(HS_STAGE_MAP[s]||s).toLowerCase();
-  if(label.includes('contract')||label.includes('concierge')||label.includes('won'))return'hot';
-  if(label.includes('option')||label.includes('sent'))return'hot';
-  if(label.includes('scheduled')||label.includes('call'))return'new';
-  if(label.includes('requirement'))return'new';
   if(label.includes('lost')||label.includes('unqualified'))return'cold';
+  if(isClosedDeal(s))return'cold';
+  if(label.includes('contract')||label.includes('concierge')||label.includes('won')||
+     label.includes('confirmed')||label.includes('deposit')||label.includes('approved')||
+     label.includes('itinerary sent')||label.includes('finalized'))return'hot';
+  if(label.includes('option')||label.includes('sent')||label.includes('quote')||
+     label.includes('selling')||label.includes('management'))return'hot';
+  if(label.includes('scheduled')||label.includes('call')||label.includes('first call')||
+     label.includes('introduction')||label.includes('kick off'))return'new';
+  if(label.includes('requirement')||label.includes('draft'))return'new';
   return'new';
 }
 
@@ -495,15 +514,19 @@ function parseDealName(dealname){
   // If it uses " - " separators: "Lana Barakat - Mexico City - June 2025"
   if(/\s[-–—]\s/.test(dealname)){
     const parts=dealname.split(/\s*[-–—]\s*/);
-    // The last part is often dates or service
-    const last=parts[parts.length-1];
-    const datesFromDash=MONTHS.test(last)?last:'';
-    const dest=parts.length>=3?parts[1].trim():(parts.length===2&&!datesFromDash?parts[1].trim():'');
+    // Scan ALL parts (not just last) for a month/date string
+    let dateIdx=-1;
+    const datesFromDash=parts.slice(1).find((p,i)=>{if(MONTHS.test(p)){dateIdx=i+1;return true;}return false;})||'';
+    // Destination: first non-name, non-date part that looks like a city
+    const nonDateParts=parts.slice(1).filter((_,i)=>i+1!==dateIdx);
+    const dest=nonDateParts[0]||'';
+    // Service: remaining parts after date (e.g. "Villa", "Boat")
+    const service=parts.slice(1).filter((_,i)=>i+1!==dateIdx&&parts[i+1]!==dest).join(' · ')||'';
     return{
       name:parts[0].trim(),
-      dest:dest,
-      dates:datesFromDash,
-      service:!datesFromDash&&parts.length>=3?parts.slice(2).join(' - ').trim():'',
+      dest:dest.trim(),
+      dates:datesFromDash.trim(),
+      service:service.trim(),
     };
   }
 
@@ -578,7 +601,13 @@ async function loadClientsFromHubSpot(name){
       let tripDates=parsed.dates||'';
       if(!tripDates&&p.closedate){
         const cd=parseHsDate(p.closedate);
-        if(cd) tripDates=new Date(cd).toLocaleDateString('es',{day:'numeric',month:'short',year:'numeric'});
+        if(cd){
+          const dt=new Date(cd);
+          // Only show closedate if it's a real future trip date (after today)
+          if(dt.getTime()>Date.now()&&dt.getFullYear()>2000){
+            tripDates=dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+          }
+        }
       }
 
       // Display name: prefer contact full name, then parsed client name from deal
@@ -653,64 +682,119 @@ const STAGE_META = {
 };
 
 // Normalize any HubSpot stage key to our meta keys
+// IMPORTANT: c.dealStage is a numeric HubSpot ID (e.g. "1078513049")
+// Must look up HS_STAGE_MAP first to get the human-readable label
 function getStageKey(c){
-  const raw = (c.dealStage||'').toLowerCase().replace(/[^a-z]/g,'');
+  const stageId = c.dealStage || '';
+  // Look up real label from pipeline map (populated at login)
+  const label = HS_STAGE_MAP[stageId] || stageId || '';
+  const raw = label.toLowerCase().replace(/[^a-z]/g,'');
   if(!raw) return c.status==='hot'?'contractsent':c.status==='cold'?'closedlost':'requirementsreceived';
-  // Substring matching for flexibility
-  if(raw.includes('requirement'))    return 'requirementsreceived';
+  // Substring matching against human-readable label
+  if(raw.includes('requirement'))                     return 'requirementsreceived';
   if(raw.includes('call')||raw.includes('scheduled')) return 'callscheduled';
-  if(raw.includes('houseoption')||raw.includes('houseoption')) return 'houseoptionssent';
-  if(raw.includes('boatoption'))     return 'boatoptionssent';
-  if(raw.includes('contract'))       return 'contractsent';
-  if(raw.includes('concierge'))      return 'conciergeselling';
-  if(raw.includes('won'))            return 'closedwon';
-  if(raw.includes('lost'))           return 'closedlost';
-  // exact match fallback
+  if(raw.includes('house'))                           return 'houseoptionssent';
+  if(raw.includes('boat'))                            return 'boatoptionssent';
+  if(raw.includes('contract'))                        return 'contractsent';
+  if(raw.includes('concierge'))                       return 'conciergeselling';
+  if(raw.includes('won')||raw.includes('checkin')||raw.includes('googlereview')) return 'closedwon';
+  if(raw.includes('lost')||raw.includes('unqualified'))                          return 'closedlost';
+  if(raw.includes('complet')||raw.includes('closed')) return 'closedwon';
+  // Unknown stage — return raw label key so it still appears in summary
   return raw;
 }
 
 function renderList(filter='',stageFilter=''){
   const el=document.getElementById('clist');el.innerHTML='';
-  const list=(clients[agent]||[]).filter(c=>{
-    const textMatch=!filter||c.name.toLowerCase().includes(filter.toLowerCase())||(c.dest||'').toLowerCase().includes(filter.toLowerCase());
-    // Filter by actual pipeline stage key
+  const all=clients[agent]||[];
+  const list=all.filter(c=>{
+    const textMatch=!filter||c.name.toLowerCase().includes(filter.toLowerCase())||
+      (c.dest||'').toLowerCase().includes(filter.toLowerCase())||
+      (c.dealName||'').toLowerCase().includes(filter.toLowerCase());
     const key=getStageKey(c);
     const stageMatch=!stageFilter||key===stageFilter.toLowerCase().replace(/[^a-z]/g,'');
     return textMatch&&stageMatch;
   });
-  // Sort: most recently received (createDate) first
-  list.sort((a,b)=>{
+
+  // Split: active pipeline vs closed/completed
+  const active=list.filter(c=>!isClosedDeal(c.dealStage));
+  const closed=list.filter(c=>isClosedDeal(c.dealStage));
+
+  // Sort each group by most recently modified
+  const byDate=(a,b)=>{
     const da=a.createDate?new Date(a.createDate).getTime():0;
     const db=b.createDate?new Date(b.createDate).getTime():0;
     return db-da;
-  });
+  };
+  active.sort(byDate);
+  closed.sort(byDate);
 
   if(!list.length){el.innerHTML='<div style="padding:18px 14px;font-size:11px;color:var(--ink3);text-align:center">Sin resultados</div>';return;}
-  list.forEach(c=>{
+
+  function renderCard(c){
     const d=document.createElement('div');
     d.className='ci'+(selClient&&selClient.id===c.id?' active':'');
-    const key=getStageKey(c);
-    const meta=STAGE_META[key]||{label:c.dealStage||'—',emoji:'·',cls:'t-new'};
-    // last activity label
+    // Stage label: use real pipeline label from HS_STAGE_MAP
+    const realLabel=dealStageLabel(c.dealStage);
+    const isClosed=isClosedDeal(c.dealStage);
+    const tagCls=isClosed?'t-cold':(c.status==='hot'?'t-hot':'t-new');
     let ageLbl='';
     if(c.createDate){
       const diffDays=Math.floor((Date.now()-new Date(c.createDate).getTime())/(1000*60*60*24));
       ageLbl=diffDays===0?'today':diffDays===1?'yesterday':`${diffDays}d ago`;
     }
+    // Show destination + dates if available
+    const subParts=[c.dest,c.dates].filter(Boolean);
+    const sub=subParts.join(' · ')||'—';
     d.innerHTML=`
       <div class="ci-name">${c.name}</div>
-      <div class="ci-sub">${c.dest||'—'}${c.dates?' · '+c.dates:''}</div>
+      <div class="ci-sub" style="font-size:10px;color:var(--ink3)">${sub}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px">
-        <span class="ci-tag ${meta.cls}" style="font-size:9px;position:static">${meta.emoji} ${meta.label}</span>
-        ${ageLbl?`<span style="font-size:9px;color:var(--ink3);letter-spacing:.04em">${ageLbl}</span>`:''}
+        <span class="ci-tag ${tagCls}" style="font-size:9px;position:static;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${realLabel||c.dealStage||'—'}</span>
+        ${ageLbl?`<span style="font-size:9px;color:var(--ink3)">${ageLbl}</span>`:''}
       </div>`;
     d.onclick=()=>selectClient(c);
-    el.appendChild(d);
-  });
+    return d;
+  }
 
-  // Show count
+  // Active deals first
+  if(active.length){
+    active.forEach(c=>el.appendChild(renderCard(c)));
+  } else if(!stageFilter){
+    // No active deals — show info banner only when NOT filtering by stage
+    const banner=document.createElement('div');
+    banner.style.cssText='padding:10px 14px;font-size:10px;color:var(--gold);background:rgba(154,125,82,.06);border-bottom:1px solid var(--gold3);line-height:1.5';
+    banner.innerHTML='No active deals — all clients are in a closed stage.<br><span style="color:var(--ink3)">Move deals to an active stage in HubSpot to see them here.</span>';
+    el.appendChild(banner);
+  }
+
+  // Closed section — expanded by default when there are no active deals
+  if(closed.length){
+    const noActive=active.length===0;
+    const divider=document.createElement('div');
+    divider.style.cssText='padding:6px 14px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);background:var(--sand2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none';
+    divider.innerHTML=`<span>History / Closed (${closed.length})</span><span id="closed-toggle">${noActive?'▲':'▼'}</span>`;
+    el.appendChild(divider);
+    const closedWrap=document.createElement('div');
+    closedWrap.id='closed-deals-wrap';
+    // Auto-expand when there are no active deals
+    closedWrap.style.display=noActive?'':'none';
+    closed.forEach(c=>closedWrap.appendChild(renderCard(c)));
+    el.appendChild(closedWrap);
+    divider.onclick=()=>{
+      const wrap=document.getElementById('closed-deals-wrap');
+      const tog=document.getElementById('closed-toggle');
+      if(wrap.style.display==='none'){wrap.style.display='';tog.textContent='▲';}
+      else{wrap.style.display='none';tog.textContent='▼';}
+    };
+  }
+
+  // Header count
   const hd=document.getElementById('col-ttl-clients');
-  if(hd) hd.textContent=`Mis clientes (${list.length}${list.length<(clients[agent]||[]).length?' filtrados':''})`;
+  if(hd){
+    if(active.length>0) hd.textContent=`Active pipeline (${active.length} of ${all.length})`;
+    else hd.textContent=`History (${closed.length} closed)`;
+  }
 }
 
 function filterClients(v){
@@ -723,17 +807,22 @@ function renderPipelineSummary(name){
   if(!bar)return;
   const list=clients[name]||[];
   const counts={};
-  const ORDER=['requirementsreceived','callscheduled','houseoptionssent','boatoptionssent','contractsent','conciergeselling','closedwon','closedlost'];
+  // Map each deal to a stage key and count them
   list.forEach(c=>{
     const k=getStageKey(c);
     counts[k]=(counts[k]||0)+1;
   });
   bar.innerHTML='';
-  ORDER.forEach(k=>{
+
+  // Build ordered list: known stages first, then any extras
+  const ORDER=['requirementsreceived','callscheduled','houseoptionssent','boatoptionssent','contractsent','conciergeselling','closedwon','closedlost'];
+  const allKeys=[...ORDER.filter(k=>counts[k]),...Object.keys(counts).filter(k=>!ORDER.includes(k))];
+
+  allKeys.forEach(k=>{
     if(!counts[k])return;
-    const meta=STAGE_META[k]||{label:k,emoji:'·',cls:'t-new'};
+    const meta=STAGE_META[k]||{label:k.replace(/([a-z])([A-Z])/g,'$1 $2'),emoji:'·',cls:'t-new'};
     const chip=document.createElement('button');
-    chip.title=`Filtrar: ${meta.label}`;
+    chip.title=`Filtrar: ${meta.label} (${counts[k]})`;
     chip.style.cssText='padding:3px 7px;border:1px solid var(--border);background:transparent;font-family:Jost,sans-serif;font-size:9px;color:var(--ink3);cursor:pointer;letter-spacing:.04em;transition:all .1s;white-space:nowrap';
     chip.innerHTML=`${meta.emoji} ${counts[k]}`;
     chip.onmouseover=()=>{chip.style.borderColor='var(--gold)';chip.style.color='var(--gold)';};
@@ -741,7 +830,15 @@ function renderPipelineSummary(name){
     chip.onclick=()=>{
       const sel=document.getElementById('filter-stage');
       if(sel.value===k){sel.value='';filterClients(document.getElementById('srch').value);}
-      else{sel.value=k;filterClients(document.getElementById('srch').value);}
+      else{
+        // Add to dropdown if not already there
+        if(![...sel.options].find(o=>o.value===k)){
+          const opt=document.createElement('option');
+          opt.value=k;opt.text=`${meta.emoji} ${meta.label}`;
+          sel.appendChild(opt);
+        }
+        sel.value=k;filterClients(document.getElementById('srch').value);
+      }
     };
     bar.appendChild(chip);
   });
@@ -757,7 +854,29 @@ function selectClient(c){
   if(isNew) openClientChat(c);
 }
 
-function openClientChat(c){
+// Normalize destination string → Notion city key
+function destToCity(dest){
+  if(!dest) return null;
+  const d=dest.toLowerCase();
+  if(d.includes('cartagena')||d.includes('ctg')) return 'cartagena';
+  if(d.includes('medellín')||d.includes('medellin')||d.includes('mde')) return 'medellin';
+  if(d.includes('mexico')||d.includes('cdmx')||d.includes('ciudad de mexico')) return 'mexico_city';
+  if(d.includes('tulum')) return 'tulum';
+  if(d.includes('cancún')||d.includes('cancun')) return 'cancun';
+  return null;
+}
+
+// Detect property type from deal name keywords
+function dealToType(dealName){
+  if(!dealName) return null;
+  const d=dealName.toLowerCase();
+  if(d.includes('boat')||d.includes('bote')||d.includes('yacht')||d.includes('catamaran')) return 'boat';
+  if(d.includes('wedding')||d.includes('boda')||d.includes('venue')) return 'wedding_venue';
+  if(d.includes('villa')||d.includes('casa')||d.includes('casita')||d.includes('house')) return 'villa';
+  return null; // default: all types
+}
+
+async function openClientChat(c){
   // Clear previous messages and start fresh with client context
   document.getElementById('msgs').innerHTML='';
   const info=[];
@@ -766,14 +885,90 @@ function openClientChat(c){
   if(c.budget) info.push('💰 '+c.budget);
   if(c.phone) info.push('📱 '+c.phone);
   else if(c.email) info.push('✉ '+c.email);
-  const stageMeta2=STAGE_META[getStageKey(c)]||{label:c.dealStage||'—',emoji:'·'};
+  const stageMeta2=STAGE_META[getStageKey(c)]||{label:dealStageLabel(c.dealStage)||c.dealStage||'—',emoji:'·'};
   const stageStr=`${stageMeta2.emoji} ${stageMeta2.label}`;
-  const contextLine = info.length ? info.join(' · ') : (lang==='es'?'Sin detalles aún':'No details yet');
-  const greeting = lang==='es'
-    ? `Contexto cargado para **${c.name}** — ${contextLine}\nEtapa: ${stageStr}\n\n${c.notes?`Notas HubSpot: _${c.notes}_\n\n`:''}¿Qué buscamos para este cliente?`
-    : `Context loaded for **${c.name}** — ${contextLine}\nStage: ${stageStr}\n\n${c.notes?`HubSpot notes: _${c.notes}_\n\n`:''}What are we looking for this client?`;
-  addMsg('ag', greeting, []);
+  const contextLine = info.length ? info.join(' · ') : 'No details yet';
+  const greeting = `Context loaded for **${c.name}** — ${contextLine}\nStage: ${stageStr}\n\n${c.notes?`HubSpot notes: _${c.notes}_\n\n`:''}`;
+  addMsg('ag', greeting+'_Searching available options…_', []);
   document.getElementById('cinput').focus();
+
+  // ── Auto-search Notion for matching properties ────────────────────
+  const city = destToCity(c.dest);
+  const type = dealToType(c.dealName||c.notes||'');
+
+  if(city){
+    try{
+      const r = await fetch('/api/properties',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({action:'search', city, type, limit:5})
+      });
+      if(r.ok){
+        const data = await r.json();
+        const props = data.properties||[];
+        // Update the greeting message with real results
+        const msgs = document.getElementById('msgs');
+        const lastMsg = msgs.lastElementChild;
+        if(props.length>0){
+          // Build property cards
+          const cards = props.map(p=>{
+            const pax = p.maxPax ? `👥 ${p.maxPax}` : '';
+            const beds = p.bedrooms ? `🛏 ${p.bedrooms}bd` : '';
+            const price = p.clientPrice ? `💵 ${p.clientPrice}` : '';
+            const party = p.partyFriendly===true ? '🎉' : '';
+            const sub = [pax,beds,price,party].filter(Boolean).join('  ');
+            // Sanitize links — Notion sometimes returns URLs with extra whitespace/newlines
+            const cleanUrl = u => {
+              if(!u) return '';
+              const s = String(u).trim().replace(/\s+/g,'');
+              return (s.startsWith('http')||s.startsWith('//')) ? s : s ? 'https://'+s : '';
+            };
+            const link = cleanUrl(p.airbnb)||cleanUrl(p.photos)||cleanUrl(p.notionUrl)||'';
+            return {name:p.name, sub, link, type:p.type, city:p.city, neighborhood:p.neighborhood, bedrooms:p.bedrooms, pax:p.maxPax};
+          });
+          // Store matched properties in client context for AI
+          c._matchedProperties = props;
+          // Update last message
+          const typeLabel = type||'properties';
+          const cityLabel = c.dest||city;
+          if(lastMsg) lastMsg.querySelector('.msg-text')?
+            (lastMsg.querySelector('.msg-text').innerHTML = renderMarkdown(
+              greeting + `Found **${props.length} ${typeLabel}** available in **${cityLabel}** — here are the top matches:\n\n` +
+              props.map(p=>`**${p.name}** ${p.maxPax?`(up to ${p.maxPax} guests)`:''}${p.clientPrice?' — '+p.clientPrice:''}${p.partyFriendly===true?' · 🎉 Party OK':''}`).join('\n')
+            ))
+            : null;
+          // Add clickable property cards
+          if(cards.length){
+            addMsg('ag',
+              `What are we looking for this client? I can pull more details, check availability, or build a proposal.`,
+              cards
+            );
+          }
+        } else {
+          if(lastMsg) lastMsg.querySelector('.msg-text')?
+            (lastMsg.querySelector('.msg-text').innerHTML = renderMarkdown(
+              greeting + `No properties found in **${c.dest}** matching the current filters. What are we looking for this client?`
+            ))
+            : null;
+        }
+      }
+    }catch(e){
+      console.warn('Auto property search failed:',e);
+      // Fallback: just show the greeting without properties
+      const msgs=document.getElementById('msgs');
+      const lastMsg=msgs.lastElementChild;
+      if(lastMsg) lastMsg.querySelector('.msg-text')?
+        (lastMsg.querySelector('.msg-text').innerHTML=renderMarkdown(greeting+'What are we looking for this client?'))
+        :null;
+    }
+  } else {
+    // No city detected — update greeting without property search
+    const msgs=document.getElementById('msgs');
+    const lastMsg=msgs.lastElementChild;
+    if(lastMsg) lastMsg.querySelector('.msg-text')?
+      (lastMsg.querySelector('.msg-text').innerHTML=renderMarkdown(greeting+'What are we looking for this client?'))
+      :null;
+  }
 }
 
 function renderDetail(){
@@ -782,24 +977,26 @@ function renderDetail(){
   const dc=document.getElementById('det-content');
   dc.classList.remove('hidden');dc.style.display='flex';
   document.getElementById('det-name').textContent=selClient.name;
-  document.getElementById('det-ag').textContent=`Agente: ${agent}`;
+  document.getElementById('det-ag').textContent=`Agent: ${agent}`;
   const qs=selClient.quotes||[];
   const dates=selClient.savedAt||[];
   const t=T[lang];
-  // Build contact links
+  // Build contact links + WhatsApp follow-up button
+  const phoneDigits=selClient.phone?(selClient.phone.replace(/[^0-9]/g,'')):'';
   const phoneLink=selClient.phone?`<a href="tel:${selClient.phone}" style="color:var(--gold);text-decoration:none">${selClient.phone}</a>`:'';
-  const waLink=selClient.phone?` <a href="https://wa.me/${selClient.phone.replace(/[^0-9]/g,'')}" target="_blank" style="font-size:10px;color:var(--green);border:1px solid rgba(92,184,122,.3);padding:1px 6px;text-decoration:none;margin-left:4px">WhatsApp ↗</a>`:'';
-  const emailLink=selClient.email?`<a href="mailto:${selClient.email}" style="color:var(--gold);text-decoration:none;font-size:12px">${selClient.email}</a>`:'';
+  const waMsg=encodeURIComponent(`Hey ${selClient.name.split(' ')[0]}! This is ${agent} from Two Travel 🌴 Just wanted to follow up with you${selClient.dest?' about your trip to '+selClient.dest:''}${selClient.dates?' ('+selClient.dates+')':''} — how can I help?`);
+  const waLink=phoneDigits?` <a href="https://wa.me/${phoneDigits}?text=${waMsg}" target="_blank" style="font-size:10px;color:var(--green);border:1px solid rgba(92,184,122,.3);padding:2px 8px;text-decoration:none;margin-left:4px;border-radius:2px">💬 WhatsApp</a>`:'';
+  const emailLink=selClient.email?`<a href="mailto:${selClient.email}?subject=Two Travel — ${selClient.dest||'Your trip'}&body=Hey ${selClient.name.split(' ')[0]},%0A%0AThis is ${agent} from Two Travel. " style="color:var(--gold);text-decoration:none;font-size:12px">${selClient.email}</a>`:'';
   const contactHtml=phoneLink?(phoneLink+waLink+(emailLink?'<br>'+emailLink:'')):(emailLink||`<span style="color:var(--ink3);font-style:italic;font-size:12px">${t.noData}</span>`);
   // Deal name vs contact name
   const dealNameLine=selClient.dealName&&selClient.dealName!==selClient.name?`<div style="font-size:10px;color:var(--ink3);margin-bottom:2px;letter-spacing:.04em">Deal: ${selClient.dealName}</div>`:'';
   document.getElementById('det-body').innerHTML=`
     ${dealNameLine}
     <div class="fg2">
-      <div class="fg"><div class="fl">Teléfono / Contacto</div><div class="fv">${contactHtml}</div></div>
+      <div class="fg"><div class="fl">Phone / Contact</div><div class="fv">${contactHtml}</div></div>
       <div class="fg"><div class="fl">${t.fieldBudget}</div><div class="fv ${!selClient.budget?'em':''}">${selClient.budget||t.noDefined}</div></div>
       <div class="fg"><div class="fl">${t.fieldDest}</div><div class="fv ${!selClient.dest?'em':''}">${selClient.dest||t.noDash}</div></div>
-      <div class="fg"><div class="fl">Fecha cierre / Viaje</div><div class="fv ${!selClient.dates?'em':''}">${selClient.dates||t.noConfirmed}</div></div>
+      <div class="fg"><div class="fl">Trip Dates</div><div class="fv ${!selClient.dates?'em':''}">${selClient.dates||t.noConfirmed}</div></div>
     </div>
     <div class="fg">
       <div class="fl">${t.fieldNotes}</div>
@@ -812,6 +1009,14 @@ function renderDetail(){
 }
 
 function focusChat(){updateCtx();document.getElementById('cinput').focus();}
+
+function openWA(){
+  if(!selClient||!selClient.phone) return;
+  const digits=selClient.phone.replace(/[^0-9]/g,'');
+  const first=selClient.name.split(' ')[0];
+  const msg=encodeURIComponent(`Hey ${first}! This is ${agent} from Two Travel 🌴 Just wanted to follow up${selClient.dest?' about your trip to '+selClient.dest:''}${selClient.dates?' ('+selClient.dates+')':''} — how can I help?`);
+  window.open(`https://wa.me/${digits}?text=${msg}`,'_blank');
+}
 
 function updateCtx(){
   const ce=document.getElementById('ctx-client'),ie=document.getElementById('ctx-info'),sep=document.getElementById('ctx-sep2');
@@ -860,11 +1065,127 @@ function saveQuote(text,btn){
   if(!selClient.quotes)selClient.quotes=[];
   if(!selClient.savedAt)selClient.savedAt=[];
   selClient.quotes.push(text);
-  selClient.savedAt.push(new Date().toLocaleDateString('es',{day:'numeric',month:'short'}));
+  selClient.savedAt.push(new Date().toLocaleDateString('en-US',{day:'numeric',month:'short'}));
   const idx=clients[agent].findIndex(c=>c.id===selClient.id);
   if(idx>=0)clients[agent][idx]=selClient;
   renderDetail();btn.textContent=T[lang].saveQuoteDone;btn.disabled=true;
   toast(T[lang].toastQuote);
+}
+
+// ── CHECK AVAILABILITY via Apify Two Travel Actor ────────────────────────────
+async function checkAvailability(card){
+  // Try to pre-fill dates from client's trip info
+  // Client dates might be "October 2026", "Dec 20-25", or ISO already
+  function parseTripDates(raw){
+    if(!raw) return {ci:'',co:''};
+    // ISO date already
+    const isoM=raw.match(/(\d{4}-\d{2}-\d{2})/);
+    if(isoM) return {ci:isoM[1],co:''};
+    // "Month DD-DD YYYY" or "Month YYYY"
+    const months={January:1,February:2,March:3,April:4,May:5,June:6,July:7,August:8,September:9,October:10,November:11,December:12};
+    const mName=Object.keys(months).find(m=>raw.includes(m));
+    if(mName){
+      const yr=raw.match(/(\d{4})/)?.[1]||new Date().getFullYear();
+      const days=raw.match(/(\d{1,2})\s*[-–]\s*(\d{1,2})/);
+      const mo=String(months[mName]).padStart(2,'0');
+      if(days){
+        return{ci:`${yr}-${mo}-${String(days[1]).padStart(2,'0')}`,co:`${yr}-${mo}-${String(days[2]).padStart(2,'0')}`};
+      }
+      // Just month+year → default first week
+      return{ci:`${yr}-${mo}-01`,co:`${yr}-${mo}-05`};
+    }
+    return{ci:'',co:''};
+  }
+
+  const prefill = parseTripDates(selClient?.dates||'');
+
+  // Build date input overlay
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML=`
+    <div style="background:#fff;padding:28px 32px;width:320px;font-family:Jost,sans-serif">
+      <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7a7570;margin-bottom:16px">Check Availability — ${card.name}</div>
+      <label style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#7a7570">Check-in</label>
+      <input id="av-ci" type="date" style="width:100%;padding:8px;border:1px solid #e5ddd3;font-family:Jost,sans-serif;font-size:13px;margin:5px 0 12px;outline:none" value="${prefill.ci}">
+      <label style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#7a7570">Check-out</label>
+      <input id="av-co" type="date" style="width:100%;padding:8px;border:1px solid #e5ddd3;font-family:Jost,sans-serif;font-size:13px;margin:5px 0 20px;outline:none" value="${prefill.co}">
+      <div id="av-err" style="font-size:11px;color:#c0392b;margin-bottom:8px;display:none"></div>
+      <div style="display:flex;gap:8px">
+        <button id="av-cancel" style="flex:1;padding:9px;border:1px solid #e5ddd3;background:transparent;font-family:Jost,sans-serif;font-size:11px;cursor:pointer">Cancel</button>
+        <button id="av-check" style="flex:2;padding:9px;background:#1a1814;color:#c4a272;border:none;font-family:Jost,sans-serif;font-size:11px;letter-spacing:.06em;cursor:pointer">Check ↗</button>
+      </div>
+      <div id="av-result" style="margin-top:14px;font-size:12px;line-height:1.5;display:none"></div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  // Auto-set checkout = checkin + 3 nights when checkin changes
+  const ciEl=overlay.querySelector('#av-ci');
+  const coEl=overlay.querySelector('#av-co');
+  ciEl.addEventListener('change',()=>{
+    if(ciEl.value && (!coEl.value || coEl.value<=ciEl.value)){
+      const d=new Date(ciEl.value+'T12:00:00');
+      d.setDate(d.getDate()+3);
+      coEl.value=d.toISOString().slice(0,10);
+    }
+  });
+
+  document.getElementById('av-cancel').onclick=()=>overlay.remove();
+
+  document.getElementById('av-check').onclick=async()=>{
+    const ci=document.getElementById('av-ci').value;
+    const co=document.getElementById('av-co').value;
+    const errEl=document.getElementById('av-err');
+    errEl.style.display='none';
+    if(!ci||!co){errEl.textContent='Enter both check-in and check-out dates.';errEl.style.display='block';return;}
+    if(co<=ci){errEl.textContent='Check-out must be after check-in.';errEl.style.display='block';return;}
+    const nights=Math.ceil((new Date(co)-new Date(ci))/86400000);
+    if(nights<1){errEl.textContent='Minimum 1 night required.';errEl.style.display='block';return;}
+
+    const btn=document.getElementById('av-check');
+    btn.textContent='Checking…';btn.disabled=true;
+
+    const resultEl=document.getElementById('av-result');
+    resultEl.style.display='block';
+    resultEl.innerHTML=`<span style="color:#7a7570">Checking availability via Apify… (up to 60s)</span>`;
+
+    try{
+      const r=await fetch('/api/apify',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'check_single',airbnbUrl:card.link,checkIn:ci,checkOut:co})
+      });
+      const d=await r.json();
+
+      if(!r.ok){
+        const msg = d.demo
+          ? `⚠️ Apify not configured — add <b>APIFY_TOKEN</b> to Vercel env vars to enable live availability checks.`
+          : `Error: ${d.error||'Unknown error'}${d.hint?'<br><small style="color:#7a7570">'+d.hint+'</small>':''}`;
+        resultEl.innerHTML=`<span style="color:#9a7d52">${msg}</span>`;
+        btn.textContent='Close';btn.disabled=false;
+        return;
+      }
+
+      const nights=d.totalNights||Math.ceil((new Date(co)-new Date(ci))/86400000);
+      const ciF=new Date(ci+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      const coF=new Date(co+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+
+      if(d.rangeAvailable===true){
+        const priceStr = d.pricePerNight ? ` — ${d.currency||'USD'} ${d.pricePerNight}/night${d.totalPrice?' (total: '+d.currency+' '+d.totalPrice+')':''}` : '';
+        const minStr   = d.minStay ? ` · min ${d.minStay} nights` : '';
+        resultEl.innerHTML=`<div style="color:#5cb87a;font-weight:500">✓ Available — ${nights} nights${priceStr}</div><div style="color:#7a7570;font-size:11px;margin-top:4px">${ciF} → ${coF}${minStr}</div>`;
+        addMsg('ag',`✅ **${card.name}** is **available** for ${nights} nights (${ciF} – ${coF})${priceStr}. Ready to send the proposal to ${selClient?.name||'the client'}?`);
+      } else if(d.rangeAvailable===false){
+        resultEl.innerHTML=`<div style="color:#c0392b;font-weight:500">✗ Not available for these dates</div><div style="color:#7a7570;font-size:11px;margin-top:4px">${ciF} → ${coF}</div>`;
+        addMsg('ag',`❌ **${card.name}** is **not available** for ${ciF} – ${coF}. Want me to check other properties or different dates?`);
+      } else {
+        resultEl.innerHTML=`<span style="color:#7a7570">Check complete — availability status unclear. Try opening Airbnb directly.</span>`;
+      }
+
+      btn.textContent='Done';
+    }catch(err){
+      resultEl.innerHTML=`<span style="color:#c0392b">Network error: ${err.message}</span>`;
+      btn.textContent='Retry';btn.disabled=false;
+    }
+  };
 }
 
 function addMsg(role,text,cards){
@@ -884,7 +1205,26 @@ function addMsg(role,text,cards){
       cards.forEach(card=>{
         const c=document.createElement('div');c.className='pcard';
         c.innerHTML=`<div class="pc-n">${card.name||''}</div><div class="pc-c">${card.city||''}${card.neighborhood?' · '+card.neighborhood:''}</div><div class="pc-ps">${card.bedrooms?`<span class="pc-p">${card.bedrooms} hab</span>`:''} ${card.pax?`<span class="pc-p">${card.pax} pax</span>`:''} ${card.capacity?`<span class="pc-p">${card.capacity} cap</span>`:''} ${card.type?`<span class="pc-p">${card.type}</span>`:''} ${card.rating?`<span class="pc-p hl">${card.rating}</span>`:''}</div>`;
-        if(card.link)c.onclick=()=>window.open(card.link,'_blank');
+        // Action row: Airbnb + Availability
+        const pcActs=document.createElement('div');
+        pcActs.style.cssText='display:flex;gap:5px;margin-top:6px;flex-wrap:wrap';
+        if(card.link){
+          const abBtn=document.createElement('a');
+          abBtn.href=card.link; abBtn.target='_blank';
+          abBtn.style.cssText='font-size:9px;letter-spacing:.06em;color:var(--gold);border:1px solid var(--gold3);padding:3px 8px;text-decoration:none;background:rgba(154,125,82,.05)';
+          abBtn.textContent='Airbnb ↗';
+          pcActs.appendChild(abBtn);
+        }
+        if(card.link&&card.link.includes('airbnb')){
+          const avBtn=document.createElement('button');
+          avBtn.style.cssText='font-size:9px;letter-spacing:.06em;color:var(--ink3);border:1px solid var(--border2);padding:3px 8px;background:transparent;cursor:pointer;font-family:Jost,sans-serif';
+          avBtn.textContent='Check Availability';
+          avBtn.onclick=e=>{e.stopPropagation();checkAvailability(card);};
+          pcActs.appendChild(avBtn);
+        }
+        if(pcActs.children.length) c.appendChild(pcActs);
+        // Main card click → open Airbnb only if no link buttons
+        if(card.link&&!card.link.includes('airbnb')) c.style.cursor='pointer',c.onclick=()=>window.open(card.link,'_blank');
         g.appendChild(c);
       });
       b.appendChild(g);
@@ -896,7 +1236,7 @@ function addMsg(role,text,cards){
       }
     }
     const t=document.createElement('span');t.className='stag';
-    t.textContent='Two Travel · '+new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+    t.textContent='Two Travel · '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
     b.appendChild(t);
   }else{b.textContent=text;}
   msgs.scrollTop=msgs.scrollHeight;
@@ -926,7 +1266,7 @@ function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()
 function sh(t){const i=document.getElementById('cinput');i.value=t;autoR(i);i.focus();}
 function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
 
-let lang='es';
+let lang='en';
 
 function L(es,en){return lang==='es'?es:en;}
 
@@ -1046,7 +1386,14 @@ function intDot(key){
 
 // ── Real Claude API call ───────────────────────────────────────
 async function callClaudeAPI(userText){
-  const clientCtx=selClient?{name:selClient.name,dealName:selClient.dealName||selClient.name,phone:selClient.phone||'',email:selClient.email||'',destination:selClient.dest,dates:selClient.dates,budget:selClient.budget,status:selClient.status,pipelineStage:selClient.dealStage,notes:selClient.notes,agentName:agent}:null;
+  // Build matched properties summary for AI context
+  const matchedPropsSummary = selClient?._matchedProperties?.length
+    ? '\n\nPRE-LOADED PROPERTIES for this client:\n' +
+      selClient._matchedProperties.map(p=>
+        `- ${p.name} (${p.city}, up to ${p.maxPax||'?'} guests${p.clientPrice?', '+p.clientPrice:''}${p.partyFriendly===true?', party OK':''}${p.airbnb?', airbnb: '+p.airbnb:''})`
+      ).join('\n')
+    : '';
+  const clientCtx=selClient?{name:selClient.name,dealName:selClient.dealName||selClient.name,phone:selClient.phone||'',email:selClient.email||'',destination:selClient.dest,dates:selClient.dates,budget:selClient.budget,status:selClient.status,pipelineStage:dealStageLabel(selClient.dealStage)||selClient.dealStage,notes:(selClient.notes||'')+matchedPropsSummary,agentName:agent}:null;
   chatHistory.push({role:'user',content:userText});
   try{
     const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},

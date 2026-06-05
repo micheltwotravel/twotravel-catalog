@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Two Travel · Property Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sand:#f7f4ef;--sand2:#efe9e0;--sand3:#e5ddd3;
+  --ink:#1a1814;--ink2:#3d3a35;--ink3:#7a7570;
+  --gold:#9a7d52;--gold2:#c4a272;--gold3:#e8d5b7;
+  --white:#ffffff;--border:rgba(26,24,20,0.09);--border2:rgba(26,24,20,0.15);
+  --green:#5cb87a;--red:#e05050;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Jost',sans-serif;background:var(--sand);color:var(--ink);font-weight:300;min-height:100vh}
+
+/* Header */
+.header{background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;height:54px;gap:0;position:sticky;top:0;z-index:10}
+.logo{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:500;letter-spacing:.04em}
+.hdiv{width:1px;height:14px;background:var(--border2);margin:0 13px}
+.hls{font-size:10px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase}
+.hright{margin-left:auto;display:flex;align-items:center;gap:10px}
+.nav-link{font-size:11px;color:var(--ink3);text-decoration:none;letter-spacing:.06em;padding:4px 10px;border:1px solid var(--border);transition:all .1s}
+.nav-link:hover{border-color:var(--gold);color:var(--gold)}
+
+/* Layout */
+.page{max-width:960px;margin:0 auto;padding:36px 24px}
+.page-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:400;margin-bottom:4px}
+.page-sub{font-size:11px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:32px}
+
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border2);margin-bottom:32px}
+.tab{padding:9px 18px;font-family:'Jost',sans-serif;font-size:11px;color:var(--ink3);cursor:pointer;border:none;background:transparent;letter-spacing:.08em;text-transform:uppercase;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .1s}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.tab:hover:not(.active){color:var(--ink2)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* Form */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.form-grid.single{grid-template-columns:1fr}
+.field{display:flex;flex-direction:column;gap:5px}
+.field.full{grid-column:1/-1}
+label{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+input,select,textarea{padding:9px 12px;background:var(--white);border:1px solid var(--border2);font-family:'Jost',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:border .1s;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--gold)}
+input::placeholder,textarea::placeholder{color:var(--ink3)}
+textarea{resize:vertical;min-height:80px}
+.checkbox-row{display:flex;align-items:center;gap:8px;padding:9px 0}
+.checkbox-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;flex-shrink:0}
+.checkbox-row span{font-size:13px;color:var(--ink2)}
+
+/* Section divider */
+.section-lbl{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);padding:20px 0 10px;grid-column:1/-1;border-top:1px solid var(--border);margin-top:8px}
+.section-lbl:first-child{border-top:none;margin-top:0;padding-top:0}
+
+/* Buttons */
+.btn-row{display:flex;gap:10px;align-items:center;margin-top:28px;padding-top:20px;border-top:1px solid var(--border)}
+.btn{padding:10px 24px;font-family:'Jost',sans-serif;font-size:12px;letter-spacing:.06em;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--ink2);transition:all .12s}
+.btn:hover{border-color:var(--gold);color:var(--gold)}
+.btn.primary{background:var(--ink);color:var(--white);border-color:var(--ink)}
+.btn.primary:hover{background:var(--gold);border-color:var(--gold)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Toast */
+.toast{position:fixed;bottom:28px;right:28px;padding:12px 20px;font-size:12px;letter-spacing:.04em;border:1px solid;z-index:100;transition:all .2s;pointer-events:none}
+.toast.success{background:rgba(92,184,122,.1);border-color:rgba(92,184,122,.4);color:#3a9960}
+.toast.error{background:rgba(224,80,80,.08);border-color:rgba(224,80,80,.3);color:var(--red)}
+.toast.hidden{opacity:0;transform:translateY(10px)}
+
+/* Property list */
+.prop-list{display:flex;flex-direction:column;gap:10px}
+.prop-card{background:var(--white);border:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:all .1s}
+.prop-card:hover{border-color:var(--gold);background:var(--sand)}
+.prop-badge{font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border:1px solid var(--gold3);color:var(--gold);background:rgba(154,125,82,.06)}
+.prop-name{font-size:14px;font-weight:400;flex:1}
+.prop-meta{font-size:11px;color:var(--ink3)}
+.search-bar{width:100%;padding:9px 12px;background:var(--white);border:1px solid var(--border2);font-family:'Jost',sans-serif;font-size:13px;color:var(--ink);outline:none;margin-bottom:16px}
+.search-bar:focus{border-color:var(--gold)}
+.loading-row{text-align:center;padding:40px;font-size:11px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase}
+
+/* Amenities multi-select */
+.amenity-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.amenity-chip{padding:4px 10px;border:1px solid var(--border2);font-size:11px;color:var(--ink3);cursor:pointer;transition:all .1s;user-select:none}
+.amenity-chip.selected{border-color:var(--gold);color:var(--gold);background:rgba(154,125,82,.06)}
+
+/* City & type pills on list */
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.fpill{padding:4px 10px;border:1px solid var(--border);font-size:10px;color:var(--ink3);cursor:pointer;background:transparent;font-family:'Jost',sans-serif;letter-spacing:.04em;transition:all .1s}
+.fpill.active,.fpill:hover{border-color:var(--gold);color:var(--gold)}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <span class="logo">Two Travel</span>
+  <div class="hdiv"></div>
+  <span class="hls">Property Manager</span>
+  <div class="hright">
+    <a href="/agent.html" class="nav-link">← Sales Agent</a>
+  </div>
+</header>
+
+<div class="page">
+  <div class="page-title">Property Manager</div>
+  <div class="page-sub">Add and manage villas, boats, and venues in the Two Travel portfolio</div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('add')">+ Add Property</button>
+    <button class="tab" onclick="switchTab('list')">Browse Portfolio</button>
+  </div>
+
+  <!-- ADD PROPERTY TAB -->
+  <div class="tab-panel active" id="tab-add">
+    <form id="prop-form" onsubmit="submitProperty(event)">
+      <div class="form-grid">
+
+        <div class="section-lbl">Basic Info</div>
+
+        <div class="field full">
+          <label>Property Name *</label>
+          <input id="f-name" type="text" placeholder="e.g. Casa Azul · Bocagrande" required>
+        </div>
+
+        <div class="field">
+          <label>City *</label>
+          <select id="f-city" required>
+            <option value="">— Select city —</option>
+            <option value="Cartagena">Cartagena</option>
+            <option value="Medellín">Medellín</option>
+            <option value="Mexico City">Mexico City</option>
+            <option value="Tulum">Tulum</option>
+            <option value="Cancún">Cancún</option>
+            <option value="Bogotá">Bogotá</option>
+            <option value="Miami">Miami</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Property Type</label>
+          <select id="f-type">
+            <option value="Villa">Villa</option>
+            <option value="Penthouse">Penthouse</option>
+            <option value="Boat">Boat / Yacht</option>
+            <option value="Speedboat">Speedboat / Lancha</option>
+            <option value="Wedding Venue">Wedding Venue</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Neighborhood / Area</label>
+          <input id="f-neighborhood" type="text" placeholder="e.g. Bocagrande, El Poblado">
+        </div>
+
+        <div class="field">
+          <label>Status</label>
+          <select id="f-status">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Pending Review">Pending Review</option>
+          </select>
+        </div>
+
+        <div class="section-lbl">Capacity & Rooms</div>
+
+        <div class="field">
+          <label>Max Guests (Pax)</label>
+          <input id="f-pax" type="number" placeholder="e.g. 20" min="1" max="500">
+        </div>
+
+        <div class="field">
+          <label>Bedrooms</label>
+          <input id="f-beds" type="number" placeholder="e.g. 6" min="0">
+        </div>
+
+        <div class="field">
+          <label>Bathrooms</label>
+          <input id="f-baths" type="number" placeholder="e.g. 5" min="0">
+        </div>
+
+        <div class="field">
+          <div class="checkbox-row">
+            <input id="f-party" type="checkbox">
+            <span>Bachelor / Party Friendly</span>
+          </div>
+        </div>
+
+        <div class="section-lbl">Pricing</div>
+
+        <div class="field">
+          <label>Client Price (per night)</label>
+          <input id="f-price" type="text" placeholder="e.g. $3,500 USD/night">
+        </div>
+
+        <div class="field">
+          <label>Internal / Our Price</label>
+          <input id="f-our-price" type="text" placeholder="e.g. $2,800 USD/night">
+        </div>
+
+        <div class="section-lbl">Links & Photos</div>
+
+        <div class="field">
+          <label>Airbnb Link</label>
+          <input id="f-airbnb" type="url" placeholder="https://airbnb.com/rooms/...">
+        </div>
+
+        <div class="field">
+          <label>Photos / Drive Link</label>
+          <input id="f-photos" type="url" placeholder="https://drive.google.com/...">
+        </div>
+
+        <div class="section-lbl">Description & Amenities</div>
+
+        <div class="field full">
+          <label>Description (what makes it special)</label>
+          <textarea id="f-desc" placeholder="Spectacular oceanfront villa in Bocagrande with rooftop pool, 6 bedrooms, event-ready terrace..."></textarea>
+        </div>
+
+        <div class="field full">
+          <label>Amenities (click to select)</label>
+          <div class="amenity-grid" id="amenity-grid">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+      </div><!-- /form-grid -->
+
+      <div class="btn-row">
+        <button type="submit" class="btn primary" id="submit-btn">Save to Notion</button>
+        <button type="button" class="btn" onclick="resetForm()">Clear</button>
+        <span id="form-status" style="font-size:11px;color:var(--ink3)"></span>
+      </div>
+    </form>
+  </div>
+
+  <!-- BROWSE TAB -->
+  <div class="tab-panel" id="tab-list">
+    <div class="filter-row" id="city-filters">
+      <button class="fpill active" onclick="setFilter('city','')">All cities</button>
+      <button class="fpill" onclick="setFilter('city','cartagena')">Cartagena</button>
+      <button class="fpill" onclick="setFilter('city','medellin')">Medellín</button>
+      <button class="fpill" onclick="setFilter('city','mexico_city')">Mexico City</button>
+      <button class="fpill" onclick="setFilter('city','tulum')">Tulum</button>
+    </div>
+    <div class="filter-row">
+      <button class="fpill active" onclick="setFilter('type','')">All types</button>
+      <button class="fpill" onclick="setFilter('type','villa')">Villas</button>
+      <button class="fpill" onclick="setFilter('type','boat')">Boats</button>
+      <button class="fpill" onclick="setFilter('type','wedding_venue')">Venues</button>
+    </div>
+    <input class="search-bar" id="prop-search" placeholder="Search by name..." oninput="renderProps()">
+    <div id="prop-list" class="prop-list">
+      <div class="loading-row">Loading portfolio…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast hidden" id="toast"></div>
+
+<script>
+const AMENITIES = [
+  'Pool','Infinity Pool','Jacuzzi','Rooftop','Ocean View','Mountain View',
+  'Terrace/Balcony','Outdoor Kitchen','Outdoor Shower','Sound System',
+  'Karaoke','WiFi','TV','Parking','Security','Laundry Service',
+  'Pet Friendly','Waterfront','Yoga Space','Wine Cellar','Sauna/Steam Room',
+  'Tennis Court','Washer/Dryer','Valley View'
+];
+
+let selectedAmenities = [];
+let allProps = [];
+let activeFilters = { city: '', type: '' };
+
+// ── Init amenity chips ─────────────────────────────────────────────
+function initAmenities() {
+  const grid = document.getElementById('amenity-grid');
+  grid.innerHTML = '';
+  AMENITIES.forEach(a => {
+    const chip = document.createElement('div');
+    chip.className = 'amenity-chip' + (selectedAmenities.includes(a) ? ' selected' : '');
+    chip.textContent = a;
+    chip.onclick = () => {
+      if (selectedAmenities.includes(a)) {
+        selectedAmenities = selectedAmenities.filter(x => x !== a);
+        chip.classList.remove('selected');
+      } else {
+        selectedAmenities.push(a);
+        chip.classList.add('selected');
+      }
+    };
+    grid.appendChild(chip);
+  });
+}
+
+// ── Tab switching ──────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'list' && allProps.length === 0) loadProps();
+}
+
+// ── Submit form ────────────────────────────────────────────────────
+async function submitProperty(e) {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  const status = document.getElementById('form-status');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  status.textContent = '';
+
+  const data = {
+    name:            document.getElementById('f-name').value.trim(),
+    city:            document.getElementById('f-city').value,
+    propertyType:    document.getElementById('f-type').value,
+    neighborhood:    document.getElementById('f-neighborhood').value.trim(),
+    status:          document.getElementById('f-status').value,
+    maxPax:          document.getElementById('f-pax').value || null,
+    bedrooms:        document.getElementById('f-beds').value || null,
+    bathrooms:       document.getElementById('f-baths').value || null,
+    bachelorFriendly: document.getElementById('f-party').checked,
+    clientPrice:     document.getElementById('f-price').value.trim(),
+    description:     document.getElementById('f-desc').value.trim(),
+    airbnbLink:      document.getElementById('f-airbnb').value.trim() || null,
+    photosLink:      document.getElementById('f-photos').value.trim() || null,
+    amenities:       selectedAmenities,
+  };
+
+  try {
+    const r = await fetch('/api/notion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create_property', data })
+    });
+    const d = await r.json();
+    if (r.ok && d.ok) {
+      showToast('✓ Property saved to Notion!', 'success');
+      resetForm();
+      allProps = []; // refresh cache
+    } else {
+      showToast('Error: ' + (d.error || 'Something went wrong'), 'error');
+      console.error(d);
+    }
+  } catch(err) {
+    showToast('Network error — try again', 'error');
+    console.error(err);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Save to Notion';
+}
+
+// ── Reset form ─────────────────────────────────────────────────────
+function resetForm() {
+  document.getElementById('prop-form').reset();
+  selectedAmenities = [];
+  initAmenities();
+  document.getElementById('form-status').textContent = '';
+}
+
+// ── Load portfolio ─────────────────────────────────────────────────
+async function loadProps() {
+  document.getElementById('prop-list').innerHTML = '<div class="loading-row">Loading portfolio…</div>';
+  try {
+    const r = await fetch('/api/properties', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'search', limit: 100 })
+    });
+    const d = await r.json();
+    allProps = d.properties || [];
+    renderProps();
+  } catch(e) {
+    document.getElementById('prop-list').innerHTML = '<div class="loading-row">Could not load — check connection</div>';
+  }
+}
+
+// ── Render property list ───────────────────────────────────────────
+function setFilter(key, val) {
+  activeFilters[key] = val;
+  // update button states
+  const allPills = document.querySelectorAll('.fpill');
+  allPills.forEach(p => {
+    const onclick = p.getAttribute('onclick') || '';
+    if (onclick.includes(`'${key}'`) && onclick.includes(`'${val}'`)) p.classList.add('active');
+    else if (onclick.includes(`'${key}'`)) p.classList.remove('active');
+  });
+  renderProps();
+}
+
+function renderProps() {
+  const q = (document.getElementById('prop-search')?.value || '').toLowerCase();
+  const list = document.getElementById('prop-list');
+
+  let filtered = allProps.filter(p => {
+    const nameMatch = !q || (p.name || '').toLowerCase().includes(q);
+    const cityMatch = !activeFilters.city || (p.city || '').toLowerCase().includes(activeFilters.city);
+    const typeMatch = !activeFilters.type || (p.type || '').toLowerCase().includes(activeFilters.type);
+    return nameMatch && cityMatch && typeMatch;
+  });
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="loading-row">No properties found</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  filtered.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'prop-card';
+    const city = (p.city || '').replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const type = (p.type || '').replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const meta = [
+      p.maxPax ? `👥 ${p.maxPax} guests` : '',
+      p.bedrooms ? `🛏 ${p.bedrooms} beds` : '',
+      p.clientPrice ? `💵 ${p.clientPrice}` : '',
+      p.partyFriendly === true ? '🎉 Party OK' : '',
+    ].filter(Boolean).join('  ·  ');
+
+    card.innerHTML = `
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span class="prop-badge">${city}</span>
+          <span class="prop-badge" style="color:var(--ink3);border-color:var(--border)">${type}</span>
+        </div>
+        <div class="prop-name">${p.name}</div>
+        <div class="prop-meta">${meta || '—'}</div>
+      </div>
+      ${p.airbnb ? `<a href="${p.airbnb}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:var(--gold);border:1px solid var(--gold3);padding:4px 10px;text-decoration:none;white-space:nowrap">View ↗</a>` : ''}
+    `;
+    if (p.notionUrl) {
+      card.onclick = () => window.open(p.notionUrl, '_blank');
+    }
+    list.appendChild(card);
+  });
+}
+
+// ── Toast ──────────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  setTimeout(() => { t.className = 'toast hidden'; }, 3500);
+}
+
+// ── Init ───────────────────────────────────────────────────────────
+initAmenities();
+</script>
+</body>
+</html>

@@ -156,6 +156,65 @@ export default async function handler(req, res) {
       return res.status(200).json({ clients });
     }
 
+    // ── CREATE PROPERTY ────────────────────────────────────────
+    // ALL types → single master DB "TT Villas - All Cities"
+    // Required Notion fields: Villa Name (title), City (select),
+    //   Property Type (select: Villa|Boat|Speedboat|Wedding Venue|Penthouse),
+    //   Neighborhood (rich_text), Status (select), Max Pax (number),
+    //   Bedrooms (number), Bathrooms (number), CLIENT PRICE (rich_text),
+    //   OUR PRICE (rich_text), AIR BNB LINK (url), Photos Link (url),
+    //   Bachelor Friendly (checkbox), Description (rich_text), Amenities (multi_select)
+    if (action === "create_property") {
+      const MASTER_DB = (process.env.NOTION_PROPERTIES_DB || "313ca3b33271807385ecf3ec138861f0").trim();
+
+      const {
+        name, city, propertyType = "Villa", maxPax, bedrooms, bathrooms,
+        clientPrice, ourPrice, airbnbLink, photosLink, bachelorFriendly,
+        description, amenities, neighborhood, status
+      } = data || {};
+
+      if (!name) return res.status(400).json({ error: "name required" });
+
+      const dbId = MASTER_DB;
+      console.log(`[Notion] create_property → type=${propertyType} city=${city} → master DB ${dbId}`);
+
+      const amenityList = amenities && amenities.length > 0
+        ? (Array.isArray(amenities) ? amenities : amenities.split(",").map(a => a.trim()))
+        : [];
+
+      // Capitalize property type for Notion select consistency
+      const typeLabel = String(propertyType || "Villa").trim();
+
+      const props = {
+        "Villa Name": title(name),
+        ...(city         && { "City":             { select: { name: city } } }),
+        ...(typeLabel    && { "Property Type":    { select: { name: typeLabel } } }),
+        ...(maxPax       && { "Max Pax":          { number: Number(maxPax) } }),
+        ...(bedrooms     && { "Bedrooms":         { number: Number(bedrooms) } }),
+        ...(bathrooms    && { "Bathrooms":        { number: Number(bathrooms) } }),
+        ...(clientPrice  && { "CLIENT PRICE":     { rich_text: rt(clientPrice) } }),
+        ...(ourPrice     && { "OUR PRICE":        { rich_text: rt(ourPrice) } }),
+        ...(airbnbLink   && { "AIR BNB LINK":     { url: airbnbLink.trim() } }),
+        ...(photosLink   && { "Photos Link":      { url: photosLink.trim() } }),
+        ...(bachelorFriendly !== undefined && { "Bachelor Friendly": { checkbox: !!bachelorFriendly } }),
+        ...(description  && { "Description":      { rich_text: rt(description) } }),
+        ...(neighborhood && { "Neighborhood":     { rich_text: rt(neighborhood) } }),
+        ...(status       && { "Status":           { select: { name: status } } }),
+        ...(amenityList.length > 0 && { "Amenities": { multi_select: amenityList.map(a => ({ name: a })) } }),
+      };
+
+      const r = await notionRequest("/pages", "POST", {
+        parent: { database_id: dbId },
+        properties: props,
+      }, token);
+
+      if (!r.ok) {
+        console.error("[Notion] create_property error:", JSON.stringify(r.data).slice(0, 500));
+        return res.status(500).json({ error: "Notion error", details: r.data });
+      }
+      return res.status(200).json({ action: "property_created", pageId: r.data?.id, url: r.data?.url, dbId, ok: true });
+    }
+
     return res.status(400).json({ error: `Unknown action: ${action}` });
 
   } catch (err) {

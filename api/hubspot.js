@@ -218,18 +218,64 @@ export default async function handler(req, res) {
       }
 
       // Step 2: fetch deals, optionally filtered by owner
-      // ownerIdFilter can be a comma-separated list (e.g. "79812500,76548535") for agents with multiple pipelines
+      // Strategy: fetch active deals first (non-closed stages), then closed deals to fill remaining slots
       const ownerIds = ownerIdFilter ? ownerIdFilter.split(",").map(s => s.trim()).filter(Boolean) : [];
-      const searchBody = {
-        limit,
-        properties: ["dealname","dealstage","amount","closedate","description","hs_next_step","hubspot_owner_id","notes_last_contacted","createdate","lastmodifieddate","num_associated_contacts"],
-        sorts: [{ propertyName: "lastmodifieddate", direction: "DESCENDING" }],
-        ...(ownerIds.length > 0 && {
-          filterGroups: [{ filters: [{ propertyName: "hubspot_owner_id", operator: "IN", values: ownerIds }] }]
-        }),
+
+      // Known closed stage IDs across all Two Travel pipelines
+      const CLOSED_STAGE_IDS = [
+        "closedwon","closedlost",
+        "1036315967","1036315968",      // Closed WON / LOST (main pipeline)
+        "1078513049",                    // Trip Completed - Request Google Review
+        "1064536622",                    // Check-In Complete
+        "1084922965",                    // Boat Sold
+        "1078536820",                    // Wedding Complete
+        "1081725980","1081725981","1081725982", // Closed WON BOAT/CONCIERGE/CHECK-IN
+        "1081740661","1081740662","1081740663","1081740664", // Closed WON/LOST (CTG pipelines)
+        "1262769731",                    // Closed Won (CDMX pipeline)
+      ];
+
+      const ownerFilter = ownerIds.length > 0
+        ? [{ propertyName: "hubspot_owner_id", operator: "IN", values: ownerIds }]
+        : [];
+
+      const PROPS = ["dealname","dealstage","amount","closedate","description","hs_next_step","hubspot_owner_id","notes_last_contacted","createdate","lastmodifieddate","num_associated_contacts"];
+
+      // Pass 1: active deals (not in closed stages) — sorted by closedate descending (upcoming first)
+      const activeBody = {
+        limit: 100,
+        properties: PROPS,
+        sorts: [{ propertyName: "closedate", direction: "DESCENDING" }],
+        filterGroups: [{
+          filters: [
+            ...ownerFilter,
+            { propertyName: "dealstage", operator: "NOT_IN", values: CLOSED_STAGE_IDS },
+          ]
+        }],
       };
-      const r = await hubspotRequest("/crm/v3/objects/deals/search", "POST", searchBody, token);
-      const deals = r.data?.results || [];
+      const activeRes = await hubspotRequest("/crm/v3/objects/deals/search", "POST", activeBody, token);
+      const activeDeals = activeRes.data?.results || [];
+
+      // Pass 2: recent closed deals (fill remaining slots up to limit)
+      const closedLimit = Math.max(0, limit - activeDeals.length);
+      let closedDeals = [];
+      if (closedLimit > 0) {
+        const closedBody = {
+          limit: closedLimit,
+          properties: PROPS,
+          sorts: [{ propertyName: "lastmodifieddate", direction: "DESCENDING" }],
+          filterGroups: [{
+            filters: [
+              ...ownerFilter,
+              { propertyName: "dealstage", operator: "IN", values: CLOSED_STAGE_IDS },
+            ]
+          }],
+        };
+        const closedRes = await hubspotRequest("/crm/v3/objects/deals/search", "POST", closedBody, token);
+        closedDeals = closedRes.data?.results || [];
+      }
+
+      const deals = [...activeDeals, ...closedDeals];
+      console.log(`[HubSpot] Active deals: ${activeDeals.length}, Closed deals: ${closedDeals.length}`);
 
       // Step 3: batch-fetch associated contacts to get phone/email
       let contactByDealId = {};
