@@ -662,15 +662,36 @@ function buildFeedbackLink(kickoff, clientType = 1, lang = "en") {
   url.searchParams.set("tripName", kickoff?.tripName || "");
   url.searchParams.set("guestContact", kickoff?.guestContact || "");
 
-  // Map city code → dropdown label (e.g. "CTG" → "Cartagena")
-  const rawCity = kickoff?.city || "";
-  const destination = CITY_TO_DESTINATION[rawCity] || CITY_TO_DESTINATION[rawCity.toLowerCase()] || rawCity;
-  if (destination) url.searchParams.set("destination", destination);
+  // Helper: map city code / name → dropdown label
+  const resolveCity = (raw) => {
+    if (!raw) return "";
+    const key = String(raw).trim();
+    return CITY_TO_DESTINATION[key] || CITY_TO_DESTINATION[key.toLowerCase()] || key;
+  };
+
+  // City 1 — supports comma-separated "CTG,MDE" in the city field
+  const rawCity = String(kickoff?.city || "").trim();
+  const cityParts = rawCity.includes(",")
+    ? rawCity.split(",").map(s => s.trim())
+    : [rawCity];
+
+  const dest1 = resolveCity(cityParts[0]);
+  if (dest1) url.searchParams.set("destination", dest1);
+
+  // City 2 — explicit city2 field OR second part of comma-separated city
+  const rawCity2 = String(kickoff?.city2 || cityParts[1] || "").trim();
+  const dest2 = resolveCity(rawCity2);
+  if (dest2) url.searchParams.set("destination2", dest2);
 
   // Map full concierge name → dropdown short name (e.g. "Alia Jadad" → "Alia")
   const rawConcierge = kickoff?.assignedConcierge || "";
   const concierge = CONCIERGE_TO_SHORT[rawConcierge] || rawConcierge.split(" ")[0] || "";
   if (concierge) url.searchParams.set("concierge", concierge);
+
+  // Concierge 2 (for multi-city trips)
+  const rawConcierge2 = kickoff?.assignedConcierge2 || "";
+  const concierge2 = CONCIERGE_TO_SHORT[rawConcierge2] || rawConcierge2.split(" ")[0] || "";
+  if (concierge2) url.searchParams.set("concierge2", concierge2);
 
   return url.toString();
 }
@@ -698,13 +719,58 @@ function buildOnboardLink(kickoff, clientType = 1, lang = "en") {
   return url.toString();
 }
 
-function mapServiceToCartItem(service, clientType = 1) {
+/* Resolve variable price for tiered/ranges models (mirrors TwoTravelCatalog) */
+function resolveVariablePrice(service, groupSizeNum) {
+  const model = String(service?.pricing_model || "").trim().toLowerCase();
+  const raw   = String(service?.pricing_tiers  || "").trim();
+  if (!model || !raw) return null;
+  const tiers = raw.split(",").map(part => {
+    const sep = part.lastIndexOf(":");
+    if (sep < 0) return null;
+    const label = part.substring(0, sep).trim();
+    const price = parseInt(part.substring(sep + 1).replace(/\D/g, "")) || 0;
+    if (model === "tiered") return { pax: parseInt(label) || 1, pricePerPerson: price };
+    if (model === "ranges") {
+      const d = label.indexOf("-");
+      return d >= 0
+        ? { min: parseInt(label) || 1, max: parseInt(label.substring(d + 1)) || 999, totalPrice: price }
+        : { min: parseInt(label.replace("+","")) || 1, max: 999, totalPrice: price };
+    }
+    return null;
+  }).filter(Boolean);
+  if (!tiers.length) return null;
+  const n = Math.max(1, parseInt(groupSizeNum) || 1);
+  if (model === "tiered") {
+    const sorted = [...tiers].sort((a, b) => b.pax - a.pax);
+    const match  = sorted.find(t => t.pax <= n) || sorted[sorted.length - 1];
+    return { price: match.pricePerPerson, unit: "per person" };
+  }
+  if (model === "ranges") {
+    const match = tiers.find(t => n >= t.min && n <= t.max);
+    return match ? { price: match.totalPrice, unit: "per group" } : null;
+  }
+  return null;
+}
+
+function mapServiceToCartItem(service, clientType = 1, groupSizeNum = 1) {
   const base = Number(service?.price_cop || 0);
   const t1 = Number(service?.price_tier_1 || 0);
   const t2 = Number(service?.price_tier_2 || 0);
 
   const ct = String(clientType).includes("2") ? 2 : 1;
-const chosen = ct === 2 ? (t2 || base) : (t1 || base);
+  let chosen = ct === 2 ? (t2 || base) : (t1 || base);
+  let resolvedUnit = service?.priceUnit || "";
+
+  // Variable pricing override (tiered / ranges)
+  const vModel = String(service?.pricing_model || "").trim().toLowerCase();
+  const vRaw   = String(service?.pricing_tiers  || "").trim();
+  if (vModel && vRaw) {
+    const resolved = resolveVariablePrice(service, groupSizeNum);
+    if (resolved) {
+      chosen       = resolved.price;
+      resolvedUnit = resolved.unit;
+    }
+  }
 
   return {
   id: service?.id ?? service?.sku ?? `svc_${Date.now()}`,
@@ -716,7 +782,7 @@ const chosen = ct === 2 ? (t2 || base) : (t1 || base);
   price_tier_1: t1,
   price_tier_2: t2,
   base_price_cop: base,
-  priceUnit: service?.priceUnit || "",
+  priceUnit: resolvedUnit,
   displayName: service?.name || "",
   priceOverride_cop: null,
   quickbooksCode: service?.quickbooksCode || "",
@@ -1248,7 +1314,7 @@ function ItineraryCanvas({ kickoff, onSave }) {
           items={items}
           loadingServices={loadingServices}
           availableDays={days.map(d => d.label)}
-          groupSize={parseInt(groupSize, 10) || 1}
+          groupSize={parseInt(kickoff?.groupSize || "1", 10) || 1}
           onUpdateMeta={patch => upsertDayMeta(label, patch)}
           onRenameLabel={newLabel => renameDayLabel(label, newLabel)}
           onRemoveDay={() => removeDay(label)}
@@ -1269,7 +1335,7 @@ function ItineraryCanvas({ kickoff, onSave }) {
           onPick={svc => {
             const count = cart.filter(i => (i.dayLabel || "Sin día") === catalogTargetDay).length;
             setCart(prev => [...prev, {
-              ...mapServiceToCartItem(svc, kickoff?.clientType || 1),
+              ...mapServiceToCartItem(svc, kickoff?.clientType || 1, parseInt(kickoff?.groupSize || "1") || 1),
               dayLabel: catalogTargetDay,
               sortOrder: count,
             }]);
@@ -2547,6 +2613,15 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=drivesdk");
   const [preTripContent,     setPreTripContent]     = useState(kickoff?.preTripContent     || DEFAULT_PRE_TRIP);
 
+  // ── Per-city ratings (concierge logs after each city leg) ────────
+  const [cityRatings, setCityRatings] = useState(() => {
+    try { return JSON.parse(kickoff?.cityRatings || "[]"); } catch { return []; }
+  });
+  const addCityRating    = () => setCityRatings(prev => [...prev, { city: "", rating: 0, notes: "" }]);
+  const removeCityRating = (i) => setCityRatings(prev => prev.filter((_, idx) => idx !== i));
+  const patchCityRating  = (i, patch) =>
+    setCityRatings(prev => prev.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+
   if (!kickoff) return null;
 
   const handleSave = async () => {
@@ -2585,6 +2660,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     preTripContent:    preTripContent.trim(),
     // Multiple arrivals
     arrivals: JSON.stringify(arrivals.filter(a => a.name || a.date || a.flight)),
+    // Per-city ratings
+    cityRatings: JSON.stringify(cityRatings.filter(r => r.city || r.rating > 0)),
     // Stay dates (set by concierge)
     arrivalDate:   arrivalDate.trim(),
     departureDate: departureDate.trim(),
@@ -2914,6 +2991,82 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   placeholder="https://drive.google.com/file/d/.../view" />
               </div>
             </div>
+          </div>
+
+          {/* ── Calificaciones por ciudad ── */}
+          <div className="border rounded-2xl p-4 bg-amber-50 border-amber-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-amber-800">⭐ Calificaciones por ciudad</p>
+              <button
+                type="button"
+                onClick={addCityRating}
+                className="text-[11px] px-2.5 py-1 rounded-full bg-amber-800 text-white hover:bg-amber-900 transition"
+              >
+                + Agregar ciudad
+              </button>
+            </div>
+
+            {cityRatings.length === 0 && (
+              <p className="text-[11px] text-amber-700 italic">
+                Agrega una calificación después de cada leg del viaje.
+              </p>
+            )}
+
+            {cityRatings.map((cr, i) => (
+              <div key={i} className="bg-white border border-amber-200 rounded-xl p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  {/* City dropdown */}
+                  <select
+                    value={cr.city}
+                    onChange={e => patchCityRating(i, { city: e.target.value })}
+                    className="flex-1 border border-neutral-200 rounded-lg px-2 py-1.5 text-sm bg-white outline-none"
+                  >
+                    <option value="">— Ciudad —</option>
+                    {["Cartagena","Medellín","CDMX","Tulum","Bogotá"].map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                  {/* Remove */}
+                  <button
+                    type="button"
+                    onClick={() => removeCityRating(i)}
+                    className="text-neutral-400 hover:text-red-500 text-lg leading-none px-1"
+                    title="Eliminar"
+                  >×</button>
+                </div>
+
+                {/* Star rating 1-5 */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-neutral-500 mr-1">Rating:</span>
+                  {[1,2,3,4,5].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => patchCityRating(i, { rating: cr.rating === n ? 0 : n })}
+                      className={`w-8 h-8 rounded-full text-sm font-semibold transition border ${
+                        cr.rating >= n
+                          ? "bg-amber-400 border-amber-400 text-white"
+                          : "bg-white border-neutral-200 text-neutral-400 hover:border-amber-300"
+                      }`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                  {cr.rating > 0 && (
+                    <span className="ml-1 text-[11px] text-amber-700 font-medium">{cr.rating}/5</span>
+                  )}
+                </div>
+
+                {/* Notes */}
+                <textarea
+                  value={cr.notes}
+                  onChange={e => patchCityRating(i, { notes: e.target.value })}
+                  rows={2}
+                  placeholder="Notas internas sobre este leg del viaje..."
+                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-xs bg-neutral-50 outline-none resize-none"
+                />
+              </div>
+            ))}
           </div>
 
           {/* ── LLEGADAS MÚLTIPLES ─────────────────────────────── */}

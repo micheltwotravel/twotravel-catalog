@@ -2169,12 +2169,23 @@ useEffect(() => {
           return { es: descEs, en: descEs }; // single col: same for both langs
         })(),
 
-        highlights: Array.isArray(s.highlights)
-          ? s.highlights
-          : String(s.highlights ?? "").split(/\n/).map(x => x.trim()).filter(Boolean),
-        highlights_en: Array.isArray(s.highlights_en)
-          ? s.highlights_en
-          : String(s.highlights_en ?? "").split(/\n/).map(x => x.trim()).filter(Boolean),
+        highlights: (() => {
+          if (Array.isArray(s.highlights)) return s.highlights;
+          const raw = String(s.highlights ?? "").trim();
+          if (!raw) return [];
+          // If has newlines → split on newlines; otherwise → split on commas
+          return raw.includes("\n")
+            ? raw.split("\n").map(x => x.trim()).filter(Boolean)
+            : raw.split(/,\s*/).map(x => x.trim()).filter(Boolean);
+        })(),
+        highlights_en: (() => {
+          if (Array.isArray(s.highlights_en)) return s.highlights_en;
+          const raw = String(s.highlights_en ?? "").trim();
+          if (!raw) return [];
+          return raw.includes("\n")
+            ? raw.split("\n").map(x => x.trim()).filter(Boolean)
+            : raw.split(/,\s*/).map(x => x.trim()).filter(Boolean);
+        })(),
 
         // snake_case → camelCase for dress code (Sheet uses dress_code / dress_code_en)
         dressCode:    String(s.dress_code    ?? s.dressCode    ?? "").trim(),
@@ -2183,6 +2194,10 @@ useEffect(() => {
         // Explicit bilingual deposit fields
         deposit_en: String(s.deposit_en ?? "").trim(),
         deposit_es: String(s.deposit_es ?? s.deposit ?? "").trim(),
+
+        // Variable pricing
+        pricing_model: String(s.pricing_model ?? s.pricingModel ?? "").trim().toLowerCase(),
+        pricing_tiers: String(s.pricing_tiers ?? s.pricingTiers ?? "").trim(),
 
         capacity: normalizeCapacity(s.capacity ?? s.Capacity ?? s.capacidad),
         duration: String(s.duration ?? ""),
@@ -2207,6 +2222,54 @@ useEffect(() => {
 }, []);
 
 
+
+/* ─── Variable pricing parser ───────────────────────────────────────────────
+   Sheet format (pricing_tiers column):
+     tiered  → "1:200000,2:180000,3:150000,4:130000"   (pax:price_per_person)
+     ranges  → "1-2:364000,3-6:390000,7+:420000"       (range:total_price)
+     options → "8 horas:150000,12 horas:200000"         (label:price)
+─────────────────────────────────────────────────────────────────────────── */
+function parsePricingTiers(raw, model) {
+  if (!raw || !model) return [];
+  return raw.split(",").map(part => {
+    const sepIdx = part.lastIndexOf(":");
+    if (sepIdx < 0) return null;
+    const label = part.substring(0, sepIdx).trim();
+    const price = parseInt(part.substring(sepIdx + 1).replace(/\D/g, "")) || 0;
+    if (model === "tiered") {
+      return { pax: parseInt(label) || 1, pricePerPerson: price };
+    }
+    if (model === "ranges") {
+      const dashIdx = label.indexOf("-");
+      if (dashIdx >= 0) {
+        return { min: parseInt(label) || 1, max: parseInt(label.substring(dashIdx + 1)) || 999, totalPrice: price };
+      }
+      return { min: parseInt(label.replace("+","")) || 1, max: 999, totalPrice: price };
+    }
+    if (model === "options") {
+      return { label, price };
+    }
+    return null;
+  }).filter(Boolean);
+}
+
+/* Resolve price for a given group size (used in concierge cart) */
+function resolveVariablePrice(service, groupSizeNum) {
+  const model  = service?.pricing_model;
+  const tiers  = parsePricingTiers(service?.pricing_tiers, model);
+  if (!tiers.length) return null;
+  const n = Math.max(1, parseInt(groupSizeNum) || 1);
+  if (model === "tiered") {
+    const sorted = [...tiers].sort((a, b) => b.pax - a.pax);
+    const match  = sorted.find(t => t.pax <= n) || sorted[sorted.length - 1];
+    return { price: match.pricePerPerson, unit: "per person" };
+  }
+  if (model === "ranges") {
+    const match = tiers.find(t => n >= t.min && n <= t.max);
+    return match ? { price: match.totalPrice, unit: "per group" } : null;
+  }
+  return null; // options: user picks
+}
 
 // ⭐ CHIP + INFO (versión pequeña, elegante y bilingüe)
 const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
@@ -2324,6 +2387,8 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
 
   const [imgIndex, setImgIndex] = useState(0);
   const [selectedService, setSelectedService] = useState(null);
+  // For "options" pricing model — tracks which option pill is selected
+  const [selectedPricingOption, setSelectedPricingOption] = useState(null);
 
   const gallery = selectedService
     ? [selectedService.image, ...(selectedService.images || [])].filter(Boolean)
@@ -3577,6 +3642,7 @@ setCart([]);
     onClick={() => {
   setSelectedService(s);
   setImgIndex(0);
+  setSelectedPricingOption(null);
 }}
   >
     <div className="relative h-44">
@@ -3651,7 +3717,7 @@ setCart([]);
                   )}
                   <div
                     className="bg-white rounded-xl shadow hover:shadow-xl transition-shadow overflow-hidden cursor-pointer"
-                    onClick={() => setSelectedService(s)}
+                    onClick={() => { setSelectedService(s); setImgIndex(0); setSelectedPricingOption(null); }}
                   >
                     <div className="relative h-48">
                       <img src={safeImg(s.image, serviceCategory)} alt={s.name} className="w-full h-full object-cover"/>
@@ -3686,7 +3752,7 @@ setCart([]);
     <div
       key={`svc-${_svcIdx}-${s.id}`}
       className="bg-white rounded-xl shadow hover:shadow-xl transition-shadow overflow-hidden cursor-pointer"
-      onClick={() => setSelectedService(s)}
+      onClick={() => { setSelectedService(s); setImgIndex(0); setSelectedPricingOption(null); }}
     >
       <div className="relative h-48">
         <img
@@ -3885,7 +3951,7 @@ setCart([]);
             <div className="p-6">
               <div className="flex items-start justify-between gap-2 mb-2">
                 <h2 className="text-2xl font-bold">
-                  {selectedService.name}
+                  {(lang === "en" && selectedService.name_en) ? selectedService.name_en : selectedService.name}
                 </h2>
                 <div className="flex flex-wrap gap-1.5 shrink-0">
                   {selectedService.family_friendly && (
@@ -3955,18 +4021,18 @@ setCart([]);
                         </li>
                       </>
                     )}
-                    {/* Dress code — shows whenever the field is filled in Sheet */}
-                    {(lang === "es" ? selectedService.dressCode : selectedService.dressCode_en) && (
-                      <li className="flex items-center gap-1.5">
-                        <span style={{ fontSize: 14 }}>👔</span>
-                        <span>
-                          {lang === "es" ? "Código de vestimenta: " : "Dress code: "}
-                          {lang === "es"
-                            ? selectedService.dressCode
-                            : selectedService.dressCode_en}
-                        </span>
-                      </li>
-                    )}
+                    {/* Dress code — strict language: no Spanish fallback in EN mode */}
+                    {(() => {
+                      const dc = lang === "es"
+                        ? (selectedService.dressCode || selectedService.dressCode_en)
+                        : selectedService.dressCode_en;        // no Spanish fallback in EN
+                      return dc ? (
+                        <li className="flex items-center gap-1.5">
+                          <span style={{ fontSize: 14 }}>👔</span>
+                          <span>{lang === "es" ? "Código de vestimenta: " : "Dress code: "}{dc}</span>
+                        </li>
+                      ) : null;
+                    })()}
                     {/* Cancellation policy */}
                     {(selectedService.cancellation || selectedService.cancellation_es) && (
                       <li className="flex items-center gap-1.5">
@@ -3978,17 +4044,18 @@ setCart([]);
                         </span>
                       </li>
                     )}
-                    {/* Deposit */}
-                    {(selectedService.deposit_en || selectedService.deposit_es) && (
-                      <li className="flex items-center gap-1.5">
-                        <span style={{ fontSize: 14 }}>💳</span>
-                        <span>{lang === "es" ? "Depósito: " : "Deposit: "}
-                          {lang === "es"
-                            ? (selectedService.deposit_es || selectedService.deposit_en)
-                            : (selectedService.deposit_en || selectedService.deposit_es)}
-                        </span>
-                      </li>
-                    )}
+                    {/* Deposit — only show in EN if deposit_en is explicitly filled */}
+                    {(() => {
+                      const depositTxt = lang === "es"
+                        ? (selectedService.deposit_es || selectedService.deposit_en)
+                        : selectedService.deposit_en;          // no Spanish fallback in EN
+                      return depositTxt ? (
+                        <li className="flex items-center gap-1.5">
+                          <span style={{ fontSize: 14 }}>💳</span>
+                          <span>{lang === "es" ? "Depósito: " : "Deposit: "}{depositTxt}</span>
+                        </li>
+                      ) : null;
+                    })()}
                   </ul>
                 </div>
                 <div>
@@ -4030,13 +4097,120 @@ setCart([]);
                 )}
               </div>
 
+              {/* ── Variable pricing display ── */}
+              {(() => {
+                const vModel = selectedService.pricing_model;
+                const vTiers = parsePricingTiers(selectedService.pricing_tiers, vModel);
+                if (!vModel || !vTiers.length) return null;
+
+                if (vModel === "tiered") return (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 mb-3">
+                      {lang === "es" ? "Precio según número de personas" : "Price by group size"}
+                    </p>
+                    <div className="space-y-2">
+                      {vTiers.map(tier => (
+                        <div key={tier.pax} className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">
+                            {tier.pax} {lang === "es" ? (tier.pax === 1 ? "persona" : "personas") : (tier.pax === 1 ? "person" : "people")}
+                          </span>
+                          <span className="font-semibold">
+                            {formatPrice(convertPrice(tier.pricePerPerson))}
+                            <span className="text-xs text-gray-400 font-normal ml-1">
+                              {lang === "es" ? "c/u" : "ea"}
+                              {" · "}
+                              {formatPrice(convertPrice(tier.pricePerPerson * tier.pax))} total
+                            </span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+
+                if (vModel === "ranges") return (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 mb-3">
+                      {lang === "es" ? "Precio por grupo" : "Price by group"}
+                    </p>
+                    <div className="space-y-2">
+                      {vTiers.map((r, i) => (
+                        <div key={i} className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">
+                            {r.min}{r.max < 999 ? `–${r.max}` : "+"} {lang === "es" ? "personas" : "people"}
+                          </span>
+                          <span className="font-semibold">
+                            {formatPrice(convertPrice(r.totalPrice))}
+                            <span className="text-xs text-gray-400 font-normal ml-1">total</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+
+                if (vModel === "options") return (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 mb-3">
+                      {lang === "es" ? "Elige una opción" : "Choose an option"}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {vTiers.map((opt, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setSelectedPricingOption(
+                            selectedPricingOption?.label === opt.label ? null : opt
+                          )}
+                          className={`rounded-full px-4 py-2 text-sm border transition font-medium ${
+                            selectedPricingOption?.label === opt.label
+                              ? "bg-neutral-900 text-white border-neutral-900"
+                              : "bg-white text-neutral-700 border-neutral-200 hover:border-neutral-500"
+                          }`}
+                        >
+                          {opt.label} · {formatPrice(convertPrice(opt.price))}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+
+                return null;
+              })()}
+
               <div className="border-t pt-4 flex items-center justify-between">
   <div>
   {(() => {
-    const selectedEffectivePriceCop = getEffectivePriceCop(selectedService, currentClientType);
+    const vModel = selectedService.pricing_model;
+    const vTiers = parsePricingTiers(selectedService.pricing_tiers, vModel);
+    const hasVariablePricing = vModel && vTiers.length > 0;
 
-    return categoryHasVisiblePrice(selectedServiceCategory) &&
-      hasPrice(selectedEffectivePriceCop) ? (
+    // For "options" model: show selected option price, or prompt to select
+    if (vModel === "options") {
+      return selectedPricingOption ? (
+        <>
+          <span className="text-2xl font-bold">{formatPrice(convertPrice(selectedPricingOption.price))}</span>
+          <span className="text-sm text-gray-500 ml-2">· {selectedPricingOption.label}</span>
+        </>
+      ) : (
+        <span className="text-sm text-gray-500 italic">
+          {lang === "es" ? "Selecciona una opción ↑" : "Select an option ↑"}
+        </span>
+      );
+    }
+
+    // For tiered/ranges: hide standard price (table already shown above)
+    if (hasVariablePricing) {
+      return (
+        <span className="text-sm text-gray-500">
+          {lang === "es" ? "Precio según selección ↑" : "Price varies · see above ↑"}
+        </span>
+      );
+    }
+
+    // Default: standard per-person / per-group price
+    const selectedEffectivePriceCop = getEffectivePriceCop(selectedService, currentClientType);
+    return categoryHasVisiblePrice(selectedServiceCategory) && hasPrice(selectedEffectivePriceCop) ? (
       <>
         <span className="text-2xl font-bold text-tt.ink">
           {formatPrice(convertPrice(selectedEffectivePriceCop))}
@@ -4046,17 +4220,30 @@ setCart([]);
         </span>
       </>
     ) : (
-      <span className="text-sm text-gray-500">
-        {t.requestQuote}
-      </span>
+      <span className="text-sm text-gray-500">{t.requestQuote}</span>
     );
   })()}
 </div>
 
   <button
     onClick={() => {
-      addToCart(selectedService);
+      const vModel = selectedService.pricing_model;
+      // For "options": require selection
+      if (vModel === "options" && !selectedPricingOption) return;
+      // Build cart item — if options, override price + append label to name
+      const cartItem = (vModel === "options" && selectedPricingOption)
+        ? {
+            ...selectedService,
+            price_cop:  selectedPricingOption.price,
+            price_tier_1: selectedPricingOption.price,
+            price_tier_2: selectedPricingOption.price,
+            name:    `${selectedService.name} (${selectedPricingOption.label})`,
+            name_en: `${selectedService.name_en || selectedService.name} (${selectedPricingOption.label})`,
+          }
+        : selectedService;
+      addToCart(cartItem);
       setSelectedService(null);
+      setSelectedPricingOption(null);
     }}
     className="inline-flex items-center justify-center rounded-lg px-5 py-2.5 font-medium border border-neutral-900 text-neutral-900 bg-white hover:bg-neutral-900 hover:text-white active:bg-neutral-950 focus:outline-none focus:ring-2 focus:ring-neutral-900/40 transition-colors"
   >

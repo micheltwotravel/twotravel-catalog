@@ -392,9 +392,6 @@ const handleSubmit = async (e) => {
   setSaving(true);
 
   try {
-    // NOTA: este payload va al GAS de feedback (SCRIPT_URL), NO al GAS de kickoffs.
-    // Solo incluye datos de la respuesta + referencia kickoffId para linkear.
-    // No incluir campos que podrían sobreescribir el kickoff si el GAS los procesa mal.
     const payload = {
       kickoffId: kickoffId || "",
       guestName: guestName || "",
@@ -406,21 +403,14 @@ const handleSubmit = async (e) => {
 
     const res = await fetch(SCRIPT_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8",
-      },
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload),
     });
 
-    const text = await res.text();
-
-    if (!res.ok) {
-      throw new Error("Error guardando");
-    }
+    if (!res.ok) throw new Error("Error guardando");
 
     setSubmitted(true);
 
-    // Mark kickoff as feedback submitted (fire-and-forget)
     if (kickoffId) {
       updateKickoffInSheet(kickoffId, { status: "feedback_submitted", feedbackAt: new Date().toISOString() }).catch(
         (e) => console.warn("Could not update kickoff status:", e)
@@ -435,10 +425,10 @@ const handleSubmit = async (e) => {
 };
 
   // Use module-level components (Fb*) — avoids remount on every keystroke
-  const Section       = FbSection;
-  const Label         = FbLabel;
-  const Textarea      = FbTextarea;
-  const ScorePills    = FbScorePills;
+  const Section        = FbSection;
+  const Label          = FbLabel;
+  const Textarea       = FbTextarea;
+  const ScorePills     = FbScorePills;
   const SelectDropdown = FbSelect;
 
   if (submitted) {
@@ -448,15 +438,12 @@ const handleSubmit = async (e) => {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-stone-800 text-xl font-semibold text-white">
             ✓
           </div>
-
           <p className="mt-6 text-center text-[11px] uppercase tracking-[0.3em] text-stone-400">
             {t.received}
           </p>
-
           <h1 className="mt-3 text-center text-4xl font-semibold tracking-tight">
             {t.thankYou}
           </h1>
-
           <p className="mx-auto mt-4 max-w-xl text-center text-sm leading-7 text-stone-500">
             {t.thanksBody}
           </p>
@@ -659,31 +646,17 @@ const handleSubmit = async (e) => {
                     <div>
                       <Label>{t.itinerary}</Label>
                       <p className="mt-2 text-xs text-stone-500">{t.itineraryHint}</p>
-                      <ScorePills
-                        min={1} max={5}
-                        value={form.itinerary}
-                        onChange={(v) => updateField("itinerary", v)}
-                      />
+                      <ScorePills min={1} max={5} value={form.itinerary} onChange={(v) => updateField("itinerary", v)} />
                     </div>
-
                     <div>
                       <Label>{t.communication}</Label>
                       <p className="mt-2 text-xs text-stone-500">{t.communicationHint}</p>
-                      <ScorePills
-                        min={1} max={5}
-                        value={form.communication}
-                        onChange={(v) => updateField("communication", v)}
-                      />
+                      <ScorePills min={1} max={5} value={form.communication} onChange={(v) => updateField("communication", v)} />
                     </div>
-
                     <div>
                       <Label>{t.readiness}</Label>
                       <p className="mt-2 text-xs text-stone-500">{t.readinessHint}</p>
-                      <ScorePills
-                        min={1} max={5}
-                        value={form.readiness}
-                        onChange={(v) => updateField("readiness", v)}
-                      />
+                      <ScorePills min={1} max={5} value={form.readiness} onChange={(v) => updateField("readiness", v)} />
                     </div>
                   </div>
                 </Section>
@@ -698,41 +671,21 @@ const handleSubmit = async (e) => {
                     <div>
                       <Label>{t.responsiveness}</Label>
                       <p className="mt-2 text-xs text-stone-500">{t.responsivenessHint}</p>
-                      <ScorePills
-                        min={1} max={5}
-                        value={form.responsiveness}
-                        onChange={(v) => updateField("responsiveness", v)}
-                      />
+                      <ScorePills min={1} max={5} value={form.responsiveness} onChange={(v) => updateField("responsiveness", v)} />
                     </div>
-
                     <div>
                       <Label>{t.problemSolving}</Label>
                       <p className="mt-2 text-xs text-stone-500">{t.problemSolvingHint}</p>
-                      <ScorePills
-                        min={1} max={5}
-                        allowNA
-                        value={form.problemSolving}
-                        onChange={(v) => updateField("problemSolving", v)}
-                      />
+                      <ScorePills min={1} max={5} allowNA value={form.problemSolving} onChange={(v) => updateField("problemSolving", v)} />
                     </div>
-
                     <div>
                       <Label>{t.personalTouch}</Label>
                       <p className="mt-2 text-xs text-stone-500">{t.personalTouchHint}</p>
-                      <ScorePills
-                        min={1} max={5}
-                        value={form.personalTouch}
-                        onChange={(v) => updateField("personalTouch", v)}
-                      />
+                      <ScorePills min={1} max={5} value={form.personalTouch} onChange={(v) => updateField("personalTouch", v)} />
                     </div>
                   </div>
-
                   <div>
-                    <Textarea
-                      value={form.stayNotes}
-                      onChange={(e) => updateField("stayNotes", e.target.value)}
-                      placeholder={t.stayNotesPlaceholder}
-                    />
+                    <Textarea value={form.stayNotes} onChange={(e) => updateField("stayNotes", e.target.value)} placeholder={t.stayNotesPlaceholder} />
                   </div>
                 </Section>
 
@@ -744,36 +697,22 @@ const handleSubmit = async (e) => {
                 >
                   <div>
                     <Label>{t.propertyRatingLabel}</Label>
-                    <ScorePills
-                      min={1} max={5}
-                      value={form.propertyRating}
-                      onChange={(v) => updateField("propertyRating", v)}
-                    />
+                    <ScorePills min={1} max={5} value={form.propertyRating} onChange={(v) => updateField("propertyRating", v)} />
                   </div>
-
                   <div>
                     <Label>{t.amenitiesLabel}</Label>
-                    <Textarea
-                      value={form.amenities}
-                      onChange={(e) => updateField("amenities", e.target.value)}
-                      placeholder={t.amenitiesPlaceholder}
-                    />
+                    <Textarea value={form.amenities} onChange={(e) => updateField("amenities", e.target.value)} placeholder={t.amenitiesPlaceholder} />
                   </div>
-
                   <div>
                     <Label>{t.propertyNotesLabel}</Label>
-                    <Textarea
-                      value={form.propertyNotes}
-                      onChange={(e) => updateField("propertyNotes", e.target.value)}
-                      placeholder={t.propertyNotesPlaceholder}
-                    />
+                    <Textarea value={form.propertyNotes} onChange={(e) => updateField("propertyNotes", e.target.value)} placeholder={t.propertyNotesPlaceholder} />
                   </div>
                 </Section>
               </div>
             )}
           </section>
 
-          {/* TripAdvisor — after optional sections */}
+          {/* TripAdvisor */}
           <section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
             <p className="text-[10px] uppercase tracking-[0.28em] text-stone-400">Review</p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-800">{t.reviewTitle}</h2>
@@ -791,14 +730,9 @@ const handleSubmit = async (e) => {
             <div className="rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-stone-800">
-                    {t.readySubmit}
-                  </p>
-                  <p className="text-xs text-stone-500">
-                    {t.readySubmitSubtitle}
-                  </p>
+                  <p className="text-sm font-semibold text-stone-800">{t.readySubmit}</p>
+                  <p className="text-xs text-stone-500">{t.readySubmitSubtitle}</p>
                 </div>
-
                 <button
                   type="submit"
                   disabled={saving}
