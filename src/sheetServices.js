@@ -63,8 +63,11 @@ function normalizeDriveImage(url) {
 }
 
 function splitHighlights(value) {
+  // Split on newlines or semicolons ONLY — commas are preserved inside each item
+  // Sheet format: "Private tour; Includes: transport, entrance fees, and guide"
+  //   → ["Private tour", "Includes: transport, entrance fees, and guide"]
   return String(value || "")
-    .split(/\/|;|\||,/)
+    .split(/\n|;|\|/)
     .map((s) => s.trim())
     .filter(Boolean);
 }

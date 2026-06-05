@@ -2173,18 +2173,14 @@ useEffect(() => {
           if (Array.isArray(s.highlights)) return s.highlights;
           const raw = String(s.highlights ?? "").trim();
           if (!raw) return [];
-          // If has newlines → split on newlines; otherwise → split on commas
-          return raw.includes("\n")
-            ? raw.split("\n").map(x => x.trim()).filter(Boolean)
-            : raw.split(/,\s*/).map(x => x.trim()).filter(Boolean);
+          // Split on newlines or semicolons — commas are preserved inside each item
+          return raw.split(/\n|;|\|/).map(x => x.trim()).filter(Boolean);
         })(),
         highlights_en: (() => {
           if (Array.isArray(s.highlights_en)) return s.highlights_en;
           const raw = String(s.highlights_en ?? "").trim();
           if (!raw) return [];
-          return raw.includes("\n")
-            ? raw.split("\n").map(x => x.trim()).filter(Boolean)
-            : raw.split(/,\s*/).map(x => x.trim()).filter(Boolean);
+          return raw.split(/\n|;|\|/).map(x => x.trim()).filter(Boolean);
         })(),
 
         // snake_case → camelCase for dress code (Sheet uses dress_code / dress_code_en)
