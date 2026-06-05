@@ -2192,7 +2192,8 @@ useEffect(() => {
         dressCode_en: String(s.dress_code_en ?? s.dressCode_en ?? "").trim(),
 
         // Explicit bilingual deposit fields
-        deposit_en: String(s.deposit_en ?? "").trim(),
+        // s.deposit (from sheetServices) = row.deposit_en || row.deposit (English version)
+        deposit_en: String(s.deposit_en ?? s.deposit ?? "").trim(),
         deposit_es: String(s.deposit_es ?? s.deposit ?? "").trim(),
 
         // Variable pricing
@@ -4029,30 +4030,30 @@ setCart([]);
                       return dc ? (
                         <li className="flex items-center gap-1.5">
                           <span style={{ fontSize: 14 }}>👔</span>
-                          <span>{lang === "es" ? "Código de vestimenta: " : "Dress code: "}{dc}</span>
+                          <span>{dc}</span>
                         </li>
                       ) : null;
                     })()}
-                    {/* Cancellation policy */}
+                    {/* Cancellation policy — no label prefix (icon only, prevents doubling if Sheet already has the word) */}
                     {(selectedService.cancellation || selectedService.cancellation_es) && (
                       <li className="flex items-center gap-1.5">
                         <span style={{ fontSize: 14 }}>📋</span>
-                        <span>{lang === "es" ? "Cancelación: " : "Cancellation: "}
+                        <span>
                           {lang === "es"
                             ? (selectedService.cancellation_es || selectedService.cancellation)
                             : (selectedService.cancellation || selectedService.cancellation_es)}
                         </span>
                       </li>
                     )}
-                    {/* Deposit — only show in EN if deposit_en is explicitly filled */}
+                    {/* Deposit — no label prefix (icon only). Shows in EN if deposit_en or deposit filled */}
                     {(() => {
                       const depositTxt = lang === "es"
                         ? (selectedService.deposit_es || selectedService.deposit_en)
-                        : selectedService.deposit_en;          // no Spanish fallback in EN
+                        : selectedService.deposit_en;
                       return depositTxt ? (
                         <li className="flex items-center gap-1.5">
                           <span style={{ fontSize: 14 }}>💳</span>
-                          <span>{lang === "es" ? "Depósito: " : "Deposit: "}{depositTxt}</span>
+                          <span>{depositTxt}</span>
                         </li>
                       ) : null;
                     })()}
@@ -4065,7 +4066,7 @@ setCart([]);
     ? selectedService.highlights_en
     : selectedService.highlights || []
   ).map((h, i) => (
-    <li key={i}>✓ {h}</li>
+    <li key={i}>{h}</li>
   ))}
 </ul>
 
