@@ -3154,8 +3154,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     kickoff={kickoff}
     onSave={async (newCart, newDayMeta) => {
       await onSave(kickoff.id, {
-        cart: newCart,
-        dayMeta: newDayMeta,
+        cart:    JSON.stringify(newCart),    // stringified so Apps Script stores cleanly
+        dayMeta: JSON.stringify(newDayMeta),
         status: "concierge_editing",
       });
     }}

@@ -2958,7 +2958,7 @@ const payload = {
   departureDate: departureDate.trim(),
   additionalNotes: additionalNotes.trim(),
   quizAnswers: JSON.stringify(quiz),
-  cart,                                          // last person's cart (backward compat)
+  cart: JSON.stringify(cart),                    // stringified so Apps Script stores cleanly
   groupSubmissions: JSON.stringify(updatedSubmissions), // all people's carts
   conciergeSummary,
   lang,

@@ -345,8 +345,23 @@ export async function fetchKickoffsFromSheet() {
 
   console.log("RAW KICKOFFS FROM API:", data);
 
+  // Parse a JSON-array field that may come back as a string or already-parsed array
+  const parseJsonArr = (v) => {
+    if (Array.isArray(v)) return v;
+    if (typeof v === "string" && v.trim()) {
+      try { return JSON.parse(v); } catch {}
+    }
+    return [];
+  };
+
   return data.map((k) => ({
     ...k,
+    // Always expose cart / dayMeta as real arrays — never as raw JSON strings.
+    // The Apps Script stores them as stringified JSON; parse once here so every
+    // component (ItineraryCanvas, KickoffCard, buildTravifyTextFromCart, …)
+    // can use them directly without individual guard code.
+    cart:    parseJsonArr(k.cart),
+    dayMeta: parseJsonArr(k.dayMeta ?? k.day_meta),
     guestContact: String(
       k?.guestContact ?? k?.GuestContact ?? k?.guest_contact ??
       k?.contact ?? k?.Contact ?? k?.contacto ?? k?.Contacto ?? ""
