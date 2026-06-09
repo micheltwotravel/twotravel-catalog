@@ -1106,9 +1106,16 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
    Both are persisted on save and drive PDF + Travefy output.
 ═══════════════════════════════════════════════════════════════ */
 function ItineraryCanvas({ kickoff, onSave }) {
-  const safeArr = (v) => Array.isArray(v) ? v : [];
-  const [cart,     setCart]     = useState(safeArr(kickoff?.cart));
-  const [dayMeta,  setDayMeta]  = useState(safeArr(kickoff?.dayMeta));
+  // Parse cart/dayMeta whether they arrive as arrays or JSON strings from the Sheet
+  const parseArr = (v) => {
+    if (Array.isArray(v)) return v;
+    if (typeof v === "string" && v.trim()) {
+      try { return JSON.parse(v); } catch {}
+    }
+    return [];
+  };
+  const [cart,     setCart]     = useState(parseArr(kickoff?.cart));
+  const [dayMeta,  setDayMeta]  = useState(parseArr(kickoff?.dayMeta));
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(false);
   const [saving,   setSaving]   = useState(false);
@@ -1116,8 +1123,9 @@ function ItineraryCanvas({ kickoff, onSave }) {
 
   // Sync when kickoff changes (e.g. switching between kickoffs)
   useEffect(() => {
-    setCart(kickoff?.cart     || []);
-    setDayMeta(kickoff?.dayMeta || []);
+    setCart(parseArr(kickoff?.cart));
+    setDayMeta(parseArr(kickoff?.dayMeta));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kickoff?.id]);
 
   // Load catalog once
