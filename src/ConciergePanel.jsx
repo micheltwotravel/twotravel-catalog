@@ -385,10 +385,9 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
 
   const filename = `Itinerary_${cl(kickoff.guestName||"client").replace(/\s+/g,"-")}_${new Date().toISOString().slice(0,10)}.pdf`;
 
-  // ── preview: open in browser tab ────────────────────────────
+  // ── preview: download directly (window.open blocked after async gap) ──
   if (mode === "preview") {
-    const url = doc.output("bloburl");
-    window.open(url, "_blank");
+    doc.save(filename);
     return;
   }
 
