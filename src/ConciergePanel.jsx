@@ -50,8 +50,6 @@ const cityFullName = (code) => CITY_NAMES[String(code||"").trim().toUpperCase()]
    mode = "preview" → opens PDF in a new browser tab
 ───────────────────────────────────────────────────────────── */
 async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", mode = "slack", fxRate = 3489) {
-  // Open preview window synchronously (before any await) so popup blocker doesn't fire
-  const previewWin = mode === "preview" ? window.open("", "_blank") : null;
   const { jsPDF } = await import("jspdf");
 
   // ── helpers ─────────────────────────────────────────────────
@@ -387,11 +385,9 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
 
   const filename = `Itinerary_${cl(kickoff.guestName||"client").replace(/\s+/g,"-")}_${new Date().toISOString().slice(0,10)}.pdf`;
 
-  // ── preview: open in already-open tab (avoids popup blocker) ──────────
+  // ── preview: return bloburl so caller can show in modal ────────────────
   if (mode === "preview") {
-    const url = doc.output("bloburl");
-    if (previewWin) previewWin.location.href = url;
-    return;
+    return doc.output("bloburl");
   }
 
   // ── slack: upload via GAS ────────────────────────────────────
@@ -2572,6 +2568,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const drinkOrder = kickoff?.drinkOrder || "";
   const [billingCurrency, setBillingCurrency] = useState("USD");
   const [billingSending, setBillingSending] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
   const [liveFxRate, setLiveFxRate] = useState(3489); // 3560 TRM - 2%
   useEffect(() => {
     fetch("https://api.frankfurter.app/latest?from=USD&to=COP")
@@ -3242,11 +3239,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 onClick={async () => {
                   setBillingSending(true);
                   try {
-                    await sendItineraryPdfToSlack({
+                    const url = await sendItineraryPdfToSlack({
                       ...kickoff,
                       email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
                       city: city || kickoff.city || "",
                     }, kickoff.lang || "en", billingCurrency, "preview", liveFxRate);
+                    setPdfPreviewUrl(url);
                   } catch (e) {
                     alert("❌ " + e.message);
                   } finally {
@@ -3254,7 +3252,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   }
                 }}
                 className="px-3 py-2 border-t border-b border-indigo-300 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50"
-                title="Ver PDF antes de mandar"
+                title="Ver PDF"
               >
                 {billingSending ? "…" : "👁"}
               </button>
@@ -3285,10 +3283,28 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           )}
         </div>
       </div>
-     
+
     </div>
-    
-    
+
+    {/* PDF Preview Modal */}
+    {pdfPreviewUrl && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60">
+        <div className="relative w-[92vw] h-[92vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 shrink-0">
+            <span className="text-sm font-semibold text-neutral-800">Vista previa del PDF</span>
+            <button
+              type="button"
+              onClick={() => { URL.revokeObjectURL(pdfPreviewUrl); setPdfPreviewUrl(null); }}
+              className="text-neutral-400 hover:text-neutral-700 text-lg leading-none px-2"
+            >
+              ✕
+            </button>
+          </div>
+          <iframe src={pdfPreviewUrl} className="flex-1 w-full" title="PDF preview" />
+        </div>
+      </div>
+    )}
+
   );
 }
 function ConciergePickerModal({ concierges, onClose, onSelect }) {
