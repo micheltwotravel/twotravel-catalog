@@ -1113,7 +1113,7 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
    Source of truth: cart (flat items) + dayMeta (day-level titles)
    Both are persisted on save and drive PDF + Travefy output.
 ═══════════════════════════════════════════════════════════════ */
-function ItineraryCanvas({ kickoff, onSave }) {
+function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
   // Parse cart/dayMeta whether they arrive as arrays or JSON strings from the Sheet
   const parseArr = (v) => {
     if (Array.isArray(v)) return v;
@@ -1136,6 +1136,12 @@ function ItineraryCanvas({ kickoff, onSave }) {
     setDayMeta(parseArr(kickoff?.dayMeta));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kickoff?.id]);
+
+  // Notify parent of every cart/dayMeta change so EditDrawer can include it in the main save
+  useEffect(() => {
+    onCartChange?.(cart, dayMeta);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart, dayMeta]);
 
   // Load catalog once
   useEffect(() => {
@@ -2575,6 +2581,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [billingCurrency, setBillingCurrency] = useState("USD");
   const [billingSending, setBillingSending] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
+  // Track latest ItineraryCanvas state so main "Guardar" always includes it
+  const canvasCartRef    = useRef(null);
+  const canvasDayMetaRef = useRef(null);
   const [liveFxRate, setLiveFxRate] = useState(3489); // 3560 TRM - 2%
   useEffect(() => {
     fetch("https://api.frankfurter.app/latest?from=USD&to=COP")
@@ -2685,6 +2694,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     // Stay dates (set by concierge)
     arrivalDate:   arrivalDate.trim(),
     departureDate: departureDate.trim(),
+    // Always include latest canvas state so itinerary edits aren't lost
+    ...(canvasCartRef.current    != null ? { cart:    JSON.stringify(canvasCartRef.current)    } : {}),
+    ...(canvasDayMetaRef.current != null ? { dayMeta: JSON.stringify(canvasDayMetaRef.current) } : {}),
   };
 
   const c = guestContact.trim();
@@ -3165,6 +3177,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   </div>
   <ItineraryCanvas
     kickoff={kickoff}
+    onCartChange={(newCart, newDayMeta) => {
+      canvasCartRef.current    = newCart;
+      canvasDayMetaRef.current = newDayMeta;
+    }}
     onSave={async (newCart, newDayMeta) => {
       await onSilentUpdate(kickoff.id, {
         cart:    JSON.stringify(newCart),
