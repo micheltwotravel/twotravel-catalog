@@ -2692,6 +2692,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
       <div className="w-full max-w-xl h-full bg-white shadow-xl flex flex-col">
         <div className="px-5 py-4 border-b flex items-center justify-between">
@@ -3304,7 +3305,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
         </div>
       </div>
     )}
-
+    </>
   );
 }
 function ConciergePickerModal({ concierges, onClose, onSelect }) {
