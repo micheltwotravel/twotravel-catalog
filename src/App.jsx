@@ -2148,7 +2148,7 @@ function TaskTracker() {
   const [loadError, setLoadError]           = useState("");
   const [form, setForm] = useState({
     taskName:"", assignedTo:"", assignedEmail:"", dueDate:"",
-    notes:"", kickoffId:"", kickoffName:"", priority:"media",
+    notes:"", kickoffId:"", kickoffName:"", priority:"media", imageUrl:"",
   });
   const setF = (k,v) => setForm(p=>({...p,[k]:v}));
 
@@ -2202,7 +2202,7 @@ function TaskTracker() {
         headers:{"Content-Type":"text/plain;charset=utf-8"},
         body: JSON.stringify({ action:"saveTask", payload }),
       });
-      setForm({ taskName:"", assignedTo:"", assignedEmail:"", dueDate:"", notes:"", kickoffId:"", kickoffName:"", priority:"media" });
+      setForm({ taskName:"", assignedTo:"", assignedEmail:"", dueDate:"", notes:"", kickoffId:"", kickoffName:"", priority:"media", imageUrl:"" });
       setShowForm(false);
       setTimeout(() => load(), 1500);
     } catch(err) { alert("Error al guardar: " + err.message); }
@@ -2374,6 +2374,15 @@ function TaskTracker() {
                 <textarea value={form.notes} onChange={e=>setF("notes",e.target.value)} rows={2}
                   className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm resize-none"/>
               </div>
+              <div className="sm:col-span-3">
+                <label className="text-[11px] text-stone-500">Imagen (URL de Google Drive o foto)</label>
+                <input value={form.imageUrl} onChange={e=>setF("imageUrl",e.target.value)}
+                  className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
+                  placeholder="https://drive.google.com/file/d/..."/>
+                {form.imageUrl && (
+                  <img src={form.imageUrl} alt="preview" className="mt-2 h-20 rounded-lg object-cover border border-stone-200" onError={e=>e.target.style.display="none"}/>
+                )}
+              </div>
             </div>
             <div className="flex gap-2">
               <button onClick={saveTask} disabled={saving}
@@ -2532,6 +2541,7 @@ function TaskTracker() {
                           <p className={`text-sm font-medium text-stone-800 ${t.status==="completed"?"line-through opacity-60":""}`}>{t.taskName}</p>
                           <p className="text-xs text-stone-400 mt-0.5">👤 {t.assignedTo} · 📅 {t.dueDate||"—"}</p>
                           {t.notes&&<p className="text-xs text-stone-500 mt-1">{t.notes}</p>}
+                          {t.imageUrl&&<img src={t.imageUrl} alt="" className="mt-2 h-28 rounded-lg object-cover border border-stone-100" onError={e=>e.target.style.display="none"}/>}
                         </div>
                       </div>
                     </div>

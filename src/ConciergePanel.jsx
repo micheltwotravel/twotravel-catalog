@@ -210,8 +210,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     { label: lang === "es" ? "Salida"       : "Departure",      val: fmtDate(kickoff.departureDate) },
     { label: lang === "es" ? "Destino"      : "Destination",    val: cityFullName(kickoff.city) || "" },
     { label: lang === "es" ? "Huéspedes"    : "Guests",         val: cl(kickoff.groupSize || "") },
-    { label: lang === "es" ? "Alojamiento"  : "Accommodation",  val: cl(kickoff.accommodationName || ""), url: accomUrl || null },
-    { label: lang === "es" ? "Dirección"    : "Address",        val: cl(kickoff.accommodationAddr || "") },
+    { label: lang === "es" ? "Alojamiento"  : "Accommodation",  val: cl(kickoff.accommodationName || "") },
+    { label: lang === "es" ? "Dirección"    : "Address",        val: cl(kickoff.accommodationAddr || ""), url: accomUrl || null },
     { label: "Concierge",                                        val: cl(kickoff.assignedConciergeName || kickoff.assignedConcierge || "") },
     { label: "WhatsApp Concierge",                               val: conciergePhone, url: waUrl },
     { label: lang === "es" ? "Tu WhatsApp"  : "Your WhatsApp",  val: cl(kickoff.guestContact || "") },
@@ -2982,10 +2982,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   placeholder="Calle 10 # 29-34, Medellín, Antioquia" />
               </div>
               <div className="col-span-2">
-                <label className="text-[11px] text-neutral-500">Link del alojamiento (Airbnb, Booking, etc.)</label>
+                <label className="text-[11px] text-neutral-500">Google Maps del alojamiento</label>
                 <input value={accommodationUrl} onChange={(e) => setAccommodationUrl(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="https://www.airbnb.com/rooms/12345" />
+                  placeholder="https://maps.app.goo.gl/..." />
               </div>
               <div>
                 <label className="text-[11px] text-neutral-500">Check-in</label>
@@ -4467,7 +4467,7 @@ const loadKickoffs = async () => {
 
 <td className="px-4 py-2 text-xs font-medium text-neutral-700">
   {k.city ? (
-    <span className="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 text-[11px] font-semibold">{k.city}</span>
+    <span className="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 text-[11px] font-semibold">{cityFullName(k.city)}</span>
   ) : (
     <span className="text-neutral-400 italic">—</span>
   )}
