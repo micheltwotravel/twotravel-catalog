@@ -39,6 +39,7 @@ const YACHTS_PDF_URL = "https://drive.google.com/file/d/REPLACE_WITH_YOUR_DRIVE_
 const NO_QB = new Set(["restaurants","bars","nightlife","beach-clubs","beach clubs","beachclubs"]);
 // Categories where price × pax (tours, services, chef)
 const PAX_MULTIPLIES = new Set(["tours","tour","services","service","chef","private chef","chef privado"]);
+// Transportation is priced per vehicle — never multiply by pax
 // City code → full name for PDF and QuickBooks
 const CITY_NAMES = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" };
 const cityFullName = (code) => CITY_NAMES[String(code||"").trim().toUpperCase()] || String(code||"").trim();
@@ -798,8 +799,10 @@ function mapServiceToCartItem(service, clientType = 1, groupSizeNum = 1) {
 }
 
 function mapManualToCartItem() {
+  const uid = `manual_${Date.now()}_${Math.random()}`;
   return {
-    id: `manual_${Date.now()}`,
+    id: uid,
+    _uid: uid,
     sku: "",
     name: "Ítem manual",
     category: "services",
@@ -856,20 +859,20 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
   return (
     <div className="px-4 py-2.5 hover:bg-neutral-50 transition-colors">
       <div className="grid grid-cols-12 gap-x-2 items-center">
-        {/* Time — free text */}
+        {/* Time picker */}
         <div className="col-span-2">
           <input
+            type="time"
             value={item.timeLabel || ""}
-            onChange={e => onUpdate(item.id, { timeLabel: e.target.value })}
-            placeholder="Hora"
-            className="w-full text-xs text-neutral-500 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
+            onChange={e => onUpdate(item._uid, { timeLabel: e.target.value })}
+            className="w-full text-xs text-neutral-500 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent"
           />
         </div>
         {/* Name */}
         <div className="col-span-6">
           <input
             value={item.displayName || item.name || ""}
-            onChange={e => onUpdate(item.id, { displayName: e.target.value })}
+            onChange={e => onUpdate(item._uid, { displayName: e.target.value })}
             placeholder="Nombre del servicio"
             className="w-full text-sm font-medium text-neutral-900 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent"
           />
@@ -884,14 +887,15 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
           <input
             type="number"
             value={item.priceOverride_cop ?? ""}
-            onChange={e => onUpdate(item.id, {
+            onChange={e => onUpdate(item._uid, {
               priceOverride_cop: e.target.value === "" ? null : Number(e.target.value),
             })}
             placeholder={String(item.price_cop || "Precio COP")}
             className="w-full text-xs text-right text-neutral-500 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
           />
           {(() => {
-            const isPerPerson = String(item.priceUnit || "").toLowerCase().includes("person");
+            const isTransport = String(item.category || "").toLowerCase().includes("transport");
+            const isPerPerson = !isTransport && String(item.priceUnit || "").toLowerCase().includes("person");
             const pax = parseInt(groupSize, 10);
             const unitPrice = Number(item.priceOverride_cop ?? item.price_cop ?? 0);
             if (!isPerPerson || pax < 2 || !unitPrice) return null;
@@ -907,7 +911,7 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
         <div className="col-span-1 flex items-center justify-end gap-1.5">
           <button
             type="button"
-            onClick={() => onUpdate(item.id, { confirmed: !(item.confirmed !== false) })}
+            onClick={() => onUpdate(item._uid, { confirmed: !(item.confirmed !== false) })}
             title={item.confirmed !== false ? "Marcar como recomendación" : "Marcar como confirmado"}
             className="text-[13px] leading-none opacity-60 hover:opacity-100 transition-opacity"
           >
@@ -918,7 +922,7 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
             className="text-[11px] text-neutral-300 hover:text-neutral-600 leading-none">
             ✎
           </button>
-          <button type="button" onClick={() => onRemove(item.id)}
+          <button type="button" onClick={() => onRemove(item._uid)}
             title="Quitar"
             className="text-[11px] text-neutral-300 hover:text-red-500 leading-none">
             ✕
@@ -931,7 +935,7 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
         {availableDays.length > 1 && (
           <select
             value={item.dayLabel || ""}
-            onChange={e => onUpdate(item.id, { dayLabel: e.target.value })}
+            onChange={e => onUpdate(item._uid, { dayLabel: e.target.value })}
             className="text-[10px] text-violet-600 border-b border-dashed border-violet-200 focus:border-violet-400 focus:outline-none py-0.5 bg-transparent max-w-[120px]"
             title="Mover a otro día"
           >
@@ -940,7 +944,7 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
         )}
         <input
           value={item.quickbooksCode || ""}
-          onChange={e => onUpdate(item.id, { quickbooksCode: e.target.value.toUpperCase() })}
+          onChange={e => onUpdate(item._uid, { quickbooksCode: e.target.value.toUpperCase() })}
           placeholder="QB code"
           className="w-20 text-[10px] font-mono text-indigo-500 border-b border-dashed border-indigo-200 focus:border-indigo-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 uppercase"
           title="Código QuickBooks (ej: CS010, SE022)"
@@ -950,7 +954,7 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
           <input
             type="number"
             value={item.priceUsd ?? ""}
-            onChange={e => onUpdate(item.id, { priceUsd: e.target.value === "" ? null : Number(e.target.value) })}
+            onChange={e => onUpdate(item._uid, { priceUsd: e.target.value === "" ? null : Number(e.target.value) })}
             placeholder="USD"
             className="w-16 text-[10px] text-right text-emerald-600 border-b border-dashed border-emerald-200 focus:border-emerald-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
             title="Precio en USD para QuickBooks"
@@ -963,7 +967,7 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
             <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Confirm.</span>
             <input
               value={item.confirmation || ""}
-              onChange={e => onUpdate(item.id, { confirmation: e.target.value })}
+              onChange={e => onUpdate(item._uid, { confirmation: e.target.value })}
               placeholder="# confirmación / Confirmed by…"
               className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
               autoFocus
@@ -974,7 +978,7 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
               <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Dress code</span>
               <input
                 value={item.dressCode || ""}
-                onChange={e => onUpdate(item.id, { dressCode: e.target.value })}
+                onChange={e => onUpdate(item._uid, { dressCode: e.target.value })}
                 placeholder="Formal / Smart casual / No shorts…"
                 className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
               />
@@ -985,7 +989,7 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
               <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Pasajeros</span>
               <input
                 value={item.passengers || ""}
-                onChange={e => onUpdate(item.id, { passengers: e.target.value })}
+                onChange={e => onUpdate(item._uid, { passengers: e.target.value })}
                 placeholder="Juan, María, Sam…"
                 className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
               />
@@ -995,7 +999,7 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
             <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Notas</span>
             <input
               value={item.notes || ""}
-              onChange={e => onUpdate(item.id, { notes: e.target.value })}
+              onChange={e => onUpdate(item._uid, { notes: e.target.value })}
               placeholder="Mesa, alergias, instrucciones…"
               className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
             />
@@ -1075,7 +1079,7 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
           ) : (
             <div className="divide-y divide-neutral-100 bg-white">
               {items.map(item => (
-                <ActivityRow key={item.id} item={item}
+                <ActivityRow key={item._uid || item.id} item={item}
                   availableDays={availableDays}
                   groupSize={groupSize}
                   onUpdate={onUpdateItem} onRemove={onRemoveItem}/>
@@ -1114,7 +1118,8 @@ function ItineraryCanvas({ kickoff, onSave }) {
     }
     return [];
   };
-  const [cart,     setCart]     = useState(parseArr(kickoff?.cart));
+  const withUid = (arr) => arr.map((item, i) => item._uid ? item : { ...item, _uid: `${item.id ?? "m"}_${i}_${Date.now()}` });
+  const [cart,     setCart]     = useState(withUid(parseArr(kickoff?.cart)));
   const [dayMeta,  setDayMeta]  = useState(parseArr(kickoff?.dayMeta));
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(false);
@@ -1123,7 +1128,7 @@ function ItineraryCanvas({ kickoff, onSave }) {
 
   // Sync when kickoff changes (e.g. switching between kickoffs)
   useEffect(() => {
-    setCart(parseArr(kickoff?.cart));
+    setCart(withUid(parseArr(kickoff?.cart)));
     setDayMeta(parseArr(kickoff?.dayMeta));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kickoff?.id]);
@@ -1190,11 +1195,11 @@ function ItineraryCanvas({ kickoff, onSave }) {
   };
 
   /* ── Item helpers ── */
-  const updateItem = (id, patch) =>
-    setCart(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i));
+  const updateItem = (uid, patch) =>
+    setCart(prev => prev.map(i => i._uid === uid ? { ...i, ...patch } : i));
 
-  const removeItem = (id) =>
-    setCart(prev => prev.filter(i => i.id !== id));
+  const removeItem = (uid) =>
+    setCart(prev => prev.filter(i => i._uid !== uid));
 
   const addManualToDay = (dayLabel) => {
     const count = cart.filter(i => (i.dayLabel || "Sin día") === dayLabel).length;
@@ -1342,8 +1347,10 @@ function ItineraryCanvas({ kickoff, onSave }) {
           onClose={() => setCatalogTargetDay(null)}
           onPick={svc => {
             const count = cart.filter(i => (i.dayLabel || "Sin día") === catalogTargetDay).length;
+            const newItem = mapServiceToCartItem(svc, kickoff?.clientType || 1, parseInt(kickoff?.groupSize || "1") || 1);
             setCart(prev => [...prev, {
-              ...mapServiceToCartItem(svc, kickoff?.clientType || 1, parseInt(kickoff?.groupSize || "1") || 1),
+              ...newItem,
+              _uid: `${newItem.id}_${Date.now()}_${Math.random()}`,
               dayLabel: catalogTargetDay,
               sortOrder: count,
             }]);
