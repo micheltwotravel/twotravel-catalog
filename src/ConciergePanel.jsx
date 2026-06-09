@@ -50,6 +50,8 @@ const cityFullName = (code) => CITY_NAMES[String(code||"").trim().toUpperCase()]
    mode = "preview" → opens PDF in a new browser tab
 ───────────────────────────────────────────────────────────── */
 async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", mode = "slack", fxRate = 3489) {
+  // Open preview window synchronously (before any await) so popup blocker doesn't fire
+  const previewWin = mode === "preview" ? window.open("", "_blank") : null;
   const { jsPDF } = await import("jspdf");
 
   // ── helpers ─────────────────────────────────────────────────
@@ -385,9 +387,10 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
 
   const filename = `Itinerary_${cl(kickoff.guestName||"client").replace(/\s+/g,"-")}_${new Date().toISOString().slice(0,10)}.pdf`;
 
-  // ── preview: download directly (window.open blocked after async gap) ──
+  // ── preview: open in already-open tab (avoids popup blocker) ──────────
   if (mode === "preview") {
-    doc.save(filename);
+    const url = doc.output("bloburl");
+    if (previewWin) previewWin.location.href = url;
     return;
   }
 
