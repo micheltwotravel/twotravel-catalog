@@ -684,12 +684,17 @@ function buildFeedbackLink(kickoff, clientType = 1, lang = "en") {
   if (dest2) url.searchParams.set("destination2", dest2);
 
   // Map full concierge name → dropdown short name (e.g. "Alia Jadad" → "Alia")
-  const rawConcierge = kickoff?.assignedConcierge || "";
+  // Supports comma-separated "Carolina Lopez, Daniela B" in assignedConcierge
+  const rawConciergeField = kickoff?.assignedConcierge || "";
+  const conciergeParts = rawConciergeField.includes(",")
+    ? rawConciergeField.split(",").map(s => s.trim())
+    : [rawConciergeField.trim()];
+  const rawConcierge = conciergeParts[0] || "";
   const concierge = CONCIERGE_TO_SHORT[rawConcierge] || rawConcierge.split(" ")[0] || "";
   if (concierge) url.searchParams.set("concierge", concierge);
 
-  // Concierge 2 (for multi-city trips)
-  const rawConcierge2 = kickoff?.assignedConcierge2 || "";
+  // Concierge 2 — explicit assignedConcierge2 field OR second part of comma-separated assignedConcierge
+  const rawConcierge2 = (kickoff?.assignedConcierge2 || conciergeParts[1] || "").trim();
   const concierge2 = CONCIERGE_TO_SHORT[rawConcierge2] || rawConcierge2.split(" ")[0] || "";
   if (concierge2) url.searchParams.set("concierge2", concierge2);
 
