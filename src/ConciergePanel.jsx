@@ -3159,8 +3159,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   <ItineraryCanvas
     kickoff={kickoff}
     onSave={async (newCart, newDayMeta) => {
-      await onSave(kickoff.id, {
-        cart:    JSON.stringify(newCart),    // stringified so Apps Script stores cleanly
+      await onSilentUpdate(kickoff.id, {
+        cart:    JSON.stringify(newCart),
         dayMeta: JSON.stringify(newDayMeta),
         status: "concierge_editing",
       });
