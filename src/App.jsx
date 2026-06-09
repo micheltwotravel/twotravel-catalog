@@ -712,19 +712,31 @@ const handleSubmit = async (e) => {
             )}
           </section>
 
-          {/* TripAdvisor */}
-          <section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="text-[10px] uppercase tracking-[0.28em] text-stone-400">Review</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-800">{t.reviewTitle}</h2>
-            <p className="mt-2 text-sm text-stone-500">{t.reviewSubtitle}</p>
-            <a
-              href="https://www.tripadvisor.com/UserReviewEdit-g297476-d17750092-Two_Travel-Cartagena_Cartagena_District_Bolivar_Department.html"
-              target="_blank" rel="noreferrer"
-              className="mt-4 inline-block rounded-full bg-stone-800 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-            >
-              {t.reviewButton}
-            </a>
-          </section>
+          {/* Review */}
+          {(() => {
+            const cityUpper = String(preDestination || "").toUpperCase();
+            const isMexico = cityUpper.includes("CDMX") || cityUpper.includes("TUL");
+            const reviewUrl = isMexico
+              ? "https://share.google/UvyICj95CeOsw7VgN"
+              : "https://www.tripadvisor.com/UserReviewEdit-g297476-d17750092-Two_Travel-Cartagena_Cartagena_District_Bolivar_Department.html";
+            const reviewLabel = isMexico
+              ? (lang === "es" ? "Dejar una reseña en Google" : "Leave a review on Google")
+              : t.reviewButton;
+            return (
+              <section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
+                <p className="text-[10px] uppercase tracking-[0.28em] text-stone-400">Review</p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-800">{t.reviewTitle}</h2>
+                <p className="mt-2 text-sm text-stone-500">{t.reviewSubtitle}</p>
+                <a
+                  href={reviewUrl}
+                  target="_blank" rel="noreferrer"
+                  className="mt-4 inline-block rounded-full bg-stone-800 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                >
+                  {reviewLabel}
+                </a>
+              </section>
+            );
+          })()}
 
           <div className="sticky bottom-4 z-20">
             <div className="rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm">
