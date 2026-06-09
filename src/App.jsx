@@ -321,7 +321,8 @@ function FeedbackForm({ kickoffId }) {
   const langParam = params.get("lang");
   // Pre-fill destination and concierge from URL if present
   const preDestination = params.get("destination") || params.get("city") || "";
-  const preConcierge = params.get("concierge") || "";
+  const preConcierge  = params.get("concierge")  || "";
+  const preConcierge2 = params.get("concierge2") || "";
 
   const initialLang =
     langParam === "es" || langParam === "en" ? langParam : "en";
@@ -337,6 +338,7 @@ function FeedbackForm({ kickoffId }) {
   const [form, setForm] = useState({
   destination: preDestination,
   concierge: preConcierge,
+  concierge2: preConcierge2,
   occasion: "",
 
   overallExperience: "",
@@ -551,6 +553,18 @@ const handleSubmit = async (e) => {
                   hasError={!!errors.concierge}
                 />
               </div>
+
+              {preConcierge2 && (
+                <div>
+                  <Label>{lang === "es" ? "Tu concierge 2" : "Your Concierge 2"}</Label>
+                  <SelectDropdown
+                    value={form.concierge2}
+                    onChange={(v) => updateField("concierge2", v)}
+                    options={t.options.concierges}
+                    placeholder={lang === "es" ? "Tu concierge 2" : "Your Concierge 2"}
+                  />
+                </div>
+              )}
 
               <div>
                 <Label>{t.occasion}</Label>
