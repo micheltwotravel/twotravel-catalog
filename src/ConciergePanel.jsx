@@ -4487,7 +4487,13 @@ const loadKickoffs = async () => {
 
 <td className="px-4 py-2 text-xs font-medium text-neutral-700">
   {k.city ? (
-    <span className="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 text-[11px] font-semibold">{cityFullName(k.city)}</span>
+    <div className="flex flex-wrap gap-1">
+      {String(k.city).split(",").map(c => c.trim()).filter(Boolean).map(code => (
+        <span key={code} className="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 text-[11px] font-semibold">
+          {CITY_NAMES[code.toUpperCase()] || code}
+        </span>
+      ))}
+    </div>
   ) : (
     <span className="text-neutral-400 italic">—</span>
   )}
