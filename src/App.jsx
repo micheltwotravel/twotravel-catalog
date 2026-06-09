@@ -715,7 +715,7 @@ const handleSubmit = async (e) => {
           {/* Review */}
           {(() => {
             const cityUpper = String(preDestination || "").toUpperCase();
-            const isMexico = cityUpper.includes("CDMX") || cityUpper.includes("TUL");
+            const isMexico = cityUpper.includes("CDMX") || cityUpper.includes("TUL") || cityUpper.includes("TULUM") || cityUpper.includes("MEXICO") || cityUpper.includes("MÉXICO");
             const reviewUrl = isMexico
               ? "https://share.google/UvyICj95CeOsw7VgN"
               : "https://www.tripadvisor.com/UserReviewEdit-g297476-d17750092-Two_Travel-Cartagena_Cartagena_District_Bolivar_Department.html";
