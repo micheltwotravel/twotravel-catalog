@@ -3246,13 +3246,17 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 onClick={async () => {
                   setBillingSending(true);
                   try {
-                    const url = await sendItineraryPdfToSlack({
+                    const liveKickoff = {
                       ...kickoff,
-                      cart,
-                      dayMeta,
+                      cart, dayMeta,
+                      city, tripDates, groupSize,
+                      arrivalDate, departureDate,
+                      accommodationName, accommodationAddr, accommodationUrl,
+                      checkIn, checkOut,
+                      conciergeTitle,
                       email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
-                      city: city || kickoff.city || "",
-                    }, kickoff.lang || "en", billingCurrency, "preview", liveFxRate);
+                    };
+                    const url = await sendItineraryPdfToSlack(liveKickoff, kickoff.lang || "en", billingCurrency, "preview", liveFxRate);
                     console.log("PDF preview url:", url);
                     if (!url) throw new Error("No se generó URL del PDF");
                     setPdfPreviewUrl(url);
