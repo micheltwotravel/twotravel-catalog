@@ -42,7 +42,8 @@ const PAX_MULTIPLIES = new Set(["tours","tour","services","service","chef","priv
 // Transportation is priced per vehicle — never multiply by pax
 // City code → full name for PDF and QuickBooks
 const CITY_NAMES = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" };
-const cityFullName = (code) => CITY_NAMES[String(code||"").trim().toUpperCase()] || String(code||"").trim();
+const cityFullName = (code) =>
+  String(code||"").split(",").map(c => CITY_NAMES[c.trim().toUpperCase()] || c.trim()).filter(Boolean).join(", ");
 
 /* ─────────────────────────────────────────────────────────────
    buildItineraryPdf / sendItineraryPdfToSlack
@@ -4494,11 +4495,34 @@ const loadKickoffs = async () => {
 
 <td className="px-4 py-2">
   <StatusBadge status={k.status} lang={portalLang} />
-  {k.conciergeRating > 0 && (
-    <div className="mt-0.5 text-[11px] text-amber-500 font-medium leading-none">
-      {"★".repeat(Number(k.conciergeRating))}{"☆".repeat(5 - Number(k.conciergeRating))}
-    </div>
-  )}
+  {(() => {
+    // cityRatings takes priority; fall back to single conciergeRating
+    let ratings = [];
+    try { ratings = JSON.parse(k.cityRatings || "[]"); } catch {}
+    ratings = ratings.filter(r => r.rating > 0);
+    if (ratings.length > 0) {
+      const avg = (ratings.reduce((s, r) => s + Number(r.rating), 0) / ratings.length).toFixed(1);
+      return (
+        <div className="mt-0.5 space-y-0.5">
+          {ratings.map((r, i) => (
+            <div key={i} className="text-[10px] text-neutral-500 leading-none">
+              <span className="font-medium text-neutral-700">{r.city}</span>
+              {" "}<span className="text-amber-500">{"★".repeat(Number(r.rating))}{"☆".repeat(5 - Number(r.rating))}</span>
+            </div>
+          ))}
+          {ratings.length > 1 && (
+            <div className="text-[10px] text-amber-600 font-semibold">Prom. {avg} ★</div>
+          )}
+        </div>
+      );
+    }
+    if (k.conciergeRating > 0) return (
+      <div className="mt-0.5 text-[11px] text-amber-500 font-medium leading-none">
+        {"★".repeat(Number(k.conciergeRating))}{"☆".repeat(5 - Number(k.conciergeRating))}
+      </div>
+    );
+    return null;
+  })()}
 </td>
 
 <td className="px-4 py-2 text-right">
