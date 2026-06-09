@@ -3248,12 +3248,17 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   try {
                     const url = await sendItineraryPdfToSlack({
                       ...kickoff,
+                      cart,
+                      dayMeta,
                       email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
                       city: city || kickoff.city || "",
                     }, kickoff.lang || "en", billingCurrency, "preview", liveFxRate);
+                    console.log("PDF preview url:", url);
+                    if (!url) throw new Error("No se generó URL del PDF");
                     setPdfPreviewUrl(url);
                   } catch (e) {
-                    alert("❌ " + e.message);
+                    console.error("PDF preview error:", e);
+                    alert("❌ Error generando PDF: " + e.message);
                   } finally {
                     setBillingSending(false);
                   }
@@ -4261,23 +4266,31 @@ const loadKickoffs = async () => {
           </button>
 
           {showRatings && (() => {
-            const rated = kickoffs.filter(k => Number(k.conciergeRating) > 0);
+            // Get best available rating per kickoff: avg of cityRatings, or conciergeRating
+            const getRating = (k) => {
+              try {
+                const cr = JSON.parse(k.cityRatings || "[]").filter(r => Number(r.rating) > 0);
+                if (cr.length) return cr.reduce((s, r) => s + Number(r.rating), 0) / cr.length;
+              } catch {}
+              return Number(k.conciergeRating) || 0;
+            };
+            const rated = kickoffs.filter(k => getRating(k) > 0);
             const total = rated.length;
-            const avg   = total ? (rated.reduce((s, k) => s + Number(k.conciergeRating), 0) / total).toFixed(1) : "—";
+            const avg   = total ? (rated.reduce((s, k) => s + getRating(k), 0) / total).toFixed(1) : "—";
 
             // Group by concierge
             const byC = {};
             rated.forEach(k => {
               const name = k.assignedConcierge || k.assignedConciergeName || "Sin asignar";
               if (!byC[name]) byC[name] = [];
-              byC[name].push(Number(k.conciergeRating));
+              byC[name].push(getRating(k));
             });
             const conciergeRows = Object.entries(byC)
               .map(([name, ratings]) => ({
                 name,
                 count: ratings.length,
                 avg: (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1),
-                dist: [1,2,3,4,5].map(n => ratings.filter(r => r === n).length),
+                dist: [1,2,3,4,5].map(n => ratings.filter(r => Math.round(r) === n).length),
               }))
               .sort((a, b) => b.avg - a.avg);
 
@@ -4294,7 +4307,7 @@ const loadKickoffs = async () => {
                   </div>
                   <div className="flex-1 min-w-[180px]">
                     {[5,4,3,2,1].map(n => {
-                      const cnt = rated.filter(k => Number(k.conciergeRating) === n).length;
+                      const cnt = rated.filter(k => Math.round(getRating(k)) === n).length;
                       const pct = total ? Math.round((cnt / total) * 100) : 0;
                       return (
                         <div key={n} className="flex items-center gap-2 mb-0.5">

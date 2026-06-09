@@ -354,6 +354,16 @@ export async function fetchKickoffsFromSheet() {
     return [];
   };
 
+  // Convert a Sheets-serialised time (e.g. "1899-12-30T15:00:00.000Z") → "3:00 PM"
+  const sheetsTimeToLabel = (v) => {
+    if (!v || typeof v !== "string") return v;
+    if (!v.includes("T") || !v.startsWith("1899")) return v; // already human text
+    try {
+      const d = new Date(v);
+      return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+    } catch { return v; }
+  };
+
   return data.map((k) => ({
     ...k,
     // Always expose cart / dayMeta as real arrays — never as raw JSON strings.
@@ -362,6 +372,8 @@ export async function fetchKickoffsFromSheet() {
     // can use them directly without individual guard code.
     cart:    parseJsonArr(k.cart),
     dayMeta: parseJsonArr(k.dayMeta ?? k.day_meta),
+    checkIn:  sheetsTimeToLabel(k.checkIn),
+    checkOut: sheetsTimeToLabel(k.checkOut),
     guestContact: String(
       k?.guestContact ?? k?.GuestContact ?? k?.guest_contact ??
       k?.contact ?? k?.Contact ?? k?.contacto ?? k?.Contacto ?? ""
