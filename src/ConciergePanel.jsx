@@ -4278,12 +4278,37 @@ const loadKickoffs = async () => {
             const total = rated.length;
             const avg   = total ? (rated.reduce((s, k) => s + getRating(k), 0) / total).toFixed(1) : "—";
 
-            // Group by concierge
+            // Group by concierge, splitting multi-city ratings by position
+            // e.g. city="CTG,MDE", concierge="Carolina, Daniela", cityRatings=[{city:CTG,5},{city:MDE,4}]
+            // → Carolina gets 5, Daniela gets 4
             const byC = {};
+            const addToByC = (name, rating) => {
+              const key = (name || "Sin asignar").trim();
+              if (!byC[key]) byC[key] = [];
+              byC[key].push(Number(rating));
+            };
             rated.forEach(k => {
-              const name = k.assignedConcierge || k.assignedConciergeName || "Sin asignar";
-              if (!byC[name]) byC[name] = [];
-              byC[name].push(getRating(k));
+              const concierges = String(k.assignedConcierge || k.assignedConciergeName || "")
+                .split(",").map(s => s.trim()).filter(Boolean);
+              const cities = String(k.city || "").split(",").map(s => s.trim().toUpperCase()).filter(Boolean);
+              let cityRatingsArr = [];
+              try { cityRatingsArr = JSON.parse(k.cityRatings || "[]").filter(r => Number(r.rating) > 0); } catch {}
+
+              if (cityRatingsArr.length > 0 && concierges.length > 1) {
+                // Match each city rating to its concierge by city name position
+                cityRatingsArr.forEach(cr => {
+                  const cityIdx = cities.indexOf(String(cr.city || "").trim().toUpperCase());
+                  const concierge = concierges[cityIdx >= 0 ? cityIdx : 0] || concierges[0];
+                  addToByC(concierge, cr.rating);
+                });
+              } else if (cityRatingsArr.length > 0) {
+                // Single concierge — credit all city ratings to them
+                const name = concierges[0] || "Sin asignar";
+                cityRatingsArr.forEach(cr => addToByC(name, cr.rating));
+              } else {
+                // Fallback to old single conciergeRating
+                addToByC(concierges[0] || "Sin asignar", k.conciergeRating);
+              }
             });
             const conciergeRows = Object.entries(byC)
               .map(([name, ratings]) => ({
