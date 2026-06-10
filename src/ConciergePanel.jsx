@@ -4352,22 +4352,6 @@ const loadKickoffs = async () => {
           </div>
         </div>
 
-        {/* ── Blank feedback link (client not in system) ── */}
-        <button
-          type="button"
-          onClick={async () => {
-            const lang = portalLang || "en";
-            const url = new URL("/", CLIENT_BASE_URL);
-            url.searchParams.set("mode", "feedback");
-            url.searchParams.set("lang", lang);
-            try { await navigator.clipboard.writeText(url.toString()); alert("✅ Link copiado!"); }
-            catch { prompt("Link feedback sin cliente:", url.toString()); }
-          }}
-          className="text-xs text-violet-600 hover:text-violet-800 border border-violet-200 hover:border-violet-400 rounded-lg px-3 py-1.5 bg-white transition-colors"
-        >
-          📋 Link feedback (cliente sin cuenta)
-        </button>
-
         {/* ── Ratings summary toggle ── */}
         <div>
           <button
