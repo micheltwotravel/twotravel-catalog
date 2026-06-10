@@ -177,6 +177,33 @@ const AMENITY_GROUPS = {
   "Special Features":   ["Bachelor Friendly","Wine Cellar","Private Pool","Tennis Court","Basketball Court","Pickleball","Putting Green","Helipad","Private Island"],
 };
 
+// ── Agent Tags — what the AI uses to match client requests ─────────────
+const TAG_GROUPS = {
+  "✨ Vibe": [
+    "Luxury","Ultra-Luxury","Boutique","Party","Chill & Relaxed",
+    "Romantic","Adults Only","Family Friendly","Corporate","Exclusive","Hidden Gem",
+  ],
+  "🎉 Occasion": [
+    "Bachelorette","Bachelor","Wedding","Honeymoon","Anniversary",
+    "Birthday","Corporate Retreat","Team Building","Proposal","Quince",
+  ],
+  "👥 Group Size": [
+    "Intimate (2–8)","Small Group (8–20)","Medium Group (20–40)","Large Group (40–80)","Mega Group (80+)",
+  ],
+  "📍 Setting": [
+    "Beachfront","Oceanfront","Rooftop","Historic","Colonial","Modern",
+    "Jungle / Nature","Urban","Private Island","Clifftop","Countryside",
+  ],
+  "🎯 Activities": [
+    "Nightlife","Water Sports","Snorkeling","Diving","Fishing",
+    "Gastronomy","Wine & Spirits","Wellness / Spa","Yoga & Meditation",
+    "Cultural","Adventure","Sunset Cruise","Day Trip","Shopping",
+  ],
+  "💰 Price Range": [
+    "Budget-Friendly","Mid-Range","Premium","Luxury Tier","Ultra-Premium",
+  ],
+};
+
 const CITIES   = ["Cartagena","Medellín","Mexico City","Tulum","Cancún","Bogotá","Santa Marta","Barranquilla","Miami","Panamá"];
 const TYPES    = ["Villa","Yacht","Boat","Catamaran","Speedboat","Island","Wedding Venue","Penthouse","Apartment","Finca","Hacienda","Hotel","Restaurant","Experience"];
 const STATUSES = ["Active","Inactive","On Request","Coming Soon","Seasonal"];
@@ -187,6 +214,7 @@ let selId    = null;
 let fCity    = "";
 let fType    = "";
 let selAmens = [];
+let selTags  = [];
 
 async function gas(body) {
   const r = await fetch(GAS, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(body) });
@@ -336,7 +364,8 @@ function showDetail(id){
         ${df("Contact Name",contact)} ${df("Contact",p.contact)} ${df("Phone",phone)}
         ${desc?`<div class="dsec">Description</div><div class="df full"><div class="dv">${esc(desc)}</div></div>`:""}
         ${notes?`<div class="dsec">Notes</div><div class="df full"><div class="dv" style="color:var(--ink3)">${esc(notes)}</div></div>`:""}
-        ${amenArr.length?`<div class="dsec">Amenities & Tags</div><div class="df full"><div class="atags">${amenArr.map(a=>`<span class="atag">${esc(a)}</span>`).join("")}</div></div>`:""}
+        ${amenArr.length?`<div class="dsec">Amenities</div><div class="df full"><div class="atags">${amenArr.map(a=>`<span class="atag">${esc(a)}</span>`).join("")}</div></div>`:""}
+        ${(()=>{const t=(p.tags||"").split(",").map(s=>s.trim()).filter(Boolean);return t.length?`<div class="dsec">Agent Tags</div><div class="df full"><div class="atags">${t.map(a=>`<span class="atag" style="border-color:var(--gold3);color:var(--gold);background:rgba(154,125,82,.06)">${esc(a)}</span>`).join("")}</div></div>`:"";})()}
         <div class="dsec">Links</div>
         ${airbnb?`<div class="df full"><div class="dl">Airbnb / Booking</div><a href="${esc(airbnb)}" target="_blank" class="dlink">${esc(airbnb)}</a></div>`:""}
         ${photos?`<div class="df full"><div class="dl">Photos / Drive</div><a href="${esc(photos)}" target="_blank" class="dlink">${esc(photos)}</a></div>`:""}
@@ -357,6 +386,7 @@ function openEdit(id){ showForm(allProps.find(p=>(p.id||p.name)===id)); }
 function showForm(p){
   show("main-content"); hide("empty-state");
   selAmens=p?(p.amenities||"").split(",").map(s=>s.trim()).filter(Boolean):[];
+  selTags =p?(p.tags||"").split(",").map(s=>s.trim()).filter(Boolean):[];
   const type=p?.["item type"]||p?.type||"";
   const cityOpts=CITIES.map(c=>`<option ${(p?.city||"")==c?"selected":""}>${c}</option>`).join("");
   const typeOpts=TYPES.map(t=>`<option ${type===t?"selected":""}>${t}</option>`).join("");
@@ -412,8 +442,11 @@ function showForm(p){
         <div class="fl full"><label>Description (shown to clients)</label><textarea id="fdesc" rows="4">${esc(p?.description||"")}</textarea></div>
         <div class="fl full"><label>Internal Notes</label><textarea id="fnotes" rows="3">${esc(p?.notes||"")}</textarea></div>
 
-        <div class="fsec">Amenities & Tags</div>
+        <div class="fsec">🏡 Amenities</div>
         <div class="fl full" id="amen-container"></div>
+
+        <div class="fsec">🤖 Agent Tags <span style="font-size:9px;color:var(--ink3);font-weight:300;letter-spacing:0;text-transform:none;margin-left:6px">— el agente usa estos para recomendar la propiedad</span></div>
+        <div class="fl full" id="tag-container"></div>
 
         <div class="fbtns">
           <button class="fb pri" id="save-btn" onclick="saveProperty(${p?`'${esc(p.id||p.name)}'`:null})">${p?"Save Changes":"Add to Portfolio"}</button>
@@ -423,6 +456,7 @@ function showForm(p){
       </div>
     </div>`;
   buildAmenityPicker();
+  buildTagPicker();
 }
 
 function buildAmenityPicker(){
@@ -442,6 +476,35 @@ function buildAmenityPicker(){
       chip.onclick=()=>{
         if(selAmens.includes(a)){selAmens=selAmens.filter(x=>x!==a);chip.classList.remove("sel");}
         else{selAmens.push(a);chip.classList.add("sel");}
+      };
+      chipsEl.appendChild(chip);
+    });
+  }
+}
+
+function buildTagPicker(){
+  const container=document.getElementById("tag-container");
+  if(!container) return;
+  container.innerHTML="";
+  for(const [group,items] of Object.entries(TAG_GROUPS)){
+    const sec=document.createElement("div");
+    sec.className="amen-section";
+    sec.innerHTML=`<div class="amen-group-label">${group}</div><div class="amen-chips"></div>`;
+    container.appendChild(sec);
+    const chipsEl=sec.querySelector(".amen-chips");
+    items.forEach(a=>{
+      const chip=document.createElement("div");
+      chip.className="ac"+(selTags.includes(a)?" sel":"");
+      chip.textContent=a;
+      chip.style.borderColor=selTags.includes(a)?"var(--gold)":"";
+      chip.onclick=()=>{
+        if(selTags.includes(a)){
+          selTags=selTags.filter(x=>x!==a);
+          chip.classList.remove("sel");
+        } else {
+          selTags.push(a);
+          chip.classList.add("sel");
+        }
       };
       chipsEl.appendChild(chip);
     });
@@ -485,6 +548,7 @@ async function saveProperty(id){
     notes:               document.getElementById("fnotes")?.value?.trim()||"",
     "venue type":        document.getElementById("fvtype")?.value?.trim()||"",
     amenities:           selAmens.join(", "),
+    tags:                selTags.join(", "),
     updatedAt:           new Date().toISOString(),
   };
   if(isNew) data.createdAt=data.updatedAt;
