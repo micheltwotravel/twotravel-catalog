@@ -310,6 +310,18 @@ const SAMPLE = {
 
 let agent=null, clients={}, selClient=null, editId=null, busy=false;
 let chatHistory=[];
+
+// ── Chat persistence ─────────────────────────────────────────────
+function saveChatHistory(clientId, history) {
+  if(!clientId||!history.length) return;
+  try { localStorage.setItem('chat_'+clientId, JSON.stringify(history)); } catch{}
+}
+function loadChatHistory(clientId) {
+  try { return JSON.parse(localStorage.getItem('chat_'+clientId)||'[]'); } catch { return []; }
+}
+function clearChatHistory(clientId) {
+  try { localStorage.removeItem('chat_'+clientId); } catch{}
+}
 const INT={claude:false,hubspot:false,notion:false};
 
 // ── Demo responses ──────────────────────────────────────────────
@@ -897,7 +909,7 @@ function renderPipelineSummary(name){
 function selectClient(c){
   const isNew = !selClient || selClient.id !== c.id;
   selClient=c;
-  chatHistory=[];
+  chatHistory = loadChatHistory(c.id);
   renderList(document.getElementById('srch').value);
   renderDetail();
   updateCtx();
@@ -927,8 +939,19 @@ function dealToType(dealName){
 }
 
 async function openClientChat(c){
-  // Clear previous messages and start fresh with client context
   document.getElementById('msgs').innerHTML='';
+
+  // If there's saved chat history, restore it and stop
+  if(chatHistory.length > 0) {
+    chatHistory.forEach(msg => {
+      if(msg.role==='user') addMsg('user', msg.content, []);
+      else if(msg.role==='assistant') addMsg('ag', msg.content, []);
+    });
+    // Show a subtle "continuing previous conversation" note
+    addMsg('ag', `_↩ Continuing previous conversation with **${c.name}**. Type anything to keep going._`, []);
+    document.getElementById('cinput').focus();
+    return;
+  }
   const info=[];
   if(c.dest)         info.push('📍 '+c.dest);
   if(c.dates)        info.push('📅 '+c.dates);
@@ -1044,6 +1067,26 @@ function renderDetail(){
   const contactHtml=phoneLink?(phoneLink+waLink+(emailLink?'<br>'+emailLink:'')):(emailLink||`<span style="color:var(--ink3);font-style:italic;font-size:12px">${t.noData}</span>`);
   // Deal name vs contact name
   const dealNameLine=selClient.dealName&&selClient.dealName!==selClient.name?`<div style="font-size:10px;color:var(--ink3);margin-bottom:2px;letter-spacing:.04em">Deal: ${selClient.dealName}</div>`:'';
+  // Kickoff quiz data
+  const kf = selClient.kickoff || null;
+  const kfQuiz = kf ? (()=>{try{return JSON.parse(kf.quizAnswers||'null');}catch{return null;}})() : null;
+  const kfSection = kf ? `
+    <div class="fg" style="margin-top:8px;padding-top:10px;border-top:1px solid var(--border)">
+      <div class="fl" style="color:var(--gold);margin-bottom:6px">📋 Questionnaire Data</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">
+        ${selClient.pax?`<span style="font-size:10px;padding:2px 8px;border:1px solid var(--border2);color:var(--ink2)">👥 ${selClient.pax} pax</span>`:''}
+        ${selClient.occasion?`<span style="font-size:10px;padding:2px 8px;border:1px solid var(--gold3);color:var(--gold);background:rgba(154,125,82,.05)">🎉 ${selClient.occasion}</span>`:''}
+        ${selClient.vibes?selClient.vibes.split(',').map(v=>`<span style="font-size:10px;padding:2px 8px;border:1px solid var(--border2);color:var(--ink3)">✨ ${v.trim()}</span>`).join(''):''}
+        ${kfQuiz?.kids==='yes'?`<span style="font-size:10px;padding:2px 8px;border:1px solid var(--border2);color:var(--ink3)">👶 Kids</span>`:''}
+      </div>
+      ${selClient.accommodation?`<div style="font-size:11px;color:var(--ink3);margin-bottom:3px">🏠 <b style="color:var(--ink2)">${selClient.accommodation}</b></div>`:''}
+      ${kf.arrivalDate?`<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">✈️ Arrival: <b style="color:var(--ink2)">${kf.arrivalDate}</b> → Departure: <b style="color:var(--ink2)">${kf.departureDate||'?'}</b></div>`:''}
+      ${kf.flightInfo?`<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">🛫 ${kf.flightInfo}</div>`:''}
+      ${kf.internalNotes?`<div style="font-size:11px;color:var(--ink3);margin-top:4px;font-style:italic">"${kf.internalNotes}"</div>`:''}
+    </div>` : '';
+
+  const hasPrevChat = chatHistory.length > 0;
+
   document.getElementById('det-body').innerHTML=`
     ${dealNameLine}
     <div class="fg2">
@@ -1052,14 +1095,16 @@ function renderDetail(){
       <div class="fg"><div class="fl">${t.fieldDest}</div><div class="fv ${!selClient.dest?'em':''}">${selClient.dest||t.noDash}</div></div>
       <div class="fg"><div class="fl">Trip Dates</div><div class="fv ${!selClient.dates?'em':''}">${selClient.dates||t.noConfirmed}</div></div>
     </div>
-    <div class="fg">
+    ${kfSection}
+    <div class="fg" style="margin-top:8px">
       <div class="fl">${t.fieldNotes}</div>
       <div class="fv ${!selClient.notes?'em':''}" style="font-size:12px;line-height:1.7">${selClient.notes||t.noNotes}</div>
     </div>
     <div class="fg">
       <div class="fl">${t.fieldQuotes} (${qs.length})</div>
       ${qs.length?qs.map((q,i)=>`<div class="qitem"><div class="qitem-t">${q}</div><div class="qitem-d">${dates[i]||'—'} · ${agent}</div></div>`).join(''):`<div class="fv em">${t.noQuotes}</div>`}
-    </div>`;
+    </div>
+    ${hasPrevChat?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><button onclick="clearChatHistory('${selClient.id}');chatHistory=[];document.getElementById('msgs').innerHTML='';openClientChat(selClient)" style="font-size:9px;color:var(--ink3);background:none;border:1px solid var(--border);padding:3px 8px;cursor:pointer;font-family:inherit;letter-spacing:.06em">🗑 Clear chat history</button></div>`:''}`;
 }
 
 function focusChat(){updateCtx();document.getElementById('cinput').focus();}
@@ -1473,6 +1518,7 @@ async function callClaudeAPI(userText){
     if(d.demo){chatHistory.pop();return null;}
     if(!d.text){chatHistory.pop();return null;}
     chatHistory.push({role:'assistant',content:d.text});
+    if(selClient) saveChatHistory(selClient.id, chatHistory);
     INT.claude=true;
     intDot('claude');
     return{text:d.text,cards:[]};
