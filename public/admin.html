@@ -141,24 +141,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
     <div class="sb-top">
       <div class="sb-sec">Portfolio</div>
       <input class="sb-search" id="sb-q" placeholder="Search name, neighborhood…" oninput="renderList()">
-      <div class="pills" id="city-pills">
-        <button class="pill on" data-fk="city" data-fv="">All cities</button>
-        <button class="pill" data-fk="city" data-fv="Cartagena">Cartagena</button>
-        <button class="pill" data-fk="city" data-fv="Medellín">Medellín</button>
-        <button class="pill" data-fk="city" data-fv="Mexico City">CDMX</button>
-        <button class="pill" data-fk="city" data-fv="Tulum">Tulum</button>
-        <button class="pill" data-fk="city" data-fv="Bogotá">Bogotá</button>
-        <button class="pill" data-fk="city" data-fv="Santa Marta">S. Marta</button>
-      </div>
-      <div class="pills">
-        <button class="pill on" data-fk="type" data-fv="">All types</button>
-        <button class="pill" data-fk="type" data-fv="Villa">Villas</button>
-        <button class="pill" data-fk="type" data-fv="Yacht">Yachts</button>
-        <button class="pill" data-fk="type" data-fv="Boat">Boats</button>
-        <button class="pill" data-fk="type" data-fv="Catamaran">Catamarans</button>
-        <button class="pill" data-fk="type" data-fv="Island">Islands</button>
-        <button class="pill" data-fk="type" data-fv="Wedding Venue">Venues</button>
-      </div>
+      <div class="pills" id="city-pills"></div>
+      <div class="pills" id="type-pills"></div>
       <button class="add-btn" onclick="openNew()">
         <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add property / experience
@@ -215,6 +199,7 @@ async function load() {
     const d = await gas({ action:"property_list" });
     allProps = (d.properties||[]).filter(p=>p.name);
     document.getElementById("count-badge").textContent = allProps.length+" properties";
+    buildFilterPills();
     renderList();
   } catch(e) {
     toast("Could not load — check GAS","err");
@@ -222,14 +207,50 @@ async function load() {
   }
 }
 
-document.querySelectorAll(".pill").forEach(p=>{
-  p.addEventListener("click",()=>{
-    const k=p.dataset.fk, v=p.dataset.fv;
-    if(k==="city") fCity=v; else fType=v;
-    document.querySelectorAll(`.pill[data-fk="${k}"]`).forEach(x=>x.classList.toggle("on",x.dataset.fv===v));
-    renderList();
+function buildFilterPills() {
+  // Cities — sorted by count
+  const cityCounts = {};
+  const typeCounts = {};
+  allProps.forEach(p => {
+    const c = (p.city||"").trim();
+    const t = (p["item type"]||p.type||"").trim();
+    if (c) cityCounts[c] = (cityCounts[c]||0) + 1;
+    if (t) typeCounts[t] = (typeCounts[t]||0) + 1;
   });
-});
+  const cities = Object.entries(cityCounts).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+  const types  = Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+
+  function makePills(containerId, fk, items) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.className = 'pill on';
+    allBtn.dataset.fk = fk;
+    allBtn.dataset.fv = '';
+    allBtn.textContent = fk === 'city' ? 'All cities' : 'All types';
+    allBtn.addEventListener('click', () => setPill(fk, ''));
+    el.appendChild(allBtn);
+    items.forEach(val => {
+      const btn = document.createElement('button');
+      btn.className = 'pill';
+      btn.dataset.fk = fk;
+      btn.dataset.fv = val;
+      btn.textContent = val;
+      btn.addEventListener('click', () => setPill(fk, val));
+      el.appendChild(btn);
+    });
+  }
+
+  makePills('city-pills', 'city', cities);
+  makePills('type-pills', 'type', types);
+}
+
+function setPill(k, v) {
+  if(k==="city") fCity=v; else fType=v;
+  document.querySelectorAll(`.pill[data-fk="${k}"]`).forEach(x=>x.classList.toggle("on", x.dataset.fv===v));
+  renderList();
+}
+
 
 function renderList(){
   const q=(document.getElementById("sb-q").value||"").toLowerCase();
