@@ -133,6 +133,7 @@ function buildDays(matched, lang, dayMeta) {
       qbCode       : service.quickbooksCode || service.quickbooks_code || "",
       category     : service.category   || "",
       familyFriendly: !!(service.family_friendly),
+      dressCode    : cl(cartItem.dressCode || service.dressCode || service.dress_code || ""),
       confirmed    : cartItem.confirmed !== false,
     });
   });
@@ -277,7 +278,7 @@ const CSS = `
     max-width:540px;margin-bottom:24px;font-style:italic;
   }
   .cover-footer-note{
-    font-size:10px;color:#ccc;line-height:1.8;
+    font-size:11px;color:#777;line-height:1.8;
     border-top:1px solid #ebebeb;padding-top:16px;
     margin-top:auto;
   }
@@ -316,8 +317,8 @@ const CSS = `
     align-items:baseline;
   }
   .sum-svc-time{
-    min-width:48px;color:#ccc;flex-shrink:0;
-    font-variant-numeric:tabular-nums;font-size:10px;font-weight:500;
+    min-width:48px;color:#555;flex-shrink:0;
+    font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;
   }
   .sum-svc-name{flex:1;color:#333;font-weight:500;}
   .sum-svc-loc{color:#ccc;font-size:10px;flex-shrink:0;}
@@ -375,11 +376,11 @@ const CSS = `
     color:#555;flex-shrink:0;font-weight:500;
   }
   .day-band-label{
-    font-size:15px;font-weight:700;color:#fff;line-height:1.2;letter-spacing:-.2px;
+    font-size:12px;font-weight:400;color:#aaa;line-height:1.2;letter-spacing:.2px;
   }
   .day-band-title{
-    font-size:9.5px;color:#666;margin-top:3px;
-    text-transform:uppercase;letter-spacing:2px;font-weight:500;
+    font-size:16px;color:#fff;margin-top:4px;
+    font-weight:700;letter-spacing:-.1px;text-transform:none;
   }
 
   /* ══════════════════════════════════════
@@ -761,8 +762,8 @@ const CITY_SOCIAL = {
   DEFAULT: {
     ig:    "@twotravelconcierge",
     igUrl: "https://www.instagram.com/twotravelconcierge/",
-    tt:    "@twotravelconcierge",
-    ttUrl: "https://www.tiktok.com/@twotravelconcierge",
+    tt:    "@twotravelvip",
+    ttUrl: "https://www.tiktok.com/@twotravelvip",
   },
 };
 const getCitySocial = (city) => {
@@ -883,7 +884,7 @@ function WelcomePage({ kickoff, lang, page, total, editMode, localPreTrip, setLo
 // Categories where price is NEVER shown in the PDF (quoted separately)
 const HIDE_PRICE_CATS = new Set(["restaurants","bars","nightlife","beach-clubs","beach clubs","beachclubs"]);
 
-function EventBlock({ it, lang, editMode, onRemove }) {
+function EventBlock({ it, lang, editMode, onRemove, hasFamilies }) {
   const isConfirmed = it.confirmed !== false;
   const showPrice = isConfirmed && !HIDE_PRICE_CATS.has(String(it.category || "").trim().toLowerCase());
   const price    = showPrice ? fmtPrice(it.price) : "";
@@ -970,8 +971,8 @@ function EventBlock({ it, lang, editMode, onRemove }) {
           <Editable value={it.location} tag="div" className="ev-location" editMode={editMode} />
         )}
 
-        {/* Family Friendly badge */}
-        {it.familyFriendly && (
+        {/* Family Friendly badge — only when the group actually has families/kids */}
+        {it.familyFriendly && hasFamilies && (
           <span className="ev-ff">
             <span>👨‍👩‍👧</span>
             {isEs ? "Apto para familias" : "Family Friendly"}
@@ -1036,11 +1037,19 @@ function EventBlock({ it, lang, editMode, onRemove }) {
           </div>
         )}
 
+        {/* Dress code */}
+        {it.dressCode && (
+          <div className="ev-terms">
+            <b>{isEs ? "Vestimenta: " : "Dress code: "}</b>
+            <Editable value={it.dressCode} editMode={editMode} />
+          </div>
+        )}
+
         {/* Footer: address + map + QB */}
         <div className="ev-footer">
           {(it.address || it.city) && (
             <span>
-              {[it.address, it.city].filter(Boolean).join(", ")}
+              {[it.address, it.city ? it.city.charAt(0).toUpperCase() + it.city.slice(1) : ""].filter(Boolean).join(", ")}
               {it.mapsUrl && !it.mapsUrl.includes("menuUrl") && (
                 <> ·{" "}
                   <a href={it.mapsUrl} className="ev-footer-link"
@@ -1208,7 +1217,7 @@ function BillingPage({ kickoff }) {
 /* ═══════════════════════════════════════════════════════════
    DAY PAGE
 ═══════════════════════════════════════════════════════════ */
-function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onAddItem, billingBlock }) {
+function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onAddItem, billingBlock, hasFamilies }) {
   return (
     <div className="page" style={{ position: "relative" }}>
       <PH kickoff={kickoff}/>
@@ -1246,6 +1255,7 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
             it={it}
             lang={lang}
             editMode={editMode}
+            hasFamilies={hasFamilies}
             onRemove={onRemoveItem ? () => onRemoveItem(i) : undefined}
           />
         ))}
@@ -1384,6 +1394,19 @@ export default function ItineraryPrintView() {
     if (!kickoff || !catalog.length) return [];
     return buildDays(matchCart(kickoff.cart, catalog), lang, parseJsonField(kickoff.dayMeta));
   }, [kickoff, catalog, lang]);
+
+  // Detect families/kids in group (show Family Friendly badge only then)
+  const hasFamilies = useMemo(() => {
+    if (!kickoff) return false;
+    try {
+      const q = JSON.parse(kickoff.quizAnswers || "null");
+      if (q?.kids === "yes") return true;
+      if ((q?.vibes || []).includes("family")) return true;
+    } catch {}
+    // Also check groupType or any explicit field
+    const gt = String(kickoff.groupType || "").toLowerCase();
+    return gt.includes("famil") || gt.includes("kids") || gt.includes("child");
+  }, [kickoff]);
 
   // First available service image → cover hero
   const heroImage = useMemo(() => {
@@ -1542,6 +1565,7 @@ export default function ItineraryPrintView() {
           onRemoveItem={editMode ? (ii) => removeItem(di, ii) : undefined}
           onAddItem={editMode ? () => openPickerForDay(di) : undefined}
           billingBlock={null}
+          hasFamilies={hasFamilies}
         />
       ))}
 
