@@ -1058,19 +1058,52 @@ function UnifiedDashboard() {
   const kpiArpc      = kpiTotalRev / kpiN;
   const kpiAvgSvcs   = kpiServiceCounts.reduce((a, b) => a + b, 0) / kpiN;
   const kpiPct2plus  = (kpiFiltered.filter((_, i) => kpiServiceCounts[i] >= 2).length / kpiN) * 100;
-  const kpiRated     = kpiFiltered.filter(k => Number(k.conciergeRating) > 0);
-  const kpiAvgRating = kpiRated.length ? (kpiRated.reduce((s, k) => s + Number(k.conciergeRating), 0) / kpiRated.length).toFixed(1) : "—";
+  const getKpiRating = (k) => {
+    try {
+      const cr = JSON.parse(k.cityRatings || "[]").filter(r => Number(r.rating) > 0);
+      if (cr.length) return cr.reduce((s, r) => s + Number(r.rating), 0) / cr.length;
+    } catch {}
+    return Number(k.conciergeRating) || 0;
+  };
+  const kpiRated     = kpiFiltered.filter(k => getKpiRating(k) > 0);
+  const kpiAvgRating = kpiRated.length ? (kpiRated.reduce((s, k) => s + getKpiRating(k), 0) / kpiRated.length).toFixed(1) : "—";
   // Feedback-specific metrics (separate from business KPIs)
   const kpiFeedbackSubmitted = kpiFiltered.filter(k => k.feedbackAt || k.status === "feedback_submitted");
   const kpiFeedbackRate = kpiFiltered.length ? Math.round((kpiFeedbackSubmitted.length / kpiFiltered.length) * 100) : 0;
   const kpiByConcierge = {};
+  const normCityKpi = (v) => {
+    const map = { CTG:"cartagena", MDE:"medellín", CDMX:"ciudad de méxico", TUL:"tulum", BOG:"bogotá" };
+    const u = String(v||"").trim().toUpperCase();
+    return map[u] || u.toLowerCase();
+  };
   kpiFiltered.forEach((k, i) => {
-    const name = k.assignedConcierge || k.assignedConciergeName || "Sin asignar";
-    if (!kpiByConcierge[name]) kpiByConcierge[name] = { clients: 0, revenue: 0, svcs: 0, ratings: [] };
-    kpiByConcierge[name].clients++;
-    kpiByConcierge[name].revenue += kpiRevenues[i];
-    kpiByConcierge[name].svcs    += kpiServiceCounts[i];
-    if (Number(k.conciergeRating) > 0) kpiByConcierge[name].ratings.push(Number(k.conciergeRating));
+    const concierges = String(k.assignedConcierge || k.assignedConciergeName || "Sin asignar")
+      .split(",").map(s => s.trim()).filter(Boolean);
+    const cities = String(k.city || "").split(",").map(s => normCityKpi(s)).filter(Boolean);
+    let cityRatingsArr = [];
+    try { cityRatingsArr = JSON.parse(k.cityRatings || "[]").filter(r => Number(r.rating) > 0); } catch {}
+
+    // Credit revenue/svcs to first concierge (trip-level), ratings split by city
+    concierges.forEach((name, ci) => {
+      if (!kpiByConcierge[name]) kpiByConcierge[name] = { clients: 0, revenue: 0, svcs: 0, ratings: [] };
+      if (ci === 0) { // only count client + revenue once (first concierge)
+        kpiByConcierge[name].clients++;
+        kpiByConcierge[name].revenue += kpiRevenues[i];
+        kpiByConcierge[name].svcs    += kpiServiceCounts[i];
+      }
+    });
+    // Assign ratings by city position
+    if (cityRatingsArr.length > 0 && concierges.length > 1) {
+      cityRatingsArr.forEach(cr => {
+        const cityIdx = cities.indexOf(normCityKpi(cr.city));
+        const name = concierges[cityIdx >= 0 ? cityIdx : 0];
+        kpiByConcierge[name]?.ratings.push(Number(cr.rating));
+      });
+    } else if (cityRatingsArr.length > 0) {
+      cityRatingsArr.forEach(cr => kpiByConcierge[concierges[0]]?.ratings.push(Number(cr.rating)));
+    } else if (Number(k.conciergeRating) > 0) {
+      kpiByConcierge[concierges[0]]?.ratings.push(Number(k.conciergeRating));
+    }
   });
   // ── Time metrics helpers ─────────────────────────────────────
   const daysBetween = (a, b) => {
