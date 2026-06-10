@@ -951,7 +951,8 @@ function UnifiedDashboard() {
     new: { label: "Nuevo", color: "#6b7280" },
     client_submitted: { label: "Enviado por cliente", color: "#2563eb" },
     concierge_editing: { label: "En edición", color: "#d97706" },
-    feedback_submitted: { label: "Feedback enviado", color: "#7c3aed" },
+    sent_to_travify: { label: "Enviado a contabilidad", color: "#7c3aed" },
+    feedback_submitted: { label: "Feedback enviado", color: "#059669" },
     done: { label: "Completado", color: "#16a34a" },
   };
   const STATUS_KEYS = ["new", "client_submitted", "concierge_editing", "feedback_submitted", "done"];
