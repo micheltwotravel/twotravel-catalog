@@ -959,100 +959,99 @@ async function openClientChat(c){
     document.getElementById('cinput').focus();
     return;
   }
-  const info=[];
-  if(c.dest)         info.push('📍 '+c.dest);
-  if(c.dates)        info.push('📅 '+c.dates);
-  if(c.pax)          info.push('👥 '+c.pax+' pax');
-  if(c.occasion)     info.push('🎉 '+c.occasion);
-  if(c.budget)       info.push('💰 '+c.budget);
-  if(c.accommodation)info.push('🏠 '+c.accommodation);
-  if(c.vibes)        info.push('✨ '+c.vibes);
-  if(c.phone)        info.push('📱 '+c.phone);
-  else if(c.email)   info.push('✉ '+c.email);
-  const stageMeta2=STAGE_META[getStageKey(c)]||{label:dealStageLabel(c.dealStage)||c.dealStage||'—',emoji:'·'};
-  const stageStr=`${stageMeta2.emoji} ${stageMeta2.label}`;
-  const contextLine = info.length ? info.join(' · ') : 'No details yet';
-  const greeting = `Context loaded for **${c.name}** — ${contextLine}\nStage: ${stageStr}\n\n${c.notes?`HubSpot notes: _${c.notes}_\n\n`:''}`;
-  addMsg('ag', greeting+'_Searching available options…_', []);
+  addMsg('ag', `_Analyzing **${c.name}**…_`, []);
   document.getElementById('cinput').focus();
 
-  // ── Auto-search Notion for matching properties ────────────────────
+  // ── Smart briefing — fetch properties + ask Claude for analysis ──
   const city = destToCity(c.dest);
   const type = dealToType(c.dealName||c.notes||'');
 
-  if(city){
-    try{
-      const r = await fetch('/api/properties',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({action:'search', city, type, limit:5})
-      });
-      if(r.ok){
-        const data = await r.json();
-        const props = data.properties||[];
-        // Update the greeting message with real results
-        const msgs = document.getElementById('msgs');
-        const lastMsg = msgs.lastElementChild;
-        if(props.length>0){
-          // Build property cards
-          const cards = props.map(p=>{
-            const pax = p.maxPax ? `👥 ${p.maxPax}` : '';
-            const beds = p.bedrooms ? `🛏 ${p.bedrooms}bd` : '';
-            const price = p.clientPrice ? `💵 ${p.clientPrice}` : '';
-            const party = p.partyFriendly===true ? '🎉' : '';
-            const sub = [pax,beds,price,party].filter(Boolean).join('  ');
-            // Sanitize links — Notion sometimes returns URLs with extra whitespace/newlines
-            const cleanUrl = u => {
-              if(!u) return '';
-              const s = String(u).trim().replace(/\s+/g,'');
-              return (s.startsWith('http')||s.startsWith('//')) ? s : s ? 'https://'+s : '';
-            };
-            const link = cleanUrl(p.airbnb)||cleanUrl(p.photos)||cleanUrl(p.notionUrl)||'';
-            return {name:p.name, sub, link, type:p.type, city:p.city, neighborhood:p.neighborhood, bedrooms:p.bedrooms, pax:p.maxPax};
-          });
-          // Store matched properties in client context for AI
-          c._matchedProperties = props;
-          // Update last message
-          const typeLabel = type||'properties';
-          const cityLabel = c.dest||city;
-          if(lastMsg) lastMsg.querySelector('.msg-text')?
-            (lastMsg.querySelector('.msg-text').innerHTML = renderMarkdown(
-              greeting + `Found **${props.length} ${typeLabel}** available in **${cityLabel}** — here are the top matches:\n\n` +
-              props.map(p=>`**${p.name}** ${p.maxPax?`(up to ${p.maxPax} guests)`:''}${p.clientPrice?' — '+p.clientPrice:''}${p.partyFriendly===true?' · 🎉 Party OK':''}`).join('\n')
-            ))
-            : null;
-          // Add clickable property cards
-          if(cards.length){
-            addMsg('ag',
-              `What are we looking for this client? I can pull more details, check availability, or build a proposal.`,
-              cards
-            );
-          }
-        } else {
-          if(lastMsg) lastMsg.querySelector('.msg-text')?
-            (lastMsg.querySelector('.msg-text').innerHTML = renderMarkdown(
-              greeting + `No properties found in **${c.dest}** matching the current filters. What are we looking for this client?`
-            ))
-            : null;
-        }
-      }
-    }catch(e){
-      console.warn('Auto property search failed:',e);
-      // Fallback: just show the greeting without properties
-      const msgs=document.getElementById('msgs');
-      const lastMsg=msgs.lastElementChild;
-      if(lastMsg) lastMsg.querySelector('.msg-text')?
-        (lastMsg.querySelector('.msg-text').innerHTML=renderMarkdown(greeting+'What are we looking for this client?'))
-        :null;
+  // Days since deal created
+  const daysSince = c.createDate
+    ? Math.floor((Date.now()-new Date(c.createDate).getTime())/(1000*60*60*24))
+    : null;
+
+  // Fetch matching properties in parallel
+  let props = [];
+  try {
+    const r = await fetch('/api/properties',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'search', city, type, limit:6})
+    });
+    if(r.ok){ const d=await r.json(); props=d.properties||[]; }
+  } catch{}
+  c._matchedProperties = props;
+
+  // Build rich context string for Claude
+  const stageMeta2=STAGE_META[getStageKey(c)]||{label:dealStageLabel(c.dealStage)||c.dealStage||'—',emoji:'·'};
+  const briefContext = [
+    `CLIENT: ${c.name}`,
+    `STAGE: ${stageMeta2.emoji} ${stageMeta2.label}`,
+    daysSince!==null ? `DAYS IN PIPELINE: ${daysSince}` : '',
+    c.dest   ? `DESTINATION: ${c.dest}` : '',
+    c.dates  ? `TRIP DATES: ${c.dates}` : '',
+    c.pax    ? `GROUP SIZE: ${c.pax} pax` : '',
+    c.occasion?`OCCASION: ${c.occasion}` : '',
+    c.budget ? `BUDGET: ${c.budget}` : '',
+    c.vibes  ? `VIBES: ${c.vibes}` : '',
+    c.accommodation?`ACCOMMODATION ASSIGNED: ${c.accommodation}`:'',
+    c.phone  ? `PHONE: ${c.phone}` : '',
+    c.email  ? `EMAIL: ${c.email}` : '',
+    c.notes  ? `HUBSPOT NOTES: ${c.notes}` : '',
+    props.length ? `AVAILABLE PROPERTIES (${props.length}):\n`+props.map(p=>`- ${p.name||p.Name} (${p['item type']||p.type||''}, ${p['max pax']||p.maxPax||'?'} pax, ${p['client price']||p.clientPrice||'?'})`).join('\n') : '',
+  ].filter(Boolean).join('\n');
+
+  const systemPrompt = `You are a sharp luxury travel sales assistant for Two Travel. You help agents close deals fast.
+When given a client briefing, you respond with:
+1. A 2-line summary of who this client is and what they need
+2. A urgency flag: 🔴 HOT (needs action today) / 🟡 WARM (follow up this week) / 🟢 CHILL (no rush) — base it on days in pipeline and stage
+3. ONE specific next action the agent should take RIGHT NOW (be concrete — include a draft message if relevant)
+4. If there are matching properties, highlight the TOP 1-2 that best fit this client
+
+Be direct. No fluff. Max 150 words. Respond in ${lang==='es'?'Spanish':'English'}.`;
+
+  const msgs2=document.getElementById('msgs');
+  const lastMsg=msgs2.lastElementChild;
+
+  try{
+    const r2=await fetch('/api/chat',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        messages:[{role:'user',content:`Give me a briefing and next action for this client:\n\n${briefContext}`}],
+        clientContext:null,
+        agentName:agent,
+        systemOverride: systemPrompt
+      })
+    });
+    if(r2.ok){
+      const d2=await r2.json();
+      const briefing = d2.text||'';
+      if(lastMsg) lastMsg.querySelector('.msg-text')
+        ? (lastMsg.querySelector('.msg-text').innerHTML=renderMarkdown(briefing))
+        : null;
+      chatHistory.push({role:'assistant',content:briefing});
+      saveChatHistory(c.id, chatHistory);
     }
-  } else {
-    // No city detected — update greeting without property search
-    const msgs=document.getElementById('msgs');
-    const lastMsg=msgs.lastElementChild;
-    if(lastMsg) lastMsg.querySelector('.msg-text')?
-      (lastMsg.querySelector('.msg-text').innerHTML=renderMarkdown(greeting+'What are we looking for this client?'))
-      :null;
+  }catch(e){
+    if(lastMsg) lastMsg.querySelector('.msg-text')
+      ? (lastMsg.querySelector('.msg-text').innerHTML=renderMarkdown(`**${c.name}** — ${c.dest||'destination TBD'} · ${c.dates||'dates TBC'} · ${c.budget||'budget TBD'}\n\nWhat do you need for this client?`))
+      : null;
   }
+
+  // Show property cards if found
+  if(props.length){
+    const cleanUrl=u=>{if(!u)return'';const s=String(u).trim().replace(/\s+/g,'');return(s.startsWith('http')||s.startsWith('//'))?s:s?'https://'+s:'';};
+    const cards=props.map(p=>({
+      name:p.name||p.Name,
+      sub:[p['max pax']||p.maxPax?`👥 ${p['max pax']||p.maxPax} pax`:'', p['client price']||p.clientPrice||''].filter(Boolean).join('  '),
+      link:cleanUrl(p['airbnb link']||p.airbnbLink||p['photos link']||p.photosLink||''),
+      type:p['item type']||p.type, city:p.city||p.City,
+      neighborhood:p.neighborhood||p.Neighborhood,
+      bedrooms:p.bedrooms||p.Bedrooms, pax:p['max pax']||p.maxPax
+    }));
+    addMsg('ag','_Top matches from portfolio:_', cards);
+  }
+
 }
 
 function renderDetail(){

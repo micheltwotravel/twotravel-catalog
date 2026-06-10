@@ -226,19 +226,20 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: "ANTHROPIC_API_KEY not configured", demo: true });
   }
 
-  const { messages, clientContext } = req.body;
+  const { messages, clientContext, systemOverride } = req.body;
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: "messages array required" });
   }
 
   // Build system prompt with client/agent context if provided
-  let system = SYSTEM_PROMPT;
-  if (clientContext) {
+  // systemOverride: use a completely custom system prompt (for briefing calls)
+  let system = systemOverride || SYSTEM_PROMPT;
+  if (!systemOverride && clientContext) {
     system += `\n\nCURRENT CLIENT CONTEXT:\n${JSON.stringify(clientContext, null, 2)}`;
   }
   // Inject agent identity so Claude can filter HubSpot deals correctly
   const agentName = req.body.agentName || clientContext?.agentName || null;
-  if (agentName) {
+  if (!systemOverride && agentName) {
     system += `\n\nYOU ARE ASSISTING AGENT: ${agentName}\nWhen the agent asks about their clients or deals, call get_my_deals with agentName="${agentName}".`;
   }
 
