@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 const TASK_API_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
@@ -4299,8 +4299,12 @@ const loadKickoffs = async () => {
             const avg   = total ? (rated.reduce((s, k) => s + getRating(k), 0) / total).toFixed(1) : "—";
 
             // Group by concierge, splitting multi-city ratings by position
-            // e.g. city="CTG,MDE", concierge="Carolina, Daniela", cityRatings=[{city:CTG,5},{city:MDE,4}]
-            // → Carolina gets 5, Daniela gets 4
+            // Supports both city codes (CTG) and full names (Cartagena) in cityRatings
+            const CITY_CODE_TO_NAME = { CTG:"cartagena", MDE:"medellín", CDMX:"ciudad de méxico", TUL:"tulum", BOG:"bogotá" };
+            const normCity = (v) => {
+              const u = String(v || "").trim().toUpperCase();
+              return (CITY_CODE_TO_NAME[u] || u.toLowerCase()); // normalise to lowercase full name
+            };
             const byC = {};
             const addToByC = (name, rating) => {
               const key = (name || "Sin asignar").trim();
@@ -4310,23 +4314,22 @@ const loadKickoffs = async () => {
             rated.forEach(k => {
               const concierges = String(k.assignedConcierge || k.assignedConciergeName || "")
                 .split(",").map(s => s.trim()).filter(Boolean);
-              const cities = String(k.city || "").split(",").map(s => s.trim().toUpperCase()).filter(Boolean);
+              // cities normalised to lowercase full names for matching
+              const cities = String(k.city || "").split(",").map(s => normCity(s)).filter(Boolean);
               let cityRatingsArr = [];
               try { cityRatingsArr = JSON.parse(k.cityRatings || "[]").filter(r => Number(r.rating) > 0); } catch {}
 
               if (cityRatingsArr.length > 0 && concierges.length > 1) {
-                // Match each city rating to its concierge by city name position
                 cityRatingsArr.forEach(cr => {
-                  const cityIdx = cities.indexOf(String(cr.city || "").trim().toUpperCase());
+                  const crNorm = normCity(cr.city);
+                  const cityIdx = cities.indexOf(crNorm);
                   const concierge = concierges[cityIdx >= 0 ? cityIdx : 0] || concierges[0];
                   addToByC(concierge, cr.rating);
                 });
               } else if (cityRatingsArr.length > 0) {
-                // Single concierge — credit all city ratings to them
                 const name = concierges[0] || "Sin asignar";
                 cityRatingsArr.forEach(cr => addToByC(name, cr.rating));
               } else {
-                // Fallback to old single conciergeRating
                 addToByC(concierges[0] || "Sin asignar", k.conciergeRating);
               }
             });
