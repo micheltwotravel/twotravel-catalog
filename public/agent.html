@@ -619,7 +619,14 @@ async function loadClientsFromHubSpot(name){
       const parsed=parseDealName(p.dealname);
 
       // Contact info from associated HubSpot contact
-      const phone=c.phone||'';
+      // Extract phone from contact or fallback to parsing it from description/notes
+      let phone=c.phone||'';
+      if(!phone){
+        const allText=[p.description||'',p.hs_next_step||''].join(' ');
+        const phoneMatch=allText.match(/(?:Phone|Tel|Móvil|Celular|Whatsapp)[:\s]+([+\d][\d\s\-().]{6,20})/i)
+                      || allText.match(/(\+?[\d]{7,15})/);
+        if(phoneMatch) phone=phoneMatch[1].trim();
+      }
       const email=c.email||'';
       const contactStr=[phone,email].filter(Boolean).join(' · ')||'';
 
