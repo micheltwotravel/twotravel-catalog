@@ -278,6 +278,23 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     });
   }
 
+  // ── ARRIVALS / FLIGHTS ──────────────────────────────────────
+  const arrivalsArr = (() => {
+    try { return JSON.parse(kickoff.arrivals || "[]").filter(a => a.name || a.flight || a.date); } catch { return []; }
+  })();
+  if (arrivalsArr.length > 0) {
+    checkY(60);
+    doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(120,120,120);
+    doc.text((lang === "es" ? "LLEGADAS" : "ARRIVALS").toUpperCase(), ML, y); y += 14;
+    arrivalsArr.forEach(a => {
+      checkY(18);
+      const parts = [a.name, a.flight, a.date, a.time ? `· ${a.time}` : ""].filter(Boolean).join("   ");
+      doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(30,30,30);
+      doc.text(parts, ML, y); y += 14;
+    });
+    y += 6;
+  }
+
   // ── DAY PAGES ───────────────────────────────────────────────
   orderedDays.forEach(({ label, title }) => {
     const parseTime = (t) => {
@@ -643,10 +660,7 @@ function buildCatalogLink(kickoff, clientType = 1, lang = "en") {
   url.searchParams.set("mode", "catalog");
   url.searchParams.set("kickoffId", kickoff?.id || "");
   url.searchParams.set("clientType", String(clientType));
-  url.searchParams.set("lang", lang); // explicit override — portalLang toggle wins
-  url.searchParams.set("guestName", kickoff?.guestName || "");
-  url.searchParams.set("tripName", kickoff?.tripName || "");
-  if (kickoff?.guestContact) url.searchParams.set("guestContact", kickoff.guestContact);
+  url.searchParams.set("lang", lang);
   return url.toString();
 }
 // Maps city codes / raw values → feedback form dropdown option labels
@@ -1043,7 +1057,7 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
 ═══════════════════════════════════════════════════════════════ */
 function DaySection({ label, meta, items, loadingServices, availableDays,
   onUpdateMeta, onRenameLabel, onRemoveDay,
-  onUpdateItem, onRemoveItem, onAddManual, onAddFromCatalog, groupSize = 1 }) {
+  onUpdateItem, onRemoveItem, onAddManual, onAddPreset, onAddFromCatalog, groupSize = 1 }) {
 
   const [editingLabel, setEditingLabel] = useState(false);
   const [localLabel,   setLocalLabel]   = useState(label);
@@ -1115,7 +1129,17 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
             </div>
           )}
           {/* Add buttons */}
-          <div className="flex gap-2 px-4 py-2.5 bg-neutral-50 border-t border-neutral-100">
+          <div className="flex flex-wrap gap-1.5 px-4 py-2.5 bg-neutral-50 border-t border-neutral-100">
+            {[
+              { key: "checkin",   label: "🏨 Check-in" },
+              { key: "breakfast", label: "☕ Desayuno" },
+              { key: "checkout",  label: "🧳 Check-out" },
+            ].map(({ key, label: pl }) => (
+              <button key={key} type="button" onClick={() => onAddPreset?.(key)}
+                className="text-xs text-teal-700 hover:text-teal-900 border border-teal-200 hover:border-teal-400 rounded-lg px-2.5 py-1.5 bg-teal-50 transition-colors">
+                {pl}
+              </button>
+            ))}
             <button type="button" onClick={onAddManual}
               className="text-xs text-neutral-500 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-400 rounded-lg px-3 py-1.5 bg-white transition-colors">
               + Manual
@@ -1255,6 +1279,19 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
     setCart(prev => [...prev, { ...mapManualToCartItem(), dayLabel, sortOrder: count }]);
   };
 
+  const addPresetToDay = (dayLabel, preset) => {
+    const presets = {
+      checkin:   { name: "Check-in",  category: "services", timeLabel: "3:00 PM", notes: "" },
+      breakfast: { name: "Desayuno",  category: "services", timeLabel: "8:00 AM", notes: "" },
+      checkout:  { name: "Check-out", category: "services", timeLabel: "11:00 AM", notes: "" },
+    };
+    const p = presets[preset];
+    if (!p) return;
+    const uid = `preset_${preset}_${Date.now()}`;
+    const count = cart.filter(i => (i.dayLabel || "Sin día") === dayLabel).length;
+    setCart(prev => [...prev, { ...mapManualToCartItem(), ...p, _uid: uid, id: uid, dayLabel, sortOrder: count }]);
+  };
+
   /* ── Generate tasks from cart ── */
   const [generating, setGenerating] = useState(false);
   const handleGenerateTasks = async () => {
@@ -1383,6 +1420,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
           onUpdateItem={updateItem}
           onRemoveItem={removeItem}
           onAddManual={() => addManualToDay(label)}
+          onAddPreset={(preset) => addPresetToDay(label, preset)}
           onAddFromCatalog={() => setCatalogTargetDay(label)}
         />
       ))}
@@ -4313,6 +4351,22 @@ const loadKickoffs = async () => {
             )}
           </div>
         </div>
+
+        {/* ── Blank feedback link (client not in system) ── */}
+        <button
+          type="button"
+          onClick={async () => {
+            const lang = portalLang || "en";
+            const url = new URL("/", CLIENT_BASE_URL);
+            url.searchParams.set("mode", "feedback");
+            url.searchParams.set("lang", lang);
+            try { await navigator.clipboard.writeText(url.toString()); alert("✅ Link copiado!"); }
+            catch { prompt("Link feedback sin cliente:", url.toString()); }
+          }}
+          className="text-xs text-violet-600 hover:text-violet-800 border border-violet-200 hover:border-violet-400 rounded-lg px-3 py-1.5 bg-white transition-colors"
+        >
+          📋 Link feedback (cliente sin cuenta)
+        </button>
 
         {/* ── Ratings summary toggle ── */}
         <div>
