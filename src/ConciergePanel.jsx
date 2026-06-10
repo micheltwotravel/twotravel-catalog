@@ -2657,7 +2657,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     .map(n => CONCIERGE_LIST.find(c => c.name === n)?.email || "")
     .filter(Boolean).join(",");
   const [status, setStatus] = useState(kickoff?.status || "new");
-  const [conciergeSummary] = useState(kickoff?.conciergeSummary || "");
+  // conciergeSummary intentionally read-only here (no UI field); excluded from saves to avoid overwriting
+  // const [conciergeSummary] = useState(kickoff?.conciergeSummary || "");
   const [internalNotes, setInternalNotes] = useState(kickoff?.internalNotes || "");
   const drinkOrder = kickoff?.drinkOrder || "";
   const [billingCurrency, setBillingCurrency] = useState("USD");
@@ -2747,7 +2748,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     guestName: guestName.trim(),
     tripName: tripName.trim(),
     status: autoStatus,
-    conciergeSummary,
     internalNotes,
     assignedConcierge:      assignedConcierges.join(", "),
     assignedConciergeName:  assignedConcierges.join(", "),
@@ -4077,8 +4077,8 @@ const loadKickoffs = async () => {
     if (!selectedIds.size) return;
     setBulkLoading(true);
     try {
-      await Promise.all([...selectedIds].map(id => updateKickoffInSheet(id, { status: "cerrado" })));
-      setKickoffs(prev => prev.map(k => selectedIds.has(k.id) ? { ...k, status: "cerrado" } : k));
+      await Promise.all([...selectedIds].map(id => updateKickoffInSheet(id, { status: "done" })));
+      setKickoffs(prev => prev.map(k => selectedIds.has(k.id) ? { ...k, status: "done" } : k));
       setSelectedIds(new Set());
     } catch {}
     setBulkLoading(false);
@@ -4153,11 +4153,10 @@ const loadKickoffs = async () => {
     setKickoffs((prev) =>
       prev.map((k) => {
         if (k.id !== id) return k;
-
         const next = { ...k, ...updates };
-        if ("guestContact" in updates && String(updates.guestContact || "").trim() === "") {
-          next.guestContact = k.guestContact || "";
-        }
+        // Parse back stringified cart/dayMeta so local state stays as arrays
+        if (typeof next.cart    === "string") { try { next.cart    = JSON.parse(next.cart);    } catch {} }
+        if (typeof next.dayMeta === "string") { try { next.dayMeta = JSON.parse(next.dayMeta); } catch {} }
         return next;
       })
     );
@@ -4591,7 +4590,8 @@ const loadKickoffs = async () => {
   onChange={async (e) => {
   const newType = Number(e.target.value);
 
-  const updatedCart = (k.cart || []).map((item) => {
+  const rawCart = typeof k.cart === "string" ? (() => { try { return JSON.parse(k.cart); } catch { return []; } })() : (k.cart || []);
+  const updatedCart = rawCart.map((item) => {
   const base = Number(item.base_price_cop || item.price_cop || 0);
   const t1 = Number(item.price_tier_1 || 0);
   const t2 = Number(item.price_tier_2 || 0);

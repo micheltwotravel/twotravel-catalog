@@ -423,8 +423,6 @@ export async function updateKickoffInSheet(id, updates) {
     updates,
   });
 
-  console.log("UPDATE KICKOFF RESPONSE:", json);
-
   return json.ok === true || json?.ok === undefined;
 }
 

@@ -1365,7 +1365,7 @@ function UnifiedDashboard() {
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(kpiStatusMap).map(([s,cnt]) => (
                       <div key={s} className="flex items-center gap-2 bg-stone-50 border border-stone-200 rounded-lg px-3 py-1.5">
-                        <span className="text-xs text-stone-500">{s}</span>
+                        <span className="text-xs text-stone-500">{STATUS_LABELS[s]?.label || s}</span>
                         <span className="text-sm font-bold text-stone-800">{cnt}</span>
                       </div>
                     ))}
