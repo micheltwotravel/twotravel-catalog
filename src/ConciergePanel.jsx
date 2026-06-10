@@ -873,32 +873,6 @@ function mapManualToCartItem() {
   };
 }
 
-function buildTravifyTextFromCart(kickoff) {
-  const items = kickoff?.cart || [];
-  if (!items.length) return "";
-
-  const fmt = (n) => new Intl.NumberFormat("es-CO").format(Number(n || 0));
-
-  return items
-    .map((it, i) => {
-      const name = (it.displayName || it.name || "Servicio").trim();
-      const price = it.priceOverride_cop ?? it.price_cop;
-      const when = [it.dayLabel, it.timeLabel].filter(Boolean).join(" · ");
-      const notes = it.notes ? `Notas: ${it.notes}` : "";
-      const confirmation = it.confirmation ? `Confirm: ${it.confirmation}` : "";
-
-      return [
-        `${i + 1}. ${name}`,
-        when ? `   ${when}` : "",
-        price ? `   Precio ref: ${fmt(price)} COP` : "",
-        confirmation ? `   ${confirmation}` : "",
-        notes ? `   ${notes}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
-    })
-    .join("\n\n");
-}
 /* ═══════════════════════════════════════════════════════════════
    ACTIVITY ROW — inline-editable row inside a day section
 ═══════════════════════════════════════════════════════════════ */
@@ -1604,27 +1578,8 @@ function Modal({ title, children, footer, onClose, maxWidth = "max-w-3xl" }) {
    ========================================= */
 
 function SummaryModal({ kickoff, onClose }) {
-  const [copied, setCopied] = useState(false);
   if (!kickoff) return null;
 
-  const travifyText =
-  kickoff.travifyText ||
-  buildTravifyTextFromCart(kickoff) ||
-  kickoff.conciergeSummary ||
-  "";
-
-
-  const handleCopy = async () => {
-    try {
-      if (!travifyText) return;
-      await navigator.clipboard.writeText(travifyText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch (err) {
-      console.error(err);
-      alert("No se pudo copiar al portapapeles.");
-    }
-  };
 
   return (
     <Modal
@@ -2113,7 +2068,7 @@ const kickoffId = `ko_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
       createdAt: new Date().toISOString(),
       status: "new",
       conciergeSummary: "",
-      travifyText: "",
+
       internalNotes: "",
       cart: [],
     });
@@ -4013,7 +3968,7 @@ const loadKickoffs = async () => {
       createdAt: new Date().toISOString(),
       status: "new",
       conciergeSummary: "",
-      travifyText: "",
+
       internalNotes: "",
       cart: [],
       welcomePdfUrl: "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=drivesdk",
@@ -4111,7 +4066,6 @@ const loadKickoffs = async () => {
           k.tripName,
           k.assignedConcierge,
           k.conciergeSummary,
-          k.travifyText,
         ]
           .filter(Boolean)
           .join(" ")
