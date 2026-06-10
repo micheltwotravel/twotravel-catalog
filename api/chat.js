@@ -260,9 +260,11 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           model: "claude-opus-4-5",
-          max_tokens: 2048,
+          max_tokens: 1024,
           system,
-          tools: TOOLS,
+          // When systemOverride is set (e.g. briefing calls), skip tools entirely
+          // so Claude returns plain text immediately without triggering the agentic loop
+          ...(systemOverride ? {} : { tools: TOOLS }),
           messages: currentMessages,
         }),
       });
