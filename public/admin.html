@@ -10,122 +10,118 @@
   --sand:#f7f4ef;--sand2:#efe9e0;--sand3:#e5ddd3;
   --ink:#1a1814;--ink2:#3d3a35;--ink3:#7a7570;
   --gold:#9a7d52;--gold2:#c4a272;--gold3:#e8d5b7;
-  --white:#ffffff;--border:rgba(26,24,20,0.09);--border2:rgba(26,24,20,0.15);
-  --green:#5cb87a;--red:#e05050;
+  --white:#ffffff;--border:rgba(26,24,20,.09);--border2:rgba(26,24,20,.15);
+  --green:#3a9960;--red:#e05050;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Jost',sans-serif;background:var(--sand);color:var(--ink);font-weight:300;min-height:100vh}
 
-.header{background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;height:54px;position:sticky;top:0;z-index:10}
+.header{background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;height:52px;position:sticky;top:0;z-index:20}
 .logo{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:500;letter-spacing:.04em}
-.hdiv{width:1px;height:14px;background:var(--border2);margin:0 13px}
+.hdiv{width:1px;height:13px;background:var(--border2);margin:0 12px}
 .hls{font-size:10px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase}
-.hright{margin-left:auto;display:flex;align-items:center;gap:10px}
-.nav-link{font-size:11px;color:var(--ink3);text-decoration:none;letter-spacing:.06em;padding:4px 10px;border:1px solid var(--border);transition:all .1s}
-.nav-link:hover{border-color:var(--gold);color:var(--gold)}
-.count-badge{font-size:10px;color:var(--gold);border:1px solid var(--gold3);padding:3px 10px;background:rgba(154,125,82,.05);letter-spacing:.04em}
+.hright{margin-left:auto;display:flex;align-items:center;gap:8px}
+.hbadge{font-size:10px;color:var(--gold);border:1px solid var(--gold3);padding:3px 10px;background:rgba(154,125,82,.04)}
+.hlink{font-size:10px;color:var(--ink3);text-decoration:none;letter-spacing:.06em;padding:4px 10px;border:1px solid var(--border);transition:all .1s}
+.hlink:hover{border-color:var(--gold);color:var(--gold)}
 
-/* Layout */
-.layout{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 54px)}
+.layout{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 52px)}
 .sidebar{background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
 .main{overflow-y:auto;background:var(--sand)}
 
-/* Sidebar */
-.sb-head{padding:16px 16px 12px;border-bottom:1px solid var(--border)}
-.sb-title{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
-.sb-search{width:100%;padding:8px 11px;background:var(--sand);border:1px solid var(--border);font-family:'Jost',sans-serif;font-size:12px;color:var(--ink);outline:none;transition:border .1s;margin-bottom:8px}
+.sb-top{padding:14px 14px 10px;border-bottom:1px solid var(--border)}
+.sb-sec{font-size:8.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
+.sb-search{width:100%;padding:7px 10px;background:var(--sand);border:1px solid var(--border);font-family:'Jost',sans-serif;font-size:12px;color:var(--ink);outline:none;margin-bottom:7px}
 .sb-search:focus{border-color:var(--gold)}
 .sb-search::placeholder{color:var(--ink3)}
-.filter-row{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px}
-.fpill{padding:3px 8px;border:1px solid var(--border);font-size:9px;color:var(--ink3);cursor:pointer;background:transparent;font-family:'Jost',sans-serif;letter-spacing:.04em;transition:all .1s}
-.fpill.on{border-color:var(--gold);color:var(--gold);background:rgba(154,125,82,.06)}
-.fpill:hover:not(.on){color:var(--ink2);border-color:var(--border2)}
-.add-btn{width:100%;margin-top:8px;padding:8px;background:transparent;border:1px dashed var(--border2);font-family:'Jost',sans-serif;font-size:11px;color:var(--ink3);cursor:pointer;transition:all .1s;letter-spacing:.04em;display:flex;align-items:center;justify-content:center;gap:5px}
+.pills{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}
+.pill{padding:3px 8px;border:1px solid var(--border);font-size:9px;color:var(--ink3);cursor:pointer;background:transparent;font-family:'Jost',sans-serif;letter-spacing:.04em;transition:all .1s}
+.pill.on{border-color:var(--gold);color:var(--gold);background:rgba(154,125,82,.06)}
+.pill:hover:not(.on){color:var(--ink2);border-color:var(--border2)}
+.add-btn{width:100%;margin-top:7px;padding:7px;background:transparent;border:1px dashed var(--border2);font-family:'Jost',sans-serif;font-size:11px;color:var(--ink3);cursor:pointer;transition:all .1s;letter-spacing:.04em;display:flex;align-items:center;justify-content:center;gap:6px}
 .add-btn:hover{border-color:var(--gold);color:var(--gold)}
 
-.plist{flex:1;overflow-y:auto;padding:4px 0}
+.plist{flex:1;overflow-y:auto}
 .plist::-webkit-scrollbar{width:3px}
 .plist::-webkit-scrollbar-thumb{background:var(--sand3)}
-.pi{padding:11px 16px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;position:relative}
+.pi{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s}
 .pi:hover{background:var(--sand)}
-.pi.active{background:var(--sand);border-left:2px solid var(--gold);padding-left:14px}
-.pi-name{font-size:13px;color:var(--ink);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pi-tags{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:3px}
-.pi-tag{font-size:8px;padding:1px 5px;letter-spacing:.05em;text-transform:uppercase}
-.tag-city{background:rgba(154,125,82,.08);color:var(--gold);border:1px solid var(--gold3)}
-.tag-type{background:var(--sand2);color:var(--ink3);border:1px solid var(--border2)}
-.tag-active{background:rgba(92,184,122,.08);color:#3a9960;border:1px solid rgba(92,184,122,.3)}
-.tag-inactive{background:rgba(224,80,80,.07);color:var(--red);border:1px solid rgba(224,80,80,.2)}
-.pi-meta{font-size:10px;color:var(--ink3)}
+.pi.active{background:var(--sand);border-left:2px solid var(--gold);padding-left:12px}
+.pi-row1{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:3px}
+.pi-name{font-size:12.5px;color:var(--ink);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pi-sub{font-size:10px;color:var(--ink3)}
+.tag{font-size:8px;padding:1px 5px;letter-spacing:.04em;text-transform:uppercase;border:1px solid}
+.tc{color:var(--gold);border-color:var(--gold3);background:rgba(154,125,82,.07)}
+.tt{color:var(--ink3);border-color:var(--border2);background:var(--sand2)}
+.ts-active{color:var(--green);border-color:rgba(58,153,96,.3);background:rgba(58,153,96,.07)}
+.ts-inactive{color:var(--red);border-color:rgba(224,80,80,.2);background:rgba(224,80,80,.06)}
 
-/* Main panel — detail / form */
-.main-empty{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:var(--ink3);opacity:.5}
-.main-empty p{font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.empty{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--ink3);opacity:.45}
+.empty p{font-size:10px;letter-spacing:.1em;text-transform:uppercase}
 
-.detail{padding:32px 36px}
-.det-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border)}
-.det-name{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:400}
-.det-sub{font-size:11px;color:var(--ink3);margin-top:3px;letter-spacing:.04em}
-.det-actions{display:flex;gap:8px;flex-shrink:0;margin-top:4px}
-.d-btn{padding:6px 14px;border:1px solid var(--border2);background:transparent;font-family:'Jost',sans-serif;font-size:10px;color:var(--ink3);cursor:pointer;transition:all .1s;letter-spacing:.06em}
-.d-btn:hover{border-color:var(--gold);color:var(--gold)}
-.d-btn.pri{background:var(--ink);color:var(--white);border-color:var(--ink)}
-.d-btn.pri:hover{background:var(--gold);border-color:var(--gold)}
-.d-btn.del{color:var(--red);border-color:rgba(224,80,80,.3)}
-.d-btn.del:hover{background:rgba(224,80,80,.07);border-color:var(--red)}
+/* Detail */
+.det{padding:28px 32px 48px}
+.det-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.det-name{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:400;line-height:1.1}
+.det-sub{font-size:11px;color:var(--ink3);margin-top:4px;letter-spacing:.04em}
+.det-acts{display:flex;gap:7px;flex-shrink:0;margin-top:6px}
+.da{padding:6px 13px;border:1px solid var(--border2);background:transparent;font-family:'Jost',sans-serif;font-size:10px;color:var(--ink3);cursor:pointer;transition:all .1s;letter-spacing:.05em;text-decoration:none;display:inline-block}
+.da:hover{border-color:var(--gold);color:var(--gold)}
+.da.pri{background:var(--ink);color:var(--white);border-color:var(--ink)}
+.da.pri:hover{background:var(--gold);border-color:var(--gold)}
+.da.del{color:var(--red);border-color:rgba(224,80,80,.25)}
+.da.del:hover{background:rgba(224,80,80,.06);border-color:var(--red)}
+.dg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.dsec{font-size:8.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink3);grid-column:1/-1;padding:14px 0 6px;border-top:1px solid var(--border);margin-top:4px}
+.dsec:first-child{border-top:none;padding-top:0;margin-top:0}
+.df{display:flex;flex-direction:column;gap:4px}
+.df.full{grid-column:1/-1}
+.df.half{grid-column:span 2}
+.dl{font-size:8px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink3)}
+.dv{font-size:13px;color:var(--ink2);line-height:1.5}
+.dv.muted{color:var(--ink3);font-style:italic;font-size:12px}
+.dlink{font-size:12px;color:#1d4ed8;text-decoration:underline;word-break:break-all}
+.atags{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.atag{padding:3px 8px;font-size:10px;border:1px solid var(--border2);color:var(--ink2);background:var(--white)}
 
-/* Field grid */
-.fg{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
-.fg.three{grid-template-columns:1fr 1fr 1fr}
-.fg.single{grid-template-columns:1fr}
-.field{display:flex;flex-direction:column;gap:5px}
-.field.full{grid-column:1/-1}
-.fl{font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
-.fv{font-size:13px;color:var(--ink2);line-height:1.6}
-.fv.em{color:var(--ink3);font-style:italic;font-size:12px}
-.flink{font-size:12px;color:#1d4ed8;text-decoration:underline;word-break:break-all}
-.sec-lbl{font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);
-  padding:16px 0 10px;grid-column:1/-1;border-top:1px solid var(--border);margin-top:4px}
-.sec-lbl:first-child{border-top:none;padding-top:0;margin-top:0}
-
-/* Amenity display */
-.amenity-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
-.a-chip{padding:3px 9px;font-size:10px;border:1px solid var(--border2);color:var(--ink3)}
-
-/* Form mode */
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.form-grid.three{grid-template-columns:1fr 1fr 1fr}
-label{font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
-input,select,textarea{padding:8px 11px;background:var(--white);border:1px solid var(--border2);font-family:'Jost',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:border .1s;width:100%}
+/* Form */
+.fwrap{padding:28px 32px 48px}
+.fhead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.fhead-name{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:400}
+.fg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.fg .full{grid-column:1/-1}
+.fg .half{grid-column:span 2}
+.fsec{font-size:8.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink3);grid-column:1/-1;padding:14px 0 4px;border-top:1px solid var(--border);margin-top:2px}
+.fsec:first-child{border-top:none;padding-top:0;margin-top:0}
+.fl{display:flex;flex-direction:column;gap:5px}
+label{font-size:8px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink3)}
+input,select,textarea{padding:8px 10px;background:var(--white);border:1px solid var(--border2);font-family:'Jost',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:border .1s;width:100%}
 input:focus,select:focus,textarea:focus{border-color:var(--gold)}
 input::placeholder,textarea::placeholder{color:var(--ink3)}
-textarea{resize:vertical;min-height:70px}
-.form-sec{font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);
-  padding:16px 0 10px;grid-column:1/-1;border-top:1px solid var(--border);margin-top:4px}
-.form-sec:first-child{border-top:none;padding-top:0;margin-top:0}
-.checkbox-row{display:flex;align-items:center;gap:8px;padding:8px 0}
-.checkbox-row input[type=checkbox]{width:15px;height:15px;cursor:pointer;flex-shrink:0}
-.checkbox-row span{font-size:13px;color:var(--ink2)}
-.form-btns{display:flex;gap:10px;align-items:center;margin-top:24px;padding-top:18px;border-top:1px solid var(--border);grid-column:1/-1}
-.fn-btn{padding:9px 22px;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:.06em;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--ink2);transition:all .12s}
-.fn-btn:hover{border-color:var(--gold);color:var(--gold)}
-.fn-btn.pri{background:var(--ink);color:var(--white);border-color:var(--ink)}
-.fn-btn.pri:hover{background:var(--gold);border-color:var(--gold)}
-.fn-btn:disabled{opacity:.4;cursor:not-allowed}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
 
 /* Amenity picker */
-.amenity-grid{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
-.amenity-chip{padding:4px 10px;border:1px solid var(--border2);font-size:11px;color:var(--ink3);cursor:pointer;transition:all .1s;user-select:none}
-.amenity-chip.sel{border-color:var(--gold);color:var(--gold);background:rgba(154,125,82,.06)}
+.amen-section{margin-bottom:14px}
+.amen-group-label{font-size:8px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.amen-chips{display:flex;flex-wrap:wrap;gap:5px}
+.ac{padding:5px 11px;border:1px solid var(--border2);font-size:11px;color:var(--ink3);cursor:pointer;transition:all .1s;user-select:none;background:var(--white)}
+.ac:hover{border-color:var(--gold2);color:var(--ink2)}
+.ac.sel{border-color:var(--gold);color:var(--gold);background:rgba(154,125,82,.07);font-weight:400}
 
-/* Toast */
-.toast{position:fixed;bottom:24px;right:24px;padding:11px 18px;font-size:12px;letter-spacing:.04em;border:1px solid;z-index:200;transition:all .2s;pointer-events:none}
-.toast.ok{background:rgba(92,184,122,.1);border-color:rgba(92,184,122,.4);color:#3a9960}
+.fbtns{display:flex;gap:10px;align-items:center;margin-top:24px;padding-top:18px;border-top:1px solid var(--border);grid-column:1/-1}
+.fb{padding:9px 22px;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:.06em;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--ink2);transition:all .12s}
+.fb:hover{border-color:var(--gold);color:var(--gold)}
+.fb.pri{background:var(--ink);color:var(--white);border-color:var(--ink)}
+.fb.pri:hover{background:var(--gold);border-color:var(--gold)}
+.fb:disabled{opacity:.4;cursor:not-allowed}
+.fmsg{font-size:11px;color:var(--ink3);margin-left:6px}
+
+.toast{position:fixed;bottom:22px;right:22px;padding:10px 16px;font-size:12px;letter-spacing:.04em;border:1px solid;z-index:300;transition:opacity .2s,transform .2s;pointer-events:none}
+.toast.ok{background:rgba(58,153,96,.08);border-color:rgba(58,153,96,.35);color:var(--green)}
 .toast.err{background:rgba(224,80,80,.08);border-color:rgba(224,80,80,.3);color:var(--red)}
-.toast.gone{opacity:0;transform:translateY(8px)}
-
-.spinner{display:inline-block;width:12px;height:12px;border:1.5px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:5px}
-@keyframes spin{to{transform:rotate(360deg)}}
+.toast.gone{opacity:0;transform:translateY(6px)}
+.spin{display:inline-block;width:11px;height:11px;border:1.5px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:4px}
+@keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -135,50 +131,47 @@ textarea{resize:vertical;min-height:70px}
   <div class="hdiv"></div>
   <span class="hls">Portfolio Manager</span>
   <div class="hright">
-    <span class="count-badge" id="count-badge">— properties</span>
-    <a href="/agent.html" class="nav-link">← Sales Agent</a>
+    <span class="hbadge" id="count-badge">— properties</span>
+    <a href="/agent.html" class="hlink">← Sales Agent</a>
   </div>
 </header>
 
 <div class="layout">
-  <!-- LEFT: list -->
   <div class="sidebar">
-    <div class="sb-head">
-      <div class="sb-title">Portfolio</div>
-      <input class="sb-search" id="sb-search" placeholder="Search name, neighborhood…" oninput="renderList()">
-      <div class="filter-row" id="city-pills">
-        <button class="fpill on" onclick="setFilter('city','')">All</button>
-        <button class="fpill" onclick="setFilter('city','cartagena')">Cartagena</button>
-        <button class="fpill" onclick="setFilter('city','medellín')">Medellín</button>
-        <button class="fpill" onclick="setFilter('city','mexico city')">CDMX</button>
-        <button class="fpill" onclick="setFilter('city','tulum')">Tulum</button>
-        <button class="fpill" onclick="setFilter('city','bogotá')">Bogotá</button>
+    <div class="sb-top">
+      <div class="sb-sec">Portfolio</div>
+      <input class="sb-search" id="sb-q" placeholder="Search name, neighborhood…" oninput="renderList()">
+      <div class="pills" id="city-pills">
+        <button class="pill on" data-fk="city" data-fv="">All cities</button>
+        <button class="pill" data-fk="city" data-fv="Cartagena">Cartagena</button>
+        <button class="pill" data-fk="city" data-fv="Medellín">Medellín</button>
+        <button class="pill" data-fk="city" data-fv="Mexico City">CDMX</button>
+        <button class="pill" data-fk="city" data-fv="Tulum">Tulum</button>
+        <button class="pill" data-fk="city" data-fv="Bogotá">Bogotá</button>
+        <button class="pill" data-fk="city" data-fv="Santa Marta">S. Marta</button>
       </div>
-      <div class="filter-row">
-        <button class="fpill on" onclick="setFilter('type','')">All types</button>
-        <button class="fpill" onclick="setFilter('type','villa')">Villas</button>
-        <button class="fpill" onclick="setFilter('type','penthouse')">Penthouses</button>
-        <button class="fpill" onclick="setFilter('type','boat')">Boats</button>
-        <button class="fpill" onclick="setFilter('type','speedboat')">Speedboats</button>
-        <button class="fpill" onclick="setFilter('type','catamaran')">Catamarans</button>
-        <button class="fpill" onclick="setFilter('type','wedding venue')">Venues</button>
+      <div class="pills">
+        <button class="pill on" data-fk="type" data-fv="">All types</button>
+        <button class="pill" data-fk="type" data-fv="Villa">Villas</button>
+        <button class="pill" data-fk="type" data-fv="Yacht">Yachts</button>
+        <button class="pill" data-fk="type" data-fv="Boat">Boats</button>
+        <button class="pill" data-fk="type" data-fv="Catamaran">Catamarans</button>
+        <button class="pill" data-fk="type" data-fv="Island">Islands</button>
+        <button class="pill" data-fk="type" data-fv="Wedding Venue">Venues</button>
       </div>
       <button class="add-btn" onclick="openNew()">
-        <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add property
+        <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add property / experience
       </button>
     </div>
     <div class="plist" id="plist">
-      <div style="padding:24px 16px;text-align:center;font-size:11px;color:var(--ink3);letter-spacing:.06em">
-        <span class="spinner"></span>Loading…
-      </div>
+      <div style="padding:28px;text-align:center;font-size:11px;color:var(--ink3)"><span class="spin"></span>Loading…</div>
     </div>
   </div>
 
-  <!-- RIGHT: detail / form -->
   <div class="main" id="main">
-    <div class="main-empty" id="main-empty">
-      <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <div class="empty" id="empty-state">
+      <svg width="30" height="30" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       <p>Select a property</p>
     </div>
     <div id="main-content" style="display:none"></div>
@@ -190,393 +183,327 @@ textarea{resize:vertical;min-height:70px}
 <script>
 const GAS = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
-const AMENITIES = [
-  'Pool','Infinity Pool','Jacuzzi','Rooftop','Ocean View','Sea View',
-  'Mountain View','Garden','Terrace','Balcony','Outdoor Kitchen',
-  'Outdoor Shower','BBQ','Sound System','Karaoke','WiFi','Smart TV',
-  'Parking','Security','Laundry','Pet Friendly','Waterfront','Beach Access',
-  'Yoga Space','Wine Cellar','Sauna','Steam Room','Tennis Court',
-  'Gym','City View','Valley View','Private Dock','Captain Included',
-  'Crew Included','AC','Heated Pool','Fire Pit','Bar',
-];
+const AMENITY_GROUPS = {
+  "Outdoor & Water":    ["Pool","Infinity Pool","Heated Pool","Jacuzzi","Plunge Pool","Ocean View","Sea View","Beach Access","Waterfront","Private Dock","Rooftop","Terrace","Balcony","Garden","BBQ","Fire Pit","Outdoor Kitchen","Outdoor Shower"],
+  "Views & Location":   ["City View","Mountain View","Valley View","Garden View","Jungle View","Bay View"],
+  "Entertainment":      ["Sound System","Karaoke","Home Theater","Game Room","Bar","Dance Floor","DJ Booth","Billiards","Ping Pong","Foosball"],
+  "Wellness":           ["Gym","Yoga Space","Sauna","Steam Room","Massage Area","Cold Plunge"],
+  "Services Included":  ["Chef Included","Chef Kitchen","Captain Included","Crew Included","Cleaning Included","Concierge Included","Driver Included","Security","Butler Service"],
+  "Essentials":         ["WiFi","Smart TV","AC","Parking","Elevator","Washer/Dryer","Laundry","Pet Friendly","Wheelchair Access"],
+  "Special Features":   ["Bachelor Friendly","Wine Cellar","Private Pool","Tennis Court","Basketball Court","Pickleball","Putting Green","Helipad","Private Island"],
+};
 
-const CITIES = ['Cartagena','Medellín','Mexico City','Tulum','Cancún','Bogotá','Santa Marta','Miami'];
-const TYPES  = ['Villa','Penthouse','Apartment','Boat / Yacht','Catamaran','Speedboat','Wedding Venue','Hotel','Finca'];
+const CITIES   = ["Cartagena","Medellín","Mexico City","Tulum","Cancún","Bogotá","Santa Marta","Barranquilla","Miami","Panamá"];
+const TYPES    = ["Villa","Yacht","Boat","Catamaran","Speedboat","Island","Wedding Venue","Penthouse","Apartment","Finca","Hacienda","Hotel","Restaurant","Experience"];
+const STATUSES = ["Active","Inactive","On Request","Coming Soon","Seasonal"];
+const CANCELS  = ["No refunds","50% refund 30+ days out","Full refund 30+ days out","Full refund 15+ days out","Full refund 7+ days out","Flexible — full refund 48h","Non-refundable"];
 
 let allProps = [];
-let selId = null;
-let filters = { city: '', type: '' };
-let editAmenities = [];
+let selId    = null;
+let fCity    = "";
+let fType    = "";
+let selAmens = [];
 
 async function gas(body) {
-  const r = await fetch(GAS, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(body),
-  });
+  const r = await fetch(GAS, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(body) });
   const t = await r.text();
-  try { return JSON.parse(t); } catch { return { error: t }; }
+  try { return JSON.parse(t); } catch { return {error:t}; }
 }
 
 async function load() {
   try {
-    const d = await gas({ action: 'property_list' });
-    allProps = d.properties || [];
-    document.getElementById('count-badge').textContent = allProps.length + ' properties';
+    const d = await gas({ action:"property_list" });
+    allProps = (d.properties||[]).filter(p=>p.name);
+    document.getElementById("count-badge").textContent = allProps.length+" properties";
     renderList();
   } catch(e) {
-    toast('Could not load properties — check connection', 'err');
+    toast("Could not load — check GAS","err");
+    document.getElementById("plist").innerHTML='<div style="padding:20px;text-align:center;font-size:11px;color:var(--red)">Error loading</div>';
   }
 }
 
-function setFilter(key, val) {
-  filters[key] = val;
-  document.querySelectorAll(key === 'city' ? '#city-pills .fpill' : '.filter-row:nth-of-type(2) .fpill')
-    .forEach(p => {
-      const oc = p.getAttribute('onclick') || '';
-      p.classList.toggle('on', oc.includes(`'${val}'`));
-    });
-  // simpler: re-query all pills and toggle based on active value
-  document.querySelectorAll('.fpill').forEach(p => {
-    const oc = p.getAttribute('onclick') || '';
-    if (oc.includes(`'${key}'`)) {
-      p.classList.toggle('on', oc.includes(`'${val}'`));
-    }
+document.querySelectorAll(".pill").forEach(p=>{
+  p.addEventListener("click",()=>{
+    const k=p.dataset.fk, v=p.dataset.fv;
+    if(k==="city") fCity=v; else fType=v;
+    document.querySelectorAll(`.pill[data-fk="${k}"]`).forEach(x=>x.classList.toggle("on",x.dataset.fv===v));
+    renderList();
   });
-  renderList();
-}
+});
 
-function renderList() {
-  const q = (document.getElementById('sb-search').value || '').toLowerCase();
-  const list = document.getElementById('plist');
+function renderList(){
+  const q=(document.getElementById("sb-q").value||"").toLowerCase();
+  const rows=allProps.filter(p=>{
+    const city=(p.city||"").toLowerCase();
+    const type=(p["item type"]||p.type||"").toLowerCase();
+    const name=(p.name||"").toLowerCase();
+    const hood=(p.neighborhood||"").toLowerCase();
+    const amen=(p.amenities||"").toLowerCase();
+    return (!fCity||city.includes(fCity.toLowerCase()))
+        && (!fType||type.includes(fType.toLowerCase()))
+        && (!q||name.includes(q)||hood.includes(q)||city.includes(q)||amen.includes(q));
+  }).sort((a,b)=>(a.name||"").localeCompare(b.name||""));
 
-  let filtered = allProps.filter(p => {
-    const city = (p.city || '').toLowerCase();
-    const type = (p.type || '').toLowerCase();
-    const name = (p.name || '').toLowerCase();
-    const hood = (p.neighborhood || '').toLowerCase();
-    const tags = (p.amenities || '').toLowerCase();
-    const cityOk = !filters.city || city.includes(filters.city);
-    const typeOk = !filters.type || type.includes(filters.type);
-    const qOk    = !q || name.includes(q) || hood.includes(q) || city.includes(q) || tags.includes(q);
-    return cityOk && typeOk && qOk;
-  }).sort((a,b) => (a.name||'').localeCompare(b.name||''));
-
-  if (!filtered.length) {
-    list.innerHTML = '<div style="padding:24px;text-align:center;font-size:11px;color:var(--ink3);letter-spacing:.06em">No properties found</div>';
-    return;
-  }
-
-  list.innerHTML = '';
-  filtered.forEach(p => {
-    const el = document.createElement('div');
-    el.className = 'pi' + (p.id === selId ? ' active' : '');
-    el.onclick = () => showDetail(p.id);
-    const statusTag = p.status === 'Active'
-      ? '<span class="pi-tag tag-active">Active</span>'
-      : p.status === 'Inactive'
-        ? '<span class="pi-tag tag-inactive">Inactive</span>'
-        : '<span class="pi-tag tag-type">'+esc(p.status||'')+'</span>';
-    const pax = p.maxPax ? `👥 ${p.maxPax}` : '';
-    const beds = p.bedrooms ? `🛏 ${p.bedrooms}` : '';
-    el.innerHTML = `
-      <div class="pi-tags">
-        <span class="pi-tag tag-city">${esc(p.city||'')}</span>
-        <span class="pi-tag tag-type">${esc(p.type||'')}</span>
-        ${statusTag}
-      </div>
-      <div class="pi-name">${esc(p.name||'—')}</div>
-      <div class="pi-meta">${[p.neighborhood, [pax,beds].filter(Boolean).join(' · ')].filter(Boolean).join(' · ')}</div>
-    `;
+  const list=document.getElementById("plist");
+  if(!rows.length){ list.innerHTML='<div style="padding:24px;text-align:center;font-size:11px;color:var(--ink3)">No results</div>'; return; }
+  list.innerHTML="";
+  rows.forEach(p=>{
+    const id=p.id||p.name;
+    const type=p["item type"]||p.type||"";
+    const status=p.status||"";
+    const stTag=status==="Active"?`<span class="tag ts-active">Active</span>`:status==="Inactive"?`<span class="tag ts-inactive">Inactive</span>`:status?`<span class="tag tt">${esc(status)}</span>`:"";
+    const pax=p["max pax"]||p.maxPax||"";
+    const beds=p.bedrooms||"";
+    const el=document.createElement("div");
+    el.className="pi"+(id===selId?" active":"");
+    el.onclick=()=>showDetail(id);
+    el.innerHTML=`<div class="pi-row1"><span class="tag tc">${esc(p.city||"")}</span><span class="tag tt">${esc(type)}</span>${stTag}</div><div class="pi-name">${esc(p.name)}</div><div class="pi-sub">${[p.neighborhood,pax?`👥 ${pax} pax`:"",beds?`🛏 ${beds}`:""].filter(Boolean).join(" · ")}</div>`;
     list.appendChild(el);
   });
 }
 
-function showDetail(id) {
-  selId = id;
-  renderList(); // refresh active state
-  const p = allProps.find(x => x.id === id);
-  if (!p) return;
+function showDetail(id){
+  selId=id; renderList();
+  const p=allProps.find(x=>(x.id||x.name)===id);
+  if(!p) return;
+  show("main-content"); hide("empty-state");
 
-  document.getElementById('main-empty').style.display = 'none';
-  document.getElementById('main-content').style.display = 'block';
+  const type  =p["item type"]||p.type||"";
+  const maxpax=p["max pax"]||p.maxPax||"";
+  const cprice=p["client price"]||p.clientPrice||"";
+  const oprice=p["our price"]||p.ourPrice||"";
+  const airbnb=p["airbnb link"]||p.airbnbLink||"";
+  const photos=p["photos link"]||p.photosLink||"";
+  const webpage=p["twp travel webpage"]||p.webpage||"";
+  const desc  =p.description||"";
+  const notes =p.notes||"";
+  const contact=p["contact name"]||p.contactName||"";
+  const phone =p["contact phone"]||p.contactPhone||"";
+  const cxl   =p["cancellation policy"]||p.cancellationPolicy||"";
+  const checkin=p["check-in time"]||p.checkIn||"";
+  const checkout=p["check-out time"]||p.checkOut||"";
+  const amenArr=(p.amenities||"").split(",").map(s=>s.trim()).filter(Boolean);
 
-  const amenArr = (p.amenities || '').split(',').map(s => s.trim()).filter(Boolean);
-
-  document.getElementById('main-content').innerHTML = `
-    <div class="detail">
+  document.getElementById("main-content").innerHTML=`
+    <div class="det">
       <div class="det-head">
         <div>
           <div class="det-name">${esc(p.name)}</div>
-          <div class="det-sub">${[p.city, p.neighborhood, p.type].filter(Boolean).join(' · ')}</div>
+          <div class="det-sub">${[p.city,p.neighborhood,type].filter(Boolean).join(" · ")}</div>
         </div>
-        <div class="det-actions">
-          ${p.airbnbLink ? `<a href="${esc(p.airbnbLink)}" target="_blank" class="d-btn" style="text-decoration:none">Airbnb ↗</a>` : ''}
-          ${p.photosLink ? `<a href="${esc(p.photosLink)}" target="_blank" class="d-btn" style="text-decoration:none">Photos ↗</a>` : ''}
-          <button class="d-btn pri" onclick="openEdit('${id}')">✏️ Edit</button>
-          <button class="d-btn del" onclick="deleteProperty('${id}')">Delete</button>
-        </div>
-      </div>
-
-      <div class="fg three">
-        <div class="sec-lbl">Details</div>
-        ${field('City', p.city)}
-        ${field('Type', p.type)}
-        ${field('Status', p.status)}
-        ${field('Neighborhood', p.neighborhood)}
-        ${field('Max Guests', p.maxPax ? p.maxPax + ' pax' : '')}
-        ${field('Bedrooms', p.bedrooms)}
-        ${field('Bathrooms', p.bathrooms)}
-        ${field('Bachelor / Party', p.bachelorFriendly === 'TRUE' || p.bachelorFriendly === true ? '✅ Yes' : '—')}
-
-        <div class="sec-lbl">Pricing</div>
-        ${field('Client Price', p.clientPrice)}
-        ${field('Our Price', p.ourPrice)}
-
-        ${p.description ? `<div class="field full"><div class="fl">Description</div><div class="fv">${esc(p.description)}</div></div>` : ''}
-
-        ${amenArr.length ? `
-        <div class="field full">
-          <div class="fl">Amenities & Tags</div>
-          <div class="amenity-chips">
-            ${amenArr.map(a => `<span class="a-chip">${esc(a)}</span>`).join('')}
-          </div>
-        </div>` : ''}
-
-        <div class="sec-lbl">Links</div>
-        ${p.airbnbLink ? `<div class="field full"><div class="fl">Airbnb</div><a href="${esc(p.airbnbLink)}" target="_blank" class="flink">${esc(p.airbnbLink)}</a></div>` : ''}
-        ${p.photosLink ? `<div class="field full"><div class="fl">Photos</div><a href="${esc(p.photosLink)}" target="_blank" class="flink">${esc(p.photosLink)}</a></div>` : ''}
-      </div>
-    </div>
-  `;
-}
-
-function field(label, val) {
-  if (!val && val !== 0) return `<div class="field"><div class="fl">${label}</div><div class="fv em">—</div></div>`;
-  return `<div class="field"><div class="fl">${label}</div><div class="fv">${esc(String(val))}</div></div>`;
-}
-
-function openNew() {
-  selId = null;
-  renderList();
-  showForm(null);
-}
-
-function openEdit(id) {
-  showForm(allProps.find(p => p.id === id));
-}
-
-function showForm(p) {
-  document.getElementById('main-empty').style.display = 'none';
-  document.getElementById('main-content').style.display = 'block';
-
-  editAmenities = p ? (p.amenities || '').split(',').map(s => s.trim()).filter(Boolean) : [];
-
-  const cityOpts = CITIES.map(c => `<option value="${c}" ${p?.city===c?'selected':''}>${c}</option>`).join('');
-  const typeOpts = TYPES.map(t => `<option value="${t}" ${p?.type===t?'selected':''}>${t}</option>`).join('');
-  const statusOpts = ['Active','Inactive','Pending Review'].map(s => `<option value="${s}" ${(p?.status||'Active')===s?'selected':''}>${s}</option>`).join('');
-
-  document.getElementById('main-content').innerHTML = `
-    <div class="detail">
-      <div class="det-head" style="margin-bottom:20px;padding-bottom:16px">
-        <div class="det-name">${p ? 'Edit — ' + esc(p.name) : 'New Property'}</div>
-        ${p ? `<button class="d-btn" onclick="showDetail('${p.id}')">Cancel</button>` : `<button class="d-btn" onclick="document.getElementById('main-content').style.display='none';document.getElementById('main-empty').style.display='flex'">Cancel</button>`}
-      </div>
-
-      <div class="form-grid" id="prop-form">
-        <div class="form-sec">Basic Info</div>
-
-        <div class="field full">
-          <label>Property Name *</label>
-          <input id="f-name" value="${esc(p?.name||'')}" placeholder="e.g. Casa Azul · Bocagrande" required>
-        </div>
-        <div class="field">
-          <label>City *</label>
-          <select id="f-city"><option value="">— Select —</option>${cityOpts}</select>
-        </div>
-        <div class="field">
-          <label>Type</label>
-          <select id="f-type">${typeOpts}</select>
-        </div>
-        <div class="field">
-          <label>Neighborhood / Area</label>
-          <input id="f-hood" value="${esc(p?.neighborhood||'')}" placeholder="e.g. Bocagrande, El Poblado">
-        </div>
-        <div class="field">
-          <label>Status</label>
-          <select id="f-status">${statusOpts}</select>
-        </div>
-
-        <div class="form-sec">Capacity & Rooms</div>
-        <div class="field">
-          <label>Max Guests (pax)</label>
-          <input id="f-pax" type="number" value="${esc(p?.maxPax||'')}" placeholder="20" min="1">
-        </div>
-        <div class="field">
-          <label>Bedrooms</label>
-          <input id="f-beds" type="number" value="${esc(p?.bedrooms||'')}" placeholder="6" min="0">
-        </div>
-        <div class="field">
-          <label>Bathrooms</label>
-          <input id="f-baths" type="number" value="${esc(p?.bathrooms||'')}" placeholder="5" min="0">
-        </div>
-        <div class="field">
-          <div class="checkbox-row">
-            <input id="f-party" type="checkbox" ${(p?.bachelorFriendly==='TRUE'||p?.bachelorFriendly===true)?'checked':''}>
-            <span>Bachelor / Party Friendly</span>
-          </div>
-        </div>
-
-        <div class="form-sec">Pricing</div>
-        <div class="field">
-          <label>Client Price (per night)</label>
-          <input id="f-price" value="${esc(p?.clientPrice||'')}" placeholder="$3,500 USD/night">
-        </div>
-        <div class="field">
-          <label>Our Price (internal)</label>
-          <input id="f-ourprice" value="${esc(p?.ourPrice||'')}" placeholder="$2,800 USD/night">
-        </div>
-
-        <div class="form-sec">Links</div>
-        <div class="field">
-          <label>Airbnb / Booking Link</label>
-          <input id="f-airbnb" value="${esc(p?.airbnbLink||'')}" placeholder="https://airbnb.com/rooms/...">
-        </div>
-        <div class="field">
-          <label>Photos / Drive Link</label>
-          <input id="f-photos" value="${esc(p?.photosLink||'')}" placeholder="https://drive.google.com/...">
-        </div>
-
-        <div class="form-sec">Description & Amenities</div>
-        <div class="field full">
-          <label>Description</label>
-          <textarea id="f-desc" placeholder="What makes it special…">${esc(p?.description||'')}</textarea>
-        </div>
-        <div class="field full">
-          <label>Amenities (click to select)</label>
-          <div class="amenity-grid" id="amenity-grid"></div>
-        </div>
-
-        <div class="form-btns">
-          <button class="fn-btn pri" id="save-btn" onclick="saveProperty(${p?`'${p.id}'`:null})">
-            ${p ? 'Save Changes' : 'Add to Portfolio'}
-          </button>
-          ${p ? `<button class="fn-btn" onclick="showDetail('${p.id}')">Cancel</button>` : `<button class="fn-btn" onclick="document.getElementById('main-content').style.display='none';document.getElementById('main-empty').style.display='flex'">Cancel</button>`}
-          <span id="form-msg" style="font-size:11px;color:var(--ink3);margin-left:8px"></span>
+        <div class="det-acts">
+          ${airbnb?`<a href="${esc(airbnb)}" target="_blank" class="da">Airbnb ↗</a>`:""}
+          ${photos?`<a href="${esc(photos)}" target="_blank" class="da">Photos ↗</a>`:""}
+          ${webpage?`<a href="${esc(webpage)}" target="_blank" class="da">Web ↗</a>`:""}
+          <button class="da pri" onclick="openEdit('${esc(id)}')">✏ Edit</button>
+          <button class="da del" onclick="deleteProperty('${esc(id)}')">Delete</button>
         </div>
       </div>
-    </div>
-  `;
-
-  initAmenityGrid();
+      <div class="dg">
+        <div class="dsec">Details</div>
+        ${df("City",p.city)} ${df("Type",type)} ${df("Status",p.status)}
+        ${df("Neighborhood",p.neighborhood)} ${df("Max Guests",maxpax?maxpax+" pax":"")}
+        ${df("Bedrooms",p.bedrooms)} ${df("Bathrooms",p.bathrooms)} ${df("Beds",p.beds)}
+        ${df("Capacity",p.capacity)} ${df("Sq Ft / m²",p.feet)}
+        ${df("Venue Type",p["venue type"]||p.venueType)}
+        <div class="dsec">Pricing</div>
+        ${df("Client Price",cprice)} ${df("Price Range",p["price range"]||p.priceRange)} ${df("Our Price",oprice)}
+        <div class="dsec">Policies & Logistics</div>
+        ${df("Check-in",checkin)} ${df("Check-out",checkout)}
+        ${cxl?`<div class="df half"><div class="dl">Cancellation Policy</div><div class="dv">${esc(cxl)}</div></div>`:""}
+        <div class="dsec">Contact</div>
+        ${df("Contact Name",contact)} ${df("Contact",p.contact)} ${df("Phone",phone)}
+        ${desc?`<div class="dsec">Description</div><div class="df full"><div class="dv">${esc(desc)}</div></div>`:""}
+        ${notes?`<div class="dsec">Notes</div><div class="df full"><div class="dv" style="color:var(--ink3)">${esc(notes)}</div></div>`:""}
+        ${amenArr.length?`<div class="dsec">Amenities & Tags</div><div class="df full"><div class="atags">${amenArr.map(a=>`<span class="atag">${esc(a)}</span>`).join("")}</div></div>`:""}
+        <div class="dsec">Links</div>
+        ${airbnb?`<div class="df full"><div class="dl">Airbnb / Booking</div><a href="${esc(airbnb)}" target="_blank" class="dlink">${esc(airbnb)}</a></div>`:""}
+        ${photos?`<div class="df full"><div class="dl">Photos / Drive</div><a href="${esc(photos)}" target="_blank" class="dlink">${esc(photos)}</a></div>`:""}
+        ${webpage?`<div class="df full"><div class="dl">Two Travel Page</div><a href="${esc(webpage)}" target="_blank" class="dlink">${esc(webpage)}</a></div>`:""}
+        ${p.location?`<div class="df full"><div class="dl">Google Maps</div><a href="${esc(p.location)}" target="_blank" class="dlink">${esc(p.location)}</a></div>`:""}
+      </div>
+    </div>`;
 }
 
-function initAmenityGrid() {
-  const grid = document.getElementById('amenity-grid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  AMENITIES.forEach(a => {
-    const chip = document.createElement('div');
-    chip.className = 'amenity-chip' + (editAmenities.includes(a) ? ' sel' : '');
-    chip.textContent = a;
-    chip.onclick = () => {
-      if (editAmenities.includes(a)) {
-        editAmenities = editAmenities.filter(x => x !== a);
-        chip.classList.remove('sel');
-      } else {
-        editAmenities.push(a);
-        chip.classList.add('sel');
-      }
-    };
-    grid.appendChild(chip);
-  });
+function df(label,val){
+  if(!val&&val!==0) return `<div class="df"><div class="dl">${label}</div><div class="dv muted">—</div></div>`;
+  return `<div class="df"><div class="dl">${label}</div><div class="dv">${esc(String(val))}</div></div>`;
 }
 
-async function saveProperty(id) {
-  const btn = document.getElementById('save-btn');
-  const msg = document.getElementById('form-msg');
-  const name = document.getElementById('f-name')?.value?.trim();
-  const city = document.getElementById('f-city')?.value;
-  if (!name) { toast('Property name is required', 'err'); return; }
-  if (!city) { toast('City is required', 'err'); return; }
+function openNew(){ selId=null; renderList(); showForm(null); }
+function openEdit(id){ showForm(allProps.find(p=>(p.id||p.name)===id)); }
 
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Saving…';
+function showForm(p){
+  show("main-content"); hide("empty-state");
+  selAmens=p?(p.amenities||"").split(",").map(s=>s.trim()).filter(Boolean):[];
+  const type=p?.["item type"]||p?.type||"";
+  const cityOpts=CITIES.map(c=>`<option ${(p?.city||"")==c?"selected":""}>${c}</option>`).join("");
+  const typeOpts=TYPES.map(t=>`<option ${type===t?"selected":""}>${t}</option>`).join("");
+  const statusOpts=STATUSES.map(s=>`<option ${(p?.status||"Active")===s?"selected":""}>${s}</option>`).join("");
+  const cxlOpts=[""].concat(CANCELS).map(s=>`<option value="${s}" ${(p?.["cancellation policy"]||"")==s?"selected":""}>${s||"Select…"}</option>`).join("");
+  const cancelBtn=p?`<button class="fb" onclick="showDetail('${esc(p.id||p.name)}')">Cancel</button>`:`<button class="fb" onclick="hide('main-content');show('empty-state')">Cancel</button>`;
 
-  const data = {
-    id:              id || ('prop_' + Date.now()),
-    name,
-    city,
-    type:            document.getElementById('f-type')?.value || '',
-    neighborhood:    document.getElementById('f-hood')?.value?.trim() || '',
-    status:          document.getElementById('f-status')?.value || 'Active',
-    maxPax:          document.getElementById('f-pax')?.value || '',
-    bedrooms:        document.getElementById('f-beds')?.value || '',
-    bathrooms:       document.getElementById('f-baths')?.value || '',
-    bachelorFriendly: document.getElementById('f-party')?.checked ? 'TRUE' : 'FALSE',
-    clientPrice:     document.getElementById('f-price')?.value?.trim() || '',
-    ourPrice:        document.getElementById('f-ourprice')?.value?.trim() || '',
-    airbnbLink:      document.getElementById('f-airbnb')?.value?.trim() || '',
-    photosLink:      document.getElementById('f-photos')?.value?.trim() || '',
-    description:     document.getElementById('f-desc')?.value?.trim() || '',
-    amenities:       editAmenities.join(', '),
-    updatedAt:       new Date().toISOString(),
+  document.getElementById("main-content").innerHTML=`
+    <div class="fwrap">
+      <div class="fhead">
+        <div class="fhead-name">${p?"Edit — "+esc(p.name):"New Property"}</div>
+        ${cancelBtn}
+      </div>
+      <div class="fg">
+        <div class="fsec">Basic Info</div>
+        <div class="fl full"><label>Property / Experience Name *</label><input id="fn" value="${esc(p?.name||"")}" placeholder="e.g. Casa Azul · Bocagrande"></div>
+        <div class="fl"><label>City *</label><select id="fc"><option value="">— select —</option>${cityOpts}</select></div>
+        <div class="fl"><label>Type</label><select id="ftype">${typeOpts}</select></div>
+        <div class="fl"><label>Status</label><select id="fstatus">${statusOpts}</select></div>
+        <div class="fl half"><label>Neighborhood / Area</label><input id="fhood" value="${esc(p?.neighborhood||"")}" placeholder="Bocagrande, El Poblado…"></div>
+        <div class="fl"><label>Google Maps URL</label><input id="floc" value="${esc(p?.location||"")}" placeholder="https://maps.app.goo.gl/…"></div>
+
+        <div class="fsec">Capacity & Rooms</div>
+        <div class="fl"><label>Max Guests (pax)</label><input id="fpax" type="number" min="1" value="${esc(p?.["max pax"]||p?.maxPax||"")}" placeholder="20"></div>
+        <div class="fl"><label>Bedrooms</label><input id="fbeds" type="number" min="0" value="${esc(p?.bedrooms||"")}" placeholder="6"></div>
+        <div class="fl"><label>Bathrooms</label><input id="fbaths" type="number" min="0" value="${esc(p?.bathrooms||"")}" placeholder="5"></div>
+        <div class="fl"><label>Beds</label><input id="fbedsn" type="number" min="0" value="${esc(p?.beds||"")}" placeholder="8"></div>
+        <div class="fl"><label>Capacity (events)</label><input id="fcap" value="${esc(p?.capacity||"")}" placeholder="150"></div>
+        <div class="fl"><label>Sq Ft / m²</label><input id="ffeet" value="${esc(p?.feet||"")}" placeholder="4,500"></div>
+
+        <div class="fsec">Pricing</div>
+        <div class="fl"><label>Client Price</label><input id="fprice" value="${esc(p?.["client price"]||p?.clientPrice||"")}" placeholder="$3,500 USD/night"></div>
+        <div class="fl"><label>Price Range</label><input id="fprange" value="${esc(p?.["price range"]||p?.priceRange||"")}" placeholder="$3k–$5k"></div>
+        <div class="fl"><label>Our Price (internal)</label><input id="foprice" value="${esc(p?.["our price"]||p?.ourPrice||"")}" placeholder="$2,800 USD/night"></div>
+
+        <div class="fsec">Policies</div>
+        <div class="fl"><label>Cancellation Policy</label><select id="fcxl">${cxlOpts}</select></div>
+        <div class="fl"><label>Check-in Time</label><input id="fcheckin" value="${esc(p?.["check-in time"]||p?.checkIn||"")}" placeholder="3:00 PM"></div>
+        <div class="fl"><label>Check-out Time</label><input id="fcheckout" value="${esc(p?.["check-out time"]||p?.checkOut||"")}" placeholder="11:00 AM"></div>
+
+        <div class="fsec">Contact</div>
+        <div class="fl"><label>Contact Name</label><input id="fcname" value="${esc(p?.["contact name"]||p?.contactName||"")}" placeholder="Juan García"></div>
+        <div class="fl"><label>Contact (email / IG)</label><input id="fccontact" value="${esc(p?.contact||"")}" placeholder="juan@villa.com"></div>
+        <div class="fl"><label>Phone / WhatsApp</label><input id="fcphone" value="${esc(p?.["contact phone"]||p?.contactPhone||"")}" placeholder="+57 300 000 0000"></div>
+
+        <div class="fsec">Links</div>
+        <div class="fl half"><label>Airbnb / Booking Link</label><input id="fairbnb" value="${esc(p?.["airbnb link"]||p?.airbnbLink||"")}" placeholder="https://airbnb.com/rooms/…"></div>
+        <div class="fl"><label>Photos / Drive Link</label><input id="fphotos" value="${esc(p?.["photos link"]||p?.photosLink||"")}" placeholder="https://drive.google.com/…"></div>
+        <div class="fl half"><label>Two Travel Webpage</label><input id="fweb" value="${esc(p?.["twp travel webpage"]||p?.webpage||"")}" placeholder="https://two.travel/…"></div>
+        <div class="fl"><label>Venue Type (if applicable)</label><input id="fvtype" value="${esc(p?.["venue type"]||p?.venueType||"")}" placeholder="Hotel + Espacio, Salon…"></div>
+
+        <div class="fsec">Description & Notes</div>
+        <div class="fl full"><label>Description (shown to clients)</label><textarea id="fdesc" rows="4">${esc(p?.description||"")}</textarea></div>
+        <div class="fl full"><label>Internal Notes</label><textarea id="fnotes" rows="3">${esc(p?.notes||"")}</textarea></div>
+
+        <div class="fsec">Amenities & Tags</div>
+        <div class="fl full" id="amen-container"></div>
+
+        <div class="fbtns">
+          <button class="fb pri" id="save-btn" onclick="saveProperty(${p?`'${esc(p.id||p.name)}'`:null})">${p?"Save Changes":"Add to Portfolio"}</button>
+          ${cancelBtn}
+          <span class="fmsg" id="fmsg"></span>
+        </div>
+      </div>
+    </div>`;
+  buildAmenityPicker();
+}
+
+function buildAmenityPicker(){
+  const container=document.getElementById("amen-container");
+  if(!container) return;
+  container.innerHTML="";
+  for(const [group,items] of Object.entries(AMENITY_GROUPS)){
+    const sec=document.createElement("div");
+    sec.className="amen-section";
+    sec.innerHTML=`<div class="amen-group-label">${group}</div><div class="amen-chips"></div>`;
+    container.appendChild(sec);
+    const chipsEl=sec.querySelector(".amen-chips");
+    items.forEach(a=>{
+      const chip=document.createElement("div");
+      chip.className="ac"+(selAmens.includes(a)?" sel":"");
+      chip.textContent=a;
+      chip.onclick=()=>{
+        if(selAmens.includes(a)){selAmens=selAmens.filter(x=>x!==a);chip.classList.remove("sel");}
+        else{selAmens.push(a);chip.classList.add("sel");}
+      };
+      chipsEl.appendChild(chip);
+    });
+  }
+}
+
+async function saveProperty(id){
+  const btn=document.getElementById("save-btn");
+  const name=(document.getElementById("fn")?.value||"").trim();
+  const city=document.getElementById("fc")?.value||"";
+  if(!name){toast("Name is required","err");return;}
+  if(!city){toast("City is required","err");return;}
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Saving…';
+  const isNew=!id;
+  const newId=id||("prop_"+Date.now());
+  const data={
+    id:newId, name, city,
+    "item type":         document.getElementById("ftype")?.value||"",
+    neighborhood:        document.getElementById("fhood")?.value?.trim()||"",
+    location:            document.getElementById("floc")?.value?.trim()||"",
+    status:              document.getElementById("fstatus")?.value||"Active",
+    "max pax":           document.getElementById("fpax")?.value||"",
+    bedrooms:            document.getElementById("fbeds")?.value||"",
+    bathrooms:           document.getElementById("fbaths")?.value||"",
+    beds:                document.getElementById("fbedsn")?.value||"",
+    capacity:            document.getElementById("fcap")?.value||"",
+    feet:                document.getElementById("ffeet")?.value||"",
+    "client price":      document.getElementById("fprice")?.value?.trim()||"",
+    "price range":       document.getElementById("fprange")?.value?.trim()||"",
+    "our price":         document.getElementById("foprice")?.value?.trim()||"",
+    "cancellation policy":document.getElementById("fcxl")?.value||"",
+    "check-in time":     document.getElementById("fcheckin")?.value?.trim()||"",
+    "check-out time":    document.getElementById("fcheckout")?.value?.trim()||"",
+    "contact name":      document.getElementById("fcname")?.value?.trim()||"",
+    contact:             document.getElementById("fccontact")?.value?.trim()||"",
+    "contact phone":     document.getElementById("fcphone")?.value?.trim()||"",
+    "airbnb link":       document.getElementById("fairbnb")?.value?.trim()||"",
+    "photos link":       document.getElementById("fphotos")?.value?.trim()||"",
+    "twp travel webpage":document.getElementById("fweb")?.value?.trim()||"",
+    description:         document.getElementById("fdesc")?.value?.trim()||"",
+    notes:               document.getElementById("fnotes")?.value?.trim()||"",
+    "venue type":        document.getElementById("fvtype")?.value?.trim()||"",
+    amenities:           selAmens.join(", "),
+    updatedAt:           new Date().toISOString(),
   };
-  if (!id) data.createdAt = data.updatedAt;
-
-  try {
-    const res = await gas({ action: id ? 'property_update' : 'property_create', data });
-    if (res.ok === false) throw new Error(res.error || 'Error saving');
-
-    // Update local cache
-    if (id) {
-      allProps = allProps.map(p => p.id === id ? { ...p, ...data } : p);
-    } else {
-      allProps.unshift(data);
-    }
-    document.getElementById('count-badge').textContent = allProps.length + ' properties';
-    renderList();
-    selId = data.id;
-    showDetail(data.id);
-    toast(id ? '✓ Property updated' : '✓ Added to portfolio', 'ok');
-  } catch(e) {
-    toast('Error: ' + e.message, 'err');
-    btn.disabled = false;
-    btn.textContent = id ? 'Save Changes' : 'Add to Portfolio';
+  if(isNew) data.createdAt=data.updatedAt;
+  try{
+    const res=await gas({action:isNew?"property_create":"property_update",data});
+    if(res.ok===false) throw new Error(res.error||"Save error");
+    if(isNew) allProps.unshift(data);
+    else allProps=allProps.map(p=>(p.id||p.name)===id?{...p,...data}:p);
+    document.getElementById("count-badge").textContent=allProps.length+" properties";
+    selId=newId; renderList(); showDetail(newId);
+    toast(isNew?"✓ Added to portfolio":"✓ Saved","ok");
+  }catch(e){
+    toast("Error: "+e.message,"err");
+    btn.disabled=false; btn.innerHTML=id?"Save Changes":"Add to Portfolio";
   }
 }
 
-async function deleteProperty(id) {
-  const p = allProps.find(x => x.id === id);
-  if (!p) return;
-  if (!confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
-
-  try {
-    await gas({ action: 'property_delete', data: { id } });
-    allProps = allProps.filter(x => x.id !== id);
-    document.getElementById('count-badge').textContent = allProps.length + ' properties';
-    selId = null;
-    renderList();
-    document.getElementById('main-content').style.display = 'none';
-    document.getElementById('main-empty').style.display = 'flex';
-    toast('✓ Property deleted', 'ok');
-  } catch(e) {
-    toast('Error deleting: ' + e.message, 'err');
-  }
+async function deleteProperty(id){
+  const p=allProps.find(x=>(x.id||x.name)===id);
+  if(!p) return;
+  if(!confirm(`Delete "${p.name}"?\nThis cannot be undone.`)) return;
+  try{
+    await gas({action:"property_delete",data:{id}});
+    allProps=allProps.filter(x=>(x.id||x.name)!==id);
+    selId=null;
+    document.getElementById("count-badge").textContent=allProps.length+" properties";
+    renderList(); hide("main-content"); show("empty-state");
+    toast("✓ Deleted","ok");
+  }catch(e){toast("Error: "+e.message,"err");}
 }
 
-function toast(msg, type = 'ok') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast ' + type;
-  setTimeout(() => { t.className = 'toast gone'; }, 3200);
+function show(id){const el=document.getElementById(id);if(el)el.style.display="";}
+function hide(id){const el=document.getElementById(id);if(el)el.style.display="none";}
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg,type="ok"){
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.className="toast "+type;
+  setTimeout(()=>{t.className="toast gone";},3400);
 }
 
-function esc(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ── Init ─────────────────────────────────────────────────────────────
 load();
 </script>
 </body>
