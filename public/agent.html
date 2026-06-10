@@ -638,7 +638,7 @@ async function loadClientsFromHubSpot(name){
         quotes:[],savedAt:[],
         hsId:deal.id,
         dealStage:p.dealstage||'',
-        createDate:parseHsDate(p.lastmodifieddate)||parseHsDate(p.createdate)||null
+        createDate:parseHsDate(p.createdate)||parseHsDate(p.lastmodifieddate)||null
       };
     });
     clients[name]=mapped;
@@ -720,11 +720,11 @@ function renderList(filter='',stageFilter=''){
   const active=list.filter(c=>!isClosedDeal(c.dealStage));
   const closed=list.filter(c=>isClosedDeal(c.dealStage));
 
-  // Sort each group by most recently modified
+  // Sort: most recently created first (createdate), fallback lastmodifieddate
   const byDate=(a,b)=>{
     const da=a.createDate?new Date(a.createDate).getTime():0;
     const db=b.createDate?new Date(b.createDate).getTime():0;
-    return db-da;
+    return db-da; // newest first
   };
   active.sort(byDate);
   closed.sort(byDate);
