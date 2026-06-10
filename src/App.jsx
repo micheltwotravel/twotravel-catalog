@@ -2981,7 +2981,7 @@ function WelcomeCatalogPage({ mode }) {
   // Detect language: ?lang=en/es, or browser language
   const urlLang = new URLSearchParams(window.location.search).get("lang") || "";
   const browserLang = navigator.language || "";
-  const isEn = urlLang.startsWith("en") || (!urlLang && browserLang.startsWith("en"));
+  const isEn = !urlLang.startsWith("es") && (!urlLang || !browserLang.startsWith("es"));
   const wt = {
     title:       isEn ? "Welcome 👋"                                           : "Bienvenido 👋",
     subtitle:    isEn ? "Tell us who you are and where you're going, and we'll show you a personalized catalog." : "Dinos quién eres y a dónde vas, y te mostramos el catálogo personalizado.",
@@ -3025,12 +3025,6 @@ function WelcomeCatalogPage({ mode }) {
 
   return (
     <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center px-4 py-12">
-      {/* Logo */}
-      <div className="mb-8 text-center">
-        <div className="text-white text-3xl font-bold tracking-tight mb-1">TWO TRAVEL</div>
-        <div className="text-neutral-400 text-sm">Concierge Experience</div>
-      </div>
-
       {/* Card */}
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-8">
         <h1 className="text-xl font-bold text-neutral-900 mb-1">{wt.title}</h1>
