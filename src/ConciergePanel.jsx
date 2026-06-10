@@ -449,7 +449,13 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
         slackToken: SLACK_BOT_TOKEN, channelId: SLACK_CHANNEL_ID },
     }),
   });
-  const data = await resp.json();
+  let data;
+  try {
+    const text = await resp.text();
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("GAS devolvió respuesta inválida (posible error de cuota o deployment)");
+  }
   if (!data.ok) throw new Error(data.error || "Error enviando a Slack");
 }
 

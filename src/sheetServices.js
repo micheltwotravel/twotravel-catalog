@@ -286,7 +286,7 @@ export async function fetchKickoffById(kickoffId) {
     id: kickoffId,
   });
 
-  return json.data;
+  return json?.data ?? null;
 }
 /* ============================================================
    2) KICKOFFS – REAL (Apps Script Web App)

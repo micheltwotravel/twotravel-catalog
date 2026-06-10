@@ -2932,7 +2932,7 @@ function DrinksCatalog() {
             </div>
             <div className="divide-y divide-neutral-100">
               {cat.items.map((it, ii) => (
-                <div key={ii} className="flex items-center gap-3 px-4 py-2.5">
+                <div key={it.name || ii} className="flex items-center gap-3 px-4 py-2.5">
                   {/* product image — always shows a 40×40 slot; falls back to gray box on error */}
                   <div className="w-10 h-10 rounded-lg bg-neutral-100 flex-shrink-0 overflow-hidden">
                     {it.img && (
