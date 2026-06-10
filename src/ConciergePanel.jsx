@@ -280,19 +280,43 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
 
   // ── DAY PAGES ───────────────────────────────────────────────
   orderedDays.forEach(({ label, title }) => {
-    const items = (rawMap.get(label) || []).sort((a,b) => a.sort - b.sort);
+    const parseTime = (t) => {
+      if (!t) return 9999;
+      // "HH:MM" (24h from time input) or "H:MM AM/PM"
+      const m24 = t.match(/^(\d{1,2}):(\d{2})$/);
+      if (m24) return parseInt(m24[1]) * 60 + parseInt(m24[2]);
+      const m12 = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+      if (m12) {
+        let h = parseInt(m12[1]);
+        if (m12[3].toUpperCase() === "PM" && h !== 12) h += 12;
+        if (m12[3].toUpperCase() === "AM" && h === 12) h = 0;
+        return h * 60 + parseInt(m12[2]);
+      }
+      return 9999;
+    };
+    const items = (rawMap.get(label) || []).sort((a, b) => {
+      const ta = parseTime(a.time), tb = parseTime(b.time);
+      // If both have times, sort by time; otherwise keep sortOrder
+      if (ta < 9999 && tb < 9999) return ta - tb;
+      if (ta < 9999) return -1;
+      if (tb < 9999) return 1;
+      return a.sort - b.sort;
+    });
     if (!items.length) return;
 
     newPage();
 
     // Day header band
-    doc.setFillColor(238,238,238);
-    doc.rect(ML - 12, y - 14, TW + 24, 26, "F");
-    doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(20,20,20);
+    const bandH = title ? 36 : 26;
+    doc.setFillColor(30,30,30);
+    doc.rect(ML - 12, y - 14, TW + 24, bandH, "F");
+    doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
     doc.text(label, ML, y);
     if (title) {
-      doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(120,120,120);
-      doc.text(cl(title), MR, y, { align:"right" });
+      doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(200,200,200);
+      const titleLines = doc.splitTextToSize(cl(title), TW);
+      doc.text(titleLines[0], ML, y + 14);
+      y += 14;
     }
     y += 24;
 
@@ -467,7 +491,7 @@ WhatsApp Concierge: https://wa.me/573001234567
 ──────────────────────────────
 
 Promo!
-Show everyone how amazing it is to travel with Two Travel's concierge service and get discounts on your experiences. Follow us @twotravelconcierge on Instagram and TikTok.
+Show everyone how amazing it is to travel with Two Travel's concierge service and get discounts on your experiences. Follow us @twotravelconcierge on Instagram and @twotravelvip on TikTok.
 
 Note: The post must be made during your stay. One tag per person required to redeem. For group services (transport, chef, etc.) all members must participate for the discount to apply.
 
@@ -1169,9 +1193,23 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
 
     return orderedLabels.map(label => {
       const meta  = dayMeta.find(dm => dm.label === label) || { label, title: "", sortOrder: 99 };
+      const parseTimeMin = (t) => {
+        if (!t) return 9999;
+        const m24 = t.match(/^(\d{1,2}):(\d{2})$/);
+        if (m24) return parseInt(m24[1]) * 60 + parseInt(m24[2]);
+        const m12 = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+        if (m12) { let h = parseInt(m12[1]); if (m12[3].toUpperCase()==="PM"&&h!==12) h+=12; if (m12[3].toUpperCase()==="AM"&&h===12) h=0; return h*60+parseInt(m12[2]); }
+        return 9999;
+      };
       const items = cart
         .filter(i => (i.dayLabel || "Sin día") === label)
-        .sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999));
+        .sort((a, b) => {
+          const ta = parseTimeMin(a.timeLabel), tb = parseTimeMin(b.timeLabel);
+          if (ta < 9999 && tb < 9999) return ta - tb;
+          if (ta < 9999) return -1;
+          if (tb < 9999) return 1;
+          return (a.sortOrder ?? 999) - (b.sortOrder ?? 999);
+        });
       return { label, meta, items };
     });
   }, [cart, dayMeta]);
@@ -1194,7 +1232,8 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
   };
 
   const addDay = () => {
-    const label = `Día ${days.length + 1}`;
+    const nextNum = dayMeta.filter(d => /^Día \d+$/i.test(d.label)).length + 1;
+    const label = `Día ${nextNum}`;
     setDayMeta(prev => [...prev, { label, title: "", sortOrder: prev.length }]);
   };
 
@@ -2176,7 +2215,7 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
     const query = q.trim().toLowerCase();
     return cityServices
       .filter((s) => {
-        const cat = String(s.category || "").trim();
+        const cat = normCatPanel(s.category);
         if (category !== "all" && cat !== category) return false;
 
         if (!query) return true;
@@ -2224,8 +2263,7 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
           {[
             { id: "all",            label: "Todos" },
             { id: "restaurants",    label: "🍽 Restaurantes" },
-            { id: "bars",           label: "🍸 Bares" },
-            { id: "nightlife",      label: "🌙 Nightlife" },
+            { id: "nightlife",      label: "🍸 Bares & Nightlife" },
             { id: "beach-clubs",    label: "⛵ Boating & Beach" },
             { id: "tours",          label: "🗺 Tours" },
             { id: "transportation", label: "🚗 Transporte" },

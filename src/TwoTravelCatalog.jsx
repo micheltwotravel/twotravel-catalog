@@ -2963,6 +2963,7 @@ const payload = {
   conciergeSummary,
   lang,
   currency,
+  clientType: currentClientType,
   status: "client_submitted",
   clientSubmittedAt: new Date().toISOString(),
   // Pre-fill itinerary day structure if dates provided
