@@ -2781,10 +2781,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     ...(canvasDayMetaRef.current != null ? { dayMeta: JSON.stringify(canvasDayMetaRef.current) } : {}),
   };
 
-  const c = guestContact.trim();
-  if (c) updates.guestContact = c;
+  updates.guestContact = guestContact.trim();
   const em = guestEmailState.trim();
-  if (em) { updates.email = em; updates.guestEmail = em; }
+  updates.email = em;
+  updates.guestEmail = em;
 
   await onSave(kickoff.id, updates);
   setStatus(autoStatus);
@@ -3376,11 +3376,16 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 onClick={async () => {
                   setBillingSending(true);
                   try {
-                    // Merge live EditDrawer state so email/city are always current
+                    // Merge live EditDrawer + canvas state so cart/dayMeta/city are always current
                     await sendItineraryPdfToSlack({
                       ...kickoff,
+                      cart:    canvasCartRef.current    != null ? canvasCartRef.current    : cart,
+                      dayMeta: canvasDayMetaRef.current != null ? canvasDayMetaRef.current : dayMeta,
                       email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
                       city: city || kickoff.city || "",
+                      tripDates, groupSize, arrivalDate, departureDate,
+                      accommodationName, accommodationAddr, accommodationUrl,
+                      checkIn, checkOut, conciergeTitle,
                     }, kickoff.lang || "en", billingCurrency, "slack", liveFxRate);
                     alert("✅ PDF enviado a Slack");
                   } catch (e) {
@@ -4097,7 +4102,7 @@ const loadKickoffs = async () => {
     return (kickoffs || [])
       .filter((k) => {
         if (statusFilter !== "all" && k.status !== statusFilter) return false;
-        if (conciergeFilter !== "all" && String(k.assignedConcierge || "").trim() !== conciergeFilter) return false;
+        if (conciergeFilter !== "all" && !String(k.assignedConcierge || "").split(",").map(s => s.trim()).includes(conciergeFilter)) return false;
 
         if (!q) return true;
         const text = [
@@ -4604,7 +4609,7 @@ const loadKickoffs = async () => {
 
   await updateKickoffInSheet(k.id, {
     clientType: newType,
-    cart: updatedCart,
+    cart: JSON.stringify(updatedCart),
   });
 
   setKickoffs((prev) =>
@@ -4770,6 +4775,7 @@ const loadKickoffs = async () => {
 
       {selectedForEdit && (
         <EditDrawer
+          key={selectedForEdit.id}
           kickoff={selectedForEdit}
           onClose={() => setSelectedForEdit(null)}
           onSave={handleSaveEdit}

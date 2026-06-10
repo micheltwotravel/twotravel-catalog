@@ -308,8 +308,6 @@ async function postToKickoffAPI(bodyObj) {
   });
 
   const text = await res.text();
-  console.log("KICKOFF STATUS:", res.status);
-console.log("KICKOFF RAW RESPONSE:", text);
 
 
 
@@ -343,7 +341,6 @@ export async function fetchKickoffsFromSheet() {
   else if (Array.isArray(json)) data = json;
   else if (Array.isArray(json.data)) data = json.data;
 
-  console.log("RAW KICKOFFS FROM API:", data);
 
   // Parse a JSON-array field that may come back as a string or already-parsed array
   const parseJsonArr = (v) => {

@@ -3027,7 +3027,7 @@ function WelcomeCatalogPage({ mode }) {
   // Detect language: ?lang=en/es, or browser language
   const urlLang = new URLSearchParams(window.location.search).get("lang") || "";
   const browserLang = navigator.language || "";
-  const isEn = !urlLang.startsWith("es") && (!urlLang || !browserLang.startsWith("es"));
+  const isEn = urlLang === "en" || (!urlLang && !browserLang.startsWith("es"));
   const wt = {
     title:       isEn ? "Welcome 👋"                                           : "Bienvenido 👋",
     subtitle:    isEn ? "Tell us who you are and where you're going, and we'll show you a personalized catalog." : "Dinos quién eres y a dónde vas, y te mostramos el catálogo personalizado.",
