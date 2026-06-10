@@ -672,6 +672,15 @@ async function loadClientsFromHubSpot(name){
       const kfVibes  = kfQuiz?.vibes?.join(', ') || '';
       const kfKids   = kfQuiz?.kids === 'yes' ? 'Kids included' : '';
 
+      // Kickoff phone/email fallback — use form data when HubSpot contact has none
+      // guestContact = "WhatsApp o email" field from kickoff form (can be either)
+      const kfContact = kf ? (kf.guestContact||kf.mainContact||kf.whatsapp||kf.phone||kf.guestPhone||'') : '';
+      const kfEmail   = kf ? (kf.email||kf.guestEmail||'') : '';
+      // Classify kfContact: if it looks like a phone/number use as phone, else email
+      const kfContactIsPhone = kfContact && /^[+\d]/.test(kfContact.trim());
+      if(!phone && kfContact && kfContactIsPhone) phone = kfContact.trim();
+      const finalEmail = email || kfEmail || (!kfContactIsPhone && kfContact ? kfContact.trim() : '');
+
       // Merge: kickoff data takes priority for dates/dest if available
       const finalDates = kfDates || tripDates;
       const finalDest  = kfDest  || parsed.dest;
@@ -687,12 +696,13 @@ async function loadClientsFromHubSpot(name){
         kfNotes      ? `📝 ${kfNotes}`        : '',
       ].filter(Boolean);
 
+      const finalContact=[phone, finalEmail].filter(Boolean).join(' · ')||'';
       return{
         id:deal.id,
         name:displayName,
         dealName:p.dealname||'',
-        contact:contactStr,
-        email,
+        contact:finalContact,
+        email:finalEmail,
         phone,
         dest:finalDest,
         dates:finalDates,
