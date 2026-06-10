@@ -107,7 +107,9 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     rawMap.get(key).push({
       sort       : Number(item.sortOrder ?? idx),
       time       : cl(item.timeLabel || item.time || svc?.schedule || ""),
-      name       : cl(item.displayName || item.name_en || item.name || svc?.name_en || svc?.name || ""),
+      name       : cl(lang === "en"
+        ? (svc?.name_en || item.name_en || item.displayName || svc?.name || item.name || "")
+        : (item.displayName || item.name || svc?.name || "")),
       location   : lang === "es"
         ? cl(svc?.location_es || svc?.location || "")
         : cl(svc?.location    || ""),
@@ -172,7 +174,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
 
   y = 112;
   // Eyebrow
-  doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(170,170,170);
+  doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(120,120,120);
   doc.text("YOUR ITINERARY", ML, y); y += 18;
 
   // Guest name
@@ -219,7 +221,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   ].filter(r => r.val);
 
   infoRows.forEach(({ label, val, url }) => {
-    doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(160,160,160);
+    doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(100,100,100);
     doc.text(label.toUpperCase(), ML, y);
     doc.setFontSize(10.5); doc.setFont("helvetica","normal");
     if (url) {
@@ -236,7 +238,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   if (kickoff.conciergeSummary) {
     y += 12;
     doc.setDrawColor(230,230,230); doc.line(ML, y, MR, y); y += 16;
-    doc.setFontSize(7.5); doc.setFont("helvetica","bold"); doc.setTextColor(160,160,160);
+    doc.setFontSize(7.5); doc.setFont("helvetica","bold"); doc.setTextColor(90,90,90);
     doc.text(lang === "es" ? "NOTAS DE TU CONCIERGE" : "FROM YOUR CONCIERGE", ML, y); y += 14;
     const summaryLines = doc.splitTextToSize(cl(kickoff.conciergeSummary).slice(0,900), TW);
     summaryLines.slice(0,14).forEach(line => {
@@ -246,7 +248,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   }
 
   // Cover footer
-  doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(200,200,200);
+  doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(150,150,150);
   doc.text("Two Travel · twotravelvip.com", PW/2, PH - 22, { align:"center" });
 
   // ── PRE-TRIP CONTENT PAGE ───────────────────────────────────
@@ -268,7 +270,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
         doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(30,100,200);
       } else if (l.toUpperCase() === l && l.length < 60) {
         // ALL CAPS line = section header
-        doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(120,120,120);
+        doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(60,60,60);
         y += 4;
       } else {
         doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40);
@@ -1261,9 +1263,9 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
 
   const addPresetToDay = (dayLabel, preset) => {
     const presets = {
-      checkin:   { name: "Check-in",  category: "services", timeLabel: "3:00 PM", notes: "" },
-      breakfast: { name: "Desayuno",  category: "services", timeLabel: "8:00 AM", notes: "" },
-      checkout:  { name: "Check-out", category: "services", timeLabel: "11:00 AM", notes: "" },
+      checkin:   { name: "Check-in",  name_en: "Check-in",   category: "services", timeLabel: "3:00 PM",  notes: "" },
+      breakfast: { name: "Desayuno",  name_en: "Breakfast",  category: "services", timeLabel: "8:00 AM",  notes: "" },
+      checkout:  { name: "Check-out", name_en: "Check-out",  category: "services", timeLabel: "11:00 AM", notes: "" },
     };
     const p = presets[preset];
     if (!p) return;
