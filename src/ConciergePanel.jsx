@@ -4365,7 +4365,7 @@ const loadKickoffs = async () => {
             // Get best available rating per kickoff: avg of cityRatings, or conciergeRating
             const getRating = (k) => {
               try {
-                const cr = JSON.parse(k.cityRatings || "[]").filter(r => Number(r.rating) > 0);
+                const cr = (()=>{ try { return JSON.parse(k.cityRatings||"[]"); } catch { return []; } })().filter(r => Number(r.rating) > 0);
                 if (cr.length) return cr.reduce((s, r) => s + Number(r.rating), 0) / cr.length;
               } catch {}
               return Number(k.conciergeRating) || 0;

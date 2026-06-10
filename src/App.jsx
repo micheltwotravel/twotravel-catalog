@@ -1027,7 +1027,10 @@ function UnifiedDashboard() {
   // ── KPI tab computed values (filtered by kpiPeriod / kpiConcierge) ──────────
   const now = new Date();
   const kpiFiltered = kickoffs.filter(k => {
-    if (kpiConcierge !== "all" && k.assignedConcierge !== kpiConcierge && k.assignedConciergeName !== kpiConcierge) return false;
+    if (kpiConcierge !== "all") {
+      const names = String(k.assignedConcierge || k.assignedConciergeName || "").split(",").map(s => s.trim());
+      if (!names.includes(kpiConcierge)) return false;
+    }
     if (kpiPeriod === "all") return true;
     const d = new Date(k.createdAt || k.timestamp || "");
     if (isNaN(d)) return false;
@@ -1060,7 +1063,7 @@ function UnifiedDashboard() {
   const kpiPct2plus  = (kpiFiltered.filter((_, i) => kpiServiceCounts[i] >= 2).length / kpiN) * 100;
   const getKpiRating = (k) => {
     try {
-      const cr = JSON.parse(k.cityRatings || "[]").filter(r => Number(r.rating) > 0);
+      const cr = (()=>{ try { return JSON.parse(k.cityRatings||"[]"); } catch { return []; } })().filter(r => Number(r.rating) > 0);
       if (cr.length) return cr.reduce((s, r) => s + Number(r.rating), 0) / cr.length;
     } catch {}
     return Number(k.conciergeRating) || 0;
@@ -1135,7 +1138,7 @@ function UnifiedDashboard() {
 
   const kpiConciergeRows = Object.entries(kpiByConcierge)
     .map(([name, d]) => {
-      const myKickoffs = kpiFiltered.filter(k => (k.assignedConcierge || k.assignedConciergeName) === name);
+      const myKickoffs = kpiFiltered.filter(k => String(k.assignedConcierge || k.assignedConciergeName || "").split(",").map(s=>s.trim()).includes(name));
       const myDays = myKickoffs.map(k => k.sentToTravifyAt ? daysBetween(k.createdAt, k.sentToTravifyAt) : null);
       // Derive city: prefer lookup, fall back to majority city in kickoffs
       const cityFromMap = CONCIERGE_CITIES[name] || "";
@@ -2154,7 +2157,7 @@ function exportKpiCsv(kickoffs, period = "all", conciergeFilter = "all", kpiType
       case "revenue":      return confirmedCart.reduce((s, it) => s + Number(it.priceUsd || it.price_tier_1 || it.price || 0), 0).toFixed(0);
       case "rating": {
         try {
-          const cr = JSON.parse(k.cityRatings || "[]").filter(r => Number(r.rating) > 0);
+          const cr = (()=>{ try { return JSON.parse(k.cityRatings||"[]"); } catch { return []; } })().filter(r => Number(r.rating) > 0);
           if (cr.length) return (cr.reduce((s,r) => s+Number(r.rating),0)/cr.length).toFixed(1);
         } catch {}
         return k.conciergeRating || "";
