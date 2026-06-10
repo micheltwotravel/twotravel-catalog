@@ -2123,8 +2123,8 @@ function exportKpiCsv(kickoffs, period = "all", conciergeFilter = "all", kpiType
       if (period === "month" && diffDays > 30) return false;
     }
     if (conciergeFilter !== "all") {
-      const name = k.assignedConcierge || k.assignedConciergeName || "";
-      if (name !== conciergeFilter) return false;
+      const names = String(k.assignedConcierge || k.assignedConciergeName || "").split(",").map(s=>s.trim());
+      if (!names.includes(conciergeFilter)) return false;
     }
     // For ratings export: only include rows that have a rating
     if (kpiType === "ratings" || kpiType === "feedback") {
@@ -2145,14 +2145,20 @@ function exportKpiCsv(kickoffs, period = "all", conciergeFilter = "all", kpiType
       case "guestName":    return k.guestName || "";
       case "tripName":     return k.tripName || "";
       case "city":         return k.city || "";
-      case "concierge":    return k.assignedConcierge || k.assignedConciergeName || "";
+      case "concierge":    return (k.assignedConcierge || k.assignedConciergeName || "").split(",").map(s=>s.trim()).join(" / ");
       case "status":       return k.status || "";
       case "clientType":   return k.clientType || "1";
       case "arrivalDate":  return k.arrivalDate || "";
       case "departureDate":return k.departureDate || "";
       case "services":     return confirmedCart.length;
       case "revenue":      return confirmedCart.reduce((s, it) => s + Number(it.priceUsd || it.price_tier_1 || it.price || 0), 0).toFixed(0);
-      case "rating":       return k.conciergeRating || "";
+      case "rating": {
+        try {
+          const cr = JSON.parse(k.cityRatings || "[]").filter(r => Number(r.rating) > 0);
+          if (cr.length) return (cr.reduce((s,r) => s+Number(r.rating),0)/cr.length).toFixed(1);
+        } catch {}
+        return k.conciergeRating || "";
+      }
       case "createdAt":    return (k.createdAt || "").slice(0, 10);
       default:             return "";
     }
