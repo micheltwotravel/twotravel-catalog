@@ -291,7 +291,14 @@ function renderList(){
     return (!fCity||city.includes(fCity.toLowerCase()))
         && (!fType||type.includes(fType.toLowerCase()))
         && (!q||name.includes(q)||hood.includes(q)||city.includes(q)||amen.includes(q));
-  }).sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+  }).sort((a,b)=>{
+    const da = a.updatedAt||a.createdAt||"";
+    const db = b.updatedAt||b.createdAt||"";
+    if(da&&db) return db.localeCompare(da); // newest first
+    if(da) return -1;
+    if(db) return 1;
+    return (a.name||"").localeCompare(b.name||"");
+  });
 
   const list=document.getElementById("plist");
   if(!rows.length){ list.innerHTML='<div style="padding:24px;text-align:center;font-size:11px;color:var(--ink3)">No results</div>'; return; }
