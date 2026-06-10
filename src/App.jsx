@@ -2978,10 +2978,30 @@ function WelcomeCatalogPage({ mode }) {
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState("");
 
+  // Detect language: ?lang=en/es, or browser language
+  const urlLang = new URLSearchParams(window.location.search).get("lang") || "";
+  const browserLang = navigator.language || "";
+  const isEn = urlLang.startsWith("en") || (!urlLang && browserLang.startsWith("en"));
+  const wt = {
+    title:       isEn ? "Welcome 👋"                                           : "Bienvenido 👋",
+    subtitle:    isEn ? "Tell us who you are and where you're going, and we'll show you a personalized catalog." : "Dinos quién eres y a dónde vas, y te mostramos el catálogo personalizado.",
+    nameLabel:   isEn ? "Your name *"                                          : "Tu nombre *",
+    namePh:      isEn ? "E.g. John Smith"                                      : "Ej: María García",
+    destLabel:   isEn ? "Destination *"                                        : "Destino *",
+    destPh:      isEn ? "Select your city…"                                    : "Selecciona tu ciudad…",
+    waLabel:     isEn ? "WhatsApp (optional)"                                  : "WhatsApp (opcional)",
+    btnReady:    isEn ? "See my catalog →"                                     : "Ver mi catálogo →",
+    btnSaving:   isEn ? "Creating your catalog…"                               : "Creando tu catálogo…",
+    errName:     isEn ? "Please enter your name."                              : "Por favor ingresa tu nombre.",
+    errCity:     isEn ? "Please select your destination."                      : "Por favor selecciona tu destino.",
+    errSave:     isEn ? "Error saving. Please try again."                      : "Error al guardar. Intenta de nuevo.",
+    errCreate:   isEn ? "Could not create the client"                          : "No se pudo crear el cliente",
+  };
+
   const handleStart = async (e) => {
     e.preventDefault();
-    if (!name.trim())  { setError("Por favor ingresa tu nombre."); return; }
-    if (!city)         { setError("Por favor selecciona tu destino."); return; }
+    if (!name.trim())  { setError(wt.errName); return; }
+    if (!city)         { setError(wt.errCity); return; }
     setError("");
     setSaving(true);
     try {
@@ -2992,13 +3012,13 @@ function WelcomeCatalogPage({ mode }) {
         status:       "catalog",
         createdAt:    new Date().toISOString(),
       });
-      if (!result?.id) throw new Error("No se pudo crear el cliente");
+      if (!result?.id) throw new Error(wt.errCreate);
       const url = new URL(window.location.href);
       url.searchParams.set("kickoffId", result.id);
       url.searchParams.set("mode", "catalog");
       window.location.href = url.toString();
     } catch (err) {
-      setError("Error al guardar. Intenta de nuevo.");
+      setError(wt.errSave);
       setSaving(false);
     }
   };
@@ -3013,21 +3033,19 @@ function WelcomeCatalogPage({ mode }) {
 
       {/* Card */}
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-8">
-        <h1 className="text-xl font-bold text-neutral-900 mb-1">Bienvenido 👋</h1>
-        <p className="text-sm text-neutral-500 mb-6">
-          Dinos quién eres y a dónde vas, y te mostramos el catálogo personalizado.
-        </p>
+        <h1 className="text-xl font-bold text-neutral-900 mb-1">{wt.title}</h1>
+        <p className="text-sm text-neutral-500 mb-6">{wt.subtitle}</p>
 
         <form onSubmit={handleStart} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-wide">
-              Tu nombre *
+              {wt.nameLabel}
             </label>
             <input
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="Ej: María García"
+              placeholder={wt.namePh}
               className="w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900"
               required
             />
@@ -3035,7 +3053,7 @@ function WelcomeCatalogPage({ mode }) {
 
           <div>
             <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-wide">
-              Destino *
+              {wt.destLabel}
             </label>
             <select
               value={city}
@@ -3043,7 +3061,7 @@ function WelcomeCatalogPage({ mode }) {
               className="w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 bg-white"
               required
             >
-              <option value="">Selecciona tu ciudad…</option>
+              <option value="">{wt.destPh}</option>
               {CITY_OPTIONS.map(c => (
                 <option key={c.code} value={c.code}>{c.label}</option>
               ))}
@@ -3052,7 +3070,7 @@ function WelcomeCatalogPage({ mode }) {
 
           <div>
             <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-wide">
-              WhatsApp (opcional)
+              {wt.waLabel}
             </label>
             <input
               type="tel"
@@ -3072,7 +3090,7 @@ function WelcomeCatalogPage({ mode }) {
             disabled={saving}
             className="w-full bg-neutral-900 text-white rounded-lg py-3 text-sm font-semibold hover:bg-neutral-800 disabled:opacity-50 transition-colors"
           >
-            {saving ? "Creando tu catálogo…" : "Ver mi catálogo →"}
+            {saving ? wt.btnSaving : wt.btnReady}
           </button>
         </form>
 
