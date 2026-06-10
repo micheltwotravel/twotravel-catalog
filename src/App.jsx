@@ -414,9 +414,13 @@ const handleSubmit = async (e) => {
     setSubmitted(true);
 
     if (kickoffId) {
-      updateKickoffInSheet(kickoffId, { status: "feedback_submitted", feedbackAt: new Date().toISOString() }).catch(
-        (e) => console.warn("Could not update kickoff status:", e)
-      );
+      // Also write overallExperience back to kickoff row so concierge dashboard shows it
+      const rating = Number(form.overallExperience) || 0;
+      updateKickoffInSheet(kickoffId, {
+        status: "feedback_submitted",
+        feedbackAt: new Date().toISOString(),
+        ...(rating > 0 ? { conciergeRating: rating } : {}),
+      }).catch((e) => console.warn("Could not update kickoff status:", e));
     }
   } catch (err) {
     console.error(err);
