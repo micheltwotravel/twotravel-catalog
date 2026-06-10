@@ -240,42 +240,47 @@ export default async function handler(req, res) {
 
       const PROPS = ["dealname","dealstage","amount","closedate","description","hs_next_step","hubspot_owner_id","notes_last_contacted","createdate","lastmodifieddate","num_associated_contacts"];
 
-      // Pass 1: active deals (not in closed stages) — sorted by closedate descending (upcoming first)
-      const activeBody = {
-        limit: 100,
-        properties: PROPS,
-        sorts: [{ propertyName: "closedate", direction: "DESCENDING" }],
-        filterGroups: [{
-          filters: [
-            ...ownerFilter,
-            { propertyName: "dealstage", operator: "NOT_IN", values: CLOSED_STAGE_IDS },
-          ]
-        }],
-      };
-      const activeRes = await hubspotRequest("/crm/v3/objects/deals/search", "POST", activeBody, token);
-      const activeDeals = activeRes.data?.results || [];
-
-      // Pass 2: recent closed deals (fill remaining slots up to limit)
-      const closedLimit = Math.max(0, limit - activeDeals.length);
-      let closedDeals = [];
-      if (closedLimit > 0) {
-        const closedBody = {
-          limit: closedLimit,
-          properties: PROPS,
-          sorts: [{ propertyName: "lastmodifieddate", direction: "DESCENDING" }],
-          filterGroups: [{
-            filters: [
-              ...ownerFilter,
-              { propertyName: "dealstage", operator: "IN", values: CLOSED_STAGE_IDS },
-            ]
-          }],
-        };
-        const closedRes = await hubspotRequest("/crm/v3/objects/deals/search", "POST", closedBody, token);
-        closedDeals = closedRes.data?.results || [];
+      // Helper: fetch ALL pages from HubSpot search (handles 100-per-page limit)
+      async function fetchAllDeals(filters, sorts) {
+        const all = [];
+        let after = undefined;
+        let pages = 0;
+        while (pages < 20) { // safety cap: max 2000 deals
+          const body = {
+            limit: 100,
+            properties: PROPS,
+            sorts,
+            filterGroups: [{ filters }],
+            ...(after ? { after } : {}),
+          };
+          const res = await hubspotRequest("/crm/v3/objects/deals/search", "POST", body, token);
+          const results = res.data?.results || [];
+          all.push(...results);
+          const nextAfter = res.data?.paging?.next?.after;
+          if (!nextAfter || results.length < 100) break;
+          after = nextAfter;
+          pages++;
+        }
+        return all;
       }
 
+      // Pass 1: ALL active deals (paginated)
+      const activeDeals = await fetchAllDeals(
+        [...ownerFilter, { propertyName: "dealstage", operator: "NOT_IN", values: CLOSED_STAGE_IDS }],
+        [{ propertyName: "closedate", direction: "DESCENDING" }]
+      );
+
+      // Pass 2: recent closed deals (last 50)
+      const closedRes = await hubspotRequest("/crm/v3/objects/deals/search", "POST", {
+        limit: 50,
+        properties: PROPS,
+        sorts: [{ propertyName: "lastmodifieddate", direction: "DESCENDING" }],
+        filterGroups: [{ filters: [...ownerFilter, { propertyName: "dealstage", operator: "IN", values: CLOSED_STAGE_IDS }] }],
+      }, token);
+      const closedDeals = closedRes.data?.results || [];
+
       const deals = [...activeDeals, ...closedDeals];
-      console.log(`[HubSpot] Active deals: ${activeDeals.length}, Closed deals: ${closedDeals.length}`);
+      console.log(`[HubSpot] Active deals: ${activeDeals.length}, Closed deals: ${closedDeals.length}, Total: ${deals.length}`);
 
       // Step 3: batch-fetch associated contacts to get phone/email
       let contactByDealId = {};
