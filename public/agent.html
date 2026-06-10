@@ -567,13 +567,27 @@ function parseDealName(dealname){
 
 async function loadClientsFromHubSpot(name){
   try{
-    // Fetch pipeline stages + deals in parallel
-    const [stagesRes, dealsRes]=await Promise.all([
+    const GAS_URL='https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec';
+
+    // Fetch pipeline stages + deals + kickoffs all in parallel
+    const [stagesRes, dealsRes, kickoffsRes]=await Promise.all([
       fetch('/api/hubspot',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({action:'get_pipeline_stages',data:{}})}),
       fetch('/api/hubspot',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:'get_contacts',data:{limit:100,agentName:name}})})
+        body:JSON.stringify({action:'get_contacts',data:{limit:100,agentName:name}})}),
+      fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({action:'listKickoffs'})}).then(r=>r.json()).catch(()=>({data:[]}))
     ]);
+
+    // Build email → kickoff map for fast lookup
+    const kickoffByEmail={};
+    const kickoffByName={};
+    (kickoffsRes.data||[]).forEach(k=>{
+      const em=(k.email||k.guestEmail||'').toLowerCase().trim();
+      const nm=(k.guestName||'').toLowerCase().trim();
+      if(em) kickoffByEmail[em]=k;
+      if(nm) kickoffByName[nm]=k;
+    });
 
     // Build stage map so numeric IDs → human-readable names
     if(stagesRes.ok){
@@ -623,18 +637,54 @@ async function loadClientsFromHubSpot(name){
         p.hs_next_step||'',
       ].filter(Boolean);
 
+      // Cross-reference with kickoff from Sheet
+      const kf = kickoffByEmail[email.toLowerCase()]
+               || kickoffByName[displayName.toLowerCase()]
+               || null;
+
+      // Pull rich data from kickoff if available
+      const kfDates  = kf ? (kf.tripDates||kf.arrivalDate||'') : '';
+      const kfDest   = kf ? (kf.city||kf.destination||'') : '';
+      const kfPax    = kf ? (kf.groupSize||kf.pax||kf.guestCount||'') : '';
+      const kfOccasion = kf ? (kf.occasion||'') : '';
+      const kfAccomm = kf ? (kf.accommodationName||'') : '';
+      const kfNotes  = kf ? (kf.internalNotes||kf.notes||'') : '';
+      const kfQuiz   = kf ? (() => { try { return JSON.parse(kf.quizAnswers||'null'); } catch { return null; } })() : null;
+      const kfVibes  = kfQuiz?.vibes?.join(', ') || '';
+      const kfKids   = kfQuiz?.kids === 'yes' ? 'Kids included' : '';
+
+      // Merge: kickoff data takes priority for dates/dest if available
+      const finalDates = kfDates || tripDates;
+      const finalDest  = kfDest  || parsed.dest;
+
+      // Build enriched notes
+      const enrichedParts = [
+        ...noteParts,
+        kfPax        ? `👥 ${kfPax} pax`      : '',
+        kfOccasion   ? `🎉 ${kfOccasion}`     : '',
+        kfAccomm     ? `🏠 ${kfAccomm}`       : '',
+        kfVibes      ? `✨ ${kfVibes}`         : '',
+        kfKids       ? `👶 ${kfKids}`         : '',
+        kfNotes      ? `📝 ${kfNotes}`        : '',
+      ].filter(Boolean);
+
       return{
         id:deal.id,
         name:displayName,
-        dealName:p.dealname||'',   // full original deal name (shown in detail panel)
+        dealName:p.dealname||'',
         contact:contactStr,
         email,
         phone,
-        dest:parsed.dest,
-        dates:tripDates,
+        dest:finalDest,
+        dates:finalDates,
         budget:p.amount&&Number(p.amount)>0?'USD '+Number(p.amount).toLocaleString():'',
         status:mapDealStage(p.dealstage),
-        notes:noteParts.join(' · '),
+        notes:enrichedParts.join(' · '),
+        pax:kfPax||'',
+        occasion:kfOccasion||'',
+        accommodation:kfAccomm||'',
+        vibes:kfVibes||'',
+        kickoff:kf||null,
         quotes:[],savedAt:[],
         hsId:deal.id,
         dealStage:p.dealstage||'',
@@ -880,11 +930,15 @@ async function openClientChat(c){
   // Clear previous messages and start fresh with client context
   document.getElementById('msgs').innerHTML='';
   const info=[];
-  if(c.dest) info.push('📍 '+c.dest);
-  if(c.dates) info.push('📅 '+c.dates);
-  if(c.budget) info.push('💰 '+c.budget);
-  if(c.phone) info.push('📱 '+c.phone);
-  else if(c.email) info.push('✉ '+c.email);
+  if(c.dest)         info.push('📍 '+c.dest);
+  if(c.dates)        info.push('📅 '+c.dates);
+  if(c.pax)          info.push('👥 '+c.pax+' pax');
+  if(c.occasion)     info.push('🎉 '+c.occasion);
+  if(c.budget)       info.push('💰 '+c.budget);
+  if(c.accommodation)info.push('🏠 '+c.accommodation);
+  if(c.vibes)        info.push('✨ '+c.vibes);
+  if(c.phone)        info.push('📱 '+c.phone);
+  else if(c.email)   info.push('✉ '+c.email);
   const stageMeta2=STAGE_META[getStageKey(c)]||{label:dealStageLabel(c.dealStage)||c.dealStage||'—',emoji:'·'};
   const stageStr=`${stageMeta2.emoji} ${stageMeta2.label}`;
   const contextLine = info.length ? info.join(' · ') : 'No details yet';
@@ -1393,7 +1447,23 @@ async function callClaudeAPI(userText){
         `- ${p.name} (${p.city}, up to ${p.maxPax||'?'} guests${p.clientPrice?', '+p.clientPrice:''}${p.partyFriendly===true?', party OK':''}${p.airbnb?', airbnb: '+p.airbnb:''})`
       ).join('\n')
     : '';
-  const clientCtx=selClient?{name:selClient.name,dealName:selClient.dealName||selClient.name,phone:selClient.phone||'',email:selClient.email||'',destination:selClient.dest,dates:selClient.dates,budget:selClient.budget,status:selClient.status,pipelineStage:dealStageLabel(selClient.dealStage)||selClient.dealStage,notes:(selClient.notes||'')+matchedPropsSummary,agentName:agent}:null;
+  const clientCtx=selClient?{
+    name:selClient.name,
+    dealName:selClient.dealName||selClient.name,
+    phone:selClient.phone||'',
+    email:selClient.email||'',
+    destination:selClient.dest,
+    dates:selClient.dates,
+    budget:selClient.budget,
+    pax:selClient.pax||'',
+    occasion:selClient.occasion||'',
+    accommodation:selClient.accommodation||'',
+    vibes:selClient.vibes||'',
+    status:selClient.status,
+    pipelineStage:dealStageLabel(selClient.dealStage)||selClient.dealStage,
+    notes:(selClient.notes||'')+matchedPropsSummary,
+    agentName:agent
+  }:null;
   chatHistory.push({role:'user',content:userText});
   try{
     const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
