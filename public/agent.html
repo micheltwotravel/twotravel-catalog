@@ -687,7 +687,7 @@ async function loadClientsFromHubSpot(name){
       // Cross-reference with kickoff — try email, full name, first name, phone digits
       const phoneDigitsRaw=(phone||'').replace(/[^0-9]/g,'');
       const firstName2=displayName.toLowerCase().split(' ')[0];
-      const kf = kickoffByEmail[finalEmail.toLowerCase()]
+      const kf = kickoffByEmail[email.toLowerCase()]
                || kickoffByName[displayName.toLowerCase()]
                || kickoffByName[firstName2]
                || (phoneDigitsRaw.length>6?kickoffByContact[phoneDigitsRaw]:null)
