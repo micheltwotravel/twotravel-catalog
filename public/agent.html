@@ -613,14 +613,20 @@ async function loadClientsFromHubSpot(name){
         body:JSON.stringify({action:'listKickoffs'})}).then(r=>r.json()).catch(()=>({data:[]}))
     ]);
 
-    // Build email → kickoff map for fast lookup
+    // Build lookup maps for kickoff cross-reference
     const kickoffByEmail={};
     const kickoffByName={};
+    const kickoffByContact={}; // guestContact (WhatsApp) lookup
     (kickoffsRes.data||[]).forEach(k=>{
       const em=(k.email||k.guestEmail||'').toLowerCase().trim();
       const nm=(k.guestName||'').toLowerCase().trim();
+      const gc=(k.guestContact||'').replace(/[^0-9]/g,''); // digits only for phone match
       if(em) kickoffByEmail[em]=k;
       if(nm) kickoffByName[nm]=k;
+      // Also index by first word of name (handles "Soy Madeline" vs "Madeline Smith")
+      const firstName=nm.split(' ')[0];
+      if(firstName&&firstName.length>3) kickoffByName[firstName]=kickoffByName[firstName]||k;
+      if(gc&&gc.length>6) kickoffByContact[gc]=k;
     });
 
     // Build stage map so numeric IDs → human-readable names
@@ -678,9 +684,13 @@ async function loadClientsFromHubSpot(name){
         p.hs_next_step||'',
       ].filter(Boolean);
 
-      // Cross-reference with kickoff from Sheet
-      const kf = kickoffByEmail[email.toLowerCase()]
+      // Cross-reference with kickoff — try email, full name, first name, phone digits
+      const phoneDigitsRaw=(phone||'').replace(/[^0-9]/g,'');
+      const firstName2=displayName.toLowerCase().split(' ')[0];
+      const kf = kickoffByEmail[finalEmail.toLowerCase()]
                || kickoffByName[displayName.toLowerCase()]
+               || kickoffByName[firstName2]
+               || (phoneDigitsRaw.length>6?kickoffByContact[phoneDigitsRaw]:null)
                || null;
 
       // Pull rich data from kickoff if available
@@ -694,6 +704,27 @@ async function loadClientsFromHubSpot(name){
       const kfVibes  = kfQuiz?.vibes?.join(', ') || '';
       const kfKids   = kfQuiz?.kids === 'yes' ? 'Kids included' : '';
 
+      // ── Parse extra info from HubSpot notes when kickoff is missing ──
+      const rawNotes=[p.description||'',p.hs_next_step||''].join(' ');
+      // Pax: "Pax: 100" or "100 personas" or "group of 80"
+      const paxFromNotes = !kfPax ? (rawNotes.match(/[Pp]ax[:\s]+(\d+)/)||rawNotes.match(/(\d+)\s*(?:personas|guests|people|pax)/)||rawNotes.match(/[Gg]roup\s+of\s+(\d+)/)) : null;
+      const notesPax = paxFromNotes ? paxFromNotes[1] : '';
+      // Occasion from notes keywords
+      const occasionFromNotes = !kfOccasion ? (() => {
+        const n=rawNotes.toLowerCase();
+        if(n.includes('boda')||n.includes('wedding')) return 'Wedding';
+        if(n.includes('bachelorette')||n.includes('despedida soltera')) return 'Bachelorette';
+        if(n.includes('bachelor')||n.includes('despedida')) return 'Bachelor';
+        if(n.includes('honeymoon')||n.includes('luna de miel')) return 'Honeymoon';
+        if(n.includes('anniversary')||n.includes('aniversario')) return 'Anniversary';
+        if(n.includes('birthday')||n.includes('cumpleaños')) return 'Birthday';
+        if(n.includes('corporate')||n.includes('empresa')||n.includes('team building')) return 'Corporate';
+        if(n.includes('quince')||n.includes('quinceañera')) return 'Quinceañera';
+        return '';
+      })() : '';
+      // City/destination from deal parsed name
+      const notesDest = !kfDest ? (parsed.dest||parsed.service||'') : '';
+
       // Kickoff phone/email fallback — use form data when HubSpot contact has none
       // guestContact = "WhatsApp o email" field from kickoff form (can be either)
       const kfContact = kf ? (kf.guestContact||kf.mainContact||kf.whatsapp||kf.phone||kf.guestPhone||'') : '';
@@ -703,19 +734,21 @@ async function loadClientsFromHubSpot(name){
       if(!phone && kfContact && kfContactIsPhone) phone = kfContact.trim();
       const finalEmail = email || kfEmail || (!kfContactIsPhone && kfContact ? kfContact.trim() : '');
 
-      // Merge: kickoff data takes priority for dates/dest if available
-      const finalDates = kfDates || tripDates;
-      const finalDest  = kfDest  || parsed.dest;
+      // Merge: kickoff data takes priority, then notes extraction, then parsed deal name
+      const finalDates   = kfDates || tripDates;
+      const finalDest    = kfDest  || parsed.dest || notesDest;
+      const finalPax     = kfPax   || notesPax;
+      const finalOccasion= kfOccasion || occasionFromNotes || parsed.service || '';
 
       // Build enriched notes
       const enrichedParts = [
         ...noteParts,
-        kfPax        ? `👥 ${kfPax} pax`      : '',
-        kfOccasion   ? `🎉 ${kfOccasion}`     : '',
-        kfAccomm     ? `🏠 ${kfAccomm}`       : '',
-        kfVibes      ? `✨ ${kfVibes}`         : '',
-        kfKids       ? `👶 ${kfKids}`         : '',
-        kfNotes      ? `📝 ${kfNotes}`        : '',
+        finalPax     ? `👥 ${finalPax} pax`      : '',
+        finalOccasion? `🎉 ${finalOccasion}`      : '',
+        kfAccomm     ? `🏠 ${kfAccomm}`           : '',
+        kfVibes      ? `✨ ${kfVibes}`             : '',
+        kfKids       ? `👶 ${kfKids}`             : '',
+        kfNotes      ? `📝 ${kfNotes}`            : '',
       ].filter(Boolean);
 
       const finalContact=[phone, finalEmail].filter(Boolean).join(' · ')||'';
@@ -731,8 +764,8 @@ async function loadClientsFromHubSpot(name){
         budget:p.amount&&Number(p.amount)>0?'USD '+Number(p.amount).toLocaleString():'',
         status:mapDealStage(p.dealstage),
         notes:enrichedParts.join(' · '),
-        pax:kfPax||'',
-        occasion:kfOccasion||'',
+        pax:finalPax||'',
+        occasion:finalOccasion||'',
         accommodation:kfAccomm||'',
         vibes:kfVibes||'',
         kickoff:kf||null,
