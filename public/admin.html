@@ -358,26 +358,47 @@ function showDetail(id){
       <div class="dg">
         <div class="dsec">Details</div>
         ${df("City",p.city)} ${df("Type",type)} ${df("Status",p.status)}
+        ${df("Subtype / Boat Type",p["subtype / boat type"]||p.boatType)}
         ${df("Neighborhood",p.neighborhood)} ${df("Max Guests",maxpax?maxpax+" pax":"")}
         ${df("Bedrooms",p.bedrooms)} ${df("Bathrooms",p.bathrooms)} ${df("Beds",p.beds)}
-        ${df("Capacity",p.capacity)} ${df("Sq Ft / m²",p.feet)}
+        ${df("Capacity (events)",p.capacity)} ${df("Sq Ft / m²",p.feet)}
+        ${df("Rating",p.rating)} ${df("Party Friendly",p["bachelor / party friendly"])}
         ${df("Venue Type",p["venue type"]||p.venueType)}
+        ${df("AC Below Deck",p["ac below deck"])} ${df("Dock Location",p["dock location"]||p.dockLocation)}
+
         <div class="dsec">Pricing</div>
         ${df("Client Price",cprice)} ${df("Price Range",p["price range"]||p.priceRange)} ${df("Our Price",oprice)}
+        ${df("Quote 2025",p["quote 2025"]||p.quote2025)} ${df("Commission Tier",p["commission tier"]||p.commissionTier)}
+        ${df("Payment Methods",p["payment methods"]||p.paymentMethods)}
+
         <div class="dsec">Policies & Logistics</div>
         ${df("Check-in",checkin)} ${df("Check-out",checkout)}
         ${cxl?`<div class="df half"><div class="dl">Cancellation Policy</div><div class="dv">${esc(cxl)}</div></div>`:""}
+        ${df("Min Hours",p["min hours"]||p.minHours)} ${df("Max Hours",p["max hours"]||p.maxHours)}
+        ${(p["availability notes"]||p.availabilityNotes)?`<div class="df full"><div class="dl">Availability</div><div class="dv" style="color:#e8a83a">${esc(p["availability notes"]||p.availabilityNotes)}</div></div>`:""}
+
         <div class="dsec">Contact</div>
         ${df("Contact Name",contact)} ${df("Contact",p.contact)} ${df("Phone",phone)}
+        ${df("Owner / POC",p["owner / poc"]||p.owner)} ${df("Staff Contact",p["staff contact"]||p.staffContact)}
+        ${(p["whatsapp group"]||p.whatsappGroup)?`<div class="df full"><div class="dl">WhatsApp Group</div><a href="${esc(p["whatsapp group"]||p.whatsappGroup)}" target="_blank" class="dlink">Join group ↗</a></div>`:""}
+
         ${desc?`<div class="dsec">Description</div><div class="df full"><div class="dv">${esc(desc)}</div></div>`:""}
-        ${notes?`<div class="dsec">Notes</div><div class="df full"><div class="dv" style="color:var(--ink3)">${esc(notes)}</div></div>`:""}
+        ${(p.includes)?`<div class="dsec">Includes</div><div class="df full"><div class="dv">${esc(p.includes)}</div></div>`:""}
+        ${(p.extras)?`<div class="dsec">Extras / Add-ons</div><div class="df full"><div class="dv">${esc(p.extras)}</div></div>`:""}
+        ${(p["internal notes"]||notes)?`<div class="dsec">Internal Notes</div><div class="df full"><div class="dv" style="color:var(--ink3)">${esc(p["internal notes"]||notes)}</div></div>`:""}
+
         ${amenArr.length?`<div class="dsec">Amenities</div><div class="df full"><div class="atags">${amenArr.map(a=>`<span class="atag">${esc(a)}</span>`).join("")}</div></div>`:""}
         ${(()=>{const t=(p.tags||"").split(",").map(s=>s.trim()).filter(Boolean);return t.length?`<div class="dsec">Agent Tags</div><div class="df full"><div class="atags">${t.map(a=>`<span class="atag" style="border-color:var(--gold3);color:var(--gold);background:rgba(154,125,82,.06)">${esc(a)}</span>`).join("")}</div></div>`:"";})()}
+
         <div class="dsec">Links</div>
-        ${airbnb?`<div class="df full"><div class="dl">Airbnb / Booking</div><a href="${esc(airbnb)}" target="_blank" class="dlink">${esc(airbnb)}</a></div>`:""}
-        ${photos?`<div class="df full"><div class="dl">Photos / Drive</div><a href="${esc(photos)}" target="_blank" class="dlink">${esc(photos)}</a></div>`:""}
+        ${airbnb?`<div class="df full"><div class="dl">Airbnb</div><a href="${esc(airbnb)}" target="_blank" class="dlink">${esc(airbnb)}</a></div>`:""}
+        ${(p["alternative airbnb links"])?`<div class="df full"><div class="dl">Alt. Airbnb</div><a href="${esc(p["alternative airbnb links"])}" target="_blank" class="dlink">View ↗</a></div>`:""}
+        ${photos?`<div class="df full"><div class="dl">Photos / Drive</div><a href="${esc(photos)}" target="_blank" class="dlink">View photos ↗</a></div>`:""}
         ${webpage?`<div class="df full"><div class="dl">Two Travel Page</div><a href="${esc(webpage)}" target="_blank" class="dlink">${esc(webpage)}</a></div>`:""}
-        ${p.location?`<div class="df full"><div class="dl">Google Maps</div><a href="${esc(p.location)}" target="_blank" class="dlink">${esc(p.location)}</a></div>`:""}
+        ${(p["website link"]||p.websiteLink)?`<div class="df full"><div class="dl">Website</div><a href="${esc(p["website link"]||p.websiteLink)}" target="_blank" class="dlink">Visit ↗</a></div>`:""}
+        ${(p["pdf link"]||p.pdfLink)?`<div class="df full"><div class="dl">PDF</div><a href="${esc(p["pdf link"]||p.pdfLink)}" target="_blank" class="dlink">📄 Open PDF ↗</a></div>`:""}
+        ${(p["updated pdf link"]||p.updatedPdfLink)?`<div class="df full"><div class="dl">Updated PDF</div><a href="${esc(p["updated pdf link"]||p.updatedPdfLink)}" target="_blank" class="dlink">📄 Open PDF ↗</a></div>`:""}
+        ${p.location?`<div class="df full"><div class="dl">Maps</div><a href="${esc(p.location)}" target="_blank" class="dlink">📍 Google Maps ↗</a></div>`:""}
       </div>
     </div>`;
 }
@@ -428,26 +449,55 @@ function showForm(p){
         <div class="fl"><label>Client Price</label><input id="fprice" value="${esc(p?.["client price"]||p?.clientPrice||"")}" placeholder="$3,500 USD/night"></div>
         <div class="fl"><label>Price Range</label><input id="fprange" value="${esc(p?.["price range"]||p?.priceRange||"")}" placeholder="$3k–$5k"></div>
         <div class="fl"><label>Our Price (internal)</label><input id="foprice" value="${esc(p?.["our price"]||p?.ourPrice||"")}" placeholder="$2,800 USD/night"></div>
+        <div class="fl"><label>Quote 2025</label><input id="fquote" value="${esc(p?.["quote 2025"]||p?.quote2025||"")}" placeholder="$4,000/night"></div>
+        <div class="fl"><label>Commission Tier</label><select id="fcomm">
+          ${["","Tier 1","Tier 2","Tier 3","Net Rate","10%","15%","20%","25%"].map(o=>`<option${(p?.["commission tier"]||"")==o?" selected":""}>${o}</option>`).join("")}
+        </select></div>
+        <div class="fl"><label>Payment Methods</label><input id="fpayment" value="${esc(p?.["payment methods"]||p?.paymentMethods||"")}" placeholder="Wire, Zelle, Cash"></div>
+        <div class="fl"><label>Rating</label><select id="frating">
+          ${["","⭐ 1","⭐⭐ 2","⭐⭐⭐ 3","⭐⭐⭐⭐ 4","⭐⭐⭐⭐⭐ 5"].map(o=>`<option${(p?.rating||"")==o?" selected":""}>${o}</option>`).join("")}
+        </select></div>
+        <div class="fl"><label>Bachelor / Party Friendly</label><select id="fparty">
+          ${["","YES","NO","Ask"].map(o=>`<option${(p?.["bachelor / party friendly"]||"")==o?" selected":""}>${o}</option>`).join("")}
+        </select></div>
 
         <div class="fsec">Policies</div>
         <div class="fl"><label>Cancellation Policy</label><select id="fcxl">${cxlOpts}</select></div>
         <div class="fl"><label>Check-in Time</label><input id="fcheckin" value="${esc(p?.["check-in time"]||p?.checkIn||"")}" placeholder="3:00 PM"></div>
         <div class="fl"><label>Check-out Time</label><input id="fcheckout" value="${esc(p?.["check-out time"]||p?.checkOut||"")}" placeholder="11:00 AM"></div>
+        <div class="fl"><label>Min Hours (boats)</label><input id="fminhrs" value="${esc(p?.["min hours"]||p?.minHours||"")}" placeholder="4"></div>
+        <div class="fl"><label>Max Hours (boats)</label><input id="fmaxhrs" value="${esc(p?.["max hours"]||p?.maxHours||"")}" placeholder="10"></div>
+        <div class="fl full"><label>Availability Notes</label><input id="favail" value="${esc(p?.["availability notes"]||p?.availabilityNotes||"")}" placeholder="Not available Dec 24–Jan 2"></div>
 
         <div class="fsec">Contact</div>
         <div class="fl"><label>Contact Name</label><input id="fcname" value="${esc(p?.["contact name"]||p?.contactName||"")}" placeholder="Juan García"></div>
         <div class="fl"><label>Contact (email / IG)</label><input id="fccontact" value="${esc(p?.contact||"")}" placeholder="juan@villa.com"></div>
         <div class="fl"><label>Phone / WhatsApp</label><input id="fcphone" value="${esc(p?.["contact phone"]||p?.contactPhone||"")}" placeholder="+57 300 000 0000"></div>
+        <div class="fl"><label>Owner / POC</label><input id="fowner" value="${esc(p?.["owner / poc"]||p?.owner||"")}" placeholder="Property owner name"></div>
+        <div class="fl"><label>WhatsApp Group Link</label><input id="fwagroup" value="${esc(p?.["whatsapp group"]||p?.whatsappGroup||"")}" placeholder="https://chat.whatsapp.com/…"></div>
+        <div class="fl"><label>Staff Contact</label><input id="fstaff" value="${esc(p?.["staff contact"]||p?.staffContact||"")}" placeholder="+57 300 000 0000"></div>
 
         <div class="fsec">Links</div>
         <div class="fl half"><label>Airbnb / Booking Link</label><input id="fairbnb" value="${esc(p?.["airbnb link"]||p?.airbnbLink||"")}" placeholder="https://airbnb.com/rooms/…"></div>
+        <div class="fl"><label>Alternative Airbnb Links</label><input id="fairbnb2" value="${esc(p?.["alternative airbnb links"]||"")}" placeholder="https://airbnb.com/rooms/…"></div>
         <div class="fl"><label>Photos / Drive Link</label><input id="fphotos" value="${esc(p?.["photos link"]||p?.photosLink||"")}" placeholder="https://drive.google.com/…"></div>
+        <div class="fl"><label>Alternative Photos Links</label><input id="fphotos2" value="${esc(p?.["alternative photos links"]||"")}" placeholder="https://drive.google.com/…"></div>
         <div class="fl half"><label>Two Travel Webpage</label><input id="fweb" value="${esc(p?.["twp travel webpage"]||p?.webpage||"")}" placeholder="https://two.travel/…"></div>
-        <div class="fl"><label>Venue Type (if applicable)</label><input id="fvtype" value="${esc(p?.["venue type"]||p?.venueType||"")}" placeholder="Hotel + Espacio, Salon…"></div>
+        <div class="fl"><label>Website Link</label><input id="fwebsite" value="${esc(p?.["website link"]||p?.websiteLink||"")}" placeholder="https://villaname.com"></div>
+        <div class="fl"><label>PDF Link</label><input id="fpdf" value="${esc(p?.["pdf link"]||p?.pdfLink||"")}" placeholder="https://drive.google.com/file/…"></div>
+        <div class="fl"><label>Updated PDF Link</label><input id="fpdf2" value="${esc(p?.["updated pdf link"]||p?.updatedPdfLink||"")}" placeholder="https://drive.google.com/file/…"></div>
+        <div class="fl"><label>Venue Type</label><input id="fvtype" value="${esc(p?.["venue type"]||p?.venueType||"")}" placeholder="Hotel + Espacio, Salon…"></div>
+        <div class="fl"><label>Subtype / Boat Type</label><input id="fsubtype" value="${esc(p?.["subtype / boat type"]||p?.boatType||"")}" placeholder="Catamaran, Speedboat…"></div>
+        <div class="fl"><label>Dock Location</label><input id="fdock" value="${esc(p?.["dock location"]||p?.dockLocation||"")}" placeholder="Club Náutico de Cartagena"></div>
+        <div class="fl"><label>AC Below Deck</label><select id="facbelow">
+          ${["","YES","NO"].map(o=>`<option${(p?.["ac below deck"]||"")==o?" selected":""}>${o}</option>`).join("")}
+        </select></div>
 
         <div class="fsec">Description & Notes</div>
         <div class="fl full"><label>Description (shown to clients)</label><textarea id="fdesc" rows="4">${esc(p?.description||"")}</textarea></div>
-        <div class="fl full"><label>Internal Notes</label><textarea id="fnotes" rows="3">${esc(p?.notes||"")}</textarea></div>
+        <div class="fl full"><label>Includes (what's included)</label><textarea id="fincludes" rows="2">${esc(p?.includes||"")}</textarea></div>
+        <div class="fl full"><label>Extras (add-ons available)</label><textarea id="fextras" rows="2">${esc(p?.extras||"")}</textarea></div>
+        <div class="fl full"><label>Internal Notes (team only)</label><textarea id="fnotes" rows="3">${esc(p?.["internal notes"]||p?.internalNotes||p?.notes||"")}</textarea></div>
 
         <div class="fsec">🏡 Amenities</div>
         <div class="fl full" id="amen-container"></div>
@@ -539,23 +589,51 @@ async function saveProperty(id){
     beds:                document.getElementById("fbedsn")?.value||"",
     capacity:            document.getElementById("fcap")?.value||"",
     feet:                document.getElementById("ffeet")?.value||"",
-    "client price":      document.getElementById("fprice")?.value?.trim()||"",
-    "price range":       document.getElementById("fprange")?.value?.trim()||"",
-    "our price":         document.getElementById("foprice")?.value?.trim()||"",
-    "cancellation policy":document.getElementById("fcxl")?.value||"",
-    "check-in time":     document.getElementById("fcheckin")?.value?.trim()||"",
-    "check-out time":    document.getElementById("fcheckout")?.value?.trim()||"",
-    "contact name":      document.getElementById("fcname")?.value?.trim()||"",
-    contact:             document.getElementById("fccontact")?.value?.trim()||"",
-    "contact phone":     document.getElementById("fcphone")?.value?.trim()||"",
-    "airbnb link":       document.getElementById("fairbnb")?.value?.trim()||"",
-    "photos link":       document.getElementById("fphotos")?.value?.trim()||"",
-    "twp travel webpage":document.getElementById("fweb")?.value?.trim()||"",
-    description:         document.getElementById("fdesc")?.value?.trim()||"",
-    notes:               document.getElementById("fnotes")?.value?.trim()||"",
-    "venue type":        document.getElementById("fvtype")?.value?.trim()||"",
-    amenities:           selAmens.join(", "),
-    tags:                selTags.join(", "),
+    // Pricing
+    "client price":               document.getElementById("fprice")?.value?.trim()||"",
+    "price range":                document.getElementById("fprange")?.value?.trim()||"",
+    "our price":                  document.getElementById("foprice")?.value?.trim()||"",
+    "quote 2025":                 document.getElementById("fquote")?.value?.trim()||"",
+    "commission tier":            document.getElementById("fcomm")?.value||"",
+    "payment methods":            document.getElementById("fpayment")?.value?.trim()||"",
+    rating:                       document.getElementById("frating")?.value||"",
+    "bachelor / party friendly":  document.getElementById("fparty")?.value||"",
+    // Policies
+    "cancellation policy":        document.getElementById("fcxl")?.value||"",
+    "check-in time":              document.getElementById("fcheckin")?.value?.trim()||"",
+    "check-out time":             document.getElementById("fcheckout")?.value?.trim()||"",
+    "min hours":                  document.getElementById("fminhrs")?.value?.trim()||"",
+    "max hours":                  document.getElementById("fmaxhrs")?.value?.trim()||"",
+    "availability notes":         document.getElementById("favail")?.value?.trim()||"",
+    // Contact
+    "contact name":               document.getElementById("fcname")?.value?.trim()||"",
+    contact:                      document.getElementById("fccontact")?.value?.trim()||"",
+    "contact phone":              document.getElementById("fcphone")?.value?.trim()||"",
+    "owner / poc":                document.getElementById("fowner")?.value?.trim()||"",
+    "whatsapp group":             document.getElementById("fwagroup")?.value?.trim()||"",
+    "staff contact":              document.getElementById("fstaff")?.value?.trim()||"",
+    // Links
+    "airbnb link":                document.getElementById("fairbnb")?.value?.trim()||"",
+    "alternative airbnb links":   document.getElementById("fairbnb2")?.value?.trim()||"",
+    "photos link":                document.getElementById("fphotos")?.value?.trim()||"",
+    "alternative photos links":   document.getElementById("fphotos2")?.value?.trim()||"",
+    "twp travel webpage":         document.getElementById("fweb")?.value?.trim()||"",
+    "website link":               document.getElementById("fwebsite")?.value?.trim()||"",
+    "pdf link":                   document.getElementById("fpdf")?.value?.trim()||"",
+    "updated pdf link":           document.getElementById("fpdf2")?.value?.trim()||"",
+    // Classification
+    "venue type":                 document.getElementById("fvtype")?.value?.trim()||"",
+    "subtype / boat type":        document.getElementById("fsubtype")?.value?.trim()||"",
+    "dock location":              document.getElementById("fdock")?.value?.trim()||"",
+    "ac below deck":              document.getElementById("facbelow")?.value||"",
+    // Content
+    description:                  document.getElementById("fdesc")?.value?.trim()||"",
+    includes:                     document.getElementById("fincludes")?.value?.trim()||"",
+    extras:                       document.getElementById("fextras")?.value?.trim()||"",
+    "internal notes":             document.getElementById("fnotes")?.value?.trim()||"",
+    // Chips
+    amenities:                    selAmens.join(", "),
+    tags:                         selTags.join(", "),
     updatedAt:           new Date().toISOString(),
   };
   if(isNew) data.createdAt=data.updatedAt;
