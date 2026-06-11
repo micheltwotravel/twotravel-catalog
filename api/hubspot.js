@@ -162,6 +162,17 @@ export default async function handler(req, res) {
       return res.status(200).json({ action: "note_created", noteId });
     }
 
+    // ── GET OWNERS ────────────────────────────────────────────
+    if (action === "get_owners") {
+      const r = await hubspotRequest("/crm/v3/owners?limit=100", "GET", null, token);
+      const owners = (r.data?.results || []).map(o => ({
+        id: o.id,
+        name: [o.firstName, o.lastName].filter(Boolean).join(" "),
+        email: o.email,
+      }));
+      return res.status(200).json({ owners });
+    }
+
     // ── GET PIPELINE STAGES ────────────────────────────────────
     if (action === "get_pipeline_stages") {
       const r = await hubspotRequest("/crm/v3/pipelines/deals", "GET", null, token);
