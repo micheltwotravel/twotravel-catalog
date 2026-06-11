@@ -164,7 +164,7 @@ export default async function handler(req, res) {
 
     // ── GET OWNERS ────────────────────────────────────────────
     if (action === "get_owners") {
-      const r = await hubspotRequest("/crm/v3/owners?limit=100", "GET", null, token);
+      const r = await hubspotRequest("/crm/v3/owners/?limit=100&archived=false", "GET", null, token);
       const owners = (r.data?.results || []).map(o => ({
         id: o.id,
         name: [o.firstName, o.lastName].filter(Boolean).join(" "),
