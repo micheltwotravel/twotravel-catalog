@@ -1127,24 +1127,83 @@ function renderDetail(){
 
   const hasPrevChat = chatHistory.length > 0;
 
+  // ── Build rich chip rows from ALL available data ───────────────────
+  const chip=(icon,label,style='')=>label?`<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:3px 10px;border:1px solid var(--border2);color:var(--ink2);background:rgba(255,255,255,.03);${style}">${icon?icon+' ':''}${label}</span>`:'';
+  const chipGold=(icon,label)=>label?`<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:3px 10px;border:1px solid rgba(154,125,82,.5);color:var(--gold);background:rgba(154,125,82,.06);">${icon?icon+' ':''}${label}</span>`:'';
+  const chipGreen=(icon,label)=>label?`<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:3px 10px;border:1px solid rgba(92,184,122,.4);color:#5cb87a;background:rgba(92,184,122,.04);">${icon?icon+' ':''}${label}</span>`:'';
+
+  const kfActivities = kfQuiz?.activities||kfQuiz?.activityList||[];
+  const activitiesArr = Array.isArray(kfActivities)?kfActivities:(typeof kfActivities==='string'?kfActivities.split(',').map(s=>s.trim()).filter(Boolean):[]);
+  const kfVibesArr = (kfQuiz?.vibes||[]);
+  const vibesArr = Array.isArray(kfVibesArr)?kfVibesArr:(typeof kfVibesArr==='string'?kfVibesArr.split(',').map(s=>s.trim()).filter(Boolean):[]);
+  const allVibes = [...new Set([...(selClient.vibes?selClient.vibes.split(',').map(s=>s.trim()):[]),...vibesArr])].filter(Boolean);
+
+  // Contact row
+  const contactRow = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--border)">
+    ${selClient.phone?`<a href="tel:${selClient.phone}" style="color:var(--gold);text-decoration:none;font-size:13px;font-weight:500">📱 ${selClient.phone}</a>`:''}
+    ${phoneDigits?`<a href="https://wa.me/${phoneDigits}?text=${waMsg}" target="_blank" style="font-size:11px;color:#5cb87a;border:1px solid rgba(92,184,122,.35);padding:3px 10px;text-decoration:none;border-radius:2px">💬 WhatsApp</a>`:''}
+    ${selClient.email?`<a href="mailto:${selClient.email}" style="color:var(--ink2);text-decoration:none;font-size:12px">✉️ ${selClient.email}</a>`:''}
+    ${!selClient.phone&&!selClient.email?addContactBtn:''}
+  </div>`;
+
+  // Hero: destination + dates + pax + budget
+  const heroItems=[
+    selClient.dest?`<div style="display:flex;flex-direction:column;gap:1px"><div style="font-size:9px;letter-spacing:.08em;color:var(--ink3);text-transform:uppercase">Destination</div><div style="font-size:15px;font-weight:600;color:var(--ink1)">${selClient.dest}</div></div>`:'',
+    (selClient.dates||kf?.arrivalDate)?`<div style="display:flex;flex-direction:column;gap:1px"><div style="font-size:9px;letter-spacing:.08em;color:var(--ink3);text-transform:uppercase">Dates</div><div style="font-size:13px;color:var(--ink1)">${selClient.dates||(kf.arrivalDate+(kf.departureDate?' → '+kf.departureDate:''))}</div></div>`:'',
+    selClient.pax?`<div style="display:flex;flex-direction:column;gap:1px"><div style="font-size:9px;letter-spacing:.08em;color:var(--ink3);text-transform:uppercase">Group</div><div style="font-size:13px;color:var(--ink1)">👥 ${selClient.pax} pax</div></div>`:'',
+    selClient.budget?`<div style="display:flex;flex-direction:column;gap:1px"><div style="font-size:9px;letter-spacing:.08em;color:var(--ink3);text-transform:uppercase">Budget</div><div style="font-size:13px;color:var(--gold)">${selClient.budget}</div></div>`:'',
+  ].filter(Boolean);
+
+  const heroRow = heroItems.length?`<div style="display:flex;gap:20px;flex-wrap:wrap;padding:10px 0 8px;border-bottom:1px solid var(--border)">${heroItems.join('')}</div>`:'';
+
+  // Chips: occasion, vibes, activities, kids, accommodation
+  const chipsRow1=[
+    chipGold('🎉', selClient.occasion||kf?.occasion||''),
+    ...allVibes.map(v=>chipGold('✨',v)),
+    chip('👶', kfQuiz?.kids==='yes'?'Kids':''),
+    chip('🏠', selClient.accommodation||kf?.accommodationName||''),
+    chip('', kf?.flightInfo?'✈️ '+kf.flightInfo:''),
+  ].filter(Boolean).join('');
+
+  const chipsRow2 = activitiesArr.map(a=>chip('🎯',a)).join('');
+
+  const chipsSection = (chipsRow1||chipsRow2)?`<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+    ${chipsRow1?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:${chipsRow2?'5px':'0'}">${chipsRow1}</div>`:''}
+    ${chipsRow2?`<div style="display:flex;flex-wrap:wrap;gap:5px">${chipsRow2}</div>`:''}
+  </div>`:'';
+
+  // Notes — HubSpot + kickoff internal notes
+  const notesText = [
+    selClient.notes||'',
+    kf?.internalNotes&&!selClient.notes?.includes(kf.internalNotes)?kf.internalNotes:'',
+  ].filter(Boolean).join('\n\n').trim();
+
+  const notesSection = notesText?`<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+    <div style="font-size:9px;letter-spacing:.08em;color:var(--ink3);text-transform:uppercase;margin-bottom:5px">Notes</div>
+    <div style="font-size:12px;color:var(--ink2);line-height:1.7;white-space:pre-line">${notesText}</div>
+  </div>`:
+  `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+    <div style="font-size:9px;letter-spacing:.08em;color:var(--ink3);text-transform:uppercase;margin-bottom:5px">Notes</div>
+    <div style="font-size:12px;color:var(--ink3);font-style:italic">No notes yet — fill in after your next call</div>
+  </div>`;
+
+  // Quotes
+  const quotesSection=`<div style="padding:8px 0">
+    <div style="font-size:9px;letter-spacing:.08em;color:var(--ink3);text-transform:uppercase;margin-bottom:5px">Saved Quotes (${qs.length})</div>
+    ${qs.length?qs.map((q,i)=>`<div class="qitem"><div class="qitem-t">${q}</div><div class="qitem-d">${dates[i]||'—'} · ${agent}</div></div>`).join(''):`<div style="font-size:12px;color:var(--ink3);font-style:italic">No quotes yet</div>`}
+  </div>`;
+
+  // Clear chat footer
+  const clearBtn=hasPrevChat?`<div style="padding-top:6px;border-top:1px solid var(--border)"><button onclick="clearChatHistory('${selClient.id}');chatHistory=[];document.getElementById('msgs').innerHTML='';openClientChat(selClient)" style="font-size:9px;color:var(--ink3);background:none;border:1px solid var(--border);padding:3px 8px;cursor:pointer;font-family:inherit;letter-spacing:.06em">🗑 Clear chat history</button></div>`:'';
+
   document.getElementById('det-body').innerHTML=`
     ${dealNameLine}
-    <div class="fg2">
-      <div class="fg"><div class="fl">Phone / Contact</div><div class="fv">${contactHtml}</div></div>
-      <div class="fg"><div class="fl">${t.fieldBudget}</div><div class="fv ${!selClient.budget?'em':''}">${selClient.budget||t.noDefined}</div></div>
-      <div class="fg"><div class="fl">${t.fieldDest}</div><div class="fv ${!selClient.dest?'em':''}">${selClient.dest||t.noDash}</div></div>
-      <div class="fg"><div class="fl">Trip Dates</div><div class="fv ${!selClient.dates?'em':''}">${selClient.dates||t.noConfirmed}</div></div>
-    </div>
-    ${kfSection}
-    <div class="fg" style="margin-top:8px">
-      <div class="fl">${t.fieldNotes}</div>
-      <div class="fv ${!selClient.notes?'em':''}" style="font-size:12px;line-height:1.7">${selClient.notes||t.noNotes}</div>
-    </div>
-    <div class="fg">
-      <div class="fl">${t.fieldQuotes} (${qs.length})</div>
-      ${qs.length?qs.map((q,i)=>`<div class="qitem"><div class="qitem-t">${q}</div><div class="qitem-d">${dates[i]||'—'} · ${agent}</div></div>`).join(''):`<div class="fv em">${t.noQuotes}</div>`}
-    </div>
-    ${hasPrevChat?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><button onclick="clearChatHistory('${selClient.id}');chatHistory=[];document.getElementById('msgs').innerHTML='';openClientChat(selClient)" style="font-size:9px;color:var(--ink3);background:none;border:1px solid var(--border);padding:3px 8px;cursor:pointer;font-family:inherit;letter-spacing:.06em">🗑 Clear chat history</button></div>`:''}`;
+    ${contactRow}
+    ${heroRow}
+    ${chipsSection}
+    ${notesSection}
+    ${quotesSection}
+    ${clearBtn}`;
 }
 
 function focusChat(){updateCtx();document.getElementById('cinput').focus();}
