@@ -2647,16 +2647,17 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     try { return JSON.parse(kickoff?.quizAnswers || "{}"); } catch { return {}; }
   })();
 
-  // Auto-format tripDates from arrivalDate/departureDate if not already set
+  // Auto-format tripDates from arrivalDate/departureDate (always recompute to avoid timezone artifacts)
   const autoTripDates = (() => {
-    if (kickoff?.tripDates) return kickoff.tripDates;
     const a = kickoff?.arrivalDate, d = kickoff?.departureDate;
-    if (!a || !d) return "";
-    try {
-      const fmt = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      const yr  = new Date(d + "T12:00:00").getFullYear();
-      return `${fmt(a)} – ${fmt(d)}, ${yr}`;
-    } catch { return ""; }
+    if (a && d) {
+      try {
+        const fmt = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        const yr  = new Date(d + "T12:00:00").getFullYear();
+        return `${fmt(a)} – ${fmt(d)}, ${yr}`;
+      } catch {}
+    }
+    return kickoff?.tripDates || "";
   })();
 
   // Auto-fill groupSize from quiz if concierge hasn't set it yet
