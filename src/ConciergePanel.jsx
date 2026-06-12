@@ -1114,7 +1114,7 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
           <div className="flex flex-wrap gap-1.5 px-4 py-2.5 bg-neutral-50 border-t border-neutral-100">
             {[
               { key: "checkin",   label: "🏨 Check-in" },
-              { key: "breakfast", label: "☕ Desayuno" },
+              { key: "breakfast", label: lang === "es" ? "☕ Desayuno" : "☕ Breakfast" },
               { key: "checkout",  label: "🧳 Check-out" },
             ].map(({ key, label: pl }) => (
               <button key={key} type="button" onClick={() => onAddPreset?.(key)}
