@@ -435,6 +435,7 @@ function showForm(p){
         <div class="fl"><label>Type</label><select id="ftype">${typeOpts}</select></div>
         <div class="fl"><label>Status</label><select id="fstatus">${statusOpts}</select></div>
         <div class="fl half"><label>Neighborhood / Area</label><input id="fhood" value="${esc(p?.neighborhood||"")}" placeholder="Bocagrande, El Poblado…"></div>
+        <div class="fl full"><label>Address</label><input id="faddr" value="${esc(p?.address||"")}" placeholder="Calle 10 # 29-34, Cartagena"></div>
         <div class="fl"><label>Google Maps URL</label><input id="floc" value="${esc(p?.location||"")}" placeholder="https://maps.app.goo.gl/…"></div>
 
         <div class="fsec">Capacity & Rooms</div>
@@ -581,6 +582,7 @@ async function saveProperty(id){
     id:newId, name, city,
     "item type":         document.getElementById("ftype")?.value||"",
     neighborhood:        document.getElementById("fhood")?.value?.trim()||"",
+    address:             document.getElementById("faddr")?.value?.trim()||"",
     location:            document.getElementById("floc")?.value?.trim()||"",
     status:              document.getElementById("fstatus")?.value||"Active",
     "max pax":           document.getElementById("fpax")?.value||"",
