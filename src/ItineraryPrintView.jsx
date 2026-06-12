@@ -587,8 +587,9 @@ function CoverPage({ kickoff, total, lang, editMode }) {
   const isEs = lang === "es";
 
   const titleLine = a.guestName || "Two Travel Concierge";
-  // Only show city in subtitle — tripName is the HubSpot deal name which already contains dates
-  const subtitle  = [a.city].filter(Boolean).join(" · ");
+  // tripName = HubSpot deal name e.g. "Carolina Lopez Cartagena Concierge Feb 8-12 2027"
+  // already contains dates — use it as the subtitle, fall back to city only
+  const subtitle  = a.tripName || a.city || "";
 
   return (
     <div className="page">
@@ -617,7 +618,8 @@ function CoverPage({ kickoff, total, lang, editMode }) {
         {subtitle && (
           <Editable tag="div" className="cover-subtitle" editMode={editMode} value={subtitle}/>
         )}
-        {a.tripDates && (
+        {/* tripDates hidden — dates already in tripName (deal name) */}
+        {a.tripDates && !a.tripName && (
           <Editable tag="div" className="cover-dates" editMode={editMode} value={a.tripDates}/>
         )}
 
