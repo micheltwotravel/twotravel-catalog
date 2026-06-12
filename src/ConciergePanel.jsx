@@ -2675,6 +2675,17 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [arrivalDate, departureDate]);
 
+  // Auto-sync tripDates2 when city 2 dates change
+  useEffect(() => {
+    if (!arrivalDate2 || !departureDate2) return;
+    try {
+      const fmt = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const yr  = new Date(departureDate2 + "T12:00:00").getFullYear();
+      setTripDates2(`${fmt(arrivalDate2)} – ${fmt(departureDate2)}, ${yr}`);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrivalDate2, departureDate2]);
+
   const [tripDates,          setTripDates]          = useState(autoTripDates);
   const [city,               setCity]               = useState(kickoff?.city               || "");
   // Multiple arrivals: [{name, date, time, flight, notes}]
@@ -2697,6 +2708,17 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // City 2 stay dates
   const [arrivalDate2,   setArrivalDate2]   = useState(kickoff?.arrivalDate2   || "");
   const [departureDate2, setDepartureDate2] = useState(kickoff?.departureDate2 || "");
+  const [tripDates2,     setTripDates2]     = useState(() => {
+    const a = kickoff?.arrivalDate2, d = kickoff?.departureDate2;
+    if (a && d) {
+      try {
+        const fmt = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        const yr  = new Date(d + "T12:00:00").getFullYear();
+        return `${fmt(a)} – ${fmt(d)}, ${yr}`;
+      } catch {}
+    }
+    return kickoff?.tripDates2 || "";
+  });
   const [checkIn,            setCheckIn]            = useState(kickoff?.checkIn            || "3:00 PM");
   const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "11:00 AM");
   const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=drivesdk");
@@ -2767,6 +2789,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     // City 2 dates & accommodation
     arrivalDate2:      arrivalDate2.trim(),
     departureDate2:    departureDate2.trim(),
+    tripDates2:        tripDates2.trim(),
     accommodationName2: accommodationName2.trim(),
     accommodationAddr2: accommodationAddr2.trim(),
     accommodationUrl2:  accommodationUrl2.trim(),
@@ -3074,11 +3097,19 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             <p className="text-xs font-semibold text-neutral-700">Portada del itinerario (PDF)</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[11px] text-neutral-500">Fechas del viaje</label>
+                <label className="text-[11px] text-neutral-500">{city.includes(",") ? `Fechas ${city.split(",")[0]?.trim()}` : "Fechas del viaje"}</label>
                 <input value={tripDates} onChange={(e) => setTripDates(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="May 22-28, 2026" />
               </div>
+              {city.includes(",") && (
+                <div>
+                  <label className="text-[11px] text-neutral-500">Fechas {city.split(",")[1]?.trim()}</label>
+                  <input value={tripDates2} onChange={(e) => setTripDates2(e.target.value)}
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                    placeholder="Jun 1-5, 2026" />
+                </div>
+              )}
               <div>
                 <label className="text-[11px] text-neutral-500">Ciudad / Destino</label>
                 <input value={city} onChange={(e) => setCity(e.target.value)}
@@ -3116,7 +3147,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               {/* City 2 accommodation — only shown when 2 cities */}
               {city.includes(",") && (<>
                 <div className="col-span-2 border-t border-blue-100 pt-2">
-                  <p className="text-[11px] font-semibold text-blue-700 mb-2">🏠 Alojamiento ciudad 2 — {city.split(",")[1]?.trim()}</p>
+                  <p className="text-[11px] font-semibold text-blue-700 mb-2">🏠 Alojamiento {city.split(",")[1]?.trim()}</p>
                 </div>
                 <div className="col-span-2">
                   <label className="text-[11px] text-neutral-500">Nombre del alojamiento 2</label>
