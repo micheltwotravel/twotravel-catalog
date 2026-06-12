@@ -64,7 +64,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   };
   const fmtDate = (v) => {
     if (!v) return "—";
-    try { return new Date(v).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric", year:"numeric" }); }
+    try { return new Date(String(v).length === 10 ? v + "T12:00:00" : v).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric", year:"numeric" }); }
     catch { return String(v); }
   };
   const fmtIso = (v) => {
@@ -2653,8 +2653,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     const a = kickoff?.arrivalDate, d = kickoff?.departureDate;
     if (!a || !d) return "";
     try {
-      const fmt = (s) => new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      const yr  = new Date(d).getFullYear();
+      const fmt = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const yr  = new Date(d + "T12:00:00").getFullYear();
       return `${fmt(a)} – ${fmt(d)}, ${yr}`;
     } catch { return ""; }
   })();
@@ -2666,8 +2666,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   useEffect(() => {
     if (!arrivalDate || !departureDate) return;
     try {
-      const fmt = (s) => new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      const yr  = new Date(departureDate).getFullYear();
+      const fmt = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const yr  = new Date(departureDate + "T12:00:00").getFullYear();
       const auto = `${fmt(arrivalDate)} – ${fmt(departureDate)}, ${yr}`;
       setTripDates(auto);
     } catch {}
