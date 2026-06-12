@@ -3130,8 +3130,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     setAccommodationName(val);
                     const match = (propertyList || []).find(p => p.Name === val);
                     if (match) {
-                      const addr = match.Address || match.address || match.Addr || match.addr || match.Location || "";
-                      const url  = match.MapsUrl || match.mapsUrl || match.maps_url || match.GoogleMaps || match.Maps || match.maps || "";
+                      const addr = match.address || match.Address || match.addr || match.Addr || "";
+                      const url  = match.location || match.Location || match.MapsUrl || match.mapsUrl || match.maps_url || match.GoogleMaps || "";
                       if (addr) setAccommodationAddr(addr);
                       if (url)  setAccommodationUrl(url);
                     }
