@@ -2662,6 +2662,18 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // Auto-fill groupSize from quiz if concierge hasn't set it yet
   const autoGroupSize = kickoff?.groupSize || String(quizAnswers?.groupSize || quizAnswers?.pax || "");
 
+  // Auto-sync tripDates on the cover when arrival/departure change
+  useEffect(() => {
+    if (!arrivalDate || !departureDate) return;
+    try {
+      const fmt = (s) => new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const yr  = new Date(departureDate).getFullYear();
+      const auto = `${fmt(arrivalDate)} – ${fmt(departureDate)}, ${yr}`;
+      setTripDates(auto);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrivalDate, departureDate]);
+
   const [tripDates,          setTripDates]          = useState(autoTripDates);
   const [city,               setCity]               = useState(kickoff?.city               || "");
   // Multiple arrivals: [{name, date, time, flight, notes}]
@@ -2677,6 +2689,13 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [accommodationName,  setAccommodationName]  = useState(kickoff?.accommodationName  || "");
   const [accommodationAddr,  setAccommodationAddr]  = useState(kickoff?.accommodationAddr  || "");
   const [accommodationUrl,   setAccommodationUrl]   = useState(kickoff?.accommodationUrl   || "");
+  // City 2 accommodation
+  const [accommodationName2, setAccommodationName2] = useState(kickoff?.accommodationName2 || "");
+  const [accommodationAddr2, setAccommodationAddr2] = useState(kickoff?.accommodationAddr2 || "");
+  const [accommodationUrl2,  setAccommodationUrl2]  = useState(kickoff?.accommodationUrl2  || "");
+  // City 2 stay dates
+  const [arrivalDate2,   setArrivalDate2]   = useState(kickoff?.arrivalDate2   || "");
+  const [departureDate2, setDepartureDate2] = useState(kickoff?.departureDate2 || "");
   const [checkIn,            setCheckIn]            = useState(kickoff?.checkIn            || "3:00 PM");
   const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "11:00 AM");
   const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=drivesdk");
@@ -2686,6 +2705,17 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [cityRatings, setCityRatings] = useState(() => {
     try { return JSON.parse(kickoff?.cityRatings || "[]"); } catch { return []; }
   });
+  // Property list for accommodation autocomplete
+  const [propertyList, setPropertyList] = useState([]);
+  useEffect(() => {
+    const GAS = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+    fetch(GAS, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "property_get", data: { id: "all", limit: 600 } }) })
+      .then(r => r.json()).then(d => {
+        const list = (d.data || d.properties || []).filter(p => p.Name);
+        setPropertyList(list);
+      }).catch(() => {});
+  }, []);
   const addCityRating    = () => setCityRatings(prev => [...prev, { city: "", rating: 0, notes: "" }]);
   const removeCityRating = (i) => setCityRatings(prev => prev.filter((_, idx) => idx !== i));
   const patchCityRating  = (i, patch) =>
@@ -2731,8 +2761,14 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     // Per-city ratings
     cityRatings: JSON.stringify(cityRatings.filter(r => r.city || r.rating > 0)),
     // Stay dates (set by concierge)
-    arrivalDate:   arrivalDate.trim(),
-    departureDate: departureDate.trim(),
+    arrivalDate:    arrivalDate.trim(),
+    departureDate:  departureDate.trim(),
+    // City 2 dates & accommodation
+    arrivalDate2:      arrivalDate2.trim(),
+    departureDate2:    departureDate2.trim(),
+    accommodationName2: accommodationName2.trim(),
+    accommodationAddr2: accommodationAddr2.trim(),
+    accommodationUrl2:  accommodationUrl2.trim(),
     // Always include latest canvas state so itinerary edits aren't lost
     ...(canvasCartRef.current    != null ? { cart:    JSON.stringify(canvasCartRef.current)    } : {}),
     ...(canvasDayMetaRef.current != null ? { dayMeta: JSON.stringify(canvasDayMetaRef.current) } : {}),
@@ -2828,6 +2864,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   <input
                     type="date"
                     value={departureDate}
+                    min={arrivalDate || undefined}
                     onChange={e => setDepartureDate(e.target.value)}
                     className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
                   />
@@ -2837,6 +2874,33 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 <p className="text-[10px] text-neutral-500">🌙 {clientNights} noche{clientNights !== 1 ? "s" : ""}</p>
               )}
             </div>
+
+            {/* City 2 dates — only shown when trip has 2 cities */}
+            {city.includes(",") && (
+              <div className="border rounded-xl p-3 bg-blue-50 border-blue-100 space-y-2">
+                <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas ciudad 2 — {city.split(",")[1]?.trim()}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] text-neutral-500 mb-1">Llegada ciudad 2</label>
+                    <input type="date" value={arrivalDate2}
+                      min={departureDate || undefined}
+                      onChange={e => setArrivalDate2(e.target.value)}
+                      className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-neutral-500 mb-1">Salida ciudad 2</label>
+                    <input type="date" value={departureDate2}
+                      min={arrivalDate2 || undefined}
+                      onChange={e => setDepartureDate2(e.target.value)}
+                      className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
+                  </div>
+                </div>
+                {arrivalDate2 && departureDate2 && (() => {
+                  const n = Math.round((new Date(departureDate2) - new Date(arrivalDate2)) / 86400000);
+                  return n > 0 ? <p className="text-[10px] text-blue-600">🌙 {n} noche{n !== 1 ? "s" : ""}</p> : null;
+                })()}
+              </div>
+            )}
 
             {/* Quiz answers submitted by client */}
             {(Object.keys(quizAnswers).some(k => quizAnswers[k] && quizAnswers[k] !== "no" && !(Array.isArray(quizAnswers[k]) && !quizAnswers[k].length))) && (
@@ -3027,23 +3091,55 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   placeholder="5 people" />
               </div>
               <div className="col-span-2">
-                <label className="text-[11px] text-neutral-500">Nombre del alojamiento</label>
+                <label className="text-[11px] text-neutral-500">Nombre del alojamiento {city.includes(",") ? `— ${city.split(",")[0]?.trim()}` : ""}</label>
                 <input value={accommodationName} onChange={(e) => setAccommodationName(e.target.value)}
+                  list="prop-list-1"
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="Edificio Los Eucaliptos" />
+                <datalist id="prop-list-1">
+                  {(propertyList || []).map(p => <option key={p.id} value={p.Name}>{p.Name} — {p.City}</option>)}
+                </datalist>
               </div>
               <div className="col-span-2">
-                <label className="text-[11px] text-neutral-500">Dirección del alojamiento</label>
+                <label className="text-[11px] text-neutral-500">Dirección del alojamiento {city.includes(",") ? `— ${city.split(",")[0]?.trim()}` : ""}</label>
                 <input value={accommodationAddr} onChange={(e) => setAccommodationAddr(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="Calle 10 # 29-34, Medellín, Antioquia" />
               </div>
               <div className="col-span-2">
-                <label className="text-[11px] text-neutral-500">Google Maps del alojamiento</label>
+                <label className="text-[11px] text-neutral-500">Google Maps del alojamiento {city.includes(",") ? `— ${city.split(",")[0]?.trim()}` : ""}</label>
                 <input value={accommodationUrl} onChange={(e) => setAccommodationUrl(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="https://maps.app.goo.gl/..." />
               </div>
+              {/* City 2 accommodation — only shown when 2 cities */}
+              {city.includes(",") && (<>
+                <div className="col-span-2 border-t border-blue-100 pt-2">
+                  <p className="text-[11px] font-semibold text-blue-700 mb-2">🏠 Alojamiento ciudad 2 — {city.split(",")[1]?.trim()}</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[11px] text-neutral-500">Nombre del alojamiento 2</label>
+                  <input value={accommodationName2} onChange={(e) => setAccommodationName2(e.target.value)}
+                    list="prop-list-2"
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                    placeholder="Casa Medellín" />
+                  <datalist id="prop-list-2">
+                    {(propertyList || []).map(p => <option key={p.id} value={p.Name}>{p.Name} — {p.City}</option>)}
+                  </datalist>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[11px] text-neutral-500">Dirección alojamiento 2</label>
+                  <input value={accommodationAddr2} onChange={(e) => setAccommodationAddr2(e.target.value)}
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                    placeholder="El Poblado, Medellín" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[11px] text-neutral-500">Google Maps alojamiento 2</label>
+                  <input value={accommodationUrl2} onChange={(e) => setAccommodationUrl2(e.target.value)}
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                    placeholder="https://maps.app.goo.gl/..." />
+                </div>
+              </>)}
               <div>
                 <label className="text-[11px] text-neutral-500">Check-in</label>
                 <input value={checkIn} onChange={(e) => setCheckIn(e.target.value)}
