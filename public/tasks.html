@@ -489,7 +489,7 @@ function taskCard(t){
 function renderTable(){
   const vis = visibleTasks();
   const groups = groupMode==='status' ? Object.keys(STATUSES)
-               : groupMode==='assignee' ? [...new Set(tasks.map(t=>t.assignee||'Unassigned'))]
+               : groupMode==='assignee' ? [...new Set(vis.map(t=>t.assignee||'Unassigned'))]
                : Object.keys(PRIORITIES);
 
   let html = '';
@@ -643,7 +643,7 @@ function openDetail(id){
   // Status bar
   const bar = document.getElementById('detail-status-bar');
   bar.innerHTML = Object.entries(STATUSES).map(([k,s])=>
-    `<button class="ds-btn ${t.status===k?'selected':''}" style="background:${s.color}" onclick="setDetailStatus('${k}')">${s.label}</button>`
+    `<button class="ds-btn ${t.status===k?'selected':''}" style="background:${s.color}" onclick="setDetailStatus('${k}',this)">${s.label}</button>`
   ).join('');
 
   // Fields
@@ -700,11 +700,10 @@ function renderActivity(t){
   }).join('');
 }
 function renderDetail(){ openDetail(detailId); }
-function setDetailStatus(s){
+function setDetailStatus(s,btn){
   const t=tasks.find(x=>x.id===detailId); if(t){ t.status=s; }
-  // re-render status bar
   document.querySelectorAll('.ds-btn').forEach(b=>b.classList.remove('selected'));
-  event.target.classList.add('selected');
+  btn.classList.add('selected');
 }
 function addComment(){
   const input = document.getElementById('comment-input');
@@ -727,7 +726,7 @@ function saveDetail(){
   saveTasks(); render();
   document.getElementById('modal-detail').classList.remove('open');
 }
-function closeDetail(e){ if(!e||e.target===document.getElementById('modal-detail')) document.getElementById('modal-detail').classList.remove('open'); }
+function closeDetail(e){ if(!e||!e.target||e.target===document.getElementById('modal-detail')) document.getElementById('modal-detail').classList.remove('open'); }
 
 /* ── HELPERS ── */
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -745,7 +744,8 @@ function formatDue(d){
 
 /* ── INIT ── */
 loadTasks();
-loadFromGAS().then(()=>render()).catch(()=>render());
+render(); // render immediately from localStorage
+loadFromGAS().then(()=>{ if(tasks.length) render(); }).catch(()=>{});
 </script>
 </body>
 </html>
