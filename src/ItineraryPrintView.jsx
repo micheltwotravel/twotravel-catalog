@@ -587,7 +587,8 @@ function CoverPage({ kickoff, total, lang, editMode }) {
   const isEs = lang === "es";
 
   const titleLine = a.guestName || "Two Travel Concierge";
-  const subtitle  = [a.city, a.tripName].filter(Boolean).join(" · ");
+  // Only show city in subtitle — tripName is the HubSpot deal name which already contains dates
+  const subtitle  = [a.city].filter(Boolean).join(" · ");
 
   return (
     <div className="page">
