@@ -3124,7 +3124,18 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               </div>
               <div className="col-span-2">
                 <label className="text-[11px] text-neutral-500">Nombre del alojamiento {city.includes(",") ? `— ${city.split(",")[0]?.trim()}` : ""}</label>
-                <input value={accommodationName} onChange={(e) => setAccommodationName(e.target.value)}
+                <input value={accommodationName}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setAccommodationName(val);
+                    const match = (propertyList || []).find(p => p.Name === val);
+                    if (match) {
+                      const addr = match.Address || match.address || match.Addr || match.addr || match.Location || "";
+                      const url  = match.MapsUrl || match.mapsUrl || match.maps_url || match.GoogleMaps || match.Maps || match.maps || "";
+                      if (addr) setAccommodationAddr(addr);
+                      if (url)  setAccommodationUrl(url);
+                    }
+                  }}
                   list="prop-list-1"
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="Edificio Los Eucaliptos" />
@@ -3151,7 +3162,18 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 </div>
                 <div className="col-span-2">
                   <label className="text-[11px] text-neutral-500">Nombre del alojamiento 2</label>
-                  <input value={accommodationName2} onChange={(e) => setAccommodationName2(e.target.value)}
+                  <input value={accommodationName2}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAccommodationName2(val);
+                      const match = (propertyList || []).find(p => p.Name === val);
+                      if (match) {
+                        const addr = match.Address || match.address || match.Addr || match.addr || match.Location || "";
+                        const url  = match.MapsUrl || match.mapsUrl || match.maps_url || match.GoogleMaps || match.Maps || match.maps || "";
+                        if (addr) setAccommodationAddr2(addr);
+                        if (url)  setAccommodationUrl2(url);
+                      }
+                    }}
                     list="prop-list-2"
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                     placeholder="Casa Medellín" />
