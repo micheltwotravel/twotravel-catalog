@@ -2663,29 +2663,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // Auto-fill groupSize from quiz if concierge hasn't set it yet
   const autoGroupSize = kickoff?.groupSize || String(quizAnswers?.groupSize || quizAnswers?.pax || "");
 
-  // Auto-sync tripDates on the cover when arrival/departure change
-  useEffect(() => {
-    if (!arrivalDate || !departureDate) return;
-    try {
-      const fmt = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      const yr  = new Date(departureDate + "T12:00:00").getFullYear();
-      const auto = `${fmt(arrivalDate)} – ${fmt(departureDate)}, ${yr}`;
-      setTripDates(auto);
-    } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [arrivalDate, departureDate]);
-
-  // Auto-sync tripDates2 when city 2 dates change
-  useEffect(() => {
-    if (!arrivalDate2 || !departureDate2) return;
-    try {
-      const fmt = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      const yr  = new Date(departureDate2 + "T12:00:00").getFullYear();
-      setTripDates2(`${fmt(arrivalDate2)} – ${fmt(departureDate2)}, ${yr}`);
-    } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [arrivalDate2, departureDate2]);
-
   const [tripDates,          setTripDates]          = useState(autoTripDates);
   const [city,               setCity]               = useState(kickoff?.city               || "");
   // Multiple arrivals: [{name, date, time, flight, notes}]
@@ -2719,6 +2696,29 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     }
     return kickoff?.tripDates2 || "";
   });
+
+  // Auto-sync tripDates when arrival/departure change
+  useEffect(() => {
+    if (!arrivalDate || !departureDate) return;
+    try {
+      const fmt = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const yr  = new Date(departureDate + "T12:00:00").getFullYear();
+      setTripDates(`${fmt(arrivalDate)} – ${fmt(departureDate)}, ${yr}`);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrivalDate, departureDate]);
+
+  // Auto-sync tripDates2 when city 2 dates change
+  useEffect(() => {
+    if (!arrivalDate2 || !departureDate2) return;
+    try {
+      const fmt = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const yr  = new Date(departureDate2 + "T12:00:00").getFullYear();
+      setTripDates2(`${fmt(arrivalDate2)} – ${fmt(departureDate2)}, ${yr}`);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrivalDate2, departureDate2]);
+
   const [checkIn,            setCheckIn]            = useState(kickoff?.checkIn            || "3:00 PM");
   const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "11:00 AM");
   const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=drivesdk");
