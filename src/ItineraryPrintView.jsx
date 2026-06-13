@@ -608,18 +608,15 @@ function CoverPage({ kickoff, total, lang, editMode }) {
       <PH kickoff={a}/>
 
       <div className="cover-body">
-        {(a.city || a.tripName) && (
+        {a.city && (
           <Editable
             tag="div" className="cover-eyebrow" editMode={editMode}
-            value={`${subtitle} · ${isEs ? "Itinerario Concierge" : "Concierge Itinerary"}`}
+            value={`${String(a.city).split(",").map(c => ({ CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" })[c.trim().toUpperCase()] || c.trim()).join(" · ")} · ${isEs ? "Itinerario Concierge" : "Concierge Itinerary"}`}
           />
         )}
         <Editable tag="div" className="cover-title" editMode={editMode} value={titleLine}/>
-        {subtitle && (
-          <Editable tag="div" className="cover-subtitle" editMode={editMode} value={subtitle}/>
-        )}
-        {/* tripDates hidden — dates already in tripName (deal name) */}
-        {a.tripDates && !a.tripName && (
+        {/* Show tripDates once — clearly below the guest name */}
+        {a.tripDates && (
           <Editable tag="div" className="cover-dates" editMode={editMode} value={a.tripDates}/>
         )}
 

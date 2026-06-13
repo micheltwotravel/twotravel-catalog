@@ -2683,110 +2683,120 @@ function TaskTracker() {
    DRINKS CATALOG — client-facing drink selection page
    ============================================================ */
 // img: URL directo de la foto. priceCOP/priceUSD: precio por unidad/botella.
+// Base drink catalog — prices in COP; USD shown live via exchange rate
 const DRINK_CATEGORIES = [
-  {
-    id: "spirits", label: "🥃 Licores", label_en: "🥃 Spirits",
-    items: [
-      { name: "Ron Medellín 8 años",        name_en: "Rum Medellín 8 años",        img: "https://images.rappi.com/products/7459a9d1-4ff4-4f70-9565-a72059e43a57.png", priceCOP: 110000, priceUSD: 27.50, qty: "", note: "" },
-      { name: "Ron Dictador 12",             name_en: "Rum Dictador 12",             img: "https://dictador.com/wp-content/uploads/2024/11/Dictador_12_Blend_40vol_floating-1024x1024.png", priceCOP: 295000, priceUSD: 73.75, qty: "", note: "" },
-      { name: "Aguardiente Antioqueño",      name_en: "Aguardiente Antioqueño",      img: "https://images.rappi.com/products/1684976360608_1684976356914_1684976356232.jpg", priceCOP: 55000, priceUSD: 13.75, qty: "", note: "" },
-      { name: "Tequila Patrón Silver",       name_en: "Tequila Patrón Silver",       img: "https://images.rappi.com/products/6b921167-1806-43c7-b57b-1f1579b6f72e.png", priceCOP: 258000, priceUSD: 64.50, qty: "", note: "" },
-      { name: "Vodka Grey Goose",            name_en: "Vodka Grey Goose",            img: "https://images.rappi.com/products/508701057988_skppusgjklge_103497454041_fqpzouxhrxhe_1188_1.jpeg", priceCOP: 240200, priceUSD: 60.05, qty: "", note: "" },
-      { name: "Whisky Johnnie Walker Black", name_en: "Whisky Johnnie Walker Black", img: "https://images.rappi.com/products/43ee0b4d-693e-49ce-a428-3e1a5c8e9ac6.jpg", priceCOP: 158000, priceUSD: 39.50, qty: "", note: "" },
-      { name: "Gin Hendricks",               name_en: "Gin Hendricks",               img: "https://images.rappi.com/products/42203de0-ce71-4bc4-aac2-d82b2bd9ca06.png", priceCOP: 276000, priceUSD: 69.00, qty: "", note: "" },
-      { name: "Champagne Moët & Chandon",    name_en: "Champagne Moët & Chandon",    img: "https://upload.wikimedia.org/wikipedia/commons/0/0c/A_bottle_of_Prosecco.jpg", priceCOP: 485000, priceUSD: 121.25, qty: "", note: "" },
-    ],
-  },
-  {
-    id: "beer", label: "🍺 Cerveza", label_en: "🍺 Beer",
-    items: [
-      { name: "Águila",        name_en: "Águila",        img: "https://images.rappi.com/products/e412dd24-23e9-438f-814b-a4e8925ebaf0.png", priceCOP: 4500, priceUSD: 1.13, qty: "", note: "" },
-      { name: "Club Colombia", name_en: "Club Colombia", img: "https://images.rappi.com/products/f2b59539-ba5b-409f-8f9b-b067b5347374.png", priceCOP: 4500, priceUSD: 1.13, qty: "", note: "" },
-      { name: "Corona",        name_en: "Corona",        img: "https://images.rappi.com/products/f6206ee6-78c1-4279-a9ab-b8c203f7107d.png", priceCOP: 7000, priceUSD: 1.75, qty: "", note: "" },
-      { name: "Heineken",      name_en: "Heineken",      img: "https://upload.wikimedia.org/wikipedia/en/thumb/4/4e/Heineken_lager_beer_can.png/200px-Heineken_lager_beer_can.png", priceCOP: 6000, priceUSD: 1.50, qty: "", note: "" },
-      { name: "Poker",         name_en: "Poker",         img: "https://images.rappi.com/products/414428019836_rxaaltnmrzon_476705357483_txldxmllacvr_50644_1.jpeg", priceCOP: 4500, priceUSD: 1.13, qty: "", note: "" },
-    ],
-  },
-  {
-    id: "wine", label: "🍷 Vino", label_en: "🍷 Wine",
-    items: [
-      { name: "Vino tinto (botella)",  name_en: "Red wine (bottle)",    img: "https://images.rappi.com/products/851855029156_wvpoxqeunfmh_378174607221_vtrwvvhcgsar_1265_1.jpeg", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
-      { name: "Vino blanco (botella)", name_en: "White wine (bottle)",  img: "https://images.rappi.com/products/e1443858-0c4e-4541-894c-b7bd8eb4bd20.jpg", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
-      { name: "Vino rosado (botella)", name_en: "Rosé wine (bottle)",   img: "https://images.rappi.com/products/800ac89d-5ce8-46a0-84ff-b8ff127a7af7.jpg", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
-      { name: "Espumante / Prosecco",  name_en: "Sparkling / Prosecco", img: "https://upload.wikimedia.org/wikipedia/commons/0/0c/A_bottle_of_Prosecco.jpg", priceCOP: 85000, priceUSD: 21.25, qty: "", note: "" },
-    ],
-  },
-  {
-    id: "mixers", label: "🥤 Mezcladores", label_en: "🥤 Mixers",
-    items: [
-      { name: "Coca-Cola",       name_en: "Coca-Cola",        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/CocaColaBottle.svg/200px-CocaColaBottle.svg.png", priceCOP: 3800, priceUSD: 0.95, qty: "", note: "" },
-      { name: "Agua tónica",     name_en: "Tonic water",      img: "https://upload.wikimedia.org/wikipedia/commons/b/b3/Schweppes_Indian_Tonic_Water_%28front%29.jpg", priceCOP: 3000, priceUSD: 0.75, qty: "", note: "" },
-      { name: "Ginger ale",      name_en: "Ginger ale",       img: "https://upload.wikimedia.org/wikipedia/commons/6/64/Canada_Dry_ginger_ale_can.jpg", priceCOP: 4000, priceUSD: 1.00, qty: "", note: "" },
-      { name: "Jugo de naranja", name_en: "Orange juice",     img: "https://upload.wikimedia.org/wikipedia/commons/0/04/Cappy_Orange.jpg", priceCOP: 20000, priceUSD: 5.00, qty: "", note: "" },
-      { name: "Agua con gas",    name_en: "Sparkling water",  img: "", priceCOP: 36000, priceUSD: 9.00, qty: "", note: "" },
-      { name: "Agua sin gas",    name_en: "Still water",      img: "", priceCOP: 25600, priceUSD: 6.40, qty: "", note: "" },
-      { name: "Red Bull",        name_en: "Red Bull",         img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Red_bull_energy_drink.jpg/200px-Red_bull_energy_drink.jpg", priceCOP: 9400, priceUSD: 2.35, qty: "", note: "" },
-    ],
-  },
-  {
-    id: "snacks", label: "🍿 Snacks", label_en: "🍿 Snacks",
-    items: [
-      { name: "Papas / Chips",   name_en: "Chips",        img: "", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
-      { name: "Maní",            name_en: "Peanuts",      img: "", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
-      { name: "Tabla de quesos", name_en: "Cheese board", img: "", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
-      { name: "Fruta picada",    name_en: "Fresh fruit",  img: "", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
-      { name: "Crudités",        name_en: "Crudités",     img: "", priceCOP: 0, priceUSD: 0, qty: "", note: "" },
-    ],
-  },
+  { id:"ron",        label:"🥃 Ron",         label_en:"🥃 Rum",          items:[
+    { name:"Ron Medellín 8 años",  name_en:"Rum Medellín 8 años",  img:"https://images.rappi.com/products/7459a9d1-4ff4-4f70-9565-a72059e43a57.png",                                                                    priceCOP:110000, qty:"", note:"" },
+    { name:"Ron Dictador 12",      name_en:"Rum Dictador 12",      img:"https://dictador.com/wp-content/uploads/2024/11/Dictador_12_Blend_40vol_floating-1024x1024.png",                                                priceCOP:295000, qty:"", note:"" },
+    { name:"Aguardiente Antioqueño",name_en:"Aguardiente Antioqueño",img:"https://images.rappi.com/products/1684976360608_1684976356914_1684976356232.jpg",                                                             priceCOP: 55000, qty:"", note:"" },
+  ]},
+  { id:"tequila",    label:"🌵 Tequila",     label_en:"🌵 Tequila",       items:[
+    { name:"Tequila Patrón Silver",name_en:"Tequila Patrón Silver",img:"https://images.rappi.com/products/6b921167-1806-43c7-b57b-1f1579b6f72e.png",                                                                    priceCOP:258000, qty:"", note:"" },
+    { name:"Tequila Don Julio Blanco",name_en:"Tequila Don Julio Blanco",img:"https://images.rappi.com/products/9b1b1b1b-1b1b-1b1b-1b1b-1b1b1b1b1b1b.png",                                                             priceCOP:320000, qty:"", note:"" },
+  ]},
+  { id:"vodka",      label:"🍸 Vodka",       label_en:"🍸 Vodka",         items:[
+    { name:"Vodka Grey Goose",     name_en:"Vodka Grey Goose",     img:"https://images.rappi.com/products/508701057988_skppusgjklge_103497454041_fqpzouxhrxhe_1188_1.jpeg",                                             priceCOP:240200, qty:"", note:"" },
+    { name:"Vodka Absolut",        name_en:"Vodka Absolut",        img:"https://images.rappi.com/products/bba89040-5d68-4c76-8c7e-1c72ec394cfe.png",                                                                    priceCOP: 98000, qty:"", note:"" },
+  ]},
+  { id:"whisky",     label:"🥃 Whisky",      label_en:"🥃 Whisky",        items:[
+    { name:"Whisky Johnnie Walker Black",name_en:"Whisky Johnnie Walker Black",img:"https://images.rappi.com/products/43ee0b4d-693e-49ce-a428-3e1a5c8e9ac6.jpg",                                                        priceCOP:158000, qty:"", note:"" },
+    { name:"Whisky Chivas 12",     name_en:"Whisky Chivas 12",     img:"https://images.rappi.com/products/dd73f3c2-f6f5-4b62-93c0-9faf98e2d897.jpg",                                                                    priceCOP:185000, qty:"", note:"" },
+  ]},
+  { id:"gin",        label:"🌿 Gin",         label_en:"🌿 Gin",           items:[
+    { name:"Gin Hendricks",        name_en:"Gin Hendricks",        img:"https://images.rappi.com/products/42203de0-ce71-4bc4-aac2-d82b2bd9ca06.png",                                                                    priceCOP:276000, qty:"", note:"" },
+    { name:"Tanqueray",            name_en:"Tanqueray",            img:"https://images.rappi.com/products/tanqueray.jpg",                                                                                                 priceCOP:184000, qty:"", note:"" },
+  ]},
+  { id:"champagne",  label:"🥂 Champagne",   label_en:"🥂 Champagne",     items:[
+    { name:"Champagne Moët & Chandon",name_en:"Champagne Moët & Chandon",img:"https://upload.wikimedia.org/wikipedia/commons/0/0c/A_bottle_of_Prosecco.jpg",                                                           priceCOP:485000, qty:"", note:"" },
+    { name:"Espumante / Prosecco",name_en:"Sparkling / Prosecco",  img:"https://upload.wikimedia.org/wikipedia/commons/0/0c/A_bottle_of_Prosecco.jpg",                                                                 priceCOP: 85000, qty:"", note:"" },
+  ]},
+  { id:"beer",       label:"🍺 Cerveza",     label_en:"🍺 Beer",          items:[
+    { name:"Águila",               name_en:"Águila",               img:"https://images.rappi.com/products/e412dd24-23e9-438f-814b-a4e8925ebaf0.png",                                                                    priceCOP:  4500, qty:"", note:"" },
+    { name:"Club Colombia",        name_en:"Club Colombia",        img:"https://images.rappi.com/products/f2b59539-ba5b-409f-8f9b-b067b5347374.png",                                                                    priceCOP:  4500, qty:"", note:"" },
+    { name:"Corona",               name_en:"Corona",               img:"https://images.rappi.com/products/f6206ee6-78c1-4279-a9ab-b8c203f7107d.png",                                                                    priceCOP:  7000, qty:"", note:"" },
+    { name:"Heineken",             name_en:"Heineken",             img:"https://upload.wikimedia.org/wikipedia/en/thumb/4/4e/Heineken_lager_beer_can.png/200px-Heineken_lager_beer_can.png",                            priceCOP:  6000, qty:"", note:"" },
+    { name:"Poker",                name_en:"Poker",                img:"https://images.rappi.com/products/414428019836_rxaaltnmrzon_476705357483_txldxmllacvr_50644_1.jpeg",                                            priceCOP:  4500, qty:"", note:"" },
+  ]},
+  { id:"wine",       label:"🍷 Vino",        label_en:"🍷 Wine",          items:[
+    { name:"Vino tinto (botella)", name_en:"Red wine (bottle)",    img:"https://images.rappi.com/products/851855029156_wvpoxqeunfmh_378174607221_vtrwvvhcgsar_1265_1.jpeg",                                             priceCOP:      0, qty:"", note:"" },
+    { name:"Vino blanco (botella)",name_en:"White wine (bottle)",  img:"https://images.rappi.com/products/e1443858-0c4e-4541-894c-b7bd8eb4bd20.jpg",                                                                   priceCOP:      0, qty:"", note:"" },
+    { name:"Vino rosado (botella)",name_en:"Rosé wine (bottle)",   img:"https://images.rappi.com/products/800ac89d-5ce8-46a0-84ff-b8ff127a7af7.jpg",                                                                   priceCOP:      0, qty:"", note:"" },
+  ]},
+  { id:"mixers",     label:"🥤 Mezcladores", label_en:"🥤 Mixers",        items:[
+    { name:"Coca-Cola",            name_en:"Coca-Cola",            img:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/CocaColaBottle.svg/200px-CocaColaBottle.svg.png",                                    priceCOP:  3800, qty:"", note:"" },
+    { name:"Agua tónica",          name_en:"Tonic water",          img:"https://upload.wikimedia.org/wikipedia/commons/b/b3/Schweppes_Indian_Tonic_Water_%28front%29.jpg",                                             priceCOP:  3000, qty:"", note:"" },
+    { name:"Ginger ale",           name_en:"Ginger ale",           img:"https://upload.wikimedia.org/wikipedia/commons/6/64/Canada_Dry_ginger_ale_can.jpg",                                                            priceCOP:  4000, qty:"", note:"" },
+    { name:"Jugo de naranja",      name_en:"Orange juice",         img:"https://upload.wikimedia.org/wikipedia/commons/0/04/Cappy_Orange.jpg",                                                                         priceCOP: 20000, qty:"", note:"" },
+    { name:"Agua con gas",         name_en:"Sparkling water",      img:"",                                                                                                                                              priceCOP: 36000, qty:"", note:"" },
+    { name:"Agua sin gas",         name_en:"Still water",          img:"",                                                                                                                                              priceCOP: 25600, qty:"", note:"" },
+    { name:"Red Bull",             name_en:"Red Bull",             img:"https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Red_bull_energy_drink.jpg/200px-Red_bull_energy_drink.jpg",                          priceCOP:  9400, qty:"", note:"" },
+  ]},
+  { id:"snacks",     label:"🍿 Snacks",      label_en:"🍿 Snacks",        items:[
+    { name:"Papas / Chips",        name_en:"Chips",                img:"", priceCOP:0, qty:"", note:"" },
+    { name:"Maní",                 name_en:"Peanuts",              img:"", priceCOP:0, qty:"", note:"" },
+    { name:"Tabla de quesos",      name_en:"Cheese board",         img:"", priceCOP:0, qty:"", note:"" },
+    { name:"Fruta picada",         name_en:"Fresh fruit",          img:"", priceCOP:0, qty:"", note:"" },
+    { name:"Crudités",             name_en:"Crudités",             img:"", priceCOP:0, qty:"", note:"" },
+  ]},
 ];
 
 function DrinksCatalog() {
-  const params        = new URLSearchParams(window.location.search);
-  const kickoffId     = params.get("kickoffId")     || "";
-  const lang          = params.get("lang") === "en" ? "en" : "es";
-  // Pre-filled by the concierge when they generate the link
-  const prefillName   = params.get("guestName")     || "";
-  const prefillArrival= params.get("arrivalDate")   || "";
-  const prefillDepart = params.get("departureDate")  || "";
+  const params         = new URLSearchParams(window.location.search);
+  const kickoffId      = params.get("kickoffId")    || "";
+  const lang           = params.get("lang") === "en" ? "en" : "es";
+  const prefillName    = params.get("guestName")    || "";
+  const prefillArrival = params.get("arrivalDate")  || "";
+  const prefillDepart  = params.get("departureDate")|| "";
 
-  // UI strings
   const T = lang === "en" ? {
-    brand:        "Two Travel",
-    heading:      "🍹 Drink List",
-    subtitle:     "Select your drinks and quantities for your stay.",
-    namePlaceholder: "Your name (optional)",
-    notePlaceholder: "Anything else? Specific brands, allergies, preferences…",
-    totalLabel:   "Estimated total",
-    sendBtn:      "✅ Send list to concierge",
-    sending:      "Sending…",
-    successTitle: "Thanks for submitting!",
-    successBody:  "Your concierge will review this with you on your kick-off call.",
+    brand:"Two Travel", heading:"🍹 Drink List",
+    instr1:"Please use this resource as a way to order and also budget what you would like for both your house and boat. Select the quantity of each drink you would like to have.",
+    instr2:"Note: USD prices are approximate and may vary based on the exchange rate on the day the purchase is made.",
+    houseTab:"🏠 House", boatTab:"⛵ Boat",
+    houseLabel:"House Order", boatLabel:"Boat Order",
+    namePlaceholder:"Your name (optional)",
+    notePlaceholder:"Anything else? Specific brands, allergies, preferences…",
+    totalLabel:"Estimated total", rateLabel:"Exchange rate",
+    sendBtn:"✅ Submit order to concierge", sending:"Sending…",
+    editBtn:"✏️ Edit order",
+    successTitle:"Thanks for submitting!", successBody:"Your concierge will review this with you on your kick-off call.",
   } : {
-    brand:        "Two Travel",
-    heading:      "🍹 Lista de Bebidas",
-    subtitle:     "Selecciona las bebidas y cantidades para tu estadía.",
-    namePlaceholder: "Tu nombre (opcional)",
-    notePlaceholder: "Algo más? Marcas específicas, alergias, preferencias…",
-    totalLabel:   "Total estimado",
-    sendBtn:      "✅ Enviar lista al concierge",
-    sending:      "Enviando…",
-    successTitle: "¡Gracias por enviarlo!",
-    successBody:  "Tu concierge lo revisará contigo en tu kick-off call.",
+    brand:"Two Travel", heading:"🍹 Lista de Bebidas",
+    instr1:"Por favor usa este recurso para ordenar y presupuestar lo que quieres para tu casa y el bote. Selecciona la cantidad de cada bebida que deseas tener.",
+    instr2:"Nota: Los precios en USD son aproximados y pueden variar según la tasa de cambio del día de la compra.",
+    houseTab:"🏠 Casa", boatTab:"⛵ Bote",
+    houseLabel:"Pedido Casa", boatLabel:"Pedido Bote",
+    namePlaceholder:"Tu nombre (opcional)",
+    notePlaceholder:"¿Algo más? Marcas específicas, alergias, preferencias…",
+    totalLabel:"Total estimado", rateLabel:"Tasa de cambio",
+    sendBtn:"✅ Enviar pedido al concierge", sending:"Enviando…",
+    editBtn:"✏️ Editar pedido",
+    successTitle:"¡Gracias por enviarlo!", successBody:"Tu concierge lo revisará contigo en tu kick-off call.",
   };
 
   const itemName = (it) => (lang === "en" && it.name_en) ? it.name_en : it.name;
   const catLabel = (cat) => (lang === "en" && cat.label_en) ? cat.label_en : cat.label;
 
-  const [items,  setItems]   = React.useState(() =>
-    DRINK_CATEGORIES.map(cat => ({
-      ...cat,
-      items: cat.items.map(it => ({ ...it })),
-    }))
-  );
-  const [extra,    setExtra]    = React.useState("");
-  const [sent,     setSent]     = React.useState(false);
-  const [sending,  setSending]  = React.useState(false);
-  const [guestName,setGuestName]= React.useState(prefillName);
+  const mkItems = () => DRINK_CATEGORIES.map(cat => ({ ...cat, items: cat.items.map(it => ({ ...it })) }));
+  const [houseItems, setHouseItems] = React.useState(mkItems);
+  const [boatItems,  setBoatItems]  = React.useState(mkItems);
+  const [activeTab, setActiveTab]   = React.useState("house"); // "house" | "boat"
+  const [extra,     setExtra]       = React.useState("");
+  const [sent,      setSent]        = React.useState(false);
+  const [sending,   setSending]     = React.useState(false);
+  const [guestName, setGuestName]   = React.useState(prefillName);
+  const [fxRate,    setFxRate]      = React.useState(4000); // COP per 1 USD — updated live
+
+  // Fetch live exchange rate (COP → USD)
+  React.useEffect(() => {
+    fetch("https://open.er-api.com/v6/latest/USD")
+      .then(r => r.json())
+      .then(d => { if (d?.rates?.COP) setFxRate(Math.round(d.rates.COP)); })
+      .catch(() => {}); // keep default if offline
+  }, []);
+
+  const items    = activeTab === "house" ? houseItems : boatItems;
+  const setItems = activeTab === "house" ? setHouseItems : setBoatItems;
 
   const patchItem = (catIdx, itemIdx, patch) =>
     setItems(prev => prev.map((cat, ci) =>
@@ -2796,55 +2806,62 @@ function DrinksCatalog() {
       }
     ));
 
-  const hasSelection = items.some(cat => cat.items.some(it => Number(it.qty) > 0));
+  const calcTotals = (its) => {
+    const flat = its.flatMap(c => c.items);
+    const cop  = flat.reduce((s, it) => s + (it.priceCOP || 0) * (Number(it.qty) || 0), 0);
+    return { cop, usd: cop / fxRate };
+  };
+  const { cop: houseCOP, usd: houseUSD } = calcTotals(houseItems);
+  const { cop: boatCOP,  usd: boatUSD  } = calcTotals(boatItems);
+  const totalCOP = houseCOP + boatCOP;
+  const totalUSD = houseUSD + boatUSD;
 
-  // Running totals
-  const allItems = items.flatMap(c => c.items);
-  const totalCOP = allItems.reduce((s, it) => s + (it.priceCOP || 0) * (Number(it.qty) || 0), 0);
-  const totalUSD = allItems.reduce((s, it) => s + (it.priceUSD || 0) * (Number(it.qty) || 0), 0);
-  const fmtCOP = n => n.toLocaleString("es-CO");
+  const fmtCOP = n => Math.round(n).toLocaleString("es-CO");
   const fmtUSD = n => n.toFixed(2);
+
+  const hasSelection = [...houseItems, ...boatItems].flatMap(c => c.items).some(it => Number(it.qty) > 0);
+
+  const buildSummaryText = (its, label) => {
+    const lines = [];
+    its.forEach(cat => {
+      const sel = cat.items.filter(it => Number(it.qty) > 0);
+      if (!sel.length) return;
+      lines.push(`*${catLabel(cat)}*`);
+      sel.forEach(it => {
+        const cop = it.priceCOP > 0 ? ` · COP ${fmtCOP(it.priceCOP * Number(it.qty))}` : "";
+        lines.push(`  • ${itemName(it)}: *${it.qty}*${cop}`);
+      });
+    });
+    if (!lines.length) return "";
+    const { cop, usd } = calcTotals(its);
+    if (cop > 0) lines.push(`💰 *${label} total: COP ${fmtCOP(cop)} (~USD ${fmtUSD(usd)})*`);
+    return `*${label}*\n${lines.join("\n")}`;
+  };
 
   const handleSend = async () => {
     if (!hasSelection) return;
     setSending(true);
-    const lines = [];
-    items.forEach(cat => {
-      const selected = cat.items.filter(it => Number(it.qty) > 0);
-      if (!selected.length) return;
-      lines.push(`\n*${cat.label}*`);
-      selected.forEach(it => {
-        const price = it.priceCOP > 0 ? ` · COP ${fmtCOP(it.priceCOP * Number(it.qty))}` : "";
-        lines.push(`  • ${it.name}: *${it.qty}*${price}${it.note ? ` — ${it.note}` : ""}`);
-      });
-    });
-    if (extra) lines.push(`\n📝 Extra: ${extra}`);
-    if (totalCOP > 0) lines.push(`\n💰 *Total estimado: COP ${fmtCOP(totalCOP)} (~USD ${fmtUSD(totalUSD)})*`);
-    const text = `🍹 *Drink List* ${guestName ? `(${guestName})` : ""} · kickoff: ${kickoffId}\n${lines.join("\n")}`;
-    // Plain-text summary for the concierge panel
-    const drinkSummaryLines = [];
-    items.forEach(cat => {
-      const selected = cat.items.filter(it => Number(it.qty) > 0);
-      if (!selected.length) return;
-      drinkSummaryLines.push(`${cat.label}`);
-      selected.forEach(it => drinkSummaryLines.push(`  • ${it.name}: ${it.qty}`));
-    });
-    if (extra) drinkSummaryLines.push(`Notas: ${extra}`);
-    if (totalCOP > 0) drinkSummaryLines.push(`Total: COP ${fmtCOP(totalCOP)} (~USD ${fmtUSD(totalUSD)})`);
-    const drinkOrder = drinkSummaryLines.join("\n");
+    const houseText = buildSummaryText(houseItems, lang === "en" ? "🏠 House" : "🏠 Casa");
+    const boatText  = buildSummaryText(boatItems,  lang === "en" ? "⛵ Boat"  : "⛵ Bote");
+    const parts = [houseText, boatText].filter(Boolean);
+    if (extra) parts.push(`📝 ${extra}`);
+    if (totalCOP > 0) parts.push(`\n💰 *Total: COP ${fmtCOP(totalCOP)} (~USD ${fmtUSD(totalUSD)})*`);
+    const slackText = `🍹 *Drink Order* ${guestName ? `(${guestName})` : ""} · kickoff: ${kickoffId}\n\n${parts.join("\n\n")}`;
+    const drinkOrder = slackText.replace(/\*/g, "");
+
     try {
-      // 1) Send to Slack
+      // 1) Send to Slack — drinks channel
       await fetch("https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec", {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "sendSlackMessage", payload: { text, channelId: "C094NE421NV", slackToken: import.meta.env.VITE_SLACK_BOT_TOKEN || "" } }),
+        body: JSON.stringify({ action: "sendSlackMessage", payload: { text: slackText, channelId: "C094NE421NV", slackToken: import.meta.env.VITE_SLACK_BOT_TOKEN || "" } }),
       });
-      // 2) Save drink order to kickoff so concierge can see it in the panel
+      // 2) Save to kickoff so concierge sees 🍹 badge
       if (kickoffId) {
         updateKickoffInSheet(kickoffId, { drinkOrder, drinkOrderAt: new Date().toISOString() }).catch(() => {});
       }
       setSent(true);
-    } catch { setSent(true); } // show success regardless
+    } catch { setSent(true); }
     setSending(false);
   };
 
@@ -2853,79 +2870,88 @@ function DrinksCatalog() {
       <div className="text-5xl">🥂</div>
       <h1 className="text-2xl font-semibold text-white">{T.successTitle}</h1>
       <p className="text-neutral-400 text-sm max-w-xs">{T.successBody}</p>
+      <button
+        onClick={() => setSent(false)}
+        className="mt-4 px-6 py-2.5 rounded-xl bg-white/10 text-white text-sm hover:bg-white/20"
+      >{T.editBtn}</button>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-neutral-50 pb-24">
+    <div className="min-h-screen bg-neutral-50 pb-28">
       {/* Header */}
-      <div className="bg-neutral-950 text-white px-6 py-5">
+      <div className="bg-neutral-950 text-white px-6 pt-6 pb-5">
         <p className="text-xs text-neutral-400 uppercase tracking-widest mb-1">{T.brand}</p>
-        <h1 className="text-xl font-semibold">{T.heading}</h1>
-        <p className="text-sm text-neutral-400 mt-1">{T.subtitle}</p>
+        <h1 className="text-xl font-semibold mb-3">{T.heading}</h1>
+        {/* Instructions */}
+        <div className="bg-white/10 rounded-xl px-4 py-3 space-y-1.5 text-sm text-neutral-300">
+          <p>{T.instr1}</p>
+          <p className="text-neutral-400 text-xs italic">{T.instr2}</p>
+        </div>
       </div>
 
-      <div className="max-w-xl mx-auto px-4 pt-5 space-y-5">
+      <div className="max-w-xl mx-auto px-4 pt-4 space-y-4">
 
-        {/* Stay dates banner — shown when concierge pre-filled them */}
+        {/* Stay dates banner */}
         {(prefillArrival || prefillDepart) && (
           <div className="bg-white border border-neutral-200 rounded-2xl px-5 py-4 flex items-center gap-4">
             {prefillArrival && (
               <div className="flex-1 text-center">
-                <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-0.5">
-                  {lang === "en" ? "Check-in" : "Llegada"}
-                </p>
+                <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-0.5">{lang==="en"?"Check-in":"Llegada"}</p>
                 <p className="text-sm font-semibold text-neutral-900">
-                  {new Date(prefillArrival + "T12:00:00").toLocaleDateString(
-                    lang === "en" ? "en-US" : "es-CO",
-                    { weekday: "short", month: "short", day: "numeric" }
-                  )}
+                  {new Date(prefillArrival+"T12:00:00").toLocaleDateString(lang==="en"?"en-US":"es-CO",{weekday:"short",month:"short",day:"numeric"})}
                 </p>
               </div>
             )}
-            {prefillArrival && prefillDepart && (
-              <div className="text-neutral-300 text-xl">→</div>
-            )}
+            {prefillArrival && prefillDepart && <div className="text-neutral-300 text-xl">→</div>}
             {prefillDepart && (
               <div className="flex-1 text-center">
-                <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-0.5">
-                  {lang === "en" ? "Check-out" : "Salida"}
-                </p>
+                <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-0.5">{lang==="en"?"Check-out":"Salida"}</p>
                 <p className="text-sm font-semibold text-neutral-900">
-                  {new Date(prefillDepart + "T12:00:00").toLocaleDateString(
-                    lang === "en" ? "en-US" : "es-CO",
-                    { weekday: "short", month: "short", day: "numeric" }
-                  )}
+                  {new Date(prefillDepart+"T12:00:00").toLocaleDateString(lang==="en"?"en-US":"es-CO",{weekday:"short",month:"short",day:"numeric"})}
                 </p>
               </div>
             )}
             {prefillArrival && prefillDepart && (() => {
-              const nights = Math.round((new Date(prefillDepart) - new Date(prefillArrival)) / 86400000);
-              return nights > 0 ? (
-                <div className="text-center border-l pl-4">
-                  <p className="text-lg font-bold text-neutral-900">{nights}</p>
-                  <p className="text-[10px] text-neutral-400">{lang === "en" ? "nights" : "noches"}</p>
-                </div>
-              ) : null;
+              const n = Math.round((new Date(prefillDepart)-new Date(prefillArrival))/86400000);
+              return n>0?<div className="text-center border-l pl-4"><p className="text-lg font-bold text-neutral-900">{n}</p><p className="text-[10px] text-neutral-400">{lang==="en"?"nights":"noches"}</p></div>:null;
             })()}
           </div>
         )}
 
-        {/* Guest name — read-only if pre-filled, editable otherwise */}
+        {/* Exchange rate badge */}
+        <div className="flex justify-end">
+          <span className="text-[10px] text-neutral-400 bg-neutral-100 rounded-full px-3 py-1">
+            {T.rateLabel}: 1 USD = COP {fxRate.toLocaleString("es-CO")}
+          </span>
+        </div>
+
+        {/* Guest name */}
         {prefillName ? (
           <div className="bg-white border border-neutral-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
-            <span className="text-base">👤</span>
-            <span className="text-sm text-neutral-800 font-medium">{prefillName}</span>
+            <span>👤</span><span className="text-sm font-medium text-neutral-800">{prefillName}</span>
           </div>
         ) : (
-          <input
-            value={guestName}
-            onChange={e => setGuestName(e.target.value)}
+          <input value={guestName} onChange={e=>setGuestName(e.target.value)}
             placeholder={T.namePlaceholder}
-            className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
-          />
+            className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"/>
         )}
 
+        {/* House / Boat tabs */}
+        <div className="flex gap-2">
+          {["house","boat"].map(tab => (
+            <button key={tab} type="button"
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition ${activeTab===tab?"bg-neutral-950 text-white":"bg-white border border-neutral-200 text-neutral-600 hover:border-neutral-400"}`}
+            >
+              {tab==="house" ? T.houseTab : T.boatTab}
+              {tab==="house" && houseCOP>0 && <span className="ml-2 text-xs opacity-70">COP {fmtCOP(houseCOP)}</span>}
+              {tab==="boat"  && boatCOP >0 && <span className="ml-2 text-xs opacity-70">COP {fmtCOP(boatCOP)}</span>}
+            </button>
+          ))}
+        </div>
+
+        {/* Drink categories */}
         {items.map((cat, ci) => (
           <div key={cat.id} className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
             <div className="px-4 py-3 bg-neutral-50 border-b">
@@ -2933,33 +2959,23 @@ function DrinksCatalog() {
             </div>
             <div className="divide-y divide-neutral-100">
               {cat.items.map((it, ii) => (
-                <div key={it.name || ii} className="flex items-center gap-3 px-4 py-2.5">
-                  {/* product image — always shows a 40×40 slot; falls back to gray box on error */}
+                <div key={it.name||ii} className="flex items-center gap-3 px-4 py-2.5">
                   <div className="w-10 h-10 rounded-lg bg-neutral-100 flex-shrink-0 overflow-hidden">
-                    {it.img && (
-                      <img
-                        src={it.img}
-                        alt={itemName(it)}
-                        className="w-full h-full object-contain"
-                        onError={e => { e.target.style.display = "none"; }}
-                      />
-                    )}
+                    {it.img && <img src={it.img} alt={itemName(it)} className="w-full h-full object-contain" onError={e=>{e.target.style.display="none";}}/>}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-neutral-800 leading-snug">{itemName(it)}</p>
                     {it.priceCOP > 0 && (
                       <p className="text-xs text-neutral-400 mt-0.5">
-                        COP {fmtCOP(it.priceCOP)} · <span className="text-neutral-400">${fmtUSD(it.priceUSD)}</span>
+                        COP {fmtCOP(it.priceCOP)} <span className="text-neutral-300">·</span> ≈ USD {(it.priceCOP/fxRate).toFixed(2)}
                       </p>
                     )}
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button type="button"
-                      onClick={() => patchItem(ci, ii, { qty: String(Math.max(0, Number(it.qty||0)-1)||"") })}
+                    <button type="button" onClick={()=>patchItem(ci,ii,{qty:String(Math.max(0,Number(it.qty||0)-1)||"")})}
                       className="w-7 h-7 rounded-full border border-neutral-300 text-neutral-600 flex items-center justify-center text-sm hover:bg-neutral-100">−</button>
-                    <span className="w-8 text-center text-sm font-medium text-neutral-900">{it.qty || 0}</span>
-                    <button type="button"
-                      onClick={() => patchItem(ci, ii, { qty: String(Number(it.qty||0)+1) })}
+                    <span className="w-8 text-center text-sm font-medium text-neutral-900">{it.qty||0}</span>
+                    <button type="button" onClick={()=>patchItem(ci,ii,{qty:String(Number(it.qty||0)+1)})}
                       className="w-7 h-7 rounded-full border border-neutral-300 text-neutral-600 flex items-center justify-center text-sm hover:bg-neutral-100">+</button>
                   </div>
                 </div>
@@ -2970,34 +2986,24 @@ function DrinksCatalog() {
 
         {/* Running total */}
         {hasSelection && (
-          <div className="bg-neutral-900 text-white rounded-2xl px-5 py-4 flex justify-between items-center">
-            <div>
-              <p className="text-xs text-neutral-400 uppercase tracking-wider mb-0.5">{T.totalLabel}</p>
-              <p className="text-lg font-semibold">COP {fmtCOP(totalCOP)}</p>
-              <p className="text-xs text-neutral-400">≈ USD {fmtUSD(totalUSD)}</p>
-            </div>
-            <div className="text-3xl">🧾</div>
+          <div className="bg-neutral-900 text-white rounded-2xl px-5 py-4 space-y-2">
+            <p className="text-xs text-neutral-400 uppercase tracking-wider mb-1">{T.totalLabel}</p>
+            {houseCOP > 0 && <div className="flex justify-between text-sm"><span className="text-neutral-400">{T.houseLabel}</span><span>COP {fmtCOP(houseCOP)} <span className="text-neutral-500 text-xs">≈ USD {fmtUSD(houseUSD)}</span></span></div>}
+            {boatCOP  > 0 && <div className="flex justify-between text-sm"><span className="text-neutral-400">{T.boatLabel}</span><span>COP {fmtCOP(boatCOP)} <span className="text-neutral-500 text-xs">≈ USD {fmtUSD(boatUSD)}</span></span></div>}
+            {houseCOP > 0 && boatCOP > 0 && <div className="flex justify-between font-semibold pt-1 border-t border-white/10"><span>Total</span><span>COP {fmtCOP(totalCOP)} <span className="text-neutral-400 text-xs">≈ USD {fmtUSD(totalUSD)}</span></span></div>}
           </div>
         )}
 
         {/* Notes */}
-        <textarea
-          value={extra}
-          onChange={e => setExtra(e.target.value)}
-          placeholder={T.notePlaceholder}
-          rows={3}
-          className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10 resize-none"
-        />
+        <textarea value={extra} onChange={e=>setExtra(e.target.value)}
+          placeholder={T.notePlaceholder} rows={3}
+          className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10 resize-none"/>
       </div>
 
-      {/* Fixed footer button */}
+      {/* Fixed footer */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-3 flex justify-center">
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={sending || !hasSelection}
-          className="w-full max-w-xl py-3 rounded-xl bg-neutral-950 text-white font-semibold text-sm disabled:opacity-40 hover:bg-neutral-800"
-        >
+        <button type="button" onClick={handleSend} disabled={sending||!hasSelection}
+          className="w-full max-w-xl py-3 rounded-xl bg-neutral-950 text-white font-semibold text-sm disabled:opacity-40 hover:bg-neutral-800">
           {sending ? T.sending : T.sendBtn}
         </button>
       </div>

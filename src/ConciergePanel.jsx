@@ -2915,7 +2915,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             {/* City 2 dates — only shown when trip has 2 cities */}
             {city.includes(",") && (
               <div className="border rounded-xl p-3 bg-blue-50 border-blue-100 space-y-2">
-                <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas ciudad 2 — {city.split(",")[1]?.trim()}</p>
+                <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas ciudad 2 — {cityFullName(city.split(",")[1]?.trim())}</p>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[10px] text-neutral-500 mb-1">Llegada ciudad 2</label>
@@ -3110,14 +3110,14 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             <p className="text-xs font-semibold text-neutral-700">Portada del itinerario (PDF)</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[11px] text-neutral-500">{city.includes(",") ? `Fechas ${city.split(",")[0]?.trim()}` : "Fechas del viaje"}</label>
+                <label className="text-[11px] text-neutral-500">{city.includes(",") ? `Fechas ${cityFullName(city.split(",")[0]?.trim())}` : "Fechas del viaje"}</label>
                 <input value={tripDates} onChange={(e) => setTripDates(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="May 22-28, 2026" />
               </div>
               {city.includes(",") && (
                 <div>
-                  <label className="text-[11px] text-neutral-500">Fechas {city.split(",")[1]?.trim()}</label>
+                  <label className="text-[11px] text-neutral-500">Fechas {cityFullName(city.split(",")[1]?.trim())}</label>
                   <input value={tripDates2} onChange={(e) => setTripDates2(e.target.value)}
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                     placeholder="Jun 1-5, 2026" />
@@ -3126,8 +3126,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               <div>
                 <label className="text-[11px] text-neutral-500">Ciudad / Destino</label>
                 <input value={city} onChange={(e) => setCity(e.target.value)}
+                  onBlur={() => setCity(prev => cityFullName(prev) || prev)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="Medellín" />
+                  placeholder="Cartagena" />
               </div>
               <div>
                 <label className="text-[11px] text-neutral-500">Personas en el grupo</label>
@@ -3136,7 +3137,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   placeholder="5 people" />
               </div>
               <div className="col-span-2">
-                <label className="text-[11px] text-neutral-500">Nombre del alojamiento {city.includes(",") ? `— ${city.split(",")[0]?.trim()}` : ""}</label>
+                <label className="text-[11px] text-neutral-500">Nombre del alojamiento {city.includes(",") ? `— ${cityFullName(city.split(",")[0]?.trim())}` : ""}</label>
                 <input value={accommodationName}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -3153,17 +3154,24 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="Edificio Los Eucaliptos" />
                 <datalist id="prop-list-1">
-                  {(propertyList || []).map(p => <option key={p.id} value={p.Name}>{p.Name} — {p.City}</option>)}
+                  {(propertyList || []).filter(p => {
+                    if (!city) return true;
+                    const c1 = city.split(",")[0]?.trim()?.toUpperCase();
+                    const pCity = String(p.City || p.city || "").trim().toUpperCase();
+                    const code1 = { CARTAGENA:"CTG", MEDELLÍN:"MDE", MEDELLIN:"MDE", "CIUDAD DE MÉXICO":"CDMX", TULUM:"TUL", BOGOTÁ:"BOG" }[c1] || c1;
+                    const pCode = { CARTAGENA:"CTG", MEDELLÍN:"MDE", MEDELLIN:"MDE", "CIUDAD DE MÉXICO":"CDMX", TULUM:"TUL", BOGOTÁ:"BOG" }[pCity] || pCity;
+                    return !c1 || pCode === code1 || pCity.includes(c1) || c1.includes(pCity);
+                  }).map(p => <option key={p.id} value={p.Name}>{p.Name} — {p.City}</option>)}
                 </datalist>
               </div>
               <div className="col-span-2">
-                <label className="text-[11px] text-neutral-500">Dirección del alojamiento {city.includes(",") ? `— ${city.split(",")[0]?.trim()}` : ""}</label>
+                <label className="text-[11px] text-neutral-500">Dirección del alojamiento {city.includes(",") ? `— ${cityFullName(city.split(",")[0]?.trim())}` : ""}</label>
                 <input value={accommodationAddr} onChange={(e) => setAccommodationAddr(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="Calle 10 # 29-34, Medellín, Antioquia" />
               </div>
               <div className="col-span-2">
-                <label className="text-[11px] text-neutral-500">Google Maps del alojamiento {city.includes(",") ? `— ${city.split(",")[0]?.trim()}` : ""}</label>
+                <label className="text-[11px] text-neutral-500">Google Maps del alojamiento {city.includes(",") ? `— ${cityFullName(city.split(",")[0]?.trim())}` : ""}</label>
                 <input value={accommodationUrl} onChange={(e) => setAccommodationUrl(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="https://maps.app.goo.gl/..." />
@@ -3171,7 +3179,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               {/* City 2 accommodation — only shown when 2 cities */}
               {city.includes(",") && (<>
                 <div className="col-span-2 border-t border-blue-100 pt-2">
-                  <p className="text-[11px] font-semibold text-blue-700 mb-2">🏠 Alojamiento {city.split(",")[1]?.trim()}</p>
+                  <p className="text-[11px] font-semibold text-blue-700 mb-2">🏠 Alojamiento {cityFullName(city.split(",")[1]?.trim())}</p>
                 </div>
                 <div className="col-span-2">
                   <label className="text-[11px] text-neutral-500">Nombre del alojamiento 2</label>
@@ -3191,7 +3199,14 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                     placeholder="Casa Medellín" />
                   <datalist id="prop-list-2">
-                    {(propertyList || []).map(p => <option key={p.id} value={p.Name}>{p.Name} — {p.City}</option>)}
+                    {(propertyList || []).filter(p => {
+                      const c2 = city.split(",")[1]?.trim()?.toUpperCase();
+                      if (!c2) return true;
+                      const pCity = String(p.City || p.city || "").trim().toUpperCase();
+                      const code2 = { CARTAGENA:"CTG", MEDELLÍN:"MDE", MEDELLIN:"MDE", "CIUDAD DE MÉXICO":"CDMX", TULUM:"TUL", BOGOTÁ:"BOG" }[c2] || c2;
+                      const pCode = { CARTAGENA:"CTG", MEDELLÍN:"MDE", MEDELLIN:"MDE", "CIUDAD DE MÉXICO":"CDMX", TULUM:"TUL", BOGOTÁ:"BOG" }[pCity] || pCity;
+                      return pCode === code2 || pCity.includes(c2) || c2.includes(pCity);
+                    }).map(p => <option key={p.id} value={p.Name}>{p.Name} — {p.City}</option>)}
                   </datalist>
                 </div>
                 <div className="col-span-2">
@@ -3468,11 +3483,15 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       ...kickoff,
                       ...(canvasCartRef.current    != null ? { cart:    canvasCartRef.current    } : {}),
                       ...(canvasDayMetaRef.current != null ? { dayMeta: canvasDayMetaRef.current } : {}),
-                      city, tripDates, groupSize,
+                      city: cityFullName(city) || city,
+                      tripDates, tripDates2, groupSize,
                       arrivalDate, departureDate,
+                      arrivalDate2, departureDate2,
                       accommodationName, accommodationAddr, accommodationUrl,
+                      accommodationName2, accommodationAddr2, accommodationUrl2,
                       checkIn, checkOut,
                       conciergeTitle,
+                      tripName: tripName || kickoff.tripName || "",
                       email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
                     };
                     const url = await sendItineraryPdfToSlack(liveKickoff, kickoff.lang || "en", billingCurrency, "preview", liveFxRate);
@@ -3503,9 +3522,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       cart:    canvasCartRef.current    != null ? canvasCartRef.current    : kickoff.cart,
                       dayMeta: canvasDayMetaRef.current != null ? canvasDayMetaRef.current : kickoff.dayMeta,
                       email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
-                      city: city || kickoff.city || "",
-                      tripDates, groupSize, arrivalDate, departureDate,
+                      city: cityFullName(city) || city || kickoff.city || "",
+                      tripDates, tripDates2, groupSize, arrivalDate, departureDate,
+                      arrivalDate2, departureDate2,
                       accommodationName, accommodationAddr, accommodationUrl,
+                      accommodationName2, accommodationAddr2, accommodationUrl2,
+                      tripName: tripName || kickoff.tripName || "",
                       checkIn, checkOut, conciergeTitle,
                     }, kickoff.lang || "en", billingCurrency, "slack", liveFxRate);
                     alert("✅ PDF enviado a Slack");

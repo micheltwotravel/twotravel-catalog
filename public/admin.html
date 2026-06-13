@@ -483,6 +483,7 @@ function showForm(p){
         <div class="fl"><label>Alternative Airbnb Links</label><input id="fairbnb2" value="${esc(p?.["alternative airbnb links"]||"")}" placeholder="https://airbnb.com/rooms/…"></div>
         <div class="fl"><label>Photos / Drive Link</label><input id="fphotos" value="${esc(p?.["photos link"]||p?.photosLink||"")}" placeholder="https://drive.google.com/…"></div>
         <div class="fl"><label>Alternative Photos Links</label><input id="fphotos2" value="${esc(p?.["alternative photos links"]||"")}" placeholder="https://drive.google.com/…"></div>
+        <div class="fl full"><label>🖼️ Cover Photo URL (foto de portada en el itinerario)</label><input id="fcoverphoto" value="${esc(p?.["cover photo"]||p?.coverPhoto||"")}" placeholder="https://images.…/villa-portada.jpg"></div>
         <div class="fl half"><label>Two Travel Webpage</label><input id="fweb" value="${esc(p?.["twp travel webpage"]||p?.webpage||"")}" placeholder="https://two.travel/…"></div>
         <div class="fl"><label>Website Link</label><input id="fwebsite" value="${esc(p?.["website link"]||p?.websiteLink||"")}" placeholder="https://villaname.com"></div>
         <div class="fl"><label>PDF Link</label><input id="fpdf" value="${esc(p?.["pdf link"]||p?.pdfLink||"")}" placeholder="https://drive.google.com/file/…"></div>
@@ -619,6 +620,7 @@ async function saveProperty(id){
     "alternative airbnb links":   document.getElementById("fairbnb2")?.value?.trim()||"",
     "photos link":                document.getElementById("fphotos")?.value?.trim()||"",
     "alternative photos links":   document.getElementById("fphotos2")?.value?.trim()||"",
+    "cover photo":                document.getElementById("fcoverphoto")?.value?.trim()||"",
     "twp travel webpage":         document.getElementById("fweb")?.value?.trim()||"",
     "website link":               document.getElementById("fwebsite")?.value?.trim()||"",
     "pdf link":                   document.getElementById("fpdf")?.value?.trim()||"",
