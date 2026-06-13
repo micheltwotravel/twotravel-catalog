@@ -1039,7 +1039,7 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
 ═══════════════════════════════════════════════════════════════ */
 function DaySection({ label, meta, items, loadingServices, availableDays,
   onUpdateMeta, onRenameLabel, onRemoveDay,
-  onUpdateItem, onRemoveItem, onAddManual, onAddPreset, onAddFromCatalog, groupSize = 1 }) {
+  onUpdateItem, onRemoveItem, onAddManual, onAddPreset, onAddFromCatalog, groupSize = 1, lang = "en" }) {
 
   const [editingLabel, setEditingLabel] = useState(false);
   const [localLabel,   setLocalLabel]   = useState(label);
@@ -1396,6 +1396,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
           loadingServices={loadingServices}
           availableDays={days.map(d => d.label)}
           groupSize={parseInt(kickoff?.groupSize || "1", 10) || 1}
+          lang={kickoff?.lang || "en"}
           onUpdateMeta={patch => upsertDayMeta(label, patch)}
           onRenameLabel={newLabel => renameDayLabel(label, newLabel)}
           onRemoveDay={() => removeDay(label)}
