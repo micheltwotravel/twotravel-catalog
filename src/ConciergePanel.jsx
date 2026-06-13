@@ -4774,6 +4774,12 @@ const loadKickoffs = async () => {
 
 <td className="px-4 py-2">
   <StatusBadge status={k.status} lang={portalLang} />
+  {k.drinkOrder && (
+    <span title={`Bebidas recibidas${k.drinkOrderAt ? ": " + new Date(k.drinkOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""}`}
+      className="ml-1 text-[11px] bg-teal-50 text-teal-700 border border-teal-200 rounded-full px-1.5 py-0.5 cursor-default">
+      🍹
+    </span>
+  )}
   {(() => {
     // cityRatings takes priority; fall back to single conciergeRating
     let ratings = [];
