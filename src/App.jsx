@@ -2744,7 +2744,7 @@ const DRINK_CATEGORIES = [
 function DrinksCatalog() {
   const params         = new URLSearchParams(window.location.search);
   const kickoffId      = params.get("kickoffId")    || "";
-  const lang           = params.get("lang") === "es" ? "es" : "en"; // default: English
+  const [lang, setLang]= React.useState(params.get("lang") === "es" ? "es" : "en"); // default: English
   const prefillName    = params.get("guestName")    || "";
   const prefillArrival = params.get("arrivalDate")  || "";
   const prefillDepart  = params.get("departureDate")|| "";
@@ -2920,8 +2920,19 @@ function DrinksCatalog() {
     <div className="min-h-screen bg-neutral-50 pb-28">
       {/* Header */}
       <div className="bg-neutral-950 text-white px-6 pt-6 pb-5">
-        <p className="text-xs text-neutral-400 uppercase tracking-widest mb-1">{T.brand}</p>
-        <h1 className="text-xl font-semibold mb-3">{T.heading}</h1>
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <p className="text-xs text-neutral-400 uppercase tracking-widest mb-1">{T.brand}</p>
+            <h1 className="text-xl font-semibold">{T.heading}</h1>
+          </div>
+          {/* Language toggle */}
+          <button
+            onClick={() => setLang(l => l === "en" ? "es" : "en")}
+            className="flex-shrink-0 mt-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition"
+          >
+            {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
+          </button>
+        </div>
         {/* Instructions */}
         <div className="bg-white/10 rounded-xl px-4 py-3 space-y-1.5 text-sm text-neutral-300">
           <p>{T.instr1}</p>
@@ -3244,7 +3255,7 @@ function GroceryCatalog() {
   const GAS_URL    = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
   const params     = new URLSearchParams(window.location.search);
   const kickoffId  = params.get("kickoffId") || "";
-  const lang       = params.get("lang") === "es" ? "es" : "en";
+  const [lang, setLang] = React.useState(params.get("lang") === "es" ? "es" : "en");
   const prefillName= params.get("guestName") || "";
 
   const mkChecks = () => {
@@ -3340,8 +3351,19 @@ function GroceryCatalog() {
     <div className="min-h-screen bg-neutral-50 pb-28">
       {/* Header */}
       <div className="bg-neutral-950 text-white px-6 pt-6 pb-5">
-        <p className="text-xs text-neutral-400 uppercase tracking-widest mb-1">Two Travel</p>
-        <h1 className="text-xl font-semibold mb-2">{lang==="en" ? "🛒 Grocery List" : "🛒 Lista de Mercado"}</h1>
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <p className="text-xs text-neutral-400 uppercase tracking-widest mb-1">Two Travel</p>
+            <h1 className="text-xl font-semibold">{lang==="en" ? "🛒 Grocery List" : "🛒 Lista de Mercado"}</h1>
+          </div>
+          {/* Language toggle */}
+          <button
+            onClick={() => setLang(l => l === "en" ? "es" : "en")}
+            className="flex-shrink-0 mt-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition"
+          >
+            {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
+          </button>
+        </div>
         <p className="text-sm text-neutral-400">{lang==="en" ? "Check the items you'd like us to have ready at the villa." : "Marca los productos que quieres que tengamos listos en la villa."}</p>
       </div>
 
