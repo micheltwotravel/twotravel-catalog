@@ -3500,8 +3500,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     // Merge live EditDrawer + canvas state so cart/dayMeta/city are always current
                     await sendItineraryPdfToSlack({
                       ...kickoff,
-                      cart:    canvasCartRef.current    != null ? canvasCartRef.current    : cart,
-                      dayMeta: canvasDayMetaRef.current != null ? canvasDayMetaRef.current : dayMeta,
+                      cart:    canvasCartRef.current    != null ? canvasCartRef.current    : kickoff.cart,
+                      dayMeta: canvasDayMetaRef.current != null ? canvasDayMetaRef.current : kickoff.dayMeta,
                       email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
                       city: city || kickoff.city || "",
                       tripDates, groupSize, arrivalDate, departureDate,
