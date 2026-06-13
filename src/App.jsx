@@ -2723,20 +2723,20 @@ const DRINK_CATEGORIES = [
     { name:"Vino rosado (botella)",name_en:"Rosé wine (bottle)",   img:"https://images.rappi.com/products/800ac89d-5ce8-46a0-84ff-b8ff127a7af7.jpg",                                                                   priceCOP:      0, qty:"", note:"" },
   ]},
   { id:"mixers",     label:"🥤 Mezcladores", label_en:"🥤 Mixers",        items:[
-    { name:"Coca-Cola",            name_en:"Coca-Cola",            img:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/CocaColaBottle.svg/200px-CocaColaBottle.svg.png",                                    priceCOP:  3800, qty:"", note:"" },
-    { name:"Agua tónica",          name_en:"Tonic water",          img:"https://upload.wikimedia.org/wikipedia/commons/b/b3/Schweppes_Indian_Tonic_Water_%28front%29.jpg",                                             priceCOP:  3000, qty:"", note:"" },
-    { name:"Ginger ale",           name_en:"Ginger ale",           img:"https://upload.wikimedia.org/wikipedia/commons/6/64/Canada_Dry_ginger_ale_can.jpg",                                                            priceCOP:  4000, qty:"", note:"" },
-    { name:"Jugo de naranja",      name_en:"Orange juice",         img:"https://upload.wikimedia.org/wikipedia/commons/0/04/Cappy_Orange.jpg",                                                                         priceCOP: 20000, qty:"", note:"" },
-    { name:"Agua con gas",         name_en:"Sparkling water",      img:"",                                                                                                                                              priceCOP: 36000, qty:"", note:"" },
-    { name:"Agua sin gas",         name_en:"Still water",          img:"",                                                                                                                                              priceCOP: 25600, qty:"", note:"" },
-    { name:"Red Bull",             name_en:"Red Bull",             img:"https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Red_bull_energy_drink.jpg/200px-Red_bull_energy_drink.jpg",                          priceCOP:  9400, qty:"", note:"" },
+    { name:"Coca-Cola",            name_en:"Coca-Cola",            img:"", emoji:"🥤", priceCOP:  3800, qty:"", note:"" },
+    { name:"Agua tónica",          name_en:"Tonic water",          img:"https://images.rappi.com/products/schweppes-tonica-250ml.jpg", emoji:"🫧", priceCOP:  3000, qty:"", note:"" },
+    { name:"Ginger ale",           name_en:"Ginger ale",           img:"https://images.rappi.com/products/canada-dry-250ml.jpg", emoji:"🥤", priceCOP:  4000, qty:"", note:"" },
+    { name:"Jugo de naranja",      name_en:"Orange juice",         img:"https://images.rappi.com/products/0/04/Cappy_Orange.jpg", emoji:"🍊", priceCOP: 20000, qty:"", note:"" },
+    { name:"Agua con gas",         name_en:"Sparkling water",      img:"", emoji:"💧", priceCOP: 36000, qty:"", note:"" },
+    { name:"Agua sin gas",         name_en:"Still water",          img:"", emoji:"💧", priceCOP: 25600, qty:"", note:"" },
+    { name:"Red Bull",             name_en:"Red Bull",             img:"https://images.rappi.com/products/redbull-250.jpg", emoji:"⚡", priceCOP:  9400, qty:"", note:"" },
   ]},
   { id:"snacks",     label:"🍿 Snacks",      label_en:"🍿 Snacks",        items:[
-    { name:"Papas / Chips",        name_en:"Chips",                img:"", priceCOP:0, qty:"", note:"" },
-    { name:"Maní",                 name_en:"Peanuts",              img:"", priceCOP:0, qty:"", note:"" },
-    { name:"Tabla de quesos",      name_en:"Cheese board",         img:"", priceCOP:0, qty:"", note:"" },
-    { name:"Fruta picada",         name_en:"Fresh fruit",          img:"", priceCOP:0, qty:"", note:"" },
-    { name:"Crudités",             name_en:"Crudités",             img:"", priceCOP:0, qty:"", note:"" },
+    { name:"Papas / Chips",        name_en:"Chips",                img:"", emoji:"🍿", priceCOP:0, qty:"", note:"" },
+    { name:"Maní",                 name_en:"Peanuts",              img:"", emoji:"🥜", priceCOP:0, qty:"", note:"" },
+    { name:"Tabla de quesos",      name_en:"Cheese board",         img:"", emoji:"🧀", priceCOP:0, qty:"", note:"" },
+    { name:"Fruta picada",         name_en:"Fresh fruit",          img:"", emoji:"🍓", priceCOP:0, qty:"", note:"" },
+    { name:"Crudités",             name_en:"Crudités",             img:"", emoji:"🥕", priceCOP:0, qty:"", note:"" },
   ]},
 ];
 
@@ -2960,8 +2960,12 @@ function DrinksCatalog() {
             <div className="divide-y divide-neutral-100">
               {cat.items.map((it, ii) => (
                 <div key={it.name||ii} className="flex items-center gap-3 px-4 py-2.5">
-                  <div className="w-10 h-10 rounded-lg bg-neutral-100 flex-shrink-0 overflow-hidden">
-                    {it.img && <img src={it.img} alt={itemName(it)} className="w-full h-full object-contain" onError={e=>{e.target.style.display="none";}}/>}
+                  <div className="w-10 h-10 rounded-lg bg-neutral-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                    {it.img ? (
+                      <img src={it.img} alt={itemName(it)} className="w-full h-full object-contain"
+                        onError={e=>{e.target.style.display="none"; e.target.nextSibling && (e.target.nextSibling.style.display="flex");}}/>
+                    ) : null}
+                    <span style={{display: it.img ? "none" : "flex"}} className="text-xl">{it.emoji || "🍾"}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-neutral-800 leading-snug">{itemName(it)}</p>
