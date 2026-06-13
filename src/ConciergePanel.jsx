@@ -3475,6 +3475,21 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           >
             🍹 Bebidas
           </a>
+          {/* Groceries catalog link */}
+          <a
+            href={(() => {
+              const u = new URL("/?mode=groceries", window.location.origin);
+              u.searchParams.set("kickoffId", kickoff.id);
+              if (kickoff.guestName)    u.searchParams.set("guestName",    kickoff.guestName);
+              if (kickoff.guestContact) u.searchParams.set("guestContact", kickoff.guestContact);
+              return u.toString();
+            })()}
+            target="_blank" rel="noreferrer"
+            className="px-3 py-2 rounded-lg border border-orange-300 text-sm text-orange-700 bg-orange-50 hover:bg-orange-100 flex items-center gap-1.5"
+            title="Abrir lista de mercado del cliente"
+          >
+            🛒 Mercado
+          </a>
           {/* Billing — send to Slack */}
           {kickoff?.cart?.length > 0 && (
             <div className="flex items-center gap-1">
