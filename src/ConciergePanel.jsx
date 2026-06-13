@@ -76,6 +76,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   const cleanTag = (v) => cl(v).replace(/[\[\]]/g, "");
   const fmtAmt = (n) => currency === "COP"
     ? `$${Number(n).toLocaleString("es-CO", { maximumFractionDigits:0 })} COP`
+    : currency === "MXN"
+    ? `$${Number(n).toLocaleString("es-MX", { maximumFractionDigits:0 })} MXN`
     : `$${Number(n).toLocaleString("en-US", { maximumFractionDigits:0 })} USD`;
 
   // ── parse cart + dayMeta ────────────────────────────────────
@@ -415,6 +417,16 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     const pax2  = PAX_MULTIPLIES.has(c2) ? Math.max(1, Number(it.pax || 1)) : 1;
     const unit2 = currency === "COP"
       ? Number(it.priceOverride_cop ?? it.price_cop ?? 0)
+      : currency === "MXN"
+      ? (() => {
+          // MXN: use price_mxn if available, otherwise convert from USD (approx 17 MXN/USD)
+          const mxn = Number(it.price_mxn ?? 0);
+          if (mxn > 0) return mxn;
+          const usd = Number(it.priceUsd ?? 0);
+          if (usd > 0) return Math.round(usd * (fxRate > 0 ? fxRate / 200 : 17));
+          const cop = Number(it.priceOverride_cop ?? it.price_cop ?? 0);
+          return cop > 0 ? Math.round(cop / fxRate * 17) : 0;
+        })()
       : (() => {
           const manual = Number(it.priceUsd ?? 0);
           if (manual > 0) return manual;
@@ -3440,7 +3452,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => setBillingCurrency(c => c === "USD" ? "COP" : "USD")}
+                onClick={() => setBillingCurrency(c => c === "USD" ? "COP" : c === "COP" ? "MXN" : "USD")}
                 className="px-2 py-2 rounded-l-lg border border-r-0 border-indigo-300 text-[11px] font-mono text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
                 title="Cambiar moneda"
               >
@@ -3454,7 +3466,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   try {
                     const liveKickoff = {
                       ...kickoff,
-                      cart, dayMeta,
+                      ...(canvasCartRef.current    != null ? { cart:    canvasCartRef.current    } : {}),
+                      ...(canvasDayMetaRef.current != null ? { dayMeta: canvasDayMetaRef.current } : {}),
                       city, tripDates, groupSize,
                       arrivalDate, departureDate,
                       accommodationName, accommodationAddr, accommodationUrl,
