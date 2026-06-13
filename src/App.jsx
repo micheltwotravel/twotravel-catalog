@@ -2780,23 +2780,51 @@ function DrinksCatalog() {
   const itemName = (it) => (lang === "en" && it.name_en) ? it.name_en : it.name;
   const catLabel = (cat) => (lang === "en" && cat.label_en) ? cat.label_en : cat.label;
 
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
   const mkItems = () => DRINK_CATEGORIES.map(cat => ({ ...cat, items: cat.items.map(it => ({ ...it })) }));
   const [houseItems, setHouseItems] = React.useState(mkItems);
   const [boatItems,  setBoatItems]  = React.useState(mkItems);
-  const [activeTab, setActiveTab]   = React.useState("house"); // "house" | "boat"
-  const [extra,     setExtra]       = React.useState("");
-  const [sent,      setSent]        = React.useState(false);
-  const [sending,   setSending]     = React.useState(false);
-  const [guestName, setGuestName]   = React.useState(prefillName);
-  const [fxRate,    setFxRate]      = React.useState(4000); // COP per 1 USD — updated live
+  const [activeTab,  setActiveTab]  = React.useState("house");
+  const [extra,      setExtra]      = React.useState("");
+  const [sent,       setSent]       = React.useState(false);
+  const [sending,    setSending]    = React.useState(false);
+  const [guestName,  setGuestName]  = React.useState(prefillName);
+  const [fxRate,     setFxRate]     = React.useState(4000);
+  const [prevOrderAt,setPrevOrderAt]= React.useState(""); // ISO date of last submission
+  const [loading,    setLoading]    = React.useState(!!kickoffId);
 
-  // Fetch live exchange rate (COP → USD)
+  // Fetch live exchange rate + existing order
   React.useEffect(() => {
     fetch("https://open.er-api.com/v6/latest/USD")
       .then(r => r.json())
       .then(d => { if (d?.rates?.COP) setFxRate(Math.round(d.rates.COP)); })
-      .catch(() => {}); // keep default if offline
+      .catch(() => {});
   }, []);
+
+  React.useEffect(() => {
+    if (!kickoffId) { setLoading(false); return; }
+    fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "getKickoffById", id: kickoffId }),
+    })
+      .then(r => r.json())
+      .then(res => {
+        const k = res.data;
+        if (!k) return;
+        if (k.drinkOrderJson) {
+          try {
+            const saved = JSON.parse(k.drinkOrderJson);
+            if (saved.house) setHouseItems(saved.house);
+            if (saved.boat)  setBoatItems(saved.boat);
+            if (saved.extra) setExtra(saved.extra);
+          } catch {}
+        }
+        if (k.drinkOrderAt) setPrevOrderAt(k.drinkOrderAt);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [kickoffId]);
 
   const items    = activeTab === "house" ? houseItems : boatItems;
   const setItems = activeTab === "house" ? setHouseItems : setBoatItems;
@@ -2841,38 +2869,48 @@ function DrinksCatalog() {
     return `*${label}*\n${lines.join("\n")}`;
   };
 
+  const isUpdate = !!prevOrderAt;
+
   const handleSend = async () => {
     if (!hasSelection) return;
     setSending(true);
-    const houseText = buildSummaryText(houseItems, lang === "en" ? "🏠 House" : "🏠 Casa");
-    const boatText  = buildSummaryText(boatItems,  lang === "en" ? "⛵ Boat"  : "⛵ Bote");
+    const houseText = buildSummaryText(houseItems, "🏠 House");
+    const boatText  = buildSummaryText(boatItems,  "⛵ Boat");
     const parts = [houseText, boatText].filter(Boolean);
     if (extra) parts.push(`📝 ${extra}`);
     if (totalCOP > 0) parts.push(`\n💰 *Total: COP ${fmtCOP(totalCOP)} (~USD ${fmtUSD(totalUSD)})*`);
-    const slackText = `🍹 *Drink Order* ${guestName ? `(${guestName})` : ""} · kickoff: ${kickoffId}\n\n${parts.join("\n\n")}`;
+    const action = isUpdate ? "✏️ *UPDATED*" : "🆕 *NEW*";
+    const slackText = `🍹 ${action} Drink Order ${guestName ? `(${guestName})` : ""} · kickoff: ${kickoffId}\n\n${parts.join("\n\n")}`;
     const drinkOrder = slackText.replace(/\*/g, "");
-
+    const drinkOrderJson = JSON.stringify({ house: houseItems, boat: boatItems, extra });
+    const now = new Date().toISOString();
     try {
-      // 1) Send to Slack — drinks channel
-      await fetch("https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec", {
+      await fetch(GAS_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action: "sendSlackMessage", payload: { text: slackText, channelId: "C094NE421NV", slackToken: import.meta.env.VITE_SLACK_BOT_TOKEN || "" } }),
       });
-      // 2) Save to kickoff so concierge sees 🍹 badge
       if (kickoffId) {
-        updateKickoffInSheet(kickoffId, { drinkOrder, drinkOrderAt: new Date().toISOString() }).catch(() => {});
+        updateKickoffInSheet(kickoffId, { drinkOrder, drinkOrderAt: now, drinkOrderJson }).catch(() => {});
       }
+      setPrevOrderAt(now);
       setSent(true);
     } catch { setSent(true); }
     setSending(false);
   };
+
+  if (loading) return (
+    <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+      <p className="text-neutral-400 text-sm">Loading…</p>
+    </div>
+  );
 
   if (sent) return (
     <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center text-center px-6 gap-6">
       <div className="text-5xl">🥂</div>
       <h1 className="text-2xl font-semibold text-white">{T.successTitle}</h1>
       <p className="text-neutral-400 text-sm max-w-xs">{T.successBody}</p>
+      <p className="text-neutral-500 text-xs">You can come back anytime to make changes.</p>
       <button
         onClick={() => setSent(false)}
         className="mt-4 px-6 py-2.5 rounded-xl bg-white/10 text-white text-sm hover:bg-white/20"
@@ -2919,6 +2957,17 @@ function DrinksCatalog() {
               const n = Math.round((new Date(prefillDepart)-new Date(prefillArrival))/86400000);
               return n>0?<div className="text-center border-l pl-4"><p className="text-lg font-bold text-neutral-900">{n}</p><p className="text-[10px] text-neutral-400">{lang==="en"?"nights":"noches"}</p></div>:null;
             })()}
+          </div>
+        )}
+
+        {/* Previous order banner */}
+        {prevOrderAt && (
+          <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center gap-3">
+            <span className="text-lg">✅</span>
+            <div>
+              <p className="text-sm font-semibold text-green-800">{lang==="en" ? "You have a saved order" : "Tienes un pedido guardado"}</p>
+              <p className="text-xs text-green-600">{lang==="en" ? "Last updated" : "Última actualización"}: {new Date(prevOrderAt).toLocaleDateString(lang==="en"?"en-US":"es-CO",{month:"short",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"})}</p>
+            </div>
           </div>
         )}
 
@@ -3008,7 +3057,7 @@ function DrinksCatalog() {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-3 flex justify-center">
         <button type="button" onClick={handleSend} disabled={sending||!hasSelection}
           className="w-full max-w-xl py-3 rounded-xl bg-neutral-950 text-white font-semibold text-sm disabled:opacity-40 hover:bg-neutral-800">
-          {sending ? T.sending : T.sendBtn}
+          {sending ? T.sending : isUpdate ? (lang==="en" ? "✅ Update my order" : "✅ Actualizar pedido") : T.sendBtn}
         </button>
       </div>
     </div>
@@ -3153,6 +3202,213 @@ function WelcomeCatalogPage({ mode }) {
   );
 }
 
+/* ================================================================
+   GROCERY CATALOG
+   ?mode=groceries&kickoffId=...&lang=en|es
+================================================================ */
+const GROCERY_CATEGORIES = [
+  { id:"essentials",  label:"🧂 Essentials", items:[
+    "Large Butter","Oil","Salt","Black pepper","White Sugar","Brown Sugar",
+  ]},
+  { id:"dairy",       label:"🥛 Dairy", items:[
+    "Mozzarella cheese","Cheddar cheese","Greek Yogurt","Regular vanilla yogurt (no added fruits)",
+  ]},
+  { id:"bread",       label:"🍞 Flours & Breads", items:[
+    "Arepas","Sliced bread","Pancake mix",
+  ]},
+  { id:"condiments",  label:"🥫 Condiments & Others", items:[
+    "Small cereal","Granola box","Hot sauce","Syrup","Chocolate Chips","Ketchup","Honey",
+  ]},
+  { id:"grains",      label:"🍚 Grains & Eggs", items:[
+    "Eggs","Beans","Rice","Maggi (seasoning)","Chicharrón",
+  ]},
+  { id:"beverages",   label:"🥤 Beverages", items:[
+    "Orange Juice","Apple Juice","Cranberry Juice","Packs of water","Large liters of water",
+    "Liter Sodas (Coke Zero, Iced Coffee)","Lemonade","Ginger beer","Electrolit",
+    "Coconut Water","Aguardiente","Lime juice","Club soda",
+  ]},
+  { id:"snacks",      label:"🍿 Snacks", items:[
+    "Cheese empanadas","Potato chips","Chocoramo","Choclitos","Platanitos","Colombian Candy",
+  ]},
+  { id:"fruits",      label:"🍍 Fruits & Vegetables", items:[
+    "Pineapple","Strawberries","Bananas","Onion","Tomato","Plantain",
+    "Garlic","Avocado","Mango","Spinach","Lime",
+  ]},
+  { id:"cleaning",    label:"🧹 Cleaning & Misc", items:[
+    "Napkins","Kitchen paper towels","Dish Gloves","Dish Soap",
+    "Plastic cups (red party cups)","Plastic plates",
+  ]},
+];
+
+function GroceryCatalog() {
+  const GAS_URL    = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+  const params     = new URLSearchParams(window.location.search);
+  const kickoffId  = params.get("kickoffId") || "";
+  const lang       = params.get("lang") === "es" ? "es" : "en";
+  const prefillName= params.get("guestName") || "";
+
+  const mkChecks = () => {
+    const m = {};
+    GROCERY_CATEGORIES.forEach(cat => cat.items.forEach(item => { m[item] = false; }));
+    return m;
+  };
+  const [checked,   setChecked]   = React.useState(mkChecks);
+  const [others,    setOthers]    = React.useState("");
+  const [sent,      setSent]      = React.useState(false);
+  const [sending,   setSending]   = React.useState(false);
+  const [prevAt,    setPrevAt]    = React.useState("");
+  const [loading,   setLoading]   = React.useState(!!kickoffId);
+  const [guestName, setGuestName] = React.useState(prefillName);
+
+  // Load existing order
+  React.useEffect(() => {
+    if (!kickoffId) { setLoading(false); return; }
+    fetch(GAS_URL, {
+      method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify({ action:"getKickoffById", id:kickoffId }),
+    })
+      .then(r=>r.json())
+      .then(res => {
+        const k = res.data;
+        if (!k) return;
+        if (k.groceryOrderJson) {
+          try {
+            const saved = JSON.parse(k.groceryOrderJson);
+            if (saved.checked) setChecked(prev => ({...prev, ...saved.checked}));
+            if (saved.others)  setOthers(saved.others);
+          } catch {}
+        }
+        if (k.groceryOrderAt) setPrevAt(k.groceryOrderAt);
+      })
+      .catch(()=>{})
+      .finally(()=>setLoading(false));
+  }, [kickoffId]);
+
+  const toggle = (item) => setChecked(prev => ({...prev, [item]: !prev[item]}));
+  const hasSelection = Object.values(checked).some(Boolean) || !!others.trim();
+  const isUpdate = !!prevAt;
+
+  const handleSend = async () => {
+    if (!hasSelection) return;
+    setSending(true);
+    const lines = [];
+    GROCERY_CATEGORIES.forEach(cat => {
+      const sel = cat.items.filter(i => checked[i]);
+      if (!sel.length) return;
+      lines.push(`*${cat.label}*`);
+      sel.forEach(i => lines.push(`  ✓ ${i}`));
+    });
+    if (others.trim()) lines.push(`\n📝 Others: ${others}`);
+    const action = isUpdate ? "✏️ *UPDATED*" : "🆕 *NEW*";
+    const slackText = `🛒 ${action} Grocery List ${guestName ? `(${guestName})` : ""} · kickoff: ${kickoffId}\n\n${lines.join("\n")}`;
+    const groceryOrder = slackText.replace(/\*/g,"");
+    const groceryOrderJson = JSON.stringify({ checked, others });
+    const now = new Date().toISOString();
+    try {
+      await fetch(GAS_URL, {
+        method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body: JSON.stringify({ action:"sendSlackMessage", payload:{ text:slackText, channelId:"C094NE421NV", slackToken:import.meta.env.VITE_SLACK_BOT_TOKEN||"" }}),
+      });
+      if (kickoffId) {
+        updateKickoffInSheet(kickoffId, { groceryOrder, groceryOrderAt: now, groceryOrderJson }).catch(()=>{});
+      }
+      setPrevAt(now);
+      setSent(true);
+    } catch { setSent(true); }
+    setSending(false);
+  };
+
+  if (loading) return (
+    <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+      <p className="text-neutral-400 text-sm">Loading…</p>
+    </div>
+  );
+
+  if (sent) return (
+    <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center text-center px-6 gap-6">
+      <div className="text-5xl">🛒</div>
+      <h1 className="text-2xl font-semibold text-white">{lang==="en" ? "Got it!" : "¡Recibido!"}</h1>
+      <p className="text-neutral-400 text-sm max-w-xs">{lang==="en" ? "Your grocery list has been sent to your concierge." : "Tu lista de mercado fue enviada al concierge."}</p>
+      <p className="text-neutral-500 text-xs">{lang==="en" ? "You can come back anytime to make changes." : "Puedes volver cuando quieras para hacer cambios."}</p>
+      <button onClick={()=>setSent(false)} className="mt-4 px-6 py-2.5 rounded-xl bg-white/10 text-white text-sm hover:bg-white/20">
+        {lang==="en" ? "✏️ Edit list" : "✏️ Editar lista"}
+      </button>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-neutral-50 pb-28">
+      {/* Header */}
+      <div className="bg-neutral-950 text-white px-6 pt-6 pb-5">
+        <p className="text-xs text-neutral-400 uppercase tracking-widest mb-1">Two Travel</p>
+        <h1 className="text-xl font-semibold mb-2">{lang==="en" ? "🛒 Grocery List" : "🛒 Lista de Mercado"}</h1>
+        <p className="text-sm text-neutral-400">{lang==="en" ? "Check the items you'd like us to have ready at the villa." : "Marca los productos que quieres que tengamos listos en la villa."}</p>
+      </div>
+
+      <div className="max-w-xl mx-auto px-4 pt-4 space-y-4">
+
+        {/* Previous order banner */}
+        {prevAt && (
+          <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center gap-3">
+            <span className="text-lg">✅</span>
+            <div>
+              <p className="text-sm font-semibold text-green-800">{lang==="en" ? "You have a saved list" : "Tienes una lista guardada"}</p>
+              <p className="text-xs text-green-600">{lang==="en" ? "Last updated" : "Última actualización"}: {new Date(prevAt).toLocaleDateString(lang==="en"?"en-US":"es-CO",{month:"short",day:"numeric",year:"numeric"})}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Guest name */}
+        {prefillName ? (
+          <div className="bg-white border border-neutral-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
+            <span>👤</span><span className="text-sm font-medium text-neutral-800">{prefillName}</span>
+          </div>
+        ) : (
+          <input value={guestName} onChange={e=>setGuestName(e.target.value)}
+            placeholder={lang==="en" ? "Your name (optional)" : "Tu nombre (opcional)"}
+            className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"/>
+        )}
+
+        {/* Categories */}
+        {GROCERY_CATEGORIES.map(cat => (
+          <div key={cat.id} className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
+            <div className="px-4 py-3 bg-neutral-50 border-b">
+              <p className="text-sm font-semibold text-neutral-800">{cat.label}</p>
+            </div>
+            <div className="divide-y divide-neutral-100">
+              {cat.items.map(item => (
+                <label key={item} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-neutral-50 transition-colors">
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${checked[item] ? "bg-neutral-900 border-neutral-900" : "border-neutral-300"}`}>
+                    {checked[item] && <span className="text-white text-xs font-bold">✓</span>}
+                  </div>
+                  <input type="checkbox" className="sr-only" checked={!!checked[item]} onChange={()=>toggle(item)}/>
+                  <span className={`text-sm ${checked[item] ? "text-neutral-900 font-medium" : "text-neutral-600"}`}>{item}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {/* Others */}
+        <div className="bg-white border border-neutral-200 rounded-2xl p-4">
+          <p className="text-sm font-semibold text-neutral-800 mb-2">📝 {lang==="en" ? "Others / Special requests" : "Otros / Peticiones especiales"}</p>
+          <textarea value={others} onChange={e=>setOthers(e.target.value)}
+            placeholder={lang==="en" ? "Anything else? Specific brands, dietary needs…" : "¿Algo más? Marcas específicas, restricciones…"}
+            rows={3} className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10 resize-none"/>
+        </div>
+      </div>
+
+      {/* Fixed footer */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-3 flex justify-center">
+        <button type="button" onClick={handleSend} disabled={sending||!hasSelection}
+          className="w-full max-w-xl py-3 rounded-xl bg-neutral-950 text-white font-semibold text-sm disabled:opacity-40 hover:bg-neutral-800">
+          {sending ? (lang==="en"?"Sending…":"Enviando…") : isUpdate ? (lang==="en"?"✅ Update grocery list":"✅ Actualizar lista") : (lang==="en"?"✅ Send list to concierge":"✅ Enviar lista al concierge")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const params = new URLSearchParams(window.location.search);
   const mode = params.get("mode");
@@ -3164,11 +3420,11 @@ function App() {
   if (mode === "soporte-dashboard")  return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
   if (mode === "tasks")              return <ErrorBoundary><TaskTracker /></ErrorBoundary>;
   if (mode === "catalog" || mode === "questionnaire") {
-    // If no kickoffId → show welcome/intake page first
     if (!kickoffId) return <WelcomeCatalogPage mode={mode} />;
     return <TwoTravelCatalog />;
   }
   if (mode === "drinks")             return <DrinksCatalog />;
+  if (mode === "groceries")          return <GroceryCatalog />;
   if (mode === "itinerary")          return <ItineraryPrintView />;
 
   return <FeedbackForm kickoffId={params.get("kickoffId") || ""} />;

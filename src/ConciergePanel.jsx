@@ -3053,14 +3053,27 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             </div>
           )}
 
-          {/* ── Drink Order (read-only, submitted by client) ── */}
+          {/* ── Drink Order ── */}
           {drinkOrder && (
             <div className="border border-teal-200 rounded-xl bg-teal-50 p-3">
-              <p className="text-[11px] font-semibold text-teal-700 mb-1.5">🍹 Orden de bebidas (enviada por el cliente)</p>
+              <p className="text-[11px] font-semibold text-teal-700 mb-1.5">🍹 Drink order (from client)</p>
               <pre className="text-xs text-teal-900 whitespace-pre-wrap font-sans leading-relaxed">{drinkOrder}</pre>
               {kickoff?.drinkOrderAt && (
                 <p className="text-[10px] text-teal-500 mt-1.5">
-                  Recibido: {new Date(kickoff.drinkOrderAt).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}
+                  Received: {new Date(kickoff.drinkOrderAt).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" })}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ── Grocery Order ── */}
+          {kickoff?.groceryOrder && (
+            <div className="border border-orange-200 rounded-xl bg-orange-50 p-3">
+              <p className="text-[11px] font-semibold text-orange-700 mb-1.5">🛒 Grocery list (from client)</p>
+              <pre className="text-xs text-orange-900 whitespace-pre-wrap font-sans leading-relaxed">{kickoff.groceryOrder}</pre>
+              {kickoff?.groceryOrderAt && (
+                <p className="text-[10px] text-orange-500 mt-1.5">
+                  Received: {new Date(kickoff.groceryOrderAt).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" })}
                 </p>
               )}
             </div>
@@ -4797,9 +4810,15 @@ const loadKickoffs = async () => {
 <td className="px-4 py-2">
   <StatusBadge status={k.status} lang={portalLang} />
   {k.drinkOrder && (
-    <span title={`Bebidas recibidas${k.drinkOrderAt ? ": " + new Date(k.drinkOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""}`}
+    <span title={`Drinks received${k.drinkOrderAt ? ": " + new Date(k.drinkOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""}`}
       className="ml-1 text-[11px] bg-teal-50 text-teal-700 border border-teal-200 rounded-full px-1.5 py-0.5 cursor-default">
       🍹
+    </span>
+  )}
+  {k.groceryOrder && (
+    <span title={`Groceries received${k.groceryOrderAt ? ": " + new Date(k.groceryOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""}`}
+      className="ml-1 text-[11px] bg-orange-50 text-orange-700 border border-orange-200 rounded-full px-1.5 py-0.5 cursor-default">
+      🛒
     </span>
   )}
   {(() => {

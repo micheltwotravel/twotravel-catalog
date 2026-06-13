@@ -18,6 +18,7 @@ const KICKOFF_HEADERS = [
   "cityRatings","groupSubmissions","clientSubmittedAt","submittedAt",
   "tripDates2","arrivalDate2","departureDate2",
   "accommodationName2","accommodationAddr2","accommodationUrl2",
+  "drinkOrderJson","groceryOrder","groceryOrderAt","groceryOrderJson",
   "sentToTravifyAt","doneAt",
 ];
 
