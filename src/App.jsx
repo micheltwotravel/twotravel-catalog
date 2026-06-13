@@ -2683,63 +2683,61 @@ function TaskTracker() {
    DRINKS CATALOG — client-facing drink selection page
    ============================================================ */
 // img: URL directo de la foto. priceCOP/priceUSD: precio por unidad/botella.
-// CDN helper — reliable Unsplash image URLs (no API key needed for display)
-const U = (id, w=120) => `https://images.unsplash.com/photo-${id}?w=${w}&q=80&fit=crop&auto=format`;
-
 // Base drink catalog — prices in COP; USD shown live via exchange rate
+// emoji = shown when no img or img fails to load
 const DRINK_CATEGORIES = [
   { id:"ron",        label:"🥃 Ron",         label_en:"🥃 Rum",          items:[
-    { name:"Ron Medellín 8 años",      name_en:"Rum Medellín 8 años",         img:"https://images.rappi.com/products/7459a9d1-4ff4-4f70-9565-a72059e43a57.png",  priceCOP:110000, qty:"", note:"" },
-    { name:"Ron Dictador 12",          name_en:"Rum Dictador 12",             img:"https://dictador.com/wp-content/uploads/2024/11/Dictador_12_Blend_40vol_floating-1024x1024.png", priceCOP:295000, qty:"", note:"" },
-    { name:"Aguardiente Antioqueño",   name_en:"Aguardiente Antioqueño",      img:"https://images.rappi.com/products/1684976360608_1684976356914_1684976356232.jpg", priceCOP:55000, qty:"", note:"" },
+    { name:"Ron Medellín 8 años",      name_en:"Rum Medellín 8 años",         emoji:"🥃", img:"https://images.rappi.com/products/7459a9d1-4ff4-4f70-9565-a72059e43a57.png",  priceCOP:110000, qty:"", note:"" },
+    { name:"Ron Dictador 12",          name_en:"Rum Dictador 12",             emoji:"🥃", img:"https://dictador.com/wp-content/uploads/2024/11/Dictador_12_Blend_40vol_floating-1024x1024.png", priceCOP:295000, qty:"", note:"" },
+    { name:"Aguardiente Antioqueño",   name_en:"Aguardiente Antioqueño",      emoji:"🍶", img:"https://images.rappi.com/products/1684976360608_1684976356914_1684976356232.jpg", priceCOP:55000, qty:"", note:"" },
   ]},
   { id:"tequila",    label:"🌵 Tequila",     label_en:"🌵 Tequila",       items:[
-    { name:"Tequila Patrón Silver",    name_en:"Tequila Patrón Silver",       img:"https://images.rappi.com/products/6b921167-1806-43c7-b57b-1f1579b6f72e.png",  priceCOP:258000, qty:"", note:"" },
-    { name:"Tequila Don Julio Blanco", name_en:"Tequila Don Julio Blanco",    img:U("1659613915375-10b0c3ee2e8f"),                                               priceCOP:320000, qty:"", note:"" },
+    { name:"Tequila Patrón Silver",    name_en:"Tequila Patrón Silver",       emoji:"🌵", img:"https://images.rappi.com/products/6b921167-1806-43c7-b57b-1f1579b6f72e.png",  priceCOP:258000, qty:"", note:"" },
+    { name:"Tequila Don Julio Blanco", name_en:"Tequila Don Julio Blanco",    emoji:"🌵", img:"", priceCOP:320000, qty:"", note:"" },
   ]},
   { id:"vodka",      label:"🍸 Vodka",       label_en:"🍸 Vodka",         items:[
-    { name:"Vodka Grey Goose",         name_en:"Vodka Grey Goose",            img:"https://images.rappi.com/products/508701057988_skppusgjklge_103497454041_fqpzouxhrxhe_1188_1.jpeg", priceCOP:240200, qty:"", note:"" },
-    { name:"Vodka Absolut",            name_en:"Vodka Absolut",               img:"https://images.rappi.com/products/bba89040-5d68-4c76-8c7e-1c72ec394cfe.png", priceCOP:98000, qty:"", note:"" },
+    { name:"Vodka Grey Goose",         name_en:"Vodka Grey Goose",            emoji:"🍸", img:"https://images.rappi.com/products/508701057988_skppusgjklge_103497454041_fqpzouxhrxhe_1188_1.jpeg", priceCOP:240200, qty:"", note:"" },
+    { name:"Vodka Absolut",            name_en:"Vodka Absolut",               emoji:"🍸", img:"https://images.rappi.com/products/bba89040-5d68-4c76-8c7e-1c72ec394cfe.png", priceCOP:98000, qty:"", note:"" },
   ]},
   { id:"whisky",     label:"🥃 Whisky",      label_en:"🥃 Whisky",        items:[
-    { name:"Whisky Johnnie Walker Black",name_en:"Whisky Johnnie Walker Black",img:"https://images.rappi.com/products/43ee0b4d-693e-49ce-a428-3e1a5c8e9ac6.jpg",priceCOP:158000, qty:"", note:"" },
-    { name:"Whisky Chivas 12",         name_en:"Whisky Chivas 12",            img:"https://images.rappi.com/products/dd73f3c2-f6f5-4b62-93c0-9faf98e2d897.jpg", priceCOP:185000, qty:"", note:"" },
+    { name:"Whisky Johnnie Walker Black",name_en:"Whisky Johnnie Walker Black",emoji:"🥃", img:"https://images.rappi.com/products/43ee0b4d-693e-49ce-a428-3e1a5c8e9ac6.jpg",priceCOP:158000, qty:"", note:"" },
+    { name:"Whisky Chivas 12",         name_en:"Whisky Chivas 12",            emoji:"🥃", img:"https://images.rappi.com/products/dd73f3c2-f6f5-4b62-93c0-9faf98e2d897.jpg", priceCOP:185000, qty:"", note:"" },
   ]},
   { id:"gin",        label:"🌿 Gin",         label_en:"🌿 Gin",           items:[
-    { name:"Gin Hendricks",            name_en:"Gin Hendricks",               img:"https://images.rappi.com/products/42203de0-ce71-4bc4-aac2-d82b2bd9ca06.png", priceCOP:276000, qty:"", note:"" },
-    { name:"Tanqueray",                name_en:"Tanqueray",                   img:U("1569529465-1569529465"),                                                   priceCOP:184000, qty:"", note:"" },
+    { name:"Gin Hendricks",            name_en:"Gin Hendricks",               emoji:"🌿", img:"https://images.rappi.com/products/42203de0-ce71-4bc4-aac2-d82b2bd9ca06.png", priceCOP:276000, qty:"", note:"" },
+    { name:"Tanqueray",                name_en:"Tanqueray",                   emoji:"🌿", img:"https://images.rappi.com/products/184f0c14-6df0-4938-9a4d-cf97ce3b2e1f.png", priceCOP:184000, qty:"", note:"" },
   ]},
   { id:"champagne",  label:"🥂 Champagne",   label_en:"🥂 Champagne",     items:[
-    { name:"Champagne Moët & Chandon", name_en:"Champagne Moët & Chandon",    img:U("1580707361-1580707361"),                                                   priceCOP:485000, qty:"", note:"" },
-    { name:"Espumante / Prosecco",     name_en:"Sparkling / Prosecco",        img:U("1553361371-1553361371"),                                                   priceCOP:85000, qty:"", note:"" },
+    { name:"Champagne Moët & Chandon", name_en:"Champagne Moët & Chandon",    emoji:"🥂", img:"", priceCOP:485000, qty:"", note:"" },
+    { name:"Espumante / Prosecco",     name_en:"Sparkling / Prosecco",        emoji:"🥂", img:"", priceCOP:85000, qty:"", note:"" },
   ]},
   { id:"beer",       label:"🍺 Beer",        label_en:"🍺 Beer",          items:[
-    { name:"Águila",                   name_en:"Águila",                      img:"https://images.rappi.com/products/e412dd24-23e9-438f-814b-a4e8925ebaf0.png", priceCOP:4500, qty:"", note:"" },
-    { name:"Club Colombia",            name_en:"Club Colombia",               img:"https://images.rappi.com/products/f2b59539-ba5b-409f-8f9b-b067b5347374.png", priceCOP:4500, qty:"", note:"" },
-    { name:"Corona",                   name_en:"Corona",                      img:"https://images.rappi.com/products/f6206ee6-78c1-4279-a9ab-b8c203f7107d.png", priceCOP:7000, qty:"", note:"" },
-    { name:"Heineken",                 name_en:"Heineken",                    img:U("1618183479-1618183479"),                                                   priceCOP:6000, qty:"", note:"" },
-    { name:"Poker",                    name_en:"Poker",                       img:"https://images.rappi.com/products/414428019836_rxaaltnmrzon_476705357483_txldxmllacvr_50644_1.jpeg", priceCOP:4500, qty:"", note:"" },
+    { name:"Águila",                   name_en:"Águila",                      emoji:"🍺", img:"https://images.rappi.com/products/e412dd24-23e9-438f-814b-a4e8925ebaf0.png", priceCOP:4500, qty:"", note:"" },
+    { name:"Club Colombia",            name_en:"Club Colombia",               emoji:"🍺", img:"https://images.rappi.com/products/f2b59539-ba5b-409f-8f9b-b067b5347374.png", priceCOP:4500, qty:"", note:"" },
+    { name:"Corona",                   name_en:"Corona",                      emoji:"🍺", img:"https://images.rappi.com/products/f6206ee6-78c1-4279-a9ab-b8c203f7107d.png", priceCOP:7000, qty:"", note:"" },
+    { name:"Heineken",                 name_en:"Heineken",                    emoji:"🍺", img:"https://images.rappi.com/products/76028c3a-e5a8-4ff7-b3c9-a5490c39f4f0.png", priceCOP:6000, qty:"", note:"" },
+    { name:"Poker",                    name_en:"Poker",                       emoji:"🍺", img:"https://images.rappi.com/products/414428019836_rxaaltnmrzon_476705357483_txldxmllacvr_50644_1.jpeg", priceCOP:4500, qty:"", note:"" },
   ]},
   { id:"wine",       label:"🍷 Wine",        label_en:"🍷 Wine",          items:[
-    { name:"Red wine (bottle)",        name_en:"Red wine (bottle)",           img:U("1510812431-1510812431"),                                                   priceCOP:0, qty:"", note:"" },
-    { name:"White wine (bottle)",      name_en:"White wine (bottle)",         img:U("1566552465-1566552465"),                                                   priceCOP:0, qty:"", note:"" },
-    { name:"Rosé wine (bottle)",       name_en:"Rosé wine (bottle)",          img:U("1558618666-1558618666"),                                                   priceCOP:0, qty:"", note:"" },
+    { name:"Red wine (bottle)",        name_en:"Red wine (bottle)",           emoji:"🍷", img:"https://images.rappi.com/products/851855029156_wvpoxqeunfmh_378174607221_vtrwvvhcgsar_1265_1.jpeg", priceCOP:0, qty:"", note:"" },
+    { name:"White wine (bottle)",      name_en:"White wine (bottle)",         emoji:"🍾", img:"https://images.rappi.com/products/e1443858-0c4e-4541-894c-b7bd8eb4bd20.jpg", priceCOP:0, qty:"", note:"" },
+    { name:"Rosé wine (bottle)",       name_en:"Rosé wine (bottle)",          emoji:"🌸", img:"https://images.rappi.com/products/800ac89d-5ce8-46a0-84ff-b8ff127a7af7.jpg", priceCOP:0, qty:"", note:"" },
   ]},
   { id:"mixers",     label:"🥤 Mixers",      label_en:"🥤 Mixers",        items:[
-    { name:"Coca-Cola",                name_en:"Coca-Cola",                   img:U("1554866585-cd94860890b7"),                                                 priceCOP:3800, qty:"", note:"" },
-    { name:"Tonic water",              name_en:"Tonic water",                 img:U("1603048675-1603048675"),                                                   priceCOP:3000, qty:"", note:"" },
-    { name:"Ginger ale",               name_en:"Ginger ale",                  img:U("1571091655-1571091655"),                                                   priceCOP:4000, qty:"", note:"" },
-    { name:"Orange juice",             name_en:"Orange juice",                img:U("1600271886742-7904aed0a558"),                                              priceCOP:20000, qty:"", note:"" },
-    { name:"Sparkling water",          name_en:"Sparkling water",             img:U("1548839140-d40d0a97e24e"),                                                 priceCOP:36000, qty:"", note:"" },
-    { name:"Still water",              name_en:"Still water",                 img:U("1560457793-f3cfec5a1b86"),                                                 priceCOP:25600, qty:"", note:"" },
-    { name:"Red Bull",                 name_en:"Red Bull",                    img:U("1538935732373-84f3e7e71a04"),                                              priceCOP:9400, qty:"", note:"" },
+    { name:"Coca-Cola",                name_en:"Coca-Cola",                   emoji:"🥤", img:"https://images.rappi.com/products/b5d6b9d0-3fa4-465a-b7e9-48ecf4ff3bc7.png", priceCOP:3800, qty:"", note:"" },
+    { name:"Tonic water",              name_en:"Tonic water",                 emoji:"🫧", img:"https://images.rappi.com/products/0b1b5e8e-c3b5-4c7f-8e5a-1b2c3d4e5f6a.png", priceCOP:3000, qty:"", note:"" },
+    { name:"Ginger ale",               name_en:"Ginger ale",                  emoji:"🥤", img:"", priceCOP:4000, qty:"", note:"" },
+    { name:"Orange juice",             name_en:"Orange juice",                emoji:"🍊", img:"https://images.rappi.com/products/7e8f9a0b-1c2d-3e4f-5a6b-7c8d9e0f1a2b.png", priceCOP:20000, qty:"", note:"" },
+    { name:"Sparkling water",          name_en:"Sparkling water",             emoji:"💧", img:"", priceCOP:36000, qty:"", note:"" },
+    { name:"Still water",              name_en:"Still water",                 emoji:"💧", img:"", priceCOP:25600, qty:"", note:"" },
+    { name:"Red Bull",                 name_en:"Red Bull",                    emoji:"⚡", img:"https://images.rappi.com/products/c3d4e5f6-a7b8-c9d0-e1f2-a3b4c5d6e7f8.png", priceCOP:9400, qty:"", note:"" },
   ]},
   { id:"snacks",     label:"🍿 Snacks",      label_en:"🍿 Snacks",        items:[
-    { name:"Chips",                    name_en:"Chips",                       img:U("1566478989-3de59c69bdc0"),                                                 priceCOP:0, qty:"", note:"" },
-    { name:"Peanuts",                  name_en:"Peanuts",                     img:U("1567347785-53efa8c89756"),                                                 priceCOP:0, qty:"", note:"" },
-    { name:"Cheese board",             name_en:"Cheese board",                img:U("1546549130-be91a68d-ea4e-4601-9d00-e7c4c53fc88c"),                         priceCOP:0, qty:"", note:"" },
-    { name:"Fresh fruit",              name_en:"Fresh fruit",                 img:U("1490474504059-c56f925f7c94"),                                              priceCOP:0, qty:"", note:"" },
-    { name:"Crudités",                 name_en:"Crudités",                    img:U("1540189549098-0e41aaa5347f"),                                              priceCOP:0, qty:"", note:"" },
+    { name:"Chips",                    name_en:"Chips",                       emoji:"🍿", img:"", priceCOP:0, qty:"", note:"" },
+    { name:"Peanuts",                  name_en:"Peanuts",                     emoji:"🥜", img:"", priceCOP:0, qty:"", note:"" },
+    { name:"Cheese board",             name_en:"Cheese board",                emoji:"🧀", img:"", priceCOP:0, qty:"", note:"" },
+    { name:"Fresh fruit",              name_en:"Fresh fruit",                 emoji:"🍓", img:"", priceCOP:0, qty:"", note:"" },
+    { name:"Crudités",                 name_en:"Crudités",                    emoji:"🥕", img:"", priceCOP:0, qty:"", note:"" },
   ]},
 ];
 
@@ -3012,9 +3010,12 @@ function DrinksCatalog() {
             <div className="divide-y divide-neutral-100">
               {cat.items.map((it, ii) => (
                 <div key={it.name||ii} className="flex items-center gap-3 px-4 py-2.5">
-                  <div className="w-10 h-10 rounded-lg bg-neutral-100 flex-shrink-0 overflow-hidden">
-                    <img src={it.img} alt={itemName(it)} className="w-full h-full object-cover"
-                      onError={e=>{e.target.src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=80&q=60&fit=crop";}}/>
+                  <div className="w-10 h-10 rounded-lg flex-shrink-0 overflow-hidden relative bg-neutral-100 flex items-center justify-center">
+                    {it.img ? (
+                      <img src={it.img} alt={itemName(it)} className="w-full h-full object-contain absolute inset-0"
+                        onError={e=>{e.target.style.display="none";}}/>
+                    ) : null}
+                    <span className="text-2xl leading-none select-none">{it.emoji||"🍾"}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-neutral-800 leading-snug">{itemName(it)}</p>
@@ -3074,7 +3075,6 @@ const CITY_OPTIONS = [
   { code: "MDE",  label: "🇨🇴 Medellín" },
   { code: "CDMX", label: "🇲🇽 Ciudad de México" },
   { code: "TUL",  label: "🇲🇽 Tulum" },
-  { code: "BOG",  label: "🇨🇴 Bogotá" },
 ];
 
 function WelcomeCatalogPage({ mode }) {

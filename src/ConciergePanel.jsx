@@ -41,7 +41,7 @@ const NO_QB = new Set(["restaurants","bars","nightlife","beach-clubs","beach clu
 const PAX_MULTIPLIES = new Set(["tours","tour","services","service","chef","private chef","chef privado"]);
 // Transportation is priced per vehicle — never multiply by pax
 // City code → full name for PDF and QuickBooks
-const CITY_NAMES = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" };
+const CITY_NAMES = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum" };
 const cityFullName = (code) =>
   String(code||"").split(",").map(c => CITY_NAMES[c.trim().toUpperCase()] || c.trim()).filter(Boolean).join(", ");
 
