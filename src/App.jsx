@@ -3218,36 +3218,84 @@ function WelcomeCatalogPage({ mode }) {
    ?mode=groceries&kickoffId=...&lang=en|es
 ================================================================ */
 const GROCERY_CATEGORIES = [
-  { id:"essentials",  label:"🧂 Essentials", items:[
-    "Large Butter","Oil","Salt","Black pepper","White Sugar","Brown Sugar",
+  { id:"essentials", label:"🧂 Essentials", label_es:"🧂 Básicos", items:[
+    { name:"Large Butter",   name_es:"Mantequilla grande", emoji:"🧈", img:"https://images.openfoodfacts.org/images/products/076/840/053/6714/front_en.3.400.jpg" },
+    { name:"Oil",            name_es:"Aceite",             emoji:"🫙", img:"" },
+    { name:"Salt",           name_es:"Sal",                emoji:"🧂", img:"" },
+    { name:"Black pepper",   name_es:"Pimienta negra",     emoji:"🌶️", img:"" },
+    { name:"White Sugar",    name_es:"Azúcar blanca",      emoji:"🍬", img:"" },
+    { name:"Brown Sugar",    name_es:"Azúcar morena",      emoji:"🍯", img:"" },
   ]},
-  { id:"dairy",       label:"🥛 Dairy", items:[
-    "Mozzarella cheese","Cheddar cheese","Greek Yogurt","Regular vanilla yogurt (no added fruits)",
+  { id:"dairy", label:"🥛 Dairy", label_es:"🥛 Lácteos", items:[
+    { name:"Mozzarella cheese",                          name_es:"Queso mozzarella",   emoji:"🧀", img:"" },
+    { name:"Cheddar cheese",                             name_es:"Queso cheddar",      emoji:"🧀", img:"" },
+    { name:"Greek Yogurt",                               name_es:"Yogurt griego",      emoji:"🥛", img:"" },
+    { name:"Regular vanilla yogurt (no added fruits)",   name_es:"Yogurt vainilla",    emoji:"🥛", img:"" },
   ]},
-  { id:"bread",       label:"🍞 Flours & Breads", items:[
-    "Arepas","Sliced bread","Pancake mix",
+  { id:"bread", label:"🍞 Flours & Breads", label_es:"🍞 Harinas & Panes", items:[
+    { name:"Arepas",       name_es:"Arepas",           emoji:"🫓", img:"" },
+    { name:"Sliced bread", name_es:"Pan tajado",        emoji:"🍞", img:"" },
+    { name:"Pancake mix",  name_es:"Mezcla de pancakes",emoji:"🥞", img:"" },
   ]},
-  { id:"condiments",  label:"🥫 Condiments & Others", items:[
-    "Small cereal","Granola box","Hot sauce","Syrup","Chocolate Chips","Ketchup","Honey",
+  { id:"condiments", label:"🥫 Condiments & Others", label_es:"🥫 Condimentos", items:[
+    { name:"Small cereal",     name_es:"Cereal pequeño",    emoji:"🥣", img:"" },
+    { name:"Granola box",      name_es:"Caja de granola",   emoji:"🌾", img:"" },
+    { name:"Hot sauce",        name_es:"Salsa picante",     emoji:"🌶️", img:"" },
+    { name:"Syrup",            name_es:"Sirope / Almíbar",  emoji:"🍯", img:"" },
+    { name:"Chocolate Chips",  name_es:"Chips de chocolate",emoji:"🍫", img:"" },
+    { name:"Ketchup",          name_es:"Ketchup",           emoji:"🍅", img:"" },
+    { name:"Honey",            name_es:"Miel",              emoji:"🍯", img:"" },
   ]},
-  { id:"grains",      label:"🍚 Grains & Eggs", items:[
-    "Eggs","Beans","Rice","Maggi (seasoning)","Chicharrón",
+  { id:"grains", label:"🍚 Grains & Eggs", label_es:"🍚 Granos & Huevos", items:[
+    { name:"Eggs",             name_es:"Huevos",             emoji:"🥚", img:"" },
+    { name:"Beans",            name_es:"Frijoles",           emoji:"🫘", img:"" },
+    { name:"Rice",             name_es:"Arroz",              emoji:"🍚", img:"" },
+    { name:"Maggi (seasoning)",name_es:"Maggi (sazón)",      emoji:"🧂", img:"" },
+    { name:"Chicharrón",       name_es:"Chicharrón",         emoji:"🥓", img:"" },
   ]},
-  { id:"beverages",   label:"🥤 Beverages", items:[
-    "Orange Juice","Apple Juice","Cranberry Juice","Packs of water","Large liters of water",
-    "Liter Sodas (Coke Zero, Iced Coffee)","Lemonade","Ginger beer","Electrolit",
-    "Coconut Water","Aguardiente","Lime juice","Club soda",
+  { id:"beverages", label:"🥤 Beverages", label_es:"🥤 Bebidas", items:[
+    { name:"Orange Juice",                    name_es:"Jugo de naranja",     emoji:"🍊", img:"" },
+    { name:"Apple Juice",                     name_es:"Jugo de manzana",     emoji:"🍎", img:"" },
+    { name:"Cranberry Juice",                 name_es:"Jugo de arándano",    emoji:"🫐", img:"" },
+    { name:"Packs of water",                  name_es:"Paquetes de agua",    emoji:"💧", img:"" },
+    { name:"Large liters of water",           name_es:"Litros de agua",      emoji:"🫧", img:"" },
+    { name:"Liter Sodas (Coke Zero, Iced Coffee)", name_es:"Gaseosas litro", emoji:"🥤", img:"" },
+    { name:"Lemonade",                        name_es:"Limonada",            emoji:"🍋", img:"" },
+    { name:"Ginger beer",                     name_es:"Cerveza de jengibre", emoji:"🍺", img:"" },
+    { name:"Electrolit",                      name_es:"Electrolit",          emoji:"⚡", img:"" },
+    { name:"Coconut Water",                   name_es:"Agua de coco",        emoji:"🥥", img:"" },
+    { name:"Aguardiente",                     name_es:"Aguardiente",         emoji:"🥃", img:"" },
+    { name:"Lime juice",                      name_es:"Jugo de limón",       emoji:"🍋", img:"" },
+    { name:"Club soda",                       name_es:"Agua tónica",         emoji:"🫧", img:"" },
   ]},
-  { id:"snacks",      label:"🍿 Snacks", items:[
-    "Cheese empanadas","Potato chips","Chocoramo","Choclitos","Platanitos","Colombian Candy",
+  { id:"snacks", label:"🍿 Snacks", label_es:"🍿 Snacks", items:[
+    { name:"Cheese empanadas", name_es:"Empanadas de queso", emoji:"🫔", img:"" },
+    { name:"Potato chips",     name_es:"Papas fritas",       emoji:"🥔", img:"" },
+    { name:"Chocoramo",        name_es:"Chocoramo",          emoji:"🍫", img:"" },
+    { name:"Choclitos",        name_es:"Choclitos",          emoji:"🌽", img:"" },
+    { name:"Platanitos",       name_es:"Platanitos",         emoji:"🍌", img:"" },
+    { name:"Colombian Candy",  name_es:"Dulces colombianos", emoji:"🍬", img:"" },
   ]},
-  { id:"fruits",      label:"🍍 Fruits & Vegetables", items:[
-    "Pineapple","Strawberries","Bananas","Onion","Tomato","Plantain",
-    "Garlic","Avocado","Mango","Spinach","Lime",
+  { id:"fruits", label:"🍍 Fruits & Vegetables", label_es:"🍍 Frutas & Verduras", items:[
+    { name:"Pineapple",   name_es:"Piña",        emoji:"🍍", img:"" },
+    { name:"Strawberries",name_es:"Fresas",       emoji:"🍓", img:"" },
+    { name:"Bananas",     name_es:"Bananos",      emoji:"🍌", img:"" },
+    { name:"Onion",       name_es:"Cebolla",      emoji:"🧅", img:"" },
+    { name:"Tomato",      name_es:"Tomate",       emoji:"🍅", img:"" },
+    { name:"Plantain",    name_es:"Plátano",      emoji:"🍌", img:"" },
+    { name:"Garlic",      name_es:"Ajo",          emoji:"🧄", img:"" },
+    { name:"Avocado",     name_es:"Aguacate",     emoji:"🥑", img:"" },
+    { name:"Mango",       name_es:"Mango",        emoji:"🥭", img:"" },
+    { name:"Spinach",     name_es:"Espinaca",     emoji:"🥬", img:"" },
+    { name:"Lime",        name_es:"Limón",        emoji:"🍋", img:"" },
   ]},
-  { id:"cleaning",    label:"🧹 Cleaning & Misc", items:[
-    "Napkins","Kitchen paper towels","Dish Gloves","Dish Soap",
-    "Plastic cups (red party cups)","Plastic plates",
+  { id:"cleaning", label:"🧹 Cleaning & Misc", label_es:"🧹 Limpieza & Misc", items:[
+    { name:"Napkins",                    name_es:"Servilletas",       emoji:"🧻", img:"" },
+    { name:"Kitchen paper towels",       name_es:"Papel de cocina",   emoji:"🧻", img:"" },
+    { name:"Dish Gloves",               name_es:"Guantes de cocina",  emoji:"🧤", img:"" },
+    { name:"Dish Soap",                 name_es:"Jabón de platos",    emoji:"🫧", img:"" },
+    { name:"Plastic cups (red party cups)", name_es:"Vasos plásticos", emoji:"🥤", img:"" },
+    { name:"Plastic plates",            name_es:"Platos plásticos",   emoji:"🍽️", img:"" },
   ]},
 ];
 
@@ -3260,7 +3308,7 @@ function GroceryCatalog() {
 
   const mkChecks = () => {
     const m = {};
-    GROCERY_CATEGORIES.forEach(cat => cat.items.forEach(item => { m[item] = false; }));
+    GROCERY_CATEGORIES.forEach(cat => cat.items.forEach(item => { m[item.name] = false; }));
     return m;
   };
   const [checked,   setChecked]   = React.useState(mkChecks);
@@ -3295,7 +3343,7 @@ function GroceryCatalog() {
       .finally(()=>setLoading(false));
   }, [kickoffId]);
 
-  const toggle = (item) => setChecked(prev => ({...prev, [item]: !prev[item]}));
+  const toggle = (itemName) => setChecked(prev => ({...prev, [itemName]: !prev[itemName]}));
   const hasSelection = Object.values(checked).some(Boolean) || !!others.trim();
   const isUpdate = !!prevAt;
 
@@ -3304,10 +3352,10 @@ function GroceryCatalog() {
     setSending(true);
     const lines = [];
     GROCERY_CATEGORIES.forEach(cat => {
-      const sel = cat.items.filter(i => checked[i]);
+      const sel = cat.items.filter(i => checked[i.name]);
       if (!sel.length) return;
       lines.push(`*${cat.label}*`);
-      sel.forEach(i => lines.push(`  ✓ ${i}`));
+      sel.forEach(i => lines.push(`  ✓ ${i.name}`));
     });
     if (others.trim()) lines.push(`\n📝 Others: ${others}`);
     const action = isUpdate ? "✏️ *UPDATED*" : "🆕 *NEW*";
@@ -3395,18 +3443,33 @@ function GroceryCatalog() {
         {GROCERY_CATEGORIES.map(cat => (
           <div key={cat.id} className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
             <div className="px-4 py-3 bg-neutral-50 border-b">
-              <p className="text-sm font-semibold text-neutral-800">{cat.label}</p>
+              <p className="text-sm font-semibold text-neutral-800">{lang==="es" ? (cat.label_es||cat.label) : cat.label}</p>
             </div>
             <div className="divide-y divide-neutral-100">
-              {cat.items.map(item => (
-                <label key={item} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-neutral-50 transition-colors">
-                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${checked[item] ? "bg-neutral-900 border-neutral-900" : "border-neutral-300"}`}>
-                    {checked[item] && <span className="text-white text-xs font-bold">✓</span>}
-                  </div>
-                  <input type="checkbox" className="sr-only" checked={!!checked[item]} onChange={()=>toggle(item)}/>
-                  <span className={`text-sm ${checked[item] ? "text-neutral-900 font-medium" : "text-neutral-600"}`}>{item}</span>
-                </label>
-              ))}
+              {cat.items.map(item => {
+                const isChecked = !!checked[item.name];
+                const displayName = lang==="es" ? (item.name_es||item.name) : item.name;
+                return (
+                  <label key={item.name} className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isChecked ? "bg-neutral-950" : "hover:bg-neutral-50"}`}>
+                    {/* Image / emoji */}
+                    <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden relative bg-neutral-100 flex items-center justify-center">
+                      <span className="text-2xl leading-none select-none">{item.emoji||"🛒"}</span>
+                      {item.img ? (
+                        <img src={item.img} alt={displayName}
+                          className="w-full h-full object-cover absolute inset-0 rounded-xl"
+                          onError={e=>{e.target.style.display="none";}}/>
+                      ) : null}
+                    </div>
+                    {/* Checkbox */}
+                    <input type="checkbox" className="sr-only" checked={isChecked} onChange={()=>toggle(item.name)}/>
+                    <span className={`flex-1 text-sm ${isChecked ? "text-white font-medium" : "text-neutral-700"}`}>{displayName}</span>
+                    {/* Check indicator */}
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${isChecked ? "bg-white" : "border-2 border-neutral-200"}`}>
+                      {isChecked && <span className="text-neutral-950 text-xs font-bold">✓</span>}
+                    </div>
+                  </label>
+                );
+              })}
             </div>
           </div>
         ))}
