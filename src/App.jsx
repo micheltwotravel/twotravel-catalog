@@ -2211,7 +2211,7 @@ function TaskTracker() {
   const [loading, setLoading]   = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving]     = useState(false);
-  const [view, setView]         = useState("table"); // "table" | "cards"
+  const [view, setView]         = useState("board"); // "board" | "table" | "calendar" | "cards"
   const [filterUser, setFilterUser]         = useState("all");
   const [filterStatus, setFilterStatus]     = useState("all");
   const [filterKickoff, setFilterKickoff]   = useState("all");
@@ -2374,18 +2374,16 @@ function TaskTracker() {
         </div>
         <div className="flex items-center gap-2">
           <div className="flex border border-stone-200 rounded-lg overflow-hidden text-xs">
-            <button onClick={()=>setView("table")}
-              className={`px-3 py-1.5 ${view==="table"?"bg-stone-800 text-white":"bg-white text-stone-500 hover:bg-stone-50"}`}>
-              ☰ Tabla
-            </button>
-            <button onClick={()=>setView("cards")}
-              className={`px-3 py-1.5 ${view==="cards"?"bg-stone-800 text-white":"bg-white text-stone-500 hover:bg-stone-50"}`}>
-              ▦ Cards
-            </button>
+            {[["board","▦ Board"],["table","☰ Table"],["calendar","📅 Calendar"]].map(([v,lbl])=>(
+              <button key={v} onClick={()=>setView(v)}
+                className={`px-3 py-1.5 ${view===v?"bg-stone-800 text-white":"bg-white text-stone-500 hover:bg-stone-50"}`}>
+                {lbl}
+              </button>
+            ))}
           </div>
           <button onClick={()=>setShowForm(v=>!v)}
             className="px-3 py-1.5 text-xs bg-stone-800 text-white rounded-lg hover:opacity-90 font-medium">
-            + Nueva tarea
+            + New Task
           </button>
         </div>
       </div>
@@ -2472,88 +2470,239 @@ function TaskTracker() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
           {/* ── Main content ── */}
-          <div className="lg:col-span-3 space-y-3">
+          <div className={view === "board" ? "lg:col-span-4" : "lg:col-span-3"}>
+            <div className="space-y-3">
 
-            {/* Filters bar */}
+            {/* Filters bar — hidden in board view to save space */}
+            {view !== "board" && (
             <div className="flex flex-wrap gap-2 items-center bg-white border border-stone-200 rounded-xl px-3 py-2">
               <input value={searchName} onChange={e=>setSearchName(e.target.value)}
-                placeholder="Buscar…"
+                placeholder="Search…"
                 className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white w-32"/>
               <select value={filterKickoff} onChange={e=>setFilterKickoff(e.target.value)}
                 className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white max-w-[140px]">
-                <option value="all">Todos los trips</option>
+                <option value="all">All trips</option>
                 {kickoffs.map(k=>(
                   <option key={k.id} value={k.id}>{k.guestName||k.tripName||k.id}</option>
                 ))}
               </select>
               <select value={filterUser} onChange={e=>setFilterUser(e.target.value)}
                 className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white">
-                <option value="all">Todas</option>
+                <option value="all">All</option>
                 {CONCIERGE_NAMES.map(u=><option key={u} value={u}>{u.split(" ")[0]}</option>)}
               </select>
               <select value={filterPriority} onChange={e=>setFilterPriority(e.target.value)}
                 className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white">
-                <option value="all">Prioridad</option>
-                <option value="alta">🔴 Alta</option>
-                <option value="media">🟡 Media</option>
-                <option value="baja">⚪ Baja</option>
+                <option value="all">Priority</option>
+                <option value="alta">🔴 High</option>
+                <option value="media">🟡 Medium</option>
+                <option value="baja">⚪ Low</option>
               </select>
-              <div className="flex gap-1 flex-wrap">
-                {[
-                  ["all","Todas"],["pending","Pendientes"],["in_progress","En progreso"],
-                  ["blocked","Bloqueadas"],["late","Vencidas"],["completed","Completadas"]
-                ].map(([s,lbl])=>(
-                  <button key={s} onClick={()=>setFilterStatus(s)}
-                    className={`px-2 py-1 text-xs rounded-lg border transition ${filterStatus===s?"bg-stone-800 text-white border-stone-800":"bg-white border-stone-200 text-stone-500 hover:bg-stone-50"}`}>
-                    {lbl}
-                  </button>
-                ))}
-              </div>
               <button onClick={()=>setShowCompleted(v=>!v)}
                 className={`px-2.5 py-1 text-xs rounded-lg border transition ${showCompleted?"bg-stone-200 text-stone-600 border-stone-300":"bg-white border-stone-200 text-stone-400 hover:bg-stone-50"}`}>
-                {showCompleted
-                  ? `Ocultar completadas (${tasks.filter(t=>t.status==="completed").length})`
-                  : `+ Mostrar completadas (${tasks.filter(t=>t.status==="completed").length})`}
+                {showCompleted ? `Hide done (${tasks.filter(t=>t.status==="completed").length})` : `Show done (${tasks.filter(t=>t.status==="completed").length})`}
               </button>
               <button onClick={load} className="ml-auto text-xs text-stone-400 hover:text-stone-700">↻</button>
             </div>
+            )}
 
             {loadError && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-xs text-red-700 font-mono break-all">
-                <p className="font-semibold mb-1">Error cargando tareas:</p>{loadError}
+                <p className="font-semibold mb-1">Error loading tasks:</p>{loadError}
               </div>
             )}
 
             {loading ? (
-              <div className="text-center py-10 text-stone-400 text-sm">Cargando…</div>
-            ) : filtered.length === 0 ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-8 text-center text-stone-400 text-sm">
-                No hay tareas con estos filtros.
-              </div>
-            ) : view === "table" ? (
+              <div className="text-center py-10 text-stone-400 text-sm">Loading…</div>
+            ) : view === "board" ? (() => {
+              /* ══ BOARD / KANBAN VIEW ══ */
+              const COLS = [
+                { id:"todo",        label:"TO DO",        statuses:["pending","late"],  dot:"bg-stone-400",   count: tasks.filter(t=>["pending","late"].includes(t.status)).length },
+                { id:"in_progress", label:"IN PROGRESS",  statuses:["in_progress"],     dot:"bg-blue-500",    count: tasks.filter(t=>t.status==="in_progress").length },
+                { id:"in_review",   label:"IN REVIEW",    statuses:["blocked"],         dot:"bg-violet-500",  count: tasks.filter(t=>t.status==="blocked").length },
+                { id:"done",        label:"DONE",         statuses:["completed"],       dot:"bg-emerald-500", count: tasks.filter(t=>t.status==="done"||t.status==="completed").length },
+              ];
+              const statusForCol = { todo:"pending", in_progress:"in_progress", in_review:"blocked", done:"completed" };
+              // Assignee color map
+              const AVATAR_COLORS = ["bg-stone-700","bg-rose-600","bg-blue-600","bg-amber-600","bg-emerald-600","bg-violet-600"];
+              const avatarColor = (() => {
+                const map = {};
+                CONCIERGE_NAMES.forEach((n,i) => { map[n] = AVATAR_COLORS[i % AVATAR_COLORS.length]; });
+                return (name) => map[name] || "bg-stone-500";
+              })();
+              const initials = (name) => (name||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+              return (
+                <div className="flex gap-4 overflow-x-auto pb-4" style={{minHeight:"60vh"}}>
+                  {COLS.map(col => {
+                    const colTasks = tasks.filter(t => {
+                      if (!col.statuses.includes(t.status)) return false;
+                      if (filterUser !== "all" && t.assignedTo !== filterUser) return false;
+                      if (filterKickoff !== "all" && t.kickoffId !== filterKickoff) return false;
+                      if (searchName.trim()) {
+                        const q = searchName.trim().toLowerCase();
+                        if (!String(t.taskName||"").toLowerCase().includes(q) &&
+                            !String(t.kickoffName||"").toLowerCase().includes(q) &&
+                            !String(t.assignedTo||"").toLowerCase().includes(q)) return false;
+                      }
+                      return true;
+                    });
+                    return (
+                      <div key={col.id} className="flex-shrink-0 w-72 flex flex-col gap-2">
+                        {/* Column header */}
+                        <div className="flex items-center gap-2 px-1 py-2">
+                          <span className={`w-2.5 h-2.5 rounded-full ${col.dot} flex-shrink-0`}/>
+                          <span className="text-xs font-semibold text-stone-600 tracking-wide">{col.label}</span>
+                          <span className="ml-auto text-xs text-stone-400 bg-stone-100 rounded-full w-5 h-5 flex items-center justify-center font-medium">{colTasks.length}</span>
+                        </div>
+                        {/* Cards */}
+                        <div className="flex flex-col gap-2">
+                          {colTasks.map(t => {
+                            const due = t.dueDate ? new Date(t.dueDate) : null;
+                            const dl  = due ? Math.round((due-now)/86400000) : null;
+                            const isLate = t.status === "late" || (dl !== null && dl < 0 && t.status !== "completed");
+                            return (
+                              <div key={t.id} className={`bg-white rounded-xl border p-3.5 shadow-sm hover:shadow-md transition-shadow cursor-default ${isLate?"border-red-200":"border-stone-200"}`}>
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  <p className={`text-sm font-medium text-stone-800 leading-snug ${t.status==="completed"?"line-through opacity-50":""}`}>{t.taskName}</p>
+                                  {isLate && <span className="text-[9px] text-red-500 font-semibold bg-red-50 border border-red-200 rounded px-1.5 py-0.5 flex-shrink-0">LATE</span>}
+                                </div>
+                                {t.kickoffName && (
+                                  <p className="text-[11px] text-stone-500 mb-2 truncate">
+                                    ✦ {t.kickoffName}{t.city ? ` — ${t.city}` : ""}
+                                  </p>
+                                )}
+                                <div className="flex items-center justify-between gap-2 mt-2">
+                                  {t.assignedTo ? (
+                                    <span className={`text-[10px] text-white font-bold rounded px-1.5 py-0.5 ${avatarColor(t.assignedTo)}`}>
+                                      {initials(t.assignedTo)}
+                                    </span>
+                                  ) : <span/>}
+                                  <div className="flex items-center gap-2 ml-auto">
+                                    {dl !== null && t.status !== "completed" && (
+                                      <span className={`text-[10px] ${isLate?"text-red-500":dl<=2?"text-amber-600":"text-stone-400"}`}>
+                                        {isLate ? `${Math.abs(dl)}d ago` : dl===0 ? "Today" : `In ${dl}d`}
+                                      </span>
+                                    )}
+                                    <select
+                                      value={t.status==="late"?"pending":t.status}
+                                      onChange={e=>updateTaskField(t.id,{status:e.target.value})}
+                                      className="text-[10px] border border-stone-200 rounded px-1.5 py-0.5 bg-white text-stone-500 cursor-pointer focus:outline-none"
+                                      onClick={e=>e.stopPropagation()}
+                                    >
+                                      {Object.entries(TASK_STATUS).filter(([k])=>k!=="late").map(([k,v])=>(
+                                        <option key={k} value={k}>{v.label}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {/* Add task shortcut */}
+                          <button onClick={()=>setShowForm(v=>!v)}
+                            className="w-full text-left text-xs text-stone-400 hover:text-stone-600 px-3 py-2 rounded-xl border border-dashed border-stone-200 hover:border-stone-400 transition-colors">
+                            + Add Task
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })() : view === "calendar" ? (() => {
+              /* ══ CALENDAR VIEW ══ */
+              const [calYear, calMonth] = (() => {
+                const d = new Date(); return [d.getFullYear(), d.getMonth()];
+              })();
+              const [cy, setCy] = useState(calYear);
+              const [cm, setCm] = useState(calMonth);
+              const firstDay = new Date(cy, cm, 1).getDay();
+              const daysInMonth = new Date(cy, cm+1, 0).getDate();
+              const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+              const tasksByDay = {};
+              tasks.filter(t=>t.status!=="completed").forEach(t => {
+                if (!t.dueDate) return;
+                const d = new Date(t.dueDate);
+                if (d.getFullYear()===cy && d.getMonth()===cm) {
+                  const k = d.getDate();
+                  if (!tasksByDay[k]) tasksByDay[k] = [];
+                  tasksByDay[k].push(t);
+                }
+              });
+              const AVATAR_COLORS = ["bg-stone-700","bg-rose-600","bg-blue-600","bg-amber-600","bg-emerald-600","bg-violet-600"];
+              const avatarColor = (() => {
+                const map = {};
+                CONCIERGE_NAMES.forEach((n,i) => { map[n] = AVATAR_COLORS[i % AVATAR_COLORS.length]; });
+                return (name) => map[name] || "bg-stone-500";
+              })();
+              return (
+                <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
+                  {/* Cal nav */}
+                  <div className="flex items-center justify-between px-5 py-3 border-b border-stone-100">
+                    <button onClick={()=>{ if(cm===0){setCm(11);setCy(y=>y-1);}else setCm(m=>m-1); }}
+                      className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500 text-sm">‹</button>
+                    <span className="text-sm font-semibold text-stone-700">{MONTHS[cm]} {cy}</span>
+                    <button onClick={()=>{ if(cm===11){setCm(0);setCy(y=>y+1);}else setCm(m=>m+1); }}
+                      className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500 text-sm">›</button>
+                  </div>
+                  {/* Day headers */}
+                  <div className="grid grid-cols-7 border-b border-stone-100">
+                    {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=>(
+                      <div key={d} className="text-center text-[10px] font-semibold text-stone-400 py-2">{d}</div>
+                    ))}
+                  </div>
+                  {/* Grid */}
+                  <div className="grid grid-cols-7">
+                    {Array.from({length: firstDay}).map((_,i)=>(
+                      <div key={"empty-"+i} className="min-h-[80px] border-b border-r border-stone-50 p-1"/>
+                    ))}
+                    {Array.from({length: daysInMonth}).map((_,i) => {
+                      const day = i+1;
+                      const dayTasks = tasksByDay[day] || [];
+                      const isToday = new Date().getDate()===day && new Date().getMonth()===cm && new Date().getFullYear()===cy;
+                      return (
+                        <div key={day} className="min-h-[80px] border-b border-r border-stone-50 p-1.5">
+                          <div className={`text-[11px] font-semibold mb-1 w-5 h-5 flex items-center justify-center rounded-full ${isToday?"bg-stone-800 text-white":"text-stone-500"}`}>{day}</div>
+                          <div className="space-y-0.5">
+                            {dayTasks.slice(0,3).map(t => {
+                              const col = avatarColor(t.assignedTo);
+                              return (
+                                <div key={t.id} className={`text-[9px] text-white rounded px-1 py-0.5 truncate ${col}`} title={t.taskName}>
+                                  {t.taskName}
+                                </div>
+                              );
+                            })}
+                            {dayTasks.length>3 && <div className="text-[9px] text-stone-400">+{dayTasks.length-3} more</div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })() : view === "table" ? (
               /* ══ TABLE VIEW — grouped by trip ══ */
               <div className="space-y-4">
                 {grouped.map(([key, group]) => (
                   <div key={key} className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-                    {/* Group header */}
                     <div className="flex items-center gap-2 px-4 py-2.5 border-b border-stone-100 bg-stone-50">
                       <span className="text-xs font-semibold text-stone-700">
-                        {key==="__none__" ? "📋 Sin trip" : `✈️ ${group.name}`}
+                        {key==="__none__" ? "📋 No trip" : `✈️ ${group.name}`}
                       </span>
                       <span className="text-[10px] text-stone-400 bg-white border border-stone-200 rounded-full px-2 py-0.5">
-                        {group.tasks.length} {group.tasks.length===1?"tarea":"tareas"}
+                        {group.tasks.length} {group.tasks.length===1?"task":"tasks"}
                       </span>
                       <span className="text-[10px] text-emerald-600 ml-auto">
-                        {group.tasks.filter(t=>t.status==="completed").length}/{group.tasks.length} completadas
+                        {group.tasks.filter(t=>t.status==="completed").length}/{group.tasks.length} done
                       </span>
                     </div>
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-stone-100 text-[10px] text-stone-400 uppercase tracking-wide">
-                          <th className="text-left px-4 py-2 font-medium">Tarea</th>
-                          <th className="text-left px-3 py-2 font-medium">Asignado</th>
-                          <th className="text-left px-3 py-2 font-medium">Fecha</th>
-                          <th className="text-left px-3 py-2 font-medium">Prioridad</th>
+                          <th className="text-left px-4 py-2 font-medium">Task</th>
+                          <th className="text-left px-3 py-2 font-medium">Assigned</th>
+                          <th className="text-left px-3 py-2 font-medium">Due</th>
+                          <th className="text-left px-3 py-2 font-medium">Priority</th>
                           <th className="text-left px-3 py-2 font-medium">Status</th>
                         </tr>
                       </thead>
@@ -2572,7 +2721,7 @@ function TaskTracker() {
                                 <span className={dl!==null&&dl<0&&t.status!=="completed"?"text-red-500":dl!==null&&dl<=2&&t.status!=="completed"?"text-amber-600":"text-stone-500"}>
                                   {t.dueDate||"—"}
                                   {dl!==null&&t.status!=="completed"&&dl<=2&&dl>=0&&(
-                                    <span className="ml-1 text-[10px]">{dl===0?"· hoy":`· ${dl}d`}</span>
+                                    <span className="ml-1 text-[10px]">{dl===0?"· today":`· ${dl}d`}</span>
                                   )}
                                 </span>
                               </td>
@@ -2586,46 +2735,12 @@ function TaskTracker() {
                   </div>
                 ))}
               </div>
-            ) : (
-              /* ══ CARD VIEW ══ */
-              <div className="space-y-3">
-                {filtered.map(t => {
-                  const st  = TASK_STATUS[t.status] || TASK_STATUS.pending;
-                  const due = t.dueDate ? new Date(t.dueDate) : null;
-                  const dl  = due ? Math.round((due-now)/86400000) : null;
-                  return (
-                    <div key={t.id} className={`bg-white rounded-xl border p-4 ${t.status==="late"||t.status==="blocked"?"border-red-200":"border-stone-200"}`}>
-                      <div className="flex items-start gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <StatusSelect t={t}/>
-                            <PriorityBadge t={t}/>
-                            {dl!==null&&t.status!=="completed"&&(
-                              <span className={`text-[10px] ${dl<0?"text-red-500":dl<=2?"text-amber-600":"text-stone-400"}`}>
-                                {dl<0?`Venció hace ${Math.abs(dl)}d`:dl===0?"Vence hoy":`${dl}d restantes`}
-                              </span>
-                            )}
-                          </div>
-                          {t.kickoffName&&(
-                            <span className="inline-block text-[10px] bg-blue-50 text-blue-600 border border-blue-100 rounded px-1.5 py-0.5 mb-1">
-                              ✈️ {t.kickoffName}
-                            </span>
-                          )}
-                          <p className={`text-sm font-medium text-stone-800 ${t.status==="completed"?"line-through opacity-60":""}`}>{t.taskName}</p>
-                          <p className="text-xs text-stone-400 mt-0.5">👤 {t.assignedTo} · 📅 {t.dueDate||"—"}</p>
-                          {t.notes&&<p className="text-xs text-stone-500 mt-1">{t.notes}</p>}
-                          {t.imageUrl&&<img src={t.imageUrl} alt="" className="mt-2 h-28 rounded-lg object-cover border border-stone-100" onError={e=>e.target.style.display="none"}/>}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            ) : null}
+            </div>
           </div>
 
-          {/* ── Sidebar ── */}
-          <div className="space-y-3">
+          {/* ── Sidebar — hidden in board/calendar view ── */}
+          {(view === "table" || view === "cards") && <div className="space-y-3">
             <div className="bg-white rounded-2xl border border-stone-200 p-4">
               <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Carga por persona</h2>
               {lbRows.length===0 ? (
@@ -2672,7 +2787,7 @@ function TaskTracker() {
                 </div>
               ))}
             </div>
-          </div>
+          </div>}
         </div>
       </div>
     </div>
