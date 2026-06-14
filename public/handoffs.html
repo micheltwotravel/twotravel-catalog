@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Two Travel · Handoffs Operaciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sand:#f7f4ef;--sand2:#efe9e0;--sand3:#e5ddd3;
+  --ink:#1a1814;--ink2:#3d3a35;--ink3:#7a7570;
+  --gold:#9a7d52;--gold2:#c4a272;--gold3:#e8d5b7;
+  --white:#ffffff;
+  --border:rgba(26,24,20,0.09);--border2:rgba(26,24,20,0.15);
+  --s-todo:#aaaaaa;--s-inprog:#5c8ae0;--s-cobrar:#e0905c;--s-cancel:#e0c05c;--s-done:#5cb87a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color:var(--ink);font-weight:300;overflow:hidden}
+
+.header{height:54px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:0;position:fixed;top:0;left:0;right:0;z-index:100}
+.logo{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:500;letter-spacing:.04em;text-decoration:none;color:var(--ink)}
+.hdiv{width:1px;height:14px;background:var(--border2);margin:0 13px}
+.hls{font-size:10px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase}
+.hright{margin-left:auto;display:flex;align-items:center;gap:10px}
+.back-btn{font-size:11px;color:var(--ink3);text-decoration:none;letter-spacing:.06em;padding:5px 10px;border:1px solid var(--border2);transition:all .12s}
+.back-btn:hover{color:var(--ink);border-color:var(--gold)}
+
+.toolbar{position:fixed;top:54px;left:0;right:0;height:46px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:10px;z-index:99}
+.tbtn{display:flex;align-items:center;gap:5px;padding:5px 12px;font-size:11px;letter-spacing:.05em;border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--ink2);font-family:'Jost',sans-serif;transition:all .12s;white-space:nowrap}
+.tbtn:hover{border-color:var(--gold);color:var(--gold)}
+.tbtn.primary{background:var(--gold);color:var(--white);border-color:var(--gold)}
+.tbtn.primary:hover{background:var(--gold2);border-color:var(--gold2)}
+.search-box{display:flex;align-items:center;gap:7px;padding:5px 11px;border:1px solid var(--border2);background:var(--sand);font-size:11px;color:var(--ink3);font-family:'Jost',sans-serif}
+.search-box input{border:none;background:transparent;outline:none;font-family:'Jost',sans-serif;font-size:11px;color:var(--ink);width:140px}
+.sync-info{margin-left:auto;font-size:10px;color:var(--ink3);letter-spacing:.04em}
+
+.main{position:fixed;top:100px;left:0;right:0;bottom:0;overflow:auto;padding:20px 22px}
+
+/* TABLE */
+.week-group{margin-bottom:24px}
+.week-header{display:flex;align-items:center;gap:8px;margin-bottom:0;padding:8px 12px;background:var(--white);border:1px solid var(--border);border-bottom:none;cursor:pointer;user-select:none}
+.week-toggle{font-size:11px;color:var(--ink3);transition:transform .15s}
+.week-toggle.open{transform:rotate(0deg)}
+.week-toggle.closed{transform:rotate(-90deg)}
+.week-label{font-size:12px;font-weight:500;letter-spacing:.04em;color:var(--ink2)}
+.week-count{font-size:11px;color:var(--ink3);background:var(--sand2);padding:1px 7px;border-radius:10px}
+.week-color{width:4px;height:18px;border-radius:2px;margin-right:2px}
+
+.table-wrap{overflow-x:auto;border:1px solid var(--border);background:var(--white)}
+.htable{width:100%;border-collapse:collapse;min-width:1200px}
+.htable th{position:sticky;top:0;background:var(--sand);border-bottom:1px solid var(--border2);border-right:1px solid var(--border);padding:7px 10px;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;cursor:default}
+.htable th:first-child{width:36px;text-align:center}
+.htable td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:0;vertical-align:middle;height:38px;font-size:12px}
+.htable td:last-child{border-right:none}
+.htable tr:hover td{background:rgba(247,244,239,0.5)}
+.htable tr.selected td{background:rgba(154,125,82,0.06)}
+
+.cell{padding:6px 10px;min-height:38px;display:flex;align-items:center;cursor:pointer;height:100%}
+.cell:hover{background:rgba(154,125,82,0.06)}
+.cell.editing{padding:0}
+.cell input,.cell select,.cell textarea{width:100%;border:none;outline:none;font-family:'Jost',sans-serif;font-size:12px;color:var(--ink);background:transparent;padding:6px 10px;height:38px}
+.cell textarea{height:auto;min-height:38px;resize:none}
+
+.row-check{width:36px;text-align:center;color:var(--ink3);font-size:16px;cursor:pointer;user-select:none}
+.row-check input{cursor:pointer;accent-color:var(--gold)}
+
+/* STATUS CHIP */
+.status-chip{display:inline-flex;align-items:center;padding:3px 10px;font-size:11px;font-weight:400;letter-spacing:.04em;border-radius:2px;color:#fff;white-space:nowrap;cursor:pointer;min-width:90px;justify-content:center}
+.status-wrap{display:flex;align-items:center;justify-content:center;padding:4px 6px}
+
+/* PERSON AVATAR */
+.person-chip{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-size:9px;font-weight:500;letter-spacing:.04em;color:#fff;flex-shrink:0}
+.persons-cell{display:flex;align-items:center;gap:3px;padding:5px 8px;flex-wrap:wrap;cursor:pointer}
+.persons-cell:hover{background:rgba(154,125,82,0.06)}
+
+/* TRAVEFY LINK */
+.travefy-link{color:var(--gold);text-decoration:none;font-size:11px}
+.travefy-link:hover{text-decoration:underline}
+
+/* ADD ROW */
+.add-row td{padding:6px 10px;font-size:11px;color:var(--ink3);cursor:pointer;border-top:1px dashed var(--border2)}
+.add-row:hover td{color:var(--gold)}
+
+/* STATUS DROPDOWN POPUP */
+.status-popup{position:fixed;background:var(--white);border:1px solid var(--border2);box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:300;min-width:160px;padding:4px 0}
+.sp-item{padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.sp-item:hover{background:var(--sand)}
+.sp-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* PERSON POPUP */
+.person-popup{position:fixed;background:var(--white);border:1px solid var(--border2);box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:300;min-width:160px;padding:4px 0}
+.pp-item{padding:7px 12px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.pp-item:hover{background:var(--sand)}
+.pp-check{width:14px;height:14px;border:1px solid var(--border2);border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--gold)}
+
+/* MODAL: NEW HANDOFF */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--white);width:560px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-head{padding:20px 24px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:500;letter-spacing:.04em}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink3);padding:0 4px}
+.modal-body{padding:20px 24px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.form-row.single{grid-template-columns:1fr}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.form-input{border:1px solid var(--border2);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--ink);background:transparent;outline:none}
+.form-input:focus{border-color:var(--gold)}
+.form-select{border:1px solid var(--border2);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--ink);background:var(--white);outline:none;cursor:pointer}
+.modal-foot{padding:14px 24px 20px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--border)}
+
+/* SUMMARY ROW */
+.summary-row td{background:var(--sand);font-size:10px;color:var(--ink3);padding:5px 10px;letter-spacing:.04em}
+
+/* EMPTY STATE */
+.empty-week{padding:20px;text-align:center;font-size:12px;color:var(--ink3);font-style:italic;background:var(--white);border:1px solid var(--border);border-top:none}
+
+/* WEEK COLORS */
+.wc-0{background:#c4473a}.wc-1{background:#9a7d52}.wc-2{background:#3d5a8a}.wc-3{background:#5a3d8a}.wc-4{background:#3d8a5a}.wc-5{background:#8a5a3d}.wc-6{background:#5a8a3d}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="/" class="logo">Two Travel</a>
+  <div class="hdiv"></div>
+  <span class="hls">Operaciones · Handoffs</span>
+  <div class="hright">
+    <a href="/" class="back-btn">← Concierge</a>
+  </div>
+</div>
+
+<div class="toolbar">
+  <button class="tbtn primary" onclick="openNewModal()">+ Nuevo handoff</button>
+  <div class="search-box">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
+    <input type="text" placeholder="Buscar..." oninput="searchQ=this.value;render()" id="search-input">
+  </div>
+  <select class="form-select" style="font-size:11px;padding:4px 8px;border-color:var(--border2)" onchange="filterPerson=this.value;render()">
+    <option value="">Todas las personas</option>
+    <option value="Alia">Alia</option>
+    <option value="Caro">Caro</option>
+    <option value="Dani">Dani</option>
+    <option value="Michel">Michel</option>
+    <option value="Xilene">Xilene</option>
+  </select>
+  <span class="sync-info" id="sync-info">Cargando...</span>
+</div>
+
+<div class="main" id="main"></div>
+
+<!-- Status popup -->
+<div id="status-popup" class="status-popup" style="display:none"></div>
+<!-- Person popup -->
+<div id="person-popup" class="person-popup" style="display:none"></div>
+
+<!-- New Handoff Modal -->
+<div class="overlay" id="new-modal" style="display:none" onclick="if(event.target===this)closeNewModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">Nuevo Handoff</span>
+      <button class="modal-close" onclick="closeNewModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Cliente</label>
+          <input class="form-input" id="n-client" placeholder="Ej. Jerome V.">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha de la actividad</label>
+          <input class="form-input" type="datetime-local" id="n-date">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Actividad</label>
+          <input class="form-input" id="n-activity" placeholder="Ej. Masajes, Almuerzo, IVs...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Clientes (quiénes)</label>
+          <input class="form-input" id="n-pax" placeholder="Ej. Todos, 8 pax, Tony y Rock">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Operador / Proveedor</label>
+          <input class="form-input" id="n-operator" placeholder="Ej. Dennis, Carmen, Sions">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Donde se realizó la reservación</label>
+          <select class="form-select" id="n-booking-where">
+            <option value="">Seleccionar...</option>
+            <option value="Grupo de Whatsapp">Grupo de Whatsapp</option>
+            <option value="Email">Email</option>
+            <option value="Llamada">Llamada</option>
+            <option value="Presencial">Presencial</option>
+            <option value="Plataforma">Plataforma</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Persona encargada de la actividad</label>
+          <select class="form-select" id="n-person">
+            <option value="">—</option>
+            <option value="Alia">Alia</option>
+            <option value="Caro">Caro</option>
+            <option value="Dani">Dani</option>
+            <option value="Michel">Michel</option>
+            <option value="Xilene">Xilene</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Persona en vivo</label>
+          <select class="form-select" id="n-person-live">
+            <option value="">—</option>
+            <option value="Alia">Alia</option>
+            <option value="Caro">Caro</option>
+            <option value="Dani">Dani</option>
+            <option value="Michel">Michel</option>
+            <option value="Xilene">Xilene</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Enlace Travefy</label>
+          <input class="form-input" id="n-travefy" placeholder="https://travefy.com/...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estado</label>
+          <select class="form-select" id="n-status">
+            <option value="todo">Por hacer</option>
+            <option value="inprog">En curso</option>
+            <option value="cobrar">Por cobrar</option>
+            <option value="cancel">Cancelado sin cargo</option>
+            <option value="done">Listo</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row single">
+        <div class="form-group">
+          <label class="form-label">Notas</label>
+          <textarea class="form-input" id="n-notes" rows="3" placeholder="Notas internas..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="tbtn" onclick="closeNewModal()">Cancelar</button>
+      <button class="tbtn primary" onclick="createHandoff()">Crear handoff</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec';
+
+const STATUSES = {
+  todo:   {label:'Por hacer',          color:'#aaaaaa'},
+  inprog: {label:'En curso',           color:'#5c8ae0'},
+  cobrar: {label:'Por cobrar',         color:'#e05c5c'},
+  cancel: {label:'Cancelado sin cargo',color:'#e0905c'},
+  done:   {label:'Listo',              color:'#5cb87a'},
+};
+
+const MEMBERS = {
+  Alia:   {bg:'#9a7d52',i:'AL'},
+  Caro:   {bg:'#3d8a5a',i:'CA'},
+  Dani:   {bg:'#8a3d5a',i:'DA'},
+  Michel: {bg:'#3d5a8a',i:'MI'},
+  Xilene: {bg:'#5a3d8a',i:'XI'},
+};
+
+let handoffs = [];
+let searchQ = '';
+let filterPerson = '';
+let activePopup = null;
+
+/* ── WEEK UTILS ── */
+function getWeekKey(dateStr){
+  if(!dateStr) return 'sin-fecha';
+  const d = new Date(dateStr);
+  if(isNaN(d)) return 'sin-fecha';
+  const day = d.getDay();
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  return monday.toISOString().split('T')[0];
+}
+function getWeekLabel(weekKey){
+  if(weekKey === 'sin-fecha') return 'Sin fecha';
+  const mon = new Date(weekKey + 'T00:00:00');
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  const fmt = d => `${d.toLocaleString('es',{month:'short'})} ${d.getDate()}`;
+  return `Semana ${fmt(mon)} – ${fmt(sun)}`;
+}
+function weekOrder(weekKey){
+  if(weekKey === 'sin-fecha') return '9999';
+  return weekKey;
+}
+
+/* ── STORAGE ── */
+function save(){
+  localStorage.setItem('tt_handoffs', JSON.stringify(handoffs));
+  syncToGAS();
+}
+function load(){
+  const saved = localStorage.getItem('tt_handoffs');
+  if(saved){ try{ handoffs=JSON.parse(saved); }catch{} }
+  if(!handoffs.length) handoffs = sampleData();
+}
+async function syncToGAS(){
+  try{
+    await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'saveHandoffs',data:{handoffs}})});
+  }catch{}
+}
+async function loadFromGAS(){
+  setSyncInfo('Sincronizando...');
+  try{
+    const r = await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'getHandoffs'})});
+    const d = await r.json();
+    if(d.data?.length){
+      handoffs = d.data;
+      localStorage.setItem('tt_handoffs', JSON.stringify(handoffs));
+      setSyncInfo('Sincronizado · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
+    } else {
+      setSyncInfo('Sin datos remotos');
+    }
+  }catch{
+    setSyncInfo('Local (sin conexión)');
+  }
+  render();
+}
+function setSyncInfo(t){ document.getElementById('sync-info').textContent = t; }
+
+function sampleData(){
+  const today = new Date();
+  const dt = (daysOffset, h=10, m=0) => {
+    const d = new Date(today); d.setDate(d.getDate()+daysOffset);
+    d.setHours(h,m,0,0); return d.toISOString().slice(0,16);
+  };
+  return [
+    {id:'h1',client:'Jerome V.',date:dt(-2,10,0),activity:'Masajes',pax:'8 pax',operator:'Dennis',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:true,person:'Alia',personLive:'Alia',notes:'Eran 10 masajes pero al final solo se hicieron 8',status:'cobrar'},
+    {id:'h2',client:'Jerome V.',date:dt(-2,11,0),activity:'IVs',pax:'Tony, Rock & He',operator:'IV MD',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:true,person:'Alia',personLive:'Alia',notes:'Por pagar',status:'cobrar'},
+    {id:'h3',client:'Jerome V.',date:dt(-2,12,30),activity:'Almuerzo',pax:'Todos',operator:'Carmen',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:false,person:'Alia',personLive:'Alia',notes:'pidieron cancelar la reserva de last minute, pero igual el restaurante cobró',status:'cancel'},
+    {id:'h4',client:'Jerome V.',date:dt(-2,20,30),activity:'Drinks',pax:'Todos',operator:'Mirador',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:false,person:'Xilene',personLive:'Xilene',notes:'',status:'cancel'},
+    {id:'h5',client:'Jerome V.',date:dt(-1,23,0),activity:'La Jugada',pax:'Todos',operator:'La Jugada',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:false,person:'Alia',personLive:'Alia',notes:'',status:'cancel'},
+    {id:'h6',client:'Jerome V.',date:dt(0,11,0),activity:'Transportation Out',pax:'Todos menos 1',operator:'Sions',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:false,person:'Alia',personLive:'Alia',notes:'',status:'todo'},
+    {id:'h7',client:'Jerome V.',date:dt(0,12,30),activity:'Transportation Out',pax:'Mikey',operator:'Sions',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:false,person:'Alia',personLive:'Alia',notes:'',status:'todo'},
+  ];
+}
+
+/* ── RENDER ── */
+const collapsedWeeks = new Set();
+
+function render(){
+  const main = document.getElementById('main');
+  let items = handoffs.filter(h => {
+    const q = searchQ.toLowerCase();
+    const matchQ = !q || [h.client,h.activity,h.pax,h.operator,h.notes].some(f=>(f||'').toLowerCase().includes(q));
+    const matchP = !filterPerson || h.person===filterPerson || h.personLive===filterPerson;
+    return matchQ && matchP;
+  });
+
+  // Group by week
+  const groups = {};
+  items.forEach(h => {
+    const wk = getWeekKey(h.date);
+    if(!groups[wk]) groups[wk] = [];
+    groups[wk].push(h);
+  });
+  const weekKeys = Object.keys(groups).sort((a,b) => weekOrder(a) < weekOrder(b) ? -1 : 1);
+
+  let html = '';
+  let colorIdx = 0;
+  weekKeys.forEach(wk => {
+    const rows = groups[wk];
+    const collapsed = collapsedWeeks.has(wk);
+    const label = getWeekLabel(wk);
+    const ci = colorIdx++ % 7;
+    html += `
+    <div class="week-group" data-wk="${wk}">
+      <div class="week-header" onclick="toggleWeek('${wk}')">
+        <div class="week-color wc-${ci}"></div>
+        <span class="week-toggle ${collapsed?'closed':'open'}">▼</span>
+        <span class="week-label">${label}</span>
+        <span class="week-count">${rows.length}</span>
+      </div>`;
+    if(!collapsed){
+      html += `<div class="table-wrap"><table class="htable">
+        <thead><tr>
+          <th></th>
+          <th>Cliente</th>
+          <th>Fecha · Hora</th>
+          <th>Actividad</th>
+          <th>Clientes</th>
+          <th>Enlace Travefy</th>
+          <th>Operador</th>
+          <th>Reservación via</th>
+          <th>Confirmación</th>
+          <th>Encargada</th>
+          <th>En vivo</th>
+          <th>Notas</th>
+          <th>Estado</th>
+        </tr></thead>
+        <tbody>`;
+      rows.forEach(h => { html += renderRow(h); });
+      html += `<tr class="add-row" onclick="openNewModal('${wk}')">
+        <td colspan="13">+ Agregar handoff</td>
+      </tr>`;
+      html += `</tbody></table></div>`;
+    }
+    html += `</div>`;
+  });
+
+  if(!weekKeys.length){
+    html = `<div style="text-align:center;padding:60px;color:var(--ink3);font-size:13px">No hay handoffs. Crea el primero con "+ Nuevo handoff".</div>`;
+  }
+
+  main.innerHTML = html;
+}
+
+function renderRow(h){
+  const st = STATUSES[h.status] || STATUSES.todo;
+  const fmtDate = d => {
+    if(!d) return '';
+    const dt = new Date(d);
+    if(isNaN(dt)) return d;
+    return dt.toLocaleString('es',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  };
+  const personAvatar = (name) => {
+    if(!name) return '';
+    const m = MEMBERS[name];
+    if(!m) return `<span class="person-chip" style="background:#aaa">${name[0]}</span>`;
+    return `<span class="person-chip" style="background:${m.bg}" title="${name}">${m.i}</span>`;
+  };
+
+  return `<tr data-id="${h.id}">
+    <td class="row-check"><input type="checkbox" onclick="event.stopPropagation()"></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','client')">${esc(h.client||'')}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','date')">${fmtDate(h.date)}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','activity')">${esc(h.activity||'')}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','pax')">${esc(h.pax||'')}</div></td>
+    <td><div class="cell">${h.travefy ? `<a class="travefy-link" href="${esc(h.travefy)}" target="_blank" rel="noreferrer">🔗 Link</a>` : `<span ondblclick="editCell(this.parentNode,'${h.id}','travefy')" style="color:var(--ink3);font-size:11px">—</span>`}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','operator')">${esc(h.operator||'')}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','bookingWhere')" style="font-size:11px;color:var(--ink2)">${esc(h.bookingWhere||'')}</div></td>
+    <td class="status-wrap"><span onclick="openConfirmToggle('${h.id}',event)" style="font-size:18px;cursor:pointer">${h.confirmation ? '✅' : '⬜'}</span></td>
+    <td><div class="persons-cell" onclick="openPersonPopup('${h.id}','person',event)">${personAvatar(h.person)}</div></td>
+    <td><div class="persons-cell" onclick="openPersonPopup('${h.id}','personLive',event)">${personAvatar(h.personLive)}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','notes')" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--ink3)">${esc(h.notes||'')}</div></td>
+    <td class="status-wrap"><span class="status-chip" style="background:${st.color}" onclick="openStatusPopup('${h.id}',event)">${st.label}</span></td>
+  </tr>`;
+}
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function toggleWeek(wk){
+  if(collapsedWeeks.has(wk)) collapsedWeeks.delete(wk);
+  else collapsedWeeks.add(wk);
+  render();
+}
+
+/* ── INLINE EDIT ── */
+function editCell(cell, id, field){
+  const h = handoffs.find(x=>x.id===id);
+  if(!h) return;
+  const cur = h[field] || '';
+
+  let input;
+  if(field === 'date'){
+    input = document.createElement('input');
+    input.type = 'datetime-local';
+    input.value = cur ? cur.slice(0,16) : '';
+  } else if(field === 'bookingWhere'){
+    input = document.createElement('select');
+    ['','Grupo de Whatsapp','Email','Llamada','Presencial','Plataforma','Otro'].forEach(v=>{
+      const o = document.createElement('option'); o.value=v; o.textContent=v||'—'; if(v===cur) o.selected=true;
+      input.appendChild(o);
+    });
+  } else {
+    input = document.createElement('input');
+    input.value = cur;
+    input.placeholder = field;
+  }
+
+  input.style.cssText = 'width:100%;border:none;outline:none;font-family:Jost,sans-serif;font-size:12px;color:var(--ink);background:rgba(154,125,82,0.08);padding:6px 10px;height:38px';
+
+  const done = () => {
+    h[field] = input.value;
+    save();
+    render();
+  };
+  input.addEventListener('blur', done);
+  input.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); done(); } if(e.key==='Escape'){ render(); } });
+
+  cell.innerHTML = '';
+  cell.appendChild(input);
+  input.focus();
+  if(input.type === 'text' || input.tagName === 'INPUT') input.select();
+}
+
+function openConfirmToggle(id, e){
+  e.stopPropagation();
+  const h = handoffs.find(x=>x.id===id);
+  if(!h) return;
+  h.confirmation = !h.confirmation;
+  save();
+  render();
+}
+
+/* ── STATUS POPUP ── */
+function openStatusPopup(id, e){
+  e.stopPropagation();
+  closePopups();
+  const popup = document.getElementById('status-popup');
+  popup.innerHTML = Object.entries(STATUSES).map(([k,s]) =>
+    `<div class="sp-item" onclick="setStatus('${id}','${k}')"><span class="sp-dot" style="background:${s.color}"></span>${s.label}</div>`
+  ).join('');
+  positionPopup(popup, e);
+  activePopup = popup;
+}
+function setStatus(id, status){
+  const h = handoffs.find(x=>x.id===id);
+  if(h){ h.status=status; save(); }
+  closePopups();
+  render();
+}
+
+/* ── PERSON POPUP ── */
+function openPersonPopup(id, field, e){
+  e.stopPropagation();
+  closePopups();
+  const h = handoffs.find(x=>x.id===id);
+  if(!h) return;
+  const cur = h[field] || '';
+  const popup = document.getElementById('person-popup');
+  popup.innerHTML = Object.entries(MEMBERS).map(([name,m]) =>
+    `<div class="pp-item" onclick="setPerson('${id}','${field}','${name}')">
+      <span class="person-chip" style="background:${m.bg};width:22px;height:22px;font-size:8px">${m.i}</span>
+      ${name}
+      ${cur===name ? '<span style="margin-left:auto;color:var(--gold)">✓</span>' : ''}
+    </div>`
+  ).join('') + `<div class="pp-item" onclick="setPerson('${id}','${field}','')"><span style="width:22px;height:22px;display:inline-block"></span><span style="color:var(--ink3)">— Ninguna</span></div>`;
+  positionPopup(popup, e);
+  activePopup = popup;
+}
+function setPerson(id, field, name){
+  const h = handoffs.find(x=>x.id===id);
+  if(h){ h[field]=name; save(); }
+  closePopups();
+  render();
+}
+
+function positionPopup(popup, e){
+  popup.style.display = 'block';
+  const rect = e.target.getBoundingClientRect ? e.target.getBoundingClientRect() : {bottom:e.clientY,left:e.clientX};
+  let top = (rect.bottom || e.clientY) + 4;
+  let left = rect.left || e.clientX;
+  if(left + 180 > window.innerWidth) left = window.innerWidth - 185;
+  if(top + 200 > window.innerHeight) top = (rect.top || e.clientY) - 205;
+  popup.style.top = top + 'px';
+  popup.style.left = left + 'px';
+}
+function closePopups(){
+  document.getElementById('status-popup').style.display = 'none';
+  document.getElementById('person-popup').style.display = 'none';
+  activePopup = null;
+}
+document.addEventListener('click', closePopups);
+
+/* ── NEW HANDOFF MODAL ── */
+let prefillWeek = null;
+function openNewModal(wk){
+  prefillWeek = wk || null;
+  // prefill date to Monday of week if week given
+  if(wk && wk !== 'sin-fecha'){
+    document.getElementById('n-date').value = wk + 'T10:00';
+  } else {
+    const now = new Date();
+    document.getElementById('n-date').value = now.toISOString().slice(0,16);
+  }
+  document.getElementById('new-modal').style.display = 'flex';
+  document.getElementById('n-client').focus();
+}
+function closeNewModal(){
+  document.getElementById('new-modal').style.display = 'none';
+  ['n-client','n-date','n-activity','n-pax','n-operator','n-travefy','n-notes'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('n-status').value = 'todo';
+  document.getElementById('n-person').value = '';
+  document.getElementById('n-person-live').value = '';
+  document.getElementById('n-booking-where').value = '';
+}
+function createHandoff(){
+  const h = {
+    id: 'h' + Date.now(),
+    client:      document.getElementById('n-client').value.trim(),
+    date:        document.getElementById('n-date').value,
+    activity:    document.getElementById('n-activity').value.trim(),
+    pax:         document.getElementById('n-pax').value.trim(),
+    operator:    document.getElementById('n-operator').value.trim(),
+    bookingWhere:document.getElementById('n-booking-where').value,
+    travefy:     document.getElementById('n-travefy').value.trim(),
+    confirmation:false,
+    person:      document.getElementById('n-person').value,
+    personLive:  document.getElementById('n-person-live').value,
+    notes:       document.getElementById('n-notes').value.trim(),
+    status:      document.getElementById('n-status').value,
+  };
+  if(!h.activity && !h.client){ alert('Ingresa al menos el cliente o la actividad'); return; }
+  handoffs.push(h);
+  save();
+  closeNewModal();
+  render();
+}
+
+/* ── INIT ── */
+load();
+render();
+setSyncInfo('Cargando desde servidor...');
+loadFromGAS();
+</script>
+</body>
+</html>

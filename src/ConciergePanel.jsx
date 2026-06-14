@@ -4430,6 +4430,13 @@ const loadKickoffs = async () => {
     📋 Tareas
   </a>
 
+  <a
+    href="/handoffs.html"
+    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium"
+  >
+    🔁 Handoffs
+  </a>
+
   <button
     onClick={loadKickoffs}
     disabled={loading}
