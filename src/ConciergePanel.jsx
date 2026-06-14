@@ -3285,7 +3285,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     className="flex-1 border border-neutral-200 rounded-lg px-2 py-1.5 text-sm bg-white outline-none"
                   >
                     <option value="">— Ciudad —</option>
-                    {["Cartagena","Medellín","CDMX","Tulum","Bogotá"].map(d => (
+                    {["Cartagena","Medellín","CDMX","Tulum"].map(d => (
                       <option key={d} value={d}>{d}</option>
                     ))}
                   </select>
@@ -3423,7 +3423,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
         </div>
 
 
-        <div className="px-5 py-4 border-t bg-neutral-50 flex justify-end gap-2">
+        <div className="px-5 py-4 border-t bg-neutral-50 flex flex-wrap justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
@@ -3901,9 +3901,8 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
               {[
                 { code: "CTG",  label: "Cartagena" },
                 { code: "MDE",  label: "Medellín" },
-                { code: "CDMX", label: "Cdmx" },
+                { code: "CDMX", label: "CDMX" },
                 { code: "TUL",  label: "Tulum" },
-                { code: "BOG",  label: "Bogotá" },
               ].map(({ code, label }) => {
                 const cities = form.city ? form.city.split(",").map(s=>s.trim()) : [];
                 const active = cities.includes(code);

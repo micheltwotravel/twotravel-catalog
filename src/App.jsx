@@ -2219,6 +2219,9 @@ function TaskTracker() {
   const [searchName, setSearchName]         = useState("");
   const [showCompleted, setShowCompleted]   = useState(false);
   const [loadError, setLoadError]           = useState("");
+  // Calendar state (must be at component level — hooks can't be inside render)
+  const [calYear,  setCalYear]  = useState(new Date().getFullYear());
+  const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [form, setForm] = useState({
     taskName:"", assignedTo:"", assignedEmail:"", dueDate:"",
     notes:"", kickoffId:"", kickoffName:"", priority:"media", imageUrl:"",
@@ -2609,14 +2612,10 @@ function TaskTracker() {
                   })}
                 </div>
               );
-            })() : view === "calendar" ? (() => {
-              /* ══ CALENDAR VIEW ══ */
-              const [calYear, calMonth] = (() => {
-                const d = new Date(); return [d.getFullYear(), d.getMonth()];
-              })();
-              const [cy, setCy] = useState(calYear);
-              const [cm, setCm] = useState(calMonth);
-              const firstDay = new Date(cy, cm, 1).getDay();
+            }) : view === "calendar" ? (() => {
+              /* ══ CALENDAR VIEW — uses component-level calYear/calMonth state ══ */
+              const cy = calYear, cm = calMonth;
+              const firstDay    = new Date(cy, cm, 1).getDay();
               const daysInMonth = new Date(cy, cm+1, 0).getDate();
               const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
               const tasksByDay = {};
@@ -2630,23 +2629,22 @@ function TaskTracker() {
                 }
               });
               const AVATAR_COLORS = ["bg-stone-700","bg-rose-600","bg-blue-600","bg-amber-600","bg-emerald-600","bg-violet-600"];
-              const avatarColor = (() => {
-                const map = {};
-                CONCIERGE_NAMES.forEach((n,i) => { map[n] = AVATAR_COLORS[i % AVATAR_COLORS.length]; });
-                return (name) => map[name] || "bg-stone-500";
-              })();
+              const avatarColor = (name) => {
+                const idx = CONCIERGE_NAMES.indexOf(name);
+                return idx >= 0 ? AVATAR_COLORS[idx % AVATAR_COLORS.length] : "bg-stone-500";
+              };
+              const prevMonth = () => { if(cm===0){setCalMonth(11);setCalYear(y=>y-1);}else setCalMonth(m=>m-1); };
+              const nextMonth = () => { if(cm===11){setCalMonth(0);setCalYear(y=>y+1);}else setCalMonth(m=>m+1); };
               return (
                 <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
                   {/* Cal nav */}
                   <div className="flex items-center justify-between px-5 py-3 border-b border-stone-100">
-                    <button onClick={()=>{ if(cm===0){setCm(11);setCy(y=>y-1);}else setCm(m=>m-1); }}
-                      className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500 text-sm">‹</button>
+                    <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500 text-lg font-light">‹</button>
                     <span className="text-sm font-semibold text-stone-700">{MONTHS[cm]} {cy}</span>
-                    <button onClick={()=>{ if(cm===11){setCm(0);setCy(y=>y+1);}else setCm(m=>m+1); }}
-                      className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500 text-sm">›</button>
+                    <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500 text-lg font-light">›</button>
                   </div>
                   {/* Day headers */}
-                  <div className="grid grid-cols-7 border-b border-stone-100">
+                  <div className="grid grid-cols-7 border-b border-stone-100 bg-stone-50">
                     {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=>(
                       <div key={d} className="text-center text-[10px] font-semibold text-stone-400 py-2">{d}</div>
                     ))}
@@ -2654,29 +2652,37 @@ function TaskTracker() {
                   {/* Grid */}
                   <div className="grid grid-cols-7">
                     {Array.from({length: firstDay}).map((_,i)=>(
-                      <div key={"empty-"+i} className="min-h-[80px] border-b border-r border-stone-50 p-1"/>
+                      <div key={"empty-"+i} className="min-h-[90px] border-b border-r border-stone-100 bg-stone-50/50"/>
                     ))}
                     {Array.from({length: daysInMonth}).map((_,i) => {
                       const day = i+1;
                       const dayTasks = tasksByDay[day] || [];
                       const isToday = new Date().getDate()===day && new Date().getMonth()===cm && new Date().getFullYear()===cy;
+                      const hasLate  = dayTasks.some(t=>t.status==="late"||(t.dueDate&&new Date(t.dueDate)<new Date()&&t.status!=="completed"));
                       return (
-                        <div key={day} className="min-h-[80px] border-b border-r border-stone-50 p-1.5">
-                          <div className={`text-[11px] font-semibold mb-1 w-5 h-5 flex items-center justify-center rounded-full ${isToday?"bg-stone-800 text-white":"text-stone-500"}`}>{day}</div>
+                        <div key={day} className={`min-h-[90px] border-b border-r border-stone-100 p-1.5 ${hasLate?"bg-red-50/30":""}`}>
+                          <div className={`text-[11px] font-semibold mb-1 w-6 h-6 flex items-center justify-center rounded-full ${isToday?"bg-stone-800 text-white":"text-stone-500"}`}>{day}</div>
                           <div className="space-y-0.5">
-                            {dayTasks.slice(0,3).map(t => {
-                              const col = avatarColor(t.assignedTo);
-                              return (
-                                <div key={t.id} className={`text-[9px] text-white rounded px-1 py-0.5 truncate ${col}`} title={t.taskName}>
-                                  {t.taskName}
-                                </div>
-                              );
-                            })}
-                            {dayTasks.length>3 && <div className="text-[9px] text-stone-400">+{dayTasks.length-3} more</div>}
+                            {dayTasks.slice(0,3).map(t => (
+                              <div key={t.id} title={`${t.taskName} — ${t.assignedTo||"?"}`}
+                                className={`text-[9px] text-white rounded px-1.5 py-0.5 truncate leading-tight ${avatarColor(t.assignedTo)}`}>
+                                {t.taskName}
+                              </div>
+                            ))}
+                            {dayTasks.length>3 && <div className="text-[9px] text-stone-400 pl-0.5">+{dayTasks.length-3} more</div>}
                           </div>
                         </div>
                       );
                     })}
+                  </div>
+                  {/* Legend */}
+                  <div className="px-4 py-3 border-t border-stone-100 flex flex-wrap gap-3">
+                    {CONCIERGE_NAMES.map((n,i)=>(
+                      <span key={n} className="flex items-center gap-1.5 text-[10px] text-stone-500">
+                        <span className={`w-2.5 h-2.5 rounded-full ${AVATAR_COLORS[i%AVATAR_COLORS.length]}`}/>
+                        {n.split(" ")[0]}
+                      </span>
+                    ))}
                   </div>
                 </div>
               );
