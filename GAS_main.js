@@ -180,7 +180,10 @@ function saveKickoff_(payload) {
   });
   if (colMap["createdAt"] && !row[colMap["createdAt"]-1])
     row[colMap["createdAt"]-1] = new Date().toISOString();
-  sh.appendRow(row);
+  const newRowNum = sh.getLastRow() + 1;
+  const newRange = sh.getRange(newRowNum, 1, 1, row.length);
+  newRange.setNumberFormat("@");
+  newRange.setValues([row]);
   SpreadsheetApp.flush();
   return { ok: true, id: newId };
 }
@@ -216,9 +219,9 @@ function updateKickoff_(id, updates) {
       const col = headers.indexOf(key.trim().toLowerCase());
       if (col === -1) return;
       const cell = (val !== null && val !== undefined) ? val : "";
-      sh.getRange(r + 1, col + 1).setValue(
-        typeof cell === "object" ? JSON.stringify(cell) : cell
-      );
+      const cellRange = sh.getRange(r + 1, col + 1);
+      cellRange.setNumberFormat("@");
+      cellRange.setValue(typeof cell === "object" ? JSON.stringify(cell) : cell);
     });
     SpreadsheetApp.flush();
     return { ok: true };
@@ -634,6 +637,31 @@ function clearDuplicateProperties() {
     SpreadsheetApp.flush();
   }
   Logger.log("Done. Rows now: " + sh.getLastRow());
+}
+
+// ─── Reparar #ERROR! en Sheet1 (correr una vez manualmente) ─────
+function repairContactErrors() {
+  const sh = SS.getSheetByName("Sheet1");
+  if (!sh) { Logger.log("Sheet1 no encontrada"); return; }
+  const lastRow = sh.getLastRow();
+  const lastCol = sh.getLastColumn();
+  if (lastRow < 2) { Logger.log("Sin datos"); return; }
+  // Formatea todas las celdas de datos como texto plano
+  sh.getRange(2, 1, lastRow - 1, lastCol).setNumberFormat("@");
+  // Reescribe las celdas que tienen error
+  const data = sh.getDataRange().getValues();
+  let fixed = 0;
+  for (let r = 1; r < data.length; r++) {
+    for (let c = 0; c < data[r].length; c++) {
+      const v = data[r][c];
+      if (v instanceof Error || String(v) === "#ERROR!" || String(v).startsWith("#")) {
+        sh.getRange(r + 1, c + 1).setNumberFormat("@").setValue("");
+        fixed++;
+      }
+    }
+  }
+  SpreadsheetApp.flush();
+  Logger.log("Reparadas " + fixed + " celdas con error.");
 }
 
 // ═══════════════ HANDOFFS OPERACIONES ════════════════════════════
