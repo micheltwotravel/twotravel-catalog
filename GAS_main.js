@@ -124,6 +124,12 @@ function doPost(e) {
       case "sendSlackMessage":   return jsonResponse(sendSlackMessage_(payload));
       case "property_bulk":      return jsonResponse(handlePropertyBulk(body.data || []));
 
+      // ── Handoffs operaciones ──
+      case "getHandoffs":    return jsonResponse({ ok: true, data: getHandoffs_() });
+      case "saveHandoffs":   return jsonResponse(saveHandoffs_(payload));
+      case "updateHandoff":  return jsonResponse(updateHandoff_(payload.id || id, payload));
+      case "deleteHandoff":  return jsonResponse(deleteHandoff_(payload.id || id));
+
       // ── Properties ──
       case "property_list":   return jsonResponse(handlePropertyList());
       case "property_get":    return jsonResponse(handlePropertyGet(body.data || {}));
@@ -628,4 +634,85 @@ function clearDuplicateProperties() {
     SpreadsheetApp.flush();
   }
   Logger.log("Done. Rows now: " + sh.getLastRow());
+}
+
+// ═══════════════ HANDOFFS OPERACIONES ════════════════════════════
+const HANDOFFS_SHEET = "Handoffs";
+const HANDOFFS_COLS  = ["id","client","date","activity","pax","operator","bookingWhere","travefy","confirmation","person","personLive","notes","status","createdAt","updatedAt"];
+
+function getHandoffsSheet_() {
+  let sh = SS.getSheetByName(HANDOFFS_SHEET);
+  if (!sh) {
+    sh = SS.insertSheet(HANDOFFS_SHEET);
+    sh.getRange(1, 1, 1, HANDOFFS_COLS.length).setValues([HANDOFFS_COLS]);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function getHandoffs_() {
+  const sh = getHandoffsSheet_();
+  const vals = sh.getDataRange().getValues();
+  if (vals.length < 2) return [];
+  const headers = vals[0].map(String);
+  return vals.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = row[i] ?? ""; });
+    return obj;
+  }).filter(r => r.id);
+}
+
+function saveHandoffs_(payload) {
+  // payload = { handoffs: [...] }  — full replace
+  const items = Array.isArray(payload) ? payload : (payload.handoffs || []);
+  const sh = getHandoffsSheet_();
+  const lastRow = sh.getLastRow();
+  if (lastRow > 1) sh.deleteRows(2, lastRow - 1);
+  if (!items.length) return { ok: true };
+  const now = new Date().toISOString();
+  const rows = items.map(h => HANDOFFS_COLS.map(col => {
+    if (col === "createdAt") return h.createdAt || now;
+    if (col === "updatedAt") return now;
+    if (col === "id")        return h.id || ("hf_" + Date.now() + Math.random());
+    return h[col] !== undefined ? h[col] : "";
+  }));
+  sh.getRange(2, 1, rows.length, HANDOFFS_COLS.length).setValues(rows);
+  SpreadsheetApp.flush();
+  return { ok: true, count: rows.length };
+}
+
+function updateHandoff_(id, updates) {
+  if (!id) return { ok: false, error: "Falta id" };
+  const sh = getHandoffsSheet_();
+  const vals = sh.getDataRange().getValues();
+  const headers = vals[0].map(String);
+  const idIdx = headers.indexOf("id");
+  for (let r = 1; r < vals.length; r++) {
+    if (String(vals[r][idIdx]) === String(id)) {
+      Object.entries(updates).forEach(([k, v]) => {
+        const ci = headers.indexOf(k);
+        if (ci >= 0) sh.getRange(r + 1, ci + 1).setValue(v ?? "");
+      });
+      const updIdx = headers.indexOf("updatedAt");
+      if (updIdx >= 0) sh.getRange(r + 1, updIdx + 1).setValue(new Date().toISOString());
+      SpreadsheetApp.flush();
+      return { ok: true };
+    }
+  }
+  return { ok: false, error: "Handoff no encontrado: " + id };
+}
+
+function deleteHandoff_(id) {
+  if (!id) return { ok: false, error: "Falta id" };
+  const sh = getHandoffsSheet_();
+  const vals = sh.getDataRange().getValues();
+  const idIdx = vals[0].map(String).indexOf("id");
+  for (let r = 1; r < vals.length; r++) {
+    if (String(vals[r][idIdx]) === String(id)) {
+      sh.deleteRow(r + 1);
+      SpreadsheetApp.flush();
+      return { ok: true };
+    }
+  }
+  return { ok: false, error: "No encontrado: " + id };
 }
