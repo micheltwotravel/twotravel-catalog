@@ -22,7 +22,7 @@ const KICKOFF_HEADERS = [
   "sentToTravifyAt","doneAt",
 ];
 
-const TASK_HEADERS = ["id","taskName","assignedTo","assignedEmail","dueDate","status","notes","kickoffId","kickoffName","priority","createdAt","completedAt"];
+const TASK_HEADERS = ["id","taskName","assignedTo","assignedEmail","dueDate","status","notes","kickoffId","kickoffName","handoffId","priority","createdAt","completedAt"];
 const SOPORTE_HEADERS = [
   "id","nombre","tipo","prioridad","titulo","descripcion","createdAt","status",
 ];
@@ -274,6 +274,7 @@ function saveTask_(payload) {
   row[colMap["notes"]-1]        = payload.notes        || "";
   if (colMap["kickoffId"])   row[colMap["kickoffId"]-1]   = payload.kickoffId   || "";
   if (colMap["kickoffName"]) row[colMap["kickoffName"]-1] = payload.kickoffName || "";
+  if (colMap["handoffId"])   row[colMap["handoffId"]-1]   = payload.handoffId   || "";
   row[colMap["createdAt"]-1]    = payload.createdAt    || new Date().toISOString();
   sh.appendRow(row);
   SpreadsheetApp.flush();
