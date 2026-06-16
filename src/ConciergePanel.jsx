@@ -1016,7 +1016,7 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
               className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
             />
           </div>
-          {["restaurants","bars","nightlife","beach-clubs"].includes(String(item.category || "").toLowerCase()) && (
+          {["restaurants","bars","nightlife","beach-clubs"].includes(normCatPanel(item.category)) && (
             <div className="flex items-center gap-2">
               <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Dress code</span>
               <input
@@ -1432,7 +1432,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         <CatalogPickerModal
           services={services}
           clientType={kickoff?.clientType || 1}
-          city={kickoff?.city || ""}
+          city={kickoff?.city || kickoff?.destination || ""}
           onClose={() => setCatalogTargetDay(null)}
           onPick={svc => {
             const count = cart.filter(i => (i.dayLabel || "Sin día") === catalogTargetDay).length;
@@ -2184,13 +2184,15 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
     BOG:  ["bog","bogota","bogotá"],
   };
   const toCityCode = (raw) => {
-    const v = String(raw || "").trim().toLowerCase();
-    if (!v) return "";
+    // Handle comma-separated multi-city — take first city only
+    const first = String(raw || "").split(",")[0].trim().toLowerCase();
+    if (!first) return "";
     for (const [code, aliases] of Object.entries(CITY_ALIASES)) {
-      if (aliases.includes(v) || v === code.toLowerCase()) return code;
+      if (aliases.includes(first) || first === code.toLowerCase()) return code;
     }
-    return v.toUpperCase();
+    return first.toUpperCase();
   };
+  const CITY_LABELS = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" };
   const kickoffCityCode = toCityCode(city); // e.g. "CTG", "CDMX"
 
   // Base list: filter by city using canonical codes
@@ -2264,7 +2266,7 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
 
   return (
     <Modal
-      title={kickoffCityCode ? `Agregar desde Catálogo · ${kickoffCityCode}` : "Agregar desde Catálogo"}
+      title={kickoffCityCode ? `Agregar desde Catálogo · ${CITY_LABELS[kickoffCityCode] || kickoffCityCode}` : "Agregar desde Catálogo"}
       onClose={onClose}
       maxWidth="max-w-4xl"
       footer={
@@ -2278,6 +2280,11 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
       }
     >
       <div className="space-y-3">
+        {!kickoffCityCode && (
+          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            ⚠️ Este cliente no tiene ciudad asignada — se muestran todos los servicios. Asigna la ciudad al kickoff para filtrar correctamente.
+          </div>
+        )}
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -2357,7 +2364,7 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
         )}
 
         <div className="text-[11px] text-neutral-500">
-          Mostrando {filtered.length} de {(services || []).length} servicios
+          Mostrando {filtered.length} de {cityServices.length} servicios{kickoffCityCode ? ` en ${CITY_LABELS[kickoffCityCode] || kickoffCityCode}` : ""}
         </div>
 
         {filtered.length === 0 ? (
