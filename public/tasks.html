@@ -196,10 +196,15 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
   </div>
   <div class="tsep"></div>
   <button class="tbtn" onclick="openNewTask()">+ New Task</button>
-  <div style="display:flex;gap:4px;margin:0 4px">
-    <button id="cat-all" onclick="setCatFilter('all')" style="padding:4px 10px;font-size:11px;border:1px solid var(--border2);border-radius:5px;background:var(--ink);color:#fff;cursor:pointer">Todas</button>
-    <button id="cat-concierge" onclick="setCatFilter('concierge')" style="padding:4px 10px;font-size:11px;border:1px solid var(--border2);border-radius:5px;background:transparent;color:var(--ink);cursor:pointer">Concierge</button>
-    <button id="cat-ventas" onclick="setCatFilter('ventas')" style="padding:4px 10px;font-size:11px;border:1px solid var(--border2);border-radius:5px;background:transparent;color:var(--ink);cursor:pointer">Ventas</button>
+  <div style="display:flex;align-items:center;gap:0;margin:0 4px">
+    <button id="cat-all" onclick="setCatFilter('all')" style="padding:4px 10px;font-size:11px;border:1px solid var(--border2);border-radius:5px;background:var(--ink);color:#fff;cursor:pointer;margin-right:6px">Todas</button>
+    <div style="display:flex;align-items:center;border:1px solid var(--border2);border-radius:6px;overflow:hidden;background:var(--sand)">
+      <button id="cat-concierge" onclick="setCatFilter('concierge')" style="padding:4px 11px;font-size:11px;border:none;background:transparent;color:var(--ink);cursor:pointer;letter-spacing:.03em">Concierge</button>
+      <span style="font-size:11px;color:var(--ink3);padding:0 2px;user-select:none">→</span>
+      <button id="cat-handoff" onclick="setCatFilter('handoff')" style="padding:4px 11px;font-size:11px;border:none;background:transparent;color:var(--ink);cursor:pointer;letter-spacing:.03em">Handoff</button>
+      <span style="font-size:11px;color:var(--ink3);padding:0 2px;user-select:none">→</span>
+      <button id="cat-sales" onclick="setCatFilter('sales')" style="padding:4px 11px;font-size:11px;border:none;background:transparent;color:var(--ink);cursor:pointer;letter-spacing:.03em">Sales</button>
+    </div>
   </div>
   <div class="search-box">
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="5"/><line x1="10" y1="10" x2="15" y2="15"/></svg>
@@ -306,7 +311,8 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
           <label class="form-label">Area</label>
           <select class="form-select" id="new-category">
             <option value="concierge">Concierge</option>
-            <option value="ventas">Ventas</option>
+            <option value="handoff">Handoff</option>
+            <option value="sales">Sales</option>
           </select>
         </div>
         <div class="form-row" style="margin-bottom:0">
@@ -391,9 +397,17 @@ let catFilter = 'all';
 
 function setCatFilter(v){
   catFilter = v;
-  ['all','concierge','ventas'].forEach(k => {
+  ['all','concierge','handoff','sales'].forEach(k => {
     const b = document.getElementById('cat-'+k);
-    if(b){ b.style.background = k===v ? 'var(--ink)' : 'transparent'; b.style.color = k===v ? '#fff' : 'var(--ink)'; }
+    if (!b) return;
+    if (k === 'all') {
+      b.style.background = k===v ? 'var(--ink)' : 'transparent';
+      b.style.color = k===v ? '#fff' : 'var(--ink)';
+    } else {
+      b.style.background = k===v ? 'var(--ink)' : 'transparent';
+      b.style.color = k===v ? '#fff' : 'var(--ink)';
+      b.style.borderRadius = '0';
+    }
   });
   render();
 }
@@ -462,7 +476,8 @@ function regroupBy(val){ groupMode=val; render(); }
 
 function visibleTasks(){
   return tasks.filter(t=>{
-    if(catFilter !== 'all' && (t.category||'concierge') !== catFilter) return false;
+    const cat = t.category === 'ventas' ? 'sales' : (t.category||'concierge');
+    if(catFilter !== 'all' && cat !== catFilter) return false;
     if(!searchQ) return true;
     return t.title.toLowerCase().includes(searchQ)||
       (t.client||'').toLowerCase().includes(searchQ)||
