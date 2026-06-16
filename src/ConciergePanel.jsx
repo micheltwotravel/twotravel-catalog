@@ -4450,34 +4450,6 @@ const loadKickoffs = async () => {
     {portalLang === "en" ? "🇺🇸 Links EN · UI EN" : "🇨🇴 Links ES · UI ES"}
   </button>
 
-  <a
-    href="?mode=dashboard"
-    className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100"
-  >
-    Dashboard
-  </a>
-
-  <a
-    href="?mode=tasks"
-    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-violet-200 bg-violet-50 hover:bg-violet-100 text-violet-700 font-medium"
-  >
-    📋 Tareas
-  </a>
-
-  <a
-    href="/handoffs.html"
-    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium"
-  >
-    🔁 Handoffs
-  </a>
-
-  <a
-    href="/pagos.html"
-    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium"
-  >
-    💳 Pagos
-  </a>
-
   <button
     onClick={loadKickoffs}
     disabled={loading}
@@ -4496,25 +4468,13 @@ const loadKickoffs = async () => {
     + Nuevo cliente
   </button>
 
-{/* ── BOTÓN EQUIPO DE VENTAS ── */}
-<a
-  href="https://www.twotravelvip.com/agent.html"
-  target="_blank"
-  rel="noreferrer"
-  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium"
-  title="Abrir herramienta del equipo de ventas"
->
-  👥 Ventas
-</a>
-
-<a
-  href="/?mode=soporte-dashboard"
-  target="_blank"
-  rel="noreferrer"
-  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100 text-neutral-700"
->
-  🛠 Soporte
-</a>
+  <a
+    href="/menu.html"
+    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-500"
+    title="Menú principal"
+  >
+    ☰ Menú
+  </a>
 
 </div>
 
