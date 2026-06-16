@@ -2853,13 +2853,6 @@ const DRINK_CATEGORIES = [
     { name:"Still water",              name_en:"Still water",                 emoji:"💧", img:"", priceCOP:25600, qty:"", note:"" },
     { name:"Red Bull",                 name_en:"Red Bull",                    emoji:"⚡", img:"https://images.rappi.com/products/c3d4e5f6-a7b8-c9d0-e1f2-a3b4c5d6e7f8.png", priceCOP:9400, qty:"", note:"" },
   ]},
-  { id:"snacks",     label:"🍿 Snacks",      label_en:"🍿 Snacks",        items:[
-    { name:"Chips",                    name_en:"Chips",                       emoji:"🍿", img:"", priceCOP:0, qty:"", note:"" },
-    { name:"Peanuts",                  name_en:"Peanuts",                     emoji:"🥜", img:"", priceCOP:0, qty:"", note:"" },
-    { name:"Cheese board",             name_en:"Cheese board",                emoji:"🧀", img:"", priceCOP:0, qty:"", note:"" },
-    { name:"Fresh fruit",              name_en:"Fresh fruit",                 emoji:"🍓", img:"", priceCOP:0, qty:"", note:"" },
-    { name:"Crudités",                 name_en:"Crudités",                    emoji:"🥕", img:"", priceCOP:0, qty:"", note:"" },
-  ]},
 ];
 
 function DrinksCatalog() {
@@ -3398,6 +3391,10 @@ const GROCERY_CATEGORIES = [
     { name:"Choclitos",        name_es:"Choclitos",          emoji:"🌽", img:OFF("770/218/904/5805/front_fr.4.400.jpg") },
     { name:"Platanitos",       name_es:"Platanitos",         emoji:"🍌", img:"https://www.hola-colombia.eu/web/image/product.template/494/image_1920?unique=8ab60b6" },
     { name:"Colombian Candy",  name_es:"Dulces colombianos", emoji:"🍬", img:"" },
+    { name:"Peanuts",          name_es:"Maní",               emoji:"🥜", img:"" },
+    { name:"Cheese board",     name_es:"Tabla de quesos",    emoji:"🧀", img:"" },
+    { name:"Fresh fruit",      name_es:"Fruta fresca",       emoji:"🍓", img:"" },
+    { name:"Crudités",         name_es:"Crudités",           emoji:"🥕", img:"" },
   ]},
   { id:"fruits", label:"🍍 Fruits & Vegetables", label_es:"🍍 Frutas & Verduras", items:[
     { name:"Pineapple",   name_es:"Piña",        emoji:"🍍", img:U("photo-1550258987-190a2d41a8ba") },
