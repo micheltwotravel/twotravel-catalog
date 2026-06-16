@@ -4082,22 +4082,8 @@ function App() {
   const kickoffId = params.get("kickoffId") || "";
   const { user, login, logout } = useAuth();
 
-  // Gate internal modes behind PIN login
-  if (PROTECTED_MODES.has(mode)) {
-    if (!user) return <LoginScreen onLogin={login} targetMode={mode} />;
-    const allowed = ROLE_ACCESS[user.role] || [];
-    if (!allowed.includes(mode)) {
-      return (
-        <div style={{minHeight:"100vh",background:"#f7f4ef",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Jost',sans-serif",flexDirection:"column",gap:16}}>
-          <p style={{fontSize:15,color:"#1a1814"}}>No tienes acceso a esta sección.</p>
-          <button onClick={logout} style={{padding:"8px 20px",background:"#1a1814",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:12}}>Cerrar sesión</button>
-        </div>
-      );
-    }
-  }
-
-  if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard onLogout={logout} currentUser={user} /></ErrorBoundary>;
-  if (mode === "concierge")          return <ErrorBoundary><ConciergePanel onLogout={logout} currentUser={user} /></ErrorBoundary>;
+  if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard /></ErrorBoundary>;
+  if (mode === "concierge")          return <ErrorBoundary><ConciergePanel /></ErrorBoundary>;
   if (mode === "soporte")            return <ErrorBoundary><SoportePage /></ErrorBoundary>;
   if (mode === "soporte-dashboard")  return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
   if (mode === "tasks")              return <ErrorBoundary><TaskTracker /></ErrorBoundary>;
