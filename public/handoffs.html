@@ -186,12 +186,32 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
     <input type="text" placeholder="Buscar..." oninput="searchQ=this.value;render()" id="search-input">
   </div>
   <select class="form-select" style="font-size:11px;padding:4px 8px;border-color:var(--border2)" onchange="filterPerson=this.value;render()">
-    <option value="">Todas las personas</option>
+    <option value="">Todas</option>
     <option value="Alia">Alia</option>
     <option value="Caro">Caro</option>
     <option value="Dani">Dani</option>
     <option value="Michel">Michel</option>
     <option value="Xilene">Xilene</option>
+  </select>
+  <select class="form-select" style="font-size:11px;padding:4px 8px;border-color:var(--border2)" onchange="filterStatus=this.value;render()">
+    <option value="">Todos los estados</option>
+    <option value="todo">Por hacer</option>
+    <option value="inprog">En curso</option>
+    <option value="cobrar">Por cobrar</option>
+    <option value="cancel">Cancelado</option>
+    <option value="done">Listo</option>
+  </select>
+  <select class="form-select" style="font-size:11px;padding:4px 8px;border-color:var(--border2)" onchange="filterConfirm=this.value;render()">
+    <option value="">Confirmación</option>
+    <option value="yes">✅ Confirmados</option>
+    <option value="no">⬜ Sin confirmar</option>
+  </select>
+  <select class="form-select" style="font-size:11px;padding:4px 8px;border-color:var(--border2)" onchange="filterDate=this.value;render()">
+    <option value="">Todas las fechas</option>
+    <option value="today">Hoy</option>
+    <option value="week">Esta semana</option>
+    <option value="next">Próxima semana</option>
+    <option value="past">Pasados</option>
   </select>
   <div class="view-toggle">
     <button id="btn-table" class="active" onclick="setView('table')">☰ Tabla</button>
@@ -329,6 +349,9 @@ const MEMBERS = {
 let handoffs = [];
 let searchQ = '';
 let filterPerson = '';
+let filterStatus = '';
+let filterConfirm = '';
+let filterDate = '';
 let activePopup = null;
 let currentView = 'table';
 let calWeekStart = getMondayOf(new Date());
@@ -452,7 +475,21 @@ function renderCalendar(){
     const q = searchQ.toLowerCase();
     const matchQ = !q || [h.client,h.activity,h.pax,h.operator,h.notes].some(f=>(f||'').toLowerCase().includes(q));
     const matchP = !filterPerson || h.person===filterPerson || h.personLive===filterPerson;
-    return matchQ && matchP;
+    const matchS = !filterStatus || h.status === filterStatus;
+    const matchC = !filterConfirm || (filterConfirm==='yes' ? h.confirmation : !h.confirmation);
+    let matchD = true;
+    if(filterDate && h.date){
+      const hd = new Date(h.date); hd.setHours(0,0,0,0);
+      const tod = new Date(); tod.setHours(0,0,0,0);
+      const mon = getMondayOf(tod);
+      const nextMon = new Date(mon); nextMon.setDate(mon.getDate()+7);
+      const nextSun = new Date(nextMon); nextSun.setDate(nextMon.getDate()+6);
+      if(filterDate==='today') matchD = hd.getTime()===tod.getTime();
+      else if(filterDate==='week') matchD = hd>=mon && hd<=new Date(mon.getTime()+6*86400000);
+      else if(filterDate==='next') matchD = hd>=nextMon && hd<=nextSun;
+      else if(filterDate==='past') matchD = hd<tod;
+    }
+    return matchQ && matchP && matchS && matchC && matchD;
   });
 
   // Map handoffs to days
@@ -538,7 +575,21 @@ function renderTable(){
     const q = searchQ.toLowerCase();
     const matchQ = !q || [h.client,h.activity,h.pax,h.operator,h.notes].some(f=>(f||'').toLowerCase().includes(q));
     const matchP = !filterPerson || h.person===filterPerson || h.personLive===filterPerson;
-    return matchQ && matchP;
+    const matchS = !filterStatus || h.status === filterStatus;
+    const matchC = !filterConfirm || (filterConfirm==='yes' ? h.confirmation : !h.confirmation);
+    let matchD = true;
+    if(filterDate && h.date){
+      const hd = new Date(h.date); hd.setHours(0,0,0,0);
+      const tod = new Date(); tod.setHours(0,0,0,0);
+      const mon = getMondayOf(tod);
+      const nextMon = new Date(mon); nextMon.setDate(mon.getDate()+7);
+      const nextSun = new Date(nextMon); nextSun.setDate(nextMon.getDate()+6);
+      if(filterDate==='today') matchD = hd.getTime()===tod.getTime();
+      else if(filterDate==='week') matchD = hd>=mon && hd<=new Date(mon.getTime()+6*86400000);
+      else if(filterDate==='next') matchD = hd>=nextMon && hd<=nextSun;
+      else if(filterDate==='past') matchD = hd<tod;
+    }
+    return matchQ && matchP && matchS && matchC && matchD;
   });
 
   // Group by week
