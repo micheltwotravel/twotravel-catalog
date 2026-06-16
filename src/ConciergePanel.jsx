@@ -4437,6 +4437,13 @@ const loadKickoffs = async () => {
     🔁 Handoffs
   </a>
 
+  <a
+    href="/pagos.html"
+    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium"
+  >
+    💳 Pagos
+  </a>
+
   <button
     onClick={loadKickoffs}
     disabled={loading}

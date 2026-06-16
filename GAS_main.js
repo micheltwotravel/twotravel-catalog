@@ -130,6 +130,12 @@ function doPost(e) {
       case "updateHandoff":  return jsonResponse(updateHandoff_(payload.id || id, payload));
       case "deleteHandoff":  return jsonResponse(deleteHandoff_(payload.id || id));
 
+      // ── Pagos / Solicitudes de pago ──
+      case "getPagos":    return jsonResponse({ ok: true, data: getPagos_() });
+      case "savePagos":   return jsonResponse(savePagos_(payload));
+      case "updatePago":  return jsonResponse(updatePago_(payload.id || id, payload));
+      case "deletePago":  return jsonResponse(deletePago_(payload.id || id));
+
       // ── Properties ──
       case "property_list":   return jsonResponse(handlePropertyList());
       case "property_get":    return jsonResponse(handlePropertyGet(body.data || {}));
@@ -734,6 +740,92 @@ function updateHandoff_(id, updates) {
 function deleteHandoff_(id) {
   if (!id) return { ok: false, error: "Falta id" };
   const sh = getHandoffsSheet_();
+  const vals = sh.getDataRange().getValues();
+  const idIdx = vals[0].map(String).indexOf("id");
+  for (let r = 1; r < vals.length; r++) {
+    if (String(vals[r][idIdx]) === String(id)) {
+      sh.deleteRow(r + 1);
+      SpreadsheetApp.flush();
+      return { ok: true };
+    }
+  }
+  return { ok: false, error: "No encontrado: " + id };
+}
+
+// ═══════════════ PAGOS / SOLICITUDES DE PAGO ═════════════════════
+const PAGOS_SHEET = "Pagos";
+const PAGOS_COLS  = ["id","dept","date","category","client","vendor","desc","amount","currency","method","person","receipt","status","notes","createdAt","updatedAt"];
+
+function getPagosSheet_() {
+  let sh = SS.getSheetByName(PAGOS_SHEET);
+  if (!sh) {
+    sh = SS.insertSheet(PAGOS_SHEET);
+    sh.getRange(1, 1, 1, PAGOS_COLS.length).setValues([PAGOS_COLS]);
+    sh.setFrozenRows(1);
+  } else {
+    const existing = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
+    PAGOS_COLS.forEach(col => {
+      if (!existing.includes(col)) {
+        sh.getRange(1, sh.getLastColumn() + 1).setValue(col);
+        existing.push(col);
+      }
+    });
+  }
+  return sh;
+}
+function getPagos_() {
+  const sh = getPagosSheet_();
+  const vals = sh.getDataRange().getValues();
+  if (vals.length < 2) return [];
+  const headers = vals[0].map(String);
+  return vals.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = row[i] ?? ""; });
+    return obj;
+  }).filter(r => r.id);
+}
+function savePagos_(payload) {
+  const items = Array.isArray(payload) ? payload : (payload.pagos || []);
+  const sh = getPagosSheet_();
+  const lastRow = sh.getLastRow();
+  if (lastRow > 1) sh.deleteRows(2, lastRow - 1);
+  if (!items.length) return { ok: true };
+  const now = new Date().toISOString();
+  const rows = items.map(p => PAGOS_COLS.map(col => {
+    if (col === "createdAt") return p.createdAt || now;
+    if (col === "updatedAt") return now;
+    if (col === "id")        return p.id || ("pg_" + Date.now() + Math.random());
+    // Don't store large base64 receipt images in sheet — store URL or skip
+    if (col === "receipt")   return p.receipt && p.receipt.length < 500 ? p.receipt : (p.receipt ? "[foto]" : "");
+    return p[col] !== undefined ? p[col] : "";
+  }));
+  sh.getRange(2, 1, rows.length, PAGOS_COLS.length).setValues(rows);
+  SpreadsheetApp.flush();
+  return { ok: true, count: rows.length };
+}
+function updatePago_(id, updates) {
+  if (!id) return { ok: false, error: "Falta id" };
+  const sh = getPagosSheet_();
+  const vals = sh.getDataRange().getValues();
+  const headers = vals[0].map(String);
+  const idIdx = headers.indexOf("id");
+  for (let r = 1; r < vals.length; r++) {
+    if (String(vals[r][idIdx]) === String(id)) {
+      Object.entries(updates).forEach(([k, v]) => {
+        const ci = headers.indexOf(k);
+        if (ci >= 0) sh.getRange(r + 1, ci + 1).setValue(v ?? "");
+      });
+      const updIdx = headers.indexOf("updatedAt");
+      if (updIdx >= 0) sh.getRange(r + 1, updIdx + 1).setValue(new Date().toISOString());
+      SpreadsheetApp.flush();
+      return { ok: true };
+    }
+  }
+  return { ok: false, error: "Pago no encontrado: " + id };
+}
+function deletePago_(id) {
+  if (!id) return { ok: false, error: "Falta id" };
+  const sh = getPagosSheet_();
   const vals = sh.getDataRange().getValues();
   const idIdx = vals[0].map(String).indexOf("id");
   for (let r = 1; r < vals.length; r++) {

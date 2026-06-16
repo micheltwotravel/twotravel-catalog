@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Two Travel · Solicitudes de Pago</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sand:#f7f4ef;--sand2:#efe9e0;--sand3:#e5ddd3;
+  --ink:#1a1814;--ink2:#3d3a35;--ink3:#7a7570;
+  --gold:#9a7d52;--gold2:#c4a272;--gold3:#e8d5b7;
+  --white:#ffffff;
+  --border:rgba(26,24,20,0.09);--border2:rgba(26,24,20,0.15);
+  --s-pend:#aaaaaa;--s-aprov:#5c8ae0;--s-pago:#5cb87a;--s-rech:#e05c5c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color:var(--ink);font-weight:300;overflow:hidden}
+
+.header{height:54px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:0;position:fixed;top:0;left:0;right:0;z-index:100}
+.logo{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:500;letter-spacing:.04em;text-decoration:none;color:var(--ink)}
+.hdiv{width:1px;height:14px;background:var(--border2);margin:0 13px}
+.hls{font-size:10px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase}
+.hright{margin-left:auto;display:flex;align-items:center;gap:10px}
+.back-btn{font-size:11px;color:var(--ink3);text-decoration:none;letter-spacing:.06em;padding:5px 10px;border:1px solid var(--border2);transition:all .12s}
+.back-btn:hover{color:var(--ink);border-color:var(--gold)}
+
+.toolbar{position:fixed;top:54px;left:0;right:0;height:46px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:10px;z-index:99;overflow-x:auto}
+.tbtn{display:flex;align-items:center;gap:5px;padding:5px 12px;font-size:11px;letter-spacing:.05em;border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--ink2);font-family:'Jost',sans-serif;transition:all .12s;white-space:nowrap;flex-shrink:0}
+.tbtn:hover{border-color:var(--gold);color:var(--gold)}
+.tbtn.primary{background:var(--gold);color:var(--white);border-color:var(--gold)}
+.tbtn.primary:hover{background:var(--gold2);border-color:var(--gold2)}
+.search-box{display:flex;align-items:center;gap:7px;padding:5px 11px;border:1px solid var(--border2);background:var(--sand);font-size:11px;color:var(--ink3);font-family:'Jost',sans-serif;flex-shrink:0}
+.search-box input{border:none;background:transparent;outline:none;font-family:'Jost',sans-serif;font-size:11px;color:var(--ink);width:120px}
+.filter-sel{font-size:11px;padding:4px 8px;border:1px solid var(--border2);background:var(--white);font-family:'Jost',sans-serif;color:var(--ink2);outline:none;cursor:pointer;flex-shrink:0}
+.sync-info{margin-left:auto;font-size:10px;color:var(--ink3);letter-spacing:.04em;flex-shrink:0}
+
+.main{position:fixed;top:100px;left:0;right:0;bottom:0;overflow:auto;padding:20px 22px}
+
+/* STATS BAR */
+.stats-bar{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.stat-card{background:var(--white);border:1px solid var(--border);padding:12px 18px;flex:1;min-width:120px}
+.stat-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+.stat-val{font-size:22px;font-weight:300;color:var(--ink)}
+.stat-sub{font-size:11px;color:var(--ink3);margin-top:2px}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;border:1px solid var(--border);background:var(--white);margin-bottom:20px}
+.ptable{width:100%;border-collapse:collapse;min-width:1100px}
+.ptable th{background:var(--sand);border-bottom:1px solid var(--border2);border-right:1px solid var(--border);padding:7px 10px;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);white-space:nowrap}
+.ptable td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:0;vertical-align:middle;height:38px;font-size:12px}
+.ptable td:last-child,.ptable th:last-child{border-right:none}
+.ptable tr:hover td{background:rgba(247,244,239,0.5)}
+.cell{padding:6px 10px;min-height:38px;display:flex;align-items:center;height:100%}
+.cell.editable:hover{background:rgba(154,125,82,0.06);cursor:text}
+
+/* STATUS */
+.status-chip{display:inline-flex;align-items:center;padding:3px 10px;font-size:11px;border-radius:2px;color:#fff;white-space:nowrap;cursor:pointer;min-width:85px;justify-content:center}
+.status-wrap{display:flex;align-items:center;justify-content:center;padding:4px 6px}
+.status-popup{position:fixed;background:var(--white);border:1px solid var(--border2);box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:300;min-width:150px;padding:4px 0}
+.sp-item{padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.sp-item:hover{background:var(--sand)}
+.sp-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* AMOUNT */
+.amount-cell{font-weight:500;font-size:12px;color:var(--ink)}
+.amount-cell.big{color:#5cb87a}
+
+/* PERSON AVATAR */
+.person-chip{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:8px;font-weight:500;color:#fff;flex-shrink:0}
+.person-wrap{display:flex;align-items:center;gap:4px;padding:5px 8px;cursor:pointer}
+.person-wrap:hover{background:rgba(154,125,82,0.06)}
+.person-popup{position:fixed;background:var(--white);border:1px solid var(--border2);box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:300;min-width:150px;padding:4px 0}
+.pp-item{padding:7px 12px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.pp-item:hover{background:var(--sand)}
+
+/* RECEIPT */
+.receipt-thumb{width:28px;height:28px;object-fit:cover;border-radius:2px;border:1px solid var(--border2);cursor:pointer;margin:0 auto;display:block}
+.receipt-btn{font-size:10px;color:var(--ink3);background:none;border:1px dashed var(--border2);padding:2px 6px;cursor:pointer;font-family:'Jost',sans-serif}
+.receipt-btn:hover{color:var(--gold);border-color:var(--gold)}
+
+/* PHOTO LIGHTBOX */
+.photo-lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.photo-lightbox img{max-width:90vw;max-height:90vh;object-fit:contain}
+.photo-lightbox-close{position:absolute;top:18px;right:22px;color:#fff;font-size:26px;cursor:pointer}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--white);width:600px;max-width:96vw;max-height:92vh;overflow-y:auto}
+.modal-head{padding:20px 24px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--white);z-index:10}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:500}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink3)}
+.modal-body{padding:20px 24px}
+.modal-foot{padding:14px 24px 20px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--white)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.form-row.single{grid-template-columns:1fr}
+.form-row.triple{grid-template-columns:1fr 1fr 1fr}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.form-input,.form-select{border:1px solid var(--border2);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--ink);background:transparent;outline:none;width:100%}
+.form-select{background:var(--white);cursor:pointer}
+.form-input:focus,.form-select:focus{border-color:var(--gold)}
+.form-textarea{border:1px solid var(--border2);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--ink);background:transparent;outline:none;width:100%;resize:vertical;min-height:60px}
+.form-textarea:focus{border-color:var(--gold)}
+.cat-hint{font-size:10px;color:var(--ink3);margin-top:3px;font-style:italic}
+
+/* SECTION HEADER in table */
+.section-head td{background:var(--sand2);padding:6px 12px;font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);border-bottom:1px solid var(--border2)}
+.add-row td{padding:6px 10px;font-size:11px;color:var(--ink3);cursor:pointer;border-top:1px dashed var(--border2)}
+.add-row:hover td{color:var(--gold)}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 18px;font-size:12px;letter-spacing:.04em;z-index:600;border-radius:2px;pointer-events:none;opacity:1;transition:opacity .3s}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="/" class="logo">Two Travel</a>
+  <div class="hdiv"></div>
+  <span class="hls">Finanzas · Solicitudes de Pago</span>
+  <div class="hright">
+    <a href="/" class="back-btn">← Concierge</a>
+  </div>
+</div>
+
+<div class="toolbar">
+  <button class="tbtn primary" onclick="openNewModal()">+ Nueva solicitud</button>
+  <div class="search-box">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
+    <input type="text" placeholder="Buscar..." oninput="searchQ=this.value;render()" id="search-input">
+  </div>
+  <select class="filter-sel" onchange="filterStatus=this.value;render()">
+    <option value="">Todos los estados</option>
+    <option value="pend">Pendiente</option>
+    <option value="aprov">Aprobado</option>
+    <option value="pago">Pagado</option>
+    <option value="rech">Rechazado</option>
+  </select>
+  <select class="filter-sel" onchange="filterPerson=this.value;render()">
+    <option value="">Todos</option>
+    <option value="Alia">Alia</option>
+    <option value="Caro">Caro</option>
+    <option value="Dani">Dani</option>
+    <option value="Michel">Michel</option>
+    <option value="Xilene">Xilene</option>
+  </select>
+  <select class="filter-sel" onchange="filterDept=this.value;render()">
+    <option value="">Todos los depto.</option>
+    <option value="concierge">Concierge</option>
+    <option value="wedding">Bodas</option>
+  </select>
+  <span class="sync-info" id="sync-info">Cargando...</span>
+</div>
+
+<div class="main" id="main"></div>
+
+<div id="status-popup" class="status-popup" style="display:none"></div>
+<div id="person-popup" class="person-popup" style="display:none"></div>
+
+<!-- MODAL: Nueva solicitud -->
+<div class="overlay" id="new-modal" style="display:none" onclick="if(event.target===this)closeNewModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title" id="modal-title-text">Nueva Solicitud de Pago</span>
+      <button class="modal-close" onclick="closeNewModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Departamento</label>
+          <select class="form-select" id="n-dept" onchange="updateCategoryOptions()">
+            <option value="concierge">Concierge</option>
+            <option value="wedding">Bodas</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha</label>
+          <input class="form-input" type="date" id="n-date">
+        </div>
+      </div>
+
+      <div class="form-row single">
+        <div class="form-group">
+          <label class="form-label">Category / Product Service</label>
+          <select class="form-select" id="n-category" onchange="showCategoryHint()">
+            <option value="">Seleccionar...</option>
+          </select>
+          <span class="cat-hint" id="cat-hint"></span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Cliente / Trip</label>
+          <input class="form-input" id="n-client" placeholder="Ej. Jerome V., Boda Ana & Luis">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Proveedor</label>
+          <input class="form-input" id="n-vendor" placeholder="Ej. Dennis, Mar y Miel">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Descripción del servicio</label>
+          <input class="form-input" id="n-desc" placeholder="Ej. Masajes spa 8 pax">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monto</label>
+          <input class="form-input" id="n-amount" type="number" placeholder="0.00" step="0.01">
+        </div>
+      </div>
+
+      <div class="form-row triple">
+        <div class="form-group">
+          <label class="form-label">Moneda</label>
+          <select class="form-select" id="n-currency">
+            <option value="COP">COP $</option>
+            <option value="USD">USD $</option>
+            <option value="MXN">MXN $</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Método de pago</label>
+          <select class="form-select" id="n-method">
+            <option value="">—</option>
+            <option value="Transferencia">Transferencia</option>
+            <option value="Efectivo">Efectivo</option>
+            <option value="Tarjeta">Tarjeta</option>
+            <option value="Nequi">Nequi</option>
+            <option value="Daviplata">Daviplata</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Solicitado por</label>
+          <select class="form-select" id="n-person">
+            <option value="">—</option>
+            <option value="Alia">Alia</option>
+            <option value="Caro">Caro</option>
+            <option value="Dani">Dani</option>
+            <option value="Michel">Michel</option>
+            <option value="Xilene">Xilene</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row single">
+        <div class="form-group">
+          <label class="form-label">Notas</label>
+          <textarea class="form-textarea" id="n-notes" placeholder="Notas adicionales, datos de pago, cuenta bancaria..."></textarea>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="tbtn" onclick="closeNewModal()">Cancelar</button>
+      <button class="tbtn primary" onclick="createPago()">Crear solicitud</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec';
+
+const STATUSES = {
+  pend:  {label:'Pendiente',  color:'#aaaaaa'},
+  aprov: {label:'Aprobado',   color:'#5c8ae0'},
+  pago:  {label:'Pagado',     color:'#5cb87a'},
+  rech:  {label:'Rechazado',  color:'#e05c5c'},
+};
+
+const MEMBERS = {
+  Alia:   {bg:'#9a7d52',i:'AL'},
+  Caro:   {bg:'#3d8a5a',i:'CA'},
+  Dani:   {bg:'#8a3d5a',i:'DA'},
+  Michel: {bg:'#3d5a8a',i:'MI'},
+  Xilene: {bg:'#5a3d8a',i:'XI'},
+};
+
+const CATEGORIES = {
+  concierge: [
+    {group:'Casas y Botes', items:[
+      {v:'casa-nombre', l:'[Nombre de la casa/bote]', hint:'Usa el nombre exacto de la propiedad o embarcación'},
+    ]},
+    {group:'Chef', items:[
+      {v:'Service: O-Chef', l:'Service: O-Chef', hint:'Para México, Medellín, o Cartagena sin Mar y Miel'},
+      {v:'Cartagena: Chef Services: Chef Dinner', l:'Chef Services: Chef Dinner (Cartagena)'},
+      {v:'Cartagena: Chef Services: Boat Lunch Box', l:'Chef Services: Boat Lunch Box (Cartagena)'},
+      {v:'Cartagena: Chef Services: Chef On Board', l:'Chef Services: Chef On Board (Cartagena)'},
+      {v:'Cartagena: Chef Services: Brunch', l:'Chef Services: Brunch (Cartagena)'},
+      {v:'Cartagena: Chef Services: Chef at the villa', l:'Chef Services: Chef at the villa (Cartagena)'},
+    ]},
+    {group:'Tours y Actividades', items:[
+      {v:'Tour: Medellín tours and activities', l:'Tour: Medellín tours and activities', hint:'Ej. Comuna 13 Tour'},
+      {v:'Tour: Cartagena tours and activities', l:'Tour: Cartagena tours and activities', hint:'Ej. Cigar Rolling Tasting'},
+      {v:'Tour: Mexican tours and activities', l:'Tour: Mexican tours and activities', hint:'Ej. Taco Tour'},
+    ]},
+    {group:'Depósitos', items:[
+      {v:'Service: Deposits (Restaurants, Bars & Venues)', l:'Deposits (Restaurants, Bars & Venues)', hint:'⚠️ Recordar: depósitos ahora los pagan clientes directo al proveedor'},
+    ]},
+    {group:'Rentals', items:[
+      {v:'Service: Rentals', l:'Service: Rentals', hint:'Ej. snorkels, equipos de alquiler'},
+    ]},
+  ],
+  wedding: [
+    {group:'Gastos Operación', items:[
+      {v:'Business Expenses: Wedding Expenses', l:'Business Expenses: Wedding Expenses', hint:'Costos de operación que NO se cobran al cliente'},
+    ]},
+    {group:'Servicios de Boda', items:[
+      {v:'Wedding Cake', l:'Wedding Cake', hint:'Pudín, mesa de postres y similares'},
+      {v:'Wedding: Ceremony Officiant', l:'Wedding: Ceremony Officiant'},
+      {v:'Wedding: Church', l:'Wedding: Church'},
+      {v:'Wedding: Open Bar', l:'Wedding: Open Bar'},
+      {v:'Wedding: Production', l:'Wedding: Production', hint:'Hora loca, violinistas, mago, shows'},
+      {v:'Wedding: Wedding Bodyguard', l:'Wedding: Wedding Bodyguard'},
+      {v:'Wedding: Wedding Catering', l:'Wedding: Wedding Catering', hint:'Servicio Mar y Miel'},
+      {v:'Wedding: Wedding Chiva', l:'Wedding: Wedding Chiva'},
+      {v:'Wedding: Wedding Concierge', l:'Wedding: Wedding Concierge'},
+      {v:'Wedding: Wedding Decoration', l:'Wedding: Wedding Decoration'},
+      {v:'Wedding: Wedding DJ', l:'Wedding: Wedding DJ'},
+      {v:'Wedding: Wedding Hair & Makeup', l:'Wedding: Wedding Hair & Makeup'},
+      {v:'Wedding: Wedding Menu Tasting', l:'Wedding: Wedding Menu Tasting'},
+      {v:'Wedding: Wedding Photographer', l:'Wedding: Wedding Photographer'},
+      {v:'Wedding: Wedding Staff', l:'Wedding: Wedding Staff'},
+      {v:'Wedding: Wedding Transport', l:'Wedding: Wedding Transport'},
+      {v:'Wedding: Wedding Venue', l:'Wedding: Wedding Venue'},
+      {v:'Wedding: Other Services', l:'Wedding: Other Services', hint:'Niñeras, papelería, impresiones, trámites…'},
+    ]},
+  ],
+};
+
+const CAT_HINTS = {};
+Object.values(CATEGORIES).forEach(groups => {
+  groups.forEach(g => g.items.forEach(i => { if(i.hint) CAT_HINTS[i.v] = i.hint; }));
+});
+
+let pagos = [];
+let searchQ = '';
+let filterStatus = '';
+let filterPerson = '';
+let filterDept = '';
+let activePopup = null;
+let editingId = null;
+
+/* ── CATEGORY DROPDOWN ── */
+function updateCategoryOptions(){
+  const dept = document.getElementById('n-dept').value;
+  const sel = document.getElementById('n-category');
+  sel.innerHTML = '<option value="">Seleccionar...</option>';
+  (CATEGORIES[dept] || []).forEach(group => {
+    const og = document.createElement('optgroup');
+    og.label = group.group;
+    group.items.forEach(item => {
+      const o = document.createElement('option');
+      o.value = item.v;
+      o.textContent = item.l;
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
+  });
+  document.getElementById('cat-hint').textContent = '';
+}
+function showCategoryHint(){
+  const v = document.getElementById('n-category').value;
+  document.getElementById('cat-hint').textContent = CAT_HINTS[v] || '';
+}
+
+/* ── STORAGE ── */
+function save(){
+  localStorage.setItem('tt_pagos', JSON.stringify(pagos));
+  syncToGAS();
+}
+function load(){
+  const saved = localStorage.getItem('tt_pagos');
+  if(saved){ try{ pagos = JSON.parse(saved); }catch{} }
+}
+async function syncToGAS(){
+  try{
+    await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'savePagos',payload:{pagos}})});
+  }catch{}
+}
+async function loadFromGAS(){
+  setSyncInfo('Sincronizando...');
+  try{
+    const r = await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'getPagos'})});
+    const d = await r.json();
+    if(d.ok && d.data?.length){
+      pagos = d.data;
+      localStorage.setItem('tt_pagos', JSON.stringify(pagos));
+      setSyncInfo('Sincronizado · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
+    } else {
+      setSyncInfo('Local');
+    }
+  }catch{
+    setSyncInfo('Local (sin conexión)');
+  }
+  render();
+}
+function setSyncInfo(t){ document.getElementById('sync-info').textContent = t; }
+
+/* ── RENDER ── */
+function render(){
+  const main = document.getElementById('main');
+
+  let items = pagos.filter(p => {
+    const q = searchQ.toLowerCase();
+    const matchQ = !q || [p.client,p.desc,p.vendor,p.category,p.notes].some(f=>(f||'').toLowerCase().includes(q));
+    const matchS = !filterStatus || p.status === filterStatus;
+    const matchP = !filterPerson || p.person === filterPerson;
+    const matchD = !filterDept || p.dept === filterDept;
+    return matchQ && matchS && matchP && matchD;
+  }).sort((a,b) => (b.createdAt||'') > (a.createdAt||'') ? 1 : -1);
+
+  // Stats
+  const total = pagos.length;
+  const pend  = pagos.filter(p=>p.status==='pend').length;
+  const aprov = pagos.filter(p=>p.status==='aprov').length;
+  const pago  = pagos.filter(p=>p.status==='pago').length;
+  const totalMonto = pagos.filter(p=>p.status==='pago' && p.currency==='COP')
+    .reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+
+  const fmtMonto = n => n >= 1000000
+    ? '$' + (n/1000000).toFixed(1) + 'M'
+    : n >= 1000 ? '$' + (n/1000).toFixed(0) + 'K'
+    : '$' + n.toFixed(0);
+
+  let html = `<div class="stats-bar">
+    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val">${total}</div><div class="stat-sub">solicitudes</div></div>
+    <div class="stat-card"><div class="stat-label">Pendientes</div><div class="stat-val" style="color:#aaa">${pend}</div><div class="stat-sub">por aprobar</div></div>
+    <div class="stat-card"><div class="stat-label">Aprobadas</div><div class="stat-val" style="color:#5c8ae0">${aprov}</div><div class="stat-sub">por pagar</div></div>
+    <div class="stat-card"><div class="stat-label">Pagadas</div><div class="stat-val" style="color:#5cb87a">${pago}</div><div class="stat-sub">${fmtMonto(totalMonto)} COP</div></div>
+  </div>`;
+
+  if(!items.length){
+    html += `<div style="text-align:center;padding:60px;color:var(--ink3);font-size:13px">No hay solicitudes. Crea la primera con "+ Nueva solicitud".</div>`;
+    main.innerHTML = html; return;
+  }
+
+  html += `<div class="table-wrap"><table class="ptable">
+    <thead><tr>
+      <th>Fecha</th>
+      <th>Depto.</th>
+      <th>Category / Product Service</th>
+      <th>Cliente</th>
+      <th>Proveedor</th>
+      <th>Descripción</th>
+      <th>Monto</th>
+      <th>Método</th>
+      <th>Solicitado por</th>
+      <th>Comprobante</th>
+      <th>Estado</th>
+      <th>Notas</th>
+    </tr></thead>
+    <tbody>`;
+
+  items.forEach(p => { html += renderRow(p); });
+
+  html += `<tr class="add-row" onclick="openNewModal()">
+    <td colspan="12">+ Agregar solicitud</td>
+  </tr>`;
+  html += `</tbody></table></div>`;
+
+  main.innerHTML = html;
+}
+
+function renderRow(p){
+  const st = STATUSES[p.status] || STATUSES.pend;
+  const fmtDate = d => {
+    if(!d) return '';
+    const dt = new Date(d + 'T12:00:00');
+    return dt.toLocaleDateString('es',{day:'numeric',month:'short',year:'numeric'});
+  };
+  const m = MEMBERS[p.person];
+  const avatar = m
+    ? `<span class="person-chip" style="background:${m.bg}" title="${p.person}">${m.i}</span>`
+    : `<span style="color:var(--ink3);font-size:11px">—</span>`;
+
+  const deptBadge = p.dept === 'wedding'
+    ? `<span style="font-size:10px;background:#f0e6f5;color:#7a3d8a;padding:2px 7px;letter-spacing:.04em">BODAS</span>`
+    : `<span style="font-size:10px;background:#e6f0f5;color:#3d5a8a;padding:2px 7px;letter-spacing:.04em">CONCIERGE</span>`;
+
+  const amountFmt = p.amount
+    ? `${p.currency || 'COP'} ${parseFloat(p.amount).toLocaleString('es')}`
+    : '—';
+
+  const receipt = p.receipt
+    ? `<img class="receipt-thumb" src="${p.receipt}" onclick="openLightbox('${p.id}')">`
+    : `<button class="receipt-btn" onclick="uploadReceipt('${p.id}',event)">📎</button>`;
+
+  // Category display — shorten if too long
+  const catDisplay = (p.category||'').replace(/^(Service:|Tour:|Wedding:|Business Expenses:|Cartagena: Chef Services:)\s*/,'');
+
+  return `<tr data-id="${p.id}">
+    <td><div class="cell editable" ondblclick="editField('${p.id}','date')">${fmtDate(p.date)}</div></td>
+    <td><div class="cell" style="justify-content:center">${deptBadge}</div></td>
+    <td><div class="cell" style="font-size:11px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(p.category||'')}">${esc(catDisplay||p.category||'—')}</div></td>
+    <td><div class="cell editable" ondblclick="editField('${p.id}','client')">${esc(p.client||'')}</div></td>
+    <td><div class="cell editable" ondblclick="editField('${p.id}','vendor')">${esc(p.vendor||'')}</div></td>
+    <td><div class="cell editable" ondblclick="editField('${p.id}','desc')" style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.desc||'')}</div></td>
+    <td><div class="cell amount-cell">${amountFmt}</div></td>
+    <td><div class="cell" style="font-size:11px;color:var(--ink3)">${esc(p.method||'—')}</div></td>
+    <td><div class="person-wrap">${avatar}<span style="font-size:11px;color:var(--ink3)">${p.person||'—'}</span></div></td>
+    <td><div class="cell" style="justify-content:center">${receipt}</div></td>
+    <td class="status-wrap"><span class="status-chip" style="background:${st.color}" onclick="openStatusPopup('${p.id}',event)">${st.label}</span></td>
+    <td><div class="cell editable" ondblclick="editField('${p.id}','notes')" style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink3)">${esc(p.notes||'')}</div></td>
+  </tr>`;
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ── INLINE EDIT ── */
+function editField(id, field){
+  const p = pagos.find(x=>x.id===id);
+  if(!p) return;
+  const el = document.querySelector(`tr[data-id="${id}"] td:nth-child(${
+    {date:1,client:4,vendor:5,desc:6,notes:12}[field]
+  }) .cell`);
+  if(!el) return;
+  const cur = p[field] || '';
+  const input = document.createElement('input');
+  input.type = field === 'date' ? 'date' : 'text';
+  input.value = cur;
+  input.style.cssText = 'width:100%;border:none;outline:none;font-family:Jost,sans-serif;font-size:12px;color:var(--ink);background:rgba(154,125,82,0.08);padding:6px 10px;height:38px';
+  const done = () => { p[field] = input.value; save(); render(); };
+  input.addEventListener('blur', done);
+  input.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); done(); } if(e.key==='Escape') render(); });
+  el.innerHTML = ''; el.appendChild(input); input.focus();
+}
+
+/* ── STATUS POPUP ── */
+function openStatusPopup(id, e){
+  e.stopPropagation();
+  closePopups();
+  const popup = document.getElementById('status-popup');
+  popup.innerHTML = Object.entries(STATUSES).map(([k,s]) =>
+    `<div class="sp-item" onclick="setStatus('${id}','${k}')"><span class="sp-dot" style="background:${s.color}"></span>${s.label}</div>`
+  ).join('');
+  positionPopup(popup, e);
+  activePopup = popup;
+}
+function setStatus(id, status){
+  const p = pagos.find(x=>x.id===id);
+  if(p){ p.status = status; save(); }
+  closePopups(); render();
+}
+
+function positionPopup(popup, e){
+  popup.style.display = 'block';
+  const rect = e.target.getBoundingClientRect ? e.target.getBoundingClientRect() : {bottom:e.clientY,left:e.clientX};
+  let top = (rect.bottom||e.clientY)+4, left = rect.left||e.clientX;
+  if(left+180>window.innerWidth) left=window.innerWidth-185;
+  if(top+200>window.innerHeight) top=(rect.top||e.clientY)-205;
+  popup.style.top=top+'px'; popup.style.left=left+'px';
+}
+function closePopups(){
+  document.getElementById('status-popup').style.display='none';
+  document.getElementById('person-popup').style.display='none';
+  activePopup=null;
+}
+document.addEventListener('click', closePopups);
+
+/* ── RECEIPT UPLOAD ── */
+function uploadReceipt(id, e){
+  e.stopPropagation();
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*,application/pdf';
+  input.onchange = () => {
+    const file = input.files[0]; if(!file) return;
+    if(file.type.startsWith('image/')){
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxW = 800, scale = img.width>maxW ? maxW/img.width : 1;
+          canvas.width=img.width*scale; canvas.height=img.height*scale;
+          canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+          const p = pagos.find(x=>x.id===id);
+          if(p){ p.receipt = canvas.toDataURL('image/jpeg',0.75); save(); render(); }
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  input.click();
+}
+function openLightbox(id){
+  const p = pagos.find(x=>x.id===id);
+  if(!p||!p.receipt) return;
+  const box = document.createElement('div');
+  box.className = 'photo-lightbox';
+  box.innerHTML = `<span class="photo-lightbox-close" onclick="this.parentNode.remove()">×</span><img src="${p.receipt}">`;
+  box.onclick = e => { if(e.target===box) box.remove(); };
+  document.body.appendChild(box);
+}
+
+/* ── NEW PAGO MODAL ── */
+function openNewModal(){
+  editingId = null;
+  document.getElementById('modal-title-text').textContent = 'Nueva Solicitud de Pago';
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('n-date').value = today;
+  document.getElementById('n-dept').value = 'concierge';
+  updateCategoryOptions();
+  document.getElementById('n-category').value = '';
+  document.getElementById('n-client').value = '';
+  document.getElementById('n-vendor').value = '';
+  document.getElementById('n-desc').value = '';
+  document.getElementById('n-amount').value = '';
+  document.getElementById('n-currency').value = 'COP';
+  document.getElementById('n-method').value = '';
+  document.getElementById('n-person').value = '';
+  document.getElementById('n-notes').value = '';
+  document.getElementById('cat-hint').textContent = '';
+  document.getElementById('new-modal').style.display = 'flex';
+  setTimeout(()=>document.getElementById('n-client').focus(), 50);
+}
+function closeNewModal(){
+  document.getElementById('new-modal').style.display = 'none';
+  editingId = null;
+}
+function createPago(){
+  const category = document.getElementById('n-category').value;
+  const client   = document.getElementById('n-client').value.trim();
+  if(!category){ showToast('Selecciona una categoría'); return; }
+  if(!client){ showToast('Ingresa el cliente o trip'); return; }
+
+  // If "casa-nombre" placeholder, require them to fill actual name
+  const finalCategory = category === 'casa-nombre' ? (client || category) : category;
+
+  const p = {
+    id:         'pg' + Date.now(),
+    dept:       document.getElementById('n-dept').value,
+    date:       document.getElementById('n-date').value,
+    category:   finalCategory,
+    client:     client,
+    vendor:     document.getElementById('n-vendor').value.trim(),
+    desc:       document.getElementById('n-desc').value.trim(),
+    amount:     document.getElementById('n-amount').value,
+    currency:   document.getElementById('n-currency').value,
+    method:     document.getElementById('n-method').value,
+    person:     document.getElementById('n-person').value,
+    notes:      document.getElementById('n-notes').value.trim(),
+    status:     'pend',
+    receipt:    '',
+    createdAt:  new Date().toISOString(),
+  };
+  pagos.unshift(p);
+  save();
+  closeNewModal();
+  render();
+  showToast('Solicitud creada ✓');
+}
+
+/* ── TOAST ── */
+function showToast(msg, duration=3000){
+  const t = document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, duration);
+}
+
+/* ── INIT ── */
+updateCategoryOptions();
+load();
+render();
+setSyncInfo('Cargando...');
+loadFromGAS();
+</script>
+</body>
+</html>
