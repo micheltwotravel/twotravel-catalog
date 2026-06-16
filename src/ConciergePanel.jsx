@@ -355,6 +355,13 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       doc.setFontSize(10.5); doc.setFont("helvetica","bold"); doc.setTextColor(15,15,15);
       doc.text(timePart + item.name, ML, y); y += 15;
 
+      // Confirmation status
+      if (item.confirmed !== false) {
+        const confBy = item.confirmation ? ` · ${cl(item.confirmation)}` : "";
+        doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(60,150,90);
+        doc.text("✓ Confirmed" + confBy, ML + 2, y); y += 12;
+      }
+
       // Location
       if (item.location) {
         doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(120,120,120);
@@ -853,7 +860,7 @@ function mapServiceToCartItem(service, clientType = 1, groupSizeNum = 1) {
   dayLabel: "",
   timeLabel: "",
   notes: "",
-  confirmed: true,
+  confirmed: false,
   confirmation: "",
   dressCode: "",
   passengers: "",
@@ -891,7 +898,7 @@ function mapManualToCartItem() {
    ACTIVITY ROW — inline-editable row inside a day section
 ═══════════════════════════════════════════════════════════════ */
 function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize = 1 }) {
-  const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation));
+  const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation || item.confirmed));
   return (
     <div className="px-4 py-2.5 hover:bg-neutral-50 transition-colors">
       <div className="grid grid-cols-12 gap-x-2 items-center">
@@ -947,7 +954,7 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
         <div className="col-span-1 flex items-center justify-end gap-1.5">
           <button
             type="button"
-            onClick={() => onUpdate(item._uid, { confirmed: !(item.confirmed !== false) })}
+            onClick={() => { onUpdate(item._uid, { confirmed: !(item.confirmed !== false) }); setShowNotes(true); }}
             title={item.confirmed !== false ? "Marcar como recomendación" : "Marcar como confirmado"}
             className="text-[13px] leading-none opacity-60 hover:opacity-100 transition-opacity"
           >
@@ -1000,13 +1007,12 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
       {showNotes && (
         <div className="mt-1.5 flex flex-col gap-1 pl-0.5">
           <div className="flex items-center gap-2">
-            <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Confirm.</span>
+            <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Confirmado por</span>
             <input
               value={item.confirmation || ""}
               onChange={e => onUpdate(item._uid, { confirmation: e.target.value })}
-              placeholder="# confirmación / Confirmed by…"
+              placeholder="Nombre de quien confirmó…"
               className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
-              autoFocus
             />
           </div>
           {["restaurants","bars","nightlife","beach-clubs"].includes(String(item.category || "").toLowerCase()) && (
