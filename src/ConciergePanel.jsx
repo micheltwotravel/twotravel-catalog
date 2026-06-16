@@ -71,6 +71,21 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       doc.link(x2, y2 - h, w, h * 1.3, { url });
     } catch(e) { /* link annotation optional */ }
   };
+  // Fetch image URL → base64 data URL (for jsPDF addImage); returns null on failure
+  const fetchImgB64 = async (url) => {
+    if (!url) return null;
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return await new Promise((res2) => {
+        const r = new FileReader();
+        r.onload = () => res2(r.result);
+        r.onerror = () => res2(null);
+        r.readAsDataURL(blob);
+      });
+    } catch { return null; }
+  };
+
   const parseJ = (v) => {
     if (Array.isArray(v)) return v;
     if (typeof v === "string" && v.trim().startsWith("[")) {
@@ -178,6 +193,10 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   };
   const checkY = (need = 30) => { if (y + need > PH - 48) newPage(); };
 
+  // Pre-fetch accommodation photos (async, before rendering)
+  const accomPhotoB64  = await fetchImgB64(cl(kickoff.accommodationPhoto  || "")).catch(() => null);
+  const accomPhotoB64_2 = await fetchImgB64(cl(kickoff.accommodationPhoto2 || "")).catch(() => null);
+
   // ── COVER ───────────────────────────────────────────────────
   // Header band
   doc.setFillColor(10, 10, 10);
@@ -279,6 +298,25 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     }
     y += 18;
   });
+
+  // Property photo (city 1)
+  if (accomPhotoB64) {
+    try {
+      checkY(150);
+      const imgW = TW, imgH = 140;
+      doc.addImage(accomPhotoB64, "JPEG", ML, y, imgW, imgH);
+      y += imgH + 10;
+    } catch(e) {}
+  }
+  // Property photo (city 2)
+  if (accomPhotoB64_2) {
+    try {
+      checkY(150);
+      const imgW = TW, imgH = 140;
+      doc.addImage(accomPhotoB64_2, "JPEG", ML, y, imgW, imgH);
+      y += imgH + 10;
+    } catch(e) {}
+  }
 
   // Concierge summary / notes (optional)
   if (kickoff.conciergeSummary) {
@@ -2851,11 +2889,13 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [accommodationAddr,  setAccommodationAddr]  = useState(kickoff?.accommodationAddr  || "");
   const [accommodationUrl,   setAccommodationUrl]   = useState(kickoff?.accommodationUrl   || "");
   const [barrio,             setBarrio]             = useState(kickoff?.barrio             || "");
+  const [accommodationPhoto, setAccommodationPhoto] = useState(kickoff?.accommodationPhoto || "");
   // City 2 accommodation
   const [accommodationName2, setAccommodationName2] = useState(kickoff?.accommodationName2 || "");
   const [accommodationAddr2, setAccommodationAddr2] = useState(kickoff?.accommodationAddr2 || "");
   const [accommodationUrl2,  setAccommodationUrl2]  = useState(kickoff?.accommodationUrl2  || "");
   const [barrio2,            setBarrio2]            = useState(kickoff?.barrio2            || "");
+  const [accommodationPhoto2,setAccommodationPhoto2]= useState(kickoff?.accommodationPhoto2|| "");
   // City 2 stay dates
   const [arrivalDate2,   setArrivalDate2]   = useState(kickoff?.arrivalDate2   || "");
   const [departureDate2, setDepartureDate2] = useState(kickoff?.departureDate2 || "");
@@ -2943,10 +2983,11 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     city:              city.trim(),
     groupSize:         groupSize.trim(),
     conciergeTitle:    conciergeTitle.trim(),
-    accommodationName: accommodationName.trim(),
-    accommodationAddr: accommodationAddr.trim(),
-    accommodationUrl:  accommodationUrl.trim(),
-    barrio:            barrio.trim(),
+    accommodationName:  accommodationName.trim(),
+    accommodationAddr:  accommodationAddr.trim(),
+    accommodationUrl:   accommodationUrl.trim(),
+    barrio:             barrio.trim(),
+    accommodationPhoto: accommodationPhoto.trim(),
     checkIn:           checkIn.trim(),
     checkOut:          checkOut.trim(),
     welcomePdfUrl:     welcomePdfUrl.trim(),
@@ -2969,10 +3010,11 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     arrivalDate2:      arrivalDate2.trim(),
     departureDate2:    departureDate2.trim(),
     tripDates2:        tripDates2.trim(),
-    accommodationName2: accommodationName2.trim(),
-    accommodationAddr2: accommodationAddr2.trim(),
-    accommodationUrl2:  accommodationUrl2.trim(),
-    barrio2:            barrio2.trim(),
+    accommodationName2:  accommodationName2.trim(),
+    accommodationAddr2:  accommodationAddr2.trim(),
+    accommodationUrl2:   accommodationUrl2.trim(),
+    barrio2:             barrio2.trim(),
+    accommodationPhoto2: accommodationPhoto2.trim(),
     // Always include latest canvas state so itinerary edits aren't lost
     ...(canvasCartRef.current    != null ? { cart:    JSON.stringify(canvasCartRef.current)    } : {}),
     ...(canvasDayMetaRef.current != null ? { dayMeta: JSON.stringify(canvasDayMetaRef.current) } : {}),
@@ -3353,6 +3395,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       if (addr)  setAccommodationAddr(addr);
                       if (url)   setAccommodationUrl(url);
                       if (nbhd)  setBarrio(nbhd);
+                      const photo = match.photoUrl || match.PhotoUrl || match.photo || match.Photo || match.coverPhoto || match.CoverPhoto || "";
+                      if (photo) setAccommodationPhoto(photo);
                     }
                   }}
                   list="prop-list-1"
@@ -3387,6 +3431,13 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="https://maps.app.goo.gl/..." />
               </div>
+              <div className="col-span-2">
+                <label className="text-[11px] text-neutral-500">Foto del alojamiento (URL) {city.includes(",") ? `— ${cityFullName(city.split(",")[0]?.trim())}` : ""}</label>
+                <input value={accommodationPhoto} onChange={(e) => setAccommodationPhoto(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="https://..." />
+                {accommodationPhoto && <img src={accommodationPhoto} alt="preview" className="mt-1 w-full rounded-lg object-cover" style={{maxHeight:80}} onError={e=>e.target.style.display='none'} />}
+              </div>
               {/* City 2 accommodation — only shown when 2 cities */}
               {city.includes(",") && (<>
                 <div className="col-span-2 border-t border-blue-100 pt-2">
@@ -3406,6 +3457,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                         if (addr)  setAccommodationAddr2(addr);
                         if (url)   setAccommodationUrl2(url);
                         if (nbhd)  setBarrio2(nbhd);
+                        const photo = match.photoUrl || match.PhotoUrl || match.photo || match.Photo || match.coverPhoto || match.CoverPhoto || "";
+                        if (photo) setAccommodationPhoto2(photo);
                       }
                     }}
                     list="prop-list-2"
@@ -3439,6 +3492,13 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   <input value={accommodationUrl2} onChange={(e) => setAccommodationUrl2(e.target.value)}
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                     placeholder="https://maps.app.goo.gl/..." />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[11px] text-neutral-500">Foto alojamiento 2 (URL)</label>
+                  <input value={accommodationPhoto2} onChange={(e) => setAccommodationPhoto2(e.target.value)}
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                    placeholder="https://..." />
+                  {accommodationPhoto2 && <img src={accommodationPhoto2} alt="preview" className="mt-1 w-full rounded-lg object-cover" style={{maxHeight:80}} onError={e=>e.target.style.display='none'} />}
                 </div>
               </>)}
               <div>
