@@ -3691,21 +3691,21 @@ const BREAKFAST_MENUS = [
 ];
 
 function BreakfastCatalog() {
-  const GAS_URL    = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
-  const params     = new URLSearchParams(window.location.search);
-  const kickoffId  = params.get("kickoffId") || "";
-  const tierParam  = params.get("groupTier") || "1-5";
-  const currParam  = params.get("currency") || "COP";
-  const [lang, setLang]   = React.useState(params.get("lang") === "es" ? "es" : "en");
-  const [tier, setTier]   = React.useState(BREAKFAST_TIERS.includes(tierParam) ? tierParam : "1-5");
+  const GAS_URL   = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+  const params    = new URLSearchParams(window.location.search);
+  const kickoffId = params.get("kickoffId") || "";
+  const tierParam = params.get("groupTier") || "1-5";
+  const currParam = params.get("currency")  || "COP";
+  const [lang, setLang]         = React.useState(params.get("lang") === "es" ? "es" : "en");
+  const [tier, setTier]         = React.useState(BREAKFAST_TIERS.includes(tierParam) ? tierParam : "1-5");
   const [currency, setCurrency] = React.useState(currParam === "USD" ? "USD" : "COP");
   const [menuTab, setMenuTab]   = React.useState("traditional");
   const [checked, setChecked]   = React.useState({});
-  const [guestName, setGuestName] = React.useState(params.get("guestName") || "");
-  const [notes, setNotes]   = React.useState("");
-  const [sent, setSent]     = React.useState(false);
-  const [sending, setSending] = React.useState(false);
-  const [fxRate, setFxRate] = React.useState(4000);
+  const [notes, setNotes]       = React.useState("");
+  const [sent, setSent]         = React.useState(false);
+  const [sending, setSending]   = React.useState(false);
+  const [fxRate, setFxRate]     = React.useState(4000);
+  const guestName               = params.get("guestName") || "";
 
   React.useEffect(() => {
     fetch("https://open.er-api.com/v6/latest/USD")
@@ -3717,18 +3717,16 @@ function BreakfastCatalog() {
   const tierIdx = BREAKFAST_TIERS.indexOf(tier);
   const menu    = BREAKFAST_MENUS.find(m => m.id === menuTab) || BREAKFAST_MENUS[0];
 
-  const fmtPrice = (cop) => {
-    if (currency === "USD") return `$${(cop / fxRate).toFixed(0)} USD`;
-    return `$${cop.toLocaleString("es-CO")} COP`;
-  };
+  const fmt = (cop) => currency === "USD"
+    ? `$${(cop / fxRate).toFixed(0)} USD`
+    : `$${cop.toLocaleString("es-CO")} COP`;
 
-  const toggle = (key) => setChecked(p => ({ ...p, [key]: !p[key] }));
-  const hasAny = Object.values(checked).some(Boolean);
+  const toggle  = (key) => setChecked(p => ({ ...p, [key]: !p[key] }));
+  const hasAny  = Object.values(checked).some(Boolean);
+  const totalCOP = menu.sections.flatMap(s => s.items)
+    .reduce((s, it) => checked[`${menu.id}:${it.name}`] ? s + it.prices[tierIdx] : s, 0);
 
-  const totalCOP = menu.sections.flatMap(s => s.items).reduce((sum, it) => {
-    const key = `${menu.id}:${it.name}`;
-    return checked[key] ? sum + it.prices[tierIdx] : sum;
-  }, 0);
+  const en = lang === "en";
 
   const handleSend = async () => {
     setSending(true);
@@ -3736,152 +3734,167 @@ function BreakfastCatalog() {
     menu.sections.forEach(sec => {
       const sel = sec.items.filter(it => checked[`${menu.id}:${it.name}`]);
       if (!sel.length) return;
-      lines.push(`*${lang === "es" ? sec.label_es : sec.label}*`);
-      sel.forEach(it => {
-        const cop  = it.prices[tierIdx];
-        const pStr = currency === "USD" ? `$${(cop/fxRate).toFixed(0)} USD` : `$${cop.toLocaleString("es-CO")} COP`;
-        lines.push(`  ✓ ${lang === "es" ? it.name_es : it.name} · ${pStr}`);
-      });
+      lines.push(`*${en ? sec.label : sec.label_es}*`);
+      sel.forEach(it => lines.push(`  · ${en ? it.name : it.name_es} — ${fmt(it.prices[tierIdx])}`));
     });
     if (notes.trim()) lines.push(`\n📝 ${notes}`);
-    const menuLabel = lang === "es" ? menu.label_es : menu.label;
-    const text = `☕ *Breakfast Order* ${guestName ? `(${guestName})` : ""} · ${menuLabel} · ${tier} pax · kickoff: ${kickoffId}\n\n${lines.join("\n")}`;
+    const text = `☕ *Breakfast* ${guestName ? `· ${guestName}` : ""} · ${en ? menu.label : menu.label_es} · ${tier} pax\n\n${lines.join("\n")}`;
     try {
-      await fetch(GAS_URL, {
-        method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+      await fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
         body: JSON.stringify({ action:"sendSlackMessage", payload:{ text, channelId:"C094NE421NV", slackToken:import.meta.env.VITE_SLACK_BOT_TOKEN||"" }}),
       });
     } catch {}
-    setSent(true);
-    setSending(false);
-  };
-
-  const T = lang === "en" ? {
-    heading:"☕ Breakfast Menu", sub:"Select what you'd like for your stay",
-    tierLabel:"Group size", currLabel:"Currency", menuLabel:"Menu type",
-    fullMenu:"Full menu", fullMenuPrice:"Full menu",
-    note:"Note: Basic items (sugar, salt, oil, napkins) not included. Additional cost of $10–$20 USD may apply.",
-    notePlaceholder:"Anything else? Allergies, preferences…",
-    send:"✅ Send order to concierge", sending:"Sending…", edit:"✏️ Edit order",
-    successTitle:"Order received!", successBody:"Your concierge will review this with you on your kick-off call.",
-  } : {
-    heading:"☕ Menú de Desayuno", sub:"Selecciona lo que quieres para tu estadía",
-    tierLabel:"Tamaño del grupo", currLabel:"Moneda", menuLabel:"Tipo de menú",
-    fullMenu:"Menú completo", fullMenuPrice:"Menú completo",
-    note:"Nota: Básicos (azúcar, sal, aceite, servilletas) no incluidos. Puede aplicar costo adicional de $10–$20 USD.",
-    notePlaceholder:"¿Algo más? Alergias, preferencias…",
-    send:"✅ Enviar pedido al concierge", sending:"Enviando…", edit:"✏️ Editar pedido",
-    successTitle:"¡Pedido recibido!", successBody:"Tu concierge lo revisará en tu kick-off call.",
+    setSent(true); setSending(false);
   };
 
   if (sent) return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-6">
-      <div className="text-center max-w-sm">
-        <div className="text-5xl mb-4">☕</div>
-        <h2 className="text-white text-2xl font-semibold mb-2">{T.successTitle}</h2>
-        <p className="text-neutral-400 text-sm">{T.successBody}</p>
-        <button onClick={() => setSent(false)} className="mt-6 text-xs text-neutral-500 hover:text-white">{T.edit}</button>
+    <div style={{minHeight:"100vh",background:"#f7f4ef",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Jost',sans-serif"}}>
+      <div style={{textAlign:"center",maxWidth:400,padding:"40px 24px"}}>
+        <div style={{width:48,height:2,background:"#9a7d52",margin:"0 auto 32px"}}/>
+        <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:500,color:"#1a1814",marginBottom:12}}>
+          {en ? "Order received" : "Pedido recibido"}
+        </p>
+        <p style={{fontSize:13,color:"#7a7570",lineHeight:1.6}}>
+          {en ? "Your concierge will review your selection during the kick-off call." : "Tu concierge revisará tu selección durante la llamada de kickoff."}
+        </p>
+        <button onClick={() => { setSent(false); setChecked({}); }}
+          style={{marginTop:32,fontSize:11,color:"#9a7d52",background:"none",border:"none",cursor:"pointer",letterSpacing:".1em",textTransform:"uppercase"}}>
+          {en ? "Edit order" : "Editar pedido"}
+        </button>
       </div>
     </div>
   );
 
+  const tabStyle = (id) => ({
+    padding:"8px 20px", fontSize:12, fontWeight:500, letterSpacing:".06em", textTransform:"uppercase",
+    border:"none", cursor:"pointer", transition:"all .15s",
+    background: menuTab === id ? "#1a1814" : "transparent",
+    color: menuTab === id ? "#f7f4ef" : "#7a7570",
+    borderBottom: menuTab === id ? "2px solid #9a7d52" : "2px solid transparent",
+  });
+
   return (
-    <div className="min-h-screen bg-neutral-950 text-white pb-24">
+    <div style={{minHeight:"100vh",background:"#f7f4ef",fontFamily:"'Jost',sans-serif",color:"#1a1814"}}>
       {/* Header */}
-      <div className="bg-neutral-900 border-b border-neutral-800 px-4 py-5">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-between mb-1">
-            <h1 className="text-xl font-semibold">{T.heading}</h1>
-            <button onClick={() => setLang(l => l === "en" ? "es" : "en")} className="text-xs border border-neutral-600 rounded px-2 py-1 text-neutral-400 hover:text-white">
-              {lang === "en" ? "🇨🇴 ES" : "🇺🇸 EN"}
-            </button>
+      <div style={{background:"#1a1814",padding:"28px 24px 24px",textAlign:"center"}}>
+        <p style={{fontSize:10,color:"#9a7d52",letterSpacing:".16em",textTransform:"uppercase",marginBottom:8}}>Two Travel · Cartagena</p>
+        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:30,fontWeight:500,color:"#f7f4ef",marginBottom:6}}>
+          {en ? "Breakfast Menu" : "Menú de Desayuno"}
+        </h1>
+        <p style={{fontSize:12,color:"#9a7d52",letterSpacing:".06em"}}>
+          {guestName ? guestName + " · " : ""}{tier} {en ? "guests" : "personas"}
+        </p>
+        {/* Controls row */}
+        <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:16,flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:4,background:"rgba(255,255,255,.08)",borderRadius:6,padding:3}}>
+            {BREAKFAST_TIERS.map(t => (
+              <button key={t} onClick={() => setTier(t)} style={{
+                padding:"4px 12px",fontSize:11,borderRadius:4,border:"none",cursor:"pointer",transition:"all .15s",
+                background: tier === t ? "#9a7d52" : "transparent",
+                color: tier === t ? "#fff" : "rgba(255,255,255,.5)",
+              }}>{t} pax</button>
+            ))}
           </div>
-          <p className="text-neutral-400 text-sm">{T.sub}</p>
-          {/* Controls */}
-          <div className="flex gap-2 mt-4 flex-wrap">
-            <div className="flex gap-1 bg-neutral-800 rounded-lg p-1">
-              {BREAKFAST_TIERS.map(t => (
-                <button key={t} onClick={() => setTier(t)}
-                  className={`px-3 py-1 rounded text-xs font-medium transition-colors ${tier === t ? "bg-white text-neutral-900" : "text-neutral-400 hover:text-white"}`}>
-                  {t} pax
-                </button>
-              ))}
-            </div>
-            <button onClick={() => setCurrency(c => c === "COP" ? "USD" : "COP")}
-              className="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-1 text-xs text-neutral-300 hover:text-white">
-              {currency === "COP" ? "COP 🇨🇴" : "USD 🇺🇸"} ⇄
-            </button>
-            {guestName && <span className="bg-neutral-800 rounded-lg px-3 py-1 text-xs text-neutral-400">{guestName}</span>}
-          </div>
+          <button onClick={() => setCurrency(c => c === "COP" ? "USD" : "COP")} style={{
+            padding:"4px 14px",fontSize:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",
+            border:"1px solid rgba(255,255,255,.15)",borderRadius:6,cursor:"pointer",
+          }}>{currency} ⇄</button>
+          <button onClick={() => setLang(l => l === "en" ? "es" : "en")} style={{
+            padding:"4px 14px",fontSize:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",
+            border:"1px solid rgba(255,255,255,.15)",borderRadius:6,cursor:"pointer",
+          }}>{en ? "ES" : "EN"}</button>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 pt-4">
-        {/* Menu tabs */}
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-          {BREAKFAST_MENUS.map(m => (
-            <button key={m.id} onClick={() => setMenuTab(m.id)}
-              className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${menuTab === m.id ? "bg-amber-500 text-white" : "bg-neutral-800 text-neutral-400 hover:text-white"}`}>
-              {lang === "es" ? m.label_es : m.label}
-            </button>
-          ))}
-        </div>
+      {/* Menu type tabs */}
+      <div style={{background:"#fff",borderBottom:"1px solid #e5ddd3",display:"flex",justifyContent:"center",gap:0,overflowX:"auto"}}>
+        {BREAKFAST_MENUS.map(m => (
+          <button key={m.id} onClick={() => { setMenuTab(m.id); setChecked({}); }} style={tabStyle(m.id)}>
+            {en ? m.label : m.label_es}
+          </button>
+        ))}
+      </div>
 
-        {/* Full menu option */}
-        <div className="bg-neutral-800 border border-amber-500/30 rounded-xl p-4 mb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-amber-400">{T.fullMenu}</p>
-              <p className="text-xs text-neutral-400 mt-0.5">{lang === "en" ? "Everything in smaller portions for the whole group" : "Todo en porciones menores para el grupo completo"}</p>
-            </div>
-            <span className="text-lg font-semibold text-white">{fmtPrice(menu.fullPrice[tierIdx])}</span>
+      <div style={{maxWidth:680,margin:"0 auto",padding:"32px 20px 80px"}}>
+        {/* Full menu highlight */}
+        <div style={{background:"#fff",border:"1px solid #e5ddd3",borderLeft:"3px solid #9a7d52",borderRadius:8,padding:"16px 20px",marginBottom:28,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div>
+            <p style={{fontSize:13,fontWeight:500,color:"#1a1814",marginBottom:3}}>
+              {en ? "Full Menu" : "Menú Completo"}
+            </p>
+            <p style={{fontSize:11,color:"#7a7570",lineHeight:1.5}}>
+              {en ? "All dishes in smaller portions, enough for the whole group" : "Todos los platos en porciones menores, suficiente para el grupo"}
+            </p>
           </div>
+          <span style={{fontSize:17,fontWeight:500,color:"#9a7d52",flexShrink:0,marginLeft:16}}>{fmt(menu.fullPrice[tierIdx])}</span>
         </div>
 
-        {/* Items */}
+        {/* Sections & Items */}
         {menu.sections.map((sec, si) => (
-          <div key={si} className="mb-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500 mb-2">{lang === "es" ? sec.label_es : sec.label}</p>
-            <div className="space-y-2">
-              {sec.items.map((it, ii) => {
-                const key = `${menu.id}:${it.name}`;
-                const isChecked = !!checked[key];
-                const cop = it.prices[tierIdx];
-                return (
-                  <button key={ii} onClick={() => toggle(key)}
-                    className={`w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${isChecked ? "bg-amber-500/10 border-amber-500/50" : "bg-neutral-800/60 border-neutral-700 hover:border-neutral-500"}`}>
-                    <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center ${isChecked ? "border-amber-400 bg-amber-400" : "border-neutral-500"}`}>
-                      {isChecked && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white">{lang === "es" ? it.name_es : it.name}{it.unitLabel ? <span className="text-neutral-400 text-xs ml-1">{it.unitLabel}</span> : ""}</p>
-                      {(lang === "es" ? it.desc_es : it.desc) && <p className="text-xs text-neutral-400 mt-0.5 line-clamp-2">{lang === "es" ? it.desc_es : it.desc}</p>}
-                    </div>
-                    <span className="text-sm font-semibold text-amber-400 flex-shrink-0 ml-2">{fmtPrice(cop)}</span>
-                  </button>
-                );
-              })}
-            </div>
+          <div key={si} style={{marginBottom:28}}>
+            <p style={{fontSize:9,fontWeight:500,letterSpacing:".18em",textTransform:"uppercase",color:"#9a7d52",marginBottom:12,paddingBottom:8,borderBottom:"1px solid #e5ddd3"}}>
+              {en ? sec.label : sec.label_es}
+            </p>
+            {sec.items.map((it, ii) => {
+              const key = `${menu.id}:${it.name}`;
+              const on  = !!checked[key];
+              return (
+                <button key={ii} onClick={() => toggle(key)} style={{
+                  width:"100%",display:"flex",alignItems:"flex-start",gap:14,padding:"14px 16px",
+                  background: on ? "rgba(154,125,82,.07)" : "#fff",
+                  border:`1px solid ${on ? "#9a7d52" : "#e5ddd3"}`,
+                  borderRadius:6,marginBottom:6,cursor:"pointer",textAlign:"left",transition:"all .12s",
+                }}>
+                  <div style={{
+                    width:16,height:16,borderRadius:3,flexShrink:0,marginTop:2,
+                    border:`1.5px solid ${on ? "#9a7d52" : "#c8c0b8"}`,
+                    background: on ? "#9a7d52" : "transparent",
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                  }}>
+                    {on && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <p style={{fontSize:13,fontWeight:500,color:"#1a1814",marginBottom:2}}>
+                      {en ? it.name : it.name_es}
+                      {it.unitLabel && <span style={{fontSize:11,color:"#9a9590",marginLeft:6}}>{it.unitLabel}</span>}
+                    </p>
+                    {(en ? it.desc : it.desc_es) && (
+                      <p style={{fontSize:11,color:"#7a7570",lineHeight:1.5}}>{en ? it.desc : it.desc_es}</p>
+                    )}
+                  </div>
+                  <span style={{fontSize:13,fontWeight:500,color:"#9a7d52",flexShrink:0,marginLeft:8}}>{fmt(it.prices[tierIdx])}</span>
+                </button>
+              );
+            })}
           </div>
         ))}
 
         {/* Note */}
-        <p className="text-xs text-neutral-500 mb-4 italic">{T.note}</p>
+        <p style={{fontSize:11,color:"#9a9590",fontStyle:"italic",marginBottom:20,lineHeight:1.6}}>
+          {en
+            ? "Note: Basic items (sugar, salt, oil, napkins) are not included. An additional cost of $10–$20 USD may apply."
+            : "Nota: Los básicos (azúcar, sal, aceite, servilletas) no están incluidos. Puede aplicar un costo adicional de $10–$20 USD."}
+        </p>
 
-        {/* Notes textarea */}
-        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder={T.notePlaceholder}
-          rows={2} className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 mb-4 resize-none" />
+        {/* Notes */}
+        <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
+          placeholder={en ? "Anything else? Allergies, preferences…" : "¿Algo más? Alergias, preferencias…"}
+          style={{width:"100%",background:"#fff",border:"1px solid #e5ddd3",borderRadius:6,padding:"10px 14px",
+            fontSize:13,color:"#1a1814",outline:"none",resize:"none",marginBottom:16,fontFamily:"'Jost',sans-serif"}}/>
 
-        {/* Total + Send */}
+        {/* Total */}
         {hasAny && (
-          <div className="flex items-center justify-between mb-4 bg-neutral-800 rounded-xl p-3">
-            <span className="text-sm text-neutral-400">{lang === "en" ? "Estimated total" : "Total estimado"}</span>
-            <span className="text-lg font-bold text-amber-400">{fmtPrice(totalCOP)}</span>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",background:"#fff",border:"1px solid #e5ddd3",borderRadius:6,marginBottom:14}}>
+            <span style={{fontSize:12,color:"#7a7570",letterSpacing:".04em"}}>{en ? "Estimated total" : "Total estimado"}</span>
+            <span style={{fontSize:16,fontWeight:500,color:"#9a7d52"}}>{fmt(totalCOP)}</span>
           </div>
         )}
-        <button onClick={handleSend} disabled={!hasAny || sending}
-          className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition-colors">
-          {sending ? T.sending : T.send}
+
+        <button onClick={handleSend} disabled={!hasAny || sending} style={{
+          width:"100%",padding:"14px",fontSize:12,fontWeight:500,letterSpacing:".1em",textTransform:"uppercase",
+          background: hasAny ? "#1a1814" : "#ccc",color:"#fff",border:"none",borderRadius:6,cursor: hasAny ? "pointer" : "default",transition:"background .15s",
+        }}>
+          {sending ? (en ? "Sending…" : "Enviando…") : (en ? "Send order to concierge" : "Enviar pedido al concierge")}
         </button>
       </div>
     </div>
