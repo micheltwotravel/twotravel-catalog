@@ -2227,10 +2227,14 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
+    const catEntry = SUGGESTION_CATS.find(c => c.id === category);
     return cityServices
       .filter((s) => {
         const cat = normCatPanel(s.category);
-        if (category !== "all" && cat !== category) return false;
+        if (category !== "all") {
+          const match = catEntry ? catEntry.ids.includes(cat) : cat === category;
+          if (!match) return false;
+        }
 
         if (!query) return true;
         const haystack = [
@@ -2239,6 +2243,8 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
           s.category,
           s.subcategory,
           s.priceUnit,
+          s.description,
+          s.notes,
         ]
           .filter(Boolean)
           .join(" ")
@@ -2246,7 +2252,7 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
 
         return haystack.includes(query);
       })
-      .slice(0, 200); // evita listas gigantes
+      .slice(0, 200);
   }, [cityServices, q, category]);
 
   return (
