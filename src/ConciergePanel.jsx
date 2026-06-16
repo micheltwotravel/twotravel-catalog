@@ -56,10 +56,21 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   // ── helpers ─────────────────────────────────────────────────
   const cl = (v) => String(v ?? "").trim();
   // jsPDF Helvetica only supports Latin-1 — strip anything outside that range
-  const se = (s) => String(s||"").replace(/[^\x00-\xFF]/g, "").replace(/\s+/g," ").trim();
+  const se = (s) => String(s||"").replace(/[^\x20-\x7E\xA0-\xFF]/g, "").replace(/\s+/g," ").trim();
   // Safe wrappers — every doc.text / doc.splitTextToSize must go through these
   const dt  = (txt, x, y2, opts) => opts ? doc.text(se(String(txt||"")), x, y2, opts) : doc.text(se(String(txt||"")), x, y2);
   const sts = (txt, w) => doc.splitTextToSize(se(String(txt||"")), w);
+  // Safe link: render text via dt() then add clickable area without textWithLink()
+  const dtLink = (txt, x2, y2, url) => {
+    const safe = se(String(txt||""));
+    if (!safe) return;
+    dt(safe, x2, y2);
+    try {
+      const w = doc.getStringUnitWidth(safe) * doc.getFontSize() / doc.internal.scaleFactor;
+      const h = doc.getFontSize() / doc.internal.scaleFactor;
+      doc.link(x2, y2 - h, w, h * 1.3, { url });
+    } catch(e) { /* link annotation optional */ }
+  };
   const parseJ = (v) => {
     if (Array.isArray(v)) return v;
     if (typeof v === "string" && v.trim().startsWith("[")) {
@@ -231,7 +242,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     doc.setFontSize(10.5); doc.setFont("helvetica","normal");
     if (url) {
       doc.setTextColor(30, 100, 200);
-      doc.textWithLink(se(val), ML + 100, y, { url });
+      dtLink(val, ML + 100, y, url);
     } else {
       doc.setTextColor(20, 20, 20);
       dt(se(val), ML + 100, y);
@@ -276,7 +287,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     ? "Selecciona y presupuesta tus bebidas para la casa y el bote."
     : "Select and budget your drinks for both the house and the boat.", ML, y); y += 10;
   doc.setTextColor(30,100,200);
-  doc.textWithLink(drinksUrl.replace("https://",""), ML, y, { url: drinksUrl }); y += 14;
+  dtLink(drinksUrl.replace("https://",""), ML, y, drinksUrl); y += 14;
 
   // Groceries
   const grocUrl = `${BASE}/?mode=groceries&kickoffId=${kid}&guestName=${gn}&lang=${lang}`;
@@ -287,7 +298,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     ? "Personaliza tu lista de mercado con snacks y esenciales."
     : "Customize your grocery list with snacks and breakfast essentials.", ML, y); y += 10;
   doc.setTextColor(30,100,200);
-  doc.textWithLink(grocUrl.replace("https://",""), ML, y, { url: grocUrl }); y += 14;
+  dtLink(grocUrl.replace("https://",""), ML, y, grocUrl); y += 14;
 
   // Breakfast (CTG only)
   const cityCode = cl(kickoff.city || kickoff.destination || "").split(",")[0].trim().toUpperCase();
@@ -303,7 +314,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       ? "Elige tu menú de desayuno para toda la estadía."
       : "Choose your breakfast menu for your entire stay.", ML, y); y += 10;
     doc.setTextColor(30,100,200);
-    doc.textWithLink(bfUrl.replace("https://",""), ML, y, { url: bfUrl }); y += 14;
+    dtLink(bfUrl.replace("https://",""), ML, y, bfUrl); y += 14;
   }
 
   // Welcome guide
@@ -311,7 +322,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
   dt(lang === "es" ? "Guia de Bienvenida Two Travel:" : "Two Travel Welcome Guide:", ML, y); y += 11;
   doc.setFont("helvetica","normal"); doc.setTextColor(30,100,200);
-  doc.textWithLink("twotravelvip.com/welcome-guide.pdf", ML, y, { url: "https://twotravelvip.com/welcome-guide.pdf" });
+  dtLink("twotravelvip.com/welcome-guide.pdf", ML, y, "https://twotravelvip.com/welcome-guide.pdf");
   y += 18;
 
   // Cover footer
