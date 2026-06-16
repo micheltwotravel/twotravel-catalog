@@ -115,11 +115,9 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       location   : lang === "es"
         ? cl(svc?.location_es || svc?.location || "")
         : cl(svc?.location    || ""),
-      description: svc
-        ? (lang === "es"
-            ? (svc.description?.es || svc.description?.en || "")
-            : (svc.description?.en || svc.description?.es || ""))
-        : "",
+      description: lang === "es"
+        ? (svc?.description?.es || item.description_es || svc?.description?.en || item.description_en || "")
+        : (svc?.description?.en || item.description_en || svc?.description?.es || item.description_es || ""),
       highlights : svc
         ? (lang === "es"
             ? (svc.highlights    || [])
@@ -846,6 +844,9 @@ function mapServiceToCartItem(service, clientType = 1, groupSizeNum = 1) {
   id: service?.id ?? service?.sku ?? `svc_${Date.now()}`,
   sku: service?.sku || "",
   name: service?.name || "Servicio",
+  name_en: service?.name_en || service?.name || "Service",
+  description_es: service?.description?.es || "",
+  description_en: service?.description?.en || "",
   category: service?.category || "",
   subcategory: service?.subcategory || "",
   price_cop: chosen,
