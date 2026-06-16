@@ -1770,7 +1770,7 @@ function SummaryModal({ kickoff, onClose }) {
             {kickoff.conciergeEditingAt && <p>✏️ Concierge editó: <span className="text-neutral-700">{formatDateTime(kickoff.conciergeEditingAt)}</span></p>}
             {kickoff.feedbackAt && <p>💬 Feedback: <span className="text-neutral-700">{formatDateTime(kickoff.feedbackAt)}</span></p>}
             {kickoff.conciergeRating > 0 && (
-              <p>⭐ Rating interno: <span className="text-amber-600 font-semibold">{"★".repeat(Number(kickoff.conciergeRating))}{"☆".repeat(5 - Number(kickoff.conciergeRating))}</span></p>
+              <p>⭐ Rating interno: <span className="text-amber-600 font-semibold">{(() => { const r = Math.min(5, Math.max(0, Number(kickoff.conciergeRating)||0)); return "★".repeat(r) + "☆".repeat(5-r); })()}</span></p>
             )}
           </div>
           <div className="ml-auto">
@@ -5028,7 +5028,7 @@ const loadKickoffs = async () => {
           {ratings.map((r, i) => (
             <div key={i} className="text-[10px] text-neutral-500 leading-none">
               <span className="font-medium text-neutral-700">{r.city}</span>
-              {" "}<span className="text-amber-500">{"★".repeat(Number(r.rating))}{"☆".repeat(5 - Number(r.rating))}</span>
+              {" "}<span className="text-amber-500">{(() => { const rv = Math.min(5, Math.max(0, Number(r.rating)||0)); return "★".repeat(rv) + "☆".repeat(5-rv); })()}</span>
             </div>
           ))}
           {ratings.length > 1 && (
@@ -5039,7 +5039,7 @@ const loadKickoffs = async () => {
     }
     if (k.conciergeRating > 0) return (
       <div className="mt-0.5 text-[11px] text-amber-500 font-medium leading-none">
-        {"★".repeat(Number(k.conciergeRating))}{"☆".repeat(5 - Number(k.conciergeRating))}
+        {(() => { const r = Math.min(5, Math.max(0, Number(k.conciergeRating)||0)); return "★".repeat(r) + "☆".repeat(5-r); })()}
       </div>
     );
     return null;
