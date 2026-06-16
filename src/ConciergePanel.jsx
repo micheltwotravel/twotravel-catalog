@@ -247,14 +247,62 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     });
   }
 
-  // Welcome guide link on cover
-  y += 18;
+  // ── Order links section on cover ────────────────────────────
+  y += 14;
   doc.setDrawColor(220,220,220); doc.setLineWidth(0.5); doc.line(ML, y, MR, y); y += 14;
-  doc.setFontSize(8.5); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
-  doc.text(lang === "es" ? "📋 Guía de Bienvenida Two Travel:" : "📋 Two Travel Welcome Guide:", ML, y);
+
+  const BASE = "https://twotravelvip.com";
+  const kid  = cl(kickoff.id);
+  const gn   = encodeURIComponent(cl(kickoff.guestName));
+  const ad   = encodeURIComponent(cl(kickoff.arrivalDate));
+  const dd   = encodeURIComponent(cl(kickoff.departureDate));
+
+  // Drinks
+  const drinksUrl = `${BASE}/?mode=drinks&kickoffId=${kid}&guestName=${gn}&arrivalDate=${ad}&departureDate=${dd}&lang=${lang}`;
+  doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
+  doc.text(lang === "es" ? "🥂 Pedido de Bebidas" : "🥂 Drink Order", ML, y); y += 11;
+  doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
+  doc.text(lang === "es"
+    ? "Selecciona y presupuesta tus bebidas para la casa y el bote."
+    : "Select and budget your drinks for both the house and the boat.", ML, y); y += 10;
+  doc.setTextColor(30,100,200);
+  doc.textWithLink(drinksUrl.replace("https://",""), ML, y, { url: drinksUrl }); y += 14;
+
+  // Groceries
+  const grocUrl = `${BASE}/?mode=groceries&kickoffId=${kid}&guestName=${gn}&lang=${lang}`;
+  doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
+  doc.text(lang === "es" ? "🛒 Pedido de Mercado" : "🛒 Groceries Order", ML, y); y += 11;
+  doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
+  doc.text(lang === "es"
+    ? "Personaliza tu lista de mercado con snacks y esenciales."
+    : "Customize your grocery list with snacks and breakfast essentials.", ML, y); y += 10;
+  doc.setTextColor(30,100,200);
+  doc.textWithLink(grocUrl.replace("https://",""), ML, y, { url: grocUrl }); y += 14;
+
+  // Breakfast (CTG only)
+  const cityCode = cl(kickoff.city || kickoff.destination || "").split(",")[0].trim().toUpperCase();
+  const isCtg = ["CTG","CARTAGENA"].some(c => cityCode.includes(c));
+  if (isCtg) {
+    const gs   = parseInt(cl(kickoff.groupSize)) || 1;
+    const tier = gs <= 5 ? "1-5" : gs <= 10 ? "6-10" : "11-20";
+    const bfUrl = `${BASE}/?mode=breakfast&kickoffId=${kid}&guestName=${gn}&groupTier=${tier}&currency=${currency}&lang=${lang}`;
+    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
+    doc.text(lang === "es" ? "☕ Pedido de Desayuno" : "☕ Breakfast Order", ML, y); y += 11;
+    doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
+    doc.text(lang === "es"
+      ? "Elige tu menú de desayuno para toda la estadía."
+      : "Choose your breakfast menu for your entire stay.", ML, y); y += 10;
+    doc.setTextColor(30,100,200);
+    doc.textWithLink(bfUrl.replace("https://",""), ML, y, { url: bfUrl }); y += 14;
+  }
+
+  // Welcome guide
+  y += 4;
+  doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
+  doc.text(lang === "es" ? "📋 Guía de Bienvenida Two Travel:" : "📋 Two Travel Welcome Guide:", ML, y); y += 11;
   doc.setFont("helvetica","normal"); doc.setTextColor(30,100,200);
-  doc.textWithLink("twotravelvip.com/welcome-guide.pdf", ML, y + 13, { url: "https://twotravelvip.com/welcome-guide.pdf" });
-  y += 26;
+  doc.textWithLink("twotravelvip.com/welcome-guide.pdf", ML, y, { url: "https://twotravelvip.com/welcome-guide.pdf" });
+  y += 18;
 
   // Cover footer
   doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(150,150,150);
