@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Guía de la Plataforma · Two Travel</title>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Jost',sans-serif;font-weight:300;color:#1a1814;background:#fff}
+.page{max-width:760px;margin:0 auto;padding:48px 48px 60px}
+.cover{background:#1a1814;border-radius:8px;padding:40px 36px 36px;margin-bottom:36px}
+.cover-sub{font-size:11px;color:#9a7d52;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+.cover-title{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:500;color:#f7f4ef;margin-bottom:10px}
+.cover-desc{font-size:14px;color:#b8b0a6;line-height:1.65;max-width:520px}
+.area{margin-bottom:36px}
+.area-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:500;margin-bottom:4px}
+.area-url{font-size:11px;color:#9a7d52;letter-spacing:.06em;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e5ddd3}
+.item{display:flex;gap:14px;margin-bottom:14px;align-items:flex-start}
+.item-dot{width:6px;height:6px;border-radius:50%;background:#9a7d52;flex-shrink:0;margin-top:7px}
+.item-title{font-size:13px;font-weight:500;margin-bottom:2px}
+.item-desc{font-size:12px;color:#5a5650;line-height:1.55}
+.sec-title{font-size:10px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:#7a7570;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #e5ddd3}
+.tip{background:#f7f4ef;border-left:3px solid #9a7d52;border-radius:0 6px 6px 0;padding:10px 14px;font-size:12px;color:#5a5650;line-height:1.55;margin:14px 0}
+.footer{margin-top:40px;padding-top:16px;border-top:1px solid #e5ddd3;font-size:11px;color:#9a9590;text-align:center}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.page{padding:32px 40px 50px}.cover{-webkit-print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="cover">
+    <p class="cover-sub">Two Travel · Internal</p>
+    <h1 class="cover-title">Guía de la Plataforma</h1>
+    <p class="cover-desc">Manual de uso del sistema operativo interno de Two Travel — para todo el equipo.</p>
+  </div>
+
+  <!-- MENÚ -->
+  <div class="area">
+    <p class="sec-title">Cómo navegar</p>
+    <div class="item">
+      <span class="item-dot"></span>
+      <div>
+        <p class="item-title">Menú principal — twotravelvip.com/menu.html</p>
+        <p class="item-desc">Punto de entrada para todo el equipo. Desde aquí accedes a cada área: Concierge, Finanzas y Ventas. Cada página tiene un botón ← Menú para regresar.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONCIERGE -->
+  <div class="area">
+    <p class="area-title">Concierge & Logística</p>
+    <p class="area-url">twotravelvip.com/?mode=concierge</p>
+    <div class="item">
+      <span class="item-dot"></span>
+      <div>
+        <p class="item-title">Clientes</p>
+        <p class="item-desc">Lista de todos los kickoffs activos. Clic en un cliente para abrir su perfil completo: kickoff, itinerario, carrito de servicios y PDF.</p>
+      </div>
+    </div>
+    <div class="item">
+      <span class="item-dot"></span>
+      <div>
+        <p class="item-title">Nuevo cliente</p>
+        <p class="item-desc">Botón "+ Nuevo cliente" en el header. Crea el kickoff y genera los links del cuestionario para enviarle al cliente.</p>
+      </div>
+    </div>
+    <div class="item">
+      <span class="item-dot"></span>
+      <div>
+        <p class="item-title">Itinerario y catálogo</p>
+        <p class="item-desc">Dentro de cada cliente, agrega servicios del catálogo al itinerario. Filtra por ciudad y categoría. Confirma cada servicio escribiendo quién lo confirmó.</p>
+      </div>
+    </div>
+    <div class="item">
+      <span class="item-dot"></span>
+      <div>
+        <p class="item-title">PDF del cliente</p>
+        <p class="item-desc">Genera el PDF de itinerario desde el panel. Incluye foto de portada, servicios confirmados, link a la guía de bienvenida y se envía por Slack automáticamente.</p>
+      </div>
+    </div>
+    <div class="tip">Los servicios llegan al itinerario como 📌 sin confirmar. El concierge marca ✅ y escribe quién confirmó — eso aparece en el PDF del cliente.</div>
+
+    <div class="item">
+      <span class="item-dot"></span>
+      <div>
+        <p class="item-title">Handoffs — twotravelvip.com/handoffs.html</p>
+        <p class="item-desc">Registro de todos los servicios confirmados por trip. Al marcar ✅ en handoffs se crea una tarea automáticamente.</p>
+      </div>
+    </div>
+    <div class="item">
+      <span class="item-dot"></span>
+      <div>
+        <p class="item-title">Tareas — twotravelvip.com/tasks.html</p>
+        <p class="item-desc">Panel de tareas del equipo. Se crean desde handoffs o manualmente. Filtra por persona, estado y fecha.</p>
+      </div>
+    </div>
+    <div class="item">
+      <span class="item-dot"></span>
+      <div>
+        <p class="item-title">Dashboard — twotravelvip.com/?mode=dashboard</p>
+        <p class="item-desc">Métricas de operación: trips activos, tiempos de respuesta, ratings y KPIs del equipo.</p>
+      </div>
+    </div>
+    <div class="item">
+      <span class="item-dot"></span>
+      <div>
+        <p class="item-title">Soporte — twotravelvip.com/?mode=soporte</p>
+        <p class="item-desc">Solicitudes de soporte interno del equipo.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINANZAS -->
+  <div class="area">
+    <p class="area-title">Finanzas</p>
+    <p class="area-url">twotravelvip.com/pagos.html</p>
+    <div class="item">
+      <span class="item-dot"></span>
+      <div>
+        <p class="item-title">Solicitudes de pago</p>
+        <p class="item-desc">Cualquier persona del equipo crea una solicitud con el monto, proveedor, cliente y link de factura. Lyna recibe aviso en Slack al instante.</p>
+      </div>
+    </div>
+    <div class="item">
+      <span class="item-dot"></span>
+      <div>
+        <p class="item-title">Aprobación</p>
+        <p class="item-desc">Lyna aprueba o rechaza desde la tabla. El solicitante recibe notificación en Slack automáticamente.</p>
+      </div>
+    </div>
+    <div class="item">
+      <span class="item-dot"></span>
+      <div>
+        <p class="item-title">Exportar a Excel</p>
+        <p class="item-desc">Botón ⬇ Excel descarga todas las solicitudes en CSV listo para abrir en Excel o Google Sheets.</p>
+      </div>
+    </div>
+    <div class="tip">Para la guía completa de pagos: twotravelvip.com/guia-pagos-lyna.html</div>
+  </div>
+
+  <!-- VENTAS -->
+  <div class="area">
+    <p class="area-title">Ventas</p>
+    <p class="area-url">twotravelvip.com/agent.html</p>
+    <div class="item">
+      <span class="item-dot"></span>
+      <div>
+        <p class="item-title">Agente IA de ventas</p>
+        <p class="item-desc">Chatbot inteligente para atender leads, armar propuestas y consultar disponibilidad del portafolio. Disponible en español e inglés.</p>
+      </div>
+    </div>
+    <div class="item">
+      <span class="item-dot"></span>
+      <div>
+        <p class="item-title">Portafolio</p>
+        <p class="item-desc">441 villas, 83 embarcaciones y 41 venues en Cartagena, Medellín, Tulum y CDMX. Accesible desde el agente o directamente desde el menú.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    twotravelvip.com/menu.html &nbsp;·&nbsp; Para imprimir: Archivo → Imprimir → Guardar como PDF
+  </div>
+
+</div>
+</body>
+</html>
