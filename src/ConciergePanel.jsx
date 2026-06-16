@@ -4166,12 +4166,13 @@ const toCityCodeModule = (raw) => {
 };
 
 function BreakfastLink({ kickoff }) {
-  const [bfTier, setBfTier] = React.useState("1-5");
+  const autoGs = parseInt(kickoff.groupSize) || 1;
+  const [bfGs,   setBfGs]   = React.useState(autoGs);
   const [bfCurr, setBfCurr] = React.useState("COP");
   const bfUrl = (() => {
     const u = new URL("/?mode=breakfast", window.location.origin);
     u.searchParams.set("kickoffId", kickoff.id);
-    u.searchParams.set("groupTier", bfTier);
+    u.searchParams.set("groupSize", bfGs);
     u.searchParams.set("currency", bfCurr);
     u.searchParams.set("lang", kickoff.lang || "en");
     if (kickoff.guestName) u.searchParams.set("guestName", kickoff.guestName);
@@ -4179,12 +4180,10 @@ function BreakfastLink({ kickoff }) {
   })();
   return (
     <div className="flex items-center gap-0">
-      <select value={bfTier} onChange={e => setBfTier(e.target.value)}
-        className="px-2 py-2 rounded-l-lg border border-r-0 border-amber-300 text-[11px] text-amber-700 bg-amber-50 hover:bg-amber-100 cursor-pointer">
-        <option value="1-5">1–5</option>
-        <option value="6-10">6–10</option>
-        <option value="11-20">11–20</option>
-      </select>
+      <input type="number" min="1" max="50" value={bfGs}
+        onChange={e => setBfGs(Math.max(1, parseInt(e.target.value)||1))}
+        className="w-14 px-2 py-2 rounded-l-lg border border-r-0 border-amber-300 text-[11px] text-amber-700 bg-amber-50 text-center"
+        title="Número de personas" />
       <select value={bfCurr} onChange={e => setBfCurr(e.target.value)}
         className="px-2 py-2 border border-r-0 border-amber-300 text-[11px] text-amber-700 bg-amber-50 hover:bg-amber-100 cursor-pointer">
         <option value="COP">COP</option>

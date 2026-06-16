@@ -3694,10 +3694,16 @@ function BreakfastCatalog() {
   const GAS_URL   = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
   const params    = new URLSearchParams(window.location.search);
   const kickoffId = params.get("kickoffId") || "";
+  const gsParam   = parseInt(params.get("groupSize")) || 0;
   const tierParam = params.get("groupTier") || "1-5";
   const currParam = params.get("currency")  || "COP";
+  // Compute tier from exact groupSize if provided, else fall back to groupTier param
+  const initTier = gsParam > 0
+    ? (gsParam <= 5 ? "1-5" : gsParam <= 10 ? "6-10" : "11-20")
+    : (BREAKFAST_TIERS.includes(tierParam) ? tierParam : "1-5");
+  const [groupSize, setGroupSize] = React.useState(gsParam > 0 ? gsParam : null);
   const [lang, setLang]         = React.useState(params.get("lang") === "es" ? "es" : "en");
-  const [tier, setTier]         = React.useState(BREAKFAST_TIERS.includes(tierParam) ? tierParam : "1-5");
+  const [tier, setTier]         = React.useState(initTier);
   const [currency, setCurrency] = React.useState(currParam === "USD" ? "USD" : "COP");
   const [menuTab, setMenuTab]   = React.useState("traditional");
   const [checked, setChecked]   = React.useState({});
@@ -3738,7 +3744,8 @@ function BreakfastCatalog() {
       sel.forEach(it => lines.push(`  · ${en ? it.name : it.name_es} — ${fmt(it.prices[tierIdx])}`));
     });
     if (notes.trim()) lines.push(`\n📝 ${notes}`);
-    const text = `☕ *Breakfast* ${guestName ? `· ${guestName}` : ""} · ${en ? menu.label : menu.label_es} · ${tier} pax\n\n${lines.join("\n")}`;
+    const paxLabel = groupSize ? `${groupSize} ${en ? "guests" : "personas"}` : `${tier} pax`;
+    const text = `☕ *Breakfast* ${guestName ? `· ${guestName}` : ""} · ${en ? menu.label : menu.label_es} · ${paxLabel}\n\n${lines.join("\n")}`;
     const now = new Date().toISOString();
     try {
       await fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
@@ -3790,10 +3797,12 @@ function BreakfastCatalog() {
           {en ? "Breakfast Menu" : "Menú de Desayuno"}
         </h1>
         <p style={{fontSize:12,color:"#9a7d52",letterSpacing:".06em"}}>
-          {guestName ? guestName + " · " : ""}{tier} {en ? "guests" : "personas"}
+          {guestName ? guestName + " · " : ""}
+          {groupSize ? `${groupSize} ${en ? "guests" : "personas"}` : `${tier} ${en ? "guests" : "personas"}`}
         </p>
         {/* Controls row */}
         <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:16,flexWrap:"wrap"}}>
+          {!groupSize && (
           <div style={{display:"flex",gap:4,background:"rgba(255,255,255,.08)",borderRadius:6,padding:3}}>
             {BREAKFAST_TIERS.map(t => (
               <button key={t} onClick={() => setTier(t)} style={{
@@ -3803,6 +3812,7 @@ function BreakfastCatalog() {
               }}>{t} pax</button>
             ))}
           </div>
+          )}
           <button onClick={() => setCurrency(c => c === "COP" ? "USD" : "COP")} style={{
             padding:"4px 14px",fontSize:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",
             border:"1px solid rgba(255,255,255,.15)",borderRadius:6,cursor:"pointer",
