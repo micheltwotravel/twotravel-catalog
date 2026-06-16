@@ -1432,6 +1432,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         <CatalogPickerModal
           services={services}
           clientType={kickoff?.clientType || 1}
+          lang={kickoff?.lang || "en"}
           city={kickoff?.city || kickoff?.destination || ""}
           onClose={() => setCatalogTargetDay(null)}
           onPick={svc => {
@@ -2171,7 +2172,7 @@ const SUGGESTION_CATS = [
   { id: "services",       ids: ["services"],                 label: "✨ Servicios" },
 ];
 
-function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPick }) {
+function CatalogPickerModal({ services, clientType = 1, lang = "en", city = "", onClose, onPick }) {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("all");
 
@@ -2248,12 +2249,13 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
         if (!query) return true;
         const haystack = [
           s.name,
+          s.name_en,
           s.sku,
           s.category,
           s.subcategory,
           s.priceUnit,
-          s.description,
-          s.notes,
+          s.description?.es,
+          s.description?.en,
         ]
           .filter(Boolean)
           .join(" ")
@@ -2344,7 +2346,7 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
                         className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 hover:border-neutral-400 text-left transition-colors"
                       >
                         <div className="min-w-0">
-                          <div className="text-xs font-semibold text-neutral-900 truncate">{s.name}</div>
+                          <div className="text-xs font-semibold text-neutral-900 truncate">{lang === "en" ? (s.name_en || s.name) : s.name}</div>
                           {s.subcategory && <div className="text-[10px] text-neutral-500 truncate">{s.subcategory}</div>}
                         </div>
                         <div className="shrink-0 flex flex-col items-end gap-0.5">
@@ -2375,7 +2377,7 @@ function CatalogPickerModal({ services, clientType = 1, city = "", onClose, onPi
           <div className="border rounded-2xl overflow-hidden bg-white">
             <div className="max-h-[55vh] overflow-auto divide-y">
               {filtered.map((s) => {
-                const name = String(s.name || "Servicio").trim();
+                const name = String((lang === "en" ? (s.name_en || s.name) : s.name) || "Servicio").trim();
                 const cat = String(s.category || "").trim();
                 const sub = String(s.subcategory || "").trim();
                 const sku = String(s.sku || "").trim();
