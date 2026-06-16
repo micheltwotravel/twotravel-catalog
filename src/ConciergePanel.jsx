@@ -55,6 +55,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
 
   // ── helpers ─────────────────────────────────────────────────
   const cl = (v) => String(v ?? "").trim();
+  // jsPDF Helvetica can't render emoji — strip before any doc.text() call
+  const se = (s) => String(s||"").replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{2BFF}]|[︀-️]|‍|️/gu, "").replace(/\s+/g," ").trim();
   const parseJ = (v) => {
     if (Array.isArray(v)) return v;
     if (typeof v === "string" && v.trim().startsWith("[")) {
@@ -240,7 +242,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     doc.setDrawColor(230,230,230); doc.line(ML, y, MR, y); y += 16;
     doc.setFontSize(7.5); doc.setFont("helvetica","bold"); doc.setTextColor(90,90,90);
     doc.text(lang === "es" ? "NOTAS DE TU CONCIERGE" : "FROM YOUR CONCIERGE", ML, y); y += 14;
-    const summaryLines = doc.splitTextToSize(cl(kickoff.conciergeSummary).slice(0,900), TW);
+    const summaryLines = doc.splitTextToSize(se(cl(kickoff.conciergeSummary)).slice(0,900), TW);
     summaryLines.slice(0,14).forEach(line => {
       doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(50,50,50);
       doc.text(line, ML, y); y += 13;
@@ -260,7 +262,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   // Drinks
   const drinksUrl = `${BASE}/?mode=drinks&kickoffId=${kid}&guestName=${gn}&arrivalDate=${ad}&departureDate=${dd}&lang=${lang}`;
   doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
-  doc.text(lang === "es" ? "🥂 Pedido de Bebidas" : "🥂 Drink Order", ML, y); y += 11;
+  doc.text(lang === "es" ? "Pedido de Bebidas" : "Drink Order", ML, y); y += 11;
   doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
   doc.text(lang === "es"
     ? "Selecciona y presupuesta tus bebidas para la casa y el bote."
@@ -271,7 +273,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   // Groceries
   const grocUrl = `${BASE}/?mode=groceries&kickoffId=${kid}&guestName=${gn}&lang=${lang}`;
   doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
-  doc.text(lang === "es" ? "🛒 Pedido de Mercado" : "🛒 Groceries Order", ML, y); y += 11;
+  doc.text(lang === "es" ? "Pedido de Mercado" : "Groceries Order", ML, y); y += 11;
   doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
   doc.text(lang === "es"
     ? "Personaliza tu lista de mercado con snacks y esenciales."
@@ -287,7 +289,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     const tier = gs <= 5 ? "1-5" : gs <= 10 ? "6-10" : "11-20";
     const bfUrl = `${BASE}/?mode=breakfast&kickoffId=${kid}&guestName=${gn}&groupTier=${tier}&currency=${currency}&lang=${lang}`;
     doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
-    doc.text(lang === "es" ? "☕ Pedido de Desayuno" : "☕ Breakfast Order", ML, y); y += 11;
+    doc.text(lang === "es" ? "Pedido de Desayuno" : "Breakfast Order", ML, y); y += 11;
     doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
     doc.text(lang === "es"
       ? "Elige tu menú de desayuno para toda la estadía."
@@ -299,7 +301,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   // Welcome guide
   y += 4;
   doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
-  doc.text(lang === "es" ? "📋 Guía de Bienvenida Two Travel:" : "📋 Two Travel Welcome Guide:", ML, y); y += 11;
+  doc.text(lang === "es" ? "Guia de Bienvenida Two Travel:" : "Two Travel Welcome Guide:", ML, y); y += 11;
   doc.setFont("helvetica","normal"); doc.setTextColor(30,100,200);
   doc.textWithLink("twotravelvip.com/welcome-guide.pdf", ML, y, { url: "https://twotravelvip.com/welcome-guide.pdf" });
   y += 18;
@@ -332,7 +334,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       } else {
         doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40);
       }
-      const wrapped = doc.splitTextToSize(l, TW);
+      const wrapped = doc.splitTextToSize(se(l), TW);
       wrapped.forEach(wl => { checkY(13); doc.text(wl, ML, y); y += 13; });
     });
   }
@@ -349,7 +351,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       checkY(18);
       const parts = [a.name, a.flight, a.date, a.time ? `· ${a.time}` : ""].filter(Boolean).join("   ");
       doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(30,30,30);
-      doc.text(parts, ML, y); y += 14;
+      doc.text(se(parts), ML, y); y += 14;
     });
     y += 6;
   }
@@ -408,19 +410,19 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       // Time + Name
       const timePart = item.time ? `${item.time}   ` : "";
       doc.setFontSize(10.5); doc.setFont("helvetica","bold"); doc.setTextColor(15,15,15);
-      doc.text(timePart + item.name, ML, y); y += 15;
+      doc.text(se(timePart + item.name), ML, y); y += 15;
 
       // Confirmation status
       if (item.confirmed !== false) {
         const confBy = item.confirmation ? ` · ${cl(item.confirmation)}` : "";
         doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(60,150,90);
-        doc.text("✓ Confirmed" + confBy, ML + 2, y); y += 12;
+        doc.text("Confirmed" + se(confBy), ML + 2, y); y += 12;
       }
 
       // Location
       if (item.location) {
         doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(120,120,120);
-        doc.text("📍 " + item.location, ML + 2, y); y += 13;
+        doc.text(se(item.location), ML + 2, y); y += 13;
       }
 
       // Description (max 3 lines)
