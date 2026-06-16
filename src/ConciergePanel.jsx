@@ -214,24 +214,29 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     { label: lang === "es" ? "Llegada"      : "Arrival",        val: fmtDate(kickoff.arrivalDate) },
     { label: lang === "es" ? "Salida"       : "Departure",      val: fmtDate(kickoff.departureDate) },
     { label: lang === "es" ? "Destino"      : "Destination",    val: cityFullName(kickoff.city) || "" },
-    { label: lang === "es" ? "Huéspedes"    : "Guests",         val: cl(kickoff.groupSize || "") },
+    { label: lang === "es" ? "Huéspedes"    : "Guests",         val: (() => { const n = parseInt(cl(kickoff.groupSize||"")) || 0; if (!n) return cl(kickoff.groupSize||""); return lang === "es" ? `${n} ${n===1?"persona":"personas"}` : `${n} ${n===1?"guest":"guests"}`; })() },
     { label: lang === "es" ? "Alojamiento"  : "Accommodation",  val: cl(kickoff.accommodationName || "") },
     { label: lang === "es" ? "Dirección"    : "Address",        val: cl(kickoff.accommodationAddr || ""), url: accomUrl || null },
-    { label: "Concierge",                                        val: cl(kickoff.assignedConciergeName || kickoff.assignedConcierge || "") },
+    { label: "Concierge",                                        val: cl(kickoff.assignedConciergeName || kickoff.assignedConcierge || ""), sub: cl(kickoff.conciergeTitle || "") },
     { label: "WhatsApp Concierge",                               val: conciergePhone, url: waUrl },
     { label: lang === "es" ? "Tu WhatsApp"  : "Your WhatsApp",  val: cl(kickoff.guestContact || "") },
   ].filter(r => r.val);
 
-  infoRows.forEach(({ label, val, url }) => {
+  infoRows.forEach(({ label, val, url, sub }) => {
     doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(100,100,100);
-    doc.text(label.toUpperCase(), ML, y);
+    doc.text(se(label).toUpperCase(), ML, y);
     doc.setFontSize(10.5); doc.setFont("helvetica","normal");
     if (url) {
       doc.setTextColor(30, 100, 200);
-      doc.textWithLink(val, ML + 100, y, { url });
+      doc.textWithLink(se(val), ML + 100, y, { url });
     } else {
       doc.setTextColor(20, 20, 20);
-      doc.text(val, ML + 100, y);
+      doc.text(se(val), ML + 100, y);
+    }
+    if (sub) {
+      doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(130,130,130);
+      doc.text(se(sub), ML + 100, y + 8);
+      y += 8;
     }
     y += 18;
   });
@@ -447,6 +452,31 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       }
     });
   });
+
+  // ── FREE NOTES BLOCK (pdfNotes) ────────────────────────────
+  const pdfNotesText = cl(kickoff.pdfNotes || "");
+  if (pdfNotesText) {
+    newPage();
+    pdfNotesText.split("\n").forEach(line => {
+      const l = se(cl(line));
+      if (!l) { checkY(8); y += 6; return; }
+      checkY(14);
+      if (l.toUpperCase() === l && l.length < 80) {
+        doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
+        y += 4;
+        doc.text(l, ML, y); y += 14;
+      } else if (l.startsWith("- ") || l.startsWith("• ")) {
+        const content = l.replace(/^[-•]\s+/, "");
+        const wrapped = doc.splitTextToSize("· " + se(content), TW - 8);
+        doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(50,50,50);
+        wrapped.forEach(wl => { checkY(13); doc.text(wl, ML + 4, y); y += 13; });
+      } else {
+        const wrapped = doc.splitTextToSize(l, TW);
+        doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40);
+        wrapped.forEach(wl => { checkY(13); doc.text(wl, ML, y); y += 13; });
+      }
+    });
+  }
 
   // Page footers
   const totalPages = doc.getNumberOfPages();
@@ -2820,6 +2850,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "11:00 AM");
   const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=drivesdk");
   const [preTripContent,     setPreTripContent]     = useState(kickoff?.preTripContent     || DEFAULT_PRE_TRIP);
+  const [meetingNotes,       setMeetingNotes]       = useState(kickoff?.meetingNotes       || "");
+  const [pdfNotes,           setPdfNotes]           = useState(kickoff?.pdfNotes           || "");
 
   // ── Per-city ratings (concierge logs after each city leg) ────────
   const [cityRatings, setCityRatings] = useState(() => {
@@ -2876,6 +2908,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     ...(autoStatus === "done"              && !kickoff.doneAt              ? { doneAt: now }              : {}),
     // Pre-trip info block (rendered as a page before itinerary days in PDF)
     preTripContent:    preTripContent.trim(),
+    meetingNotes:      meetingNotes.trim(),
+    pdfNotes:          pdfNotes.trim(),
     // Multiple arrivals
     arrivals: JSON.stringify(arrivals.filter(a => a.name || a.date || a.flight)),
     // Per-city ratings
@@ -3124,6 +3158,29 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               onChange={(e) => setInternalNotes(e.target.value)}
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm min-h-[90px]"
               placeholder="Notas internas"
+            />
+          </div>
+
+          {/* ── Reuniones ── */}
+          <div className="border border-amber-200 rounded-xl bg-amber-50 p-3 space-y-2">
+            <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide">Reuniones</p>
+            <textarea
+              value={meetingNotes}
+              onChange={e => setMeetingNotes(e.target.value)}
+              className="w-full border border-amber-200 rounded-lg px-3 py-2 text-sm min-h-[80px] bg-white"
+              placeholder={"Última reunión con cliente:\n\nÚltima reunión con Caro:"}
+            />
+          </div>
+
+          {/* ── Notas libres para PDF ── */}
+          <div className="border border-indigo-200 rounded-xl bg-indigo-50 p-3 space-y-1">
+            <p className="text-[11px] font-semibold text-indigo-700 uppercase tracking-wide">Bloque libre en PDF</p>
+            <p className="text-[10px] text-indigo-500">Se incluye al final del PDF. Acepta listas (- item), títulos (MAYÚSCULAS) y párrafos.</p>
+            <textarea
+              value={pdfNotes}
+              onChange={e => setPdfNotes(e.target.value)}
+              className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm min-h-[100px] bg-white"
+              placeholder={"ACTIVIDADES ADICIONALES\n- Reserva restaurante Marea\n- Transfer aeropuerto confirmado\n\nNota: llevar pasaporte para check-in."}
             />
           </div>
 

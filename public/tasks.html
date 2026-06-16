@@ -196,6 +196,11 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
   </div>
   <div class="tsep"></div>
   <button class="tbtn" onclick="openNewTask()">+ New Task</button>
+  <div style="display:flex;gap:4px;margin:0 4px">
+    <button id="cat-all" onclick="setCatFilter('all')" style="padding:4px 10px;font-size:11px;border:1px solid var(--border2);border-radius:5px;background:var(--ink);color:#fff;cursor:pointer">Todas</button>
+    <button id="cat-concierge" onclick="setCatFilter('concierge')" style="padding:4px 10px;font-size:11px;border:1px solid var(--border2);border-radius:5px;background:transparent;color:var(--ink);cursor:pointer">Concierge</button>
+    <button id="cat-ventas" onclick="setCatFilter('ventas')" style="padding:4px 10px;font-size:11px;border:1px solid var(--border2);border-radius:5px;background:transparent;color:var(--ink);cursor:pointer">Ventas</button>
+  </div>
   <div class="search-box">
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="5"/><line x1="10" y1="10" x2="15" y2="15"/></svg>
     <input type="text" placeholder="Search tasks..." oninput="filterTasks(this.value)" id="search-input">
@@ -296,11 +301,20 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
           <input class="form-input" type="date" id="new-due" />
         </div>
       </div>
-      <div class="form-row" style="margin-top:16px">
-        <label class="form-label">Client (optional)</label>
-        <input class="form-input" id="new-client" placeholder="e.g. Nick Soni — Mexico City" />
+      <div class="form-row-2" style="margin-top:16px">
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Area</label>
+          <select class="form-select" id="new-category">
+            <option value="concierge">Concierge</option>
+            <option value="ventas">Ventas</option>
+          </select>
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Client (optional)</label>
+          <input class="form-input" id="new-client" placeholder="e.g. Nick Soni" />
+        </div>
       </div>
-      <div class="form-row">
+      <div class="form-row" style="margin-top:12px">
         <label class="form-label">Notes</label>
         <textarea class="form-textarea" id="new-notes" placeholder="Add more context..."></textarea>
       </div>
@@ -373,6 +387,16 @@ let detailId = null;
 let calDate = new Date();
 let groupMode = 'status';
 let searchQ = '';
+let catFilter = 'all';
+
+function setCatFilter(v){
+  catFilter = v;
+  ['all','concierge','ventas'].forEach(k => {
+    const b = document.getElementById('cat-'+k);
+    if(b){ b.style.background = k===v ? 'var(--ink)' : 'transparent'; b.style.color = k===v ? '#fff' : 'var(--ink)'; }
+  });
+  render();
+}
 
 /* ── STORAGE ── */
 function saveTasks(){
@@ -437,12 +461,13 @@ function sortBy(col){ /* simple sort */ tasks.sort((a,b)=>(a[col]||'').localeCom
 function regroupBy(val){ groupMode=val; render(); }
 
 function visibleTasks(){
-  if(!searchQ) return tasks;
-  return tasks.filter(t=>
-    t.title.toLowerCase().includes(searchQ)||
-    (t.client||'').toLowerCase().includes(searchQ)||
-    (t.assignee||'').toLowerCase().includes(searchQ)
-  );
+  return tasks.filter(t=>{
+    if(catFilter !== 'all' && (t.category||'concierge') !== catFilter) return false;
+    if(!searchQ) return true;
+    return t.title.toLowerCase().includes(searchQ)||
+      (t.client||'').toLowerCase().includes(searchQ)||
+      (t.assignee||'').toLowerCase().includes(searchQ);
+  });
 }
 
 /* ── BOARD ── */
@@ -624,6 +649,7 @@ function saveNewTask(){
     priority: document.getElementById('new-priority').value,
     assignee: document.getElementById('new-assignee').value,
     due: document.getElementById('new-due').value,
+    category: document.getElementById('new-category').value,
     client: document.getElementById('new-client').value.trim(),
     notes: document.getElementById('new-notes').value.trim(),
     activity: [{by:'System',text:'Task created',time:new Date().toISOString()}],
