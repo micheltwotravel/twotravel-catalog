@@ -3524,6 +3524,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           >
             🛒 Mercado
           </a>
+          {/* Breakfast link — CTG only */}
+          {toCityCode(kickoff.city || kickoff.destination || "") === "CTG" && (
+            <BreakfastLink kickoff={kickoff} />
+          )}
           {/* Billing — send to Slack */}
           {kickoff?.cart?.length > 0 && (
             <div className="flex items-center gap-1">
@@ -4092,6 +4096,39 @@ function ClientTypePickerModal({ onClose, onSelect }) {
         </select>
       </div>
     </Modal>
+  );
+}
+
+function BreakfastLink({ kickoff }) {
+  const [bfTier, setBfTier] = React.useState("1-5");
+  const [bfCurr, setBfCurr] = React.useState("COP");
+  const bfUrl = (() => {
+    const u = new URL("/?mode=breakfast", window.location.origin);
+    u.searchParams.set("kickoffId", kickoff.id);
+    u.searchParams.set("groupTier", bfTier);
+    u.searchParams.set("currency", bfCurr);
+    u.searchParams.set("lang", kickoff.lang || "en");
+    if (kickoff.guestName) u.searchParams.set("guestName", kickoff.guestName);
+    return u.toString();
+  })();
+  return (
+    <div className="flex items-center gap-0">
+      <select value={bfTier} onChange={e => setBfTier(e.target.value)}
+        className="px-2 py-2 rounded-l-lg border border-r-0 border-amber-300 text-[11px] text-amber-700 bg-amber-50 hover:bg-amber-100 cursor-pointer">
+        <option value="1-5">1–5</option>
+        <option value="6-10">6–10</option>
+        <option value="11-20">11–20</option>
+      </select>
+      <select value={bfCurr} onChange={e => setBfCurr(e.target.value)}
+        className="px-2 py-2 border border-r-0 border-amber-300 text-[11px] text-amber-700 bg-amber-50 hover:bg-amber-100 cursor-pointer">
+        <option value="COP">COP</option>
+        <option value="USD">USD</option>
+      </select>
+      <a href={bfUrl} target="_blank" rel="noreferrer"
+        className="px-3 py-2 rounded-r-lg border border-amber-300 text-sm text-amber-700 bg-amber-50 hover:bg-amber-100 flex items-center gap-1.5">
+        ☕ Desayuno
+      </a>
+    </div>
   );
 }
 

@@ -3614,6 +3614,280 @@ function GroceryCatalog() {
   );
 }
 
+// ─── BREAKFAST DATA ──────────────────────────────────────────────────────────
+const BREAKFAST_TIERS = ["1-5","6-10","11-20"];
+const BREAKFAST_MENUS = [
+  { id:"traditional", label:"Traditional Menu", label_es:"Menú Típico",
+    fullPrice:[197000,316000,422000],
+    sections:[
+      { label:"Main Dishes", label_es:"Platos Principales", items:[
+        { name:"Arepa de Huevo",   name_es:"Arepa de Huevo",   desc:"Traditional fried arepa filled with egg.",                         desc_es:"Arepa tradicional rellena de huevo y frita.",          prices:[24000,60000,72000] },
+        { name:"Arepa de Queso",   name_es:"Arepa de Queso",   desc:"Soft arepa stuffed with melted costeño cheese.",                   desc_es:"Arepa suave rellena de queso costeño derretido.",     prices:[40000,52000,80000] },
+        { name:"Pericos Eggs",     name_es:"Huevos Pericos",   desc:"Scrambled eggs with tomato and onion.",                            desc_es:"Huevos revueltos con tomate y cebolla.",               prices:[24000,40000,40000] },
+        { name:"Empanadas",        name_es:"Empanadas",         desc:"Fried empanadas: chicken, cheese, meat or ham with pineapple.",   desc_es:"Empanadas fritas de queso, pollo, carne o jamón.",    prices:[40000,40000,40000] },
+        { name:"Cheese Fingers",   name_es:"Deditos de queso",  desc:"Fried dough sticks filled with cheese.",                          desc_es:"Palitos de masa fritos rellenos de queso.",            prices:[40000,40000,40000] },
+        { name:"Fried Plantain",   name_es:"Patacones",         desc:"Traditional fried plantain chips.",                               desc_es:"Tradicionales chips de plátano frito.",                prices:[12000,12000,20000] },
+      ]},
+      { label:"Side Dishes", label_es:"Acompañamientos", items:[
+        { name:"Costeño Sour Cream",        name_es:"Suero Costeño",            desc:"Refreshing sour cream made from buttermilk.",        desc_es:"Crema agria hecha a base de suero de leche.",                       prices:[12000,12000,24000] },
+        { name:"Hogao",                     name_es:"Hogao",                    desc:"Homemade tomato and sautéed onion sauce.",           desc_es:"Salsa de tomate y cebolla salteada.",                               prices:[28000,28000,36000] },
+        { name:"Seasonal Exotic Fruits",    name_es:"Frutas Exóticas de Temporada", desc:"Pitaya, mangosteen, granadilla, borojo…",       desc_es:"Pitaya, mangostino, granadilla, borojo…",                          prices:[80000,80000,140000] },
+        { name:"Sausage and Chorizo",       name_es:"Salchicha y Chorizo",      desc:"",                                                  desc_es:"",                                                                  prices:[36000,52000,104000] },
+        { name:"Costeño Cheese",            name_es:"Queso Costeño",            desc:"",                                                  desc_es:"",                                                                  prices:[16000,16000,28000] },
+        { name:"Pan de Bono",               name_es:"Pan de Bono",              desc:"Colombian cheese bread (per unit).",                 desc_es:"Pan colombiano de queso, por unidad.",                              prices:[5000,5000,5000], unitLabel:"x U" },
+      ]},
+      { label:"Drinks", label_es:"Bebidas", items:[
+        { name:"Coffee",                        name_es:"Café",                           desc:"Black or with milk.",              desc_es:"Negro o con leche.",              prices:[44000,44000,44000] },
+        { name:"Natural Juice (local fruits)",  name_es:"Jugo Natural de Frutas Locales", desc:"Lulo, passion fruit or corozo.",   desc_es:"Lulo, maracuyá o corozo.",        prices:[40000,40000,40000] },
+      ]},
+    ]
+  },
+  { id:"american", label:"American Menu", label_es:"Menú Americano",
+    fullPrice:[215000,337500,445000],
+    sections:[
+      { label:"Main Dishes", label_es:"Platos Principales", items:[
+        { name:"Scrambled Eggs",              name_es:"Huevos Revueltos",          desc:"Ideal to combine with proteins.",                                      desc_es:"Ideales para combinar con proteínas.",                  prices:[14000,28000,28000] },
+        { name:"Classic Pancakes",            name_es:"Hotcakes Clásicos",         desc:"Served with maple syrup and butter.",                                  desc_es:"Con sirope de maple y mantequilla.",                    prices:[24000,48000,72000] },
+        { name:"Fruit Bowl with Greek Yogurt",name_es:"Bowl de Frutas con Yogurt", desc:"Fresh tropical fruit bowl, with optional greek yogurt and honey.",     desc_es:"Frutas tropicales, con yogur griego y miel opcional.",  prices:[100000,140000,200000] },
+      ]},
+      { label:"Proteins", label_es:"Proteínas", items:[
+        { name:"Bacon",               name_es:"Tocino",              desc:"", desc_es:"", prices:[24000,44000,88000] },
+        { name:"Sausages",            name_es:"Salchichas",          desc:"", desc_es:"", prices:[12000,32000,64000] },
+        { name:"Chorizo",             name_es:"Chorizo",             desc:"", desc_es:"", prices:[24000,28000,56000] },
+        { name:"Pork or Turkey Ham",  name_es:"Jamón de Cerdo o Pavo", desc:"", desc_es:"", prices:[16000,32000,64000] },
+      ]},
+      { label:"Side Dishes", label_es:"Acompañamientos", items:[
+        { name:"Greek Yogurt",        name_es:"Yogur Griego",        desc:"Natural or flavored.",             desc_es:"Natural o de sabores.",         prices:[28000,56000,96000] },
+        { name:"Granola & Nuts",      name_es:"Granola",             desc:"",                                desc_es:"",                              prices:[32000,32000,64000] },
+        { name:"Bread",               name_es:"Pan",                 desc:"White and wholemeal.",             desc_es:"Blanco e integral.",            prices:[12000,12000,24000] },
+        { name:"Spread Station",      name_es:"Estación de Untables",desc:"Butter, jam and cream cheese.",   desc_es:"Mantequilla, mermelada y queso crema.", prices:[40000,40000,68000] },
+        { name:"Fresh Seasonal Fruits",name_es:"Frutas Frescas de Temporada", desc:"Banana, papaya, mango, watermelon, kiwi…", desc_es:"Banano, papaya, mango, sandía, kiwi…", prices:[52000,52000,100000] },
+      ]},
+      { label:"Drinks", label_es:"Bebidas", items:[
+        { name:"American Coffee",     name_es:"Café Americano",      desc:"", desc_es:"", prices:[44000,44000,44000] },
+        { name:"Fresh Orange Juice",  name_es:"Jugo de Naranja",     desc:"", desc_es:"", prices:[32000,32000,40000] },
+        { name:"Milk",                name_es:"Leche",               desc:"Whole or lactose-free.", desc_es:"Entera o deslactosada.", prices:[24000,24000,80000] },
+        { name:"Almond Milk",         name_es:"Leche de Almendras",  desc:"", desc_es:"", prices:[40000,40000,80000] },
+      ]},
+    ]
+  },
+  { id:"healthy", label:"Healthy, Vegan & Vegetarian", label_es:"Menú Saludable, Vegano y Vegetariano",
+    fullPrice:[400000,550000,870000],
+    sections:[
+      { label:"Dishes", label_es:"Platos", items:[
+        { name:"Whole Wheat Toast with Avocado",          name_es:"Tostadas Integrales con Aguacate",       desc:"Sliced whole wheat bread topped with avocado.",                         desc_es:"Pan integral cubierto con aguacate.",                     prices:[34000,50000,76000] },
+        { name:"Grilled Arepa with Guacamole",            name_es:"Arepa Asada con Guacamole",              desc:"Soft arepa served with fresh guacamole.",                               desc_es:"Arepa suave con guacamole fresco.",                        prices:[50000,61000,94000] },
+        { name:"Egg White Omelette with Vegetables",      name_es:"Omelette de Claras con Vegetales",       desc:"Egg whites cooked with a sauté of fresh vegetables.",                   desc_es:"Claras con salteado de vegetales frescos.",               prices:[36000,50000,80000] },
+        { name:"Falafel with Tortilla",                   name_es:"Falafel con Tortilla",                   desc:"Spiced croquettes served with a soft tortilla.",                         desc_es:"Croquetas especiadas con tortilla suave.",                prices:[65000,120000,180000] },
+        { name:"Oat & Banana Pancakes",                   name_es:"Pancakes de Avena y Banana",             desc:"Soft pancakes made with oats and ripe banana.",                         desc_es:"Panqueques de avena y banana madura.",                    prices:[42000,50000,59000] },
+        { name:"Fruit Smoothie Bowl",                     name_es:"Smoothie Bowl de Fruta",                 desc:"A creamy bowl of fresh tropical fruits.",                               desc_es:"Tazón cremoso de frutas frescas tropicales.",             prices:[89000,108500,240000] },
+        { name:"Granola with Nuts & Almond Milk",         name_es:"Granola con Frutos Secos y Leche de Almendra", desc:"Crunchy granola, nuts, and seeds with almond milk.",            desc_es:"Granola crujiente, frutos secos y semillas con leche de almendra.", prices:[61000,122000,160000] },
+        { name:"Chickpea Salad with Cucumber & Herbs",    name_es:"Ensalada de Garbanzos con Pepino y Hierbas", desc:"Chickpeas combined with cucumber and fresh herbs.",              desc_es:"Garbanzos con pepino y hierbas frescas.",                 prices:[25000,35000,50000] },
+        { name:"Protein Bars",    name_es:"Barras de Proteína",  desc:"", desc_es:"", prices:[12000,12000,12000], unitLabel:"x 1U" },
+        { name:"Granola Bars",    name_es:"Barras de Granola",   desc:"", desc_es:"", prices:[15000,15000,15000], unitLabel:"x 6U" },
+      ]},
+    ]
+  },
+];
+
+function BreakfastCatalog() {
+  const GAS_URL    = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+  const params     = new URLSearchParams(window.location.search);
+  const kickoffId  = params.get("kickoffId") || "";
+  const tierParam  = params.get("groupTier") || "1-5";
+  const currParam  = params.get("currency") || "COP";
+  const [lang, setLang]   = React.useState(params.get("lang") === "es" ? "es" : "en");
+  const [tier, setTier]   = React.useState(BREAKFAST_TIERS.includes(tierParam) ? tierParam : "1-5");
+  const [currency, setCurrency] = React.useState(currParam === "USD" ? "USD" : "COP");
+  const [menuTab, setMenuTab]   = React.useState("traditional");
+  const [checked, setChecked]   = React.useState({});
+  const [guestName, setGuestName] = React.useState(params.get("guestName") || "");
+  const [notes, setNotes]   = React.useState("");
+  const [sent, setSent]     = React.useState(false);
+  const [sending, setSending] = React.useState(false);
+  const [fxRate, setFxRate] = React.useState(4000);
+
+  React.useEffect(() => {
+    fetch("https://open.er-api.com/v6/latest/USD")
+      .then(r => r.json())
+      .then(d => { if (d?.rates?.COP) setFxRate(Math.round(d.rates.COP)); })
+      .catch(() => {});
+  }, []);
+
+  const tierIdx = BREAKFAST_TIERS.indexOf(tier);
+  const menu    = BREAKFAST_MENUS.find(m => m.id === menuTab) || BREAKFAST_MENUS[0];
+
+  const fmtPrice = (cop) => {
+    if (currency === "USD") return `$${(cop / fxRate).toFixed(0)} USD`;
+    return `$${cop.toLocaleString("es-CO")} COP`;
+  };
+
+  const toggle = (key) => setChecked(p => ({ ...p, [key]: !p[key] }));
+  const hasAny = Object.values(checked).some(Boolean);
+
+  const totalCOP = menu.sections.flatMap(s => s.items).reduce((sum, it) => {
+    const key = `${menu.id}:${it.name}`;
+    return checked[key] ? sum + it.prices[tierIdx] : sum;
+  }, 0);
+
+  const handleSend = async () => {
+    setSending(true);
+    const lines = [];
+    menu.sections.forEach(sec => {
+      const sel = sec.items.filter(it => checked[`${menu.id}:${it.name}`]);
+      if (!sel.length) return;
+      lines.push(`*${lang === "es" ? sec.label_es : sec.label}*`);
+      sel.forEach(it => {
+        const cop  = it.prices[tierIdx];
+        const pStr = currency === "USD" ? `$${(cop/fxRate).toFixed(0)} USD` : `$${cop.toLocaleString("es-CO")} COP`;
+        lines.push(`  ✓ ${lang === "es" ? it.name_es : it.name} · ${pStr}`);
+      });
+    });
+    if (notes.trim()) lines.push(`\n📝 ${notes}`);
+    const menuLabel = lang === "es" ? menu.label_es : menu.label;
+    const text = `☕ *Breakfast Order* ${guestName ? `(${guestName})` : ""} · ${menuLabel} · ${tier} pax · kickoff: ${kickoffId}\n\n${lines.join("\n")}`;
+    try {
+      await fetch(GAS_URL, {
+        method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body: JSON.stringify({ action:"sendSlackMessage", payload:{ text, channelId:"C094NE421NV", slackToken:import.meta.env.VITE_SLACK_BOT_TOKEN||"" }}),
+      });
+    } catch {}
+    setSent(true);
+    setSending(false);
+  };
+
+  const T = lang === "en" ? {
+    heading:"☕ Breakfast Menu", sub:"Select what you'd like for your stay",
+    tierLabel:"Group size", currLabel:"Currency", menuLabel:"Menu type",
+    fullMenu:"Full menu", fullMenuPrice:"Full menu",
+    note:"Note: Basic items (sugar, salt, oil, napkins) not included. Additional cost of $10–$20 USD may apply.",
+    notePlaceholder:"Anything else? Allergies, preferences…",
+    send:"✅ Send order to concierge", sending:"Sending…", edit:"✏️ Edit order",
+    successTitle:"Order received!", successBody:"Your concierge will review this with you on your kick-off call.",
+  } : {
+    heading:"☕ Menú de Desayuno", sub:"Selecciona lo que quieres para tu estadía",
+    tierLabel:"Tamaño del grupo", currLabel:"Moneda", menuLabel:"Tipo de menú",
+    fullMenu:"Menú completo", fullMenuPrice:"Menú completo",
+    note:"Nota: Básicos (azúcar, sal, aceite, servilletas) no incluidos. Puede aplicar costo adicional de $10–$20 USD.",
+    notePlaceholder:"¿Algo más? Alergias, preferencias…",
+    send:"✅ Enviar pedido al concierge", sending:"Enviando…", edit:"✏️ Editar pedido",
+    successTitle:"¡Pedido recibido!", successBody:"Tu concierge lo revisará en tu kick-off call.",
+  };
+
+  if (sent) return (
+    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-6">
+      <div className="text-center max-w-sm">
+        <div className="text-5xl mb-4">☕</div>
+        <h2 className="text-white text-2xl font-semibold mb-2">{T.successTitle}</h2>
+        <p className="text-neutral-400 text-sm">{T.successBody}</p>
+        <button onClick={() => setSent(false)} className="mt-6 text-xs text-neutral-500 hover:text-white">{T.edit}</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-neutral-950 text-white pb-24">
+      {/* Header */}
+      <div className="bg-neutral-900 border-b border-neutral-800 px-4 py-5">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-center justify-between mb-1">
+            <h1 className="text-xl font-semibold">{T.heading}</h1>
+            <button onClick={() => setLang(l => l === "en" ? "es" : "en")} className="text-xs border border-neutral-600 rounded px-2 py-1 text-neutral-400 hover:text-white">
+              {lang === "en" ? "🇨🇴 ES" : "🇺🇸 EN"}
+            </button>
+          </div>
+          <p className="text-neutral-400 text-sm">{T.sub}</p>
+          {/* Controls */}
+          <div className="flex gap-2 mt-4 flex-wrap">
+            <div className="flex gap-1 bg-neutral-800 rounded-lg p-1">
+              {BREAKFAST_TIERS.map(t => (
+                <button key={t} onClick={() => setTier(t)}
+                  className={`px-3 py-1 rounded text-xs font-medium transition-colors ${tier === t ? "bg-white text-neutral-900" : "text-neutral-400 hover:text-white"}`}>
+                  {t} pax
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setCurrency(c => c === "COP" ? "USD" : "COP")}
+              className="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-1 text-xs text-neutral-300 hover:text-white">
+              {currency === "COP" ? "COP 🇨🇴" : "USD 🇺🇸"} ⇄
+            </button>
+            {guestName && <span className="bg-neutral-800 rounded-lg px-3 py-1 text-xs text-neutral-400">{guestName}</span>}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 pt-4">
+        {/* Menu tabs */}
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+          {BREAKFAST_MENUS.map(m => (
+            <button key={m.id} onClick={() => setMenuTab(m.id)}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${menuTab === m.id ? "bg-amber-500 text-white" : "bg-neutral-800 text-neutral-400 hover:text-white"}`}>
+              {lang === "es" ? m.label_es : m.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Full menu option */}
+        <div className="bg-neutral-800 border border-amber-500/30 rounded-xl p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-amber-400">{T.fullMenu}</p>
+              <p className="text-xs text-neutral-400 mt-0.5">{lang === "en" ? "Everything in smaller portions for the whole group" : "Todo en porciones menores para el grupo completo"}</p>
+            </div>
+            <span className="text-lg font-semibold text-white">{fmtPrice(menu.fullPrice[tierIdx])}</span>
+          </div>
+        </div>
+
+        {/* Items */}
+        {menu.sections.map((sec, si) => (
+          <div key={si} className="mb-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500 mb-2">{lang === "es" ? sec.label_es : sec.label}</p>
+            <div className="space-y-2">
+              {sec.items.map((it, ii) => {
+                const key = `${menu.id}:${it.name}`;
+                const isChecked = !!checked[key];
+                const cop = it.prices[tierIdx];
+                return (
+                  <button key={ii} onClick={() => toggle(key)}
+                    className={`w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${isChecked ? "bg-amber-500/10 border-amber-500/50" : "bg-neutral-800/60 border-neutral-700 hover:border-neutral-500"}`}>
+                    <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center ${isChecked ? "border-amber-400 bg-amber-400" : "border-neutral-500"}`}>
+                      {isChecked && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white">{lang === "es" ? it.name_es : it.name}{it.unitLabel ? <span className="text-neutral-400 text-xs ml-1">{it.unitLabel}</span> : ""}</p>
+                      {(lang === "es" ? it.desc_es : it.desc) && <p className="text-xs text-neutral-400 mt-0.5 line-clamp-2">{lang === "es" ? it.desc_es : it.desc}</p>}
+                    </div>
+                    <span className="text-sm font-semibold text-amber-400 flex-shrink-0 ml-2">{fmtPrice(cop)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+
+        {/* Note */}
+        <p className="text-xs text-neutral-500 mb-4 italic">{T.note}</p>
+
+        {/* Notes textarea */}
+        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder={T.notePlaceholder}
+          rows={2} className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 mb-4 resize-none" />
+
+        {/* Total + Send */}
+        {hasAny && (
+          <div className="flex items-center justify-between mb-4 bg-neutral-800 rounded-xl p-3">
+            <span className="text-sm text-neutral-400">{lang === "en" ? "Estimated total" : "Total estimado"}</span>
+            <span className="text-lg font-bold text-amber-400">{fmtPrice(totalCOP)}</span>
+          </div>
+        )}
+        <button onClick={handleSend} disabled={!hasAny || sending}
+          className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition-colors">
+          {sending ? T.sending : T.send}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const params = new URLSearchParams(window.location.search);
   const mode = params.get("mode");
@@ -3630,6 +3904,7 @@ function App() {
   }
   if (mode === "drinks")             return <DrinksCatalog />;
   if (mode === "groceries")          return <GroceryCatalog />;
+  if (mode === "breakfast")          return <BreakfastCatalog />;
   if (mode === "itinerary")          return <ItineraryPrintView />;
 
   return <FeedbackForm kickoffId={params.get("kickoffId") || ""} />;
