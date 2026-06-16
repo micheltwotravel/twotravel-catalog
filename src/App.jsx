@@ -4005,13 +4005,99 @@ function BreakfastCatalog() {
   );
 }
 
+// ─── AUTH ────────────────────────────────────────────────────────────────────
+// Change PINs and roles here. Roles: "admin" | "concierge" | "sales" | "viewer"
+const USERS = [
+  { name: "Michel",    pin: "1991", role: "admin" },
+  { name: "Ray",       pin: "2222", role: "concierge" },
+  { name: "Ross",      pin: "3333", role: "concierge" },
+  { name: "Caro",      pin: "4444", role: "sales" },
+];
+
+// Which modes each role can access
+const ROLE_ACCESS = {
+  admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard"],
+  concierge: ["concierge","tasks"],
+  sales:     ["tasks","soporte","soporte-dashboard"],
+  viewer:    ["dashboard","kpi"],
+};
+
+// Modes that require auth
+const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard"]);
+
+function useAuth() {
+  const [user, setUser] = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem("tt_auth") || "null");
+      if (!s || !s.pin || Date.now() > s.exp) return null;
+      return USERS.find(u => u.pin === s.pin) || null;
+    } catch { return null; }
+  });
+  const login = (pin) => {
+    const found = USERS.find(u => u.pin === pin);
+    if (!found) return false;
+    localStorage.setItem("tt_auth", JSON.stringify({ pin, exp: Date.now() + 8 * 3600_000 }));
+    setUser(found);
+    return true;
+  };
+  const logout = () => { localStorage.removeItem("tt_auth"); setUser(null); };
+  return { user, login, logout };
+}
+
+function LoginScreen({ onLogin, targetMode }) {
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+  const handle = (e) => {
+    e.preventDefault();
+    if (!onLogin(pin)) { setError("PIN incorrecto"); setPin(""); }
+  };
+  return (
+    <div style={{minHeight:"100vh",background:"#f7f4ef",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Jost',sans-serif"}}>
+      <div style={{background:"#fff",borderRadius:16,padding:"40px 36px",boxShadow:"0 4px 24px rgba(0,0,0,.08)",width:320,textAlign:"center"}}>
+        <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:500,color:"#1a1814",marginBottom:4}}>Two Travel</p>
+        <p style={{fontSize:11,color:"#9a7d52",letterSpacing:".12em",textTransform:"uppercase",marginBottom:32}}>Internal Access</p>
+        <form onSubmit={handle}>
+          <input
+            type="password"
+            inputMode="numeric"
+            value={pin}
+            onChange={e => { setPin(e.target.value); setError(""); }}
+            placeholder="PIN"
+            autoFocus
+            style={{width:"100%",border:"1px solid #e5ddd3",borderRadius:10,padding:"12px 16px",fontSize:18,textAlign:"center",letterSpacing:".2em",outline:"none",fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}}
+          />
+          {error && <p style={{color:"#e05c5c",fontSize:12,marginTop:8}}>{error}</p>}
+          <button type="submit" style={{marginTop:16,width:"100%",background:"#1a1814",color:"#fff",border:"none",borderRadius:10,padding:"12px",fontSize:13,letterSpacing:".06em",cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+            Entrar
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const params = new URLSearchParams(window.location.search);
   const mode = params.get("mode");
   const kickoffId = params.get("kickoffId") || "";
+  const { user, login, logout } = useAuth();
 
-  if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard /></ErrorBoundary>;
-  if (mode === "concierge")          return <ErrorBoundary><ConciergePanel /></ErrorBoundary>;
+  // Gate internal modes behind PIN login
+  if (PROTECTED_MODES.has(mode)) {
+    if (!user) return <LoginScreen onLogin={login} targetMode={mode} />;
+    const allowed = ROLE_ACCESS[user.role] || [];
+    if (!allowed.includes(mode)) {
+      return (
+        <div style={{minHeight:"100vh",background:"#f7f4ef",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Jost',sans-serif",flexDirection:"column",gap:16}}>
+          <p style={{fontSize:15,color:"#1a1814"}}>No tienes acceso a esta sección.</p>
+          <button onClick={logout} style={{padding:"8px 20px",background:"#1a1814",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:12}}>Cerrar sesión</button>
+        </div>
+      );
+    }
+  }
+
+  if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard onLogout={logout} currentUser={user} /></ErrorBoundary>;
+  if (mode === "concierge")          return <ErrorBoundary><ConciergePanel onLogout={logout} currentUser={user} /></ErrorBoundary>;
   if (mode === "soporte")            return <ErrorBoundary><SoportePage /></ErrorBoundary>;
   if (mode === "soporte-dashboard")  return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
   if (mode === "tasks")              return <ErrorBoundary><TaskTracker /></ErrorBoundary>;

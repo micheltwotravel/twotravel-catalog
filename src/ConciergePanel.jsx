@@ -4385,8 +4385,8 @@ function BreakfastLink({ kickoff }) {
    Componente principal
    ========================================= */
 
-export default function ConciergePanel() {
-  
+export default function ConciergePanel({ onLogout, currentUser }) {
+
   const [kickoffs, setKickoffs] = useState([]);
   const [selectedKickoffForLink, setSelectedKickoffForLink] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -4761,6 +4761,19 @@ const loadKickoffs = async () => {
   >
     ☰ Menú
   </a>
+
+  {currentUser && (
+    <div className="flex items-center gap-2 pl-2 border-l border-neutral-200">
+      <span className="text-xs text-neutral-500 hidden sm:inline">{currentUser.name}</span>
+      <button
+        onClick={onLogout}
+        className="text-xs text-neutral-400 hover:text-red-500 transition"
+        title="Cerrar sesión"
+      >
+        ⎋ Salir
+      </button>
+    </div>
+  )}
 
 </div>
 
