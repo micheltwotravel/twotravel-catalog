@@ -3525,7 +3525,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             🛒 Mercado
           </a>
           {/* Breakfast link — CTG only */}
-          {toCityCode(kickoff.city || kickoff.destination || "") === "CTG" && (
+          {toCityCodeModule(kickoff.city || kickoff.destination || "") === "CTG" && (
             <BreakfastLink kickoff={kickoff} />
           )}
           {/* Billing — send to Slack */}
@@ -4098,6 +4098,22 @@ function ClientTypePickerModal({ onClose, onSelect }) {
     </Modal>
   );
 }
+
+const _CITY_ALIASES = {
+  CTG:  ["ctg","cartagena","cartagena de indias"],
+  MDE:  ["mde","medellin","medellín"],
+  CDMX: ["cdmx","mexico","ciudad de mexico","ciudad de méxico"],
+  TUL:  ["tul","tulum"],
+  BOG:  ["bog","bogota","bogotá"],
+};
+const toCityCodeModule = (raw) => {
+  const first = String(raw || "").split(",")[0].trim().toLowerCase();
+  if (!first) return "";
+  for (const [code, aliases] of Object.entries(_CITY_ALIASES)) {
+    if (aliases.includes(first) || first === code.toLowerCase()) return code;
+  }
+  return first.toUpperCase();
+};
 
 function BreakfastLink({ kickoff }) {
   const [bfTier, setBfTier] = React.useState("1-5");
