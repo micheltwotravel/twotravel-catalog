@@ -4291,7 +4291,9 @@ function BreakfastLink({ kickoff }) {
     u.searchParams.set("groupSize", bfGs);
     u.searchParams.set("currency", bfCurr);
     u.searchParams.set("lang", kickoff.lang || "en");
-    if (kickoff.guestName) u.searchParams.set("guestName", kickoff.guestName);
+    if (kickoff.guestName)    u.searchParams.set("guestName", kickoff.guestName);
+    if (kickoff.arrivalDate)  u.searchParams.set("arrivalDate", kickoff.arrivalDate);
+    if (kickoff.departureDate) u.searchParams.set("departureDate", kickoff.departureDate);
     return u.toString();
   })();
   return (
