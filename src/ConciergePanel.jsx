@@ -247,6 +247,15 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     });
   }
 
+  // Welcome guide link on cover
+  y += 18;
+  doc.setDrawColor(220,220,220); doc.setLineWidth(0.5); doc.line(ML, y, MR, y); y += 14;
+  doc.setFontSize(8.5); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
+  doc.text(lang === "es" ? "📋 Guía de Bienvenida Two Travel:" : "📋 Two Travel Welcome Guide:", ML, y);
+  doc.setFont("helvetica","normal"); doc.setTextColor(30,100,200);
+  doc.textWithLink("twotravelvip.com/welcome-guide.pdf", ML, y + 13, { url: "https://twotravelvip.com/welcome-guide.pdf" });
+  y += 26;
+
   // Cover footer
   doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(150,150,150);
   doc.text("Two Travel · twotravelvip.com", PW/2, PH - 22, { align:"center" });
@@ -464,7 +473,10 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify({
       action: "sendBillingToSlack",
-      payload: { pdfBase64, pdfSize, filename, comment: "",
+      payload: { pdfBase64, pdfSize, filename,
+        comment: lang === "es"
+          ? `📋 Guía de Bienvenida Two Travel: https://twotravelvip.com/welcome-guide.pdf`
+          : `📋 Two Travel Welcome Guide: https://twotravelvip.com/welcome-guide.pdf`,
         slackToken: SLACK_BOT_TOKEN, channelId: SLACK_CHANNEL_ID },
     }),
   });
