@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Two Travel · Menu</title>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;font-family:'Jost',sans-serif;font-weight:300;background:#f7f4ef;color:#1a1814}
+.header{background:#1a1814;padding:28px 32px 24px;text-align:center}
+.logo{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:500;color:#f7f4ef;letter-spacing:.06em}
+.tagline{font-size:11px;color:#9a7d52;letter-spacing:.14em;text-transform:uppercase;margin-top:5px}
+.wrap{max-width:860px;margin:0 auto;padding:40px 24px 60px}
+.section{margin-bottom:36px}
+.sec-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #e5ddd3}
+.sec-icon{font-size:20px}
+.sec-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:500}
+.sec-sub{font-size:11px;color:#7a7570;letter-spacing:.06em;text-transform:uppercase;margin-top:1px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.card{background:#fff;border:1px solid #e5ddd3;border-radius:8px;padding:18px 20px;text-decoration:none;color:#1a1814;transition:all .15s;display:block}
+.card:hover{border-color:#9a7d52;box-shadow:0 2px 12px rgba(154,125,82,.12);transform:translateY(-1px)}
+.card-icon{font-size:22px;margin-bottom:10px}
+.card-title{font-size:14px;font-weight:500;margin-bottom:4px}
+.card-desc{font-size:11px;color:#7a7570;line-height:1.5}
+.card.gold{border-left:3px solid #9a7d52}
+.divider{width:40px;height:2px;background:#9a7d52;margin:0 auto 32px;border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Two Travel</div>
+  <div class="tagline">Panel Interno · Selecciona tu área</div>
+</div>
+
+<div class="wrap">
+  <div class="divider"></div>
+
+  <!-- CONCIERGE & LOGÍSTICA -->
+  <div class="section">
+    <div class="sec-head">
+      <span class="sec-icon">🌴</span>
+      <div>
+        <div class="sec-title">Concierge & Logística</div>
+        <div class="sec-sub">Alia · Caro · Dani · Xilene · Michel</div>
+      </div>
+    </div>
+    <div class="cards">
+      <a href="/" class="card gold">
+        <div class="card-icon">👥</div>
+        <div class="card-title">Clientes</div>
+        <div class="card-desc">Kickoffs, itinerarios, PDFs y catálogo de servicios</div>
+      </a>
+      <a href="/handoffs.html" class="card">
+        <div class="card-icon">🔁</div>
+        <div class="card-title">Handoffs</div>
+        <div class="card-desc">Registro de servicios confirmados por trip</div>
+      </a>
+      <a href="/tasks.html" class="card">
+        <div class="card-icon">✅</div>
+        <div class="card-title">Tareas</div>
+        <div class="card-desc">Tareas del equipo y seguimiento</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- FINANZAS -->
+  <div class="section">
+    <div class="sec-head">
+      <span class="sec-icon">💳</span>
+      <div>
+        <div class="sec-title">Finanzas</div>
+        <div class="sec-sub">Lyna · Contabilidad</div>
+      </div>
+    </div>
+    <div class="cards">
+      <a href="/pagos.html" class="card gold">
+        <div class="card-icon">💳</div>
+        <div class="card-title">Solicitudes de Pago</div>
+        <div class="card-desc">Aprobar, pagar y exportar solicitudes del equipo</div>
+      </a>
+      <a href="/guia-pagos-lyna.html" class="card">
+        <div class="card-icon">📋</div>
+        <div class="card-title">Guía de uso</div>
+        <div class="card-desc">Cómo usar el tablero de pagos · Imprimir PDF</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- VENTAS -->
+  <div class="section">
+    <div class="sec-head">
+      <span class="sec-icon">📈</span>
+      <div>
+        <div class="sec-title">Ventas</div>
+        <div class="sec-sub">Equipo Comercial</div>
+      </div>
+    </div>
+    <div class="cards">
+      <a href="/?mode=dashboard" class="card gold">
+        <div class="card-icon">📊</div>
+        <div class="card-title">Dashboard</div>
+        <div class="card-desc">Vista general de clientes y estado de trips</div>
+      </a>
+      <a href="/soporte.html" class="card">
+        <div class="card-icon">🛠</div>
+        <div class="card-title">Soporte</div>
+        <div class="card-desc">Reportes internos y solicitudes de soporte</div>
+      </a>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
