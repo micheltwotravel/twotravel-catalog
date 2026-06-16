@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Guía Solicitudes de Pago · Two Travel</title>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Jost', sans-serif; font-weight: 300; color: #1a1814; background: #fff; }
+
+  .page { max-width: 760px; margin: 0 auto; padding: 48px 48px 60px; }
+
+  .cover { background: #1a1814; border-radius: 8px; padding: 40px 36px 36px; margin-bottom: 36px; }
+  .cover-sub { font-size: 11px; color: #9a7d52; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 8px; }
+  .cover-title { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 500; color: #f7f4ef; margin-bottom: 10px; }
+  .cover-desc { font-size: 14px; color: #b8b0a6; line-height: 1.65; max-width: 500px; }
+
+  .section { margin-bottom: 32px; }
+  .sec-title { font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: #7a7570; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #e5ddd3; }
+
+  .step-row { display: flex; gap: 14px; margin-bottom: 12px; align-items: flex-start; }
+  .step-num { width: 26px; height: 26px; border-radius: 50%; background: #9a7d52; color: #fff; font-size: 11px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+  .step-title { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
+  .step-desc { font-size: 13px; color: #5a5650; line-height: 1.55; }
+  .new-tag { font-size: 10px; color: #9a7d52; font-weight: 500; margin-left: 6px; letter-spacing: .04em; }
+
+  .field-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .field-card { background: #f7f4ef; border: 1px solid #e5ddd3; border-radius: 6px; padding: 10px 12px; }
+  .field-label { font-size: 9px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: #7a7570; margin-bottom: 4px; }
+  .field-val { font-size: 12px; color: #1a1814; }
+
+  .status-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px; border-radius: 20px; font-size: 12px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .pill-pend { background: #f0f0f0; color: #888; }
+  .pill-aprov { background: #e8eefb; color: #3d6db8; }
+  .pill-pago { background: #e5f5ec; color: #2e7a4d; }
+  .pill-rech { background: #fbe8e8; color: #c03030; }
+
+  .flow-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .flow-box { background: #f7f4ef; border: 1px solid #e5ddd3; border-radius: 6px; padding: 7px 13px; font-size: 12px; }
+  .flow-arr { color: #9a7d52; font-size: 14px; }
+  .flow-box.green { background: #e5f5ec; border-color: #b8dfc8; color: #2e7a4d; }
+
+  .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .feat-card { border: 1px solid #e5ddd3; border-radius: 8px; padding: 16px 18px; }
+  .feat-icon { font-size: 20px; margin-bottom: 8px; }
+  .feat-title { font-size: 13px; font-weight: 500; margin-bottom: 5px; }
+  .feat-desc { font-size: 12px; color: #5a5650; line-height: 1.55; }
+
+  .url-box { background: #f7f4ef; border: 1px solid #e5ddd3; border-radius: 6px; padding: 12px 16px; display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .url-icon { font-size: 22px; }
+  .url-label { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: #7a7570; margin-bottom: 3px; }
+  .url-val { font-size: 15px; font-weight: 500; color: #9a7d52; }
+  .url-note { font-size: 12px; color: #7a7570; }
+
+  .sheet-flow { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .sheet-box { border: 1px solid #e5ddd3; border-radius: 6px; padding: 6px 12px; font-size: 12px; color: #1a1814; background: #f7f4ef; }
+  .sheet-box.green { background: #e5f5ec; border-color: #b8dfc8; color: #2e7a4d; }
+  .sheet-note { font-size: 12px; color: #5a5650; line-height: 1.55; margin-top: 8px; }
+
+  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5ddd3; font-size: 11px; color: #9a9590; text-align: center; }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { padding: 32px 40px 50px; }
+    .cover { -webkit-print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="cover">
+    <p class="cover-sub">Two Travel · Finanzas</p>
+    <h1 class="cover-title">Guía de Solicitudes de Pago</h1>
+    <p class="cover-desc">Cómo usar el tablero de pagos — crear solicitudes, aprobar, adjuntar facturas y exportar reportes.</p>
+  </div>
+
+  <div class="section">
+    <p class="sec-title">Acceso al tablero</p>
+    <div class="url-box">
+      <div class="url-icon">💳</div>
+      <div>
+        <p class="url-label">URL directa</p>
+        <p class="url-val">twotravelvip.com/pagos.html</p>
+      </div>
+    </div>
+    <p class="url-note">También accesible desde el botón <strong>💳 Pagos</strong> en el header del Concierge.</p>
+  </div>
+
+  <div class="section">
+    <p class="sec-title">Cómo crear una solicitud (quien pide el pago)</p>
+    <div class="step-row">
+      <div class="step-num">1</div>
+      <div>
+        <p class="step-title">Abrir el formulario</p>
+        <p class="step-desc">Clic en <strong>+ Nueva solicitud</strong> en la barra superior.</p>
+      </div>
+    </div>
+    <div class="step-row">
+      <div class="step-num">2</div>
+      <div>
+        <p class="step-title">Llenar los datos</p>
+        <p class="step-desc">Departamento, fecha, categoría, cliente, proveedor, monto, moneda y método de pago.</p>
+      </div>
+    </div>
+    <div class="step-row">
+      <div class="step-num">3</div>
+      <div>
+        <p class="step-title">Adjuntar pre-bill o factura <span class="new-tag">NUEVO</span></p>
+        <p class="step-desc">Pega el link de Drive, Dropbox o cualquier URL donde esté la factura o pre-bill.</p>
+      </div>
+    </div>
+    <div class="step-row">
+      <div class="step-num">4</div>
+      <div>
+        <p class="step-title">Enviar</p>
+        <p class="step-desc">Clic en <strong>Crear solicitud</strong>. Lyna recibe una notificación en Slack automáticamente con todos los detalles.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <p class="sec-title">Campos del formulario</p>
+    <div class="field-grid">
+      <div class="field-card"><p class="field-label">Departamento</p><p class="field-val">Concierge / Bodas</p></div>
+      <div class="field-card"><p class="field-label">Fecha</p><p class="field-val">Fecha del servicio</p></div>
+      <div class="field-card"><p class="field-label">Categoría</p><p class="field-val">Chef, Tour, Venue…</p></div>
+      <div class="field-card"><p class="field-label">Cliente / Trip</p><p class="field-val">Nombre del cliente</p></div>
+      <div class="field-card"><p class="field-label">Proveedor</p><p class="field-val">A quién se le paga</p></div>
+      <div class="field-card"><p class="field-label">Descripción</p><p class="field-val">Detalle del servicio</p></div>
+      <div class="field-card"><p class="field-label">Monto</p><p class="field-val">COP / USD / MXN</p></div>
+      <div class="field-card"><p class="field-label">Método de pago</p><p class="field-val">Transferencia, Nequi…</p></div>
+      <div class="field-card"><p class="field-label">Solicitado por</p><p class="field-val">Alia, Caro, Dani…</p></div>
+      <div class="field-card"><p class="field-label">Link factura ✦</p><p class="field-val">URL pre-bill / factura</p></div>
+      <div class="field-card"><p class="field-label">Comprobante ✦</p><p class="field-val">Foto del recibo</p></div>
+      <div class="field-card"><p class="field-label">Notas</p><p class="field-val">Cuenta bancaria, etc.</p></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <p class="sec-title">Flujo de aprobación (Lyna aprueba)</p>
+    <div class="flow-row">
+      <div class="flow-box">Nueva solicitud</div>
+      <span class="flow-arr">→</span>
+      <div class="flow-box">⏳ Pendiente</div>
+      <span class="flow-arr">→</span>
+      <div class="flow-box">✅ Aprobado</div>
+      <span class="flow-arr">→</span>
+      <div class="flow-box green">💚 Pagado</div>
+    </div>
+    <p class="step-desc" style="margin-bottom:12px">Clic en el estado de cualquier fila para desplegrar el menú y cambiarlo. Al aprobar o rechazar, el solicitante recibe aviso en Slack.</p>
+    <div class="status-row">
+      <span class="pill pill-pend"><span class="dot" style="background:#aaa"></span>Pendiente</span>
+      <span class="pill pill-aprov"><span class="dot" style="background:#5c8ae0"></span>Aprobado</span>
+      <span class="pill pill-pago"><span class="dot" style="background:#5cb87a"></span>Pagado</span>
+      <span class="pill pill-rech"><span class="dot" style="background:#e05c5c"></span>Rechazado</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <p class="sec-title">Funcionalidades clave</p>
+    <div class="feature-grid">
+      <div class="feat-card">
+        <div class="feat-icon">🔔</div>
+        <p class="feat-title">Slack a finanzas al crear</p>
+        <p class="feat-desc">Cada solicitud nueva llega automáticamente a Slack con categoría, cliente, monto, método y link de factura.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🔗</div>
+        <p class="feat-title">Link de factura / pre-bill</p>
+        <p class="feat-desc">El solicitante adjunta el URL de la factura al crear la solicitud. Se ve en la tabla y en el Slack.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">💬</div>
+        <p class="feat-title">Notificación al solicitante</p>
+        <p class="feat-desc">Cuando Lyna aprueba o rechaza, el solicitante recibe aviso automático en Slack con los detalles.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">⬇</div>
+        <p class="feat-title">Exportar a Excel</p>
+        <p class="feat-desc">Botón <strong>⬇ Excel</strong> descarga todas las solicitudes en CSV, listo para abrir en Excel.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <p class="sec-title">Filtros y búsqueda</p>
+    <div class="step-row">
+      <div class="step-num" style="background:#3d5a8a">🔍</div>
+      <div>
+        <p class="step-title">Búsqueda en tiempo real</p>
+        <p class="step-desc">Busca por cliente, proveedor, descripción o categoría.</p>
+      </div>
+    </div>
+    <div class="step-row">
+      <div class="step-num" style="background:#5a3d8a">▽</div>
+      <div>
+        <p class="step-title">Filtros por estado, persona y departamento</p>
+        <p class="step-desc">Ver solo Pendientes, solo Bodas, o solo solicitudes de Caro — combínales como quieras.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <p class="sec-title">Sincronización con Google Sheets</p>
+    <div class="sheet-flow">
+      <div class="sheet-box">pagos.html</div>
+      <span class="flow-arr">→</span>
+      <div class="sheet-box">Apps Script</div>
+      <span class="flow-arr">→</span>
+      <div class="sheet-box green">Google Sheets · Hoja "Pagos"</div>
+    </div>
+    <p class="sheet-note">Cada solicitud se guarda automáticamente con todas las columnas: id, departamento, fecha, categoría, cliente, proveedor, monto, moneda, método, factura, comprobante, estado y notas.</p>
+  </div>
+
+  <div class="footer">
+    twotravelvip.com/pagos.html &nbsp;·&nbsp; Para imprimir este documento: Archivo → Imprimir → Guardar como PDF
+  </div>
+
+</div>
+</body>
+</html>
