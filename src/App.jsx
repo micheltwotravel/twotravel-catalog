@@ -3739,10 +3739,18 @@ function BreakfastCatalog() {
     });
     if (notes.trim()) lines.push(`\n📝 ${notes}`);
     const text = `☕ *Breakfast* ${guestName ? `· ${guestName}` : ""} · ${en ? menu.label : menu.label_es} · ${tier} pax\n\n${lines.join("\n")}`;
+    const now = new Date().toISOString();
     try {
       await fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
         body: JSON.stringify({ action:"sendSlackMessage", payload:{ text, channelId:"C094NE421NV", slackToken:import.meta.env.VITE_SLACK_BOT_TOKEN||"" }}),
       });
+      if (kickoffId) {
+        updateKickoffInSheet(kickoffId, {
+          breakfastOrder: text.replace(/\*/g,""),
+          breakfastOrderAt: now,
+          breakfastOrderJson: JSON.stringify({ menu: menuTab, tier, currency, checked, notes }),
+        }).catch(() => {});
+      }
     } catch {}
     setSent(true); setSending(false);
   };
