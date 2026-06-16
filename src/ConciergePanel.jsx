@@ -55,8 +55,11 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
 
   // ── helpers ─────────────────────────────────────────────────
   const cl = (v) => String(v ?? "").trim();
-  // jsPDF Helvetica can't render emoji — strip before any doc.text() call
-  const se = (s) => String(s||"").replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{2BFF}]|[︀-️]|‍|️/gu, "").replace(/\s+/g," ").trim();
+  // jsPDF Helvetica only supports Latin-1 — strip anything outside that range
+  const se = (s) => String(s||"").replace(/[^\x00-\xFF]/g, "").replace(/\s+/g," ").trim();
+  // Safe wrappers — every doc.text / doc.splitTextToSize must go through these
+  const dt  = (txt, x, y2, opts) => opts ? doc.text(se(String(txt||"")), x, y2, opts) : doc.text(se(String(txt||"")), x, y2);
+  const sts = (txt, w) => doc.splitTextToSize(se(String(txt||"")), w);
   const parseJ = (v) => {
     if (Array.isArray(v)) return v;
     if (typeof v === "string" && v.trim().startsWith("[")) {
@@ -155,9 +158,9 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     doc.setLineWidth(0.5);
     doc.line(ML, 30, MR, 30);
     doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(180,180,180);
-    doc.text("TWO TRAVEL", ML, 22);
-    doc.text(cl(kickoff.guestName), PW / 2, 22, { align:"center" });
-    doc.text(`${pageNum}`, MR, 22, { align:"right" });
+    dt("TWO TRAVEL", ML, 22);
+    dt(cl(kickoff.guestName), PW / 2, 22, { align:"center" });
+    dt(`${pageNum}`, MR, 22, { align:"right" });
   };
   const newPage = () => {
     doc.addPage(); pageNum++; y = 52; addMiniHeader();
@@ -169,24 +172,24 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   doc.setFillColor(10, 10, 10);
   doc.rect(0, 0, PW, 76, "F");
   doc.setFontSize(20); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-  doc.text("TWO TRAVEL", ML, 36);
+  dt("TWO TRAVEL", ML, 36);
   doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(160,160,160);
-  doc.text("PRIVATE CONCIERGE", ML, 54);
-  doc.text(new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}), MR, 54, { align:"right" });
+  dt("PRIVATE CONCIERGE", ML, 54);
+  dt(new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}), MR, 54, { align:"right" });
 
   y = 112;
   // Eyebrow
   doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(120,120,120);
-  doc.text("YOUR ITINERARY", ML, y); y += 18;
+  dt("YOUR ITINERARY", ML, y); y += 18;
 
   // Guest name
   doc.setFontSize(28); doc.setFont("helvetica","bold"); doc.setTextColor(12,12,12);
-  doc.text(cl(kickoff.guestName) || "Guest", ML, y); y += 12;
+  dt(cl(kickoff.guestName) || "Guest", ML, y); y += 12;
 
   // Trip name
   if (kickoff.tripName) {
     doc.setFontSize(13); doc.setFont("helvetica","normal"); doc.setTextColor(90,90,90);
-    doc.text(cl(kickoff.tripName), ML, y + 6); y += 22;
+    dt(cl(kickoff.tripName), ML, y + 6); y += 22;
   }
   y += 14;
 
@@ -224,18 +227,18 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
 
   infoRows.forEach(({ label, val, url, sub }) => {
     doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(100,100,100);
-    doc.text(se(label).toUpperCase(), ML, y);
+    dt(se(label).toUpperCase(), ML, y);
     doc.setFontSize(10.5); doc.setFont("helvetica","normal");
     if (url) {
       doc.setTextColor(30, 100, 200);
       doc.textWithLink(se(val), ML + 100, y, { url });
     } else {
       doc.setTextColor(20, 20, 20);
-      doc.text(se(val), ML + 100, y);
+      dt(se(val), ML + 100, y);
     }
     if (sub) {
       doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(130,130,130);
-      doc.text(se(sub), ML + 100, y + 8);
+      dt(se(sub), ML + 100, y + 8);
       y += 8;
     }
     y += 18;
@@ -246,11 +249,11 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     y += 12;
     doc.setDrawColor(230,230,230); doc.line(ML, y, MR, y); y += 16;
     doc.setFontSize(7.5); doc.setFont("helvetica","bold"); doc.setTextColor(90,90,90);
-    doc.text(lang === "es" ? "NOTAS DE TU CONCIERGE" : "FROM YOUR CONCIERGE", ML, y); y += 14;
-    const summaryLines = doc.splitTextToSize(se(cl(kickoff.conciergeSummary)).slice(0,900), TW);
+    dt(lang === "es" ? "NOTAS DE TU CONCIERGE" : "FROM YOUR CONCIERGE", ML, y); y += 14;
+    const summaryLines = sts(se(cl(kickoff.conciergeSummary)).slice(0,900), TW);
     summaryLines.slice(0,14).forEach(line => {
       doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(50,50,50);
-      doc.text(line, ML, y); y += 13;
+      dt(line, ML, y); y += 13;
     });
   }
 
@@ -267,9 +270,9 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   // Drinks
   const drinksUrl = `${BASE}/?mode=drinks&kickoffId=${kid}&guestName=${gn}&arrivalDate=${ad}&departureDate=${dd}&lang=${lang}`;
   doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
-  doc.text(lang === "es" ? "Pedido de Bebidas" : "Drink Order", ML, y); y += 11;
+  dt(lang === "es" ? "Pedido de Bebidas" : "Drink Order", ML, y); y += 11;
   doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
-  doc.text(lang === "es"
+  dt(lang === "es"
     ? "Selecciona y presupuesta tus bebidas para la casa y el bote."
     : "Select and budget your drinks for both the house and the boat.", ML, y); y += 10;
   doc.setTextColor(30,100,200);
@@ -278,9 +281,9 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   // Groceries
   const grocUrl = `${BASE}/?mode=groceries&kickoffId=${kid}&guestName=${gn}&lang=${lang}`;
   doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
-  doc.text(lang === "es" ? "Pedido de Mercado" : "Groceries Order", ML, y); y += 11;
+  dt(lang === "es" ? "Pedido de Mercado" : "Groceries Order", ML, y); y += 11;
   doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
-  doc.text(lang === "es"
+  dt(lang === "es"
     ? "Personaliza tu lista de mercado con snacks y esenciales."
     : "Customize your grocery list with snacks and breakfast essentials.", ML, y); y += 10;
   doc.setTextColor(30,100,200);
@@ -294,9 +297,9 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     const tier = gs <= 5 ? "1-5" : gs <= 10 ? "6-10" : "11-20";
     const bfUrl = `${BASE}/?mode=breakfast&kickoffId=${kid}&guestName=${gn}&groupTier=${tier}&currency=${currency}&lang=${lang}`;
     doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
-    doc.text(lang === "es" ? "Pedido de Desayuno" : "Breakfast Order", ML, y); y += 11;
+    dt(lang === "es" ? "Pedido de Desayuno" : "Breakfast Order", ML, y); y += 11;
     doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
-    doc.text(lang === "es"
+    dt(lang === "es"
       ? "Elige tu menú de desayuno para toda la estadía."
       : "Choose your breakfast menu for your entire stay.", ML, y); y += 10;
     doc.setTextColor(30,100,200);
@@ -306,21 +309,21 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   // Welcome guide
   y += 4;
   doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
-  doc.text(lang === "es" ? "Guia de Bienvenida Two Travel:" : "Two Travel Welcome Guide:", ML, y); y += 11;
+  dt(lang === "es" ? "Guia de Bienvenida Two Travel:" : "Two Travel Welcome Guide:", ML, y); y += 11;
   doc.setFont("helvetica","normal"); doc.setTextColor(30,100,200);
   doc.textWithLink("twotravelvip.com/welcome-guide.pdf", ML, y, { url: "https://twotravelvip.com/welcome-guide.pdf" });
   y += 18;
 
   // Cover footer
   doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(150,150,150);
-  doc.text("Two Travel · twotravelvip.com", PW/2, PH - 22, { align:"center" });
+  dt("Two Travel · twotravelvip.com", PW/2, PH - 22, { align:"center" });
 
   // ── PRE-TRIP CONTENT PAGE ───────────────────────────────────
   const preTripText = cl(kickoff.preTripContent || kickoff.preTrip || kickoff.pre_trip || "");
   if (preTripText) {
     newPage();
     doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(12,12,12);
-    doc.text(lang === "es" ? "ANTES DE TU LLEGADA" : "BEFORE YOUR ARRIVAL", ML, y); y += 20;
+    dt(lang === "es" ? "ANTES DE TU LLEGADA" : "BEFORE YOUR ARRIVAL", ML, y); y += 20;
     doc.setDrawColor(12,12,12); doc.setLineWidth(1.2);
     doc.line(ML, y, ML + 50, y); doc.setLineWidth(0.5); y += 16;
 
@@ -339,8 +342,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       } else {
         doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40);
       }
-      const wrapped = doc.splitTextToSize(se(l), TW);
-      wrapped.forEach(wl => { checkY(13); doc.text(wl, ML, y); y += 13; });
+      const wrapped = sts(se(l), TW);
+      wrapped.forEach(wl => { checkY(13); dt(wl, ML, y); y += 13; });
     });
   }
 
@@ -351,12 +354,12 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   if (arrivalsArr.length > 0) {
     checkY(60);
     doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(120,120,120);
-    doc.text((lang === "es" ? "LLEGADAS" : "ARRIVALS").toUpperCase(), ML, y); y += 14;
+    dt((lang === "es" ? "LLEGADAS" : "ARRIVALS").toUpperCase(), ML, y); y += 14;
     arrivalsArr.forEach(a => {
       checkY(18);
       const parts = [a.name, a.flight, a.date, a.time ? `· ${a.time}` : ""].filter(Boolean).join("   ");
       doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(30,30,30);
-      doc.text(se(parts), ML, y); y += 14;
+      dt(se(parts), ML, y); y += 14;
     });
     y += 6;
   }
@@ -394,11 +397,11 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     doc.setFillColor(30,30,30);
     doc.rect(ML - 12, y - 14, TW + 24, bandH, "F");
     doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-    doc.text(label, ML, y);
+    dt(label, ML, y);
     if (title) {
       doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(200,200,200);
-      const titleLines = doc.splitTextToSize(cl(title), TW);
-      doc.text(titleLines[0], ML, y + 14);
+      const titleLines = sts(cl(title), TW);
+      dt(titleLines[0], ML, y + 14);
       y += 14;
     }
     y += 24;
@@ -406,7 +409,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     items.forEach((item, itemIdx) => {
       // Estimate height needed
       const descLines = item.description
-        ? doc.splitTextToSize(item.description.replace(/\n+/g," "), TW - 12).slice(0,3)
+        ? sts(item.description.replace(/\n+/g," "), TW - 12).slice(0,3)
         : [];
       const hlCount = Math.min((item.highlights || []).length, 4);
       const need = 18 + (item.location ? 14 : 0) + descLines.length * 12 + hlCount * 12 + 16;
@@ -415,33 +418,33 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       // Time + Name
       const timePart = item.time ? `${item.time}   ` : "";
       doc.setFontSize(10.5); doc.setFont("helvetica","bold"); doc.setTextColor(15,15,15);
-      doc.text(se(timePart + item.name), ML, y); y += 15;
+      dt(se(timePart + item.name), ML, y); y += 15;
 
       // Confirmation status
       if (item.confirmed !== false) {
         const confBy = item.confirmation ? ` · ${cl(item.confirmation)}` : "";
         doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(60,150,90);
-        doc.text("Confirmed" + se(confBy), ML + 2, y); y += 12;
+        dt("Confirmed" + se(confBy), ML + 2, y); y += 12;
       }
 
       // Location
       if (item.location) {
         doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(120,120,120);
-        doc.text(se(item.location), ML + 2, y); y += 13;
+        dt(se(item.location), ML + 2, y); y += 13;
       }
 
       // Description (max 3 lines)
       descLines.forEach(line => {
         checkY(13);
         doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(65,65,65);
-        doc.text(line, ML + 4, y); y += 12;
+        dt(line, ML + 4, y); y += 12;
       });
 
       // Highlights
       (item.highlights || []).slice(0,4).forEach(hl => {
         checkY(13);
         doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(90,90,90);
-        doc.text("·  " + cl(hl), ML + 4, y); y += 12;
+        dt("·  " + cl(hl), ML + 4, y); y += 12;
       });
 
       y += 10;
@@ -464,16 +467,16 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       if (l.toUpperCase() === l && l.length < 80) {
         doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
         y += 4;
-        doc.text(l, ML, y); y += 14;
+        dt(l, ML, y); y += 14;
       } else if (l.startsWith("- ") || l.startsWith("• ")) {
         const content = l.replace(/^[-•]\s+/, "");
-        const wrapped = doc.splitTextToSize("· " + se(content), TW - 8);
+        const wrapped = sts("· " + se(content), TW - 8);
         doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(50,50,50);
-        wrapped.forEach(wl => { checkY(13); doc.text(wl, ML + 4, y); y += 13; });
+        wrapped.forEach(wl => { checkY(13); dt(wl, ML + 4, y); y += 13; });
       } else {
-        const wrapped = doc.splitTextToSize(l, TW);
+        const wrapped = sts(l, TW);
         doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40);
-        wrapped.forEach(wl => { checkY(13); doc.text(wl, ML, y); y += 13; });
+        wrapped.forEach(wl => { checkY(13); dt(wl, ML, y); y += 13; });
       }
     });
   }
@@ -483,7 +486,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   for (let p = 2; p <= totalPages; p++) {
     doc.setPage(p);
     doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(200,200,200);
-    doc.text("Two Travel · twotravelvip.com", PW/2, PH - 22, { align:"center" });
+    dt("Two Travel · twotravelvip.com", PW/2, PH - 22, { align:"center" });
   }
 
   // ── MACHINE-READABLE BILLING PAGE (last, hidden from client) ─
@@ -491,7 +494,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   let dy = 40;
   const dln = (n = 16) => { dy += n; };
   doc.setFontSize(7); doc.setFont("helvetica","bold"); doc.setTextColor(210,210,210);
-  doc.text("BILLING DATA — DO NOT EDIT", ML, dy); dln();
+  dt("BILLING DATA — DO NOT EDIT", ML, dy); dln();
   doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
 
   [
@@ -500,7 +503,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     `[3A][${fmtIso(kickoff.arrivalDate)}]`,
     `[4A][${fmtIso(kickoff.departureDate)}]`,
     `[CIUDAD][${cleanTag(cityFullName(kickoff.city))}]`,
-  ].forEach(line => { doc.setFontSize(7.5); doc.text(line, ML, dy); dln(); });
+  ].forEach(line => { doc.setFontSize(7.5); dt(line, ML, dy); dln(); });
   dln(4);
 
   cart.forEach(it => {
@@ -530,7 +533,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     const tot2  = unit2 * pax2;
     const nm2   = cl(it.name_en || it.displayName || it.name || "").replace(/[\[\]]/g,"");
     doc.setFontSize(7.5);
-    doc.text(`[${qb2}][${nm2}][${Math.round(tot2)}]`, ML, dy); dln();
+    dt(`[${qb2}][${nm2}][${Math.round(tot2)}]`, ML, dy); dln();
   });
 
   const filename = `Itinerary_${cl(kickoff.guestName||"client").replace(/\s+/g,"-")}_${new Date().toISOString().slice(0,10)}.pdf`;
