@@ -150,6 +150,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
     <option value="concierge">Concierge</option>
     <option value="wedding">Bodas</option>
   </select>
+  <button class="tbtn" onclick="exportCSV()">⬇ Excel</button>
   <span class="sync-info" id="sync-info">Cargando...</span>
 </div>
 
@@ -244,6 +245,13 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
             <option value="Michel">Michel</option>
             <option value="Xilene">Xilene</option>
           </select>
+        </div>
+      </div>
+
+      <div class="form-row single">
+        <div class="form-group">
+          <label class="form-label">Link Factura / Pre-bill</label>
+          <input class="form-input" id="n-factura" placeholder="URL de Drive, Dropbox, o pega link de factura...">
         </div>
       </div>
 
@@ -453,6 +461,7 @@ function render(){
       <th>Método</th>
       <th>Solicitado por</th>
       <th>Comprobante</th>
+      <th>Factura</th>
       <th>Estado</th>
       <th>Notas</th>
     </tr></thead>
@@ -461,7 +470,7 @@ function render(){
   items.forEach(p => { html += renderRow(p); });
 
   html += `<tr class="add-row" onclick="openNewModal()">
-    <td colspan="12">+ Agregar solicitud</td>
+    <td colspan="13">+ Agregar solicitud</td>
   </tr>`;
   html += `</tbody></table></div>`;
 
@@ -492,6 +501,10 @@ function renderRow(p){
     ? `<img class="receipt-thumb" src="${p.receipt}" onclick="openLightbox('${p.id}')">`
     : `<button class="receipt-btn" onclick="uploadReceipt('${p.id}',event)">📎</button>`;
 
+  const factura = p.factura
+    ? `<a href="${esc(p.factura)}" target="_blank" style="font-size:10px;color:var(--gold);text-decoration:none;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;display:block" title="${esc(p.factura)}">🔗 Ver</a>`
+    : `<span style="color:var(--border2);font-size:11px">—</span>`;
+
   // Category display — shorten if too long
   const catDisplay = (p.category||'').replace(/^(Service:|Tour:|Wedding:|Business Expenses:|Cartagena: Chef Services:)\s*/,'');
 
@@ -506,6 +519,7 @@ function renderRow(p){
     <td><div class="cell" style="font-size:11px;color:var(--ink3)">${esc(p.method||'—')}</div></td>
     <td><div class="person-wrap">${avatar}<span style="font-size:11px;color:var(--ink3)">${p.person||'—'}</span></div></td>
     <td><div class="cell" style="justify-content:center">${receipt}</div></td>
+    <td><div class="cell" style="justify-content:center">${factura}</div></td>
     <td class="status-wrap"><span class="status-chip" style="background:${st.color}" onclick="openStatusPopup('${p.id}',event)">${st.label}</span></td>
     <td><div class="cell editable" ondblclick="editField('${p.id}','notes')" style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink3)">${esc(p.notes||'')}</div></td>
   </tr>`;
@@ -518,7 +532,7 @@ function editField(id, field){
   const p = pagos.find(x=>x.id===id);
   if(!p) return;
   const el = document.querySelector(`tr[data-id="${id}"] td:nth-child(${
-    {date:1,client:4,vendor:5,desc:6,notes:12}[field]
+    {date:1,client:4,vendor:5,desc:6,notes:13}[field]
   }) .cell`);
   if(!el) return;
   const cur = p[field] || '';
@@ -545,7 +559,13 @@ function openStatusPopup(id, e){
 }
 function setStatus(id, status){
   const p = pagos.find(x=>x.id===id);
-  if(p){ p.status = status; save(); }
+  if(p){
+    p.status = status;
+    save();
+    if(status === 'aprov' || status === 'rech'){
+      notifyStatusChange(p);
+    }
+  }
   closePopups(); render();
 }
 
@@ -616,6 +636,7 @@ function openNewModal(){
   document.getElementById('n-currency').value = 'COP';
   document.getElementById('n-method').value = '';
   document.getElementById('n-person').value = '';
+  document.getElementById('n-factura').value = '';
   document.getElementById('n-notes').value = '';
   document.getElementById('cat-hint').textContent = '';
   document.getElementById('new-modal').style.display = 'flex';
@@ -646,6 +667,7 @@ function createPago(){
     currency:   document.getElementById('n-currency').value,
     method:     document.getElementById('n-method').value,
     person:     document.getElementById('n-person').value,
+    factura:    document.getElementById('n-factura').value.trim(),
     notes:      document.getElementById('n-notes').value.trim(),
     status:     'pend',
     receipt:    '',
@@ -653,6 +675,7 @@ function createPago(){
   };
   pagos.unshift(p);
   save();
+  notifyNewPago(p);
   closeNewModal();
   render();
   showToast('Solicitud creada ✓');
@@ -664,6 +687,72 @@ function showToast(msg, duration=3000){
   t.className='toast'; t.textContent=msg;
   document.body.appendChild(t);
   setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, duration);
+}
+
+/* ── SLACK NOTIFICATIONS ── */
+function notifyNewPago(p){
+  const body = {
+    action: 'notifyNewPago',
+    id: p.id,
+    dept: p.dept,
+    date: p.date,
+    category: p.category,
+    client: p.client,
+    vendor: p.vendor,
+    desc: p.desc,
+    amount: p.amount,
+    currency: p.currency,
+    method: p.method,
+    person: p.person,
+    factura: p.factura,
+    notes: p.notes,
+  };
+  fetch(GAS_URL, {method:'POST', body:JSON.stringify(body)}).catch(()=>{});
+}
+
+function notifyStatusChange(p){
+  const body = {
+    action: 'notifyPagoStatus',
+    id: p.id,
+    status: p.status,
+    category: p.category,
+    client: p.client,
+    amount: p.amount,
+    currency: p.currency,
+    person: p.person,
+  };
+  fetch(GAS_URL, {method:'POST', body:JSON.stringify(body)}).catch(()=>{});
+}
+
+/* ── EXPORT CSV ── */
+function exportCSV(){
+  const headers = ['Fecha','Depto.','Categoría','Cliente','Proveedor','Descripción','Monto','Moneda','Método','Solicitado por','Factura','Estado','Notas','Creado'];
+  const rows = pagos.map(p => [
+    p.date||'',
+    p.dept||'',
+    p.category||'',
+    p.client||'',
+    p.vendor||'',
+    p.desc||'',
+    p.amount||'',
+    p.currency||'',
+    p.method||'',
+    p.person||'',
+    p.factura||'',
+    (STATUSES[p.status]||STATUSES.pend).label,
+    p.notes||'',
+    (p.createdAt||'').slice(0,10),
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`));
+
+  const csv = '﻿' + [headers.map(h=>`"${h}"`), ...rows].map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `pagos_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Exportando CSV...');
 }
 
 /* ── INIT ── */

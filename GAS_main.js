@@ -131,10 +131,12 @@ function doPost(e) {
       case "deleteHandoff":  return jsonResponse(deleteHandoff_(payload.id || id));
 
       // ── Pagos / Solicitudes de pago ──
-      case "getPagos":    return jsonResponse({ ok: true, data: getPagos_() });
-      case "savePagos":   return jsonResponse(savePagos_(payload));
-      case "updatePago":  return jsonResponse(updatePago_(payload.id || id, payload));
-      case "deletePago":  return jsonResponse(deletePago_(payload.id || id));
+      case "getPagos":          return jsonResponse({ ok: true, data: getPagos_() });
+      case "savePagos":         return jsonResponse(savePagos_(payload));
+      case "updatePago":        return jsonResponse(updatePago_(payload.id || id, payload));
+      case "deletePago":        return jsonResponse(deletePago_(payload.id || id));
+      case "notifyNewPago":     return jsonResponse(notifyNewPago_(payload));
+      case "notifyPagoStatus":  return jsonResponse(notifyPagoStatus_(payload));
 
       // ── Properties ──
       case "property_list":   return jsonResponse(handlePropertyList());
@@ -754,7 +756,7 @@ function deleteHandoff_(id) {
 
 // ═══════════════ PAGOS / SOLICITUDES DE PAGO ═════════════════════
 const PAGOS_SHEET = "Pagos";
-const PAGOS_COLS  = ["id","dept","date","category","client","vendor","desc","amount","currency","method","person","receipt","status","notes","createdAt","updatedAt"];
+const PAGOS_COLS  = ["id","dept","date","category","client","vendor","desc","amount","currency","method","person","factura","receipt","status","notes","createdAt","updatedAt"];
 
 function getPagosSheet_() {
   let sh = SS.getSheetByName(PAGOS_SHEET);
@@ -836,4 +838,71 @@ function deletePago_(id) {
     }
   }
   return { ok: false, error: "No encontrado: " + id };
+}
+
+// ─── Notificaciones Pagos ─────────────────────────────────────────
+function notifyNewPago_(p) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const token   = props.getProperty("SLACK_BOT_TOKEN");
+    const channel = props.getProperty("SLACK_FINANCE_CHANNEL") || props.getProperty("SLACK_CHANNEL_ID") || "C094NE421NV";
+    if (!token) return { ok: false, error: "No Slack token" };
+
+    const dept  = p.dept === 'wedding' ? '💍 Bodas' : '🌴 Concierge';
+    const monto = p.amount ? `${p.currency || 'COP'} ${parseFloat(p.amount).toLocaleString('es-CO')}` : '—';
+    const cat   = (p.category || '').replace(/^(Service:|Tour:|Wedding:|Business Expenses:|Cartagena: Chef Services:)\s*/, '');
+    const factura = p.factura ? `\n📄 Factura: ${p.factura}` : '';
+    const notas   = p.notes   ? `\n📝 ${p.notes}` : '';
+
+    const text = `💳 *Nueva solicitud de pago* — ${dept}\n` +
+      `• *Categoría:* ${cat}\n` +
+      `• *Cliente:* ${p.client || '—'}\n` +
+      `• *Proveedor:* ${p.vendor || '—'}\n` +
+      `• *Monto:* ${monto}\n` +
+      `• *Método:* ${p.method || '—'}\n` +
+      `• *Solicitado por:* ${p.person || '—'}\n` +
+      `• *Fecha:* ${p.date || '—'}` +
+      factura + notas;
+
+    const res = UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
+      method: "post", contentType: "application/json",
+      headers: { "Authorization": "Bearer " + token },
+      payload: JSON.stringify({ channel, text }),
+      muteHttpExceptions: true,
+    });
+    const data = JSON.parse(res.getContentText());
+    return { ok: data.ok, slackError: data.error };
+  } catch(e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+function notifyPagoStatus_(p) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const token   = props.getProperty("SLACK_BOT_TOKEN");
+    const channel = props.getProperty("SLACK_CHANNEL_ID") || "C094NE421NV";
+    if (!token) return { ok: false, error: "No Slack token" };
+
+    const statusLabel = p.status === 'aprov' ? '✅ *APROBADO*' : '❌ *RECHAZADO*';
+    const monto = p.amount ? `${p.currency || 'COP'} ${parseFloat(p.amount).toLocaleString('es-CO')}` : '—';
+    const cat   = (p.category || '').replace(/^(Service:|Tour:|Wedding:|Business Expenses:|Cartagena: Chef Services:)\s*/, '');
+
+    const text = `${statusLabel} — Solicitud de pago\n` +
+      `• *Solicitado por:* ${p.person || '—'}\n` +
+      `• *Categoría:* ${cat}\n` +
+      `• *Cliente:* ${p.client || '—'}\n` +
+      `• *Monto:* ${monto}`;
+
+    const res = UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
+      method: "post", contentType: "application/json",
+      headers: { "Authorization": "Bearer " + token },
+      payload: JSON.stringify({ channel, text }),
+      muteHttpExceptions: true,
+    });
+    const data = JSON.parse(res.getContentText());
+    return { ok: data.ok, slackError: data.error };
+  } catch(e) {
+    return { ok: false, error: e.message };
+  }
 }
