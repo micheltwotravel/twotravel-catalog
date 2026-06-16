@@ -3036,7 +3036,7 @@ function DrinksCatalog() {
       <div className="bg-neutral-950 text-white px-6 pt-6 pb-5">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <p className="text-xs text-neutral-400 uppercase tracking-widest mb-1">{T.brand}</p>
+            <img src="/logo.png" alt="Two Travel" className="h-7 mb-2 opacity-90" />
             <h1 className="text-xl font-semibold">{T.heading}</h1>
           </div>
           {/* Language toggle */}
@@ -3521,7 +3521,7 @@ function GroceryCatalog() {
       <div className="bg-neutral-950 text-white px-6 pt-6 pb-5">
         <div className="flex items-start justify-between mb-2">
           <div>
-            <p className="text-xs text-neutral-400 uppercase tracking-widest mb-1">Two Travel</p>
+            <img src="/logo.png" alt="Two Travel" className="h-7 mb-2 opacity-90" />
             <h1 className="text-xl font-semibold">{lang==="en" ? "🛒 Grocery List" : "🛒 Lista de Mercado"}</h1>
           </div>
           {/* Language toggle */}
@@ -3825,7 +3825,7 @@ function BreakfastCatalog() {
     <div style={{minHeight:"100vh",background:"#f7f4ef",fontFamily:"'Jost',sans-serif",color:"#1a1814"}}>
       {/* Header */}
       <div style={{background:"#1a1814",padding:"28px 24px 24px",textAlign:"center"}}>
-        <p style={{fontSize:10,color:"#9a7d52",letterSpacing:".16em",textTransform:"uppercase",marginBottom:8}}>Two Travel · Cartagena</p>
+        <img src="/logo.png" alt="Two Travel" style={{height:28,opacity:.85,marginBottom:16,filter:"brightness(0) invert(1)"}} />
         <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:30,fontWeight:500,color:"#f7f4ef",marginBottom:6}}>
           {en ? "Breakfast Menu" : "Menú de Desayuno"}
         </h1>

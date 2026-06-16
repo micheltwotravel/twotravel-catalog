@@ -232,7 +232,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   const city2Name = cityFullName(city2Code);
 
   // Info rows — each: { label, val, url?, sub? }
-  const guestsVal = (() => { const n = parseInt(cl(kickoff.groupSize||"")) || 0; if (!n) return cl(kickoff.groupSize||""); return lang === "es" ? `${n} ${n===1?"persona":"personas"}` : `${n} ${n===1?"guest":"guests"}`; })();
+  const guestsVal = (() => { const n = parseInt(cl(kickoff.groupSize||"")) || 0; if (!n) return cl(kickoff.groupSize||""); return lang === "es" ? `${n} ${n===1?"persona":"personas"}` : `${n} ${n===1?"person":"people"}`; })();
   const infoRows = [
     // Destination
     { label: lang === "es" ? "Destino" : "Destination", val: cityFullName(kickoff.city) || "" },
@@ -456,11 +456,17 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       doc.setFontSize(10.5); doc.setFont("helvetica","bold"); doc.setTextColor(15,15,15);
       dt(se(timePart + item.name), ML, y); y += 15;
 
-      // Confirmation status
-      if (item.confirmed !== false) {
+      // Confirmation status — show badge only when explicitly confirmed (true), skip when recommendation (false/undefined)
+      if (item.confirmed === true) {
         const confBy = item.confirmation ? ` · ${cl(item.confirmation)}` : "";
-        doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(60,150,90);
-        dt("Confirmed" + se(confBy), ML + 2, y); y += 12;
+        const badge = (lang === "es" ? "CONFIRMADO" : "CONFIRMED") + se(confBy);
+        doc.setFillColor(230, 245, 235);
+        doc.setDrawColor(60, 150, 90);
+        doc.setLineWidth(0.5);
+        const bw = doc.getStringUnitWidth(badge) * 7.5 / doc.internal.scaleFactor + 10;
+        doc.roundedRect(ML, y - 7, bw, 10, 2, 2, "FD");
+        doc.setFontSize(7.5); doc.setFont("helvetica","bold"); doc.setTextColor(40, 130, 70);
+        dt(badge, ML + 5, y); y += 14;
       }
 
       // Location
