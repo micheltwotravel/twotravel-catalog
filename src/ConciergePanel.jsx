@@ -80,7 +80,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   };
   const fmtDate = (v) => {
     if (!v) return "—";
-    try { return new Date(String(v).length === 10 ? v + "T12:00:00" : v).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric", year:"numeric" }); }
+    try { return new Date(String(v).length === 10 ? v + "T12:00:00" : v).toLocaleDateString(lang === "es" ? "es-CO" : "en-US", { weekday:"long", month:"long", day:"numeric", year:"numeric" }); }
     catch { return String(v); }
   };
   const fmtIso = (v) => {
@@ -223,17 +223,42 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   // Build accommodation URL (Airbnb / Booking link if concierge set one)
   const accomUrl = cl(kickoff.accommodationUrl || "");
 
-  // Info rows — each: { label, val, url? }
+  // Detect 2-city trip
+  const cityRaw   = cl(kickoff.city || "");
+  const is2Cities = cityRaw.includes(",");
+  const city1Code = cityRaw.split(",")[0].trim();
+  const city2Code = cityRaw.split(",")[1]?.trim() || "";
+  const city1Name = cityFullName(city1Code);
+  const city2Name = cityFullName(city2Code);
+
+  // Info rows — each: { label, val, url?, sub? }
+  const guestsVal = (() => { const n = parseInt(cl(kickoff.groupSize||"")) || 0; if (!n) return cl(kickoff.groupSize||""); return lang === "es" ? `${n} ${n===1?"persona":"personas"}` : `${n} ${n===1?"guest":"guests"}`; })();
   const infoRows = [
-    { label: lang === "es" ? "Llegada"      : "Arrival",        val: fmtDate(kickoff.arrivalDate) },
-    { label: lang === "es" ? "Salida"       : "Departure",      val: fmtDate(kickoff.departureDate) },
-    { label: lang === "es" ? "Destino"      : "Destination",    val: cityFullName(kickoff.city) || "" },
-    { label: lang === "es" ? "Huéspedes"    : "Guests",         val: (() => { const n = parseInt(cl(kickoff.groupSize||"")) || 0; if (!n) return cl(kickoff.groupSize||""); return lang === "es" ? `${n} ${n===1?"persona":"personas"}` : `${n} ${n===1?"guest":"guests"}`; })() },
-    { label: lang === "es" ? "Alojamiento"  : "Accommodation",  val: cl(kickoff.accommodationName || "") },
-    { label: lang === "es" ? "Dirección"    : "Address",        val: cl(kickoff.accommodationAddr || ""), url: accomUrl || null },
-    { label: "Concierge",                                        val: cl(kickoff.assignedConciergeName || kickoff.assignedConcierge || ""), sub: cl(kickoff.conciergeTitle || "") },
-    { label: "WhatsApp Concierge",                               val: conciergePhone, url: waUrl },
-    { label: lang === "es" ? "Tu WhatsApp"  : "Your WhatsApp",  val: cl(kickoff.guestContact || "") },
+    // Destination
+    { label: lang === "es" ? "Destino" : "Destination", val: cityFullName(kickoff.city) || "" },
+    { label: lang === "es" ? "Huéspedes" : "Guests",    val: guestsVal },
+    // City 1 dates
+    ...(is2Cities ? [{ label: (lang === "es" ? "Llegada" : "Arrival") + ` — ${city1Name}`,   val: fmtDate(kickoff.arrivalDate) }] :
+                   [{ label: lang === "es" ? "Llegada"  : "Arrival",                           val: fmtDate(kickoff.arrivalDate) }]),
+    ...(is2Cities ? [{ label: (lang === "es" ? "Salida"  : "Departure") + ` — ${city1Name}`, val: fmtDate(kickoff.departureDate) }] :
+                   [{ label: lang === "es" ? "Salida"   : "Departure",                         val: fmtDate(kickoff.departureDate) }]),
+    // City 1 accommodation
+    { label: lang === "es" ? (is2Cities ? `Alojamiento — ${city1Name}` : "Alojamiento") : (is2Cities ? `Accommodation — ${city1Name}` : "Accommodation"),
+      val: cl(kickoff.accommodationName || ""), sub: cl(kickoff.barrio || "") },
+    { label: lang === "es" ? "Dirección" : "Address", val: cl(kickoff.accommodationAddr || ""), url: accomUrl || null },
+    // City 2 dates & accommodation (only for 2-city trips)
+    ...(is2Cities && kickoff.arrivalDate2 ? [
+      { label: (lang === "es" ? "Llegada"  : "Arrival")   + ` — ${city2Name}`, val: fmtDate(kickoff.arrivalDate2) },
+      { label: (lang === "es" ? "Salida"   : "Departure") + ` — ${city2Name}`, val: fmtDate(kickoff.departureDate2) },
+      { label: lang === "es" ? `Alojamiento — ${city2Name}` : `Accommodation — ${city2Name}`,
+        val: cl(kickoff.accommodationName2 || ""), sub: cl(kickoff.barrio2 || "") },
+      ...(kickoff.accommodationAddr2 ? [{ label: lang === "es" ? `Dirección — ${city2Name}` : `Address — ${city2Name}`,
+        val: cl(kickoff.accommodationAddr2 || ""), url: cl(kickoff.accommodationUrl2 || "") || null }] : []),
+    ] : []),
+    // Concierge
+    { label: "Concierge",                                       val: cl(kickoff.assignedConciergeName || kickoff.assignedConcierge || ""), sub: cl(kickoff.conciergeTitle || "") },
+    { label: "WhatsApp Concierge",                              val: conciergePhone, url: waUrl },
+    { label: lang === "es" ? "Tu WhatsApp" : "Your WhatsApp",  val: cl(kickoff.guestContact || "") },
   ].filter(r => r.val);
 
   infoRows.forEach(({ label, val, url, sub }) => {
@@ -2819,10 +2844,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [accommodationName,  setAccommodationName]  = useState(kickoff?.accommodationName  || "");
   const [accommodationAddr,  setAccommodationAddr]  = useState(kickoff?.accommodationAddr  || "");
   const [accommodationUrl,   setAccommodationUrl]   = useState(kickoff?.accommodationUrl   || "");
+  const [barrio,             setBarrio]             = useState(kickoff?.barrio             || "");
   // City 2 accommodation
   const [accommodationName2, setAccommodationName2] = useState(kickoff?.accommodationName2 || "");
   const [accommodationAddr2, setAccommodationAddr2] = useState(kickoff?.accommodationAddr2 || "");
   const [accommodationUrl2,  setAccommodationUrl2]  = useState(kickoff?.accommodationUrl2  || "");
+  const [barrio2,            setBarrio2]            = useState(kickoff?.barrio2            || "");
   // City 2 stay dates
   const [arrivalDate2,   setArrivalDate2]   = useState(kickoff?.arrivalDate2   || "");
   const [departureDate2, setDepartureDate2] = useState(kickoff?.departureDate2 || "");
@@ -2913,6 +2940,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     accommodationName: accommodationName.trim(),
     accommodationAddr: accommodationAddr.trim(),
     accommodationUrl:  accommodationUrl.trim(),
+    barrio:            barrio.trim(),
     checkIn:           checkIn.trim(),
     checkOut:          checkOut.trim(),
     welcomePdfUrl:     welcomePdfUrl.trim(),
@@ -2938,6 +2966,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     accommodationName2: accommodationName2.trim(),
     accommodationAddr2: accommodationAddr2.trim(),
     accommodationUrl2:  accommodationUrl2.trim(),
+    barrio2:            barrio2.trim(),
     // Always include latest canvas state so itinerary edits aren't lost
     ...(canvasCartRef.current    != null ? { cart:    JSON.stringify(canvasCartRef.current)    } : {}),
     ...(canvasDayMetaRef.current != null ? { dayMeta: JSON.stringify(canvasDayMetaRef.current) } : {}),
@@ -3312,10 +3341,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     setAccommodationName(val);
                     const match = (propertyList || []).find(p => p.Name === val);
                     if (match) {
-                      const addr = match.address || match.Address || match.addr || match.Addr || "";
-                      const url  = match.location || match.Location || match.MapsUrl || match.mapsUrl || match.maps_url || match.GoogleMaps || "";
-                      if (addr) setAccommodationAddr(addr);
-                      if (url)  setAccommodationUrl(url);
+                      const addr  = match.address || match.Address || match.addr || match.Addr || "";
+                      const url   = match.location || match.Location || match.MapsUrl || match.mapsUrl || match.maps_url || match.GoogleMaps || "";
+                      const nbhd  = match.barrio || match.Barrio || match.neighborhood || match.Neighborhood || match.Barrio || "";
+                      if (addr)  setAccommodationAddr(addr);
+                      if (url)   setAccommodationUrl(url);
+                      if (nbhd)  setBarrio(nbhd);
                     }
                   }}
                   list="prop-list-1"
@@ -3331,6 +3362,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     return !c1 || pCode === code1 || pCity.includes(c1) || c1.includes(pCity);
                   }).map(p => <option key={p.id} value={p.Name}>{p.Name} — {p.City}</option>)}
                 </datalist>
+              </div>
+              <div className="col-span-2">
+                <label className="text-[11px] text-neutral-500">Barrio / Zona {city.includes(",") ? `— ${cityFullName(city.split(",")[0]?.trim())}` : ""}</label>
+                <input value={barrio} onChange={(e) => setBarrio(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="Getsemaní, Centro Histórico..." />
               </div>
               <div className="col-span-2">
                 <label className="text-[11px] text-neutral-500">Dirección del alojamiento {city.includes(",") ? `— ${cityFullName(city.split(",")[0]?.trim())}` : ""}</label>
@@ -3357,10 +3394,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       setAccommodationName2(val);
                       const match = (propertyList || []).find(p => p.Name === val);
                       if (match) {
-                        const addr = match.Address || match.address || match.Addr || match.addr || match.Location || "";
-                        const url  = match.MapsUrl || match.mapsUrl || match.maps_url || match.GoogleMaps || match.Maps || match.maps || "";
-                        if (addr) setAccommodationAddr2(addr);
-                        if (url)  setAccommodationUrl2(url);
+                        const addr  = match.Address || match.address || match.Addr || match.addr || match.Location || "";
+                        const url   = match.MapsUrl || match.mapsUrl || match.maps_url || match.GoogleMaps || match.Maps || match.maps || "";
+                        const nbhd  = match.barrio || match.Barrio || match.neighborhood || match.Neighborhood || "";
+                        if (addr)  setAccommodationAddr2(addr);
+                        if (url)   setAccommodationUrl2(url);
+                        if (nbhd)  setBarrio2(nbhd);
                       }
                     }}
                     list="prop-list-2"
@@ -3376,6 +3415,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       return pCode === code2 || pCity.includes(c2) || c2.includes(pCity);
                     }).map(p => <option key={p.id} value={p.Name}>{p.Name} — {p.City}</option>)}
                   </datalist>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[11px] text-neutral-500">Barrio / Zona 2</label>
+                  <input value={barrio2} onChange={(e) => setBarrio2(e.target.value)}
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                    placeholder="El Poblado, Laureles..." />
                 </div>
                 <div className="col-span-2">
                   <label className="text-[11px] text-neutral-500">Dirección alojamiento 2</label>
