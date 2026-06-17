@@ -1568,7 +1568,7 @@ export default function ItineraryPrintView() {
 
   const hasPreTrip = true; // always shown — falls back to DEFAULT_PRETRIP_PDF when empty
   const hasSummary = activeDays.length > 0;
-  const total = 1 + (hasSummary ? 1 : 0) + 1 + activeDays.length + 1; // +1 = billing page
+  const total = 1 + (hasSummary ? 1 : 0) + 1 + activeDays.length + (pdfNotes.trim() ? 1 : 0) + 1; // +1 = billing page
   let pageNum = 1;
 
   const ctrl = {
@@ -1692,6 +1692,35 @@ export default function ItineraryPrintView() {
           patchItemFn={editMode ? (ii, field, val) => patchItem(di, ii, field, val) : undefined}
         />
       ))}
+
+      {/* ── PDF notes block (printable) ── */}
+      {pdfNotes.trim() && (
+        <div className="page">
+          <PH kickoff={kickoff}/>
+          <div className="section-eyebrow">{lang === "en" ? "Additional Info" : "Información Adicional"}</div>
+          <div style={{ marginTop: 16, lineHeight: 1.7, fontSize: 13, color: "#222" }}>
+            {pdfNotes.trim().split("\n").map((raw, i) => {
+              const line = raw.trim();
+              if (!line) return <div key={i} style={{ height: 8 }} />;
+              const isTitle  = line === line.toUpperCase() && line.length > 2 && !/^[-*•]/.test(line);
+              const isBullet = /^[-*•]/.test(line);
+              if (isTitle) return (
+                <div key={i} style={{ fontWeight: 700, fontSize: 14, letterSpacing: ".03em", textTransform: "uppercase", color: "#111", marginTop: 16, marginBottom: 4 }}>
+                  {line}
+                </div>
+              );
+              if (isBullet) return (
+                <div key={i} style={{ display: "flex", gap: 8, paddingLeft: 8, marginBottom: 2 }}>
+                  <span style={{ color: "#888", flexShrink: 0 }}>—</span>
+                  <span>{line.replace(/^[-*•]\s*/, "")}</span>
+                </div>
+              );
+              return <p key={i} style={{ margin: "0 0 6px" }}>{line}</p>;
+            })}
+          </div>
+          <PF n={++pageNum} total={total}/>
+        </div>
+      )}
 
       {/* ── Billing page (last, internal/QB use) ── */}
       <BillingPage kickoff={kickoff} />
