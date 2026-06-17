@@ -3285,17 +3285,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             />
           </div>
 
-          {/* ── Notas libres para PDF ── */}
-          <div className="border border-indigo-200 rounded-xl bg-indigo-50 p-3 space-y-1">
-            <p className="text-[11px] font-semibold text-indigo-700 uppercase tracking-wide">Bloque libre en PDF</p>
-            <p className="text-[10px] text-indigo-500">Se incluye al final del PDF. Acepta listas (- item), títulos (MAYÚSCULAS) y párrafos.</p>
-            <textarea
-              value={pdfNotes}
-              onChange={e => setPdfNotes(e.target.value)}
-              className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm min-h-[100px] bg-white"
-              placeholder={"ACTIVIDADES ADICIONALES\n- Reserva restaurante Marea\n- Transfer aeropuerto confirmado\n\nNota: llevar pasaporte para check-in."}
-            />
-          </div>
 
           {/* ── Feedback del cliente (respuestas del formulario) ── */}
           {(kickoff.status === "feedback_submitted" || kickoff.feedbackAt) && (

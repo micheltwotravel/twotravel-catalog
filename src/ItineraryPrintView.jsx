@@ -1312,6 +1312,7 @@ export default function ItineraryPrintView() {
 
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState("");
+  const [pdfNotes, setPdfNotes] = useState("");
 
   // Sync editDays from computed days (or itinerarySnapshot) each time editMode is activated
   useEffect(() => {
@@ -1322,6 +1323,7 @@ export default function ItineraryPrintView() {
       }
       setEditDays(JSON.parse(JSON.stringify(base)));
       setLocalPreTrip(null);
+      setPdfNotes(kickoff?.pdfNotes || "");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode]);
@@ -1352,10 +1354,20 @@ export default function ItineraryPrintView() {
     if (!kickoffId || !editDays) return;
     setSaving(true);
     try {
-      await updateKickoffInSheet(kickoffId, { itinerarySnapshot: JSON.stringify(editDays) });
-      setSavedAt(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
-      // Reflect saved snapshot in kickoff so client link shows it immediately
-      setKickoff(prev => ({ ...prev, itinerarySnapshot: JSON.stringify(editDays) }));
+      const now = new Date().toISOString();
+      await updateKickoffInSheet(kickoffId, {
+        itinerarySnapshot: JSON.stringify(editDays),
+        pdfNotes: pdfNotes.trim(),
+        itineraryUpdatedAt: now,
+      });
+      const ts = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      setSavedAt(ts);
+      setKickoff(prev => ({
+        ...prev,
+        itinerarySnapshot: JSON.stringify(editDays),
+        pdfNotes: pdfNotes.trim(),
+        itineraryUpdatedAt: now,
+      }));
     } finally {
       setSaving(false);
     }
@@ -1631,6 +1643,36 @@ export default function ItineraryPrintView() {
           onSelect={(svc) => addServiceFromCatalog(pickerForDay, svc)}
           onClose={() => setPickerForDay(null)}
         />
+      )}
+
+      {/* ── PDF free-text block (edit mode only) ── */}
+      {editMode && (
+        <div className="no-print" style={{
+          maxWidth: 680, margin: "32px auto 0", padding: "20px 24px",
+          background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10,
+          boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+        }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>
+            Bloque libre en PDF
+          </p>
+          <p style={{ fontSize: 10.5, color: "#9ca3af", marginBottom: 10 }}>
+            Se imprime al final del PDF. <b>TITULO</b> en mayúsculas, <b>- item</b> para listas, párrafos normales fluyen solos.
+          </p>
+          <textarea
+            value={pdfNotes}
+            onChange={e => setPdfNotes(e.target.value)}
+            rows={7}
+            style={{
+              width: "100%", border: "1px solid #e5e7eb", borderRadius: 6,
+              padding: "10px 12px", fontSize: 13, resize: "vertical",
+              fontFamily: "inherit", boxSizing: "border-box", lineHeight: 1.6,
+            }}
+            placeholder={"ACTIVIDADES ADICIONALES\n- Reserva restaurante Marea\n- Transfer aeropuerto confirmado\n\nNota: Llevar pasaporte para check-in."}
+          />
+          <p style={{ fontSize: 10, color: "#d1d5db", marginTop: 6 }}>
+            Guardar con el botón ↑ de la barra de edición para que se refleje en el PDF del cliente.
+          </p>
+        </div>
       )}
 
       <div className="no-print" style={{
