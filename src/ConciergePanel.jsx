@@ -888,17 +888,21 @@ function buildCatalogLink(kickoff, clientType = 1, lang = "en") {
 }
 // Maps city codes / raw values → feedback form dropdown option labels
 const CITY_TO_DESTINATION = {
-  CTG:       "Cartagena",
-  MDE:       "Medellín",
-  CDMX:      "CDMX",
-  TUL:       "Tulum",
-  BOG:       "Bogotá",
-  cartagena: "Cartagena",
-  medellin:  "Medellín",
-  medellín:  "Medellín",
-  tulum:     "Tulum",
-  bogota:    "Bogotá",
-  bogotá:    "Bogotá",
+  CTG:              "Cartagena",
+  MDE:              "Medellín",
+  CDMX:             "CDMX",
+  TUL:              "Tulum",
+  BOG:              "Bogotá",
+  cartagena:        "Cartagena",
+  medellin:         "Medellín",
+  medellín:         "Medellín",
+  tulum:            "Tulum",
+  bogota:           "Bogotá",
+  bogotá:           "Bogotá",
+  "Ciudad de México": "CDMX",
+  "ciudad de méxico": "CDMX",
+  "Mexico":         "CDMX",
+  "mexico":         "CDMX",
 };
 
 // Maps full concierge names → dropdown short names

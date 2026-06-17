@@ -987,7 +987,8 @@ function UnifiedDashboard() {
   const kTotal = kickoffs.length;
   const kActivos = kickoffs.filter((k) => k.status !== "done").length;
   const kScores = kickoffs
-    .map((k) => Number(k.overallExperience))
+    .filter((k) => k.feedbackAt || k.status === "feedback_submitted")
+    .map((k) => Number(k.conciergeRating))
     .filter((n) => !Number.isNaN(n) && n > 0);
   const kAvgScore =
     kScores.length
@@ -1100,7 +1101,7 @@ function UnifiedDashboard() {
       });
     } else if (cityRatingsArr.length > 0) {
       cityRatingsArr.forEach(cr => kpiByConcierge[concierges[0]]?.ratings.push(Number(cr.rating)));
-    } else if (Number(k.conciergeRating) > 0) {
+    } else if (Number(k.conciergeRating) > 0 && (k.feedbackAt || k.status === "feedback_submitted")) {
       kpiByConcierge[concierges[0]]?.ratings.push(Number(k.conciergeRating));
     }
   });
@@ -1406,15 +1407,16 @@ function UnifiedDashboard() {
                         <p className="text-[11px] font-semibold text-stone-400 uppercase tracking-wide mb-2">Rating por concierge</p>
                         <div className="space-y-2">
                           {kpiConciergeRows.filter(r => r.avgRating !== "—").map(row => {
-                            const pct = (Number(row.avgRating) / 5) * 100;
-                            const color = Number(row.avgRating) >= 4 ? "bg-teal-400" : Number(row.avgRating) >= 3 ? "bg-amber-400" : "bg-red-400";
+                            const n = Number(row.avgRating);
+                            const pct = (n / 10) * 100;
+                            const color = n >= 8 ? "bg-teal-400" : n >= 6 ? "bg-amber-400" : "bg-red-400";
                             return (
                               <div key={row.name} className="flex items-center gap-3">
                                 <span className="text-xs text-stone-600 w-36 truncate">{row.name}</span>
                                 <div className="flex-1 h-2 rounded-full bg-stone-100 overflow-hidden">
                                   <div className={"h-full rounded-full " + color} style={{ width: pct + "%" }} />
                                 </div>
-                                <span className="text-xs font-semibold text-stone-700 w-8 text-right">{row.avgRating} ⭐</span>
+                                <span className="text-xs font-semibold text-stone-700 w-10 text-right">{row.avgRating}/10</span>
                               </div>
                             );
                           })}
