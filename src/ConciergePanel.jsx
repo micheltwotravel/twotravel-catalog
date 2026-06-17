@@ -194,8 +194,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   const checkY = (need = 30) => { if (y + need > PH - 48) newPage(); };
 
   // Pre-fetch accommodation photos (async, before rendering)
-  const accomPhotoB64  = await fetchImgB64(cl(kickoff.accommodationPhoto  || "")).catch(() => null);
-  const accomPhotoB64_2 = await fetchImgB64(cl(kickoff.accommodationPhoto2 || "")).catch(() => null);
+  const accomPhotoB64  = await fetchImgB64(driveImgUrl(cl(kickoff.accommodationPhoto  || ""))).catch(() => null);
+  const accomPhotoB64_2 = await fetchImgB64(driveImgUrl(cl(kickoff.accommodationPhoto2 || ""))).catch(() => null);
 
   // ── COVER ───────────────────────────────────────────────────
   // Header band
@@ -816,6 +816,23 @@ const STATUS_LABELS = {
 };
 function statusLabel(status, lang = "es") {
   return STATUS_LABELS[status]?.[lang] ?? status;
+}
+
+// Convert Google Drive share/folder links → direct image URL
+// Folder links (drive/folders/...) can't become images — returned as-is so the broken-img handler fires
+function driveImgUrl(url) {
+  if (!url) return url;
+  // Already a direct image URL
+  if (!url.includes("drive.google.com")) return url;
+  // File share: /file/d/FILE_ID/view → uc?export=view&id=FILE_ID
+  const fileMatch = url.match(/\/file\/d\/([^/]+)/);
+  if (fileMatch) return `https://drive.google.com/uc?export=view&id=${fileMatch[1]}`;
+  // Open?id=FILE_ID
+  const openMatch = url.match(/[?&]id=([^&]+)/);
+  if (openMatch) return `https://drive.google.com/uc?export=view&id=${openMatch[1]}`;
+  // uc?export=... already
+  if (url.includes("uc?export=")) return url;
+  return url; // folder or unknown — can't convert
 }
 
 const STATUS_CLASSES = {
@@ -3390,8 +3407,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 <label className="text-[11px] text-neutral-500">Foto del alojamiento (URL) {city.includes(",") ? `— ${cityFullName(city.split(",")[0]?.trim())}` : ""}</label>
                 <input value={accommodationPhoto} onChange={(e) => setAccommodationPhoto(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="https://..." />
-                {accommodationPhoto && <img src={accommodationPhoto} alt="preview" className="mt-1 w-full rounded-lg object-cover" style={{maxHeight:80}} onError={e=>e.target.style.display='none'} />}
+                  placeholder="https://... (o link de Google Drive del archivo, no carpeta)" />
+                {accommodationPhoto && <img src={driveImgUrl(accommodationPhoto)} alt="preview" className="mt-1 w-full rounded-lg object-cover" style={{maxHeight:80}} onError={e=>e.target.style.display='none'} />}
               </div>
               {/* City 2 accommodation — only shown when 2 cities */}
               {city.includes(",") && (<>
@@ -3453,7 +3470,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   <input value={accommodationPhoto2} onChange={(e) => setAccommodationPhoto2(e.target.value)}
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                     placeholder="https://..." />
-                  {accommodationPhoto2 && <img src={accommodationPhoto2} alt="preview" className="mt-1 w-full rounded-lg object-cover" style={{maxHeight:80}} onError={e=>e.target.style.display='none'} />}
+                  {accommodationPhoto2 && <img src={driveImgUrl(accommodationPhoto2)} alt="preview" className="mt-1 w-full rounded-lg object-cover" style={{maxHeight:80}} onError={e=>e.target.style.display='none'} />}
                 </div>
               </>)}
               <div>

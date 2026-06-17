@@ -9,6 +9,17 @@ import ttLogo from "./assets/logo.png";
    Renders a span that is click-to-edit when editMode is on.
    Falls back to plain text in print / when editMode is off.
 ──────────────────────────────────────────────────────────── */
+function driveImgUrl(url) {
+  if (!url) return url;
+  if (!url.includes("drive.google.com")) return url;
+  const fileMatch = url.match(/\/file\/d\/([^/]+)/);
+  if (fileMatch) return `https://drive.google.com/uc?export=view&id=${fileMatch[1]}`;
+  const openMatch = url.match(/[?&]id=([^&]+)/);
+  if (openMatch) return `https://drive.google.com/uc?export=view&id=${openMatch[1]}`;
+  if (url.includes("uc?export=")) return url;
+  return url;
+}
+
 function Editable({ value, tag: Tag = "span", className = "", editMode, style, onChange }) {
   const ref = useRef();
   if (!editMode) {
@@ -633,7 +644,7 @@ function CoverPage({ kickoff, total, lang, editMode }) {
             {a.accommodationName && (
               <div className="cover-info-card">
                 {a.accommodationPhoto && (
-                  <img src={a.accommodationPhoto} alt={a.accommodationName}
+                  <img src={driveImgUrl(a.accommodationPhoto)} alt={a.accommodationName}
                     style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, marginBottom: 8 }}
                     onError={e => { e.target.style.display = "none"; }}
                   />
