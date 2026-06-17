@@ -4720,118 +4720,101 @@ const loadKickoffs = async () => {
   }[portalLang];
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex flex-col">
-      <header className="h-14 border-b bg-white flex items-center justify-between px-4 sm:px-6">
-        <div>
-          <h1 className="font-semibold text-lg">Concierge Panel</h1>
-          <p className="text-[11px] text-neutral-500">{cp.subtitle}</p>
+    <div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",flexDirection:"column"}}>
+      <header className="tt-topbar">
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Concierge Panel</span>
+          <span style={{fontSize:11,color:"var(--text-3)",fontWeight:400}}>{filteredKickoffs.length} clientes</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
 
-  {/* Language toggle — controls language of catalog/questionnaire links */}
   <button
     type="button"
     onClick={() => setPortalLang(l => l === "en" ? "es" : "en")}
-    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100 font-medium"
-    title="Idioma del catálogo que verá el cliente (no cambia este portal)"
+    className="tt-btn-ghost"
+    title="Idioma del catálogo que verá el cliente"
   >
-    {portalLang === "en" ? "🇺🇸 Links EN · UI EN" : "🇨🇴 Links ES · UI ES"}
+    {portalLang === "en" ? "EN" : "ES"}
   </button>
 
   <button
     onClick={loadKickoffs}
     disabled={loading}
-    className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100 disabled:opacity-50"
+    className="tt-btn-ghost"
+    style={{display:"flex",alignItems:"center",gap:6,opacity:loading?.6:1}}
   >
-    <RefreshCcw className="w-4 h-4" />
-    {loading ? cp.refreshing : cp.refresh}
+    <RefreshCcw className="w-3.5 h-3.5" />
+    {loading ? "Actualizando…" : "Refrescar"}
   </button>
 
-  {/* ── BOTÓN NUEVO CLIENTE ── */}
   <button
     type="button"
     onClick={() => { setPendingLinkKind("both"); setCreateModalOpen(true); }}
-    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 font-semibold"
+    className="tt-btn-primary"
   >
     + Nuevo cliente
   </button>
 
   <a
     href="/menu.html"
-    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-500"
+    className="tt-btn-ghost"
     title="Menú principal"
   >
-    ☰ Menú
+    Menu
   </a>
 
   {currentUser && (
-    <div className="flex items-center gap-2 pl-2 border-l border-neutral-200">
-      <span className="text-xs text-neutral-500 hidden sm:inline">{currentUser.name}</span>
-      <button
-        onClick={onLogout}
-        className="text-xs text-neutral-400 hover:text-red-500 transition"
-        title="Cerrar sesión"
-      >
-        ⎋ Salir
+    <div style={{display:"flex",alignItems:"center",gap:8,paddingLeft:8,borderLeft:"1px solid var(--border)"}}>
+      <span style={{fontSize:11,color:"var(--text-3)"}}>{currentUser.name}</span>
+      <button onClick={onLogout} style={{fontSize:11,color:"var(--text-3)",background:"none",border:"none",cursor:"pointer"}} title="Cerrar sesión">
+        Salir
       </button>
     </div>
   )}
 
 </div>
-
-
       </header>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-4 space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
-          <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 text-neutral-400 absolute left-2 top-1/2 -translate-y-1/2" />
+      <main style={{flex:1,maxWidth:1280,width:"100%",margin:"0 auto",padding:"16px 24px",display:"flex",flexDirection:"column",gap:12}}>
+        <div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{position:"relative",width:260}}>
+            <Search style={{width:14,height:14,color:"var(--text-3)",position:"absolute",left:9,top:"50%",transform:"translateY(-50%)"}} />
             <input
-              className="w-full pl-7 pr-3 py-1.5 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+              style={{width:"100%",paddingLeft:30,paddingRight:10,paddingTop:7,paddingBottom:7,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",fontSize:12.5,background:"var(--surface)",boxSizing:"border-box"}}
               placeholder={cp.search}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-neutral-500">{cp.filterStatus}</span>
-              <select
-                className="border rounded-lg px-2.5 py-1.5 bg-white text-xs"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="all">{cp.all}</option>
-                <option value="new">{statusLabel("new", portalLang)}</option>
-                <option value="client_submitted">{statusLabel("client_submitted", portalLang)}</option>
-                <option value="concierge_editing">{statusLabel("concierge_editing", portalLang)}</option>
-                <option value="sent_to_travify">{statusLabel("sent_to_travify", portalLang)}</option>
-                <option value="feedback_submitted">{statusLabel("feedback_submitted", portalLang)}</option>
-                <option value="done">{statusLabel("done", portalLang)}</option>
-              </select>
-            </div>
+          <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:8}}>
+            <select
+              style={{border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"5px 9px",fontSize:12,background:"var(--surface)"}}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">Todos los estados</option>
+              <option value="new">{statusLabel("new", portalLang)}</option>
+              <option value="client_submitted">{statusLabel("client_submitted", portalLang)}</option>
+              <option value="concierge_editing">{statusLabel("concierge_editing", portalLang)}</option>
+              <option value="sent_to_travify">{statusLabel("sent_to_travify", portalLang)}</option>
+              <option value="feedback_submitted">{statusLabel("feedback_submitted", portalLang)}</option>
+              <option value="done">{statusLabel("done", portalLang)}</option>
+            </select>
 
             {conciergeOptions.length > 1 && (
-              <div className="flex items-center gap-1.5 flex-wrap">
+              <div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"}}>
                 {conciergeOptions.map((c) => {
                   const found = CONCIERGE_LIST.find(x => x.name === c);
-                  const label = c === "all"
-                    ? "Todos"
-                    : (found?.name.split(" ")[0] || c);
-                  const city  = found?.city || "";
+                  const label = c === "all" ? "Todos" : (found?.name.split(" ")[0] || c);
                   const active = conciergeFilter === c;
                   return (
                     <button
                       key={c}
                       onClick={() => setConciergeFilter(c)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition border ${
-                        active
-                          ? "bg-neutral-900 text-white border-neutral-900"
-                          : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-100"
-                      }`}
+                      className={`tt-pill${active ? " active" : ""}`}
                     >
-                      {label}{city && !active ? <span className="ml-1 opacity-50 text-[10px]">{city}</span> : null}
+                      {label}
                     </button>
                   );
                 })}
@@ -4844,9 +4827,9 @@ const loadKickoffs = async () => {
         <div>
           <button
             onClick={() => setShowRatings(v => !v)}
-            className="flex items-center gap-1.5 text-xs text-amber-600 hover:text-amber-800 font-medium py-1"
+            style={{fontSize:11.5,fontWeight:500,color:"#D97706",background:"none",border:"none",cursor:"pointer",padding:"2px 0"}}
           >
-            ⭐ {showRatings ? "Ocultar resumen de ratings" : "Ver resumen de ratings"}
+            {showRatings ? "Ocultar ratings" : "Ver ratings"}
           </button>
 
           {showRatings && (() => {
@@ -4907,7 +4890,7 @@ const loadKickoffs = async () => {
               .sort((a, b) => b.avg - a.avg);
 
             return (
-              <div className="mt-2 bg-white border border-amber-200 rounded-2xl p-4 shadow-sm">
+              <div className="tt-card" style={{marginTop:8,padding:16}}>
                 <div className="flex items-center gap-4 mb-4 flex-wrap">
                   <div className="text-center">
                     <div className="text-3xl font-bold text-amber-500">{avg}</div>
@@ -4974,48 +4957,46 @@ const loadKickoffs = async () => {
 
         {/* Bulk action bar */}
         {selectedIds.size > 0 && (
-          <div className="mb-3 flex items-center gap-3 bg-neutral-900 text-white rounded-xl px-4 py-2.5">
-            <span className="text-sm font-medium flex-1">{selectedIds.size} cliente{selectedIds.size !== 1 ? "s" : ""} seleccionado{selectedIds.size !== 1 ? "s" : ""}</span>
+          <div style={{display:"flex",alignItems:"center",gap:10,background:"#111",color:"#fff",borderRadius:"var(--radius-md)",padding:"8px 16px"}}>
+            <span style={{fontSize:12,fontWeight:500,flex:1}}>{selectedIds.size} cliente{selectedIds.size !== 1 ? "s" : ""} seleccionado{selectedIds.size !== 1 ? "s" : ""}</span>
             <button onClick={bulkArchive} disabled={bulkLoading}
-              className="px-3 py-1 text-xs bg-white/10 hover:bg-white/20 rounded-lg transition disabled:opacity-40 font-medium">
-              {bulkLoading ? "…" : "✓ Marcar cerrados"}
+              style={{fontSize:11.5,padding:"4px 10px",borderRadius:"var(--radius-sm)",border:"none",background:"rgba(255,255,255,.12)",color:"#fff",cursor:"pointer",opacity:bulkLoading?.5:1}}>
+              {bulkLoading ? "…" : "Marcar cerrados"}
             </button>
             <button onClick={bulkDelete} disabled={bulkLoading}
-              className="px-3 py-1 text-xs bg-red-500 hover:bg-red-400 rounded-lg transition disabled:opacity-40 font-medium">
-              {bulkLoading ? "…" : "🗑 Eliminar"}
+              style={{fontSize:11.5,padding:"4px 10px",borderRadius:"var(--radius-sm)",border:"none",background:"#DC2626",color:"#fff",cursor:"pointer",opacity:bulkLoading?.5:1}}>
+              {bulkLoading ? "…" : "Eliminar"}
             </button>
-            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-white/50 hover:text-white transition ml-1">
+            <button onClick={() => setSelectedIds(new Set())}
+              style={{fontSize:11.5,color:"rgba(255,255,255,.5)",background:"none",border:"none",cursor:"pointer",marginLeft:4}}>
               Cancelar
             </button>
           </div>
         )}
 
-        <div className="bg-white border border-neutral-200 rounded-2xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-neutral-50 border-b border-neutral-200">
+        <div className="tt-card" style={{overflow:"hidden"}}>
+          <div style={{overflowX:"auto"}}>
+            <table className="tt-table" style={{minWidth:"100%"}}>
+              <thead>
                 <tr>
-                  <th className="px-3 py-2 w-8">
+                  <th style={{width:36,padding:"8px 12px"}}>
                     <input type="checkbox"
                       checked={selectedIds.size > 0 && selectedIds.size === filteredKickoffs.length}
                       ref={el => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < filteredKickoffs.length; }}
                       onChange={() => toggleSelectAll(filteredKickoffs)}
-                      className="w-3.5 h-3.5 cursor-pointer accent-neutral-900"
+                      style={{width:13,height:13,cursor:"pointer"}}
                     />
                   </th>
                   {["ID", cp.colGuest, cp.colTrip, cp.colType, cp.colContact, cp.colCreated, cp.colConcierge, cp.colCity, cp.colStatus].map(h => (
-                    <th key={h} className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">{h}</th>
+                    <th key={h} style={{textAlign:"left"}}>{h}</th>
                   ))}
-                  <th className="px-4 py-2 text-right text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">{cp.colActions}</th>
+                  <th style={{textAlign:"right"}}>{cp.colActions}</th>
                 </tr>
               </thead>
               <tbody>
                 {loading && filteredKickoffs.length === 0 && (
                   <tr>
-                    <td
-                      colSpan={11}
-                      className="px-4 py-8 text-center text-xs text-neutral-500"
-                    >
+                    <td colSpan={11} style={{textAlign:"center",padding:"32px 16px",color:"var(--text-3)"}}>
                       {cp.loading}
                     </td>
                   </tr>
@@ -5023,10 +5004,7 @@ const loadKickoffs = async () => {
 
                 {!loading && filteredKickoffs.length === 0 && (
                   <tr>
-                    <td
-                      colSpan={11}
-                      className="px-4 py-8 text-center text-xs text-neutral-500"
-                    >
+                    <td colSpan={11} style={{textAlign:"center",padding:"32px 16px",color:"var(--text-3)"}}>
                       {cp.empty}
                     </td>
                   </tr>
@@ -5034,116 +5012,95 @@ const loadKickoffs = async () => {
 
                 {filteredKickoffs.map((k) => (
                   <tr
-  key={k.id}
-  onClick={() => setSelectedKickoffForLink(k)}
-  className={
-    "border-t border-neutral-100 hover:bg-neutral-50/70 cursor-pointer " +
-    (selectedIds.has(k.id) ? "bg-neutral-100/60 " : "") +
-    (selectedKickoffForLink?.id === k.id ? "bg-neutral-100" : "")
-  }
->
-                    <td className="px-3 py-2 w-8" onClick={e => e.stopPropagation()}>
+                    key={k.id}
+                    onClick={() => setSelectedKickoffForLink(k)}
+                    style={{
+                      cursor:"pointer",
+                      background: selectedKickoffForLink?.id === k.id ? "var(--border-soft)" : selectedIds.has(k.id) ? "#F5F5F4" : undefined,
+                    }}
+                  >
+                    <td style={{padding:"8px 12px",width:36}} onClick={e => e.stopPropagation()}>
                       <input type="checkbox"
                         checked={selectedIds.has(k.id)}
                         onChange={() => toggleSelect(k.id)}
-                        className="w-3.5 h-3.5 cursor-pointer accent-neutral-900"
+                        style={{width:13,height:13,cursor:"pointer"}}
                       />
                     </td>
 
-                    <td className="px-4 py-2 text-xs text-neutral-700 font-mono">
-  {k.id}
-</td>
+                    <td style={{fontFamily:"monospace",fontSize:10.5,color:"var(--text-3)",maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      {k.id}
+                    </td>
 
-<td className="px-4 py-2 text-sm text-neutral-700">
-  {k.guestName || "Sin nombre"}
-</td>
-<td className="px-4 py-2 text-sm text-neutral-700">
-  {k.tripName || "Sin título"}
-</td>
+                    <td style={{fontWeight:500,color:"var(--text-1)"}}>
+                      {k.guestName || "Sin nombre"}
+                    </td>
+                    <td style={{color:"var(--text-2)"}}>
+                      {k.tripName || <span style={{color:"var(--text-3)",fontStyle:"italic"}}>—</span>}
+                    </td>
 
-<td className="px-4 py-2">
-  <select
-  value={String(k.clientType).includes("2") ? 2 : 1}
-  onClick={(e) => e.stopPropagation()}
-  onChange={async (e) => {
-  const newType = Number(e.target.value);
+                    <td onClick={e => e.stopPropagation()}>
+                      <select
+                        value={String(k.clientType).includes("2") ? 2 : 1}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={async (e) => {
+                          const newType = Number(e.target.value);
+                          const rawCart = typeof k.cart === "string" ? (() => { try { return JSON.parse(k.cart); } catch { return []; } })() : (k.cart || []);
+                          const updatedCart = rawCart.map((item) => {
+                            const base = Number(item.base_price_cop || item.price_cop || 0);
+                            const t1 = Number(item.price_tier_1 || 0);
+                            const t2 = Number(item.price_tier_2 || 0);
+                            if (!t1 && !t2) return item;
+                            return { ...item, price_cop: newType === 2 ? (t2 || base) : (t1 || base) };
+                          });
+                          await updateKickoffInSheet(k.id, { clientType: newType, cart: JSON.stringify(updatedCart) });
+                          setKickoffs((prev) => prev.map((item) => item.id === k.id ? { ...item, clientType: newType, cart: updatedCart } : item));
+                        }}
+                        style={{border:"1px solid var(--border)",borderRadius:"var(--radius-xs)",padding:"3px 7px",fontSize:11.5,background:"var(--surface)"}}
+                      >
+                        <option value={1}>Tipo 1</option>
+                        <option value={2}>Tipo 2</option>
+                      </select>
+                    </td>
+                    <td style={{color:"var(--text-2)"}}>
+                      {k.guestContact || <span style={{color:"var(--text-3)",fontStyle:"italic"}}>—</span>}
+                    </td>
 
-  const rawCart = typeof k.cart === "string" ? (() => { try { return JSON.parse(k.cart); } catch { return []; } })() : (k.cart || []);
-  const updatedCart = rawCart.map((item) => {
-  const base = Number(item.base_price_cop || item.price_cop || 0);
-  const t1 = Number(item.price_tier_1 || 0);
-  const t2 = Number(item.price_tier_2 || 0);
+                    <td style={{color:"var(--text-3)",whiteSpace:"nowrap"}}>
+                      {formatDateTime(k.createdAt)}
+                    </td>
 
-  // 👇 si NO tiene tiers → NO tocar precio
-  if (!t1 && !t2) {
-    return item;
-  }
+                    <td style={{color:"var(--text-2)"}}>
+                      {k.assignedConcierge || <span style={{color:"var(--text-3)",fontStyle:"italic"}}>—</span>}
+                    </td>
 
-  return {
-    ...item,
-    price_cop: newType === 2 ? (t2 || base) : (t1 || base),
-  };
-});
+                    <td>
+                      {k.city ? (
+                        <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
+                          {String(k.city).split(",").map(c => c.trim()).filter(Boolean).map(code => (
+                            <span key={code} style={{padding:"2px 7px",borderRadius:3,background:"var(--border-soft)",color:"var(--text-2)",fontSize:10.5,fontWeight:600}}>
+                              {CITY_NAMES[code.toUpperCase()] || code}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span style={{color:"var(--text-3)",fontStyle:"italic"}}>—</span>
+                      )}
+                    </td>
 
-  await updateKickoffInSheet(k.id, {
-    clientType: newType,
-    cart: JSON.stringify(updatedCart),
-  });
-
-  setKickoffs((prev) =>
-    prev.map((item) =>
-      item.id === k.id
-        ? { ...item, clientType: newType, cart: updatedCart }
-        : item
-    )
-  );
-}}
-  className="border rounded-lg px-2 py-1 text-xs bg-white"
->
-  <option value={1}>Tipo 1</option>
-  <option value={2}>Tipo 2</option>
-</select>
-</td>
-<td className="px-4 py-2 text-xs text-neutral-700">
-  {k.guestContact || <span className="italic text-neutral-400">—</span>}
-</td>
-
-<td className="px-4 py-2 text-xs text-neutral-700">
-  {formatDateTime(k.createdAt)}
-</td>
-
-<td className="px-4 py-2 text-xs text-neutral-700">
-  {k.assignedConcierge || <span className="text-neutral-400 italic">—</span>}
-</td>
-
-<td className="px-4 py-2 text-xs font-medium text-neutral-700">
-  {k.city ? (
-    <div className="flex flex-wrap gap-1">
-      {String(k.city).split(",").map(c => c.trim()).filter(Boolean).map(code => (
-        <span key={code} className="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 text-[11px] font-semibold">
-          {CITY_NAMES[code.toUpperCase()] || code}
-        </span>
-      ))}
-    </div>
-  ) : (
-    <span className="text-neutral-400 italic">—</span>
-  )}
-</td>
-
-<td className="px-4 py-2">
-  <StatusBadge status={k.status} lang={portalLang} />
-  {k.drinkOrder && (
-    <span title={`Drinks received${k.drinkOrderAt ? ": " + new Date(k.drinkOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""}`}
-      className="ml-1 text-[11px] bg-teal-50 text-teal-700 border border-teal-200 rounded-full px-1.5 py-0.5 cursor-default">
-      🍹
-    </span>
-  )}
-  {k.groceryOrder && (
-    <span title={`Groceries received${k.groceryOrderAt ? ": " + new Date(k.groceryOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""}`}
-      className="ml-1 text-[11px] bg-orange-50 text-orange-700 border border-orange-200 rounded-full px-1.5 py-0.5 cursor-default">
-      🛒
-    </span>
-  )}
+                    <td>
+                      <StatusBadge status={k.status} lang={portalLang} />
+                      {k.drinkOrder && (
+                        <span title={`Drinks received${k.drinkOrderAt ? ": " + new Date(k.drinkOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""}`}
+                          style={{marginLeft:4,fontSize:10.5,background:"#F0FDF4",color:"#065F46",border:"1px solid #BBF7D0",borderRadius:3,padding:"1px 5px",cursor:"default"}}>
+                          drinks
+                        </span>
+                      )}
+                      {k.groceryOrder && (
+                        <span title={`Groceries received${k.groceryOrderAt ? ": " + new Date(k.groceryOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""}`}
+                          style={{marginLeft:4,fontSize:10.5,background:"#FFF7ED",color:"#9A3412",border:"1px solid #FED7AA",borderRadius:3,padding:"1px 5px",cursor:"default"}}>
+                          grocery
+                        </span>
+                      )}
   {(() => {
     // cityRatings takes priority; fall back to single conciergeRating
     let ratings = [];
@@ -5174,79 +5131,66 @@ const loadKickoffs = async () => {
   })()}
 </td>
 
-<td className="px-4 py-2 text-right">
-  <div className="inline-flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                    <td style={{textAlign:"right"}} onClick={e => e.stopPropagation()}>
+                      <div style={{display:"inline-flex",alignItems:"center",gap:4}}>
+                        <button
+                          onClick={() => setSelectedForEdit(k)}
+                          className="tt-btn-ghost"
+                          style={{padding:"4px 9px",fontSize:11.5}}
+                        >
+                          Editar
+                        </button>
 
-    {/* Primary: Editar */}
-    <button
-      onClick={() => setSelectedForEdit(k)}
-      className="px-2.5 py-1 border border-neutral-200 rounded-lg text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition"
-    >
-      Editar
-    </button>
+                        <button
+                          onClick={() => setRatingModalKickoff(k)}
+                          style={{padding:"4px 9px",fontSize:11.5,fontWeight:500,border:"1px solid #FDE68A",borderRadius:"var(--radius-sm)",background:"#FFFBEB",color:"#92400E",cursor:"pointer"}}
+                        >
+                          Feedback
+                        </button>
 
-    {/* Primary: Feedback */}
-    <button
-      onClick={() => setRatingModalKickoff(k)}
-      className="px-2.5 py-1 border border-amber-200 rounded-lg text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 transition"
-    >
-      ★ Feedback
-    </button>
-
-    {/* ⋯ More actions dropdown */}
-    <div className="relative">
-      <button
-        onClick={() => setOpenMenuId(openMenuId === k.id ? null : k.id)}
-        className="px-2 py-1 border border-neutral-200 rounded-lg text-xs text-neutral-500 hover:bg-neutral-50 transition"
-      >
-        ⋯
-      </button>
-      {openMenuId === k.id && (
-        <div
-          className="absolute right-0 top-full mt-1 z-50 bg-white border border-neutral-200 rounded-xl shadow-lg py-1 min-w-[170px]"
-          onMouseLeave={() => setOpenMenuId(null)}
-        >
-          <button
-            onClick={() => { setOpenMenuId(null); setSelectedForSummary(k); }}
-            className="w-full text-left px-4 py-2 text-xs text-neutral-700 hover:bg-neutral-50"
-          >
-            👁 Ver resumen
-          </button>
-          <button
-            onClick={async () => {
-              setOpenMenuId(null);
-              const link = buildCatalogLink(k, Number(k.clientType ?? 1));
-              try { await navigator.clipboard.writeText(link); alert("Link de catálogo copiado ✅"); }
-              catch { prompt("Copia este link:", link); }
-            }}
-            className="w-full text-left px-4 py-2 text-xs text-neutral-700 hover:bg-neutral-50"
-          >
-            📋 Copiar catálogo
-          </button>
-          <button
-            onClick={async () => {
-              setOpenMenuId(null);
-              const link = buildQuestionnaireLink(k, Number(k.clientType ?? 1));
-              try { await navigator.clipboard.writeText(link); alert("Link de cuestionario copiado ✅"); }
-              catch { prompt("Copia este link:", link); }
-            }}
-            className="w-full text-left px-4 py-2 text-xs text-neutral-700 hover:bg-neutral-50"
-          >
-            📝 Copiar cuestionario
-          </button>
-          <div className="border-t border-neutral-100 my-1"/>
-          <button
-            onClick={() => { setOpenMenuId(null); setSelectedForDelete(k); }}
-            className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-50"
-          >
-            🗑 Eliminar
-          </button>
-        </div>
-      )}
-    </div>
-
-  </div>
-</td>
+                        <div style={{position:"relative"}}>
+                          <button
+                            onClick={() => setOpenMenuId(openMenuId === k.id ? null : k.id)}
+                            className="tt-btn-ghost"
+                            style={{padding:"4px 8px",fontSize:13}}
+                          >
+                            ⋯
+                          </button>
+                          {openMenuId === k.id && (
+                            <div
+                              style={{position:"absolute",right:0,top:"100%",marginTop:4,zIndex:50,background:"var(--surface)",border:"1px solid var(--border)",borderRadius:"var(--radius-md)",boxShadow:"var(--shadow-pop)",padding:"4px 0",minWidth:160}}
+                              onMouseLeave={() => setOpenMenuId(null)}
+                            >
+                              <button onClick={() => { setOpenMenuId(null); setSelectedForSummary(k); }}
+                                style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"var(--text-1)",background:"none",border:"none",cursor:"pointer"}}>
+                                Ver resumen
+                              </button>
+                              <button onClick={async () => {
+                                setOpenMenuId(null);
+                                const link = buildCatalogLink(k, Number(k.clientType ?? 1));
+                                try { await navigator.clipboard.writeText(link); alert("Link de catálogo copiado"); }
+                                catch { prompt("Copia este link:", link); }
+                              }} style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"var(--text-1)",background:"none",border:"none",cursor:"pointer"}}>
+                                Copiar catálogo
+                              </button>
+                              <button onClick={async () => {
+                                setOpenMenuId(null);
+                                const link = buildQuestionnaireLink(k, Number(k.clientType ?? 1));
+                                try { await navigator.clipboard.writeText(link); alert("Link de cuestionario copiado"); }
+                                catch { prompt("Copia este link:", link); }
+                              }} style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"var(--text-1)",background:"none",border:"none",cursor:"pointer"}}>
+                                Copiar cuestionario
+                              </button>
+                              <div style={{height:1,background:"var(--border)",margin:"4px 0"}}/>
+                              <button onClick={() => { setOpenMenuId(null); setSelectedForDelete(k); }}
+                                style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"#DC2626",background:"none",border:"none",cursor:"pointer"}}>
+                                Eliminar
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
 
                   </tr>
                 ))}
