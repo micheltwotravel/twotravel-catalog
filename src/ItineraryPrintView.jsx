@@ -114,7 +114,9 @@ function buildDays(matched, lang, dayMeta) {
       sort         : Number(cartItem.sortOrder ?? idx),
       time         : cl(cartItem.timeLabel || cartItem.time || cartItem.startTime || service.schedule || ""),
       duration     : cl(service.duration || ""),
-      title        : cl(cartItem.displayName || cartItem.title || (lang === "en" ? (cartItem.name_en || cartItem.name) : cartItem.name) || service.name),
+      title        : cl(lang === "en"
+        ? (service.name_en || cartItem.name_en || cartItem.displayName || cartItem.title || cartItem.name || service.name || "")
+        : (cartItem.displayName || cartItem.title || cartItem.name || service.name || "")),
       description  : desc,
       highlights   : lang === "es"
         ? (service.highlights    || [])
