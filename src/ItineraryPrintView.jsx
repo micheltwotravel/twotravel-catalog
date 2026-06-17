@@ -739,65 +739,45 @@ function CoverPage({ kickoff, total, lang, editMode }) {
         )}
 
 
-        {/* Action cards — Pre Check-In, Drinks, Groceries/WhatsApp */}
+        {/* Action cards — Drinks, Groceries, Breakfast */}
         {a.id && (() => {
           const cardImg = { borderRadius: "8px 8px 0 0", width: "100%", height: 70, objectFit: "cover", display: "block" };
           const cardBody = { padding: "8px 10px 10px" };
-          const cardWrap = (href, border) => ({
-            textDecoration: "none", display: "block",
-            border: `1px solid ${border}`, borderRadius: 10, overflow: "hidden",
-          });
+          const card = (href, border, img, titleColor, title, desc) => (
+            <a href={href} target="_blank" rel="noreferrer"
+              style={{ textDecoration: "none", display: "block", border: `1px solid ${border}`, borderRadius: 10, overflow: "hidden" }}>
+              <img src={img} alt="" style={cardImg} onError={e=>e.target.style.display='none'} />
+              <div style={cardBody}>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: titleColor, marginBottom: 2 }}>{title}</div>
+                <div style={{ fontSize: 9, color: "#6b7280", lineHeight: 1.4 }}>{desc}</div>
+              </div>
+            </a>
+          );
           return (
             <div style={{ marginBottom: 16, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-              {/* Pre Check-In */}
-              <a href={`https://twotravelvip.com/?mode=precheckin&kickoffId=${a.id}&lang=${lang}`}
-                target="_blank" rel="noreferrer" style={cardWrap("https://twotravelvip.com/?mode=precheckin","#bfdbfe")}>
-                <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=140&fit=crop&auto=format" alt="" style={cardImg} onError={e=>e.target.style.display='none'} />
-                <div style={cardBody}>
-                  <div style={{ fontSize: 10.5, fontWeight: 700, color: "#1d4ed8", marginBottom: 2 }}>Pre Check-In</div>
-                  <div style={{ fontSize: 9, color: "#6b7280", lineHeight: 1.4 }}>
-                    {isEs ? "Completa el formulario antes de tu llegada." : "Complete the arrival form before you arrive."}
-                  </div>
-                </div>
-              </a>
-              {/* Drink Order */}
-              <a href={`https://twotravelvip.com/?mode=drinks&kickoffId=${a.id}&lang=${lang}`}
-                target="_blank" rel="noreferrer" style={cardWrap("https://twotravelvip.com/?mode=drinks","#e9d5ff")}>
-                <img src="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=140&fit=crop&auto=format" alt="" style={cardImg} onError={e=>e.target.style.display='none'} />
-                <div style={cardBody}>
-                  <div style={{ fontSize: 10.5, fontWeight: 700, color: "#7c3aed", marginBottom: 2 }}>
-                    {isEs ? "Calculadora de Bebidas" : "Drink Calculator"}
-                  </div>
-                  <div style={{ fontSize: 9, color: "#6b7280", lineHeight: 1.4 }}>
-                    {isEs ? "Personaliza tus bebidas para la casa." : "Select your drinks for the house."}
-                  </div>
-                </div>
-              </a>
-              {/* WhatsApp or Groceries */}
-              {a.mainContact ? (
-                <a href={`https://wa.me/${a.mainContact.replace(/\D/g,"")}`}
-                  target="_blank" rel="noreferrer" style={cardWrap("https://wa.me/","#bbf7d0")}>
-                  <img src="https://images.unsplash.com/photo-1512438248247-f0f2a5a8b7f0?w=400&h=140&fit=crop&auto=format" alt="" style={cardImg} onError={e=>e.target.style.display='none'} />
-                  <div style={cardBody}>
-                    <div style={{ fontSize: 10.5, fontWeight: 700, color: "#15803d", marginBottom: 2 }}>WhatsApp</div>
-                    <div style={{ fontSize: 9, color: "#6b7280", lineHeight: 1.4 }}>
-                      {isEs ? "Escríbele a tu concierge en cualquier momento." : "Message your concierge anytime."}
-                    </div>
-                  </div>
-                </a>
-              ) : (
-                <a href={`https://twotravelvip.com/?mode=groceries&kickoffId=${a.id}&lang=${lang}`}
-                  target="_blank" rel="noreferrer" style={cardWrap("https://twotravelvip.com/?mode=groceries","#bbf7d0")}>
-                  <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=140&fit=crop&auto=format" alt="" style={cardImg} onError={e=>e.target.style.display='none'} />
-                  <div style={cardBody}>
-                    <div style={{ fontSize: 10.5, fontWeight: 700, color: "#15803d", marginBottom: 2 }}>
-                      {isEs ? "Mercado y Desayuno" : "Groceries & Breakfast"}
-                    </div>
-                    <div style={{ fontSize: 9, color: "#6b7280", lineHeight: 1.4 }}>
-                      {isEs ? "Personaliza tu lista de mercado." : "Customize your grocery list."}
-                    </div>
-                  </div>
-                </a>
+              {card(
+                `https://twotravelvip.com/?mode=drinks&kickoffId=${a.id}&lang=${lang}`,
+                "#e9d5ff",
+                "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=140&fit=crop&auto=format",
+                "#7c3aed",
+                isEs ? "Calculadora de Bebidas" : "Drink Calculator",
+                isEs ? "Personaliza tus bebidas para la casa y el bote." : "Select your drinks for the house and boat."
+              )}
+              {card(
+                `https://twotravelvip.com/?mode=groceries&kickoffId=${a.id}&lang=${lang}`,
+                "#bbf7d0",
+                "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=140&fit=crop&auto=format",
+                "#15803d",
+                isEs ? "Mercado" : "Groceries",
+                isEs ? "Personaliza tu lista de mercado para la estadía." : "Customize your grocery list for the stay."
+              )}
+              {card(
+                `https://twotravelvip.com/?mode=breakfast&kickoffId=${a.id}&lang=${lang}`,
+                "#fde68a",
+                "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=400&h=140&fit=crop&auto=format",
+                "#b45309",
+                isEs ? "Desayuno" : "Breakfast",
+                isEs ? "Elige tu desayuno para cada mañana de tu estadía." : "Choose your breakfast for each morning."
               )}
             </div>
           );
@@ -869,7 +849,7 @@ function CoverPage({ kickoff, total, lang, editMode }) {
                 { en: "IV Treatment", es: "Tratamiento IV", pct: "10%" },
                 { en: "City Tour", es: "City Tour", pct: "15%*" },
                 { en: "Transportation", es: "Transporte", pct: "10%" },
-                { en: "Chef service", es: "Chef privado", pct: "20%**" },
+                { en: "Chef service", es: "Chef privado", pct: "20%" },
               ].map(d => (
                 <div key={d.en} style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5, color: "#44301a", lineHeight: 1.65 }}>
                   <span>{isEs ? d.es : d.en}</span>
@@ -882,8 +862,8 @@ function CoverPage({ kickoff, total, lang, editMode }) {
           {/* Fine print */}
           <div style={{ marginTop: 8, paddingTop: 6, borderTop: "1px solid #e8c97a", fontSize: 8.5, color: "#92713a", lineHeight: 1.5 }}>
             {isEs
-              ? "* City Tour sujeto a disponibilidad · ** Chef: mínimo 4 personas · Un tag por persona · El post debe hacerse durante tu estadía"
-              : "* City Tour subject to availability · ** Chef: minimum 4 guests · One tag per person · Post must be made during your stay"}
+              ? "* City Tour sujeto a disponibilidad · Chef: mínimo 4 personas · Un tag por persona · El post debe hacerse durante tu estadía"
+              : "* City Tour subject to availability · Chef: minimum 4 guests · One tag per person · Post must be made during your stay"}
           </div>
         </div>
       </div>
