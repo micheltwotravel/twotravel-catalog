@@ -831,12 +831,13 @@ function CoverPage({ kickoff, total, lang, editMode }) {
             <div style={{ fontSize: 9, color: "#d1a96a", letterSpacing: "2px", textTransform: "uppercase", fontWeight: 600, marginBottom: 3 }}>
               {isEs ? "Síguenos en redes" : "Follow us"}
             </div>
-            <div style={{ fontSize: 10, color: "#e5e5e5", lineHeight: 1.5 }}>
-              @twotravelvip &nbsp;·&nbsp; @twotravelcartagena &nbsp;·&nbsp; @twotravelmedellin
+            <div style={{ fontSize: 10, color: "#e5e5e5", lineHeight: 1.5, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <a href="https://www.instagram.com/twotravelvip" target="_blank" rel="noreferrer" style={{ color: "#e5e5e5", textDecoration: "none" }}>@twotravelvip</a>
+              <span style={{ color: "#6b7280" }}>·</span>
+              <a href="https://www.instagram.com/twotravelcartagena" target="_blank" rel="noreferrer" style={{ color: "#e5e5e5", textDecoration: "none" }}>@twotravelcartagena</a>
+              <span style={{ color: "#6b7280" }}>·</span>
+              <a href="https://www.instagram.com/twotravelmedellin" target="_blank" rel="noreferrer" style={{ color: "#e5e5e5", textDecoration: "none" }}>@twotravelmedellin</a>
             </div>
-          </div>
-          <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 9, color: "#9ca3af" }}>twotravelvip.com</div>
           </div>
         </div>
       </div>
