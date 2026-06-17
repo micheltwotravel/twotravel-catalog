@@ -318,16 +318,36 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     } catch(e) {}
   }
 
-  // Concierge summary / notes (optional)
+  // Concierge summary / free-text block (supports TITLE, - bullet, paragraph)
   if (kickoff.conciergeSummary) {
     y += 12;
     doc.setDrawColor(230,230,230); doc.line(ML, y, MR, y); y += 16;
     doc.setFontSize(7.5); doc.setFont("helvetica","bold"); doc.setTextColor(90,90,90);
     dt(lang === "es" ? "NOTAS DE TU CONCIERGE" : "FROM YOUR CONCIERGE", ML, y); y += 14;
-    const summaryLines = sts(se(cl(kickoff.conciergeSummary)).slice(0,900), TW);
-    summaryLines.slice(0,14).forEach(line => {
-      doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(50,50,50);
-      dt(line, ML, y); y += 13;
+
+    const rawLines = cl(kickoff.conciergeSummary).split("\n");
+    rawLines.forEach(raw => {
+      const line = raw.trim();
+      if (!line) { y += 5; return; } // blank line = spacing
+
+      const isTitle  = line === line.toUpperCase() && line.length > 2 && !/^-/.test(line);
+      const isBullet = /^[-*•]/.test(line);
+
+      if (isTitle) {
+        y += 4;
+        doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
+        dt(se(line), ML, y); y += 12;
+      } else if (isBullet) {
+        const text = line.replace(/^[-*•]\s*/, "");
+        const wrapped = sts(se(text), TW - 8);
+        doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(50,50,50);
+        dt(se("-"), ML, y);
+        wrapped.forEach((wl, i) => { dt(wl, ML + 8, y); y += 12; });
+      } else {
+        const wrapped = sts(se(line), TW);
+        doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(50,50,50);
+        wrapped.forEach(wl => { dt(wl, ML, y); y += 12; });
+      }
     });
   }
 
