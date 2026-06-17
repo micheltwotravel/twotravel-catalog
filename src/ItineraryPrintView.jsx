@@ -817,27 +817,73 @@ function CoverPage({ kickoff, total, lang, editMode }) {
             : `All reservations are under Two Travel — ${a.guestName || ""}. Once a reservation has been confirmed, a cancellation fee may apply.`}
         </div>
 
-        {/* Social promo */}
+        {/* Social Media Promo */}
         <div style={{
-          display: "flex", alignItems: "center", gap: 12,
-          background: "linear-gradient(135deg,#1a1410 0%,#2d1f14 100%)",
-          borderRadius: 10, padding: "12px 16px", marginBottom: 8,
+          background: "linear-gradient(135deg,#fdf6ec 0%,#fef9f2 100%)",
+          border: "1.5px solid #e8c97a", borderRadius: 12, padding: "14px 16px", marginBottom: 8,
         }}>
-          <img src={ttLogo} alt="Two Travel"
-            style={{ height: 28, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
-            onError={e => { e.target.style.display = "none"; }}
-          />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 9, color: "#d1a96a", letterSpacing: "2px", textTransform: "uppercase", fontWeight: 600, marginBottom: 3 }}>
-              {isEs ? "Síguenos en redes" : "Follow us"}
+          {/* Header row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <img src={ttLogo} alt="Two Travel"
+              style={{ height: 22, objectFit: "contain", flexShrink: 0 }}
+              onError={e => { e.target.style.display = "none"; }}
+            />
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#1a1410", letterSpacing: "-.2px" }}>
+                {isEs ? "¡Promo en Redes Sociales! ✨" : "Social Media Promo! ✨"}
+              </div>
+              <div style={{ fontSize: 9.5, color: "#6b5c3e", marginTop: 1 }}>
+                {isEs
+                  ? "¡Muéstrale al mundo cómo es viajar con Two Travel y obtén descuentos!"
+                  : "Show everyone how amazing it is to travel with Two Travel and get discounts!"}
+              </div>
             </div>
-            <div style={{ fontSize: 10, color: "#e5e5e5", lineHeight: 1.5, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <a href="https://www.instagram.com/twotravelvip" target="_blank" rel="noreferrer" style={{ color: "#e5e5e5", textDecoration: "none" }}>@twotravelvip</a>
-              <span style={{ color: "#6b7280" }}>·</span>
-              <a href="https://www.instagram.com/twotravelcartagena" target="_blank" rel="noreferrer" style={{ color: "#e5e5e5", textDecoration: "none" }}>@twotravelcartagena</a>
-              <span style={{ color: "#6b7280" }}>·</span>
-              <a href="https://www.instagram.com/twotravelmedellin" target="_blank" rel="noreferrer" style={{ color: "#e5e5e5", textDecoration: "none" }}>@twotravelmedellin</a>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {/* How to */}
+            <div>
+              <div style={{ fontSize: 8.5, fontWeight: 700, color: "#92400e", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 5 }}>
+                {isEs ? "Cómo participar" : "Here's how"}
+              </div>
+              <div style={{ fontSize: 9.5, color: "#44301a", lineHeight: 1.6 }}>
+                {"1. "}{isEs ? "Síguenos en Instagram o TikTok" : "Follow us on Instagram or TikTok"}<br/>
+                <span style={{ fontWeight: 700 }}>
+                  {"   "}
+                  <a href="https://www.instagram.com/twotravelconcierge" target="_blank" rel="noreferrer" style={{ color: "#1d4ed8", textDecoration: "none" }}>@twotravelconcierge</a>
+                  {" / "}
+                  <a href="https://www.tiktok.com/@twotravelvip" target="_blank" rel="noreferrer" style={{ color: "#1d4ed8", textDecoration: "none" }}>@twotravelvip</a>
+                </span><br/>
+                {"2. "}{isEs ? "Etiquétanos en tu Story o TikTok" : "Tag us in your Story or TikTok"}<br/>
+                {"3. "}{isEs ? "Avísale a tu concierge en el chat" : "Let us know in the Concierge chat"}
+              </div>
             </div>
+
+            {/* Discounts */}
+            <div>
+              <div style={{ fontSize: 8.5, fontWeight: 700, color: "#92400e", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 5 }}>
+                {isEs ? "Tus descuentos" : "Your discounts"}
+              </div>
+              {[
+                { en: "Massage session", es: "Sesión de masajes", pct: "20%" },
+                { en: "IV Treatment", es: "Tratamiento IV", pct: "10%" },
+                { en: "City Tour", es: "City Tour", pct: "15%*" },
+                { en: "Transportation", es: "Transporte", pct: "10%" },
+                { en: "Chef service", es: "Chef privado", pct: "20%**" },
+              ].map(d => (
+                <div key={d.en} style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5, color: "#44301a", lineHeight: 1.65 }}>
+                  <span>{isEs ? d.es : d.en}</span>
+                  <span style={{ fontWeight: 700, color: "#b45309" }}>{d.pct} off</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Fine print */}
+          <div style={{ marginTop: 8, paddingTop: 6, borderTop: "1px solid #e8c97a", fontSize: 8.5, color: "#92713a", lineHeight: 1.5 }}>
+            {isEs
+              ? "* City Tour sujeto a disponibilidad · ** Chef: mínimo 4 personas · Un tag por persona · El post debe hacerse durante tu estadía"
+              : "* City Tour subject to availability · ** Chef: minimum 4 guests · One tag per person · Post must be made during your stay"}
           </div>
         </div>
       </div>
