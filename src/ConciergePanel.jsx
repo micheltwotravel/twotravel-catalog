@@ -4852,9 +4852,9 @@ const loadKickoffs = async () => {
             const getRating = (k) => {
               try {
                 const cr = (()=>{ try { return JSON.parse(k.cityRatings||"[]"); } catch { return []; } })().filter(r => Number(r.rating) > 0);
-                if (cr.length) return cr.reduce((s, r) => s + Number(r.rating), 0) / cr.length;
+                if (cr.length) return cr.reduce((s, r) => s + Math.min(5, Math.max(0, Number(r.rating)||0)), 0) / cr.length;
               } catch {}
-              return Number(k.conciergeRating) || 0;
+              return Math.min(5, Math.max(0, Number(k.conciergeRating) || 0));
             };
             const rated = kickoffs.filter(k => getRating(k) > 0);
             const total = rated.length;
@@ -4871,7 +4871,7 @@ const loadKickoffs = async () => {
             const addToByC = (name, rating) => {
               const key = (name || "Sin asignar").trim();
               if (!byC[key]) byC[key] = [];
-              byC[key].push(Number(rating));
+              byC[key].push(Math.min(5, Math.max(0, Number(rating) || 0)));
             };
             rated.forEach(k => {
               const concierges = String(k.assignedConcierge || k.assignedConciergeName || "")
@@ -5148,7 +5148,7 @@ const loadKickoffs = async () => {
     try { ratings = JSON.parse(k.cityRatings || "[]"); } catch {}
     ratings = ratings.filter(r => r.rating > 0);
     if (ratings.length > 0) {
-      const avg = (ratings.reduce((s, r) => s + Number(r.rating), 0) / ratings.length).toFixed(1);
+      const avg = (ratings.reduce((s, r) => s + Math.min(5, Math.max(0, Number(r.rating)||0)), 0) / ratings.length).toFixed(1);
       return (
         <div className="mt-0.5 space-y-0.5">
           {ratings.map((r, i) => (
