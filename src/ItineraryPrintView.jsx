@@ -727,69 +727,107 @@ function CoverPage({ kickoff, total, lang, editMode }) {
           </div>
         )}
 
-        {/* Main concierge contact — WhatsApp number */}
-        {a.mainContact && (
-          <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{
-              background: "#f0fdf4", border: "1px solid #bbf7d0",
-              borderRadius: 8, padding: "10px 16px", display: "flex", alignItems: "center", gap: 10,
-            }}>
-              <span style={{ fontSize: 18 }}>📱</span>
-              <div>
-                <div style={{ fontSize: 8, letterSpacing: "2px", textTransform: "uppercase", color: "#6b7280", fontWeight: 600, marginBottom: 3 }}>
-                  {isEs ? "Contacto principal" : "Main contact"}
-                </div>
-                <a href={`https://wa.me/${a.mainContact.replace(/\D/g,"")}`}
-                  target="_blank" rel="noreferrer"
-                  style={{ fontSize: 13, fontWeight: 700, color: "#16a34a", textDecoration: "none" }}>
-                  {a.mainContact}
-                </a>
-                <span style={{ fontSize: 10, color: "#9ca3af", marginLeft: 6 }}>WhatsApp</span>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Drink & Grocery order links */}
+        {/* Action cards — Pre Check-In, Drinks, Groceries */}
         {a.id && (
-          <div style={{ marginBottom: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div style={{ marginBottom: 16, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            {/* Pre Check-In */}
+            <a href={`https://twotravelvip.com/?mode=precheckin&kickoffId=${a.id}&lang=${lang}`}
+              target="_blank" rel="noreferrer"
+              style={{ textDecoration: "none", display: "block", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 10, padding: "12px 12px" }}>
+              <div style={{ fontSize: 16, marginBottom: 4 }}>📋</div>
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: "#1d4ed8", marginBottom: 3 }}>
+                {isEs ? "Pre Check-In" : "Pre Check-In"}
+              </div>
+              <div style={{ fontSize: 9.5, color: "#6b7280", lineHeight: 1.4 }}>
+                {isEs
+                  ? "Completa el formulario previo a tu llegada para un check-in sin fricciones."
+                  : "Complete the arrival form for a seamless check-in experience."}
+              </div>
+            </a>
             {/* Drink Order */}
             <a href={`https://twotravelvip.com/?mode=drinks&kickoffId=${a.id}&lang=${lang}`}
               target="_blank" rel="noreferrer"
-              style={{ textDecoration: "none", display: "block", background: "#faf5ff", border: "1px solid #e9d5ff", borderRadius: 10, padding: "12px 14px" }}>
-              <div style={{ fontSize: 18, marginBottom: 4 }}>🍹</div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", marginBottom: 3 }}>
-                {isEs ? "Pedido de Bebidas" : "Drink Order"}
+              style={{ textDecoration: "none", display: "block", background: "#faf5ff", border: "1px solid #e9d5ff", borderRadius: 10, padding: "12px 12px" }}>
+              <div style={{ fontSize: 16, marginBottom: 4 }}>🍹</div>
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: "#7c3aed", marginBottom: 3 }}>
+                {isEs ? "Calculadora de Bebidas" : "Drink Calculator"}
               </div>
-              <div style={{ fontSize: 10, color: "#6b7280", lineHeight: 1.4 }}>
+              <div style={{ fontSize: 9.5, color: "#6b7280", lineHeight: 1.4 }}>
                 {isEs
-                  ? "Selecciona tus bebidas para la casa y el bote."
-                  : "Select your drinks for the house and boat."}
+                  ? "Personaliza tus bebidas. Las llevaremos listas en tu llegada."
+                  : "Select your drinks. We'll have them ready when you arrive."}
               </div>
             </a>
-            {/* Groceries & Breakfast */}
-            <a href={`https://twotravelvip.com/?mode=groceries&kickoffId=${a.id}&lang=${lang}`}
-              target="_blank" rel="noreferrer"
-              style={{ textDecoration: "none", display: "block", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 14px" }}>
-              <div style={{ fontSize: 18, marginBottom: 4 }}>🛒</div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#15803d", marginBottom: 3 }}>
-                {isEs ? "Mercado y Desayuno" : "Groceries & Breakfast"}
-              </div>
-              <div style={{ fontSize: 10, color: "#6b7280", lineHeight: 1.4 }}>
-                {isEs
-                  ? "Personaliza tu lista de mercado y desayuno."
-                  : "Customize your grocery list and breakfast order."}
-              </div>
-            </a>
+            {/* WhatsApp */}
+            {a.mainContact ? (
+              <a href={`https://wa.me/${a.mainContact.replace(/\D/g,"")}`}
+                target="_blank" rel="noreferrer"
+                style={{ textDecoration: "none", display: "block", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 12px" }}>
+                <div style={{ fontSize: 16, marginBottom: 4 }}>💬</div>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: "#15803d", marginBottom: 3 }}>
+                  WhatsApp
+                </div>
+                <div style={{ fontSize: 9.5, color: "#6b7280", lineHeight: 1.4 }}>
+                  {isEs
+                    ? "Escríbele a tu concierge por WhatsApp en cualquier momento."
+                    : "Message your concierge on WhatsApp anytime."}
+                </div>
+              </a>
+            ) : (
+              <a href={`https://twotravelvip.com/?mode=groceries&kickoffId=${a.id}&lang=${lang}`}
+                target="_blank" rel="noreferrer"
+                style={{ textDecoration: "none", display: "block", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 12px" }}>
+                <div style={{ fontSize: 16, marginBottom: 4 }}>🛒</div>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: "#15803d", marginBottom: 3 }}>
+                  {isEs ? "Mercado y Desayuno" : "Groceries & Breakfast"}
+                </div>
+                <div style={{ fontSize: 9.5, color: "#6b7280", lineHeight: 1.4 }}>
+                  {isEs
+                    ? "Personaliza tu lista de mercado y desayuno."
+                    : "Customize your grocery list and breakfast order."}
+                </div>
+              </a>
+            )}
           </div>
         )}
 
-        <Editable
-          tag="div" className="cover-footer-note" editMode={editMode}
-          value={isEs
-            ? `Por favor tómate un momento para revisar este PDF antes de tu llegada. Incluye información útil para tu estadía, como detalles de facturación, consejos de seguridad, cultura de propinas y servicios adicionales de concierge para hacer tu experiencia en Cartagena lo más fluida y disfrutable posible.`
-            : `Please take a moment to review this PDF before your arrival. It includes useful information for your stay, such as billing details, safety tips, tipping culture, and additional concierge services to help make your Cartagena experience as smooth and enjoyable as possible.`}
-        />
+        {/* Cancellation / reservation note */}
+        <div style={{
+          fontSize: 10, color: "#6b7280", lineHeight: 1.6,
+          background: "#fafafa", border: "1px solid #e8e8e8",
+          borderRadius: 8, padding: "10px 14px", marginBottom: 16,
+        }}>
+          <span style={{ fontWeight: 600, color: "#374151" }}>
+            {isEs ? "Reservas y cancelaciones: " : "Reservations & cancellations: "}
+          </span>
+          {isEs
+            ? `Todas las reservas están a nombre de Two Travel — ${a.guestName || ""}. Una vez confirmada una reserva, puede aplicar un cargo por cancelación.`
+            : `All reservations are under Two Travel — ${a.guestName || ""}. Once a reservation has been confirmed, a cancellation fee may apply.`}
+        </div>
+
+        {/* Social promo */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 12,
+          background: "linear-gradient(135deg,#1a1410 0%,#2d1f14 100%)",
+          borderRadius: 10, padding: "12px 16px", marginBottom: 8,
+        }}>
+          <img src={ttLogo} alt="Two Travel"
+            style={{ height: 28, objectFit: "contain", filter: "brightness(0) invert(1)", flexShrink: 0 }}
+            onError={e => { e.target.style.display = "none"; }}
+          />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 9, color: "#d1a96a", letterSpacing: "2px", textTransform: "uppercase", fontWeight: 600, marginBottom: 3 }}>
+              {isEs ? "Síguenos en redes" : "Follow us"}
+            </div>
+            <div style={{ fontSize: 10, color: "#e5e5e5", lineHeight: 1.5 }}>
+              @twotravelvip &nbsp;·&nbsp; @twotravelcartagena &nbsp;·&nbsp; @twotravelmedellin
+            </div>
+          </div>
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ fontSize: 9, color: "#9ca3af" }}>twotravelvip.com</div>
+          </div>
+        </div>
       </div>
 
       <PF n={1} total={total}/>
