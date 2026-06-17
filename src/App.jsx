@@ -414,12 +414,16 @@ const handleSubmit = async (e) => {
     setSubmitted(true);
 
     if (kickoffId) {
-      // Also write overallExperience back to kickoff row so concierge dashboard shows it
       const rating = Number(form.overallExperience) || 0;
       updateKickoffInSheet(kickoffId, {
         status: "feedback_submitted",
         feedbackAt: new Date().toISOString(),
-        ...(rating > 0 ? { conciergeRating: rating } : {}),
+        feedbackDestination: form.destination || "",
+        feedbackLanguage:    lang,
+        ...(rating > 0       ? { conciergeRating: rating }                  : {}),
+        ...(form.service     ? { feedbackService: Number(form.service) }     : {}),
+        ...(form.speed       ? { feedbackSpeed:   Number(form.speed)   }     : {}),
+        ...(form.overallReason ? { feedbackComment: form.overallReason }     : {}),
       }).catch((e) => console.warn("Could not update kickoff status:", e));
     }
   } catch (err) {
@@ -784,7 +788,7 @@ function UnifiedDashboard() {
 
   const [tab, setTab] = useState("kpis");
   const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [destinationFilter, setDestinationFilter] = useState("all");
   const [conciergeFilter, setConciergeFilter] = useState("all");
   const [languageFilter, setLanguageFilter] = useState("all");
@@ -795,59 +799,29 @@ function UnifiedDashboard() {
   const [kpiConcierge, setKpiConcierge]     = useState("all");
   const [kpiExportType, setKpiExportType]   = useState("all");
 
-  const FEEDBACK_SHEET_ID = "1Tyv5cPTN0MjxezyWRjo-XuIRqOgaPwP-z1heZfgGiuQ";
-
+  // Derive feedback rows from kickoffs (no external sheet fetch needed)
   useEffect(() => {
-    const load = async () => {
-      // Try 1: opensheet.elk.sh (JSON, fast)
-      // Try 2: direct CSV export (more reliable, needs sheet to be public)
-      const sources = [
-        `https://opensheet.elk.sh/${FEEDBACK_SHEET_ID}/feedback`,
-        `https://opensheet.elk.sh/${FEEDBACK_SHEET_ID}/Feedback`,
-        `https://docs.google.com/spreadsheets/d/${FEEDBACK_SHEET_ID}/export?format=csv&sheet=feedback&t=${Date.now()}`,
-      ];
-
-      for (const src of sources) {
-        try {
-          const res = await fetch(src);
-          if (!res.ok) continue;
-
-          const contentType = res.headers.get("content-type") || "";
-          let data = [];
-
-          if (contentType.includes("json")) {
-            data = await res.json();
-            if (!Array.isArray(data)) data = [];
-          } else {
-            // CSV — parse manually
-            const text = await res.text();
-            if (!text || text.trim().startsWith("<!")) continue; // HTML error page
-            const lines = text.trim().split("\n");
-            if (lines.length < 2) continue;
-            const headers = lines[0].split(",").map((h) =>
-              h.trim().replace(/^"|"$/g, "").toLowerCase()
-            );
-            data = lines.slice(1).map((line) => {
-              const vals = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
-              const obj = {};
-              headers.forEach((h, i) => { obj[h] = vals[i] || ""; });
-              return obj;
-            });
-          }
-
-          if (data.length > 0) {
-            setRows(data);
-            break;
-          }
-        } catch (err) {
-          console.warn("Dashboard fetch attempt failed:", src, err.message);
-        }
-      }
-      setLoading(false);
-    };
-
-    load();
-  }, []);
+    const derived = kickoffs
+      .filter((k) => k.feedbackAt || k.status === "feedback_submitted")
+      .map((k) => {
+        const concierge = Array.isArray(k.concierges) ? k.concierges[0] : (k.concierges || "");
+        const destination = k.feedbackDestination || k.city || "";
+        return {
+          guestName: k.guestName || "",
+          tripName: k.tripName || "",
+          destination,
+          concierge,
+          language: k.feedbackLanguage || "",
+          overallExperience: k.conciergeRating || "",
+          service: k.feedbackService || "",
+          speed: k.feedbackSpeed || "",
+          overallReason: k.feedbackComment || "",
+          feedbackAt: k.feedbackAt || "",
+        };
+      })
+      .sort((a, b) => (b.feedbackAt > a.feedbackAt ? 1 : -1));
+    setRows(derived);
+  }, [kickoffs]);
 
   useEffect(() => {
     fetchKickoffsFromSheet()
@@ -1649,8 +1623,9 @@ function UnifiedDashboard() {
                         <p><span className="text-stone-500">Huésped:</span> <span className="font-semibold">{latest.guestName || "—"}</span></p>
                         <p><span className="text-stone-500">Viaje:</span> <span className="font-semibold">{latest.tripName || "—"}</span></p>
                         <p><span className="text-stone-500">Destino:</span> <span className="font-semibold">{latest.destination || "—"}</span></p>
-                        <p><span className="text-stone-500">Score:</span> <span className="font-semibold">{latest.overallExperience || "—"}</span></p>
+                        <p><span className="text-stone-500">Score:</span> <span className="font-semibold">{latest.overallExperience || "—"}/10</span></p>
                         <p><span className="text-stone-500">Idioma:</span> <span className="font-semibold">{latest.language || "—"}</span></p>
+                        {latest.overallReason && <p><span className="text-stone-500">Comentario:</span> <span className="font-semibold">{latest.overallReason}</span></p>}
                       </div>
                     ) : (
                       <p className="mt-4 text-sm text-stone-500">Sin feedback todavía.</p>
