@@ -632,6 +632,12 @@ function CoverPage({ kickoff, total, lang, editMode }) {
           <div className="cover-info-grid">
             {a.accommodationName && (
               <div className="cover-info-card">
+                {a.accommodationPhoto && (
+                  <img src={a.accommodationPhoto} alt={a.accommodationName}
+                    style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, marginBottom: 8 }}
+                    onError={e => { e.target.style.display = "none"; }}
+                  />
+                )}
                 <div className="cover-info-label">
                   {isEs ? "Alojamiento" : "Accommodation"}
                 </div>
@@ -741,6 +747,40 @@ function CoverPage({ kickoff, total, lang, editMode }) {
                 <span style={{ fontSize: 10, color: "#9ca3af", marginLeft: 6 }}>WhatsApp</span>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Drink & Grocery order links */}
+        {a.id && (
+          <div style={{ marginBottom: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {/* Drink Order */}
+            <a href={`https://twotravelvip.com/?mode=drinks&kickoffId=${a.id}&lang=${lang}`}
+              target="_blank" rel="noreferrer"
+              style={{ textDecoration: "none", display: "block", background: "#faf5ff", border: "1px solid #e9d5ff", borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ fontSize: 18, marginBottom: 4 }}>🍹</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", marginBottom: 3 }}>
+                {isEs ? "Pedido de Bebidas" : "Drink Order"}
+              </div>
+              <div style={{ fontSize: 10, color: "#6b7280", lineHeight: 1.4 }}>
+                {isEs
+                  ? "Selecciona tus bebidas para la casa y el bote."
+                  : "Select your drinks for the house and boat."}
+              </div>
+            </a>
+            {/* Groceries & Breakfast */}
+            <a href={`https://twotravelvip.com/?mode=groceries&kickoffId=${a.id}&lang=${lang}`}
+              target="_blank" rel="noreferrer"
+              style={{ textDecoration: "none", display: "block", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ fontSize: 18, marginBottom: 4 }}>🛒</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#15803d", marginBottom: 3 }}>
+                {isEs ? "Mercado y Desayuno" : "Groceries & Breakfast"}
+              </div>
+              <div style={{ fontSize: 10, color: "#6b7280", lineHeight: 1.4 }}>
+                {isEs
+                  ? "Personaliza tu lista de mercado y desayuno."
+                  : "Customize your grocery list and breakfast order."}
+              </div>
+            </a>
           </div>
         )}
 
