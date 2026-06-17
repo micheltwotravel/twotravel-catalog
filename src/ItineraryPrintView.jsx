@@ -2,19 +2,21 @@
 // Premium Two Travel Concierge Itinerary — browser print → PDF
 // Visual direction: luxury editorial, horizontal images, clean hierarchy
 import { useState, useEffect, useMemo, useRef } from "react";
-import { fetchServicesFromSheet, fetchKickoffsFromSheet } from "./sheetServices";
+import { fetchServicesFromSheet, fetchKickoffsFromSheet, updateKickoffInSheet } from "./sheetServices";
 import ttLogo from "./assets/logo.png";
 
 /* ─── contentEditable helper ─────────────────────────────────
    Renders a span that is click-to-edit when editMode is on.
    Falls back to plain text in print / when editMode is off.
 ──────────────────────────────────────────────────────────── */
-function Editable({ value, tag: Tag = "span", className = "", editMode, style }) {
+function Editable({ value, tag: Tag = "span", className = "", editMode, style, onChange }) {
+  const ref = useRef();
   if (!editMode) {
     return <Tag className={className} style={style}>{value}</Tag>;
   }
   return (
     <Tag
+      ref={ref}
       className={className}
       style={{
         ...style,
@@ -26,6 +28,7 @@ function Editable({ value, tag: Tag = "span", className = "", editMode, style })
       contentEditable
       suppressContentEditableWarning
       spellCheck={false}
+      onBlur={() => onChange?.(ref.current?.innerText ?? "")}
     >
       {value}
     </Tag>
@@ -884,7 +887,7 @@ function WelcomePage({ kickoff, lang, page, total, editMode, localPreTrip, setLo
 // Categories where price is NEVER shown in the PDF (quoted separately)
 const HIDE_PRICE_CATS = new Set(["restaurants","bars","nightlife","beach-clubs","beach clubs","beachclubs"]);
 
-function EventBlock({ it, lang, editMode, onRemove, hasFamilies }) {
+function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
   const isConfirmed = it.confirmed !== false;
   const showPrice = isConfirmed && !HIDE_PRICE_CATS.has(String(it.category || "").trim().toLowerCase());
   const price    = showPrice ? fmtPrice(it.price) : "";
@@ -939,9 +942,9 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies }) {
           <div className="ev-meta">
             {editMode ? (
               <>
-                <Editable value={timePart} editMode={editMode} />
+                <Editable value={timePart} editMode={editMode} onChange={v => patchItem?.("time", v)} />
                 {timePart && durPart ? " · " : ""}
-                <Editable value={durPart} editMode={editMode} />
+                <Editable value={durPart} editMode={editMode} onChange={v => patchItem?.("duration", v)} />
                 {" · "}{tzPart}
               </>
             ) : metaParts.join(" · ")}
@@ -957,18 +960,18 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies }) {
 
         {/* Title + price */}
         <div className="ev-title-row">
-          <Editable value={it.title} tag="div" className="ev-title" editMode={editMode} />
+          <Editable value={it.title} tag="div" className="ev-title" editMode={editMode} onChange={v => patchItem?.("title", v)} />
           {price && (
             <div className="ev-price-col">
               <span className="ev-price-label">{isEs ? "Precio" : "Price"}</span>
-              <Editable value={price} tag="div" className="ev-price-val" editMode={editMode} />
+              <Editable value={price} tag="div" className="ev-price-val" editMode={editMode} onChange={v => patchItem?.("price", v)} />
             </div>
           )}
         </div>
 
         {/* Location subtitle */}
         {it.location && (
-          <Editable value={it.location} tag="div" className="ev-location" editMode={editMode} />
+          <Editable value={it.location} tag="div" className="ev-location" editMode={editMode} onChange={v => patchItem?.("location", v)} />
         )}
 
         {/* Family Friendly badge — only when the group actually has families/kids */}
@@ -997,7 +1000,7 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies }) {
 
         {/* Description */}
         {it.description && (
-          <Editable value={it.description} tag="p" className="ev-desc" editMode={editMode} />
+          <Editable value={it.description} tag="p" className="ev-desc" editMode={editMode} onChange={v => patchItem?.("description", v)} />
         )}
 
         {/* Highlights */}
@@ -1217,7 +1220,7 @@ function BillingPage({ kickoff }) {
 /* ═══════════════════════════════════════════════════════════
    DAY PAGE
 ═══════════════════════════════════════════════════════════ */
-function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onAddItem, billingBlock, hasFamilies }) {
+function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onAddItem, billingBlock, hasFamilies, patchDay, patchItemFn }) {
   return (
     <div className="page" style={{ position: "relative" }}>
       <PH kickoff={kickoff}/>
@@ -1227,10 +1230,10 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
         <div className="day-band-inner">
           <div className="day-band-row">
             <span className="day-band-sup">{lang === "es" ? "Día" : "Day"}</span>
-            <Editable value={day.label} tag="span" className="day-band-label" editMode={editMode}/>
+            <Editable value={day.label} tag="span" className="day-band-label" editMode={editMode} onChange={v => patchDay?.("label", v)}/>
           </div>
           {day.title && (
-            <Editable value={day.title} tag="div" className="day-band-title" editMode={editMode}/>
+            <Editable value={day.title} tag="div" className="day-band-title" editMode={editMode} onChange={v => patchDay?.("title", v)}/>
           )}
         </div>
         {editMode && onRemoveDay && (
@@ -1257,6 +1260,7 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
             editMode={editMode}
             hasFamilies={hasFamilies}
             onRemove={onRemoveItem ? () => onRemoveItem(i) : undefined}
+            patchItem={patchItemFn ? (field, val) => patchItemFn(i, field, val) : undefined}
           />
         ))}
 
@@ -1306,11 +1310,18 @@ export default function ItineraryPrintView() {
   const [pickerForDay, setPickerForDay] = useState(null);
   const [localPreTrip, setLocalPreTrip] = useState(null);
 
-  // Sync editDays from computed days each time editMode is activated
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState("");
+
+  // Sync editDays from computed days (or itinerarySnapshot) each time editMode is activated
   useEffect(() => {
     if (editMode) {
-      setEditDays(JSON.parse(JSON.stringify(days)));
-      setLocalPreTrip(null); // reset so it reads from kickoff
+      let base = days;
+      if (kickoff?.itinerarySnapshot) {
+        try { base = JSON.parse(kickoff.itinerarySnapshot); } catch {}
+      }
+      setEditDays(JSON.parse(JSON.stringify(base)));
+      setLocalPreTrip(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode]);
@@ -1323,6 +1334,32 @@ export default function ItineraryPrintView() {
     setEditDays(prev => prev.map((day, i) =>
       i !== di ? day : { ...day, items: day.items.filter((_, j) => j !== ii) }
     ));
+
+  const patchDay = (di, field, val) =>
+    setEditDays(prev => prev.map((day, i) =>
+      i !== di ? day : { ...day, [field]: val }
+    ));
+
+  const patchItem = (di, ii, field, val) =>
+    setEditDays(prev => prev.map((day, i) =>
+      i !== di ? day : {
+        ...day,
+        items: day.items.map((it, j) => j !== ii ? it : { ...it, [field]: val }),
+      }
+    ));
+
+  const saveSnapshot = async () => {
+    if (!kickoffId || !editDays) return;
+    setSaving(true);
+    try {
+      await updateKickoffInSheet(kickoffId, { itinerarySnapshot: JSON.stringify(editDays) });
+      setSavedAt(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+      // Reflect saved snapshot in kickoff so client link shows it immediately
+      setKickoff(prev => ({ ...prev, itinerarySnapshot: JSON.stringify(editDays) }));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Open catalog picker for a specific day
   const openPickerForDay = (di) => setPickerForDay(di);
@@ -1391,7 +1428,12 @@ export default function ItineraryPrintView() {
   }, [kickoffId]);
 
   const days = useMemo(() => {
-    if (!kickoff || !catalog.length) return [];
+    if (!kickoff) return [];
+    // Use saved snapshot if present (concierge edited & saved)
+    if (kickoff.itinerarySnapshot) {
+      try { return JSON.parse(kickoff.itinerarySnapshot); } catch {}
+    }
+    if (!catalog.length) return [];
     return buildDays(matchCart(kickoff.cart, catalog), lang, parseJsonField(kickoff.dayMeta));
   }, [kickoff, catalog, lang]);
 
@@ -1472,7 +1514,14 @@ export default function ItineraryPrintView() {
             <b>✏️ Edit mode</b>
             {" "}— click any text field to edit. Changes print as-is.
           </span>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {savedAt && <span style={{ fontSize: 11, color: "rgba(255,255,255,.6)" }}>Guardado {savedAt}</span>}
+            <button
+              onClick={saveSnapshot}
+              disabled={saving}
+              style={{ ...ctrl, background: saving ? "rgba(255,255,255,.2)" : "#22c55e", color: "#fff", border: "none", fontWeight: 700, opacity: saving ? .7 : 1 }}>
+              {saving ? "Guardando…" : "💾 Guardar"}
+            </button>
             <button onClick={() => setEditMode(false)}
               style={{ ...ctrl, background: "rgba(255,255,255,.15)", color: "#fff", border: "1px solid rgba(255,255,255,.35)" }}>
               ✓ Done
@@ -1566,6 +1615,8 @@ export default function ItineraryPrintView() {
           onAddItem={editMode ? () => openPickerForDay(di) : undefined}
           billingBlock={null}
           hasFamilies={hasFamilies}
+          patchDay={editMode ? (field, val) => patchDay(di, field, val) : undefined}
+          patchItemFn={editMode ? (ii, field, val) => patchItem(di, ii, field, val) : undefined}
         />
       ))}
 
