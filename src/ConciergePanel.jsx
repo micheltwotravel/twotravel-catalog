@@ -3018,6 +3018,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     // Always include latest canvas state so itinerary edits aren't lost
     ...(canvasCartRef.current    != null ? { cart:    JSON.stringify(canvasCartRef.current)    } : {}),
     ...(canvasDayMetaRef.current != null ? { dayMeta: JSON.stringify(canvasDayMetaRef.current) } : {}),
+    // Clear itinerarySnapshot so client link rebuilds from fresh cart data
+    itinerarySnapshot: "",
   };
 
   updates.guestContact = guestContact.trim();
