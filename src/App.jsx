@@ -959,29 +959,24 @@ function UnifiedDashboard() {
 
   const BarChartCard = ({ title, data }) => {
     const max = Math.max(...data.map((d) => d.value), 1);
-
     return (
-      <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm">
-        <p className="text-lg font-semibold">{title}</p>
-
-        <div className="mt-4 space-y-3">
+      <div className="tt-card" style={{padding:20}}>
+        <p style={{fontSize:12,fontWeight:600,color:"var(--text-2)",marginBottom:14}}>{title}</p>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
           {data.length ? (
             data.map((item) => (
               <div key={item.label}>
-                <div className="mb-1 flex items-center justify-between gap-3 text-sm">
-                  <span className="truncate">{item.label}</span>
-                  <span className="font-semibold">{item.value}</span>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4,gap:8}}>
+                  <span style={{fontSize:12,color:"var(--text-1)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.label}</span>
+                  <span style={{fontSize:12,fontWeight:600,color:"var(--text-1)",flexShrink:0}}>{item.value}</span>
                 </div>
-                <div className="h-3 rounded-full bg-stone-100 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-stone-800"
-                    style={{ width: `${(item.value / max) * 100}%` }}
-                  />
+                <div style={{height:4,borderRadius:2,background:"var(--border-soft)",overflow:"hidden"}}>
+                  <div style={{height:"100%",borderRadius:2,background:"#111",width:`${(item.value/max)*100}%`}}/>
                 </div>
               </div>
             ))
           ) : (
-            <p className="text-sm text-stone-500">Sin datos.</p>
+            <p style={{fontSize:12,color:"var(--text-3)"}}>Sin datos.</p>
           )}
         </div>
       </div>
@@ -1185,45 +1180,50 @@ function UnifiedDashboard() {
   kpiFiltered.forEach(k => { const s = k.status || "new"; kpiStatusMap[s] = (kpiStatusMap[s]||0)+1; });
   const fmtRev = v => v >= 10000 ? "$" + Math.round(v).toLocaleString("es-CO") + " COP" : "$" + v.toLocaleString("en-US",{maximumFractionDigits:0}) + " USD";
   const KpiCard = ({ label, value, sub, color }) => {
-    const cl = color || "text-stone-800";
     return (
-      <div className="bg-white rounded-2xl border border-stone-200 p-5">
-        <div className={"text-2xl font-bold " + cl}>{value}</div>
-        <div className="text-xs text-stone-500 mt-1">{label}</div>
-        {sub && <div className="text-[10px] text-stone-400 mt-0.5">{sub}</div>}
+      <div className="tt-card p-5">
+        <div style={{fontSize:22,fontWeight:700,color:color?"":undefined,letterSpacing:"-.02em"}} className={color||"text-neutral-900"}>{value}</div>
+        <div style={{fontSize:11.5,color:"var(--text-2)",marginTop:4,fontWeight:500}}>{label}</div>
+        {sub && <div style={{fontSize:10.5,color:"var(--text-3)",marginTop:2}}>{sub}</div>}
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-800">
+    <div style={{minHeight:"100vh",background:"var(--bg)",color:"var(--text-1)"}}>
       {/* ── Header ── */}
-      <div className="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <a href="/?mode=concierge" className="text-stone-400 hover:text-stone-700 text-sm">← Panel</a>
-          <span className="text-stone-300">|</span>
-          <h1 className="text-base font-semibold text-stone-800">Two Travel · Dashboard</h1>
+      <header className="tt-topbar">
+        <div style={{display:"flex",alignItems:"center",gap:16}}>
+          <a href="/?mode=concierge" style={{fontSize:12,color:"var(--text-3)",textDecoration:"none",fontWeight:500}}>← Panel</a>
+          <span style={{width:1,height:14,background:"var(--border)",display:"inline-block"}}/>
+          <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Dashboard</span>
         </div>
-        <a href={sheetUrl} target="_blank" rel="noreferrer"
-          className="inline-block rounded-full bg-stone-800 px-5 py-2 text-xs text-white font-semibold">
-          Abrir Google Sheet
+        <a href={sheetUrl} target="_blank" rel="noreferrer" className="tt-btn-ghost" style={{textDecoration:"none"}}>
+          Ver Sheet ↗
         </a>
-      </div>
+      </header>
 
-      <div className="mx-auto max-w-7xl px-4 py-6">
-        {/* ── Tab buttons ── */}
-        <div className="mb-6 flex gap-2 flex-wrap">
+      <div className="mx-auto max-w-7xl px-6 py-6">
+        {/* ── Tabs ── */}
+        <div style={{display:"flex",gap:6,marginBottom:24,borderBottom:"1px solid var(--border)",paddingBottom:0}}>
           {[
-            { id: "kpis",     label: "📊 KPIs" },
-            { id: "gestion",  label: "⚙️ Gestión" },
-            { id: "feedback", label: "💬 Feedback" },
+            { id: "kpis",     label: "KPIs" },
+            { id: "gestion",  label: "Gestión" },
+            { id: "feedback", label: "Feedback" },
           ].map(({ id, label }) => (
             <button key={id} onClick={() => setTab(id)}
-              className={"rounded-full px-6 py-2.5 text-sm font-semibold transition-colors " + (
-                tab === id
-                  ? "bg-stone-800 text-white"
-                  : "bg-white border border-stone-200 text-stone-600 hover:bg-stone-100"
-              )}>
+              style={{
+                padding:"8px 16px",
+                fontSize:12.5,
+                fontWeight:500,
+                background:"none",
+                border:"none",
+                borderBottom: tab===id ? "2px solid #111" : "2px solid transparent",
+                color: tab===id ? "var(--text-1)" : "var(--text-3)",
+                cursor:"pointer",
+                marginBottom:-1,
+                transition:"color .12s, border-color .12s",
+              }}>
               {label}
             </button>
           ))}
@@ -1233,28 +1233,28 @@ function UnifiedDashboard() {
         {tab === "kpis" && (
           <>
             {kLoading ? (
-              <div className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-sm text-sm text-stone-500">Cargando KPIs…</div>
+              <div className="tt-card" style={{padding:24,fontSize:13,color:"var(--text-3)"}}>Cargando KPIs…</div>
             ) : (
               <>
                 {/* Filters */}
-                <div className="mb-4 flex flex-wrap gap-2 items-center">
+                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:20,alignItems:"center"}}>
                   {["all","month","week"].map(p => (
                     <button key={p} onClick={() => setKpiPeriod(p)}
-                      className={"px-3 py-1 text-xs rounded-lg border transition " + (kpiPeriod===p ? "bg-stone-800 text-white border-stone-800" : "bg-white border-stone-200 text-stone-600 hover:bg-stone-50")}>
+                      className={"tt-pill" + (kpiPeriod===p?" active":"")}>
                       {p==="all"?"Todo tiempo":p==="month"?"Último mes":"Última semana"}
                     </button>
                   ))}
                   <select value={kpiConcierge} onChange={e=>setKpiConcierge(e.target.value)}
-                    className="text-xs border border-stone-200 rounded-lg px-2 py-1 bg-white">
+                    style={{fontSize:11.5,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"4px 8px",background:"var(--surface)",color:"var(--text-2)"}}>
                     <option value="all">Todos los concierges</option>
                     {CONCIERGE_NAMES.map(c=><option key={c} value={c}>{c}</option>)}
                   </select>
                   {/* KPI type selector + export */}
-                  <div className="ml-auto flex items-center gap-1.5">
+                  <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
                     <select
                       value={kpiExportType}
                       onChange={e => setKpiExportType(e.target.value)}
-                      className="text-xs border border-stone-200 rounded-lg px-2 py-1 bg-white text-stone-600"
+                      style={{fontSize:11.5,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"4px 8px",background:"var(--surface)",color:"var(--text-2)"}}
                       title="Qué KPI exportar"
                     >
                       {Object.entries(KPI_EXPORT_TYPES).map(([k, v]) => (
@@ -1263,10 +1263,10 @@ function UnifiedDashboard() {
                     </select>
                     <button
                       onClick={() => exportKpiCsv(kickoffs, kpiPeriod, kpiConcierge, kpiExportType)}
-                      className="px-3 py-1 text-xs rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium flex items-center gap-1"
-                      title="Descargar datos como CSV (abre en Excel)"
+                      className="tt-btn-ghost"
+                      title="Descargar datos como CSV"
                     >
-                      📥 Exportar
+                      Exportar CSV
                     </button>
                   </div>
                 </div>
@@ -1285,72 +1285,73 @@ function UnifiedDashboard() {
                 </div>
 
                 {/* ── Timing metrics ── */}
-                <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-4">
-                  <h2 className="text-sm font-semibold text-stone-700 mb-1">⏱ Tiempos promedio del proceso</h2>
-                  <p className="text-[11px] text-stone-400 mb-4">Desde creación del link (kickoff/meeting) hasta cada etapa</p>
+                <div className="tt-card" style={{padding:20,marginBottom:12}}>
+                  <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:12}}>
+                    <span className="tt-section-title">Tiempos promedio del proceso</span>
+                    <span style={{fontSize:11,color:"var(--text-3)"}}>desde creación del link hasta cada etapa</span>
+                  </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="bg-stone-50 rounded-xl p-4 border border-stone-100">
-                      <div className="text-xl font-bold text-stone-800">{avgDaysToEdit} <span className="text-sm font-normal text-stone-400">días</span></div>
-                      <div className="text-xs text-stone-500 mt-1">Link → Concierge empieza</div>
-                      <div className="text-[10px] text-stone-400 mt-0.5">{daysToEdit.filter(v=>v!==null).length} trips con dato</div>
-                    </div>
-                    <div className="bg-stone-50 rounded-xl p-4 border border-stone-100">
-                      <div className="text-xl font-bold text-blue-700">{avgDaysEditToSend} <span className="text-sm font-normal text-stone-400">días</span></div>
-                      <div className="text-xs text-stone-500 mt-1">Edición → Itinerario listo</div>
-                      <div className="text-[10px] text-stone-400 mt-0.5">{daysEditToSend.filter(v=>v!==null).length} trips con dato</div>
-                    </div>
-                    <div className="bg-stone-50 rounded-xl p-4 border border-stone-100">
-                      <div className="text-xl font-bold text-emerald-700">{avgDaysToSend} <span className="text-sm font-normal text-stone-400">días</span></div>
-                      <div className="text-xs text-stone-500 mt-1">Link → Enviado a contabilidad</div>
-                      <div className="text-[10px] text-stone-400 mt-0.5">Total link → QuickBooks</div>
-                    </div>
-                    <div className="bg-stone-50 rounded-xl p-4 border border-stone-100">
-                      <div className="text-xl font-bold text-amber-600">{sentCount}</div>
-                      <div className="text-xs text-stone-500 mt-1">Enviados a contabilidad</div>
-                      <div className="text-[10px] text-stone-400 mt-0.5">de {kpiFiltered.length} en el período</div>
-                    </div>
+                    {[
+                      {val:avgDaysToEdit, label:"Link → Concierge empieza", sub:`${daysToEdit.filter(v=>v!==null).length} trips`},
+                      {val:avgDaysEditToSend, label:"Edición → Itinerario listo", sub:`${daysEditToSend.filter(v=>v!==null).length} trips`, color:"#2563eb"},
+                      {val:avgDaysToSend, label:"Link → Contabilidad", sub:"total end-to-end", color:"#16a34a"},
+                      {val:sentCount, label:"Enviados a contabilidad", sub:`de ${kpiFiltered.length} en período`, color:"#d97706"},
+                    ].map((m,i)=>(
+                      <div key={i} style={{background:"var(--bg)",border:"1px solid var(--border-soft)",borderRadius:"var(--radius)",padding:"14px 16px"}}>
+                        <div style={{fontSize:20,fontWeight:700,color:m.color||"var(--text-1)",letterSpacing:"-.02em"}}>{m.val}<span style={{fontSize:12,fontWeight:400,color:"var(--text-3)",marginLeft:3}}>días</span></div>
+                        <div style={{fontSize:11.5,color:"var(--text-2)",marginTop:3}}>{m.label}</div>
+                        <div style={{fontSize:10.5,color:"var(--text-3)",marginTop:1}}>{m.sub}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
                 {/* ── Pending tasks ── */}
                 {pendingRows.length > 0 && (
-                  <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden mb-4">
-                    <div className="px-5 py-3 border-b border-stone-100 flex items-center justify-between">
-                      <h2 className="text-sm font-semibold text-stone-700">📋 Pendientes por concierge</h2>
-                      <span className="text-xs text-stone-400">Clientes en edición o listos para procesar</span>
+                  <div className="tt-card" style={{overflow:"hidden",marginBottom:12}}>
+                    <div style={{padding:"12px 20px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <span className="tt-section-title">Pendientes por concierge</span>
+                      <span style={{fontSize:11,color:"var(--text-3)"}}>En edición o listos para procesar</span>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full text-sm">
-                        <thead className="bg-stone-50 text-[11px] text-stone-400 uppercase tracking-wide">
+                    <div style={{overflowX:"auto"}}>
+                      <table className="tt-table min-w-full">
+                        <thead>
                           <tr>
-                            <th className="px-5 py-2 text-left font-medium">Concierge</th>
-                            <th className="px-5 py-2 text-center font-medium">Pendientes</th>
-                            <th className="px-5 py-2 text-center font-medium">Más antiguo</th>
-                            <th className="px-5 py-2 text-left font-medium">Estado</th>
+                            <th style={{textAlign:"left"}}>Concierge</th>
+                            <th style={{textAlign:"center"}}>Pendientes</th>
+                            <th style={{textAlign:"center"}}>Más antiguo</th>
+                            <th style={{textAlign:"left"}}>Estado</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-stone-50">
+                        <tbody>
                           {pendingRows.map(row => (
-                            <tr key={row.name} className="hover:bg-stone-50">
-                              <td className="px-5 py-3 font-medium text-stone-800">{row.name}</td>
-                              <td className="px-5 py-3 text-center">
-                                <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${row.pending >= 3 ? "bg-red-100 text-red-700" : row.pending === 2 ? "bg-amber-100 text-amber-700" : "bg-blue-50 text-blue-700"}`}>
+                            <tr key={row.name}>
+                              <td style={{fontWeight:500}}>{row.name}</td>
+                              <td style={{textAlign:"center"}}>
+                                <span style={{
+                                  display:"inline-flex",alignItems:"center",justifyContent:"center",
+                                  width:24,height:24,borderRadius:4,fontSize:11,fontWeight:700,
+                                  background: row.pending>=3?"#FEF2F2":row.pending===2?"#FFFBEB":"#EFF6FF",
+                                  color: row.pending>=3?"#DC2626":row.pending===2?"#D97706":"#2563EB",
+                                }}>
                                   {row.pending}
                                 </span>
                               </td>
-                              <td className="px-5 py-3 text-center">
+                              <td style={{textAlign:"center"}}>
                                 {row.oldestDays !== null ? (
-                                  <span className={`text-xs font-semibold ${row.oldestDays > 5 ? "text-red-600" : row.oldestDays > 2 ? "text-amber-600" : "text-stone-500"}`}>
+                                  <span style={{fontSize:12,fontWeight:600,color:row.oldestDays>5?"#DC2626":row.oldestDays>2?"#D97706":"var(--text-3)"}}>
                                     {row.oldestDays}d
                                   </span>
                                 ) : "—"}
                               </td>
-                              <td className="px-5 py-3">
-                                <div className="flex gap-1 flex-wrap">
-                                  {row.oldestDays > 5 && <span className="text-[10px] bg-red-50 text-red-600 border border-red-200 rounded px-2 py-0.5">⚠ Urgente</span>}
-                                  {row.oldestDays > 2 && row.oldestDays <= 5 && <span className="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 rounded px-2 py-0.5">Revisar</span>}
-                                  {row.oldestDays <= 2 && <span className="text-[10px] bg-green-50 text-green-600 border border-green-200 rounded px-2 py-0.5">Al día</span>}
-                                </div>
+                              <td>
+                                <span className="tt-badge" style={
+                                  row.oldestDays>5 ? {background:"#FEF2F2",color:"#DC2626"} :
+                                  row.oldestDays>2 ? {background:"#FFFBEB",color:"#D97706"} :
+                                                    {background:"#F0FDF4",color:"#16A34A"}
+                                }>
+                                  {row.oldestDays>5?"Needs attention":row.oldestDays>2?"Review soon":"On track"}
+                                </span>
                               </td>
                             </tr>
                           ))}
@@ -1361,13 +1362,13 @@ function UnifiedDashboard() {
                 )}
 
                 {/* Status breakdown */}
-                <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-4">
-                  <h2 className="text-sm font-semibold text-stone-700 mb-3">Estado de clientes</h2>
-                  <div className="flex flex-wrap gap-2">
+                <div className="tt-card" style={{padding:20,marginBottom:12}}>
+                  <span className="tt-section-title" style={{display:"block",marginBottom:12}}>Estado de clientes</span>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                     {Object.entries(kpiStatusMap).map(([s,cnt]) => (
-                      <div key={s} className="flex items-center gap-2 bg-stone-50 border border-stone-200 rounded-lg px-3 py-1.5">
-                        <span className="text-xs text-stone-500">{STATUS_LABELS[s]?.label || s}</span>
-                        <span className="text-sm font-bold text-stone-800">{cnt}</span>
+                      <div key={s} style={{display:"flex",alignItems:"center",gap:8,background:"var(--bg)",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"5px 12px"}}>
+                        <span style={{fontSize:11.5,color:"var(--text-2)"}}>{STATUS_LABELS[s]?.label || s}</span>
+                        <span style={{fontSize:13,fontWeight:700,color:"var(--text-1)"}}>{cnt}</span>
                       </div>
                     ))}
                   </div>
@@ -2364,47 +2365,51 @@ function TaskTracker() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div style={{minHeight:"100vh",background:"var(--bg)"}}>
       {/* Header */}
-      <div className="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <a href="/?mode=concierge" className="text-stone-400 hover:text-stone-700 text-sm">← Panel</a>
-          <span className="text-stone-300">|</span>
-          <h1 className="text-base font-semibold text-stone-800">✅ Task Tracker</h1>
-          <span className="text-xs text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">
-            {tasks.filter(t=>t.status!=="completed").length} activas
+      <header className="tt-topbar">
+        <div style={{display:"flex",alignItems:"center",gap:16}}>
+          <a href="/?mode=concierge" style={{fontSize:12,color:"var(--text-3)",textDecoration:"none",fontWeight:500}}>← Panel</a>
+          <span style={{width:1,height:14,background:"var(--border)",display:"inline-block"}}/>
+          <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Tasks</span>
+          <span style={{fontSize:11,fontWeight:500,background:"var(--border-soft)",color:"var(--text-3)",padding:"2px 8px",borderRadius:3}}>
+            {tasks.filter(t=>t.status!=="completed").length} open
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex border border-stone-200 rounded-lg overflow-hidden text-xs">
-            {[["board","▦ Board"],["table","☰ Table"],["calendar","📅 Calendar"]].map(([v,lbl])=>(
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <div style={{display:"flex",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",overflow:"hidden"}}>
+            {[["board","Board"],["table","Table"],["calendar","Calendar"]].map(([v,lbl])=>(
               <button key={v} onClick={()=>setView(v)}
-                className={`px-3 py-1.5 ${view===v?"bg-stone-800 text-white":"bg-white text-stone-500 hover:bg-stone-50"}`}>
+                style={{
+                  padding:"5px 12px",fontSize:11.5,fontWeight:500,border:"none",cursor:"pointer",
+                  background:view===v?"#111":"transparent",
+                  color:view===v?"#fff":"var(--text-2)",
+                  transition:"background .1s",
+                }}>
                 {lbl}
               </button>
             ))}
           </div>
-          <button onClick={()=>setShowForm(v=>!v)}
-            className="px-3 py-1.5 text-xs bg-stone-800 text-white rounded-lg hover:opacity-90 font-medium">
+          <button onClick={()=>setShowForm(v=>!v)} className="tt-btn-primary">
             + New Task
           </button>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-6xl mx-auto px-6 py-6" style={{display:"flex",flexDirection:"column",gap:16}}>
 
         {/* ── New task form ── */}
         {showForm && (
-          <div className="bg-white rounded-2xl border border-stone-200 p-5 space-y-3">
-            <h2 className="text-sm font-semibold text-stone-700">Nueva tarea</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="sm:col-span-3">
-                <label className="text-[11px] text-stone-500">Trip / Deal</label>
+          <div className="tt-card" style={{padding:20,display:"flex",flexDirection:"column",gap:16}}>
+            <p style={{fontSize:12,fontWeight:600,color:"var(--text-1)",margin:0}}>Nueva tarea</p>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+              <div style={{gridColumn:"1/-1"}}>
+                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Trip / Deal</label>
                 <select value={form.kickoffId} onChange={e => {
                   const k = kickoffs.find(k => k.id === e.target.value);
                   setF("kickoffId", e.target.value);
                   setF("kickoffName", k ? (k.guestName || k.tripName || "") : "");
-                }} className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-white">
+                }} style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,background:"var(--surface)",color:"var(--text-1)"}}>
                   <option value="">Sin trip asignado</option>
                   {kickoffs.map(k => (
                     <option key={k.id} value={k.id}>
@@ -2413,99 +2418,97 @@ function TaskTracker() {
                   ))}
                 </select>
               </div>
-              <div className="sm:col-span-3">
-                <label className="text-[11px] text-stone-500">Nombre de la tarea *</label>
+              <div style={{gridColumn:"1/-1"}}>
+                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Nombre de la tarea *</label>
                 <input value={form.taskName} onChange={e=>setF("taskName",e.target.value)}
-                  className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
+                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,boxSizing:"border-box"}}
                   placeholder="Ej: Confirmar reserva Celele para Martínez"/>
               </div>
               <div>
-                <label className="text-[11px] text-stone-500">Asignado a *</label>
+                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Asignado a *</label>
                 <select value={form.assignedTo} onChange={e=>{
                   setF("assignedTo", e.target.value);
                   setF("assignedEmail", CONCIERGE_EMAILS[e.target.value]||"");
-                }} className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-white">
+                }} style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,background:"var(--surface)"}}>
                   <option value="">Seleccionar…</option>
                   {CONCIERGE_NAMES.map(c=><option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-[11px] text-stone-500">Fecha límite *</label>
+                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Fecha límite *</label>
                 <input type="date" value={form.dueDate} onChange={e=>setF("dueDate",e.target.value)}
-                  className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"/>
+                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,boxSizing:"border-box"}}/>
               </div>
               <div>
-                <label className="text-[11px] text-stone-500">Prioridad</label>
+                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Prioridad</label>
                 <select value={form.priority} onChange={e=>setF("priority",e.target.value)}
-                  className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-white">
-                  <option value="alta">🔴 Alta</option>
-                  <option value="media">🟡 Media</option>
-                  <option value="baja">⚪ Baja</option>
+                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,background:"var(--surface)"}}>
+                  <option value="alta">Alta</option>
+                  <option value="media">Media</option>
+                  <option value="baja">Baja</option>
                 </select>
               </div>
-              <div className="sm:col-span-3">
-                <label className="text-[11px] text-stone-500">Notas</label>
+              <div style={{gridColumn:"1/-1"}}>
+                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Notas</label>
                 <textarea value={form.notes} onChange={e=>setF("notes",e.target.value)} rows={2}
-                  className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm resize-none"/>
+                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,resize:"none",boxSizing:"border-box"}}/>
               </div>
-              <div className="sm:col-span-3">
-                <label className="text-[11px] text-stone-500">Imagen (URL de Google Drive o foto)</label>
+              <div style={{gridColumn:"1/-1"}}>
+                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Imagen (URL)</label>
                 <input value={form.imageUrl} onChange={e=>setF("imageUrl",e.target.value)}
-                  className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
+                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,boxSizing:"border-box"}}
                   placeholder="https://drive.google.com/file/d/..."/>
                 {form.imageUrl && (
-                  <img src={form.imageUrl} alt="preview" className="mt-2 h-20 rounded-lg object-cover border border-stone-200" onError={e=>e.target.style.display="none"}/>
+                  <img src={form.imageUrl} alt="preview" style={{marginTop:8,height:64,borderRadius:"var(--radius-sm)",objectFit:"cover",border:"1px solid var(--border)"}} onError={e=>e.target.style.display="none"}/>
                 )}
               </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={saveTask} disabled={saving}
-                className="px-4 py-2 text-xs bg-stone-800 text-white rounded-lg hover:opacity-90 disabled:opacity-50">
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={saveTask} disabled={saving} className="tt-btn-primary" style={{opacity:saving?.5:1}}>
                 {saving?"Guardando…":"Guardar tarea"}
               </button>
-              <button onClick={()=>setShowForm(false)}
-                className="px-4 py-2 text-xs border border-stone-200 rounded-lg text-stone-500 hover:bg-stone-50">
+              <button onClick={()=>setShowForm(false)} className="tt-btn-ghost">
                 Cancelar
               </button>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
           {/* ── Main content ── */}
           <div className={view === "board" ? "lg:col-span-4" : "lg:col-span-3"}>
-            <div className="space-y-3">
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
 
             {/* Filters bar — hidden in board view to save space */}
             {view !== "board" && (
-            <div className="flex flex-wrap gap-2 items-center bg-white border border-stone-200 rounded-xl px-3 py-2">
+            <div style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"center",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:"var(--radius-md)",padding:"8px 12px"}}>
               <input value={searchName} onChange={e=>setSearchName(e.target.value)}
                 placeholder="Search…"
-                className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white w-32"/>
+                style={{fontSize:12,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"5px 9px",background:"var(--bg)",width:120}}/>
               <select value={filterKickoff} onChange={e=>setFilterKickoff(e.target.value)}
-                className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white max-w-[140px]">
+                style={{fontSize:12,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"5px 9px",background:"var(--surface)",maxWidth:160}}>
                 <option value="all">All trips</option>
                 {kickoffs.map(k=>(
                   <option key={k.id} value={k.id}>{k.guestName||k.tripName||k.id}</option>
                 ))}
               </select>
               <select value={filterUser} onChange={e=>setFilterUser(e.target.value)}
-                className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white">
+                style={{fontSize:12,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"5px 9px",background:"var(--surface)"}}>
                 <option value="all">All</option>
                 {CONCIERGE_NAMES.map(u=><option key={u} value={u}>{u.split(" ")[0]}</option>)}
               </select>
               <select value={filterPriority} onChange={e=>setFilterPriority(e.target.value)}
-                className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 bg-white">
+                style={{fontSize:12,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"5px 9px",background:"var(--surface)"}}>
                 <option value="all">Priority</option>
-                <option value="alta">🔴 High</option>
-                <option value="media">🟡 Medium</option>
-                <option value="baja">⚪ Low</option>
+                <option value="alta">High</option>
+                <option value="media">Medium</option>
+                <option value="baja">Low</option>
               </select>
               <button onClick={()=>setShowCompleted(v=>!v)}
-                className={`px-2.5 py-1 text-xs rounded-lg border transition ${showCompleted?"bg-stone-200 text-stone-600 border-stone-300":"bg-white border-stone-200 text-stone-400 hover:bg-stone-50"}`}>
+                style={{fontSize:11.5,padding:"5px 10px",borderRadius:"var(--radius-sm)",border:"1px solid var(--border)",background:showCompleted?"#111":"transparent",color:showCompleted?"#fff":"var(--text-3)",cursor:"pointer"}}>
                 {showCompleted ? `Hide done (${tasks.filter(t=>t.status==="completed").length})` : `Show done (${tasks.filter(t=>t.status==="completed").length})`}
               </button>
-              <button onClick={load} className="ml-auto text-xs text-stone-400 hover:text-stone-700">↻</button>
+              <button onClick={load} style={{marginLeft:"auto",fontSize:12,color:"var(--text-3)",background:"none",border:"none",cursor:"pointer"}}>↻</button>
             </div>
             )}
 
@@ -2550,46 +2553,46 @@ function TaskTracker() {
                       return true;
                     });
                     return (
-                      <div key={col.id} className="flex-shrink-0 w-72 flex flex-col gap-2">
+                      <div key={col.id} style={{flexShrink:0,width:272,display:"flex",flexDirection:"column",gap:8}}>
                         {/* Column header */}
-                        <div className="flex items-center gap-2 px-1 py-2">
-                          <span className={`w-2.5 h-2.5 rounded-full ${col.dot} flex-shrink-0`}/>
-                          <span className="text-xs font-semibold text-stone-600 tracking-wide">{col.label}</span>
-                          <span className="ml-auto text-xs text-stone-400 bg-stone-100 rounded-full w-5 h-5 flex items-center justify-center font-medium">{colTasks.length}</span>
+                        <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 4px"}}>
+                          <span style={{width:8,height:8,borderRadius:"50%",background:col.dot.replace("bg-","").replace("stone-400","#9CA3AF").replace("blue-500","#3B82F6").replace("violet-500","#8B5CF6").replace("emerald-500","#10B981"),flexShrink:0,background:col.id==="todo"?"#9CA3AF":col.id==="in_progress"?"#3B82F6":col.id==="in_review"?"#8B5CF6":"#10B981"}}/>
+                          <span style={{fontSize:11,fontWeight:600,color:"var(--text-2)",letterSpacing:".04em"}}>{col.label}</span>
+                          <span style={{marginLeft:"auto",fontSize:10.5,fontWeight:500,color:"var(--text-3)",background:"var(--border-soft)",borderRadius:3,padding:"1px 6px"}}>{colTasks.length}</span>
                         </div>
                         {/* Cards */}
-                        <div className="flex flex-col gap-2">
+                        <div style={{display:"flex",flexDirection:"column",gap:6}}>
                           {colTasks.map(t => {
                             const due = t.dueDate ? new Date(t.dueDate) : null;
                             const dl  = due ? Math.round((due-now)/86400000) : null;
                             const isLate = t.status === "late" || (dl !== null && dl < 0 && t.status !== "completed");
                             return (
-                              <div key={t.id} className={`bg-white rounded-xl border p-3.5 shadow-sm hover:shadow-md transition-shadow cursor-default ${isLate?"border-red-200":"border-stone-200"}`}>
-                                <div className="flex items-start justify-between gap-2 mb-2">
-                                  <p className={`text-sm font-medium text-stone-800 leading-snug ${t.status==="completed"?"line-through opacity-50":""}`}>{t.taskName}</p>
-                                  {isLate && <span className="text-[9px] text-red-500 font-semibold bg-red-50 border border-red-200 rounded px-1.5 py-0.5 flex-shrink-0">LATE</span>}
+                              <div key={t.id} className="tt-card" style={{padding:12,cursor:"default",border:isLate?"1px solid #FCA5A5":undefined}}>
+                                <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,marginBottom:6}}>
+                                  <p style={{fontSize:12.5,fontWeight:500,color:"var(--text-1)",lineHeight:1.4,textDecoration:t.status==="completed"?"line-through":"none",opacity:t.status==="completed"?.5:1,margin:0}}>{t.taskName}</p>
+                                  {isLate && <span style={{fontSize:9,color:"#EF4444",fontWeight:600,background:"#FEF2F2",border:"1px solid #FCA5A5",borderRadius:3,padding:"2px 5px",flexShrink:0}}>LATE</span>}
                                 </div>
                                 {t.kickoffName && (
-                                  <p className="text-[11px] text-stone-500 mb-2 truncate">
-                                    ✦ {t.kickoffName}{t.city ? ` — ${t.city}` : ""}
+                                  <p style={{fontSize:10.5,color:"var(--text-3)",marginBottom:6,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                                    {t.kickoffName}{t.city ? ` — ${t.city}` : ""}
                                   </p>
                                 )}
-                                <div className="flex items-center justify-between gap-2 mt-2">
+                                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginTop:6}}>
                                   {t.assignedTo ? (
-                                    <span className={`text-[10px] text-white font-bold rounded px-1.5 py-0.5 ${avatarColor(t.assignedTo)}`}>
+                                    <span style={{fontSize:10,color:"#fff",fontWeight:700,borderRadius:3,padding:"2px 6px",background:"#374151"}}>
                                       {initials(t.assignedTo)}
                                     </span>
                                   ) : <span/>}
-                                  <div className="flex items-center gap-2 ml-auto">
+                                  <div style={{display:"flex",alignItems:"center",gap:8,marginLeft:"auto"}}>
                                     {dl !== null && t.status !== "completed" && (
-                                      <span className={`text-[10px] ${isLate?"text-red-500":dl<=2?"text-amber-600":"text-stone-400"}`}>
+                                      <span style={{fontSize:10,color:isLate?"#EF4444":dl<=2?"#D97706":"var(--text-3)"}}>
                                         {isLate ? `${Math.abs(dl)}d ago` : dl===0 ? "Today" : `In ${dl}d`}
                                       </span>
                                     )}
                                     <select
                                       value={t.status==="late"?"pending":t.status}
                                       onChange={e=>updateTaskField(t.id,{status:e.target.value})}
-                                      className="text-[10px] border border-stone-200 rounded px-1.5 py-0.5 bg-white text-stone-500 cursor-pointer focus:outline-none"
+                                      style={{fontSize:10,border:"1px solid var(--border)",borderRadius:3,padding:"2px 6px",background:"var(--surface)",color:"var(--text-2)",cursor:"pointer"}}
                                       onClick={e=>e.stopPropagation()}
                                     >
                                       {Object.entries(TASK_STATUS).filter(([k])=>k!=="late").map(([k,v])=>(
@@ -2603,7 +2606,7 @@ function TaskTracker() {
                           })}
                           {/* Add task shortcut */}
                           <button onClick={()=>setShowForm(v=>!v)}
-                            className="w-full text-left text-xs text-stone-400 hover:text-stone-600 px-3 py-2 rounded-xl border border-dashed border-stone-200 hover:border-stone-400 transition-colors">
+                            style={{width:"100%",textAlign:"left",fontSize:11.5,color:"var(--text-3)",padding:"8px 12px",borderRadius:"var(--radius-sm)",border:"1px dashed var(--border)",background:"transparent",cursor:"pointer"}}>
                             + Add Task
                           </button>
                         </div>
@@ -2636,23 +2639,23 @@ function TaskTracker() {
               const prevMonth = () => { if(cm===0){setCalMonth(11);setCalYear(y=>y-1);}else setCalMonth(m=>m-1); };
               const nextMonth = () => { if(cm===11){setCalMonth(0);setCalYear(y=>y+1);}else setCalMonth(m=>m+1); };
               return (
-                <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
+                <div className="tt-card" style={{overflow:"hidden"}}>
                   {/* Cal nav */}
-                  <div className="flex items-center justify-between px-5 py-3 border-b border-stone-100">
-                    <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500 text-lg font-light">‹</button>
-                    <span className="text-sm font-semibold text-stone-700">{MONTHS[cm]} {cy}</span>
-                    <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500 text-lg font-light">›</button>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",borderBottom:"1px solid var(--border)"}}>
+                    <button onClick={prevMonth} style={{padding:"4px 8px",borderRadius:"var(--radius-sm)",border:"1px solid var(--border)",background:"transparent",cursor:"pointer",fontSize:16,color:"var(--text-2)"}}>‹</button>
+                    <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>{MONTHS[cm]} {cy}</span>
+                    <button onClick={nextMonth} style={{padding:"4px 8px",borderRadius:"var(--radius-sm)",border:"1px solid var(--border)",background:"transparent",cursor:"pointer",fontSize:16,color:"var(--text-2)"}}>›</button>
                   </div>
                   {/* Day headers */}
-                  <div className="grid grid-cols-7 border-b border-stone-100 bg-stone-50">
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"1px solid var(--border)",background:"var(--bg)"}}>
                     {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=>(
-                      <div key={d} className="text-center text-[10px] font-semibold text-stone-400 py-2">{d}</div>
+                      <div key={d} style={{textAlign:"center",fontSize:10,fontWeight:600,color:"var(--text-3)",padding:"8px 0",textTransform:"uppercase",letterSpacing:".04em"}}>{d}</div>
                     ))}
                   </div>
                   {/* Grid */}
-                  <div className="grid grid-cols-7">
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)"}}>
                     {Array.from({length: firstDay}).map((_,i)=>(
-                      <div key={"empty-"+i} className="min-h-[90px] border-b border-r border-stone-100 bg-stone-50/50"/>
+                      <div key={"empty-"+i} style={{minHeight:88,borderBottom:"1px solid var(--border-soft)",borderRight:"1px solid var(--border-soft)",background:"var(--bg)"}}/>
                     ))}
                     {Array.from({length: daysInMonth}).map((_,i) => {
                       const day = i+1;
@@ -2660,26 +2663,26 @@ function TaskTracker() {
                       const isToday = new Date().getDate()===day && new Date().getMonth()===cm && new Date().getFullYear()===cy;
                       const hasLate  = dayTasks.some(t=>t.status==="late"||(t.dueDate&&new Date(t.dueDate)<new Date()&&t.status!=="completed"));
                       return (
-                        <div key={day} className={`min-h-[90px] border-b border-r border-stone-100 p-1.5 ${hasLate?"bg-red-50/30":""}`}>
-                          <div className={`text-[11px] font-semibold mb-1 w-6 h-6 flex items-center justify-center rounded-full ${isToday?"bg-stone-800 text-white":"text-stone-500"}`}>{day}</div>
-                          <div className="space-y-0.5">
+                        <div key={day} style={{minHeight:88,borderBottom:"1px solid var(--border-soft)",borderRight:"1px solid var(--border-soft)",padding:6,background:hasLate?"#FFF8F8":"transparent"}}>
+                          <div style={{fontSize:11,fontWeight:600,marginBottom:4,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:"50%",background:isToday?"#111":"transparent",color:isToday?"#fff":"var(--text-3)"}}>{day}</div>
+                          <div style={{display:"flex",flexDirection:"column",gap:2}}>
                             {dayTasks.slice(0,3).map(t => (
                               <div key={t.id} title={`${t.taskName} — ${t.assignedTo||"?"}`}
-                                className={`text-[9px] text-white rounded px-1.5 py-0.5 truncate leading-tight ${avatarColor(t.assignedTo)}`}>
+                                style={{fontSize:9,color:"#fff",borderRadius:2,padding:"2px 5px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",background:"#374151"}}>
                                 {t.taskName}
                               </div>
                             ))}
-                            {dayTasks.length>3 && <div className="text-[9px] text-stone-400 pl-0.5">+{dayTasks.length-3} more</div>}
+                            {dayTasks.length>3 && <div style={{fontSize:9,color:"var(--text-3)",paddingLeft:2}}>+{dayTasks.length-3} more</div>}
                           </div>
                         </div>
                       );
                     })}
                   </div>
                   {/* Legend */}
-                  <div className="px-4 py-3 border-t border-stone-100 flex flex-wrap gap-3">
+                  <div style={{padding:"10px 16px",borderTop:"1px solid var(--border)",display:"flex",flexWrap:"wrap",gap:12}}>
                     {CONCIERGE_NAMES.map((n,i)=>(
-                      <span key={n} className="flex items-center gap-1.5 text-[10px] text-stone-500">
-                        <span className={`w-2.5 h-2.5 rounded-full ${AVATAR_COLORS[i%AVATAR_COLORS.length]}`}/>
+                      <span key={n} style={{display:"flex",alignItems:"center",gap:6,fontSize:10,color:"var(--text-3)"}}>
+                        <span style={{width:8,height:8,borderRadius:"50%",background:"#374151"}}/>
                         {n.split(" ")[0]}
                       </span>
                     ))}
@@ -2688,28 +2691,28 @@ function TaskTracker() {
               );
             })() : view === "table" ? (
               /* ══ TABLE VIEW — grouped by trip ══ */
-              <div className="space-y-4">
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
                 {grouped.map(([key, group]) => (
-                  <div key={key} className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-stone-100 bg-stone-50">
-                      <span className="text-xs font-semibold text-stone-700">
-                        {key==="__none__" ? "📋 No trip" : `✈️ ${group.name}`}
+                  <div key={key} className="tt-card" style={{overflow:"hidden"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 16px",borderBottom:"1px solid var(--border)",background:"var(--bg)"}}>
+                      <span style={{fontSize:12,fontWeight:600,color:"var(--text-1)"}}>
+                        {key==="__none__" ? "No trip" : group.name}
                       </span>
-                      <span className="text-[10px] text-stone-400 bg-white border border-stone-200 rounded-full px-2 py-0.5">
+                      <span style={{fontSize:10.5,color:"var(--text-3)",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:3,padding:"1px 7px"}}>
                         {group.tasks.length} {group.tasks.length===1?"task":"tasks"}
                       </span>
-                      <span className="text-[10px] text-emerald-600 ml-auto">
+                      <span style={{fontSize:10.5,color:"#059669",marginLeft:"auto"}}>
                         {group.tasks.filter(t=>t.status==="completed").length}/{group.tasks.length} done
                       </span>
                     </div>
-                    <table className="w-full text-xs">
+                    <table className="tt-table" style={{width:"100%"}}>
                       <thead>
-                        <tr className="border-b border-stone-100 text-[10px] text-stone-400 uppercase tracking-wide">
-                          <th className="text-left px-4 py-2 font-medium">Task</th>
-                          <th className="text-left px-3 py-2 font-medium">Assigned</th>
-                          <th className="text-left px-3 py-2 font-medium">Due</th>
-                          <th className="text-left px-3 py-2 font-medium">Priority</th>
-                          <th className="text-left px-3 py-2 font-medium">Status</th>
+                        <tr>
+                          <th style={{textAlign:"left"}}>Task</th>
+                          <th style={{textAlign:"left"}}>Assigned</th>
+                          <th style={{textAlign:"left"}}>Due</th>
+                          <th style={{textAlign:"left"}}>Priority</th>
+                          <th style={{textAlign:"left"}}>Status</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2717,22 +2720,22 @@ function TaskTracker() {
                           const due = t.dueDate ? new Date(t.dueDate) : null;
                           const dl  = due ? Math.round((due-now)/86400000) : null;
                           return (
-                            <tr key={t.id} className={`border-b border-stone-50 last:border-0 hover:bg-stone-50/50 transition ${t.status==="completed"?"opacity-50":""}`}>
-                              <td className="px-4 py-2.5 max-w-[200px]">
-                                <p className={`font-medium text-stone-800 truncate ${t.status==="completed"?"line-through":""}`}>{t.taskName}</p>
-                                {t.notes && <p className="text-stone-400 text-[10px] mt-0.5 truncate">{t.notes}</p>}
+                            <tr key={t.id} style={{opacity:t.status==="completed"?.5:1}}>
+                              <td style={{maxWidth:200}}>
+                                <p style={{fontWeight:500,color:"var(--text-1)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.status==="completed"?"line-through":"none",margin:0}}>{t.taskName}</p>
+                                {t.notes && <p style={{color:"var(--text-3)",fontSize:10.5,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",margin:0}}>{t.notes}</p>}
                               </td>
-                              <td className="px-3 py-2.5 text-stone-600 whitespace-nowrap">{t.assignedTo?.split(" ")[0]||"—"}</td>
-                              <td className="px-3 py-2.5 whitespace-nowrap">
-                                <span className={dl!==null&&dl<0&&t.status!=="completed"?"text-red-500":dl!==null&&dl<=2&&t.status!=="completed"?"text-amber-600":"text-stone-500"}>
+                              <td style={{whiteSpace:"nowrap"}}>{t.assignedTo?.split(" ")[0]||"—"}</td>
+                              <td style={{whiteSpace:"nowrap"}}>
+                                <span style={{color:dl!==null&&dl<0&&t.status!=="completed"?"#EF4444":dl!==null&&dl<=2&&t.status!=="completed"?"#D97706":"var(--text-2)"}}>
                                   {t.dueDate||"—"}
                                   {dl!==null&&t.status!=="completed"&&dl<=2&&dl>=0&&(
-                                    <span className="ml-1 text-[10px]">{dl===0?"· today":`· ${dl}d`}</span>
+                                    <span style={{marginLeft:4,fontSize:10}}>{dl===0?"· today":`· ${dl}d`}</span>
                                   )}
                                 </span>
                               </td>
-                              <td className="px-3 py-2.5"><PriorityBadge t={t}/></td>
-                              <td className="px-3 py-2.5"><StatusSelect t={t}/></td>
+                              <td><PriorityBadge t={t}/></td>
+                              <td><StatusSelect t={t}/></td>
                             </tr>
                           );
                         })}
@@ -2746,48 +2749,46 @@ function TaskTracker() {
           </div>
 
           {/* ── Sidebar — hidden in board/calendar view ── */}
-          {(view === "table" || view === "cards") && <div className="space-y-3">
-            <div className="bg-white rounded-2xl border border-stone-200 p-4">
-              <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Carga por persona</h2>
+          {(view === "table" || view === "cards") && <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div className="tt-card" style={{padding:16}}>
+              <p className="tt-section-title" style={{marginBottom:12}}>Carga por persona</p>
               {lbRows.length===0 ? (
-                <p className="text-xs text-stone-400">Sin pendientes 🎉</p>
+                <p style={{fontSize:12,color:"var(--text-3)"}}>Sin pendientes</p>
               ) : lbRows.map(([user,cnt],i) => (
-                <div key={user} className={`flex items-center justify-between py-2 ${i<lbRows.length-1?"border-b border-stone-50":""}`}>
-                  <span className={`text-xs font-medium ${cnt>3?"text-red-600":"text-stone-700"}`}>
-                    {cnt>3?"🔴 ":""}{user.split(" ")[0]}
-                  </span>
-                  <span className={`text-sm font-bold ${cnt>3?"text-red-600":"text-stone-700"}`}>{cnt}</span>
+                <div key={user} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 0",borderBottom:i<lbRows.length-1?"1px solid var(--border-soft)":"none"}}>
+                  <span style={{fontSize:12,fontWeight:500,color:cnt>3?"#DC2626":"var(--text-1)"}}>{user.split(" ")[0]}</span>
+                  <span style={{fontSize:13,fontWeight:700,color:cnt>3?"#DC2626":"var(--text-1)"}}>{cnt}</span>
                 </div>
               ))}
             </div>
 
-            <div className="bg-white rounded-2xl border border-stone-200 p-4">
-              <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Resumen</h2>
+            <div className="tt-card" style={{padding:16}}>
+              <p className="tt-section-title" style={{marginBottom:12}}>Resumen</p>
               {[
-                { label:"Total",        value: tasks.length },
-                { label:"Pendientes",   value: tasks.filter(t=>t.status==="pending").length,     color:"text-amber-600" },
-                { label:"En progreso",  value: tasks.filter(t=>t.status==="in_progress").length, color:"text-blue-600" },
-                { label:"Bloqueadas",   value: tasks.filter(t=>t.status==="blocked").length,     color:"text-orange-600" },
-                { label:"Vencidas",     value: tasks.filter(t=>t.status==="late").length,        color:"text-red-600" },
-                { label:"Completadas",  value: tasks.filter(t=>t.status==="completed").length,   color:"text-emerald-600" },
+                { label:"Total",        value: tasks.length,                                                  color:"var(--text-1)" },
+                { label:"Pendientes",   value: tasks.filter(t=>t.status==="pending").length,     color:"#D97706" },
+                { label:"En progreso",  value: tasks.filter(t=>t.status==="in_progress").length, color:"#2563EB" },
+                { label:"Bloqueadas",   value: tasks.filter(t=>t.status==="blocked").length,     color:"#EA580C" },
+                { label:"Vencidas",     value: tasks.filter(t=>t.status==="late").length,        color:"#DC2626" },
+                { label:"Completadas",  value: tasks.filter(t=>t.status==="completed").length,   color:"#059669" },
               ].map(r => (
-                <div key={r.label} className="flex items-center justify-between py-1.5 border-b border-stone-50 last:border-0">
-                  <span className="text-xs text-stone-500">{r.label}</span>
-                  <span className={`text-sm font-bold ${r.color||"text-stone-700"}`}>{r.value}</span>
+                <div key={r.label} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid var(--border-soft)"}}>
+                  <span style={{fontSize:12,color:"var(--text-2)"}}>{r.label}</span>
+                  <span style={{fontSize:13,fontWeight:700,color:r.color}}>{r.value}</span>
                 </div>
               ))}
             </div>
 
-            <div className="bg-white rounded-2xl border border-stone-200 p-4">
-              <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-2">Por prioridad</h2>
+            <div className="tt-card" style={{padding:16}}>
+              <p className="tt-section-title" style={{marginBottom:12}}>Por prioridad</p>
               {[
-                { label:"🔴 Alta",  key:"alta",  color:"text-red-600" },
-                { label:"🟡 Media", key:"media", color:"text-amber-600" },
-                { label:"⚪ Baja",  key:"baja",  color:"text-stone-500" },
+                { label:"Alta",  key:"alta",  color:"#DC2626" },
+                { label:"Media", key:"media", color:"#D97706" },
+                { label:"Baja",  key:"baja",  color:"var(--text-3)" },
               ].map(r => (
-                <div key={r.key} className="flex items-center justify-between py-1.5 border-b border-stone-50 last:border-0">
-                  <span className="text-xs text-stone-500">{r.label}</span>
-                  <span className={`text-sm font-bold ${r.color}`}>
+                <div key={r.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid var(--border-soft)"}}>
+                  <span style={{fontSize:12,color:"var(--text-2)"}}>{r.label}</span>
+                  <span style={{fontSize:13,fontWeight:700,color:r.color}}>
                     {tasks.filter(t=>t.priority===r.key&&t.status!=="completed").length}
                   </span>
                 </div>
