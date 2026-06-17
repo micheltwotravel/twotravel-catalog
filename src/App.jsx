@@ -1044,6 +1044,11 @@ function UnifiedDashboard() {
   // Feedback-specific metrics (separate from business KPIs)
   const kpiFeedbackSubmitted = kpiFiltered.filter(k => k.feedbackAt || k.status === "feedback_submitted");
   const kpiFeedbackRate = kpiFiltered.length ? Math.round((kpiFeedbackSubmitted.length / kpiFiltered.length) * 100) : 0;
+  // kpiRated for the "Feedback de clientes" block: ONLY client-submitted (1-10 scale)
+  const kpiFbRated = kpiFeedbackSubmitted.filter(k => Number(k.conciergeRating) > 0);
+  const kpiFbAvg = kpiFbRated.length
+    ? (kpiFbRated.reduce((s, k) => s + Number(k.conciergeRating), 0) / kpiFbRated.length).toFixed(1)
+    : "—";
   const kpiByConcierge = {};
   const normCityKpi = (v) => {
     const map = { CTG:"cartagena", MDE:"medellín", CDMX:"ciudad de méxico", TUL:"tulum", BOG:"bogotá" };
@@ -1353,7 +1358,7 @@ function UnifiedDashboard() {
                 <div className="bg-white rounded-2xl border border-violet-200 overflow-hidden mb-4">
                   <div className="px-5 py-3 border-b border-violet-100 bg-violet-50 flex items-center gap-2">
                     <span className="text-sm font-semibold text-violet-800">💬 Feedback de clientes</span>
-                    <span className="ml-auto text-[11px] text-violet-500">Basado en ratings del concierge</span>
+                    <span className="ml-auto text-[11px] text-violet-500">Formularios enviados por clientes</span>
                   </div>
                   <div className="p-5">
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
@@ -1363,15 +1368,15 @@ function UnifiedDashboard() {
                         <div className="text-[10px] text-stone-400 mt-0.5">{kpiFeedbackRate}% de clientes del período</div>
                       </div>
                       <div className="bg-amber-50 rounded-xl border border-amber-100 p-4">
-                        <div className="text-2xl font-bold text-amber-600">{kpiAvgRating} <span className="text-sm font-normal text-stone-400">/ 5 ⭐</span></div>
+                        <div className="text-2xl font-bold text-amber-600">{kpiFbAvg} <span className="text-sm font-normal text-stone-400">/ 10 ⭐</span></div>
                         <div className="text-xs text-stone-500 mt-1">Rating promedio</div>
-                        <div className="text-[10px] text-stone-400 mt-0.5">{kpiRated.length} trips calificados</div>
+                        <div className="text-[10px] text-stone-400 mt-0.5">{kpiFbRated.length} formularios con score</div>
                       </div>
                       <div className="bg-teal-50 rounded-xl border border-teal-100 p-4">
-                        <div className="text-2xl font-bold text-teal-700">{kpiRated.filter(k=>Number(k.conciergeRating)>=4).length}</div>
-                        <div className="text-xs text-stone-500 mt-1">Ratings positivos (4–5 ⭐)</div>
+                        <div className="text-2xl font-bold text-teal-700">{kpiFbRated.filter(k=>Number(k.conciergeRating)>=8).length}</div>
+                        <div className="text-xs text-stone-500 mt-1">Scores altos (8–10 ⭐)</div>
                         <div className="text-[10px] text-stone-400 mt-0.5">
-                          {kpiRated.length ? Math.round(kpiRated.filter(k=>Number(k.conciergeRating)>=4).length / kpiRated.length * 100) : 0}% satisfacción alta
+                          {kpiFbRated.length ? Math.round(kpiFbRated.filter(k=>Number(k.conciergeRating)>=8).length / kpiFbRated.length * 100) : 0}% satisfacción alta
                         </div>
                       </div>
                     </div>
