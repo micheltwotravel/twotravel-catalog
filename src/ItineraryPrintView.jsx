@@ -875,6 +875,25 @@ function WelcomePage({ kickoff, lang, page, total, editMode, localPreTrip, setLo
             <Editable tag="p" className="info-p" editMode={editMode} value={kickoff.internalNotes}/>
           </div>
         )}
+
+        {kickoff.welcomePdfUrl && (
+          <div className="info-block">
+            <div className="info-h3">{isEs ? "Guía de Bienvenida" : "Welcome Guide"}</div>
+            <p className="info-p" style={{ marginBottom: 4 }}>
+              {isEs
+                ? "Consulta tu guía de bienvenida personalizada con toda la información de tu estadía:"
+                : "Access your personalized welcome guide with all the details for your stay:"}
+            </p>
+            <a
+              href={kickoff.welcomePdfUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: "#1d4ed8", fontWeight: 600, fontSize: 12, textDecoration: "underline", wordBreak: "break-all" }}
+            >
+              {isEs ? "Ver Guía de Bienvenida →" : "View Welcome Guide →"}
+            </a>
+          </div>
+        )}
       </div>
 
       <PF n={page} total={total}/>
