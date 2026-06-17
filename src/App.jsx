@@ -3001,7 +3001,7 @@ function DrinksCatalog() {
       await fetch(GAS_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "sendSlackMessage", payload: { text: slackText, channelId: "C094NE421NV", slackToken: import.meta.env.VITE_SLACK_BOT_TOKEN || "" } }),
+        body: JSON.stringify({ action: "sendSlackMessage", payload: { text: slackText, channelId: "C0BB4EPSAP4", slackToken: import.meta.env.VITE_SLACK_BOT_TOKEN || "" } }),
       });
       if (kickoffId) {
         updateKickoffInSheet(kickoffId, { drinkOrder, drinkOrderAt: now, drinkOrderJson }).catch(() => {});
@@ -3487,7 +3487,7 @@ function GroceryCatalog() {
     try {
       await fetch(GAS_URL, {
         method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"sendSlackMessage", payload:{ text:slackText, channelId:"C094NE421NV", slackToken:import.meta.env.VITE_SLACK_BOT_TOKEN||"" }}),
+        body: JSON.stringify({ action:"sendSlackMessage", payload:{ text:slackText, channelId:"C0BB4EPSAP4", slackToken:import.meta.env.VITE_SLACK_BOT_TOKEN||"" }}),
       });
       if (kickoffId) {
         updateKickoffInSheet(kickoffId, { groceryOrder, groceryOrderAt: now, groceryOrderJson }).catch(()=>{});
@@ -3783,7 +3783,7 @@ function BreakfastCatalog() {
     const now = new Date().toISOString();
     try {
       await fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"sendSlackMessage", payload:{ text, channelId:"C094NE421NV", slackToken:import.meta.env.VITE_SLACK_BOT_TOKEN||"" }}),
+        body: JSON.stringify({ action:"sendSlackMessage", payload:{ text, channelId:"C0BB4EPSAP4", slackToken:import.meta.env.VITE_SLACK_BOT_TOKEN||"" }}),
       });
       if (kickoffId) {
         updateKickoffInSheet(kickoffId, {
