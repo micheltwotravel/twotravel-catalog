@@ -822,13 +822,12 @@ function statusLabel(status, lang = "es") {
 function driveImgUrl(url) {
   if (!url) return url;
   if (!url.includes("drive.google.com")) return url;
-  // Extract file ID from any Drive URL format
   const fileMatch = url.match(/\/file\/d\/([^/?]+)/);
-  if (fileMatch) return `https://drive.google.com/thumbnail?id=${fileMatch[1]}&sz=w800`;
+  if (fileMatch) return `https://lh3.googleusercontent.com/d/${fileMatch[1]}`;
   const openMatch = url.match(/[?&]id=([^&]+)/);
-  if (openMatch) return `https://drive.google.com/thumbnail?id=${openMatch[1]}&sz=w800`;
-  if (url.includes("thumbnail?")) return url;
-  return url; // folder or unknown
+  if (openMatch) return `https://lh3.googleusercontent.com/d/${openMatch[1]}`;
+  if (url.includes("lh3.google") || url.includes("thumbnail?")) return url;
+  return url;
 }
 
 const STATUS_CLASSES = {
