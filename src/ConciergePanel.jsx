@@ -27,7 +27,7 @@ import {
    Slack billing — PDF upload
    ========================================= */
 const SLACK_BOT_TOKEN = import.meta.env.VITE_SLACK_BOT_TOKEN || "";
-const SLACK_CHANNEL_ID = import.meta.env.VITE_SLACK_CHANNEL_ID || "C0BB4EPSAP4";
+const SLACK_CHANNEL_ID = import.meta.env.VITE_SLACK_CHANNEL_ID || "C094NE421NV";
 const BILLING_GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
 // ── Yachts & Speedboats PDF ──────────────────────────────────────────────────
