@@ -1787,6 +1787,16 @@ export default function ItineraryPrintView() {
         editMode={editMode}
       />
 
+      <WelcomePage
+        kickoff={kickoff}
+        lang={lang}
+        page={++pageNum}
+        total={total}
+        editMode={editMode}
+        localPreTrip={localPreTrip}
+        setLocalPreTrip={setLocalPreTrip}
+      />
+
       {hasSummary && (
         <SummaryPage
           kickoff={kickoff}
@@ -1797,16 +1807,6 @@ export default function ItineraryPrintView() {
           editMode={editMode}
         />
       )}
-
-      <WelcomePage
-        kickoff={kickoff}
-        lang={lang}
-        page={++pageNum}
-        total={total}
-        editMode={editMode}
-        localPreTrip={localPreTrip}
-        setLocalPreTrip={setLocalPreTrip}
-      />
 
       
 
