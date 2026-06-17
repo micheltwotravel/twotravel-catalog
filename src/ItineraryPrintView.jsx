@@ -616,7 +616,7 @@ function CoverPage({ kickoff, total, lang, editMode }) {
         {a.city && (
           <Editable
             tag="div" className="cover-eyebrow" editMode={editMode}
-            value={`${String(a.city).split(",").map(c => ({ CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" })[c.trim().toUpperCase()] || c.trim()).join(" · ")} · ${isEs ? "Itinerario Concierge" : "Concierge Itinerary"}`}
+            value={`${a.guestName ? `${a.guestName} · ` : ""}${String(a.city).split(",").map(c => ({ CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" })[c.trim().toUpperCase()] || c.trim()).join(" · ")} ${isEs ? "Itinerario Concierge" : "Concierge Itinerary"}`}
           />
         )}
         <Editable tag="div" className="cover-title" editMode={editMode} value={titleLine}/>
@@ -655,6 +655,11 @@ function CoverPage({ kickoff, total, lang, editMode }) {
                     <Editable tag="div" className="cover-info-sub" editMode={editMode} value={a.accommodationAddr}/>
                   )
                 )}
+                {a.barrio && (
+                  <div className="cover-info-sub" style={{ color: "#6b7280", fontStyle: "italic" }}>
+                    {isEs ? "Barrio" : "Neighborhood"}: {a.barrio}
+                  </div>
+                )}
               </div>
             )}
             {(a.checkIn || a.checkOut || a.groupSize) && (
@@ -665,7 +670,7 @@ function CoverPage({ kickoff, total, lang, editMode }) {
                 {a.groupSize && (
                   <div className="cover-info-value" style={{ display: "flex", alignItems: "center", gap: 5 }}>
                     <span>👥</span>
-                    <span>{a.groupSize}</span>
+                    <span>{(() => { const n = parseInt(a.groupSize) || 0; if (!n) return a.groupSize; return isEs ? `${n} ${n===1?"persona":"personas"}` : `${n} ${n===1?"person":"people"}`; })()}</span>
                   </div>
                 )}
                 {a.checkIn  && (
@@ -676,6 +681,41 @@ function CoverPage({ kickoff, total, lang, editMode }) {
                   <Editable tag="div" className="cover-info-sub" editMode={editMode}
                     value={`Check-out: ${a.checkOut}`}/>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* City 2 accommodation block */}
+        {a.accommodationName2 && (
+          <div className="cover-info-grid" style={{ marginTop: 8 }}>
+            <div className="cover-info-card">
+              <div className="cover-info-label">
+                {isEs ? "Alojamiento" : "Accommodation"}{a.city && String(a.city).split(",").length > 1 ? ` — ${String(a.city).split(",").map(c => ({ CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" })[c.trim().toUpperCase()] || c.trim())[1]}` : " 2"}
+              </div>
+              {a.accommodationUrl2 ? (
+                <a href={a.accommodationUrl2} target="_blank" rel="noreferrer"
+                  className="cover-info-value"
+                  style={{ color: "#1d4ed8", textDecoration: "underline", display: "block" }}>
+                  {a.accommodationName2}
+                </a>
+              ) : (
+                <Editable tag="div" className="cover-info-value" editMode={editMode} value={a.accommodationName2}/>
+              )}
+              {a.accommodationAddr2 && (
+                <Editable tag="div" className="cover-info-sub" editMode={editMode} value={a.accommodationAddr2}/>
+              )}
+              {a.barrio2 && (
+                <div className="cover-info-sub" style={{ color: "#6b7280", fontStyle: "italic" }}>
+                  {isEs ? "Barrio" : "Neighborhood"}: {a.barrio2}
+                </div>
+              )}
+            </div>
+            {(a.tripDates2 || a.arrivalDate2 || a.departureDate2) && (
+              <div className="cover-info-card">
+                <div className="cover-info-label">{isEs ? "Fechas — Ciudad 2" : "Dates — City 2"}</div>
+                <Editable tag="div" className="cover-info-value" editMode={editMode}
+                  value={a.tripDates2 || `${a.arrivalDate2 || ""}${a.departureDate2 ? ` – ${a.departureDate2}` : ""}`}/>
               </div>
             )}
           </div>

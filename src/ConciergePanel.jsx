@@ -362,7 +362,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   const dd   = encodeURIComponent(cl(kickoff.departureDate));
 
   // Drinks
-  const drinksUrl = `${BASE}/?mode=drinks&kickoffId=${kid}&guestName=${gn}&arrivalDate=${ad}&departureDate=${dd}&lang=${lang}`;
+  const drinksUrl     = `${BASE}/?mode=drinks&kickoffId=${kid}&guestName=${gn}&arrivalDate=${ad}&departureDate=${dd}&lang=${lang}`;
+  const drinksDisplay = `twotravelvip.com/?mode=drinks&id=${kid}`;
   doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
   dt(lang === "es" ? "Pedido de Bebidas" : "Drink Order", ML, y); y += 11;
   doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
@@ -370,10 +371,11 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     ? "Selecciona y presupuesta tus bebidas para la casa y el bote."
     : "Select and budget your drinks for both the house and the boat.", ML, y); y += 10;
   doc.setTextColor(30,100,200);
-  dtLink(drinksUrl.replace("https://",""), ML, y, drinksUrl); y += 14;
+  dtLink(drinksDisplay, ML, y, drinksUrl); y += 14;
 
   // Groceries
-  const grocUrl = `${BASE}/?mode=groceries&kickoffId=${kid}&guestName=${gn}&lang=${lang}`;
+  const grocUrl     = `${BASE}/?mode=groceries&kickoffId=${kid}&guestName=${gn}&lang=${lang}`;
+  const grocDisplay = `twotravelvip.com/?mode=groceries&id=${kid}`;
   doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
   dt(lang === "es" ? "Pedido de Mercado" : "Groceries Order", ML, y); y += 11;
   doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
@@ -381,7 +383,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     ? "Personaliza tu lista de mercado con snacks y esenciales."
     : "Customize your grocery list with snacks and breakfast essentials.", ML, y); y += 10;
   doc.setTextColor(30,100,200);
-  dtLink(grocUrl.replace("https://",""), ML, y, grocUrl); y += 14;
+  dtLink(grocDisplay, ML, y, grocUrl); y += 14;
 
   // Breakfast (CTG only)
   const cityCode = cl(kickoff.city || kickoff.destination || "").split(",")[0].trim().toUpperCase();
@@ -389,7 +391,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   if (isCtg) {
     const gs   = parseInt(cl(kickoff.groupSize)) || 1;
     const tier = gs <= 5 ? "1-5" : gs <= 10 ? "6-10" : "11-20";
-    const bfUrl = `${BASE}/?mode=breakfast&kickoffId=${kid}&guestName=${gn}&groupTier=${tier}&currency=${currency}&lang=${lang}`;
+    const bfUrl     = `${BASE}/?mode=breakfast&kickoffId=${kid}&guestName=${gn}&groupTier=${tier}&currency=${currency}&lang=${lang}`;
+    const bfDisplay = `twotravelvip.com/?mode=breakfast&id=${kid}`;
     doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
     dt(lang === "es" ? "Pedido de Desayuno" : "Breakfast Order", ML, y); y += 11;
     doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
@@ -397,7 +400,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       ? "Elige tu menú de desayuno para toda la estadía."
       : "Choose your breakfast menu for your entire stay.", ML, y); y += 10;
     doc.setTextColor(30,100,200);
-    dtLink(bfUrl.replace("https://",""), ML, y, bfUrl); y += 14;
+    dtLink(bfDisplay, ML, y, bfUrl); y += 14;
   }
 
   // Welcome guide
@@ -3172,6 +3175,16 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   );
                 })}
               </div>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="text-[11px] text-neutral-500">Título del concierge (PDF)</label>
+              <input
+                value={conciergeTitle}
+                onChange={e => setConciergeTitle(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                placeholder="Senior Concierge Cartagena"
+              />
             </div>
 
             <div className="sm:col-span-2">
