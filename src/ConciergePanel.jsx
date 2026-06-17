@@ -3407,8 +3407,14 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 <label className="text-[11px] text-neutral-500">Foto del alojamiento (URL) {city.includes(",") ? `— ${cityFullName(city.split(",")[0]?.trim())}` : ""}</label>
                 <input value={accommodationPhoto} onChange={(e) => setAccommodationPhoto(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="https://... (o link de Google Drive del archivo, no carpeta)" />
-                {accommodationPhoto && <img src={driveImgUrl(accommodationPhoto)} alt="preview" className="mt-1 w-full rounded-lg object-cover" style={{maxHeight:80}} onError={e=>e.target.style.display='none'} />}
+                  placeholder="https://..." />
+                <p className="text-[10px] text-amber-600 mt-1">
+                  ⚠️ Drive: abre la <strong>foto</strong> (no la carpeta) → clic derecho → "Obtener enlace" → pega ese link aquí.
+                </p>
+                {accommodationPhoto && <img src={driveImgUrl(accommodationPhoto)} alt="preview" className="mt-1 w-full rounded-lg object-cover" style={{maxHeight:80}} onError={e=>{ e.target.style.display='none'; }} />}
+                {accommodationPhoto && accommodationPhoto.includes("/folders/") && (
+                  <p className="text-[10px] text-red-600 mt-1">❌ Este es un link de carpeta — no funciona. Abre la carpeta, entra a la foto específica y comparte ese link.</p>
+                )}
               </div>
               {/* City 2 accommodation — only shown when 2 cities */}
               {city.includes(",") && (<>
