@@ -818,21 +818,17 @@ function statusLabel(status, lang = "es") {
   return STATUS_LABELS[status]?.[lang] ?? status;
 }
 
-// Convert Google Drive share/folder links → direct image URL
-// Folder links (drive/folders/...) can't become images — returned as-is so the broken-img handler fires
+// Convert Google Drive share/folder links → thumbnail URL (works cross-origin in browser)
 function driveImgUrl(url) {
   if (!url) return url;
-  // Already a direct image URL
   if (!url.includes("drive.google.com")) return url;
-  // File share: /file/d/FILE_ID/view → uc?export=view&id=FILE_ID
-  const fileMatch = url.match(/\/file\/d\/([^/]+)/);
-  if (fileMatch) return `https://drive.google.com/uc?export=view&id=${fileMatch[1]}`;
-  // Open?id=FILE_ID
+  // Extract file ID from any Drive URL format
+  const fileMatch = url.match(/\/file\/d\/([^/?]+)/);
+  if (fileMatch) return `https://drive.google.com/thumbnail?id=${fileMatch[1]}&sz=w800`;
   const openMatch = url.match(/[?&]id=([^&]+)/);
-  if (openMatch) return `https://drive.google.com/uc?export=view&id=${openMatch[1]}`;
-  // uc?export=... already
-  if (url.includes("uc?export=")) return url;
-  return url; // folder or unknown — can't convert
+  if (openMatch) return `https://drive.google.com/thumbnail?id=${openMatch[1]}&sz=w800`;
+  if (url.includes("thumbnail?")) return url;
+  return url; // folder or unknown
 }
 
 const STATUS_CLASSES = {
