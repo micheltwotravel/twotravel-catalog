@@ -1991,248 +1991,175 @@ function SummaryModal({ kickoff, onClose }) {
    Saves a 1-5 star internal rating to the kickoff.
    ========================================= */
 function ConciergeRatingModal({ kickoff, onSave, onClose }) {
+  const [route,         setRoute]         = useState("no_review"); // "did_review" | "no_review"
   const [rating,        setRating]        = useState(kickoff?.conciergeRating || 0);
   const [hover,         setHover]         = useState(0);
   const [saving,        setSaving]        = useState(false);
   const [msgLang,       setMsgLang]       = useState("en");
-  const [copiedStep1,    setCopiedStep1]    = useState(false);
-  const [copiedFollowUp, setCopiedFollowUp] = useState(false);
-  const [copiedNoReply,  setCopiedNoReply]  = useState(false);
+  const [copied,        setCopied]        = useState("");
 
-  // Build feedback link (includes form link for follow-up messages)
   const feedbackLink = kickoff
     ? buildFeedbackLink(kickoff, Number(kickoff.clientType ?? 1), msgLang)
     : "";
 
-  // ── SOP message templates ──────────────────────────────────
-  const STEP1 = {
-    en: `Your trip may be coming to an end, but our commitment to your experience never does.\n\nHow would you rate our overall concierge assistance (1–5 ⭐)?\n\n⭐⭐⭐⭐⭐ — Exceptional\n⭐⭐⭐⭐ — Great\n⭐⭐⭐ — Good\n⭐⭐ — Could be better\n⭐ — Poor\n\n(Simply reply with a number 1–5 or use emojis!)`,
-    es: `Puede que tu viaje esté llegando a su fin, pero nuestro compromiso con tu experiencia continúa.\n\n¿Cómo calificarías nuestra asistencia de conserjería en general (1–5 ⭐)?\n\n⭐⭐⭐⭐⭐ — Excepcional\n⭐⭐⭐⭐ — Muy bueno\n⭐⭐⭐ — Bueno\n⭐⭐ — Puede mejorar\n⭐ — Deficiente\n\n(¡Responde con un número del 1 al 5 o con emojis!)`,
-  };
-  const FOLLOW_POSITIVE = {
-    en: `Thank you so much for your feedback! ✨\n\nIf you have a moment, we'd truly appreciate a bit more insight to help us refine the guest experience — we promise it will take less than 2 minutes:\n\n${feedbackLink}`,
-    es: `¡Muchísimas gracias por tu feedback! ✨\n\nSi tienes un momento, nos encantaría conocer un poco más para seguir mejorando la experiencia — te prometemos que tomará menos de 2 minutos:\n\n${feedbackLink}`,
-  };
-  const FOLLOW_LOW = {
-    en: `Thank you so much for the feedback, and we truly apologize for not meeting your expectations.\n\nIf you have time, we would really appreciate a bit more detail to help us understand what could have gone better — we promise it'll take under 2 minutes:\n\n${feedbackLink}`,
-    es: `Muchas gracias por tus comentarios y realmente te pedimos disculpas por no haber cumplido con tus expectativas.\n\nSi tienes unos minutos, agradeceríamos muchísimo que pudieras compartir un poco más de feedback para ayudarnos a entender qué podría mejorar — te prometemos que tomará menos de 2 minutos:\n\n${feedbackLink}`,
-  };
-  const FOLLOW_NO_REPLY = {
-    en: `We noticed you haven't had a chance to share your thoughts — and we completely understand, life gets busy! ✨\n\nIf you have a moment, we'd love to hear how everything went. It'll take under 2 minutes:\n\n${feedbackLink}`,
-    es: `Notamos que aún no has tenido la oportunidad de compartir tus comentarios, y lo entendemos perfectamente — ¡el tiempo vuela! ✨\n\nSi en algún momento tienes un minuto, nos encantaría saber cómo salió todo. Prometemos que no se demora más de 2 minutos:\n\n${feedbackLink}`,
-  };
-
-  const isPositive  = rating >= 4;   // 1-3 = bajo, 4-5 = alto
-  const step1Msg    = STEP1[msgLang];
-  const followUpMsg = isPositive ? FOLLOW_POSITIVE[msgLang] : FOLLOW_LOW[msgLang];
-
-  const copyText = async (text, setCopied) => {
+  const copyText = async (text, key) => {
     try { await navigator.clipboard.writeText(text); }
     catch { prompt("Copia:", text); }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopied(key);
+    setTimeout(() => setCopied(""), 2000);
   };
 
   const handleSave = async () => {
     setSaving(true);
-    await onSave(rating);
+    await onSave(route === "did_review" ? 0 : rating);
     setSaving(false);
   };
 
+  // ── Route: DID review (skip star ask, just send form) ──
+  const MSG_DID_REVIEW = {
+    en: `Thank you so much for sharing your experience! ✨\n\nIf you have 2 minutes, we'd love a bit more detail to keep improving:\n\n${feedbackLink}`,
+    es: `¡Muchas gracias por compartir tu experiencia! ✨\n\nSi tienes 2 minutos, nos encantaría conocer un poco más para seguir mejorando:\n\n${feedbackLink}`,
+  };
+
+  // ── Route: NO review (ask stars first, then form) ──
+  const MSG_ASK_STARS = {
+    en: `Your trip may be coming to an end, but our commitment to your experience never does.\n\nHow would you rate our overall concierge assistance (1–5 ⭐)?\n\n⭐⭐⭐⭐⭐ — Exceptional\n⭐⭐⭐⭐ — Great\n⭐⭐⭐ — Good\n⭐⭐ — Could be better\n⭐ — Poor\n\n(Simply reply with a number 1–5 or use emojis!)`,
+    es: `Puede que tu viaje esté llegando a su fin, pero nuestro compromiso con tu experiencia continúa.\n\n¿Cómo calificarías nuestra asistencia de conserjería en general (1–5 ⭐)?\n\n⭐⭐⭐⭐⭐ — Excepcional\n⭐⭐⭐⭐ — Muy bueno\n⭐⭐⭐ — Bueno\n⭐⭐ — Puede mejorar\n⭐ — Deficiente\n\n(¡Responde con un número del 1 al 5 o con emojis!)`,
+  };
+  const isPositive = rating >= 4;
+  const MSG_FOLLOWUP_HIGH = {
+    en: `Thank you so much for your feedback! ✨\n\nIf you have a moment, we'd truly appreciate a bit more insight to help us keep improving — it'll take under 2 minutes:\n\n${feedbackLink}`,
+    es: `¡Muchísimas gracias por tu feedback! ✨\n\nSi tienes un momento, nos encantaría conocer un poco más para seguir mejorando la experiencia — te prometemos que tomará menos de 2 minutos:\n\n${feedbackLink}`,
+  };
+  const MSG_FOLLOWUP_LOW = {
+    en: `Thank you so much for the feedback, and we truly apologize for not meeting your expectations.\n\nIf you have time, we'd really appreciate a bit more detail to understand what could have gone better — it'll take under 2 minutes:\n\n${feedbackLink}`,
+    es: `Muchas gracias por tus comentarios y realmente te pedimos disculpas por no haber cumplido con tus expectativas.\n\nSi tienes unos minutos, agradeceríamos que pudieras compartir un poco más de detalle — tomará menos de 2 minutos:\n\n${feedbackLink}`,
+  };
+  const MSG_NO_REPLY = {
+    en: `We noticed you haven't had a chance to share your thoughts — totally understandable! ✨\n\nIf you have a moment, we'd love to hear how everything went. It'll take under 2 minutes:\n\n${feedbackLink}`,
+    es: `Notamos que aún no has tenido la oportunidad de compartir tus comentarios — ¡lo entendemos perfectamente! ✨\n\nSi en algún momento tienes un minuto, nos encantaría saber cómo salió todo. No se demora más de 2 minutos:\n\n${feedbackLink}`,
+  };
+
+  const MsgBlock = ({ label, text, copyKey, color = "#3730a3", bg = "#f8faff", border = "#e0e7ff" }) => (
+    <div style={{ background: bg, borderRadius: 10, padding: "10px 12px", marginBottom: 10, border: `1px solid ${border}` }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color, margin: 0 }}>{label}</p>
+        <button type="button" onClick={() => copyText(text, copyKey)} style={{
+          padding: "3px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer",
+          background: copied === copyKey ? "#16a34a" : "#111",
+          color: "#fff", border: "none", fontWeight: 600, flexShrink: 0, transition: "background .15s",
+        }}>
+          {copied === copyKey ? "✓ Copiado" : "Copiar"}
+        </button>
+      </div>
+      <pre style={{ fontSize: 11, color: "#4b5563", whiteSpace: "pre-wrap", margin: 0, fontFamily: "system-ui, sans-serif", lineHeight: 1.6, maxHeight: 120, overflowY: "auto" }}>
+        {text}
+      </pre>
+    </div>
+  );
+
   return (
     <div
-      style={{
-        position: "fixed", inset: 0, zIndex: 500,
-        background: "rgba(0,0,0,.5)", backdropFilter: "blur(4px)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: 16,
-      }}
+      style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,0,0,.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div style={{
-        background: "#fff", borderRadius: 16,
-        width: "100%", maxWidth: 520,
-        maxHeight: "92vh", overflowY: "auto",
-        boxShadow: "0 8px 40px rgba(0,0,0,.2)",
-        fontFamily: "system-ui, sans-serif",
-      }}>
+      <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 520, maxHeight: "92vh", overflowY: "auto", boxShadow: "0 8px 40px rgba(0,0,0,.2)", fontFamily: "system-ui, sans-serif" }}>
 
-        {/* ── Header + Stars ── */}
-        <div style={{ padding: "24px 24px 0" }}>
-          <p style={{ fontSize: 11, letterSpacing: "2px", textTransform: "uppercase", color: "#aaa", marginBottom: 4 }}>
-            Evaluación interna
-          </p>
-          <h3 style={{ fontSize: 17, fontWeight: 700, color: "#111", marginBottom: 3 }}>
-            ¿Cómo salió este trip?
-          </h3>
-          <p style={{ fontSize: 12, color: "#888", marginBottom: 16, lineHeight: 1.5 }}>
-            {kickoff?.guestName && <strong style={{ color: "#444" }}>{kickoff.guestName}</strong>}
-            {kickoff?.tripName  && <span style={{ color: "#bbb" }}> · {kickoff.tripName}</span>}
-          </p>
+        {/* Header */}
+        <div style={{ padding: "20px 24px 0" }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111", margin: "0 0 2px" }}>Feedback — {kickoff?.guestName}</h3>
+          {kickoff?.tripName && <p style={{ fontSize: 12, color: "#aaa", margin: "0 0 16px" }}>{kickoff.tripName}</p>}
 
-          <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 8 }}>
-            {[1,2,3,4,5].map(star => (
-              <button key={star} type="button"
-                onClick={() => setRating(star)}
-                onMouseEnter={() => setHover(star)}
-                onMouseLeave={() => setHover(0)}
-                style={{
-                  fontSize: 34, cursor: "pointer",
-                  background: "none", border: "none", padding: "2px 3px",
-                  color: star <= (hover || rating) ? "#f59e0b" : "#e5e7eb",
-                  transition: "color .12s",
-                }}>
-                ★
+          {/* Route tabs */}
+          <div style={{ display: "flex", gap: 0, border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden", marginBottom: 16 }}>
+            {[
+              { key: "no_review", label: "No hizo review — pedir estrellas" },
+              { key: "did_review", label: "Ya hizo review" },
+            ].map(({ key, label }) => (
+              <button key={key} type="button" onClick={() => setRoute(key)} style={{
+                flex: 1, padding: "8px 4px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", border: "none",
+                background: route === key ? "#111" : "#f9fafb",
+                color: route === key ? "#fff" : "#6b7280",
+                transition: "background .12s",
+              }}>
+                {label}
               </button>
             ))}
           </div>
-          {rating > 0 && (
-            <p style={{ textAlign: "center", fontSize: 12, color: "#888", marginBottom: 8 }}>
-              {["","😕 Hubo problemas","😐 Por mejorar","🙂 Bien","😊 Muy bien","🌟 Perfecto"][rating]}
-            </p>
-          )}
+
+          {/* Lang toggle */}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 4, marginBottom: 12 }}>
+            {["en","es"].map(l => (
+              <button key={l} type="button" onClick={() => setMsgLang(l)} style={{
+                padding: "3px 10px", borderRadius: 99, fontSize: 11, fontWeight: 600, cursor: "pointer", border: "1px solid",
+                background: msgLang === l ? "#111" : "#fff", color: msgLang === l ? "#fff" : "#666", borderColor: msgLang === l ? "#111" : "#ddd",
+              }}>{l.toUpperCase()}</button>
+            ))}
+          </div>
         </div>
 
-        {/* ── WhatsApp SOP templates ── */}
-        <div style={{ padding: "12px 24px 0" }}>
-          {/* Section header + EN/ES toggle */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: "1px", margin: 0 }}>
-              📲 Mensajes WhatsApp — SOP
-            </p>
-            <div style={{ display: "flex", gap: 4 }}>
-              {["en","es"].map(l => (
-                <button key={l} type="button" onClick={() => setMsgLang(l)} style={{
-                  padding: "3px 10px", borderRadius: 99, fontSize: 11, fontWeight: 600,
-                  cursor: "pointer", border: "1px solid",
-                  background: msgLang === l ? "#111" : "#fff",
-                  color:      msgLang === l ? "#fff" : "#666",
-                  borderColor: msgLang === l ? "#111" : "#ddd",
-                }}>
-                  {l.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
+        <div style={{ padding: "0 24px 8px" }}>
 
-          {/* Step 1 — always visible */}
-          <div style={{
-            background: "#f8faff", borderRadius: 12, padding: "10px 12px",
-            marginBottom: 10, border: "1px solid #e0e7ff",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "#3730a3", margin: 0 }}>
-                Paso 1 — Pedir calificación (al terminar el viaje)
-              </p>
-              <button type="button" onClick={() => copyText(step1Msg, setCopiedStep1)} style={{
-                padding: "4px 12px", borderRadius: 8, fontSize: 11, cursor: "pointer",
-                background: copiedStep1 ? "#16a34a" : "#3730a3",
-                color: "#fff", border: "none", fontWeight: 600, whiteSpace: "nowrap",
-                transition: "background .15s", flexShrink: 0,
-              }}>
-                {copiedStep1 ? "✓ Copiado" : "Copiar"}
-              </button>
-            </div>
-            <pre style={{
-              fontSize: 11, color: "#4b5563", whiteSpace: "pre-wrap", margin: 0,
-              fontFamily: "system-ui, sans-serif", lineHeight: 1.6,
-              maxHeight: 110, overflowY: "auto",
-            }}>
-              {step1Msg}
-            </pre>
-          </div>
+          {/* ── RUTA: YA HIZO REVIEW ── */}
+          {route === "did_review" && (
+            <MsgBlock
+              label="Mensaje directo — link al form"
+              text={MSG_DID_REVIEW[msgLang]}
+              copyKey="did_review_main"
+              color="#059669" bg="#f0fdf4" border="#bbf7d0"
+            />
+          )}
 
-          {/* Follow-up — only when rating selected */}
-          {rating > 0 ? (
-            <div style={{
-              background: isPositive ? "#f0fdf4" : "#fff7ed",
-              borderRadius: 12, padding: "10px 12px", marginBottom: 10,
-              border: `1px solid ${isPositive ? "#bbf7d0" : "#fed7aa"}`,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: isPositive ? "#15803d" : "#c2410c", margin: 0 }}>
-                  {isPositive
-                    ? "Respuesta positiva (4–5 ⭐) — Follow-up"
-                    : "Respuesta baja (1–3 ⭐) — Follow-up"}
-                </p>
-                <button type="button" onClick={() => copyText(followUpMsg, setCopiedFollowUp)} style={{
-                  padding: "4px 12px", borderRadius: 8, fontSize: 11, cursor: "pointer",
-                  background: copiedFollowUp ? "#16a34a" : "#111",
-                  color: "#fff", border: "none", fontWeight: 600, whiteSpace: "nowrap",
-                  transition: "background .15s", flexShrink: 0,
-                }}>
-                  {copiedFollowUp ? "✓ Copiado" : "Copiar"}
-                </button>
+          {/* ── RUTA: NO HIZO REVIEW ── */}
+          {route === "no_review" && (<>
+            {/* Stars (internal) */}
+            <div style={{ textAlign: "center", marginBottom: 12 }}>
+              <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6 }}>Calificación interna (guardar en sistema)</p>
+              <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+                {[1,2,3,4,5].map(star => (
+                  <button key={star} type="button"
+                    onClick={() => setRating(star)}
+                    onMouseEnter={() => setHover(star)}
+                    onMouseLeave={() => setHover(0)}
+                    style={{ fontSize: 30, cursor: "pointer", background: "none", border: "none", padding: "2px", color: star <= (hover || rating) ? "#f59e0b" : "#e5e7eb", transition: "color .1s" }}>
+                    ★
+                  </button>
+                ))}
               </div>
-              <pre style={{
-                fontSize: 11, color: "#4b5563", whiteSpace: "pre-wrap", margin: 0,
-                fontFamily: "system-ui, sans-serif", lineHeight: 1.6,
-                maxHeight: 100, overflowY: "auto",
-              }}>
-                {followUpMsg}
-              </pre>
-              <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 5, marginBottom: 0 }}>
-                💡 El link del formulario de feedback ya está incluido en el mensaje
-              </p>
+              {rating > 0 && <p style={{ fontSize: 11, color: "#888", marginTop: 4 }}>{["","😕 Hubo problemas","😐 Por mejorar","🙂 Bien","😊 Muy bien","🌟 Perfecto"][rating]}</p>}
             </div>
-          ) : (
-            <div style={{
-              background: "#f9fafb", borderRadius: 12, padding: "10px 12px",
-              marginBottom: 10, border: "1px dashed #e5e7eb", textAlign: "center",
-            }}>
-              <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
-                Selecciona las estrellas para ver el mensaje de follow-up
-              </p>
-            </div>
-          )}
 
-          {/* Third message — no reply / suspected dissatisfaction — always visible */}
-          <div style={{
-            background: "#f8f8f8", borderRadius: 12, padding: "10px 12px",
-            marginBottom: 10, border: "1px solid #e5e7eb",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", margin: 0 }}>
-                🔕 Sin respuesta — Follow-up
-              </p>
-              <button type="button" onClick={() => copyText(FOLLOW_NO_REPLY[msgLang], setCopiedNoReply)} style={{
-                padding: "4px 12px", borderRadius: 8, fontSize: 11, cursor: "pointer",
-                background: copiedNoReply ? "#16a34a" : "#6b7280",
-                color: "#fff", border: "none", fontWeight: 600, whiteSpace: "nowrap",
-                transition: "background .15s", flexShrink: 0,
-              }}>
-                {copiedNoReply ? "✓ Copiado" : "Copiar"}
-              </button>
-            </div>
-            <pre style={{
-              fontSize: 11, color: "#4b5563", whiteSpace: "pre-wrap", margin: 0,
-              fontFamily: "system-ui, sans-serif", lineHeight: 1.6,
-              maxHeight: 100, overflowY: "auto",
-            }}>
-              {FOLLOW_NO_REPLY[msgLang]}
-            </pre>
-            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 5, marginBottom: 0 }}>
-              💡 Usar si el cliente no respondió el Paso 1 (posible insatisfacción)
-            </p>
-          </div>
+            <MsgBlock label="Paso 1 — Pedir calificación" text={MSG_ASK_STARS[msgLang]} copyKey="ask_stars" />
+
+            {rating > 0 ? (
+              <MsgBlock
+                label={isPositive ? "Follow-up — respuesta alta (4–5)" : "Follow-up — respuesta baja (1–3)"}
+                text={isPositive ? MSG_FOLLOWUP_HIGH[msgLang] : MSG_FOLLOWUP_LOW[msgLang]}
+                copyKey="followup"
+                color={isPositive ? "#15803d" : "#c2410c"}
+                bg={isPositive ? "#f0fdf4" : "#fff7ed"}
+                border={isPositive ? "#bbf7d0" : "#fed7aa"}
+              />
+            ) : (
+              <div style={{ textAlign: "center", padding: "10px", background: "#f9fafb", borderRadius: 10, border: "1px dashed #e5e7eb", marginBottom: 10 }}>
+                <p style={{ fontSize: 11, color: "#d1d5db", margin: 0 }}>Selecciona las estrellas para ver el follow-up</p>
+              </div>
+            )}
+
+            <MsgBlock label="Sin respuesta — follow-up" text={MSG_NO_REPLY[msgLang]} copyKey="no_reply" color="#6b7280" bg="#f8f8f8" border="#e5e7eb" />
+          </>)}
         </div>
 
-        {/* ── Footer buttons ── */}
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", padding: "14px 24px 20px" }}>
-          <button type="button" onClick={onClose} style={{
-            padding: "8px 16px", borderRadius: 99, border: "1px solid #e0e0e0",
-            fontSize: 13, cursor: "pointer", background: "#fff", color: "#666",
-          }}>
+        {/* Footer */}
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", padding: "12px 24px 20px" }}>
+          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #e0e0e0", fontSize: 13, cursor: "pointer", background: "#fff", color: "#666" }}>
             Cancelar
           </button>
           <button type="button" onClick={handleSave} disabled={saving} style={{
-            padding: "8px 20px", borderRadius: 99, border: "none",
-            fontSize: 13, fontWeight: 700, cursor: "pointer",
-            background: rating > 0 ? "#111" : "#d1d5db",
-            color:      rating > 0 ? "#fff" : "#9ca3af",
-            transition: "background .15s",
+            padding: "8px 20px", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer",
+            background: "#111", color: "#fff", transition: "opacity .15s", opacity: saving ? .6 : 1,
           }}>
-            {saving ? "Guardando…" : "Guardar y abrir link feedback"}
+            {saving ? "Guardando…" : "Guardar"}
           </button>
         </div>
 
@@ -2955,7 +2882,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
   const [checkIn,            setCheckIn]            = useState(kickoff?.checkIn            || "3:00 PM");
   const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "11:00 AM");
-  const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=drivesdk");
+  const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eli_IGa0Y2X/view?usp=sharing");
   const [preTripContent,     setPreTripContent]     = useState(kickoff?.preTripContent     || DEFAULT_PRE_TRIP);
   const [meetingNotes,       setMeetingNotes]       = useState(kickoff?.meetingNotes       || "");
   const [pdfNotes,           setPdfNotes]           = useState(kickoff?.pdfNotes           || "");
