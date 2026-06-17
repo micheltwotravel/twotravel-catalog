@@ -783,6 +783,25 @@ function CoverPage({ kickoff, total, lang, editMode }) {
           );
         })()}
 
+        {/* Welcome Guide link — shown if configured */}
+        {a.welcomePdfUrl && (
+          <a href={a.welcomePdfUrl} target="_blank" rel="noreferrer" style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            textDecoration: "none", background: "#f0f9ff", border: "1px solid #bae6fd",
+            borderRadius: 10, padding: "11px 16px", marginBottom: 10,
+          }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#0369a1" }}>
+                📖 {isEs ? "Ver Guía de Bienvenida" : "View Welcome Guide"}
+              </div>
+              <div style={{ fontSize: 9.5, color: "#6b7280", marginTop: 2 }}>
+                {isEs ? "Toda la info de tu estadía en un solo lugar." : "All the details for your stay in one place."}
+              </div>
+            </div>
+            <span style={{ fontSize: 14, color: "#0369a1" }}>→</span>
+          </a>
+        )}
+
         {/* Cancellation / reservation note */}
         <div style={{
           fontSize: 10, color: "#6b7280", lineHeight: 1.6,
