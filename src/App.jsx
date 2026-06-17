@@ -334,6 +334,8 @@ function FeedbackForm({ kickoffId }) {
   const [saving, setSaving] = useState(false);
   const [showMoreFeedback, setShowMoreFeedback] = useState(false);
   const [errors, setErrors] = useState({});
+  // null = not chosen yet, true = already left review, false = hasn't
+  const [hasReview, setHasReview] = useState(null);
 
   const [form, setForm] = useState({
   destination: preDestination,
@@ -381,7 +383,7 @@ const handleSubmit = async (e) => {
   const newErrors = {};
   if (!form.destination) newErrors.destination = true;
   if (!form.concierge)   newErrors.concierge   = true;
-  if (!form.overallExperience) newErrors.overallExperience = true;
+  if (!hasReview && !form.overallExperience) newErrors.overallExperience = true;
   if (Object.keys(newErrors).length > 0) {
     setErrors(newErrors);
     // Scroll to first error
@@ -528,6 +530,50 @@ const handleSubmit = async (e) => {
           </div>
         </div>
 
+        {/* ── Route selector ── */}
+        {hasReview === null && (
+          <div className="rounded-[28px] border border-stone-200 bg-white p-8 shadow-sm text-center">
+            <p className="text-[11px] uppercase tracking-[0.28em] text-stone-400 mb-3">
+              {lang === "es" ? "Antes de continuar" : "Before we start"}
+            </p>
+            <h2 className="text-2xl font-semibold text-stone-800 mb-2">
+              {lang === "es"
+                ? "¿Ya nos dejaste una reseña en Google o TripAdvisor?"
+                : "Did you already leave us a review on Google or TripAdvisor?"}
+            </h2>
+            <p className="text-sm text-stone-500 mb-8">
+              {lang === "es"
+                ? "Esto nos ayuda a personalizar tu experiencia de feedback."
+                : "This helps us personalize your feedback experience."}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button type="button"
+                onClick={() => setHasReview(true)}
+                className="rounded-2xl border-2 border-teal-200 bg-teal-50 px-8 py-5 text-left hover:bg-teal-100 transition">
+                <div className="text-2xl mb-2">✅</div>
+                <div className="font-semibold text-teal-800 text-sm">
+                  {lang === "es" ? "Sí, ya dejé mi reseña" : "Yes, I left a review"}
+                </div>
+                <div className="text-xs text-teal-600 mt-1">
+                  {lang === "es" ? "Ir directo al formulario de feedback" : "Go straight to the feedback form"}
+                </div>
+              </button>
+              <button type="button"
+                onClick={() => setHasReview(false)}
+                className="rounded-2xl border-2 border-amber-200 bg-amber-50 px-8 py-5 text-left hover:bg-amber-100 transition">
+                <div className="text-2xl mb-2">⭐</div>
+                <div className="font-semibold text-amber-800 text-sm">
+                  {lang === "es" ? "No, aún no lo he hecho" : "No, I haven't yet"}
+                </div>
+                <div className="text-xs text-amber-600 mt-1">
+                  {lang === "es" ? "Calificar mi experiencia aquí" : "Rate my experience here"}
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {hasReview !== null && (
         <form onSubmit={handleSubmit} className="space-y-6">
           <Section
             eyebrow="01"
@@ -591,6 +637,7 @@ const handleSubmit = async (e) => {
             title={t.bigPictureTitle}
             subtitle={t.bigPictureSubtitle}
           >
+            {!hasReview && (
             <div className={errors.overallExperience ? "field-error" : ""}>
               <Label>
                 {t.overallExperienceLabel}
@@ -604,6 +651,7 @@ const handleSubmit = async (e) => {
                 onChange={(v) => { updateField("overallExperience", v); setErrors(p => ({...p, overallExperience: false})); }}
               />
             </div>
+            )}
 
             <div>
               <Label>{t.overallReasonLabel}</Label>
@@ -734,8 +782,8 @@ const handleSubmit = async (e) => {
             )}
           </section>
 
-          {/* Review */}
-          {(() => {
+          {/* Review — only shown for route 2 (hasn't left review yet) */}
+          {!hasReview && (() => {
             const cityUpper = String(preDestination || "").toUpperCase();
             const isMexico = cityUpper.includes("CDMX") || cityUpper.includes("TUL") || cityUpper.includes("TULUM") || cityUpper.includes("MEXICO") || cityUpper.includes("MÉXICO");
             const reviewUrl = isMexico
@@ -745,14 +793,14 @@ const handleSubmit = async (e) => {
               ? (lang === "es" ? "Dejar una reseña en Google" : "Leave a review on Google")
               : t.reviewButton;
             return (
-              <section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
-                <p className="text-[10px] uppercase tracking-[0.28em] text-stone-400">Review</p>
+              <section className="rounded-[28px] border-2 border-amber-200 bg-amber-50 p-6 shadow-sm">
+                <p className="text-[10px] uppercase tracking-[0.28em] text-amber-500">⭐ Review</p>
                 <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-800">{t.reviewTitle}</h2>
                 <p className="mt-2 text-sm text-stone-500">{t.reviewSubtitle}</p>
                 <a
                   href={reviewUrl}
                   target="_blank" rel="noreferrer"
-                  className="mt-4 inline-block rounded-full bg-stone-800 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                  className="mt-4 inline-block rounded-full bg-amber-500 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
                 >
                   {reviewLabel}
                 </a>
@@ -778,6 +826,7 @@ const handleSubmit = async (e) => {
             </div>
           </div>
         </form>
+        )}
       </div>
     </div>
   );
