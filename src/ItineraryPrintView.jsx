@@ -739,69 +739,69 @@ function CoverPage({ kickoff, total, lang, editMode }) {
         )}
 
 
-        {/* Action cards — Pre Check-In, Drinks, Groceries */}
-        {a.id && (
-          <div style={{ marginBottom: 16, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-            {/* Pre Check-In */}
-            <a href={`https://twotravelvip.com/?mode=precheckin&kickoffId=${a.id}&lang=${lang}`}
-              target="_blank" rel="noreferrer"
-              style={{ textDecoration: "none", display: "block", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 10, padding: "12px 12px" }}>
-              <div style={{ fontSize: 16, marginBottom: 4 }}>📋</div>
-              <div style={{ fontSize: 10.5, fontWeight: 700, color: "#1d4ed8", marginBottom: 3 }}>
-                {isEs ? "Pre Check-In" : "Pre Check-In"}
-              </div>
-              <div style={{ fontSize: 9.5, color: "#6b7280", lineHeight: 1.4 }}>
-                {isEs
-                  ? "Completa el formulario previo a tu llegada para un check-in sin fricciones."
-                  : "Complete the arrival form for a seamless check-in experience."}
-              </div>
-            </a>
-            {/* Drink Order */}
-            <a href={`https://twotravelvip.com/?mode=drinks&kickoffId=${a.id}&lang=${lang}`}
-              target="_blank" rel="noreferrer"
-              style={{ textDecoration: "none", display: "block", background: "#faf5ff", border: "1px solid #e9d5ff", borderRadius: 10, padding: "12px 12px" }}>
-              <div style={{ fontSize: 16, marginBottom: 4 }}>🍹</div>
-              <div style={{ fontSize: 10.5, fontWeight: 700, color: "#7c3aed", marginBottom: 3 }}>
-                {isEs ? "Calculadora de Bebidas" : "Drink Calculator"}
-              </div>
-              <div style={{ fontSize: 9.5, color: "#6b7280", lineHeight: 1.4 }}>
-                {isEs
-                  ? "Personaliza tus bebidas. Las llevaremos listas en tu llegada."
-                  : "Select your drinks. We'll have them ready when you arrive."}
-              </div>
-            </a>
-            {/* WhatsApp */}
-            {a.mainContact ? (
-              <a href={`https://wa.me/${a.mainContact.replace(/\D/g,"")}`}
-                target="_blank" rel="noreferrer"
-                style={{ textDecoration: "none", display: "block", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 12px" }}>
-                <div style={{ fontSize: 16, marginBottom: 4 }}>💬</div>
-                <div style={{ fontSize: 10.5, fontWeight: 700, color: "#15803d", marginBottom: 3 }}>
-                  WhatsApp
-                </div>
-                <div style={{ fontSize: 9.5, color: "#6b7280", lineHeight: 1.4 }}>
-                  {isEs
-                    ? "Escríbele a tu concierge por WhatsApp en cualquier momento."
-                    : "Message your concierge on WhatsApp anytime."}
+        {/* Action cards — Pre Check-In, Drinks, Groceries/WhatsApp */}
+        {a.id && (() => {
+          const cardImg = { borderRadius: "8px 8px 0 0", width: "100%", height: 70, objectFit: "cover", display: "block" };
+          const cardBody = { padding: "8px 10px 10px" };
+          const cardWrap = (href, border) => ({
+            textDecoration: "none", display: "block",
+            border: `1px solid ${border}`, borderRadius: 10, overflow: "hidden",
+          });
+          return (
+            <div style={{ marginBottom: 16, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+              {/* Pre Check-In */}
+              <a href={`https://twotravelvip.com/?mode=precheckin&kickoffId=${a.id}&lang=${lang}`}
+                target="_blank" rel="noreferrer" style={cardWrap("https://twotravelvip.com/?mode=precheckin","#bfdbfe")}>
+                <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=140&fit=crop&auto=format" alt="" style={cardImg} onError={e=>e.target.style.display='none'} />
+                <div style={cardBody}>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: "#1d4ed8", marginBottom: 2 }}>Pre Check-In</div>
+                  <div style={{ fontSize: 9, color: "#6b7280", lineHeight: 1.4 }}>
+                    {isEs ? "Completa el formulario antes de tu llegada." : "Complete the arrival form before you arrive."}
+                  </div>
                 </div>
               </a>
-            ) : (
-              <a href={`https://twotravelvip.com/?mode=groceries&kickoffId=${a.id}&lang=${lang}`}
-                target="_blank" rel="noreferrer"
-                style={{ textDecoration: "none", display: "block", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 12px" }}>
-                <div style={{ fontSize: 16, marginBottom: 4 }}>🛒</div>
-                <div style={{ fontSize: 10.5, fontWeight: 700, color: "#15803d", marginBottom: 3 }}>
-                  {isEs ? "Mercado y Desayuno" : "Groceries & Breakfast"}
-                </div>
-                <div style={{ fontSize: 9.5, color: "#6b7280", lineHeight: 1.4 }}>
-                  {isEs
-                    ? "Personaliza tu lista de mercado y desayuno."
-                    : "Customize your grocery list and breakfast order."}
+              {/* Drink Order */}
+              <a href={`https://twotravelvip.com/?mode=drinks&kickoffId=${a.id}&lang=${lang}`}
+                target="_blank" rel="noreferrer" style={cardWrap("https://twotravelvip.com/?mode=drinks","#e9d5ff")}>
+                <img src="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=140&fit=crop&auto=format" alt="" style={cardImg} onError={e=>e.target.style.display='none'} />
+                <div style={cardBody}>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: "#7c3aed", marginBottom: 2 }}>
+                    {isEs ? "Calculadora de Bebidas" : "Drink Calculator"}
+                  </div>
+                  <div style={{ fontSize: 9, color: "#6b7280", lineHeight: 1.4 }}>
+                    {isEs ? "Personaliza tus bebidas para la casa." : "Select your drinks for the house."}
+                  </div>
                 </div>
               </a>
-            )}
-          </div>
-        )}
+              {/* WhatsApp or Groceries */}
+              {a.mainContact ? (
+                <a href={`https://wa.me/${a.mainContact.replace(/\D/g,"")}`}
+                  target="_blank" rel="noreferrer" style={cardWrap("https://wa.me/","#bbf7d0")}>
+                  <img src="https://images.unsplash.com/photo-1512438248247-f0f2a5a8b7f0?w=400&h=140&fit=crop&auto=format" alt="" style={cardImg} onError={e=>e.target.style.display='none'} />
+                  <div style={cardBody}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: "#15803d", marginBottom: 2 }}>WhatsApp</div>
+                    <div style={{ fontSize: 9, color: "#6b7280", lineHeight: 1.4 }}>
+                      {isEs ? "Escríbele a tu concierge en cualquier momento." : "Message your concierge anytime."}
+                    </div>
+                  </div>
+                </a>
+              ) : (
+                <a href={`https://twotravelvip.com/?mode=groceries&kickoffId=${a.id}&lang=${lang}`}
+                  target="_blank" rel="noreferrer" style={cardWrap("https://twotravelvip.com/?mode=groceries","#bbf7d0")}>
+                  <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=140&fit=crop&auto=format" alt="" style={cardImg} onError={e=>e.target.style.display='none'} />
+                  <div style={cardBody}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: "#15803d", marginBottom: 2 }}>
+                      {isEs ? "Mercado y Desayuno" : "Groceries & Breakfast"}
+                    </div>
+                    <div style={{ fontSize: 9, color: "#6b7280", lineHeight: 1.4 }}>
+                      {isEs ? "Personaliza tu lista de mercado." : "Customize your grocery list."}
+                    </div>
+                  </div>
+                </a>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Cancellation / reservation note */}
         <div style={{
