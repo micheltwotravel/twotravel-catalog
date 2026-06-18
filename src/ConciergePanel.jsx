@@ -45,18 +45,18 @@ const CITY_NAMES = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México",
 
 /* Branded cover photos (city photos with TW logo overlay) */
 const PRESET_COVER_PHOTOS = [
-  { id: "1T0uABit7rH0pBGhBZ467_eyK4zAiQf7a",  city: "CDMX", label: "CDMX 1" },
-  { id: "14X24TXHn3YHVAJ70M1hYqGxVt4wAtob5",  city: "CDMX", label: "CDMX 2" },
-  { id: "1zvEZfCzYds90gOYIgE_4kVqe-3VnFqhH",  city: "CDMX", label: "CDMX 3" },
-  { id: "1ybdGh98iAjgJZ1HtL294FHTxxDSpRe0u",  city: "COL",  label: "Colombia 1" },
-  { id: "1n8vXILH-ZC1yINNm2qljKo6ETjLcBwH-",  city: "COL",  label: "Colombia 2" },
-  { id: "1f_ZzS4o5SUxq2_pPANYP9ZH8zi3pfGMT",  city: "COL",  label: "Colombia 3" },
-  { id: "1mL1d6fzikltPfOOCqhiet9hlBkFMpoO8",  city: "CTG",  label: "Cartagena 1" },
-  { id: "1JGgIP1esNThcK0jtOcdTvYz0ZMa0ZSwX",  city: "CTG",  label: "Cartagena 2" },
-  { id: "10hRQFZVwZzPNAgOTS2pOSvI-XmLA43q9",  city: "CTG",  label: "Cartagena 3" },
-  { id: "1bbS9G-7VbaAgdJ89rCu-L9m-AKyS-0CA",  city: "MDE",  label: "Medellín 1" },
-  { id: "1vKiUCKJagyJwK_V1HQA6X_sKeYpBmRrD",  city: "MDE",  label: "Medellín 2" },
-  { id: "1Hal7GObs16znYePvNrE8nVmwOoU0128w",   city: "TUL",  label: "Tulum 1" },
+  "1T0uABit7rH0pBGhBZ467_eyK4zAiQf7a",
+  "14X24TXHn3YHVAJ70M1hYqGxVt4wAtob5",
+  "1zvEZfCzYds90gOYIgE_4kVqe-3VnFqhH",
+  "1ybdGh98iAjgJZ1HtL294FHTxxDSpRe0u",
+  "1n8vXILH-ZC1yINNm2qljKo6ETjLcBwH-",
+  "1f_ZzS4o5SUxq2_pPANYP9ZH8zi3pfGMT",
+  "1mL1d6fzikltPfOOCqhiet9hlBkFMpoO8",
+  "1JGgIP1esNThcK0jtOcdTvYz0ZMa0ZSwX",
+  "10hRQFZVwZzPNAgOTS2pOSvI-XmLA43q9",
+  "1bbS9G-7VbaAgdJ89rCu-L9m-AKyS-0CA",
+  "1vKiUCKJagyJwK_V1HQA6X_sKeYpBmRrD",
+  "1Hal7GObs16znYePvNrE8nVmwOoU0128w",
 ];
 const cityFullName = (code) =>
   String(code||"").split(",").map(c => CITY_NAMES[c.trim().toUpperCase()] || c.trim()).filter(Boolean).join(", ");
@@ -3420,34 +3420,32 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               <div className="col-span-2">
                 <label className="text-[11px] font-semibold text-neutral-700 mb-2 block">🖼️ Foto de portada del itinerario</label>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 8 }}>
-                  {PRESET_COVER_PHOTOS.map(photo => {
-                    const selected = coverPhotoId === photo.id;
+                  {PRESET_COVER_PHOTOS.map(id => {
+                    const selected = coverPhotoId === id;
                     return (
                       <button
-                        key={photo.id}
+                        key={id}
                         type="button"
-                        onClick={() => setCoverPhotoId(selected ? "" : photo.id)}
+                        onClick={() => setCoverPhotoId(selected ? "" : id)}
                         style={{
-                          padding: 0, border: selected ? "3px solid #1d4ed8" : "2px solid transparent",
+                          padding: 0, border: selected ? "3px solid #1d4ed8" : "2px solid #e5e7eb",
                           borderRadius: 8, overflow: "hidden", cursor: "pointer", position: "relative",
-                          boxShadow: selected ? "0 0 0 1px #1d4ed8" : "0 1px 3px rgba(0,0,0,.15)",
+                          boxShadow: selected ? "0 0 0 2px #1d4ed8" : "0 1px 3px rgba(0,0,0,.1)",
                         }}
-                        title={photo.label}
                       >
                         <img
-                          src={`https://lh3.googleusercontent.com/d/${photo.id}`}
-                          alt={photo.label}
+                          src={`https://lh3.googleusercontent.com/d/${id}`}
+                          alt=""
                           style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }}
                           onError={e => { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect fill='%23e5e7eb' width='80' height='80'/%3E%3C/svg%3E"; }}
                         />
                         {selected && (
-                          <div style={{ position: "absolute", top: 3, right: 3, background: "#1d4ed8", borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <span style={{ color: "#fff", fontSize: 10, lineHeight: 1 }}>✓</span>
+                          <div style={{ position: "absolute", inset: 0, background: "rgba(29,78,216,.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <div style={{ background: "#1d4ed8", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <span style={{ color: "#fff", fontSize: 12 }}>✓</span>
+                            </div>
                           </div>
                         )}
-                        <div style={{ fontSize: 9, color: "#555", textAlign: "center", padding: "2px 2px 3px", background: "#fafafa" }}>
-                          {photo.label}
-                        </div>
                       </button>
                     );
                   })}
