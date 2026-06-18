@@ -607,18 +607,38 @@ function CoverPage({ kickoff, total, lang, editMode }) {
   // already contains dates — use it as the subtitle, fall back to city only
   const subtitle  = a.tripName || a.city || "";
 
+  const coverImgUrl = a.coverPhotoId
+    ? `https://lh3.googleusercontent.com/d/${a.coverPhotoId}`
+    : null;
+
   return (
     <div className="page">
-      {/* Hero — always Two Travel brand image */}
+      {/* Hero — branded city photo if selected, else default dark + logo */}
       <div className="cover-hero-placeholder" style={{
-        background: "linear-gradient(160deg,#1a1410 0%,#0d0d0d 60%,#111 100%)",
+        background: coverImgUrl
+          ? "transparent"
+          : "linear-gradient(160deg,#1a1410 0%,#0d0d0d 60%,#111 100%)",
         alignItems: "center",
         justifyContent: "center",
         padding: 0,
+        position: "relative",
+        overflow: "hidden",
       }}>
-        <img src={ttLogo} alt="Two Travel"
-          style={{ maxHeight: 160, maxWidth: 380, objectFit: "contain", filter: "brightness(0) invert(1)" }}
-        />
+        {coverImgUrl ? (
+          <img
+            src={coverImgUrl}
+            alt="Cover"
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            onError={e => {
+              e.target.style.display = "none";
+              e.target.parentElement.style.background = "linear-gradient(160deg,#1a1410 0%,#0d0d0d 60%,#111 100%)";
+            }}
+          />
+        ) : (
+          <img src={ttLogo} alt="Two Travel"
+            style={{ maxHeight: 160, maxWidth: 380, objectFit: "contain", filter: "brightness(0) invert(1)" }}
+          />
+        )}
       </div>
 
       <PH kickoff={a}/>
