@@ -4170,7 +4170,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
             </div>
             {form.city && form.city.split(",").filter(Boolean).length >= 2 && (
               <p className="text-[10.5px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5 mt-1.5">
-                Selecciona las ciudades <strong>en el orden en que las van a visitar</strong> — la primera que presiones será la ciudad principal del itinerario.
+                Presiona primero la ciudad a la que llegan primero — eso determina cuál es <strong>Ciudad 1</strong> (Fechas de Estadía) y cuál es <strong>Ciudad 2</strong> en el kickoff.
               </p>
             )}
           </div>
