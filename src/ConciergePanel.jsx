@@ -3061,8 +3061,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             </div>
 
             {/* ── FECHAS DE ESTADÍA (editables por el concierge) ── */}
-            <div className="col-span-2 border border-neutral-200 rounded-xl px-3 py-3 space-y-2 bg-white">
-              <p className="text-[11px] font-semibold text-neutral-600 uppercase tracking-wide">📅 Fechas de estadía</p>
+            <div className="col-span-2 border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
+              <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — Ciudad 1{city.includes(",") ? ` — ${cityFullName(city.split(",")[0]?.trim())}` : ""}</p>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
@@ -3070,7 +3070,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     type="date"
                     value={arrivalDate}
                     onChange={e => setArrivalDate(e.target.value)}
-                    className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+                    className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white"
                   />
                 </div>
                 <div>
@@ -3080,29 +3080,29 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     value={departureDate}
                     min={arrivalDate || undefined}
                     onChange={e => setDepartureDate(e.target.value)}
-                    className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+                    className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white"
                   />
                 </div>
               </div>
               {clientNights && (
-                <p className="text-[10px] text-neutral-500">🌙 {clientNights} noche{clientNights !== 1 ? "s" : ""}</p>
+                <p className="text-[10px] text-blue-600">🌙 {clientNights} noche{clientNights !== 1 ? "s" : ""}</p>
               )}
             </div>
 
             {/* City 2 dates — only shown when trip has 2 cities */}
             {city.includes(",") && (
-              <div className="border rounded-xl p-3 bg-blue-50 border-blue-100 space-y-2">
-                <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas ciudad 2 — {cityFullName(city.split(",")[1]?.trim())}</p>
+              <div className="border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
+                <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — Ciudad 2 — {cityFullName(city.split(",")[1]?.trim())}</p>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] text-neutral-500 mb-1">Llegada ciudad 2</label>
+                    <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
                     <input type="date" value={arrivalDate2}
                       min={departureDate || undefined}
                       onChange={e => setArrivalDate2(e.target.value)}
                       className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-neutral-500 mb-1">Salida ciudad 2</label>
+                    <label className="block text-[10px] text-neutral-500 mb-1">Salida</label>
                     <input type="date" value={departureDate2}
                       min={arrivalDate2 || undefined}
                       onChange={e => setDepartureDate2(e.target.value)}
