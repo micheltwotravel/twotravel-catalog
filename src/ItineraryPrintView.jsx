@@ -1460,78 +1460,133 @@ const CITY_GUIDE_SECTIONS = [
 const DEFAULT_CITY_GUIDE_INTRO =
   "A curated collection of additional spots across the city — from hidden culinary gems and vibrant nightlife to essential services. Use these recommendations as your personal guide to explore Cartagena beyond your itinerary.";
 
+/* accent color per category */
+const SECTION_ACCENT = {
+  dining:     { bg: "#fff8f0", border: "#f59e0b", dot: "#f59e0b", badge: "#fffbeb", badgeText: "#92400e" },
+  nightlife:  { bg: "#f5f3ff", border: "#8b5cf6", dot: "#8b5cf6", badge: "#ede9fe", badgeText: "#4c1d95" },
+  beach:      { bg: "#eff6ff", border: "#3b82f6", dot: "#3b82f6", badge: "#dbeafe", badgeText: "#1e40af" },
+  shopping:   { bg: "#f0fdf4", border: "#22c55e", dot: "#22c55e", badge: "#dcfce7", badgeText: "#14532d" },
+  essentials: { bg: "#fff1f2", border: "#f43f5e", dot: "#f43f5e", badge: "#ffe4e6", badgeText: "#881337" },
+};
+
 function CityGuidePage({ kickoff, cityGuideHidden, cityGuideIntro, onIntroChange, page, total, lang, editMode, onToggleHidden }) {
   const hidden = (cityGuideHidden || "").split(",").map(s => s.trim()).filter(Boolean);
   const intro = cityGuideIntro || DEFAULT_CITY_GUIDE_INTRO;
   const cityName = kickoff.cityName || "Cartagena";
 
   return (
-    <div className="page" style={{ position: "relative" }}>
-      <PH kickoff={kickoff} />
+    <div className="page" style={{ position: "relative", background: "#faf8f4" }}>
 
-      {/* Header */}
-      <div style={{ padding: "20px 40px 0" }}>
-        <div style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "#b45309", marginBottom: 6, fontWeight: 700 }}>
-          {lang === "en" ? "City Guide" : "Guía de Ciudad"}
+      {/* ── Hero banner ── */}
+      <div style={{
+        background: "linear-gradient(135deg, #1c1917 0%, #292524 60%, #3d1f00 100%)",
+        padding: "28px 40px 22px",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        {/* decorative circles */}
+        <div style={{ position: "absolute", top: -30, right: -30, width: 160, height: 160, borderRadius: "50%", background: "rgba(245,158,11,.08)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: -40, right: 80, width: 100, height: 100, borderRadius: "50%", background: "rgba(245,158,11,.05)", pointerEvents: "none" }} />
+
+        <div style={{ fontSize: 8.5, letterSpacing: "0.25em", textTransform: "uppercase", color: "#f59e0b", marginBottom: 6, fontWeight: 700, opacity: .85 }}>
+          {lang === "en" ? "Curated City Guide" : "Guía de Ciudad Curada"}
         </div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: "#111", marginBottom: 6 }}>
-          {cityName} City Guide
+        <div style={{ fontSize: 28, fontWeight: 900, color: "#fff", letterSpacing: "-.02em", lineHeight: 1.1, marginBottom: 10 }}>
+          {cityName}
         </div>
-        <div style={{ fontSize: 12, color: "#555", lineHeight: 1.6, marginBottom: 20, maxWidth: 560 }}>
-          <Editable tag="span" editMode={editMode} value={intro} onChange={onIntroChange} />
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,.65)", lineHeight: 1.65, maxWidth: 500 }}>
+          {editMode ? (
+            <Editable tag="span" editMode={editMode} value={intro} onChange={onIntroChange}
+              style={{ color: "rgba(255,255,255,.65)" }} />
+          ) : intro}
         </div>
+
+        {/* Guest name strip */}
+        {kickoff.guestName && (
+          <div style={{ marginTop: 12, fontSize: 10, color: "rgba(255,255,255,.4)", fontStyle: "italic" }}>
+            Prepared exclusively for {kickoff.guestName}
+          </div>
+        )}
       </div>
 
-      {/* Sections grid */}
-      <div style={{ padding: "0 40px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 28px" }}>
+      {/* ── Sections grid ── */}
+      <div style={{ padding: "16px 28px 20px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 14px" }}>
         {CITY_GUIDE_SECTIONS.map(section => {
+          const acc = SECTION_ACCENT[section.id] || SECTION_ACCENT.dining;
           const visibleItems = section.items.filter(item => !hidden.includes(item.id));
           if (visibleItems.length === 0 && !editMode) return null;
           return (
-            <div key={section.id}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, borderBottom: "1.5px solid #f3e8d8", paddingBottom: 4 }}>
-                <span style={{ fontSize: 14 }}>{section.icon}</span>
-                <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", color: "#92400e" }}>
+            <div key={section.id} style={{
+              background: "#fff",
+              borderRadius: 10,
+              overflow: "hidden",
+              boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+              borderTop: `3px solid ${acc.border}`,
+            }}>
+              {/* Section header */}
+              <div style={{
+                padding: "9px 14px 7px",
+                background: acc.bg,
+                display: "flex", alignItems: "center", gap: 7,
+                borderBottom: `1px solid ${acc.border}22`,
+              }}>
+                <span style={{ fontSize: 16, lineHeight: 1 }}>{section.icon}</span>
+                <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".07em", color: acc.badgeText }}>
                   {section.title}
                 </span>
               </div>
-              {section.items.map(item => {
-                const isHidden = hidden.includes(item.id);
-                if (isHidden && !editMode) return null;
-                return (
-                  <div key={item.id} style={{
-                    display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 7,
-                    opacity: isHidden ? 0.35 : 1,
-                  }}>
-                    <div style={{ flex: 1 }}>
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ fontSize: 12, fontWeight: 700, color: "#1d4ed8", textDecoration: "underline", display: "block" }}
-                      >
-                        {item.label}
-                      </a>
-                      <div style={{ fontSize: 10.5, color: "#666", lineHeight: 1.45 }}>{item.desc}</div>
+
+              {/* Items */}
+              <div style={{ padding: "8px 14px 10px" }}>
+                {section.items.map(item => {
+                  const isHidden = hidden.includes(item.id);
+                  if (isHidden && !editMode) return null;
+                  return (
+                    <div key={item.id} style={{
+                      display: "flex", alignItems: "flex-start", gap: 7, marginBottom: 7,
+                      opacity: isHidden ? 0.3 : 1,
+                    }}>
+                      {/* colored dot */}
+                      <div style={{
+                        width: 5, height: 5, borderRadius: "50%",
+                        background: acc.dot, flexShrink: 0, marginTop: 5,
+                      }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            fontSize: 11.5, fontWeight: 700, color: "#111",
+                            textDecoration: "none", display: "block",
+                            borderBottom: `1px solid ${acc.border}55`,
+                            paddingBottom: 1, marginBottom: 2,
+                          }}
+                        >
+                          {item.label}
+                          <span style={{ fontSize: 8, marginLeft: 4, color: acc.border, verticalAlign: "middle" }}>↗</span>
+                        </a>
+                        <div style={{ fontSize: 9.5, color: "#888", lineHeight: 1.4 }}>{item.desc}</div>
+                      </div>
+                      {editMode && (
+                        <button
+                          onClick={() => onToggleHidden && onToggleHidden(item.id)}
+                          className="no-print"
+                          style={{
+                            fontSize: 8, padding: "1px 5px", borderRadius: 4, cursor: "pointer",
+                            background: isHidden ? "#fee2e2" : "#f0fdf4",
+                            color: isHidden ? "#b91c1c" : "#166534",
+                            border: isHidden ? "1px solid #fca5a5" : "1px solid #86efac",
+                            flexShrink: 0, marginTop: 1,
+                          }}
+                        >
+                          {isHidden ? "Show" : "Hide"}
+                        </button>
+                      )}
                     </div>
-                    {editMode && (
-                      <button
-                        onClick={() => onToggleHidden && onToggleHidden(item.id)}
-                        className="no-print"
-                        style={{
-                          fontSize: 9, padding: "2px 6px", borderRadius: 4, cursor: "pointer",
-                          background: isHidden ? "#fee2e2" : "#f0fdf4",
-                          color: isHidden ? "#b91c1c" : "#166534",
-                          border: isHidden ? "1px solid #fca5a5" : "1px solid #86efac",
-                          flexShrink: 0, marginTop: 2,
-                        }}
-                      >
-                        {isHidden ? "Show" : "Hide"}
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           );
         })}
