@@ -1460,137 +1460,117 @@ const CITY_GUIDE_SECTIONS = [
 const DEFAULT_CITY_GUIDE_INTRO =
   "A curated collection of additional spots across the city — from hidden culinary gems and vibrant nightlife to essential services. Use these recommendations as your personal guide to explore Cartagena beyond your itinerary.";
 
-/* accent color per category */
-const SECTION_ACCENT = {
-  dining:     { bg: "#fff8f0", border: "#f59e0b", dot: "#f59e0b", badge: "#fffbeb", badgeText: "#92400e" },
-  nightlife:  { bg: "#f5f3ff", border: "#8b5cf6", dot: "#8b5cf6", badge: "#ede9fe", badgeText: "#4c1d95" },
-  beach:      { bg: "#eff6ff", border: "#3b82f6", dot: "#3b82f6", badge: "#dbeafe", badgeText: "#1e40af" },
-  shopping:   { bg: "#f0fdf4", border: "#22c55e", dot: "#22c55e", badge: "#dcfce7", badgeText: "#14532d" },
-  essentials: { bg: "#fff1f2", border: "#f43f5e", dot: "#f43f5e", badge: "#ffe4e6", badgeText: "#881337" },
-};
-
 function CityGuidePage({ kickoff, cityGuideHidden, cityGuideIntro, onIntroChange, page, total, lang, editMode, onToggleHidden }) {
   const hidden = (cityGuideHidden || "").split(",").map(s => s.trim()).filter(Boolean);
   const intro = cityGuideIntro || DEFAULT_CITY_GUIDE_INTRO;
   const cityName = kickoff.cityName || "Cartagena";
 
   return (
-    <div className="page" style={{ position: "relative", background: "#faf8f4" }}>
+    <div className="page" style={{ position: "relative", background: "#fefcf8", fontFamily: "Georgia, 'Times New Roman', serif" }}>
 
-      {/* ── Hero banner ── */}
-      <div style={{
-        background: "linear-gradient(135deg, #1c1917 0%, #292524 60%, #3d1f00 100%)",
-        padding: "28px 40px 22px",
-        position: "relative",
-        overflow: "hidden",
-      }}>
-        {/* decorative circles */}
-        <div style={{ position: "absolute", top: -30, right: -30, width: 160, height: 160, borderRadius: "50%", background: "rgba(245,158,11,.08)", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", bottom: -40, right: 80, width: 100, height: 100, borderRadius: "50%", background: "rgba(245,158,11,.05)", pointerEvents: "none" }} />
+      {/* ── Top rule ── */}
+      <div style={{ height: 4, background: "#1c1917" }} />
 
-        <div style={{ fontSize: 8.5, letterSpacing: "0.25em", textTransform: "uppercase", color: "#f59e0b", marginBottom: 6, fontWeight: 700, opacity: .85 }}>
-          {lang === "en" ? "Curated City Guide" : "Guía de Ciudad Curada"}
-        </div>
-        <div style={{ fontSize: 28, fontWeight: 900, color: "#fff", letterSpacing: "-.02em", lineHeight: 1.1, marginBottom: 10 }}>
-          {cityName}
-        </div>
-        <div style={{ fontSize: 11, color: "rgba(255,255,255,.65)", lineHeight: 1.65, maxWidth: 500 }}>
-          {editMode ? (
-            <Editable tag="span" editMode={editMode} value={intro} onChange={onIntroChange}
-              style={{ color: "rgba(255,255,255,.65)" }} />
-          ) : intro}
-        </div>
-
-        {/* Guest name strip */}
-        {kickoff.guestName && (
-          <div style={{ marginTop: 12, fontSize: 10, color: "rgba(255,255,255,.4)", fontStyle: "italic" }}>
-            Prepared exclusively for {kickoff.guestName}
+      {/* ── Header block ── */}
+      <div style={{ padding: "24px 44px 18px", borderBottom: "1px solid #e5e0d8", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24 }}>
+        <div>
+          <div style={{ fontSize: 8, letterSpacing: "0.3em", textTransform: "uppercase", color: "#9a7a4a", fontFamily: "system-ui,sans-serif", marginBottom: 5, fontWeight: 600 }}>
+            {lang === "en" ? "Curated City Guide" : "Guía de Ciudad"}
           </div>
-        )}
+          <div style={{ fontSize: 34, fontWeight: 400, color: "#1c1917", letterSpacing: "-.01em", lineHeight: 1, fontStyle: "italic" }}>
+            {cityName}
+          </div>
+        </div>
+        <div style={{ fontSize: 10.5, color: "#7a6a55", lineHeight: 1.7, maxWidth: 300, textAlign: "right", fontFamily: "system-ui,sans-serif" }}>
+          <Editable tag="span" editMode={editMode} value={intro} onChange={onIntroChange} />
+        </div>
       </div>
 
-      {/* ── Sections grid ── */}
-      <div style={{ padding: "16px 28px 20px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 14px" }}>
-        {CITY_GUIDE_SECTIONS.map(section => {
-          const acc = SECTION_ACCENT[section.id] || SECTION_ACCENT.dining;
+      {/* ── Two columns ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0, padding: "0 44px" }}>
+        {CITY_GUIDE_SECTIONS.map((section, si) => {
           const visibleItems = section.items.filter(item => !hidden.includes(item.id));
           if (visibleItems.length === 0 && !editMode) return null;
           return (
             <div key={section.id} style={{
-              background: "#fff",
-              borderRadius: 10,
-              overflow: "hidden",
-              boxShadow: "0 1px 4px rgba(0,0,0,.06)",
-              borderTop: `3px solid ${acc.border}`,
+              padding: "16px 0",
+              paddingRight: si % 2 === 0 ? 28 : 0,
+              paddingLeft: si % 2 === 1 ? 28 : 0,
+              borderBottom: "1px solid #e5e0d8",
+              borderRight: si % 2 === 0 ? "1px solid #e5e0d8" : "none",
             }}>
-              {/* Section header */}
-              <div style={{
-                padding: "9px 14px 7px",
-                background: acc.bg,
-                display: "flex", alignItems: "center", gap: 7,
-                borderBottom: `1px solid ${acc.border}22`,
-              }}>
-                <span style={{ fontSize: 16, lineHeight: 1 }}>{section.icon}</span>
-                <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".07em", color: acc.badgeText }}>
+              {/* Category label */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 13 }}>{section.icon}</span>
+                <span style={{
+                  fontSize: 8.5, fontWeight: 700, textTransform: "uppercase",
+                  letterSpacing: ".18em", color: "#1c1917",
+                  fontFamily: "system-ui,sans-serif",
+                }}>
                   {section.title}
                 </span>
+                <div style={{ flex: 1, height: 1, background: "#d6cfc4" }} />
               </div>
 
               {/* Items */}
-              <div style={{ padding: "8px 14px 10px" }}>
-                {section.items.map(item => {
-                  const isHidden = hidden.includes(item.id);
-                  if (isHidden && !editMode) return null;
-                  return (
-                    <div key={item.id} style={{
-                      display: "flex", alignItems: "flex-start", gap: 7, marginBottom: 7,
-                      opacity: isHidden ? 0.3 : 1,
-                    }}>
-                      {/* colored dot */}
-                      <div style={{
-                        width: 5, height: 5, borderRadius: "50%",
-                        background: acc.dot, flexShrink: 0, marginTop: 5,
-                      }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
+              {section.items.map(item => {
+                const isHidden = hidden.includes(item.id);
+                if (isHidden && !editMode) return null;
+                return (
+                  <div key={item.id} style={{
+                    display: "flex", alignItems: "baseline", justifyContent: "space-between",
+                    gap: 6, marginBottom: 8, opacity: isHidden ? 0.25 : 1,
+                  }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 7, flex: 1, minWidth: 0 }}>
+                      <span style={{ color: "#9a7a4a", fontSize: 10, flexShrink: 0, fontFamily: "system-ui,sans-serif" }}>→</span>
+                      <div style={{ flex: 1 }}>
                         <a
                           href={item.url}
                           target="_blank"
                           rel="noreferrer"
                           style={{
-                            fontSize: 11.5, fontWeight: 700, color: "#111",
-                            textDecoration: "none", display: "block",
-                            borderBottom: `1px solid ${acc.border}55`,
-                            paddingBottom: 1, marginBottom: 2,
+                            fontSize: 12, fontWeight: 600, color: "#1c1917",
+                            textDecoration: "none", fontFamily: "system-ui,sans-serif",
+                            borderBottom: "1px solid #c8b99a",
+                            paddingBottom: "0px",
                           }}
                         >
                           {item.label}
-                          <span style={{ fontSize: 8, marginLeft: 4, color: acc.border, verticalAlign: "middle" }}>↗</span>
                         </a>
-                        <div style={{ fontSize: 9.5, color: "#888", lineHeight: 1.4 }}>{item.desc}</div>
+                        <div style={{ fontSize: 9.5, color: "#9a8a78", lineHeight: 1.4, marginTop: 1, fontFamily: "system-ui,sans-serif" }}>
+                          {item.desc}
+                        </div>
                       </div>
-                      {editMode && (
-                        <button
-                          onClick={() => onToggleHidden && onToggleHidden(item.id)}
-                          className="no-print"
-                          style={{
-                            fontSize: 8, padding: "1px 5px", borderRadius: 4, cursor: "pointer",
-                            background: isHidden ? "#fee2e2" : "#f0fdf4",
-                            color: isHidden ? "#b91c1c" : "#166534",
-                            border: isHidden ? "1px solid #fca5a5" : "1px solid #86efac",
-                            flexShrink: 0, marginTop: 1,
-                          }}
-                        >
-                          {isHidden ? "Show" : "Hide"}
-                        </button>
-                      )}
                     </div>
-                  );
-                })}
-              </div>
+                    {editMode && (
+                      <button
+                        onClick={() => onToggleHidden && onToggleHidden(item.id)}
+                        className="no-print"
+                        style={{
+                          fontSize: 8, padding: "1px 5px", borderRadius: 3, cursor: "pointer",
+                          background: isHidden ? "#fee2e2" : "#f0fdf4",
+                          color: isHidden ? "#b91c1c" : "#166534",
+                          border: isHidden ? "1px solid #fca5a5" : "1px solid #86efac",
+                          flexShrink: 0, fontFamily: "system-ui,sans-serif",
+                        }}
+                      >
+                        {isHidden ? "Show" : "Hide"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           );
         })}
       </div>
+
+      {/* ── Bottom note ── */}
+      <div style={{ padding: "12px 44px", borderTop: "1px solid #e5e0d8", fontSize: 9, color: "#b5a898", fontFamily: "system-ui,sans-serif", fontStyle: "italic" }}>
+        All recommendations are personally curated by the Two Travel team.
+      </div>
+
+      <div style={{ height: 3, background: "#1c1917", marginTop: "auto" }} />
 
       <PF n={page} total={total} />
     </div>
