@@ -1399,6 +1399,294 @@ function BillingBlock({ kickoff }) {
   );
 }
 
+/* ═══════════════════════════════════════════════════════════
+   CITY GUIDE DATA
+═══════════════════════════════════════════════════════════ */
+const CITY_GUIDE_SECTIONS = [
+  {
+    id: "dining",
+    icon: "🍽️",
+    title: "Dining & Food",
+    items: [
+      { id: "brunch", label: "Brunch Spots", desc: "Perfect for a relaxed late morning or early afternoon.", url: "https://maps.app.goo.gl/brunch" },
+      { id: "coffee", label: "Coffee Shops", desc: "Great for a quick pick-me-up or a casual meet-up.", url: "https://maps.app.goo.gl/coffee" },
+      { id: "dinner_walled", label: "Dinner – Walled City", desc: "Our top picks for dinner in Cartagena's historic center.", url: "https://maps.app.goo.gl/dinner-walled" },
+      { id: "casual_walled", label: "Casual Dining – Walled City", desc: "More laid-back options for an easy meal.", url: "https://maps.app.goo.gl/casual-walled" },
+      { id: "getsemani", label: "Restaurants in Getsemani", desc: "Trendy, local, and vibrant dining options.", url: "https://maps.app.goo.gl/getsemani" },
+      { id: "latenight", label: "Late-Night Eats", desc: "Ideal for post-party bites or late cravings.", url: "https://maps.app.goo.gl/latenight" },
+    ],
+  },
+  {
+    id: "nightlife",
+    icon: "🎭",
+    title: "Nightlife & Entertainment",
+    items: [
+      { id: "rooftops", label: "Rooftops", desc: "Best spots for sunset views and cocktails.", url: "https://maps.app.goo.gl/rooftops" },
+      { id: "bars", label: "Bars", desc: "From chill drinks to lively atmospheres.", url: "https://maps.app.goo.gl/bars" },
+      { id: "nightclubs", label: "Nightclubs", desc: "Where to go for a proper night out.", url: "https://maps.app.goo.gl/nightclubs" },
+      { id: "gentlemens", label: "Gentleman's Clubs", desc: "Curated options for adult nightlife experiences.", url: "https://maps.app.goo.gl/gentlemens" },
+    ],
+  },
+  {
+    id: "beach",
+    icon: "🏖️",
+    title: "Beach & Day Experiences",
+    items: [
+      { id: "beach_clubs", label: "Beach Clubs", desc: "The best spots for a day by the water.", url: "https://maps.app.goo.gl/beach-clubs" },
+    ],
+  },
+  {
+    id: "shopping",
+    icon: "🛍️",
+    title: "Shopping & Lifestyle",
+    items: [
+      { id: "shopping", label: "Shopping & Souvenirs", desc: "Local boutiques, gifts, and artisan finds.", url: "https://maps.app.goo.gl/shopping" },
+      { id: "cigars", label: "Cigar Shops & Lounges", desc: "Premium cigars and relaxed atmospheres.", url: "https://maps.app.goo.gl/cigars" },
+      { id: "hair", label: "Hair & Barber Shops", desc: "Trusted spots for grooming and quick touch-ups.", url: "https://maps.app.goo.gl/hair" },
+    ],
+  },
+  {
+    id: "essentials",
+    icon: "⚙️",
+    title: "Essentials & Services",
+    items: [
+      { id: "atms", label: "ATMs", desc: "Convenient locations to withdraw cash.", url: "https://maps.app.goo.gl/atms" },
+      { id: "pharmacies", label: "24/7 Pharmacies", desc: "For any last-minute needs.", url: "https://maps.app.goo.gl/pharmacies" },
+      { id: "emergency", label: "Hospitals & Police Stations", desc: "Nearby emergency services for peace of mind.", url: "https://maps.app.goo.gl/emergency" },
+    ],
+  },
+];
+
+const DEFAULT_CITY_GUIDE_INTRO =
+  "A curated collection of additional spots across the city — from hidden culinary gems and vibrant nightlife to essential services. Use these recommendations as your personal guide to explore Cartagena beyond your itinerary.";
+
+function CityGuidePage({ kickoff, cityGuideHidden, cityGuideIntro, onIntroChange, page, total, lang, editMode, onToggleHidden }) {
+  const hidden = (cityGuideHidden || "").split(",").map(s => s.trim()).filter(Boolean);
+  const intro = cityGuideIntro || DEFAULT_CITY_GUIDE_INTRO;
+  const cityName = kickoff.cityName || "Cartagena";
+
+  return (
+    <div className="page" style={{ position: "relative" }}>
+      <PH kickoff={kickoff} />
+
+      {/* Header */}
+      <div style={{ padding: "20px 40px 0" }}>
+        <div style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "#b45309", marginBottom: 6, fontWeight: 700 }}>
+          {lang === "en" ? "City Guide" : "Guía de Ciudad"}
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: "#111", marginBottom: 6 }}>
+          {cityName} City Guide
+        </div>
+        <div style={{ fontSize: 12, color: "#555", lineHeight: 1.6, marginBottom: 20, maxWidth: 560 }}>
+          <Editable tag="span" editMode={editMode} value={intro} onChange={onIntroChange} />
+        </div>
+      </div>
+
+      {/* Sections grid */}
+      <div style={{ padding: "0 40px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 28px" }}>
+        {CITY_GUIDE_SECTIONS.map(section => {
+          const visibleItems = section.items.filter(item => !hidden.includes(item.id));
+          if (visibleItems.length === 0 && !editMode) return null;
+          return (
+            <div key={section.id}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, borderBottom: "1.5px solid #f3e8d8", paddingBottom: 4 }}>
+                <span style={{ fontSize: 14 }}>{section.icon}</span>
+                <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", color: "#92400e" }}>
+                  {section.title}
+                </span>
+              </div>
+              {section.items.map(item => {
+                const isHidden = hidden.includes(item.id);
+                if (isHidden && !editMode) return null;
+                return (
+                  <div key={item.id} style={{
+                    display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 7,
+                    opacity: isHidden ? 0.35 : 1,
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ fontSize: 12, fontWeight: 700, color: "#1d4ed8", textDecoration: "underline", display: "block" }}
+                      >
+                        {item.label}
+                      </a>
+                      <div style={{ fontSize: 10.5, color: "#666", lineHeight: 1.45 }}>{item.desc}</div>
+                    </div>
+                    {editMode && (
+                      <button
+                        onClick={() => onToggleHidden && onToggleHidden(item.id)}
+                        className="no-print"
+                        style={{
+                          fontSize: 9, padding: "2px 6px", borderRadius: 4, cursor: "pointer",
+                          background: isHidden ? "#fee2e2" : "#f0fdf4",
+                          color: isHidden ? "#b91c1c" : "#166534",
+                          border: isHidden ? "1px solid #fca5a5" : "1px solid #86efac",
+                          flexShrink: 0, marginTop: 2,
+                        }}
+                      >
+                        {isHidden ? "Show" : "Hide"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
+      <PF n={page} total={total} />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   KEEP IN TOUCH PAGE
+═══════════════════════════════════════════════════════════ */
+function KeepInTouchPage({ kickoff, page, total }) {
+  const SOCIAL = [
+    {
+      label: "Instagram",
+      handle: "@twotravelconcierge",
+      url: "https://www.instagram.com/twotravelconcierge",
+      color: "#e1306c",
+      icon: (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="24" height="24" rx="6" fill="#e1306c"/>
+          <path d="M12 7.5A4.5 4.5 0 1 0 12 16.5 4.5 4.5 0 0 0 12 7.5zm0 7.5a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm4.5-8.25a1.125 1.125 0 1 0 0 2.25 1.125 1.125 0 0 0 0-2.25z" fill="#fff"/>
+          <rect x="4" y="4" width="16" height="16" rx="5" stroke="white" strokeWidth="1.5" fill="none"/>
+        </svg>
+      ),
+    },
+    {
+      label: "Facebook",
+      handle: "Two Travel",
+      url: "https://www.facebook.com/twotravelconcierge",
+      color: "#1877f2",
+      icon: (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="24" height="24" rx="6" fill="#1877f2"/>
+          <path d="M13.5 8.5h2v-2.5h-2c-1.93 0-3.5 1.57-3.5 3.5v1.5h-2v2.5h2v6h2.5v-6h2l.5-2.5h-2.5V9.5c0-.55.45-1 1-1z" fill="#fff"/>
+        </svg>
+      ),
+    },
+    {
+      label: "TikTok",
+      handle: "@twotravelvip",
+      url: "https://www.tiktok.com/@twotravelvip",
+      color: "#000",
+      icon: (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="24" height="24" rx="6" fill="#000"/>
+          <path d="M17 7.5c-.7-.5-1.2-1.2-1.4-2H13v9.3c0 .7-.5 1.2-1.2 1.2s-1.2-.5-1.2-1.2.5-1.2 1.2-1.2c.1 0 .2 0 .3.1V11c-.1 0-.2 0-.3 0-2 0-3.6 1.6-3.6 3.6s1.6 3.6 3.6 3.6 3.6-1.6 3.6-3.6V9.9c.7.5 1.5.7 2.3.7V8.1c-.5 0-.9-.1-1.3-.3-.1-.1-.2-.1-.4-.3z" fill="#fff"/>
+        </svg>
+      ),
+    },
+  ];
+
+  const REVIEWS = [
+    {
+      label: "Google Review",
+      sub: "Share your experience on Google",
+      url: "https://g.page/r/your-google-review-link/review",
+      color: "#4285f4",
+      icon: (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="24" height="24" rx="6" fill="#fff" stroke="#e5e7eb"/>
+          <path d="M12 5.5c1.7 0 3.1.6 4.2 1.6l-1.8 1.8c-.7-.6-1.5-1-2.4-1-2 0-3.6 1.6-3.6 3.6s1.6 3.6 3.6 3.6c1.6 0 2.8-.9 3.3-2.1H12V10.5h5.7c.1.4.1.8.1 1.2 0 3.2-2.1 5.4-5.8 5.4C8.5 17.1 5.9 14.5 5.9 11.5S8.5 5.5 12 5.5z" fill="#4285f4"/>
+        </svg>
+      ),
+    },
+    {
+      label: "Tripadvisor",
+      sub: "Review us on Tripadvisor",
+      url: "https://www.tripadvisor.com/UserReviewEdit-g297476-d17750092",
+      color: "#34e0a1",
+      icon: (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="24" height="24" rx="6" fill="#34e0a1"/>
+          <text x="12" y="16" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#000">TA</text>
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <div className="page" style={{ position: "relative", background: "#fff" }}>
+      <PH kickoff={kickoff} />
+
+      <div style={{ padding: "28px 40px 0", textAlign: "center" }}>
+        {/* Title */}
+        <div style={{ fontSize: 26, fontWeight: 900, color: "#111", letterSpacing: "-.01em", marginBottom: 8 }}>
+          Let's keep in touch!
+        </div>
+        <div style={{ fontSize: 13, color: "#555", lineHeight: 1.7, maxWidth: 480, margin: "0 auto 32px" }}>
+          We hope you enjoyed your holiday and that we helped make it unforgettable.<br/>
+          Stay connected with us — we'd love to be part of your next adventure.
+        </div>
+
+        {/* Follow us */}
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "#92400e", marginBottom: 16 }}>
+          Follow Us
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 32, marginBottom: 36 }}>
+          {SOCIAL.map(s => (
+            <a
+              key={s.label}
+              href={s.url}
+              target="_blank"
+              rel="noreferrer"
+              style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}
+            >
+              {s.icon}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#111" }}>{s.label}</div>
+              <div style={{ fontSize: 10, color: "#777" }}>{s.handle}</div>
+            </a>
+          ))}
+        </div>
+
+        {/* Divider */}
+        <div style={{ borderTop: "1.5px solid #f3e8d8", maxWidth: 360, margin: "0 auto 28px" }} />
+
+        {/* Leave a review */}
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "#92400e", marginBottom: 6 }}>
+          Leave Us a Review
+        </div>
+        <div style={{ fontSize: 12, color: "#666", marginBottom: 20 }}>
+          Your feedback means the world to us. Help other travelers discover Two Travel!
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 28 }}>
+          {REVIEWS.map(r => (
+            <a
+              key={r.label}
+              href={r.url}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                background: "#fafafa", border: "1.5px solid #f3e8d8", borderRadius: 12, padding: "16px 24px",
+              }}
+            >
+              {r.icon}
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{r.label}</div>
+              <div style={{ fontSize: 10, color: "#888", maxWidth: 120, textAlign: "center" }}>{r.sub}</div>
+            </a>
+          ))}
+        </div>
+
+        {/* Tagline */}
+        <div style={{ marginTop: 40, fontSize: 11, color: "#bbb", letterSpacing: ".03em" }}>
+          twotravelvip.com · @twotravelconcierge
+        </div>
+      </div>
+
+      <PF n={page} total={total} />
+    </div>
+  );
+}
+
 function BillingPage({ kickoff }) {
   return (
     <div className="page" style={{ position: "relative" }}>
@@ -1509,6 +1797,8 @@ export default function ItineraryPrintView() {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState("");
   const [pdfNotes, setPdfNotes] = useState("");
+  const [cityGuideHidden, setCityGuideHidden] = useState("");
+  const [cityGuideIntro, setCityGuideIntro] = useState("");
 
   // Sync editDays from computed days (or itinerarySnapshot) each time editMode is activated
   useEffect(() => {
@@ -1520,6 +1810,8 @@ export default function ItineraryPrintView() {
       setEditDays(JSON.parse(JSON.stringify(base)));
       setLocalPreTrip(null);
       setPdfNotes(kickoff?.pdfNotes || "");
+      setCityGuideHidden(kickoff?.cityGuideHidden || "");
+      setCityGuideIntro(kickoff?.cityGuideIntro || "");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode]);
@@ -1554,6 +1846,8 @@ export default function ItineraryPrintView() {
       await updateKickoffInSheet(kickoffId, {
         itinerarySnapshot: JSON.stringify(editDays),
         pdfNotes: pdfNotes.trim(),
+        cityGuideHidden: cityGuideHidden,
+        cityGuideIntro: cityGuideIntro.trim(),
         itineraryUpdatedAt: now,
       });
       const ts = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -1562,6 +1856,8 @@ export default function ItineraryPrintView() {
         ...prev,
         itinerarySnapshot: JSON.stringify(editDays),
         pdfNotes: pdfNotes.trim(),
+        cityGuideHidden: cityGuideHidden,
+        cityGuideIntro: cityGuideIntro.trim(),
         itineraryUpdatedAt: now,
       }));
     } finally {
@@ -1703,7 +1999,7 @@ export default function ItineraryPrintView() {
 
   const hasPreTrip = true; // always shown — falls back to DEFAULT_PRETRIP_PDF when empty
   const hasSummary = activeDays.length > 0;
-  const total = 1 + (hasSummary ? 1 : 0) + 1 + activeDays.length + (pdfNotes.trim() ? 1 : 0) + 1; // +1 = billing page
+  const total = 1 + (hasSummary ? 1 : 0) + 1 + activeDays.length + (pdfNotes.trim() ? 1 : 0) + 1 + 1 + 1; // +billing +cityguide +keepintouch
   let pageNum = 1;
 
   const ctrl = {
@@ -1856,6 +2152,30 @@ export default function ItineraryPrintView() {
           <PF n={++pageNum} total={total}/>
         </div>
       )}
+
+      {/* ── City Guide page ── */}
+      <CityGuidePage
+        kickoff={kickoff}
+        cityGuideHidden={editMode ? cityGuideHidden : (kickoff.cityGuideHidden || "")}
+        cityGuideIntro={editMode ? cityGuideIntro : (kickoff.cityGuideIntro || "")}
+        onIntroChange={setCityGuideIntro}
+        page={++pageNum}
+        total={total}
+        lang={lang}
+        editMode={editMode}
+        onToggleHidden={(itemId) => {
+          setCityGuideHidden(prev => {
+            const list = prev.split(",").map(s => s.trim()).filter(Boolean);
+            const updated = list.includes(itemId)
+              ? list.filter(id => id !== itemId)
+              : [...list, itemId];
+            return updated.join(",");
+          });
+        }}
+      />
+
+      {/* ── Let's Keep in Touch page ── */}
+      <KeepInTouchPage kickoff={kickoff} page={++pageNum} total={total} />
 
       {/* ── Billing page (last, internal/QB use) ── */}
       <BillingPage kickoff={kickoff} />
