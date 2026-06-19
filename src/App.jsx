@@ -19,7 +19,7 @@ class ErrorBoundary extends Component {
     return this.props.children;
   }
 }
-import ConciergePanel from "./ConciergePanel";
+import ConciergePanel, { ReunionesPage } from "./ConciergePanel";
 import TwoTravelCatalog from "./TwoTravelCatalog";
 import ItineraryPrintView from "./ItineraryPrintView";
 import { updateKickoffInSheet, fetchKickoffsFromSheet, saveKickoffToSheet } from "./sheetServices";
@@ -4123,14 +4123,14 @@ const USERS = [
 
 // Which modes each role can access
 const ROLE_ACCESS = {
-  admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard"],
-  concierge: ["concierge","tasks"],
+  admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones"],
+  concierge: ["concierge","tasks","reuniones"],
   sales:     ["tasks","soporte","soporte-dashboard"],
   viewer:    ["dashboard","kpi"],
 };
 
 // Modes that require auth
-const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard"]);
+const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones"]);
 
 function useAuth() {
   const [user, setUser] = useState(() => {
@@ -4194,6 +4194,7 @@ function App() {
   if (mode === "soporte")            return <ErrorBoundary><SoportePage /></ErrorBoundary>;
   if (mode === "soporte-dashboard")  return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
   if (mode === "tasks")              return <ErrorBoundary><TaskTracker /></ErrorBoundary>;
+  if (mode === "reuniones")          return <ErrorBoundary><ReunionesPage /></ErrorBoundary>;
   if (mode === "catalog" || mode === "questionnaire") {
     if (!kickoffId) return <WelcomeCatalogPage mode={mode} />;
     return <TwoTravelCatalog />;

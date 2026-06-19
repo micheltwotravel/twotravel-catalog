@@ -4477,6 +4477,437 @@ function BreakfastLink({ kickoff }) {
    Componente principal
    ========================================= */
 
+/* =========================================================
+   REUNIONES PAGE — standalone CRM-style meeting tracker
+   ========================================================= */
+const MEETING_TYPES = ["Kickoff Call", "Pre-check in", "Follow-up", "Otro"];
+const MEETING_STATUSES = [
+  { value: "done",      label: "Hecho",     color: "#16a34a", bg: "#dcfce7", dot: "🟢" },
+  { value: "pending",   label: "Pendiente", color: "#2563eb", bg: "#dbeafe", dot: "🔵" },
+  { value: "missed",    label: "No asistió",color: "#dc2626", bg: "#fee2e2", dot: "🔴" },
+  { value: "scheduled", label: "Agendado",  color: "#d97706", bg: "#fef3c7", dot: "🟡" },
+];
+
+function getMeetingStatus(v) {
+  return MEETING_STATUSES.find(s => s.value === v) || MEETING_STATUSES[1];
+}
+
+function newMeetingId() {
+  return "mtg_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+}
+
+function parseMeetings(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "string" && raw.trim().startsWith("[")) {
+    try { const p = JSON.parse(raw); if (Array.isArray(p)) return p; } catch {}
+  }
+  if (typeof raw === "string" && raw.trim()) return [{ id: newMeetingId(), date: "", time: "", type: "Kickoff Call", status: "done", notes: raw, tasks: [] }];
+  return [];
+}
+
+/* ── Nueva reunión / edit modal ── */
+function MeetingFormModal({ kickoffs, initial, onSave, onClose }) {
+  const [kickoffId, setKickoffId] = useState(initial?.kickoffId || "");
+  const [date,      setDate]      = useState(initial?.date      || new Date().toISOString().slice(0,10));
+  const [time,      setTime]      = useState(initial?.time      || "10:00");
+  const [type,      setType]      = useState(initial?.type      || "Kickoff Call");
+  const [status,    setStatus]    = useState(initial?.status    || "scheduled");
+  const [notes,     setNotes]     = useState(initial?.notes     || "");
+  const [tasks,     setTasks]     = useState(initial?.tasks     || []);
+  const [newTask,   setNewTask]   = useState("");
+  const [saving,    setSaving]    = useState(false);
+
+  const addTask = () => {
+    if (!newTask.trim()) return;
+    setTasks(t => [...t, { text: newTask.trim(), done: false }]);
+    setNewTask("");
+  };
+
+  const handle = async () => {
+    if (!kickoffId) { alert("Selecciona un cliente"); return; }
+    setSaving(true);
+    const kickoff = kickoffs.find(k => k.id === kickoffId);
+    const existing = parseMeetings(kickoff?.meetingNotes);
+    const entry = {
+      id: initial?.id || newMeetingId(),
+      date, time, type, status,
+      notes, tasks,
+    };
+    let updated;
+    if (initial?.id) {
+      updated = existing.map(m => m.id === initial.id ? entry : m);
+    } else {
+      updated = [...existing, entry];
+    }
+    try {
+      await updateKickoffInSheet(kickoffId, { meetingNotes: JSON.stringify(updated) });
+      onSave({ kickoffId, entry, allMeetings: updated });
+    } catch (e) {
+      alert("Error al guardar: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inp = { border: "1px solid #e5ddd3", borderRadius: 8, padding: "8px 12px", fontSize: 13, fontFamily: "'Jost',sans-serif", outline: "none", width: "100%", boxSizing: "border-box", background: "#fff" };
+  const sel = { ...inp, cursor: "pointer" };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={onClose}>
+      <div style={{ background:"#fff", borderRadius:16, padding:28, width:480, maxWidth:"94vw", maxHeight:"90vh", overflowY:"auto", boxShadow:"0 8px 40px rgba(0,0,0,.18)" }} onClick={e=>e.stopPropagation()}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+          <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:600, color:"#1a1814", margin:0 }}>
+            {initial?.id ? "Editar reunión" : "Nueva reunión"}
+          </p>
+          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:18, cursor:"pointer", color:"#9a7d52" }}>✕</button>
+        </div>
+
+        <label style={{ fontSize:11, color:"#9a7d52", letterSpacing:".08em", textTransform:"uppercase", display:"block", marginBottom:4 }}>Cliente</label>
+        <select value={kickoffId} onChange={e=>setKickoffId(e.target.value)} style={{ ...sel, marginBottom:14 }} disabled={!!initial?.id}>
+          <option value="">— Seleccionar cliente —</option>
+          {kickoffs.map(k => <option key={k.id} value={k.id}>{k.guestName || k.id}</option>)}
+        </select>
+
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
+          <div>
+            <label style={{ fontSize:11, color:"#9a7d52", letterSpacing:".08em", textTransform:"uppercase", display:"block", marginBottom:4 }}>Fecha</label>
+            <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={inp} />
+          </div>
+          <div>
+            <label style={{ fontSize:11, color:"#9a7d52", letterSpacing:".08em", textTransform:"uppercase", display:"block", marginBottom:4 }}>Hora</label>
+            <input type="time" value={time} onChange={e=>setTime(e.target.value)} style={inp} />
+          </div>
+        </div>
+
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
+          <div>
+            <label style={{ fontSize:11, color:"#9a7d52", letterSpacing:".08em", textTransform:"uppercase", display:"block", marginBottom:4 }}>Tipo</label>
+            <select value={type} onChange={e=>setType(e.target.value)} style={sel}>
+              {MEETING_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize:11, color:"#9a7d52", letterSpacing:".08em", textTransform:"uppercase", display:"block", marginBottom:4 }}>Estado</label>
+            <select value={status} onChange={e=>setStatus(e.target.value)} style={sel}>
+              {MEETING_STATUSES.map(s => <option key={s.value} value={s.value}>{s.dot} {s.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <label style={{ fontSize:11, color:"#9a7d52", letterSpacing:".08em", textTransform:"uppercase", display:"block", marginBottom:4 }}>Notas</label>
+        <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3} placeholder="Qué se habló, acuerdos, observaciones..." style={{ ...inp, resize:"vertical", marginBottom:14 }} />
+
+        <label style={{ fontSize:11, color:"#9a7d52", letterSpacing:".08em", textTransform:"uppercase", display:"block", marginBottom:6 }}>Tareas</label>
+        {tasks.map((t, i) => (
+          <div key={i} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+            <input type="checkbox" checked={t.done} onChange={() => setTasks(ts => ts.map((x,j) => j===i ? {...x,done:!x.done} : x))} style={{ accentColor:"#9a7d52" }} />
+            <span style={{ flex:1, fontSize:13, color: t.done ? "#9a9a9a" : "#1a1814", textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
+            <button onClick={() => setTasks(ts => ts.filter((_,j)=>j!==i))} style={{ background:"none", border:"none", color:"#dc2626", cursor:"pointer", fontSize:13 }}>✕</button>
+          </div>
+        ))}
+        <div style={{ display:"flex", gap:8, marginBottom:20 }}>
+          <input value={newTask} onChange={e=>setNewTask(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addTask()} placeholder="Nueva tarea..." style={{ ...inp, flex:1 }} />
+          <button onClick={addTask} style={{ background:"#f5f0e8", border:"1px solid #e5ddd3", borderRadius:8, padding:"8px 14px", fontSize:13, cursor:"pointer", color:"#9a7d52", whiteSpace:"nowrap" }}>+ Agregar</button>
+        </div>
+
+        <button onClick={handle} disabled={saving} style={{ width:"100%", background:"#1a1814", color:"#fff", border:"none", borderRadius:10, padding:"12px", fontSize:13, letterSpacing:".06em", cursor:"pointer", fontFamily:"'Jost',sans-serif" }}>
+          {saving ? "Guardando…" : initial?.id ? "Guardar cambios" : "Crear reunión"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Meeting card ── */
+function MeetingCard({ meeting, kickoff, onEdit, onDelete, onToggleTask }) {
+  const st = getMeetingStatus(meeting.status);
+  const [expanded, setExpanded] = useState(false);
+  const pendingTasks = (meeting.tasks||[]).filter(t=>!t.done).length;
+  const doneTasks    = (meeting.tasks||[]).filter(t=>t.done).length;
+
+  return (
+    <div style={{ background:"#fff", border:"1px solid #eee8df", borderRadius:12, padding:"14px 16px", marginBottom:8, boxShadow:"0 1px 4px rgba(0,0,0,.05)" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={() => setExpanded(e=>!e)}>
+        <span style={{ fontSize:16 }}>{st.dot}</span>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ display:"flex", alignItems:"baseline", gap:8, flexWrap:"wrap" }}>
+            <span style={{ fontWeight:600, fontSize:14, color:"#1a1814", fontFamily:"'Jost',sans-serif" }}>{kickoff?.guestName || "—"}</span>
+            {meeting.time && <span style={{ fontSize:12, color:"#9a7d52" }}>{meeting.time}</span>}
+            <span style={{ fontSize:11, background: st.bg, color: st.color, borderRadius:6, padding:"2px 8px", fontWeight:600, letterSpacing:".04em" }}>{st.label}</span>
+            <span style={{ fontSize:11, background:"#f5f0e8", color:"#9a7d52", borderRadius:6, padding:"2px 8px" }}>{meeting.type}</span>
+          </div>
+          {kickoff?.assignedConcierge && (
+            <div style={{ fontSize:11, color:"#b0a090", marginTop:2 }}>Concierge: {kickoff.assignedConcierge}</div>
+          )}
+          {meeting.notes && !expanded && (
+            <div style={{ fontSize:12, color:"#6b6055", marginTop:4, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:340 }}>{meeting.notes}</div>
+          )}
+        </div>
+        {(meeting.tasks||[]).length > 0 && (
+          <div style={{ fontSize:11, color: pendingTasks > 0 ? "#d97706" : "#16a34a", fontWeight:600, whiteSpace:"nowrap" }}>
+            {doneTasks}/{(meeting.tasks||[]).length} tareas
+          </div>
+        )}
+        <span style={{ color:"#b0a090", fontSize:12, userSelect:"none" }}>{expanded ? "▲" : "▼"}</span>
+      </div>
+
+      {expanded && (
+        <div style={{ marginTop:12, paddingTop:12, borderTop:"1px solid #f0ebe2" }}>
+          {meeting.notes && <p style={{ fontSize:13, color:"#3a3530", lineHeight:1.6, margin:"0 0 12px 0" }}>{meeting.notes}</p>}
+          {(meeting.tasks||[]).length > 0 && (
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:11, color:"#9a7d52", letterSpacing:".08em", textTransform:"uppercase", marginBottom:6 }}>Tareas</div>
+              {meeting.tasks.map((t, i) => (
+                <div key={i} onClick={() => onToggleTask(i)} style={{ display:"flex", alignItems:"center", gap:8, padding:"4px 0", cursor:"pointer" }}>
+                  <span style={{ fontSize:14 }}>{t.done ? "✅" : "⬜"}</span>
+                  <span style={{ fontSize:13, color: t.done ? "#9a9a9a" : "#1a1814", textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={() => { setExpanded(false); onEdit(); }} style={{ background:"#f5f0e8", border:"1px solid #e5ddd3", borderRadius:8, padding:"6px 14px", fontSize:12, cursor:"pointer", color:"#1a1814" }}>✏️ Editar</button>
+            <button onClick={onDelete} style={{ background:"#fee2e2", border:"1px solid #fca5a5", borderRadius:8, padding:"6px 14px", fontSize:12, cursor:"pointer", color:"#dc2626" }}>🗑 Eliminar</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function ReunionesPage() {
+  const [kickoffs, setKickoffs]       = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [showForm, setShowForm]       = useState(false);
+  const [editMeeting, setEditMeeting] = useState(null); // { kickoffId, meeting }
+
+  // filters
+  const [filterClient,    setFilterClient]    = useState("");
+  const [filterConcierge, setFilterConcierge] = useState("all");
+  const [filterStatus,    setFilterStatus]    = useState("all");
+  const [filterDateFrom,  setFilterDateFrom]  = useState("");
+  const [filterDateTo,    setFilterDateTo]    = useState("");
+
+  useEffect(() => {
+    fetchKickoffsFromSheet().then(data => {
+      const arr = (data || []).map((k, idx) => ({
+        ...k,
+        id: k?.id || k?.kickoffId || k?.ID || `row-${idx}`,
+        guestName: String(k?.guestName || k?.GuestName || k?.guest_name || "").trim(),
+        assignedConcierge: String(k?.assignedConcierge || k?.AssignedConcierge || "").trim(),
+      }));
+      setKickoffs(arr);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  // Flatten all meetings from all kickoffs
+  const allMeetings = useMemo(() => {
+    const list = [];
+    kickoffs.forEach(k => {
+      const meetings = parseMeetings(k?.meetingNotes);
+      meetings.forEach(m => {
+        list.push({ ...m, kickoffId: k.id, _kickoff: k });
+      });
+    });
+    // sort by date desc (most recent first), undated last
+    return list.sort((a, b) => {
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return b.date.localeCompare(a.date);
+    });
+  }, [kickoffs]);
+
+  // Apply filters
+  const filtered = useMemo(() => {
+    return allMeetings.filter(m => {
+      if (filterClient && m._kickoff?.guestName !== filterClient) return false;
+      if (filterConcierge !== "all" && m._kickoff?.assignedConcierge !== filterConcierge) return false;
+      if (filterStatus !== "all" && m.status !== filterStatus) return false;
+      if (filterDateFrom && m.date && m.date < filterDateFrom) return false;
+      if (filterDateTo   && m.date && m.date > filterDateTo)   return false;
+      return true;
+    });
+  }, [allMeetings, filterClient, filterConcierge, filterStatus, filterDateFrom, filterDateTo]);
+
+  // Group by date
+  const grouped = useMemo(() => {
+    const map = new Map();
+    filtered.forEach(m => {
+      const key = m.date || "__sin_fecha__";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(m);
+    });
+    return [...map.entries()];
+  }, [filtered]);
+
+  // Unique clients for filter dropdown
+  const clientOptions = useMemo(() => {
+    const names = [...new Set(kickoffs.map(k => k.guestName).filter(Boolean))].sort();
+    return names;
+  }, [kickoffs]);
+
+  const handleSave = ({ kickoffId, allMeetings: updatedMeetings }) => {
+    setKickoffs(prev => prev.map(k => k.id === kickoffId
+      ? { ...k, meetingNotes: JSON.stringify(updatedMeetings) }
+      : k
+    ));
+    setShowForm(false);
+    setEditMeeting(null);
+  };
+
+  const handleDelete = async (kickoffId, meetingId) => {
+    if (!confirm("¿Eliminar esta reunión?")) return;
+    const kickoff = kickoffs.find(k => k.id === kickoffId);
+    const updated = parseMeetings(kickoff?.meetingNotes).filter(m => m.id !== meetingId);
+    try {
+      await updateKickoffInSheet(kickoffId, { meetingNotes: JSON.stringify(updated) });
+      setKickoffs(prev => prev.map(k => k.id === kickoffId ? { ...k, meetingNotes: JSON.stringify(updated) } : k));
+    } catch(e) { alert("Error: " + e.message); }
+  };
+
+  const handleToggleTask = async (kickoffId, meetingId, taskIndex) => {
+    const kickoff = kickoffs.find(k => k.id === kickoffId);
+    const meetings = parseMeetings(kickoff?.meetingNotes);
+    const updated  = meetings.map(m => {
+      if (m.id !== meetingId) return m;
+      const tasks = (m.tasks||[]).map((t,i) => i===taskIndex ? {...t,done:!t.done} : t);
+      return {...m, tasks};
+    });
+    try {
+      await updateKickoffInSheet(kickoffId, { meetingNotes: JSON.stringify(updated) });
+      setKickoffs(prev => prev.map(k => k.id === kickoffId ? { ...k, meetingNotes: JSON.stringify(updated) } : k));
+    } catch(e) { console.warn("toggle task error", e); }
+  };
+
+  // KPIs
+  const kpis = useMemo(() => {
+    const total = allMeetings.length;
+    const done  = allMeetings.filter(m=>m.status==="done").length;
+    const missed= allMeetings.filter(m=>m.status==="missed").length;
+    const pending=allMeetings.filter(m=>m.status==="pending"||m.status==="scheduled").length;
+    const withTasks = allMeetings.filter(m=>(m.tasks||[]).length>0);
+    const openTasks = withTasks.reduce((acc,m)=>acc+(m.tasks||[]).filter(t=>!t.done).length,0);
+    return { total, done, missed, pending, openTasks };
+  }, [allMeetings]);
+
+  const selStyle = { border:"1px solid #e5ddd3", borderRadius:8, padding:"7px 10px", fontSize:12, fontFamily:"'Jost',sans-serif", outline:"none", background:"#fff", cursor:"pointer" };
+  const inpStyle = { border:"1px solid #e5ddd3", borderRadius:8, padding:"7px 10px", fontSize:12, fontFamily:"'Jost',sans-serif", outline:"none", background:"#fff" };
+
+  const formatDateHeader = (key) => {
+    if (key === "__sin_fecha__") return "Sin fecha";
+    try {
+      const [y,m,d] = key.split("-");
+      const date = new Date(+y, +m-1, +d);
+      return date.toLocaleDateString("es-CO", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+    } catch { return key; }
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#f7f4ef", fontFamily:"'Jost',sans-serif", paddingBottom:60 }}>
+      {/* Header */}
+      <div style={{ background:"#1a1814", padding:"20px 28px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div>
+          <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:600, color:"#f5f0e8", margin:0 }}>Reuniones</p>
+          <p style={{ fontSize:11, color:"#9a7d52", letterSpacing:".12em", textTransform:"uppercase", margin:0 }}>Two Travel · CRM de llamadas</p>
+        </div>
+        <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+          <a href="/?mode=concierge" style={{ fontSize:12, color:"#9a7d52", textDecoration:"none", padding:"6px 14px", border:"1px solid #3a3530", borderRadius:8 }}>← Panel</a>
+          <button onClick={() => { setEditMeeting(null); setShowForm(true); }}
+            style={{ background:"#9a7d52", color:"#fff", border:"none", borderRadius:8, padding:"8px 18px", fontSize:13, cursor:"pointer", fontFamily:"'Jost',sans-serif" }}>
+            + Nueva reunión
+          </button>
+        </div>
+      </div>
+
+      {/* KPI strip */}
+      <div style={{ background:"#fff", borderBottom:"1px solid #eee8df", padding:"14px 28px", display:"flex", gap:24, overflowX:"auto" }}>
+        {[
+          { label:"Total reuniones", val: kpis.total, color:"#1a1814" },
+          { label:"Completadas",     val: kpis.done,  color:"#16a34a" },
+          { label:"Pendientes",      val: kpis.pending,color:"#2563eb"},
+          { label:"No asistió",      val: kpis.missed, color:"#dc2626"},
+          { label:"Tareas abiertas", val: kpis.openTasks,color:"#d97706"},
+        ].map(k => (
+          <div key={k.label} style={{ textAlign:"center", minWidth:90 }}>
+            <div style={{ fontSize:24, fontWeight:700, color:k.color }}>{k.val}</div>
+            <div style={{ fontSize:10, color:"#9a7d52", letterSpacing:".06em", textTransform:"uppercase" }}>{k.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div style={{ padding:"16px 28px", display:"flex", gap:10, flexWrap:"wrap", alignItems:"center", background:"#fff", borderBottom:"1px solid #eee8df" }}>
+        <select value={filterClient} onChange={e=>setFilterClient(e.target.value)} style={selStyle}>
+          <option value="">Todos los clientes</option>
+          {clientOptions.map(n=><option key={n} value={n}>{n}</option>)}
+        </select>
+        <select value={filterConcierge} onChange={e=>setFilterConcierge(e.target.value)} style={selStyle}>
+          <option value="all">Todos los concierges</option>
+          {CONCIERGE_LIST.map(c=><option key={c.name} value={c.name}>{c.name}</option>)}
+        </select>
+        <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={selStyle}>
+          <option value="all">Todos los estados</option>
+          {MEETING_STATUSES.map(s=><option key={s.value} value={s.value}>{s.dot} {s.label}</option>)}
+        </select>
+        <input type="date" value={filterDateFrom} onChange={e=>setFilterDateFrom(e.target.value)} style={inpStyle} placeholder="Desde" />
+        <input type="date" value={filterDateTo}   onChange={e=>setFilterDateTo(e.target.value)}   style={inpStyle} placeholder="Hasta" />
+        {(filterClient||filterConcierge!=="all"||filterStatus!=="all"||filterDateFrom||filterDateTo) && (
+          <button onClick={()=>{setFilterClient("");setFilterConcierge("all");setFilterStatus("all");setFilterDateFrom("");setFilterDateTo("");}}
+            style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:8,padding:"6px 12px",fontSize:12,cursor:"pointer",color:"#dc2626"}}>
+            ✕ Limpiar
+          </button>
+        )}
+      </div>
+
+      {/* Timeline */}
+      <div style={{ padding:"24px 28px", maxWidth:760, margin:"0 auto" }}>
+        {loading && (
+          <div style={{ textAlign:"center", color:"#9a7d52", padding:60, fontSize:14 }}>Cargando reuniones…</div>
+        )}
+        {!loading && grouped.length === 0 && (
+          <div style={{ textAlign:"center", padding:60 }}>
+            <p style={{ fontSize:32, marginBottom:12 }}>📅</p>
+            <p style={{ color:"#9a7d52", fontSize:14 }}>No hay reuniones que coincidan con los filtros.</p>
+            <button onClick={()=>setShowForm(true)} style={{ marginTop:16, background:"#1a1814", color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontSize:13, cursor:"pointer", fontFamily:"'Jost',sans-serif" }}>+ Crear primera reunión</button>
+          </div>
+        )}
+        {grouped.map(([dateKey, meetings]) => (
+          <div key={dateKey} style={{ marginBottom:28 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
+              <div style={{ height:1, flex:1, background:"#e5ddd3" }} />
+              <span style={{ fontSize:12, fontWeight:600, color:"#9a7d52", letterSpacing:".08em", textTransform:"uppercase", whiteSpace:"nowrap" }}>
+                {formatDateHeader(dateKey)}
+              </span>
+              <div style={{ height:1, flex:1, background:"#e5ddd3" }} />
+            </div>
+            {meetings.map(m => (
+              <MeetingCard
+                key={m.id || m.kickoffId + m.date + m.time}
+                meeting={m}
+                kickoff={m._kickoff}
+                onEdit={() => { setEditMeeting({ kickoffId: m.kickoffId, meeting: m }); setShowForm(true); }}
+                onDelete={() => handleDelete(m.kickoffId, m.id)}
+                onToggleTask={(taskIndex) => handleToggleTask(m.kickoffId, m.id, taskIndex)}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {showForm && (
+        <MeetingFormModal
+          kickoffs={kickoffs}
+          initial={editMeeting ? { ...editMeeting.meeting, kickoffId: editMeeting.kickoffId } : null}
+          onSave={handleSave}
+          onClose={() => { setShowForm(false); setEditMeeting(null); }}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function ConciergePanel({ onLogout, currentUser }) {
 
   const [kickoffs, setKickoffs] = useState([]);
