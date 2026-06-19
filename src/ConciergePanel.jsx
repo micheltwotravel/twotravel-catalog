@@ -4478,7 +4478,7 @@ function BreakfastLink({ kickoff }) {
    ========================================= */
 
 /* =========================================================
-   REUNIONES PAGE — standalone CRM-style meeting tracker
+   REUNIONES PAGE — CRM de llamadas Two Travel
    ========================================================= */
 const MEETING_TYPES = ["Kickoff Call", "Pre-check in", "Follow-up", "Otro"];
 const MEETING_STATUSES = [
@@ -4503,6 +4503,118 @@ function parseMeetings(raw) {
   }
   if (typeof raw === "string" && raw.trim()) return [{ id: newMeetingId(), date: "", time: "", type: "Kickoff Call", status: "done", notes: raw, tasks: [] }];
   return [];
+}
+
+/* ── Inline meeting form (no modal, embedded in panel) ── */
+function MeetingFormInline({ kickoffId, initial, onSave, onCancel }) {
+  const [date,   setDate]   = useState(initial?.date   || new Date().toISOString().slice(0,10));
+  const [time,   setTime]   = useState(initial?.time   || "10:00");
+  const [type,   setType]   = useState(initial?.type   || "Kickoff Call");
+  const [status, setStatus] = useState(initial?.status || "scheduled");
+  const [notes,  setNotes]  = useState(initial?.notes  || "");
+  const [tasks,  setTasks]  = useState(initial?.tasks  || []);
+  const [newTask,setNewTask]= useState("");
+  const [saving, setSaving] = useState(false);
+
+  const addTask = () => { if (!newTask.trim()) return; setTasks(t=>[...t,{text:newTask.trim(),done:false}]); setNewTask(""); };
+
+  const handle = async () => {
+    setSaving(true);
+    onSave({ id: initial?.id || newMeetingId(), date, time, type, status, notes, tasks })
+      .catch(()=>{}).finally(()=>setSaving(false));
+  };
+
+  const inp = { border:"1px solid #e5ddd3", borderRadius:7, padding:"7px 10px", fontSize:12, fontFamily:"'Jost',sans-serif", outline:"none", width:"100%", boxSizing:"border-box", background:"#fff" };
+
+  return (
+    <div style={{ background:"#fffdf9", border:"1px solid #e5ddd3", borderRadius:10, padding:14, marginBottom:12 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
+        <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={inp} />
+        <input type="time" value={time} onChange={e=>setTime(e.target.value)} style={inp} />
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
+        <select value={type} onChange={e=>setType(e.target.value)} style={{ ...inp, cursor:"pointer" }}>
+          {MEETING_TYPES.map(t=><option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={status} onChange={e=>setStatus(e.target.value)} style={{ ...inp, cursor:"pointer" }}>
+          {MEETING_STATUSES.map(s=><option key={s.value} value={s.value}>{s.dot} {s.label}</option>)}
+        </select>
+      </div>
+      <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} placeholder="Notas de la llamada…" style={{ ...inp, resize:"vertical", marginBottom:8 }} />
+      {tasks.map((t,i)=>(
+        <div key={i} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
+          <input type="checkbox" checked={t.done} onChange={()=>setTasks(ts=>ts.map((x,j)=>j===i?{...x,done:!x.done}:x))} />
+          <span style={{ flex:1, fontSize:12 }}>{t.text}</span>
+          <button onClick={()=>setTasks(ts=>ts.filter((_,j)=>j!==i))} style={{ background:"none",border:"none",color:"#dc2626",cursor:"pointer",fontSize:12 }}>✕</button>
+        </div>
+      ))}
+      <div style={{ display:"flex", gap:6, marginBottom:10 }}>
+        <input value={newTask} onChange={e=>setNewTask(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addTask()} placeholder="+ Tarea" style={{ ...inp, flex:1 }} />
+        <button onClick={addTask} style={{ background:"#f5f0e8",border:"1px solid #e5ddd3",borderRadius:7,padding:"6px 10px",fontSize:12,cursor:"pointer",color:"#9a7d52" }}>Agregar</button>
+      </div>
+      <div style={{ display:"flex", gap:8 }}>
+        <button onClick={handle} disabled={saving} style={{ flex:1, background:"#1a1814",color:"#fff",border:"none",borderRadius:8,padding:"8px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif" }}>
+          {saving ? "Guardando…" : initial?.id ? "Guardar cambios" : "Crear reunión"}
+        </button>
+        <button onClick={onCancel} style={{ background:"#f5f0e8",border:"1px solid #e5ddd3",borderRadius:8,padding:"8px 12px",fontSize:12,cursor:"pointer",color:"#9a7d52" }}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Meeting row ── */
+function MeetingRow({ meeting, onEdit, onDelete, onToggleTask }) {
+  const st = getMeetingStatus(meeting.status);
+  const [open, setOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const PREVIEW = 200;
+  const longNotes = (meeting.notes||"").length > PREVIEW;
+  const shownNotes = (!notesOpen && longNotes) ? (meeting.notes||"").slice(0,PREVIEW)+"…" : (meeting.notes||"");
+  const pending = (meeting.tasks||[]).filter(t=>!t.done).length;
+  const done    = (meeting.tasks||[]).filter(t=>t.done).length;
+
+  return (
+    <div style={{ borderLeft:`3px solid ${st.color}`, paddingLeft:12, marginBottom:12 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer" }} onClick={()=>setOpen(o=>!o)}>
+        <span style={{ fontSize:15 }}>{st.dot}</span>
+        <div style={{ flex:1 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+            {meeting.date && <span style={{ fontSize:12, color:"#9a7d52", fontWeight:600 }}>{meeting.date}</span>}
+            {meeting.time && <span style={{ fontSize:12, color:"#b0a090" }}>{meeting.time}</span>}
+            <span style={{ fontSize:11, background:st.bg, color:st.color, borderRadius:5, padding:"1px 7px", fontWeight:600 }}>{st.label}</span>
+            <span style={{ fontSize:11, background:"#f5f0e8", color:"#9a7d52", borderRadius:5, padding:"1px 7px" }}>{meeting.type||"Llamada"}</span>
+            {(meeting.tasks||[]).length>0 && <span style={{ fontSize:11, color: pending>0?"#d97706":"#16a34a", fontWeight:600 }}>{done}/{(meeting.tasks||[]).length} tareas</span>}
+          </div>
+          {!open && meeting.notes && <div style={{ fontSize:12, color:"#6b6055", marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:340 }}>{meeting.notes.slice(0,80)}{meeting.notes.length>80?"…":""}</div>}
+        </div>
+        <span style={{ color:"#b0a090", fontSize:11 }}>{open?"▲":"▼"}</span>
+      </div>
+      {open && (
+        <div style={{ marginTop:8 }}>
+          {meeting.notes && (
+            <div style={{ marginBottom:8 }}>
+              <p style={{ fontSize:12, color:"#3a3530", lineHeight:1.7, margin:0, whiteSpace:"pre-wrap", wordBreak:"break-word" }}>{shownNotes}</p>
+              {longNotes && <button onClick={e=>{e.stopPropagation();setNotesOpen(v=>!v);}} style={{ background:"none",border:"none",color:"#9a7d52",fontSize:11,cursor:"pointer",padding:"2px 0",textDecoration:"underline" }}>{notesOpen?"Ver menos ▲":"Ver más ▼"}</button>}
+            </div>
+          )}
+          {(meeting.tasks||[]).length>0 && (
+            <div style={{ marginBottom:8 }}>
+              {meeting.tasks.map((t,i)=>(
+                <div key={i} onClick={()=>onToggleTask(i)} style={{ display:"flex",alignItems:"center",gap:6,padding:"2px 0",cursor:"pointer" }}>
+                  <span>{t.done?"✅":"⬜"}</span>
+                  <span style={{ fontSize:12, color:t.done?"#9a9a9a":"#1a1814", textDecoration:t.done?"line-through":"none" }}>{t.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ display:"flex", gap:6 }}>
+            <button onClick={()=>{setOpen(false);onEdit();}} style={{ background:"#f5f0e8",border:"1px solid #e5ddd3",borderRadius:6,padding:"4px 10px",fontSize:11,cursor:"pointer" }}>✏️ Editar</button>
+            <button onClick={onDelete} style={{ background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:6,padding:"4px 10px",fontSize:11,cursor:"pointer",color:"#dc2626" }}>🗑 Eliminar</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ── Nueva reunión / edit modal ── */
@@ -4619,306 +4731,278 @@ function MeetingFormModal({ kickoffs, initial, onSave, onClose }) {
 }
 
 /* ── Meeting card ── */
-function MeetingCard({ meeting, kickoff, onEdit, onDelete, onToggleTask }) {
-  const st = getMeetingStatus(meeting.status);
-  const [expanded, setExpanded] = useState(false);
-  const [notesExpanded, setNotesExpanded] = useState(false);
-  const pendingTasks = (meeting.tasks||[]).filter(t=>!t.done).length;
-  const doneTasks    = (meeting.tasks||[]).filter(t=>t.done).length;
-  const NOTES_PREVIEW_CHARS = 280;
-
-  return (
-    <div style={{ background:"#fff", border:"1px solid #eee8df", borderRadius:12, padding:"14px 16px", marginBottom:8, boxShadow:"0 1px 4px rgba(0,0,0,.05)" }}>
-      <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={() => setExpanded(e=>!e)}>
-        <span style={{ fontSize:16 }}>{st.dot}</span>
-        <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ display:"flex", alignItems:"baseline", gap:8, flexWrap:"wrap" }}>
-            <span style={{ fontWeight:600, fontSize:14, color:"#1a1814", fontFamily:"'Jost',sans-serif" }}>{kickoff?.guestName || "—"}</span>
-            {meeting.time && <span style={{ fontSize:12, color:"#9a7d52" }}>{meeting.time}</span>}
-            <span style={{ fontSize:11, background: st.bg, color: st.color, borderRadius:6, padding:"2px 8px", fontWeight:600, letterSpacing:".04em" }}>{st.label}</span>
-            <span style={{ fontSize:11, background:"#f5f0e8", color:"#9a7d52", borderRadius:6, padding:"2px 8px" }}>{meeting.type}</span>
-          </div>
-          {kickoff?.assignedConcierge && (
-            <div style={{ fontSize:11, color:"#b0a090", marginTop:2 }}>Concierge: {kickoff.assignedConcierge}</div>
-          )}
-          {meeting.notes && !expanded && (
-            <div style={{ fontSize:12, color:"#6b6055", marginTop:4, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:340 }}>{meeting.notes}</div>
-          )}
-        </div>
-        {(meeting.tasks||[]).length > 0 && (
-          <div style={{ fontSize:11, color: pendingTasks > 0 ? "#d97706" : "#16a34a", fontWeight:600, whiteSpace:"nowrap" }}>
-            {doneTasks}/{(meeting.tasks||[]).length} tareas
-          </div>
-        )}
-        <span style={{ color:"#b0a090", fontSize:12, userSelect:"none" }}>{expanded ? "▲" : "▼"}</span>
-      </div>
-
-      {expanded && (
-        <div style={{ marginTop:12, paddingTop:12, borderTop:"1px solid #f0ebe2" }}>
-          {meeting.notes && (() => {
-            const long = meeting.notes.length > NOTES_PREVIEW_CHARS;
-            const shown = (!notesExpanded && long) ? meeting.notes.slice(0, NOTES_PREVIEW_CHARS) + "…" : meeting.notes;
-            return (
-              <div style={{ marginBottom:12 }}>
-                <p style={{ fontSize:13, color:"#3a3530", lineHeight:1.7, margin:0, whiteSpace:"pre-wrap", wordBreak:"break-word" }}>{shown}</p>
-                {long && (
-                  <button onClick={e=>{e.stopPropagation();setNotesExpanded(v=>!v);}} style={{ background:"none", border:"none", color:"#9a7d52", fontSize:12, cursor:"pointer", padding:"4px 0", fontFamily:"'Jost',sans-serif", textDecoration:"underline" }}>
-                    {notesExpanded ? "Ver menos ▲" : "Ver más ▼"}
-                  </button>
-                )}
-              </div>
-            );
-          })()}
-          {(meeting.tasks||[]).length > 0 && (
-            <div style={{ marginBottom:12 }}>
-              <div style={{ fontSize:11, color:"#9a7d52", letterSpacing:".08em", textTransform:"uppercase", marginBottom:6 }}>Tareas</div>
-              {meeting.tasks.map((t, i) => (
-                <div key={i} onClick={() => onToggleTask(i)} style={{ display:"flex", alignItems:"center", gap:8, padding:"4px 0", cursor:"pointer" }}>
-                  <span style={{ fontSize:14 }}>{t.done ? "✅" : "⬜"}</span>
-                  <span style={{ fontSize:13, color: t.done ? "#9a9a9a" : "#1a1814", textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <div style={{ display:"flex", gap:8 }}>
-            <button onClick={() => { setExpanded(false); onEdit(); }} style={{ background:"#f5f0e8", border:"1px solid #e5ddd3", borderRadius:8, padding:"6px 14px", fontSize:12, cursor:"pointer", color:"#1a1814" }}>✏️ Editar</button>
-            <button onClick={onDelete} style={{ background:"#fee2e2", border:"1px solid #fca5a5", borderRadius:8, padding:"6px 14px", fontSize:12, cursor:"pointer", color:"#dc2626" }}>🗑 Eliminar</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function ReunionesPage() {
-  const [kickoffs, setKickoffs]       = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [showForm, setShowForm]       = useState(false);
-  const [editMeeting, setEditMeeting] = useState(null); // { kickoffId, meeting }
-
-  // filters
-  const [filterClient,    setFilterClient]    = useState("");
+  const [kickoffs,      setKickoffs]      = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [error,         setError]         = useState("");
+  const [selectedId,    setSelectedId]    = useState(null); // kickoff id in right panel
   const [filterConcierge, setFilterConcierge] = useState("all");
-  const [filterStatus,    setFilterStatus]    = useState("all");
-  const [filterDateFrom,  setFilterDateFrom]  = useState("");
-  const [filterDateTo,    setFilterDateTo]    = useState("");
+  const [search,        setSearch]        = useState("");
+  const [addingFor,     setAddingFor]     = useState(null); // kickoffId when inline form open
+  const [editingMeeting,setEditingMeeting]= useState(null); // {kickoffId, meeting}
 
   useEffect(() => {
-    fetchKickoffsFromSheet().then(data => {
-      const arr = (data || []).map((k, idx) => ({
-        ...k,
-        id: k?.id || k?.kickoffId || k?.ID || `row-${idx}`,
-        guestName: String(k?.guestName || k?.GuestName || k?.guest_name || "").trim(),
-        assignedConcierge: String(k?.assignedConcierge || k?.AssignedConcierge || "").trim(),
-      }));
-      setKickoffs(arr);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    fetchKickoffsFromSheet()
+      .then(data => {
+        const arr = (data || []).map((k, idx) => ({
+          ...k,
+          id: k?.id || k?.kickoffId || k?.ID || `row-${idx}`,
+          guestName: String(k?.guestName || k?.GuestName || "").trim(),
+          assignedConcierge: String(k?.assignedConcierge || k?.AssignedConcierge || "").trim(),
+        }));
+        setKickoffs(arr);
+        if (arr.length > 0) setSelectedId(arr[0].id);
+      })
+      .catch(e => setError(String(e?.message || e)))
+      .finally(() => setLoading(false));
   }, []);
 
-  // Flatten all meetings from all kickoffs
-  const allMeetings = useMemo(() => {
-    const list = [];
+  // helper: get meetings array for a kickoff
+  const getMeetings = (k) => parseMeetings(k?.meetingNotes);
+
+  // persist meetings for a kickoff
+  const saveMeetings = async (kickoffId, updatedList) => {
+    await updateKickoffInSheet(kickoffId, { meetingNotes: JSON.stringify(updatedList) });
+    setKickoffs(prev => prev.map(k =>
+      k.id === kickoffId ? { ...k, meetingNotes: JSON.stringify(updatedList) } : k
+    ));
+  };
+
+  const handleAddMeeting = async (kickoffId, entry) => {
+    const k = kickoffs.find(x => x.id === kickoffId);
+    const existing = getMeetings(k);
+    await saveMeetings(kickoffId, [...existing, entry]);
+    setAddingFor(null);
+  };
+
+  const handleEditMeeting = async (kickoffId, entry) => {
+    const k = kickoffs.find(x => x.id === kickoffId);
+    const updated = getMeetings(k).map(m => m.id === entry.id ? entry : m);
+    await saveMeetings(kickoffId, updated);
+    setEditingMeeting(null);
+  };
+
+  const handleDeleteMeeting = async (kickoffId, meetingId) => {
+    if (!window.confirm("¿Eliminar esta reunión?")) return;
+    const k = kickoffs.find(x => x.id === kickoffId);
+    await saveMeetings(kickoffId, getMeetings(k).filter(m => m.id !== meetingId));
+  };
+
+  const handleToggleTask = async (kickoffId, meetingId, taskIdx) => {
+    const k = kickoffs.find(x => x.id === kickoffId);
+    const updated = getMeetings(k).map(m => {
+      if (m.id !== meetingId && !(m.id === undefined && meetingId === undefined)) return m;
+      if (m.id !== meetingId) return m;
+      return { ...m, tasks: (m.tasks||[]).map((t,i) => i===taskIdx ? {...t,done:!t.done} : t) };
+    });
+    await saveMeetings(kickoffId, updated);
+  };
+
+  // KPIs across all kickoffs
+  const kpis = useMemo(() => {
+    let total=0, done=0, missed=0, pending=0, openTasks=0;
     kickoffs.forEach(k => {
-      const meetings = parseMeetings(k?.meetingNotes);
-      meetings.forEach(m => {
-        list.push({ ...m, kickoffId: k.id, _kickoff: k });
+      getMeetings(k).forEach(m => {
+        total++;
+        if (m.status==="done") done++;
+        else if (m.status==="missed") missed++;
+        else pending++;
+        openTasks += (m.tasks||[]).filter(t=>!t.done).length;
       });
     });
-    // sort by date desc (most recent first), undated last
-    return list.sort((a, b) => {
-      if (!a.date && !b.date) return 0;
-      if (!a.date) return 1;
-      if (!b.date) return -1;
-      return b.date.localeCompare(a.date);
-    });
-  }, [kickoffs]);
-
-  // Apply filters
-  const filtered = useMemo(() => {
-    return allMeetings.filter(m => {
-      if (filterClient && m._kickoff?.guestName !== filterClient) return false;
-      if (filterConcierge !== "all" && m._kickoff?.assignedConcierge !== filterConcierge) return false;
-      if (filterStatus !== "all" && m.status !== filterStatus) return false;
-      if (filterDateFrom && m.date && m.date < filterDateFrom) return false;
-      if (filterDateTo   && m.date && m.date > filterDateTo)   return false;
-      return true;
-    });
-  }, [allMeetings, filterClient, filterConcierge, filterStatus, filterDateFrom, filterDateTo]);
-
-  // Group by date
-  const grouped = useMemo(() => {
-    const map = new Map();
-    filtered.forEach(m => {
-      const key = m.date || "__sin_fecha__";
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(m);
-    });
-    return [...map.entries()];
-  }, [filtered]);
-
-  // Unique clients for filter dropdown
-  const clientOptions = useMemo(() => {
-    const names = [...new Set(kickoffs.map(k => k.guestName).filter(Boolean))].sort();
-    return names;
-  }, [kickoffs]);
-
-  const handleSave = ({ kickoffId, allMeetings: updatedMeetings }) => {
-    setKickoffs(prev => prev.map(k => k.id === kickoffId
-      ? { ...k, meetingNotes: JSON.stringify(updatedMeetings) }
-      : k
-    ));
-    setShowForm(false);
-    setEditMeeting(null);
-  };
-
-  const handleDelete = async (kickoffId, meetingId) => {
-    if (!confirm("¿Eliminar esta reunión?")) return;
-    const kickoff = kickoffs.find(k => k.id === kickoffId);
-    const updated = parseMeetings(kickoff?.meetingNotes).filter(m => m.id !== meetingId);
-    try {
-      await updateKickoffInSheet(kickoffId, { meetingNotes: JSON.stringify(updated) });
-      setKickoffs(prev => prev.map(k => k.id === kickoffId ? { ...k, meetingNotes: JSON.stringify(updated) } : k));
-    } catch(e) { alert("Error: " + e.message); }
-  };
-
-  const handleToggleTask = async (kickoffId, meetingId, taskIndex) => {
-    const kickoff = kickoffs.find(k => k.id === kickoffId);
-    const meetings = parseMeetings(kickoff?.meetingNotes);
-    const updated  = meetings.map(m => {
-      if (m.id !== meetingId) return m;
-      const tasks = (m.tasks||[]).map((t,i) => i===taskIndex ? {...t,done:!t.done} : t);
-      return {...m, tasks};
-    });
-    try {
-      await updateKickoffInSheet(kickoffId, { meetingNotes: JSON.stringify(updated) });
-      setKickoffs(prev => prev.map(k => k.id === kickoffId ? { ...k, meetingNotes: JSON.stringify(updated) } : k));
-    } catch(e) { console.warn("toggle task error", e); }
-  };
-
-  // KPIs
-  const kpis = useMemo(() => {
-    const total = allMeetings.length;
-    const done  = allMeetings.filter(m=>m.status==="done").length;
-    const missed= allMeetings.filter(m=>m.status==="missed").length;
-    const pending=allMeetings.filter(m=>m.status==="pending"||m.status==="scheduled").length;
-    const withTasks = allMeetings.filter(m=>(m.tasks||[]).length>0);
-    const openTasks = withTasks.reduce((acc,m)=>acc+(m.tasks||[]).filter(t=>!t.done).length,0);
     return { total, done, missed, pending, openTasks };
-  }, [allMeetings]);
+  }, [kickoffs]);
 
-  const selStyle = { border:"1px solid #e5ddd3", borderRadius:8, padding:"7px 10px", fontSize:12, fontFamily:"'Jost',sans-serif", outline:"none", background:"#fff", cursor:"pointer" };
-  const inpStyle = { border:"1px solid #e5ddd3", borderRadius:8, padding:"7px 10px", fontSize:12, fontFamily:"'Jost',sans-serif", outline:"none", background:"#fff" };
+  // left panel: filter + sort
+  const leftList = useMemo(() => {
+    return kickoffs
+      .filter(k => {
+        if (filterConcierge !== "all" && k.assignedConcierge !== filterConcierge) return false;
+        if (search && !k.guestName.toLowerCase().includes(search.toLowerCase())) return false;
+        return true;
+      })
+      .sort((a,b) => {
+        // most recent meeting date first
+        const lastDate = (k) => {
+          const ms = getMeetings(k);
+          const dates = ms.map(m=>m.date).filter(Boolean).sort();
+          return dates[dates.length-1] || "";
+        };
+        return lastDate(b).localeCompare(lastDate(a));
+      });
+  }, [kickoffs, filterConcierge, search]);
 
-  const formatDateHeader = (key) => {
-    if (key === "__sin_fecha__") return "Sin fecha";
-    try {
-      const [y,m,d] = key.split("-");
-      const date = new Date(+y, +m-1, +d);
-      return date.toLocaleDateString("es-CO", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
-    } catch { return key; }
-  };
+  const selectedKickoff = kickoffs.find(k => k.id === selectedId);
+  const selectedMeetings = selectedKickoff ? getMeetings(selectedKickoff).slice().sort((a,b) => {
+    if (!a.date && !b.date) return 0;
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return b.date.localeCompare(a.date);
+  }) : [];
+
+  if (loading) return (
+    <div style={{ minHeight:"100vh", background:"#f7f4ef", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Jost',sans-serif" }}>
+      <div style={{ textAlign:"center" }}>
+        <div style={{ fontSize:28, marginBottom:12 }}>📅</div>
+        <p style={{ color:"#9a7d52", fontSize:14 }}>Cargando clientes…</p>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ minHeight:"100vh", background:"#fff1f1", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Jost',sans-serif", padding:32 }}>
+      <div style={{ textAlign:"center" }}>
+        <p style={{ color:"#dc2626", fontWeight:600, marginBottom:8 }}>Error al cargar datos</p>
+        <pre style={{ fontSize:12, color:"#6b0000", whiteSpace:"pre-wrap" }}>{error}</pre>
+        <a href="/?mode=concierge" style={{ color:"#9a7d52", fontSize:13 }}>← Volver al panel</a>
+      </div>
+    </div>
+  );
 
   return (
-    <div style={{ minHeight:"100vh", background:"#f7f4ef", fontFamily:"'Jost',sans-serif", paddingBottom:60 }}>
-      {/* Header */}
-      <div style={{ background:"#1a1814", padding:"20px 28px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <div>
-          <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:600, color:"#f5f0e8", margin:0 }}>Reuniones</p>
-          <p style={{ fontSize:11, color:"#9a7d52", letterSpacing:".12em", textTransform:"uppercase", margin:0 }}>Two Travel · CRM de llamadas</p>
+    <div style={{ minHeight:"100vh", background:"#f7f4ef", fontFamily:"'Jost',sans-serif", display:"flex", flexDirection:"column" }}>
+
+      {/* ── Top bar ── */}
+      <div style={{ background:"#1a1814", padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+          <a href="/?mode=concierge" style={{ fontSize:12, color:"#9a7d52", textDecoration:"none" }}>← Panel</a>
+          <span style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:600, color:"#f5f0e8" }}>Reuniones</span>
         </div>
-        <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-          <a href="/?mode=concierge" style={{ fontSize:12, color:"#9a7d52", textDecoration:"none", padding:"6px 14px", border:"1px solid #3a3530", borderRadius:8 }}>← Panel</a>
-          <button onClick={() => { setEditMeeting(null); setShowForm(true); }}
-            style={{ background:"#9a7d52", color:"#fff", border:"none", borderRadius:8, padding:"8px 18px", fontSize:13, cursor:"pointer", fontFamily:"'Jost',sans-serif" }}>
-            + Nueva reunión
-          </button>
-        </div>
-      </div>
-
-      {/* KPI strip */}
-      <div style={{ background:"#fff", borderBottom:"1px solid #eee8df", padding:"14px 28px", display:"flex", gap:24, overflowX:"auto" }}>
-        {[
-          { label:"Total reuniones", val: kpis.total, color:"#1a1814" },
-          { label:"Completadas",     val: kpis.done,  color:"#16a34a" },
-          { label:"Pendientes",      val: kpis.pending,color:"#2563eb"},
-          { label:"No asistió",      val: kpis.missed, color:"#dc2626"},
-          { label:"Tareas abiertas", val: kpis.openTasks,color:"#d97706"},
-        ].map(k => (
-          <div key={k.label} style={{ textAlign:"center", minWidth:90 }}>
-            <div style={{ fontSize:24, fontWeight:700, color:k.color }}>{k.val}</div>
-            <div style={{ fontSize:10, color:"#9a7d52", letterSpacing:".06em", textTransform:"uppercase" }}>{k.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <div style={{ padding:"16px 28px", display:"flex", gap:10, flexWrap:"wrap", alignItems:"center", background:"#fff", borderBottom:"1px solid #eee8df" }}>
-        <select value={filterClient} onChange={e=>setFilterClient(e.target.value)} style={selStyle}>
-          <option value="">Todos los clientes</option>
-          {clientOptions.map(n=><option key={n} value={n}>{n}</option>)}
-        </select>
-        <select value={filterConcierge} onChange={e=>setFilterConcierge(e.target.value)} style={selStyle}>
-          <option value="all">Todos los concierges</option>
-          {CONCIERGE_LIST.map(c=><option key={c.name} value={c.name}>{c.name}</option>)}
-        </select>
-        <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={selStyle}>
-          <option value="all">Todos los estados</option>
-          {MEETING_STATUSES.map(s=><option key={s.value} value={s.value}>{s.dot} {s.label}</option>)}
-        </select>
-        <input type="date" value={filterDateFrom} onChange={e=>setFilterDateFrom(e.target.value)} style={inpStyle} placeholder="Desde" />
-        <input type="date" value={filterDateTo}   onChange={e=>setFilterDateTo(e.target.value)}   style={inpStyle} placeholder="Hasta" />
-        {(filterClient||filterConcierge!=="all"||filterStatus!=="all"||filterDateFrom||filterDateTo) && (
-          <button onClick={()=>{setFilterClient("");setFilterConcierge("all");setFilterStatus("all");setFilterDateFrom("");setFilterDateTo("");}}
-            style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:8,padding:"6px 12px",fontSize:12,cursor:"pointer",color:"#dc2626"}}>
-            ✕ Limpiar
-          </button>
-        )}
-      </div>
-
-      {/* Timeline */}
-      <div style={{ padding:"24px 28px", maxWidth:760, margin:"0 auto" }}>
-        {loading && (
-          <div style={{ textAlign:"center", color:"#9a7d52", padding:60, fontSize:14 }}>Cargando reuniones…</div>
-        )}
-        {!loading && grouped.length === 0 && (
-          <div style={{ textAlign:"center", padding:60 }}>
-            <p style={{ fontSize:32, marginBottom:12 }}>📅</p>
-            <p style={{ color:"#9a7d52", fontSize:14 }}>No hay reuniones que coincidan con los filtros.</p>
-            <button onClick={()=>setShowForm(true)} style={{ marginTop:16, background:"#1a1814", color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontSize:13, cursor:"pointer", fontFamily:"'Jost',sans-serif" }}>+ Crear primera reunión</button>
-          </div>
-        )}
-        {grouped.map(([dateKey, meetings]) => (
-          <div key={dateKey} style={{ marginBottom:28 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
-              <div style={{ height:1, flex:1, background:"#e5ddd3" }} />
-              <span style={{ fontSize:12, fontWeight:600, color:"#9a7d52", letterSpacing:".08em", textTransform:"uppercase", whiteSpace:"nowrap" }}>
-                {formatDateHeader(dateKey)}
-              </span>
-              <div style={{ height:1, flex:1, background:"#e5ddd3" }} />
+        {/* KPIs inline */}
+        <div style={{ display:"flex", gap:20 }}>
+          {[
+            { label:"Total", val:kpis.total, color:"#f5f0e8" },
+            { label:"Hechas", val:kpis.done, color:"#4ade80" },
+            { label:"Pendientes", val:kpis.pending, color:"#60a5fa" },
+            { label:"No asistió", val:kpis.missed, color:"#f87171" },
+            { label:"Tareas abiertas", val:kpis.openTasks, color:"#fbbf24" },
+          ].map(k => (
+            <div key={k.label} style={{ textAlign:"center" }}>
+              <div style={{ fontSize:18, fontWeight:700, color:k.color, lineHeight:1 }}>{k.val}</div>
+              <div style={{ fontSize:9, color:"#9a7d52", letterSpacing:".06em", textTransform:"uppercase" }}>{k.label}</div>
             </div>
-            {meetings.map(m => (
-              <MeetingCard
-                key={m.id || m.kickoffId + m.date + m.time}
-                meeting={m}
-                kickoff={m._kickoff}
-                onEdit={() => { setEditMeeting({ kickoffId: m.kickoffId, meeting: m }); setShowForm(true); }}
-                onDelete={() => handleDelete(m.kickoffId, m.id)}
-                onToggleTask={(taskIndex) => handleToggleTask(m.kickoffId, m.id, taskIndex)}
-              />
-            ))}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      {showForm && (
-        <MeetingFormModal
-          kickoffs={kickoffs}
-          initial={editMeeting ? { ...editMeeting.meeting, kickoffId: editMeeting.kickoffId } : null}
-          onSave={handleSave}
-          onClose={() => { setShowForm(false); setEditMeeting(null); }}
-        />
-      )}
+      {/* ── 2-panel body ── */}
+      <div style={{ display:"flex", flex:1, overflow:"hidden", minHeight:0 }}>
+
+        {/* LEFT: client list */}
+        <div style={{ width:260, flexShrink:0, borderRight:"1px solid #e5ddd3", background:"#fff", display:"flex", flexDirection:"column", overflow:"hidden" }}>
+          {/* search + filter */}
+          <div style={{ padding:"10px 12px", borderBottom:"1px solid #eee8df" }}>
+            <input
+              value={search} onChange={e=>setSearch(e.target.value)}
+              placeholder="Buscar cliente…"
+              style={{ width:"100%", border:"1px solid #e5ddd3", borderRadius:7, padding:"6px 10px", fontSize:12, fontFamily:"'Jost',sans-serif", outline:"none", boxSizing:"border-box", marginBottom:6 }}
+            />
+            <select value={filterConcierge} onChange={e=>setFilterConcierge(e.target.value)}
+              style={{ width:"100%", border:"1px solid #e5ddd3", borderRadius:7, padding:"6px 8px", fontSize:11, fontFamily:"'Jost',sans-serif", outline:"none", background:"#fff", cursor:"pointer" }}>
+              <option value="all">Todos los concierges</option>
+              {CONCIERGE_LIST.map(c=><option key={c.name} value={c.name}>{c.name.split(" ")[0]}</option>)}
+            </select>
+          </div>
+          {/* list */}
+          <div style={{ overflowY:"auto", flex:1 }}>
+            {leftList.length === 0 && <div style={{ padding:20, textAlign:"center", color:"#b0a090", fontSize:12 }}>Sin resultados</div>}
+            {leftList.map(k => {
+              const ms = getMeetings(k);
+              const pendingCount = ms.filter(m=>m.status==="pending"||m.status==="scheduled").length;
+              const lastDate = ms.map(m=>m.date).filter(Boolean).sort().slice(-1)[0];
+              const isSelected = k.id === selectedId;
+              return (
+                <div key={k.id} onClick={()=>{ setSelectedId(k.id); setAddingFor(null); setEditingMeeting(null); }}
+                  style={{ padding:"10px 14px", borderBottom:"1px solid #f0ebe2", cursor:"pointer", background: isSelected ? "#f5f0e8" : "transparent", borderLeft: isSelected ? "3px solid #9a7d52" : "3px solid transparent", transition:"background .1s" }}>
+                  <div style={{ fontWeight:600, fontSize:13, color:"#1a1814", marginBottom:2 }}>{k.guestName || "—"}</div>
+                  <div style={{ fontSize:10, color:"#9a7d52", marginBottom:3 }}>{k.assignedConcierge || "Sin concierge"}</div>
+                  <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                    <span style={{ fontSize:10, color:"#b0a090" }}>{ms.length} reunión{ms.length!==1?"es":""}</span>
+                    {pendingCount>0 && <span style={{ fontSize:10, background:"#dbeafe", color:"#2563eb", borderRadius:4, padding:"1px 5px", fontWeight:600 }}>{pendingCount} pend.</span>}
+                    {lastDate && <span style={{ fontSize:10, color:"#b0a090", marginLeft:"auto" }}>{lastDate.slice(5)}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* RIGHT: meeting timeline */}
+        <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+          {!selectedKickoff ? (
+            <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", color:"#b0a090", fontSize:14 }}>
+              Selecciona un cliente
+            </div>
+          ) : (
+            <>
+              {/* client header */}
+              <div style={{ padding:"14px 20px", borderBottom:"1px solid #eee8df", background:"#fff", flexShrink:0 }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                  <div>
+                    <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:600, color:"#1a1814" }}>{selectedKickoff.guestName}</div>
+                    <div style={{ fontSize:11, color:"#9a7d52" }}>
+                      {selectedKickoff.assignedConcierge || "Sin concierge asignado"}
+                      {selectedKickoff.city ? ` · ${selectedKickoff.city}` : ""}
+                      {selectedKickoff.arrivalDate ? ` · Llegada: ${selectedKickoff.arrivalDate}` : ""}
+                    </div>
+                  </div>
+                  <button onClick={()=>{ setAddingFor(selectedId); setEditingMeeting(null); }}
+                    style={{ background:"#1a1814", color:"#fff", border:"none", borderRadius:8, padding:"8px 16px", fontSize:12, cursor:"pointer", fontFamily:"'Jost',sans-serif" }}>
+                    + Nueva llamada
+                  </button>
+                </div>
+              </div>
+
+              {/* timeline */}
+              <div style={{ flex:1, overflowY:"auto", padding:"16px 20px" }}>
+                {/* inline add form */}
+                {addingFor === selectedId && (
+                  <MeetingFormInline
+                    kickoffId={selectedId}
+                    initial={null}
+                    onSave={(entry) => handleAddMeeting(selectedId, entry)}
+                    onCancel={()=>setAddingFor(null)}
+                  />
+                )}
+
+                {selectedMeetings.length === 0 && !addingFor && (
+                  <div style={{ textAlign:"center", padding:"40px 0", color:"#b0a090" }}>
+                    <div style={{ fontSize:28, marginBottom:10 }}>📞</div>
+                    <p style={{ fontSize:13 }}>No hay llamadas registradas.</p>
+                    <button onClick={()=>setAddingFor(selectedId)}
+                      style={{ marginTop:8, background:"#9a7d52", color:"#fff", border:"none", borderRadius:7, padding:"7px 16px", fontSize:12, cursor:"pointer", fontFamily:"'Jost',sans-serif" }}>
+                      Registrar primera llamada
+                    </button>
+                  </div>
+                )}
+
+                {selectedMeetings.map(m => {
+                  const isEditing = editingMeeting?.kickoffId === selectedId && editingMeeting?.meeting?.id === m.id;
+                  return (
+                    <div key={m.id || m.date + m.time}>
+                      {isEditing ? (
+                        <MeetingFormInline
+                          kickoffId={selectedId}
+                          initial={{ ...m }}
+                          onSave={(entry) => handleEditMeeting(selectedId, entry)}
+                          onCancel={()=>setEditingMeeting(null)}
+                        />
+                      ) : (
+                        <MeetingRow
+                          meeting={m}
+                          onEdit={()=>{ setEditingMeeting({ kickoffId:selectedId, meeting:m }); setAddingFor(null); }}
+                          onDelete={()=>handleDeleteMeeting(selectedId, m.id)}
+                          onToggleTask={(i)=>handleToggleTask(selectedId, m.id, i)}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
