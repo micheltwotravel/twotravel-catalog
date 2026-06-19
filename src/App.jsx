@@ -3822,9 +3822,9 @@ function BreakfastCatalog() {
   const [currency,  setCurrency]  = React.useState(currParam === "COP" ? "COP" : "USD");
   const [groupSize]               = React.useState(gsParam > 0 ? gsParam : null);
   const [currentDay, setCurrentDay] = React.useState(0);
-  // dayOrders: one entry per night, each { menuId, checked }
+  // dayOrders: one entry per night, each { mode:"full"|"individual", menuId, checked }
   const [dayOrders, setDayOrders] = React.useState(() =>
-    Array.from({ length: stayNights }, () => ({ menuId: "traditional", checked: {} }))
+    Array.from({ length: stayNights }, () => ({ mode: "individual", menuId: "traditional", checked: {} }))
   );
   const [notes,   setNotes]   = React.useState("");
   const [sent,    setSent]    = React.useState(false);
@@ -3856,7 +3856,13 @@ function BreakfastCatalog() {
 
   const setMenuForDay = (menuId) => setDayOrders(prev => {
     const next = [...prev];
-    next[currentDay] = { menuId, checked: {} };
+    next[currentDay] = { ...next[currentDay], menuId, checked: {} };
+    return next;
+  });
+
+  const setModeForDay = (mode) => setDayOrders(prev => {
+    const next = [...prev];
+    next[currentDay] = { ...next[currentDay], mode, checked: {} };
     return next;
   });
 
@@ -3864,9 +3870,12 @@ function BreakfastCatalog() {
     prev.map(() => ({ ...curOrder, checked: { ...curOrder.checked } }))
   );
 
-  const hasAny   = dayOrders.some(d => Object.values(d.checked).some(Boolean));
-  const totalCOP = menu.sections.flatMap(s => s.items)
-    .reduce((s, it) => checked[`${menu.id}:${it.name}`] ? s + it.prices[tierIdx] : s, 0);
+  const curMode  = curOrder.mode || "individual";
+  const hasAny   = dayOrders.some(d => d.mode === "full" || Object.values(d.checked).some(Boolean));
+  const totalCOP = curMode === "full"
+    ? menu.fullPrice[tierIdx]
+    : menu.sections.flatMap(s => s.items)
+        .reduce((s, it) => checked[`${menu.id}:${it.name}`] ? s + it.prices[tierIdx] : s, 0);
 
   const handleSend = async () => {
     setSending(true);
@@ -3874,10 +3883,16 @@ function BreakfastCatalog() {
     const lines = [];
     dayOrders.forEach((order, i) => {
       const m = BREAKFAST_MENUS.find(x => x.id === order.menuId) || BREAKFAST_MENUS[0];
-      const dayItems = m.sections.flatMap(sec =>
-        sec.items.filter(it => order.checked[`${order.menuId}:${it.name}`])
-          .map(it => `  · ${en ? it.name : it.name_es} — ${fmt(it.prices[tierIdx])}`)
-      );
+      const isFullMode = order.mode === "full";
+      let dayItems;
+      if (isFullMode) {
+        dayItems = [`  🍽 ${en ? "Full Menu" : "Menú Completo"} — ${fmt(m.fullPrice[tierIdx])}`];
+      } else {
+        dayItems = m.sections.flatMap(sec =>
+          sec.items.filter(it => order.checked[`${order.menuId}:${it.name}`])
+            .map(it => `  · ${en ? it.name : it.name_es} — ${fmt(it.prices[tierIdx])}`)
+        );
+      }
       if (!dayItems.length) return;
       if (stayNights > 1) lines.push(`*${en ? `Day ${i+1}` : `Día ${i+1}`}: ${en ? m.label : m.label_es}*`);
       else lines.push(`*${en ? m.label : m.label_es}*`);
@@ -3995,6 +4010,26 @@ function BreakfastCatalog() {
         </div>
       )}
 
+      {/* Full menu vs Selección individual toggle */}
+      <div style={{background:"#f5f0e8",borderBottom:"1px solid #e5ddd3",padding:"10px 20px",display:"flex",justifyContent:"center",gap:8}}>
+        {[
+          { key:"full",       label: en ? "✓ Full menu"           : "✓ Menú completo",        desc: en ? "All dishes at a fixed price" : "Todos los platos a precio fijo" },
+          { key:"individual", label: en ? "≡ Individual selection" : "≡ Selección individual", desc: en ? "Choose specific items"       : "Elige artículos específicos" },
+        ].map(opt => {
+          const active = curMode === opt.key;
+          return (
+            <button key={opt.key} onClick={() => setModeForDay(opt.key)} style={{
+              padding:"8px 20px", fontSize:12, fontWeight: active ? 600 : 400,
+              border: `1.5px solid ${active ? "#9a7d52" : "#d5ccc0"}`,
+              borderRadius:8, cursor:"pointer", background: active ? "#9a7d52" : "#fff",
+              color: active ? "#fff" : "#7a7570", transition:"all .15s",
+            }}>
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Menu type tabs */}
       <div style={{background:"#fff",borderBottom:"1px solid #e5ddd3",display:"flex",justifyContent:"center",gap:0,overflowX:"auto"}}>
         {BREAKFAST_MENUS.map(m => (
@@ -4015,24 +4050,36 @@ function BreakfastCatalog() {
           </p>
         </div>
 
-        {/* Full menu highlight */}
-        <div style={{background:"#fff",border:"1px solid #e5ddd3",borderLeft:"3px solid #9a7d52",borderRadius:8,padding:"16px 20px",marginBottom:28,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div>
-            <p style={{fontSize:13,fontWeight:500,color:"#1a1814",marginBottom:3}}>
-              {en ? "Full Menu" : "Menú Completo"}
-            </p>
-            <p style={{fontSize:11,color:"#7a7570",lineHeight:1.5}}>
-              {en ? "All dishes in smaller portions, enough for the whole group" : "Todos los platos en porciones menores, suficiente para el grupo"}
-            </p>
+        {/* Full menu mode: show full menu card as the selection */}
+        {curMode === "full" && (
+          <div style={{background:"#f5f0e8",border:"2px solid #9a7d52",borderRadius:10,padding:"20px 24px",marginBottom:28,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <p style={{fontSize:14,fontWeight:600,color:"#1a1814",marginBottom:4}}>
+                ✅ {en ? menu.label : menu.label_es} — {en ? "Full Menu" : "Menú Completo"}
+              </p>
+              <p style={{fontSize:11,color:"#7a7570",lineHeight:1.5}}>
+                {en ? "Includes all dishes in smaller portions, enough for the whole group." : "Incluye todos los platos en porciones menores, suficiente para todo el grupo."}
+              </p>
+            </div>
+            <div style={{textAlign:"right",flexShrink:0,marginLeft:16}}>
+              <span style={{fontSize:20,fontWeight:700,color:"#9a7d52",display:"block"}}>{fmt(menu.fullPrice[tierIdx])}</span>
+              <span style={{fontSize:9,color:"#9a9590",letterSpacing:".04em"}}>{en ? "per day / group" : "por día / grupo"}</span>
+            </div>
           </div>
-          <div style={{textAlign:"right",flexShrink:0,marginLeft:16}}>
-            <span style={{fontSize:17,fontWeight:500,color:"#9a7d52",display:"block"}}>{fmt(menu.fullPrice[tierIdx])}</span>
-            <span style={{fontSize:9,color:"#9a9590",letterSpacing:".04em"}}>{en ? "per day / group" : "por día / grupo"}</span>
-          </div>
-        </div>
+        )}
 
-        {/* Sections & Items */}
-        {menu.sections.map((sec, si) => (
+        {/* Individual mode: Full menu reference card (display only) */}
+        {curMode === "individual" && (
+          <div style={{background:"#fff",border:"1px solid #e5ddd3",borderLeft:"3px solid #c8c0b8",borderRadius:8,padding:"12px 16px",marginBottom:20,display:"flex",justifyContent:"space-between",alignItems:"center",opacity:.7}}>
+            <p style={{fontSize:11,color:"#7a7570",margin:0}}>
+              {en ? "Full menu reference price:" : "Precio referencia menú completo:"}
+            </p>
+            <span style={{fontSize:13,fontWeight:500,color:"#9a7d52"}}>{fmt(menu.fullPrice[tierIdx])} <span style={{fontSize:9,color:"#9a9590"}}>{en?"/ day":"/ día"}</span></span>
+          </div>
+        )}
+
+        {/* Sections & Items — only in individual mode */}
+        {curMode === "individual" && menu.sections.map((sec, si) => (
           <div key={si} style={{marginBottom:28}}>
             <p style={{fontSize:9,fontWeight:500,letterSpacing:".18em",textTransform:"uppercase",color:"#9a7d52",marginBottom:12,paddingBottom:8,borderBottom:"1px solid #e5ddd3"}}>
               {en ? sec.label : sec.label_es}
