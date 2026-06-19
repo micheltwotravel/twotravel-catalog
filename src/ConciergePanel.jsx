@@ -2932,7 +2932,15 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "11:00 AM");
   const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eli_IGa0Y2X/view?usp=sharing");
   const [preTripContent,     setPreTripContent]     = useState(kickoff?.preTripContent     || DEFAULT_PRE_TRIP);
-  const [meetingNotes,       setMeetingNotes]       = useState(kickoff?.meetingNotes       || "");
+  const [meetings, setMeetings] = useState(() => {
+    try {
+      const parsed = JSON.parse(kickoff?.meetingNotes || "[]");
+      if (Array.isArray(parsed)) return parsed;
+    } catch {}
+    // legacy plain text → single entry
+    const legacy = kickoff?.meetingNotes || "";
+    return legacy ? [{ date: "", notes: legacy }] : [];
+  });
   const [pdfNotes,           setPdfNotes]           = useState(kickoff?.pdfNotes           || "");
 
   // ── Per-city ratings (concierge logs after each city leg) ────────
@@ -2993,7 +3001,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     ...(autoStatus === "done"              && !kickoff.doneAt              ? { doneAt: now }              : {}),
     // Pre-trip info block (rendered as a page before itinerary days in PDF)
     preTripContent:    preTripContent.trim(),
-    meetingNotes:      meetingNotes.trim(),
+    meetingNotes:      JSON.stringify(meetings),
     pdfNotes:          pdfNotes.trim(),
     // Multiple arrivals
     arrivals: JSON.stringify(arrivals.filter(a => a.name || a.date || a.flight)),
@@ -3260,15 +3268,47 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             />
           </div>
 
-          {/* ── Reuniones ── */}
-          <div className="border border-amber-200 rounded-xl bg-amber-50 p-3 space-y-2">
-            <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide">Reuniones</p>
-            <textarea
-              value={meetingNotes}
-              onChange={e => setMeetingNotes(e.target.value)}
-              className="w-full border border-amber-200 rounded-lg px-3 py-2 text-sm min-h-[80px] bg-white"
-              placeholder={"Última reunión con cliente:\n\nÚltima reunión con Caro:"}
-            />
+          {/* ── Notas de reuniones ── */}
+          <div className="border border-amber-200 rounded-xl bg-amber-50 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide">📋 Notas de reuniones</p>
+              <button
+                type="button"
+                onClick={() => setMeetings(prev => [{ date: new Date().toISOString().slice(0,10), notes: "" }, ...prev])}
+                className="text-[11px] text-amber-700 border border-amber-300 rounded-lg px-2 py-1 hover:bg-amber-100"
+              >
+                + Nueva reunión
+              </button>
+            </div>
+            {meetings.length === 0 && (
+              <p className="text-xs text-amber-500 italic">No hay reuniones registradas. Presiona "+ Nueva reunión" para agregar.</p>
+            )}
+            {meetings.map((m, i) => (
+              <div key={i} className="bg-white border border-amber-200 rounded-lg p-2.5 space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={m.date || ""}
+                    onChange={e => setMeetings(prev => prev.map((r, ri) => ri === i ? { ...r, date: e.target.value } : r))}
+                    className="border border-amber-200 rounded px-2 py-1 text-xs bg-amber-50"
+                  />
+                  <span className="text-xs text-amber-600 font-medium">
+                    {m.date ? new Date(m.date + "T12:00:00").toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" }) : "Fecha de reunión"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setMeetings(prev => prev.filter((_, ri) => ri !== i))}
+                    className="ml-auto text-[10px] text-red-400 hover:text-red-600"
+                  >✕</button>
+                </div>
+                <textarea
+                  value={m.notes || ""}
+                  onChange={e => setMeetings(prev => prev.map((r, ri) => ri === i ? { ...r, notes: e.target.value } : r))}
+                  className="w-full border border-amber-100 rounded px-2 py-1.5 text-xs min-h-[70px] bg-white resize-none"
+                  placeholder="Notas de esta reunión con el cliente…"
+                />
+              </div>
+            ))}
           </div>
 
 
