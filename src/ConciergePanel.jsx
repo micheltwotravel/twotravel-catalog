@@ -5348,6 +5348,14 @@ const loadKickoffs = async () => {
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
 
+  <a
+    href="/?mode=reuniones"
+    className="tt-btn-ghost"
+    title="CRM de llamadas y reuniones"
+  >
+    📅 Reuniones
+  </a>
+
   <button
     type="button"
     onClick={() => setPortalLang(l => l === "en" ? "es" : "en")}
