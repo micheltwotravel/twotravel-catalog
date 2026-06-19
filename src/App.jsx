@@ -3801,30 +3801,30 @@ function BreakfastCatalog() {
   const GAS_URL   = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
   const params      = new URLSearchParams(window.location.search);
   const kickoffId   = params.get("kickoffId") || "";
+  // URL params used as fallback when no kickoffId or kickoff data is unavailable
   const gsParam     = parseInt(params.get("groupSize")) || 0;
   const tierParam   = params.get("groupTier") || "1-5";
   const currParam   = params.get("currency")  || "USD";
   const initTier    = gsParam > 0
     ? (gsParam <= 5 ? "1-5" : gsParam <= 10 ? "6-10" : "11-20")
     : (BREAKFAST_TIERS.includes(tierParam) ? tierParam : "1-5");
-  const guestName   = params.get("guestName") || "";
-
-  // Compute number of nights from URL dates
-  const stayNights = (() => {
+  const urlNights = (() => {
     const a = params.get("arrivalDate"), d = params.get("departureDate");
-    if (!a || !d) return 1;
+    if (!a || !d) return 0;
     const n = Math.round((new Date(d) - new Date(a)) / 86400000);
-    return n > 0 ? n : 1;
+    return n > 0 ? n : 0;
   })();
 
-  const [lang,      setLang]      = React.useState(params.get("lang") === "es" ? "es" : "en");
-  const [tier,      setTier]      = React.useState(initTier);
-  const [currency,  setCurrency]  = React.useState(currParam === "COP" ? "COP" : "USD");
-  const [groupSize]               = React.useState(gsParam > 0 ? gsParam : null);
-  const [currentDay, setCurrentDay] = React.useState(0);
-  // dayOrders: one entry per night, each { mode:"full"|"individual", menuId, checked }
-  const [dayOrders, setDayOrders] = React.useState(() =>
-    Array.from({ length: stayNights }, () => ({ mode: "individual", menuId: "traditional", checked: {} }))
+  const [lang,        setLang]        = React.useState(params.get("lang") === "es" ? "es" : "en");
+  const [tier,        setTier]        = React.useState(initTier);
+  const [currency,    setCurrency]    = React.useState(currParam === "COP" ? "COP" : "USD");
+  const [groupSize,   setGroupSize]   = React.useState(gsParam > 0 ? gsParam : null);
+  const [stayNights,  setStayNights]  = React.useState(urlNights || 1);
+  const [guestName,   setGuestName]   = React.useState(params.get("guestName") || "");
+  const [currentDay,  setCurrentDay]  = React.useState(0);
+  const [loading,     setLoading]     = React.useState(!!kickoffId);
+  const [dayOrders,   setDayOrders]   = React.useState(() =>
+    Array.from({ length: urlNights || 1 }, () => ({ mode: "individual", menuId: "traditional", checked: {} }))
   );
   const [notes,   setNotes]   = React.useState("");
   const [sent,    setSent]    = React.useState(false);
@@ -3837,6 +3837,70 @@ function BreakfastCatalog() {
       .then(d => { if (d?.rates?.COP) setFxRate(Math.round(d.rates.COP)); })
       .catch(() => {});
   }, []);
+
+  // Load kickoff data + any previously saved order
+  React.useEffect(() => {
+    if (!kickoffId) { setLoading(false); return; }
+    fetch(GAS_URL, {
+      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "getKickoffById", id: kickoffId }),
+    })
+      .then(r => r.json())
+      .then(res => {
+        const k = res.data;
+        if (!k) return;
+        // Derive nights from kickoff dates if not already set from URL
+        if (!urlNights && k.arrivalDate && k.departureDate) {
+          const n = Math.round((new Date(k.departureDate) - new Date(k.arrivalDate)) / 86400000);
+          if (n > 0) setStayNights(n);
+        }
+        // Derive group size & tier from kickoff
+        if (!gsParam) {
+          const gs = parseInt(k.groupSize) || 0;
+          if (gs > 0) {
+            setGroupSize(gs);
+            setTier(gs <= 5 ? "1-5" : gs <= 10 ? "6-10" : "11-20");
+          } else {
+            try {
+              const qa = JSON.parse(k.quizAnswers || "{}");
+              const qgs = parseInt(qa.groupSize || qa.pax) || 0;
+              if (qgs > 0) {
+                setGroupSize(qgs);
+                setTier(qgs <= 5 ? "1-5" : qgs <= 10 ? "6-10" : "11-20");
+              }
+            } catch {}
+          }
+        }
+        if (!params.get("guestName") && k.guestName) setGuestName(k.guestName);
+        // Restore previously saved breakfast order
+        if (k.breakfastOrderJson) {
+          try {
+            const saved = JSON.parse(k.breakfastOrderJson);
+            if (saved.dayOrders?.length) {
+              const nights = saved.stayNights || saved.dayOrders.length;
+              setStayNights(nights);
+              setDayOrders(saved.dayOrders);
+            }
+            if (saved.notes) setNotes(saved.notes);
+            if (saved.tier && BREAKFAST_TIERS.includes(saved.tier)) setTier(saved.tier);
+            if (saved.currency) setCurrency(saved.currency === "COP" ? "COP" : "USD");
+          } catch {}
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kickoffId]);
+
+  // Keep dayOrders in sync with stayNights
+  React.useEffect(() => {
+    setDayOrders(prev => {
+      if (prev.length === stayNights) return prev;
+      if (prev.length < stayNights)
+        return [...prev, ...Array.from({ length: stayNights - prev.length }, () => ({ mode: "individual", menuId: "traditional", checked: {} }))];
+      return prev.slice(0, stayNights);
+    });
+  }, [stayNights]);
 
   const en       = lang === "en";
   const tierIdx  = BREAKFAST_TIERS.indexOf(tier);
@@ -3917,6 +3981,12 @@ function BreakfastCatalog() {
     setSent(true); setSending(false);
   };
 
+  if (loading) return (
+    <div style={{minHeight:"100vh",background:"#f7f4ef",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <p style={{color:"#9a7d52",fontSize:13}}>Loading…</p>
+    </div>
+  );
+
   if (sent) return (
     <div style={{minHeight:"100vh",background:"#f7f4ef",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Jost',sans-serif"}}>
       <div style={{textAlign:"center",maxWidth:400,padding:"40px 24px"}}>
@@ -3927,7 +3997,7 @@ function BreakfastCatalog() {
         <p style={{fontSize:13,color:"#7a7570",lineHeight:1.6}}>
           {en ? "Your concierge will review your selection during the kick-off call." : "Tu concierge revisará tu selección durante la llamada de kickoff."}
         </p>
-        <button onClick={() => { setSent(false); setDayOrders(Array.from({ length: stayNights }, () => ({ menuId: "traditional", checked: {} }))); }}
+        <button onClick={() => setSent(false)}
           style={{marginTop:32,fontSize:11,color:"#9a7d52",background:"none",border:"none",cursor:"pointer",letterSpacing:".1em",textTransform:"uppercase"}}>
           {en ? "Edit order" : "Editar pedido"}
         </button>

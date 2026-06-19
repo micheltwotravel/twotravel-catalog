@@ -378,7 +378,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   const dd   = encodeURIComponent(cl(kickoff.departureDate));
 
   // Drinks
-  const drinksUrl     = `${BASE}/?mode=drinks&kickoffId=${kid}&guestName=${gn}&arrivalDate=${ad}&departureDate=${dd}&lang=${lang}`;
+  const drinksUrl     = `${BASE}/?mode=drinks&kickoffId=${kid}&lang=${lang}`;
   const drinksDisplay = `twotravelvip.com/?mode=drinks&id=${kid}`;
   doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
   dt(lang === "es" ? "Pedido de Bebidas" : "Drink Order", ML, y); y += 11;
@@ -390,7 +390,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   dtLink(drinksDisplay, ML, y, drinksUrl); y += 14;
 
   // Groceries
-  const grocUrl     = `${BASE}/?mode=groceries&kickoffId=${kid}&guestName=${gn}&lang=${lang}`;
+  const grocUrl     = `${BASE}/?mode=groceries&kickoffId=${kid}&lang=${lang}`;
   const grocDisplay = `twotravelvip.com/?mode=groceries&id=${kid}`;
   doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
   dt(lang === "es" ? "Pedido de Mercado" : "Groceries Order", ML, y); y += 11;
@@ -407,7 +407,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   if (isCtg) {
     const gs   = parseInt(cl(kickoff.groupSize)) || 1;
     const tier = gs <= 5 ? "1-5" : gs <= 10 ? "6-10" : "11-20";
-    const bfUrl     = `${BASE}/?mode=breakfast&kickoffId=${kid}&guestName=${gn}&groupTier=${tier}&currency=${currency}&lang=${lang}`;
+    const bfUrl     = `${BASE}/?mode=breakfast&kickoffId=${kid}&lang=${lang}`;
     const bfDisplay = `twotravelvip.com/?mode=breakfast&id=${kid}`;
     doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
     dt(lang === "es" ? "Pedido de Desayuno" : "Breakfast Order", ML, y); y += 11;
@@ -4440,30 +4440,20 @@ const toCityCodeModule = (raw) => {
 };
 
 function BreakfastLink({ kickoff }) {
-  const autoGs = parseInt(kickoff.groupSize) || 1;
-  const [bfGs,   setBfGs]   = React.useState(autoGs);
   const [bfCurr, setBfCurr] = React.useState("USD");
   const bfUrl = (() => {
     const u = new URL("/?mode=breakfast", window.location.origin);
     u.searchParams.set("kickoffId", kickoff.id);
-    u.searchParams.set("groupSize", bfGs);
-    u.searchParams.set("currency", bfCurr);
     u.searchParams.set("lang", kickoff.lang || "en");
-    if (kickoff.guestName)    u.searchParams.set("guestName", kickoff.guestName);
-    if (kickoff.arrivalDate)  u.searchParams.set("arrivalDate", kickoff.arrivalDate);
-    if (kickoff.departureDate) u.searchParams.set("departureDate", kickoff.departureDate);
+    if (bfCurr === "COP") u.searchParams.set("currency", "COP");
     return u.toString();
   })();
   return (
     <div className="flex items-center gap-0">
-      <input type="number" min="1" max="50" value={bfGs}
-        onChange={e => setBfGs(Math.max(1, parseInt(e.target.value)||1))}
-        className="w-14 px-2 py-2 rounded-l-lg border border-r-0 border-amber-300 text-[11px] text-amber-700 bg-amber-50 text-center"
-        title="Número de personas" />
       <select value={bfCurr} onChange={e => setBfCurr(e.target.value)}
-        className="px-2 py-2 border border-r-0 border-amber-300 text-[11px] text-amber-700 bg-amber-50 hover:bg-amber-100 cursor-pointer">
-        <option value="COP">COP</option>
+        className="px-2 py-2 rounded-l-lg border border-r-0 border-amber-300 text-[11px] text-amber-700 bg-amber-50 hover:bg-amber-100 cursor-pointer">
         <option value="USD">USD</option>
+        <option value="COP">COP</option>
       </select>
       <a href={bfUrl} target="_blank" rel="noreferrer"
         className="px-3 py-2 rounded-r-lg border border-amber-300 text-sm text-amber-700 bg-amber-50 hover:bg-amber-100 flex items-center gap-1.5">
