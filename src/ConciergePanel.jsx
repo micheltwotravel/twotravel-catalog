@@ -4442,7 +4442,7 @@ const toCityCodeModule = (raw) => {
 function BreakfastLink({ kickoff }) {
   const autoGs = parseInt(kickoff.groupSize) || 1;
   const [bfGs,   setBfGs]   = React.useState(autoGs);
-  const [bfCurr, setBfCurr] = React.useState("COP");
+  const [bfCurr, setBfCurr] = React.useState("USD");
   const bfUrl = (() => {
     const u = new URL("/?mode=breakfast", window.location.origin);
     u.searchParams.set("kickoffId", kickoff.id);

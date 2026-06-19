@@ -656,7 +656,7 @@ function CoverPage({ kickoff, total, lang, editMode }) {
         {a.city && (
           <Editable
             tag="div" className="cover-eyebrow" editMode={editMode}
-            value={`${a.guestName ? `${a.guestName} · ` : ""}${String(a.city).split(",").map(c => ({ CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" })[c.trim().toUpperCase()] || c.trim()).join(" · ")} ${isEs ? "Itinerario Concierge" : "Concierge Itinerary"}`}
+            value={`${a.guestName ? `${a.guestName} ° ` : ""}${String(a.city).split(",").map(c => ({ CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" })[c.trim().toUpperCase()] || c.trim()).join(" & ")} ${isEs ? "Itinerario Concierge" : "Concierge Itinerary"}`}
           />
         )}
         <Editable tag="div" className="cover-title" editMode={editMode} value={titleLine}/>
