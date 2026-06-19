@@ -2887,6 +2887,108 @@ const DRINK_CATEGORIES = [
   ]},
 ];
 
+function DrinkCategoryList({ items, catLabel, itemName, fmtCOP, fxRate, patchItem }) {
+  const [open, setOpen] = React.useState({});
+  const toggle = (id) => setOpen(p => ({ ...p, [id]: !p[id] }));
+  return (
+    <div className="space-y-2">
+      {items.map((cat, ci) => {
+        const catQty = cat.items.reduce((s, it) => s + (Number(it.qty) || 0), 0);
+        const isOpen = open[cat.id] ?? false;
+        return (
+          <div key={cat.id} className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => toggle(cat.id)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-neutral-50 hover:bg-neutral-100 transition"
+            >
+              <span className="text-sm font-semibold text-neutral-800">{catLabel(cat)}</span>
+              <div className="flex items-center gap-2">
+                {catQty > 0 && (
+                  <span className="bg-neutral-900 text-white text-xs font-bold rounded-full px-2 py-0.5">
+                    {catQty}
+                  </span>
+                )}
+                <span className="text-neutral-400 text-sm">{isOpen ? "▲" : "▼"}</span>
+              </div>
+            </button>
+            {isOpen && (
+              <div className="divide-y divide-neutral-100">
+                {cat.items.map((it, ii) => (
+                  <div key={it.name||ii} className="flex items-center gap-3 px-4 py-2.5">
+                    <div className="w-10 h-10 rounded-lg flex-shrink-0 overflow-hidden relative bg-neutral-100 flex items-center justify-center">
+                      {it.img ? (
+                        <img src={it.img} alt={itemName(it)} className="w-full h-full object-contain absolute inset-0"
+                          onError={e=>{e.target.style.display="none";}}/>
+                      ) : null}
+                      <span className="text-2xl leading-none select-none">{it.emoji||"🍾"}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-neutral-800 leading-snug">{itemName(it)}</p>
+                      {it.priceCOP > 0 && (
+                        <p className="text-xs text-neutral-400 mt-0.5">
+                          COP {fmtCOP(it.priceCOP)} · ≈ USD {(it.priceCOP/fxRate).toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button type="button" onClick={()=>patchItem(ci,ii,{qty:String(Math.max(0,Number(it.qty||0)-1)||"")})}
+                        className="w-7 h-7 rounded-full border border-neutral-300 text-neutral-600 flex items-center justify-center text-sm hover:bg-neutral-100">−</button>
+                      <span className="w-8 text-center text-sm font-medium text-neutral-900">{it.qty||0}</span>
+                      <button type="button" onClick={()=>patchItem(ci,ii,{qty:String(Number(it.qty||0)+1)})}
+                        className="w-7 h-7 rounded-full border border-neutral-300 text-neutral-600 flex items-center justify-center text-sm hover:bg-neutral-100">+</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DrinkSummaryBox({ houseItems, boatItems, catLabel, itemName, houseCOP, houseUSD, boatCOP, boatUSD, totalCOP, totalUSD, fmtCOP, fmtUSD, houseLabel, boatLabel, totalLabel }) {
+  const renderItems = (its, label, cop, usd) => {
+    const selected = its.flatMap(cat =>
+      cat.items.filter(it => Number(it.qty) > 0).map(it => ({ ...it, cat: catLabel(cat) }))
+    );
+    if (!selected.length) return null;
+    return (
+      <div>
+        <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider mb-2">{label}</p>
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {selected.map((it, i) => (
+            <span key={i} className="bg-white/10 text-white text-xs px-2.5 py-1 rounded-full">
+              {Number(it.qty)}× {itemName(it)}
+            </span>
+          ))}
+        </div>
+        {cop > 0 && (
+          <p className="text-xs text-neutral-400">COP {fmtCOP(cop)} <span className="text-neutral-500">≈ USD {fmtUSD(usd)}</span></p>
+        )}
+      </div>
+    );
+  };
+  const houseSection = renderItems(houseItems, houseLabel, houseCOP, houseUSD);
+  const boatSection  = renderItems(boatItems,  boatLabel,  boatCOP,  boatUSD);
+  return (
+    <div className="bg-neutral-900 text-white rounded-2xl px-5 py-4 space-y-3">
+      <p className="text-xs text-neutral-400 uppercase tracking-wider font-semibold">{totalLabel}</p>
+      {houseSection}
+      {houseSection && boatSection && <div className="border-t border-white/10" />}
+      {boatSection}
+      {houseCOP > 0 && boatCOP > 0 && (
+        <div className="flex justify-between font-semibold pt-1 border-t border-white/10 text-sm">
+          <span>Total</span>
+          <span>COP {fmtCOP(totalCOP)} <span className="text-neutral-400 text-xs">≈ USD {fmtUSD(totalUSD)}</span></span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DrinksCatalog() {
   const params         = new URLSearchParams(window.location.search);
   const kickoffId      = params.get("kickoffId")    || "";
@@ -3158,51 +3260,24 @@ function DrinksCatalog() {
           ))}
         </div>
 
-        {/* Drink categories */}
-        {items.map((cat, ci) => (
-          <div key={cat.id} className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
-            <div className="px-4 py-3 bg-neutral-50 border-b">
-              <p className="text-sm font-semibold text-neutral-800">{catLabel(cat)}</p>
-            </div>
-            <div className="divide-y divide-neutral-100">
-              {cat.items.map((it, ii) => (
-                <div key={it.name||ii} className="flex items-center gap-3 px-4 py-2.5">
-                  <div className="w-10 h-10 rounded-lg flex-shrink-0 overflow-hidden relative bg-neutral-100 flex items-center justify-center">
-                    {it.img ? (
-                      <img src={it.img} alt={itemName(it)} className="w-full h-full object-contain absolute inset-0"
-                        onError={e=>{e.target.style.display="none";}}/>
-                    ) : null}
-                    <span className="text-2xl leading-none select-none">{it.emoji||"🍾"}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-neutral-800 leading-snug">{itemName(it)}</p>
-                    {it.priceCOP > 0 && (
-                      <p className="text-xs text-neutral-400 mt-0.5">
-                        COP {fmtCOP(it.priceCOP)} <span className="text-neutral-300">·</span> ≈ USD {(it.priceCOP/fxRate).toFixed(2)}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button type="button" onClick={()=>patchItem(ci,ii,{qty:String(Math.max(0,Number(it.qty||0)-1)||"")})}
-                      className="w-7 h-7 rounded-full border border-neutral-300 text-neutral-600 flex items-center justify-center text-sm hover:bg-neutral-100">−</button>
-                    <span className="w-8 text-center text-sm font-medium text-neutral-900">{it.qty||0}</span>
-                    <button type="button" onClick={()=>patchItem(ci,ii,{qty:String(Number(it.qty||0)+1)})}
-                      className="w-7 h-7 rounded-full border border-neutral-300 text-neutral-600 flex items-center justify-center text-sm hover:bg-neutral-100">+</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+        {/* Drink categories — collapsible */}
+        <DrinkCategoryList
+          items={items} catLabel={catLabel} itemName={itemName}
+          fmtCOP={fmtCOP} fxRate={fxRate} patchItem={patchItem}
+        />
 
-        {/* Running total */}
+        {/* Order summary cuadrito */}
         {hasSelection && (
-          <div className="bg-neutral-900 text-white rounded-2xl px-5 py-4 space-y-2">
-            <p className="text-xs text-neutral-400 uppercase tracking-wider mb-1">{T.totalLabel}</p>
-            {houseCOP > 0 && <div className="flex justify-between text-sm"><span className="text-neutral-400">{T.houseLabel}</span><span>COP {fmtCOP(houseCOP)} <span className="text-neutral-500 text-xs">≈ USD {fmtUSD(houseUSD)}</span></span></div>}
-            {boatCOP  > 0 && <div className="flex justify-between text-sm"><span className="text-neutral-400">{T.boatLabel}</span><span>COP {fmtCOP(boatCOP)} <span className="text-neutral-500 text-xs">≈ USD {fmtUSD(boatUSD)}</span></span></div>}
-            {houseCOP > 0 && boatCOP > 0 && <div className="flex justify-between font-semibold pt-1 border-t border-white/10"><span>Total</span><span>COP {fmtCOP(totalCOP)} <span className="text-neutral-400 text-xs">≈ USD {fmtUSD(totalUSD)}</span></span></div>}
-          </div>
+          <DrinkSummaryBox
+            houseItems={houseItems} boatItems={boatItems}
+            catLabel={catLabel} itemName={itemName}
+            houseCOP={houseCOP} houseUSD={houseUSD}
+            boatCOP={boatCOP}   boatUSD={boatUSD}
+            totalCOP={totalCOP} totalUSD={totalUSD}
+            fmtCOP={fmtCOP} fmtUSD={fmtUSD}
+            houseLabel={T.houseLabel} boatLabel={T.boatLabel}
+            totalLabel={T.totalLabel}
+          />
         )}
 
         {/* Notes */}
@@ -3728,7 +3803,7 @@ function BreakfastCatalog() {
   const kickoffId   = params.get("kickoffId") || "";
   const gsParam     = parseInt(params.get("groupSize")) || 0;
   const tierParam   = params.get("groupTier") || "1-5";
-  const currParam   = params.get("currency")  || "COP";
+  const currParam   = params.get("currency")  || "USD";
   const initTier    = gsParam > 0
     ? (gsParam <= 5 ? "1-5" : gsParam <= 10 ? "6-10" : "11-20")
     : (BREAKFAST_TIERS.includes(tierParam) ? tierParam : "1-5");
@@ -3744,7 +3819,7 @@ function BreakfastCatalog() {
 
   const [lang,      setLang]      = React.useState(params.get("lang") === "es" ? "es" : "en");
   const [tier,      setTier]      = React.useState(initTier);
-  const [currency,  setCurrency]  = React.useState(currParam === "USD" ? "USD" : "COP");
+  const [currency,  setCurrency]  = React.useState(currParam === "COP" ? "COP" : "USD");
   const [groupSize]               = React.useState(gsParam > 0 ? gsParam : null);
   const [currentDay, setCurrentDay] = React.useState(0);
   // dayOrders: one entry per night, each { menuId, checked }

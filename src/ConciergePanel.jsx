@@ -696,9 +696,9 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
    Lista fija de concierges
    ========================================= */
 const CONCIERGE_LIST = [
-  { name: "Alia Jadad",           email: "alia@two.travel",     phone: "+57 301 7618012",   city: "CTG"  },
-  { name: "Carolina Lopez",       email: "caro@two.travel",     phone: "+57 300 8192062",   city: "CTG"  },
-  { name: "Daniela Becerra",      email: "daniela@two.travel",  phone: "+57 304 4445285",   city: "MDE"  },
+  { name: "Alia Jadad",           email: "alia@two.travel",     phone: "+57 301 7618012",   city: "CTG", title: "Senior Concierge Cartagena" },
+  { name: "Carolina Lopez",       email: "caro@two.travel",     phone: "+57 300 8192062",   city: "CTG", title: "Senior Concierge Cartagena" },
+  { name: "Daniela Becerra",      email: "daniela@two.travel",  phone: "+57 304 4445285",   city: "MDE", title: "Senior Concierge Medellín"  },
   { name: "Nataly Cruz",          email: "nataly@two.travel",   phone: "+52 1 55 2337 7241",city: "CDMX" },
   { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   phone: "+52 1 55 4344 1382",city: "CDMX" },
   { name: "Natalia Peniche",       email: "natalia@two.travel",  phone: "",                  city: "CDMX" },
@@ -2894,6 +2894,18 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     return kickoff?.tripDates2 || "";
   });
 
+  // Auto-compute conciergeTitle when assigned concierges change
+  useEffect(() => {
+    if (assignedConcierges.length === 0) return;
+    const titles = assignedConcierges
+      .map(n => CONCIERGE_LIST.find(c => c.name === n)?.title)
+      .filter(Boolean);
+    if (titles.length === 0) return;
+    const unique = [...new Set(titles)];
+    setConciergeTitle(unique.join(" & "));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignedConcierges]);
+
   // Auto-sync tripDates when arrival/departure change
   useEffect(() => {
     if (!arrivalDate || !departureDate) return;
@@ -3355,10 +3367,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               )}
               <div>
                 <label className="text-[11px] text-neutral-500">Ciudad / Destino</label>
-                <input value={city} onChange={(e) => setCity(e.target.value)}
-                  onBlur={() => setCity(prev => cityFullName(prev) || prev)}
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="Cartagena" />
+                <input
+                  value={city.split(",").map(c => cityFullName(c.trim()) || c.trim()).join(" & ")}
+                  readOnly
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-neutral-50 text-neutral-600 cursor-default"
+                  placeholder="Se llena automático según ciudades seleccionadas"
+                />
               </div>
               <div>
                 <label className="text-[11px] text-neutral-500">Personas en el grupo</label>
