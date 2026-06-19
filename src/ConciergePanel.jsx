@@ -4622,8 +4622,10 @@ function MeetingFormModal({ kickoffs, initial, onSave, onClose }) {
 function MeetingCard({ meeting, kickoff, onEdit, onDelete, onToggleTask }) {
   const st = getMeetingStatus(meeting.status);
   const [expanded, setExpanded] = useState(false);
+  const [notesExpanded, setNotesExpanded] = useState(false);
   const pendingTasks = (meeting.tasks||[]).filter(t=>!t.done).length;
   const doneTasks    = (meeting.tasks||[]).filter(t=>t.done).length;
+  const NOTES_PREVIEW_CHARS = 280;
 
   return (
     <div style={{ background:"#fff", border:"1px solid #eee8df", borderRadius:12, padding:"14px 16px", marginBottom:8, boxShadow:"0 1px 4px rgba(0,0,0,.05)" }}>
@@ -4653,7 +4655,20 @@ function MeetingCard({ meeting, kickoff, onEdit, onDelete, onToggleTask }) {
 
       {expanded && (
         <div style={{ marginTop:12, paddingTop:12, borderTop:"1px solid #f0ebe2" }}>
-          {meeting.notes && <p style={{ fontSize:13, color:"#3a3530", lineHeight:1.6, margin:"0 0 12px 0" }}>{meeting.notes}</p>}
+          {meeting.notes && (() => {
+            const long = meeting.notes.length > NOTES_PREVIEW_CHARS;
+            const shown = (!notesExpanded && long) ? meeting.notes.slice(0, NOTES_PREVIEW_CHARS) + "…" : meeting.notes;
+            return (
+              <div style={{ marginBottom:12 }}>
+                <p style={{ fontSize:13, color:"#3a3530", lineHeight:1.7, margin:0, whiteSpace:"pre-wrap", wordBreak:"break-word" }}>{shown}</p>
+                {long && (
+                  <button onClick={e=>{e.stopPropagation();setNotesExpanded(v=>!v);}} style={{ background:"none", border:"none", color:"#9a7d52", fontSize:12, cursor:"pointer", padding:"4px 0", fontFamily:"'Jost',sans-serif", textDecoration:"underline" }}>
+                    {notesExpanded ? "Ver menos ▲" : "Ver más ▼"}
+                  </button>
+                )}
+              </div>
+            );
+          })()}
           {(meeting.tasks||[]).length > 0 && (
             <div style={{ marginBottom:12 }}>
               <div style={{ fontSize:11, color:"#9a7d52", letterSpacing:".08em", textTransform:"uppercase", marginBottom:6 }}>Tareas</div>
