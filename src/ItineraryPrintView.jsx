@@ -578,8 +578,8 @@ function PH({ kickoff }) {
     <div className="ph">
       <div className="ph-left">
         {name  && <b>{name}</b>}
+        {title && <span style={{ color:"#9a7d52", fontSize:"0.85em" }}>{title}</span>}
         {email && <span>{email}</span>}
-        {title && <span>{title}</span>}
         {!name && <span>Two Travel Concierge</span>}
       </div>
     </div>
@@ -603,9 +603,18 @@ function CoverPage({ kickoff, total, lang, editMode }) {
   const isEs = lang === "es";
 
   const titleLine = a.guestName || "Two Travel Concierge";
-  // tripName = HubSpot deal name e.g. "Carolina Lopez Cartagena Concierge Feb 8-12 2027"
-  // already contains dates — use it as the subtitle, fall back to city only
-  const subtitle  = a.tripName || a.city || "";
+
+  // Always use full month names; re-derive from ISO dates if available
+  const fmtFullDate = (iso) => {
+    try { return new Date(iso + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric" }); } catch { return iso; }
+  };
+  const displayTripDates = (() => {
+    if (a.arrivalDate && a.departureDate) {
+      const yr = new Date(a.departureDate + "T12:00:00").getFullYear();
+      return `${fmtFullDate(a.arrivalDate)} – ${fmtFullDate(a.departureDate)}, ${yr}`;
+    }
+    return a.tripDates || "";
+  })();
 
   const coverImgUrl = a.coverPhotoId
     ? `https://lh3.googleusercontent.com/d/${a.coverPhotoId}`
@@ -652,8 +661,8 @@ function CoverPage({ kickoff, total, lang, editMode }) {
         )}
         <Editable tag="div" className="cover-title" editMode={editMode} value={titleLine}/>
         {/* Show tripDates once — clearly below the guest name */}
-        {a.tripDates && (
-          <Editable tag="div" className="cover-dates" editMode={editMode} value={a.tripDates}/>
+        {displayTripDates && (
+          <Editable tag="div" className="cover-dates" editMode={editMode} value={displayTripDates}/>
         )}
 
         <div className="cover-rule"/>
@@ -752,7 +761,13 @@ function CoverPage({ kickoff, total, lang, editMode }) {
               <div className="cover-info-card">
                 <div className="cover-info-label">{isEs ? "Fechas — Ciudad 2" : "Dates — City 2"}</div>
                 <Editable tag="div" className="cover-info-value" editMode={editMode}
-                  value={a.tripDates2 || `${a.arrivalDate2 || ""}${a.departureDate2 ? ` – ${a.departureDate2}` : ""}`}/>
+                  value={(() => {
+                    if (a.arrivalDate2 && a.departureDate2) {
+                      const yr = new Date(a.departureDate2 + "T12:00:00").getFullYear();
+                      return `${fmtFullDate(a.arrivalDate2)} – ${fmtFullDate(a.departureDate2)}, ${yr}`;
+                    }
+                    return a.tripDates2 || "";
+                  })()}/>
               </div>
             )}
           </div>
