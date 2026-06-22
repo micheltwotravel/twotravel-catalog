@@ -4568,12 +4568,14 @@ function MeetingRow({ meeting, onEdit, onDelete, onToggleTask }) {
       <div style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer" }} onClick={()=>setOpen(o=>!o)}>
         <span style={{ fontSize:15 }}>{st.dot}</span>
         <div style={{ flex:1 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap", marginBottom:2 }}>
+            <span style={{ fontSize:15, fontWeight:700, color:"#1a1814" }}>{meeting.type||"Llamada"}</span>
+            <span style={{ fontSize:11, background:st.bg, color:st.color, borderRadius:5, padding:"1px 7px", fontWeight:600 }}>{st.label}</span>
+            {(meeting.tasks||[]).length>0 && <span style={{ fontSize:11, color: pending>0?"#d97706":"#16a34a", fontWeight:600 }}>{done}/{(meeting.tasks||[]).length} tareas</span>}
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
             {meeting.date && <span style={{ fontSize:12, color:"#9a7d52", fontWeight:600 }}>{meeting.date}</span>}
             {meeting.time && <span style={{ fontSize:12, color:"#b0a090" }}>{meeting.time}</span>}
-            <span style={{ fontSize:11, background:st.bg, color:st.color, borderRadius:5, padding:"1px 7px", fontWeight:600 }}>{st.label}</span>
-            <span style={{ fontSize:11, background:"#f5f0e8", color:"#9a7d52", borderRadius:5, padding:"1px 7px" }}>{meeting.type||"Llamada"}</span>
-            {(meeting.tasks||[]).length>0 && <span style={{ fontSize:11, color: pending>0?"#d97706":"#16a34a", fontWeight:600 }}>{done}/{(meeting.tasks||[]).length} tareas</span>}
           </div>
           {!open && meeting.notes && <div style={{ fontSize:12, color:"#6b6055", marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:340 }}>{meeting.notes.slice(0,80)}{meeting.notes.length>80?"…":""}</div>}
         </div>
