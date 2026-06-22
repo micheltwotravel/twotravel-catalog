@@ -3038,6 +3038,8 @@ function DrinksCatalog() {
   const [fxRate,     setFxRate]     = React.useState(4000);
   const [prevOrderAt,setPrevOrderAt]= React.useState(""); // ISO date of last submission
   const [loading,    setLoading]    = React.useState(!!kickoffId);
+  const [kickoffArrival, setKickoffArrival] = React.useState("");
+  const [kickoffDepart,  setKickoffDepart]  = React.useState("");
 
   // Fetch live exchange rate + existing order
   React.useEffect(() => {
@@ -3058,6 +3060,8 @@ function DrinksCatalog() {
       .then(res => {
         const k = res.data;
         if (!k) return;
+        if (k.arrivalDate)   setKickoffArrival(k.arrivalDate);
+        if (k.departureDate) setKickoffDepart(k.departureDate);
         if (k.drinkOrderJson) {
           try {
             const saved = JSON.parse(k.drinkOrderJson);
@@ -3191,31 +3195,31 @@ function DrinksCatalog() {
       <div className="max-w-xl mx-auto px-4 pt-4 space-y-4">
 
         {/* Stay dates banner */}
-        {(prefillArrival || prefillDepart) && (
+        {(() => { const da = kickoffArrival || prefillArrival; const dd = kickoffDepart || prefillDepart; return (da || dd) && (
           <div className="bg-white border border-neutral-200 rounded-2xl px-5 py-4 flex items-center gap-4">
-            {prefillArrival && (
+            {da && (
               <div className="flex-1 text-center">
                 <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-0.5">{lang==="en"?"Check-in":"Llegada"}</p>
                 <p className="text-sm font-semibold text-neutral-900">
-                  {new Date(prefillArrival+"T12:00:00").toLocaleDateString(lang==="en"?"en-US":"es-CO",{weekday:"short",month:"short",day:"numeric"})}
+                  {new Date(da+"T12:00:00").toLocaleDateString(lang==="en"?"en-US":"es-CO",{weekday:"short",month:"short",day:"numeric"})}
                 </p>
               </div>
             )}
-            {prefillArrival && prefillDepart && <div className="text-neutral-300 text-xl">→</div>}
-            {prefillDepart && (
+            {da && dd && <div className="text-neutral-300 text-xl">→</div>}
+            {dd && (
               <div className="flex-1 text-center">
                 <p className="text-[10px] text-neutral-400 uppercase tracking-widest mb-0.5">{lang==="en"?"Check-out":"Salida"}</p>
                 <p className="text-sm font-semibold text-neutral-900">
-                  {new Date(prefillDepart+"T12:00:00").toLocaleDateString(lang==="en"?"en-US":"es-CO",{weekday:"short",month:"short",day:"numeric"})}
+                  {new Date(dd+"T12:00:00").toLocaleDateString(lang==="en"?"en-US":"es-CO",{weekday:"short",month:"short",day:"numeric"})}
                 </p>
               </div>
             )}
-            {prefillArrival && prefillDepart && (() => {
-              const n = Math.round((new Date(prefillDepart)-new Date(prefillArrival))/86400000);
+            {da && dd && (() => {
+              const n = Math.round((new Date(dd)-new Date(da))/86400000);
               return n>0?<div className="text-center border-l pl-4"><p className="text-lg font-bold text-neutral-900">{n}</p><p className="text-[10px] text-neutral-400">{lang==="en"?"nights":"noches"}</p></div>:null;
             })()}
           </div>
-        )}
+        ); })()}
 
         {/* Previous order banner */}
         {prevOrderAt && (
