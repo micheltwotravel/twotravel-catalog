@@ -1205,17 +1205,31 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
       </div>
       {/* QB billing row + day selector */}
       <div className="flex gap-3 mt-1 items-center flex-wrap">
-        {/* Move to another day */}
-        {availableDays.length > 1 && (
-          <select
-            value={item.dayLabel || ""}
-            onChange={e => onUpdate(item._uid, { dayLabel: e.target.value })}
-            className="text-[10px] text-violet-600 border-b border-dashed border-violet-200 focus:border-violet-400 focus:outline-none py-0.5 bg-transparent max-w-[120px]"
-            title="Mover a otro día"
-          >
-            {availableDays.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-        )}
+        {/* Move to another day — prev/next arrows */}
+        {availableDays.length > 1 && (() => {
+          const idx = availableDays.indexOf(item.dayLabel || availableDays[0]);
+          const hasPrev = idx > 0;
+          const hasNext = idx < availableDays.length - 1;
+          return (
+            <div className="flex items-center gap-1">
+              <button type="button" disabled={!hasPrev}
+                onClick={() => onUpdate(item._uid, { dayLabel: availableDays[idx - 1] })}
+                title={hasPrev ? `Mover a ${availableDays[idx - 1]}` : ""}
+                className="text-[11px] px-1.5 py-0.5 rounded border border-violet-200 text-violet-500 hover:bg-violet-50 disabled:opacity-20 disabled:cursor-default leading-none">
+                ←
+              </button>
+              <span className="text-[10px] text-violet-600 font-medium max-w-[90px] truncate">
+                {item.dayLabel || availableDays[0]}
+              </span>
+              <button type="button" disabled={!hasNext}
+                onClick={() => onUpdate(item._uid, { dayLabel: availableDays[idx + 1] })}
+                title={hasNext ? `Mover a ${availableDays[idx + 1]}` : ""}
+                className="text-[11px] px-1.5 py-0.5 rounded border border-violet-200 text-violet-500 hover:bg-violet-50 disabled:opacity-20 disabled:cursor-default leading-none">
+                →
+              </button>
+            </div>
+          );
+        })()}
         <input
           value={item.quickbooksCode || ""}
           onChange={e => onUpdate(item._uid, { quickbooksCode: e.target.value.toUpperCase() })}
@@ -5311,7 +5325,7 @@ const loadKickoffs = async () => {
       all: "Todos",
       colGuest: "Huésped", colTrip: "Viaje", colType: "Tipo",
       colContact: "Contacto", colCreated: "Creado",
-      colConcierge: "Concierge", colCity: "Ciudad", colStatus: "Estado", colActions: "Acciones",
+      colConcierge: "Concierge", colCity: "Ciudad", colStatus: "Estado", colMeetings: "Reuniones", colActions: "Acciones",
       loading: "Cargando kick-offs...",
       empty: "No hay kick-offs que coincidan con el filtro.",
       linkCatalog: "Link catálogo", linkFeedback: "Link feedback",
@@ -5324,7 +5338,7 @@ const loadKickoffs = async () => {
       all: "All",
       colGuest: "Guest", colTrip: "Trip", colType: "Type",
       colContact: "Contact", colCreated: "Created",
-      colConcierge: "Concierge", colCity: "City", colStatus: "Status", colActions: "Actions",
+      colConcierge: "Concierge", colCity: "City", colStatus: "Status", colMeetings: "Meetings", colActions: "Actions",
       loading: "Loading kick-offs...",
       empty: "No kick-offs match the current filter.",
       linkCatalog: "Catalog link", linkFeedback: "Feedback link",
@@ -5607,7 +5621,7 @@ const loadKickoffs = async () => {
                       style={{width:13,height:13,cursor:"pointer"}}
                     />
                   </th>
-                  {["ID", cp.colGuest, cp.colTrip, cp.colType, cp.colContact, cp.colCreated, cp.colConcierge, cp.colCity, cp.colStatus].map(h => (
+                  {["ID", cp.colGuest, cp.colTrip, cp.colType, cp.colContact, cp.colCreated, cp.colConcierge, cp.colCity, cp.colStatus, cp.colMeetings].map(h => (
                     <th key={h} style={{textAlign:"left"}}>{h}</th>
                   ))}
                   <th style={{textAlign:"right"}}>{cp.colActions}</th>
@@ -5750,6 +5764,31 @@ const loadKickoffs = async () => {
     return null;
   })()}
 </td>
+
+                    {/* Meetings metric */}
+                    <td>
+                      {(() => {
+                        const mtgs = parseMeetings(k.meetingNotes);
+                        if (!mtgs.length) {
+                          const created = k.createdAt ? new Date(k.createdAt) : null;
+                          const daysSince = created ? Math.floor((Date.now() - created) / 86400000) : null;
+                          const color = daysSince === null ? "#9a9a9a" : daysSince > 10 ? "#dc2626" : daysSince > 5 ? "#d97706" : "#9a9a9a";
+                          return <span style={{fontSize:11,color}}>{daysSince !== null ? `${daysSince}d sin reunión` : "—"}</span>;
+                        }
+                        const doneMtgs = mtgs.filter(m => m.status === "done" && m.date);
+                        const lastDone = doneMtgs.sort((a,b) => b.date.localeCompare(a.date))[0];
+                        const nextSched = mtgs.filter(m => m.status === "scheduled" && m.date).sort((a,b) => a.date.localeCompare(b.date))[0];
+                        const daysSinceLast = lastDone ? Math.floor((Date.now() - new Date(lastDone.date)) / 86400000) : null;
+                        const color = daysSinceLast === null ? "#9a9a9a" : daysSinceLast > 14 ? "#dc2626" : daysSinceLast > 7 ? "#d97706" : "#16a34a";
+                        return (
+                          <div style={{fontSize:11,lineHeight:1.4}}>
+                            <span style={{color:"#1a1814",fontWeight:600}}>{mtgs.length} mtg{mtgs.length!==1?"s":""}</span>
+                            {lastDone && <div style={{color}}>{daysSinceLast === 0 ? "hoy" : `hace ${daysSinceLast}d`}</div>}
+                            {nextSched && <div style={{color:"#9a7d52"}}>📅 {nextSched.date}</div>}
+                          </div>
+                        );
+                      })()}
+                    </td>
 
                     <td style={{textAlign:"right"}} onClick={e => e.stopPropagation()}>
                       <div style={{display:"inline-flex",alignItems:"center",gap:4}}>
