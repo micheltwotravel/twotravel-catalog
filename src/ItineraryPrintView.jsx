@@ -570,10 +570,16 @@ const CSS = `
 /* ═══════════════════════════════════════════════════════════
    SHARED PAGE HEADER
 ═══════════════════════════════════════════════════════════ */
+const CONCIERGE_TITLE_MAP = {
+  "Alia Jadad":      "Senior Concierge Cartagena",
+  "Carolina Lopez":  "Senior Concierge Cartagena",
+  "Daniela Becerra": "Senior Concierge Medellín",
+};
+
 function PH({ kickoff }) {
   const name  = kickoff.assignedConciergeName || "";
   const email = kickoff.assignedConciergeEmail || "";
-  const title = kickoff.conciergeTitle || "";
+  const title = kickoff.conciergeTitle || CONCIERGE_TITLE_MAP[name] || "";
   return (
     <div className="ph">
       <div className="ph-left">

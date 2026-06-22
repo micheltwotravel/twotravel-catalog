@@ -3008,7 +3008,7 @@ function DrinksCatalog() {
     totalLabel:"Estimated total", rateLabel:"Exchange rate",
     sendBtn:"✅ Submit order to concierge", sending:"Sending…",
     editBtn:"✏️ Edit order",
-    successTitle:"Thanks for submitting!", successBody:"Your concierge will review this with you on your kick-off call.",
+    successTitle:"Got it! 🥂", successBody:"Your drink order has been sent to your concierge. You can come back anytime to make changes.",
   } : {
     brand:"Two Travel", heading:"🍹 Lista de Bebidas",
     instr1:"Por favor usa este recurso para ordenar y presupuestar lo que quieres para tu casa y el bote. Selecciona la cantidad de cada bebida que deseas tener.",
@@ -3020,7 +3020,7 @@ function DrinksCatalog() {
     totalLabel:"Total estimado", rateLabel:"Tasa de cambio",
     sendBtn:"✅ Enviar pedido al concierge", sending:"Enviando…",
     editBtn:"✏️ Editar pedido",
-    successTitle:"¡Gracias por enviarlo!", successBody:"Tu concierge lo revisará contigo en tu kick-off call.",
+    successTitle:"¡Listo! 🥂", successBody:"Tu pedido de bebidas fue enviado a tu concierge. Puedes volver cuando quieras para hacer cambios.",
   };
 
   const itemName = (it) => (lang === "en" && it.name_en) ? it.name_en : it.name;
@@ -3992,10 +3992,10 @@ function BreakfastCatalog() {
       <div style={{textAlign:"center",maxWidth:400,padding:"40px 24px"}}>
         <div style={{width:48,height:2,background:"#9a7d52",margin:"0 auto 32px"}}/>
         <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:500,color:"#1a1814",marginBottom:12}}>
-          {en ? "Order received" : "Pedido recibido"}
+          {en ? "Got it! ☕" : "¡Listo! ☕"}
         </p>
         <p style={{fontSize:13,color:"#7a7570",lineHeight:1.6}}>
-          {en ? "Your concierge will review your selection during the kick-off call." : "Tu concierge revisará tu selección durante la llamada de kickoff."}
+          {en ? "Your breakfast order has been sent to your concierge. You can come back anytime to make changes." : "Tu pedido de desayuno fue enviado a tu concierge. Puedes volver cuando quieras para hacer cambios."}
         </p>
         <button onClick={() => setSent(false)}
           style={{marginTop:32,fontSize:11,color:"#9a7d52",background:"none",border:"none",cursor:"pointer",letterSpacing:".1em",textTransform:"uppercase"}}>
