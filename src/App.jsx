@@ -3830,10 +3830,11 @@ function BreakfastCatalog() {
   const [dayOrders,   setDayOrders]   = React.useState(() =>
     Array.from({ length: urlNights || 1 }, () => ({ mode: "individual", menuId: "traditional", checked: {} }))
   );
-  const [notes,   setNotes]   = React.useState("");
-  const [sent,    setSent]    = React.useState(false);
-  const [sending, setSending] = React.useState(false);
-  const [fxRate,  setFxRate]  = React.useState(4000);
+  const [notes,       setNotes]       = React.useState("");
+  const [sent,        setSent]        = React.useState(false);
+  const [sending,     setSending]     = React.useState(false);
+  const [fxRate,      setFxRate]      = React.useState(4000);
+  const [arrivalDate, setArrivalDate] = React.useState(params.get("arrivalDate") || "");
 
   React.useEffect(() => {
     fetch("https://open.er-api.com/v6/latest/USD")
@@ -3876,6 +3877,7 @@ function BreakfastCatalog() {
           }
         }
         if (!params.get("guestName") && k.guestName) setGuestName(k.guestName);
+        if (!params.get("arrivalDate") && k.arrivalDate) setArrivalDate(k.arrivalDate);
         // Restore previously saved breakfast order
         if (k.breakfastOrderJson) {
           try {
@@ -3962,7 +3964,15 @@ function BreakfastCatalog() {
         );
       }
       if (!dayItems.length) return;
-      if (stayNights > 1) lines.push(`*${en ? `Day ${i+1}` : `Día ${i+1}`}: ${en ? m.label : m.label_es}*`);
+      if (stayNights > 1) {
+        let dayLabel = en ? `Day ${i+1}` : `Día ${i+1}`;
+        if (arrivalDate) {
+          const d = new Date(arrivalDate + "T12:00:00");
+          d.setDate(d.getDate() + i);
+          dayLabel = d.toLocaleDateString(en ? "en-US" : "es-CO", { weekday: "long", month: "short", day: "numeric" });
+        }
+        lines.push(`*${dayLabel}: ${en ? m.label : m.label_es}*`);
+      }
       else lines.push(`*${en ? m.label : m.label_es}*`);
       lines.push(...dayItems);
       if (i < dayOrders.length - 1) lines.push("");
@@ -4058,8 +4068,18 @@ function BreakfastCatalog() {
         <div style={{background:"#f0ebe3",borderBottom:"1px solid #e5ddd3",padding:"10px 20px",overflowX:"auto"}}>
           <div style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap"}}>
             {Array.from({ length: stayNights }, (_, i) => {
-              const hasItems = Object.values(dayOrders[i]?.checked || {}).some(Boolean);
+              const hasItems = dayOrders[i]?.mode === "full" || Object.values(dayOrders[i]?.checked || {}).some(Boolean);
               const isActive = currentDay === i;
+              let dayLabel;
+              if (arrivalDate) {
+                const d = new Date(arrivalDate + "T12:00:00");
+                d.setDate(d.getDate() + i);
+                const weekday = d.toLocaleDateString(en ? "en-US" : "es-CO", { weekday: "short" });
+                const dateNum = d.getDate();
+                dayLabel = `${weekday} ${dateNum}`;
+              } else {
+                dayLabel = en ? `Day ${i+1}` : `Día ${i+1}`;
+              }
               return (
                 <button key={i} onClick={() => setCurrentDay(i)} style={{
                   padding:"6px 16px", fontSize:11, fontWeight:500, letterSpacing:".06em",
@@ -4068,7 +4088,7 @@ function BreakfastCatalog() {
                   background: isActive ? "#9a7d52" : "#fff",
                   color: isActive ? "#fff" : hasItems ? "#9a7d52" : "#7a7570",
                 }}>
-                  {en ? `Day ${i+1}` : `Día ${i+1}`}
+                  {dayLabel}
                   {hasItems && !isActive && <span style={{marginLeft:5,opacity:.7}}>✓</span>}
                 </button>
               );
