@@ -2887,6 +2887,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [barrio,             setBarrio]             = useState(kickoff?.barrio             || "");
   const [coverPhotoId,       setCoverPhotoId]       = useState(kickoff?.coverPhotoId       || "");
   const [accommodationPhoto, setAccommodationPhoto] = useState(kickoff?.accommodationPhoto || "");
+  // Extra accommodation within city 1 (e.g. group splits between hotel + house)
+  const [accommodationNameB,  setAccommodationNameB]  = useState(kickoff?.accommodationNameB  || "");
+  const [accommodationAddrB,  setAccommodationAddrB]  = useState(kickoff?.accommodationAddrB  || "");
+  const [accommodationUrlB,   setAccommodationUrlB]   = useState(kickoff?.accommodationUrlB   || "");
+  const [barrioB,             setBarrioB]             = useState(kickoff?.barrioB             || "");
+  const [showExtraAccom,      setShowExtraAccom]      = useState(!!(kickoff?.accommodationNameB));
   // City 2 accommodation
   const [accommodationName2, setAccommodationName2] = useState(kickoff?.accommodationName2 || "");
   const [accommodationAddr2, setAccommodationAddr2] = useState(kickoff?.accommodationAddr2 || "");
@@ -3024,6 +3030,11 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     // Stay dates (set by concierge)
     arrivalDate:    arrivalDate.trim(),
     departureDate:  departureDate.trim(),
+    // Extra accommodation within city 1
+    accommodationNameB:  accommodationNameB.trim(),
+    accommodationAddrB:  accommodationAddrB.trim(),
+    accommodationUrlB:   accommodationUrlB.trim(),
+    barrioB:             barrioB.trim(),
     // City 2 dates & accommodation
     arrivalDate2:      arrivalDate2.trim(),
     departureDate2:    departureDate2.trim(),
@@ -3539,6 +3550,52 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   <p className="text-[10px] text-red-600 mt-1">❌ Este es un link de carpeta — no funciona. Abre la carpeta, entra a la foto específica y comparte ese link.</p>
                 )}
               </div>
+              {/* Extra accommodation within city 1 — optional second property (e.g. hotel + house) */}
+              <div className="col-span-2">
+                {!showExtraAccom ? (
+                  <button type="button"
+                    onClick={() => setShowExtraAccom(true)}
+                    className="text-[11px] text-violet-600 border border-dashed border-violet-300 rounded-lg px-3 py-1.5 hover:bg-violet-50 transition-colors flex items-center gap-1.5">
+                    <span style={{fontSize:14,lineHeight:1}}>+</span>
+                    Agregar otro alojamiento en la misma ciudad
+                  </button>
+                ) : (
+                  <div className="border border-violet-200 rounded-xl p-4 bg-violet-50/40">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-[11px] font-semibold text-violet-700">🏠 Alojamiento adicional (misma ciudad)</p>
+                      <button type="button" onClick={() => { setShowExtraAccom(false); setAccommodationNameB(""); setAccommodationAddrB(""); setAccommodationUrlB(""); setBarrioB(""); }}
+                        className="text-[10px] text-red-400 hover:text-red-600">Quitar</button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <label className="text-[11px] text-neutral-500">Nombre del alojamiento extra</label>
+                        <input value={accommodationNameB} onChange={e => setAccommodationNameB(e.target.value)}
+                          className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                          placeholder="Hotel Santa Clara" />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-[11px] text-neutral-500">Barrio / Zona</label>
+                        <input value={barrioB} onChange={e => setBarrioB(e.target.value)}
+                          className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                          placeholder="Centro Histórico..." />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-[11px] text-neutral-500">Dirección</label>
+                        <input value={accommodationAddrB} onChange={e => setAccommodationAddrB(e.target.value)}
+                          className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                          placeholder="Calle 29-01, Cartagena" />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-[11px] text-neutral-500">Google Maps</label>
+                        <input value={accommodationUrlB} onChange={e => setAccommodationUrlB(e.target.value)}
+                          className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                          placeholder="https://maps.app.goo.gl/..." />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* City 2 accommodation — only shown when 2 cities */}
               {city.includes(",") && (<>
                 <div className="col-span-2 border-t border-blue-100 pt-2">

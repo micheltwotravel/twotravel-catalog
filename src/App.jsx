@@ -3805,7 +3805,6 @@ function BreakfastCatalog() {
   const GAS_URL   = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
   const params      = new URLSearchParams(window.location.search);
   const kickoffId   = params.get("kickoffId") || "";
-  // URL params used as fallback when no kickoffId or kickoff data is unavailable
   const gsParam     = parseInt(params.get("groupSize")) || 0;
   const tierParam   = params.get("groupTier") || "1-5";
   const currParam   = params.get("currency")  || "USD";
@@ -3819,6 +3818,29 @@ function BreakfastCatalog() {
     return n > 0 ? n : 0;
   })();
 
+  const EMPTY_CAT = () => ({ full: false, checked: {} });
+  const EMPTY_DAY = () => ({ status: "pending", traditional: EMPTY_CAT(), american: EMPTY_CAT(), healthy: EMPTY_CAT() });
+
+  // Migrate old format { mode, menuId, checked } → new per-category format
+  const migrateDay = (old) => {
+    if (!old) return EMPTY_DAY();
+    if (old.traditional !== undefined || old.american !== undefined || old.healthy !== undefined) return old;
+    const result = EMPTY_DAY();
+    if (old.mode === "full" && old.menuId && result[old.menuId]) {
+      result[old.menuId].full = true;
+    } else if (old.checked) {
+      Object.entries(old.checked).forEach(([key, val]) => {
+        if (!val) return;
+        const ci = key.indexOf(":");
+        if (ci >= 0) {
+          const catId = key.slice(0, ci), itemName = key.slice(ci + 1);
+          if (result[catId]) result[catId].checked[itemName] = true;
+        }
+      });
+    }
+    return result;
+  };
+
   const [lang,        setLang]        = React.useState(params.get("lang") === "es" ? "es" : "en");
   const [tier,        setTier]        = React.useState(initTier);
   const [currency,    setCurrency]    = React.useState(currParam === "COP" ? "COP" : "USD");
@@ -3828,13 +3850,14 @@ function BreakfastCatalog() {
   const [currentDay,  setCurrentDay]  = React.useState(0);
   const [loading,     setLoading]     = React.useState(!!kickoffId);
   const [dayOrders,   setDayOrders]   = React.useState(() =>
-    Array.from({ length: urlNights || 1 }, () => ({ mode: "individual", menuId: "traditional", checked: {} }))
+    Array.from({ length: urlNights || 1 }, EMPTY_DAY)
   );
   const [notes,       setNotes]       = React.useState("");
   const [sent,        setSent]        = React.useState(false);
   const [sending,     setSending]     = React.useState(false);
   const [fxRate,      setFxRate]      = React.useState(4000);
   const [arrivalDate, setArrivalDate] = React.useState(params.get("arrivalDate") || "");
+  const autosaveRef = React.useRef(null);
 
   React.useEffect(() => {
     fetch("https://open.er-api.com/v6/latest/USD")
@@ -3843,7 +3866,6 @@ function BreakfastCatalog() {
       .catch(() => {});
   }, []);
 
-  // Load kickoff data + any previously saved order
   React.useEffect(() => {
     if (!kickoffId) { setLoading(false); return; }
     fetch(GAS_URL, {
@@ -3854,12 +3876,10 @@ function BreakfastCatalog() {
       .then(res => {
         const k = res.data;
         if (!k) return;
-        // Derive nights from kickoff dates if not already set from URL
         if (!urlNights && k.arrivalDate && k.departureDate) {
           const n = Math.round((new Date(k.departureDate) - new Date(k.arrivalDate)) / 86400000);
           if (n > 0) setStayNights(n);
         }
-        // Derive group size & tier from kickoff
         if (!gsParam) {
           const gs = parseInt(k.groupSize) || 0;
           if (gs > 0) {
@@ -3869,23 +3889,19 @@ function BreakfastCatalog() {
             try {
               const qa = JSON.parse(k.quizAnswers || "{}");
               const qgs = parseInt(qa.groupSize || qa.pax) || 0;
-              if (qgs > 0) {
-                setGroupSize(qgs);
-                setTier(qgs <= 5 ? "1-5" : qgs <= 10 ? "6-10" : "11-20");
-              }
+              if (qgs > 0) { setGroupSize(qgs); setTier(qgs <= 5 ? "1-5" : qgs <= 10 ? "6-10" : "11-20"); }
             } catch {}
           }
         }
         if (!params.get("guestName") && k.guestName) setGuestName(k.guestName);
         if (!params.get("arrivalDate") && k.arrivalDate) setArrivalDate(k.arrivalDate);
-        // Restore previously saved breakfast order
         if (k.breakfastOrderJson) {
           try {
             const saved = JSON.parse(k.breakfastOrderJson);
             if (saved.dayOrders?.length) {
               const nights = saved.stayNights || saved.dayOrders.length;
               setStayNights(nights);
-              setDayOrders(saved.dayOrders);
+              setDayOrders(saved.dayOrders.map(migrateDay));
             }
             if (saved.notes) setNotes(saved.notes);
             if (saved.tier && BREAKFAST_TIERS.includes(saved.tier)) setTier(saved.tier);
@@ -3898,86 +3914,116 @@ function BreakfastCatalog() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kickoffId]);
 
-  // Keep dayOrders in sync with stayNights
   React.useEffect(() => {
     setDayOrders(prev => {
       if (prev.length === stayNights) return prev;
       if (prev.length < stayNights)
-        return [...prev, ...Array.from({ length: stayNights - prev.length }, () => ({ mode: "individual", menuId: "traditional", checked: {} }))];
+        return [...prev, ...Array.from({ length: stayNights - prev.length }, EMPTY_DAY)];
       return prev.slice(0, stayNights);
     });
   }, [stayNights]);
 
-  const en       = lang === "en";
-  const tierIdx  = BREAKFAST_TIERS.indexOf(tier);
-  const curOrder = dayOrders[currentDay] || { menuId: "traditional", checked: {} };
-  const menu     = BREAKFAST_MENUS.find(m => m.id === curOrder.menuId) || BREAKFAST_MENUS[0];
-  const checked  = curOrder.checked;
+  const en      = lang === "en";
+  const tierIdx = BREAKFAST_TIERS.indexOf(tier);
 
   const fmt = (cop) => currency === "USD"
     ? `$${(cop / fxRate).toFixed(0)} USD`
     : `$${cop.toLocaleString("es-CO")} COP`;
 
-  const toggle = (key) => setDayOrders(prev => {
-    const next = [...prev];
-    next[currentDay] = { ...next[currentDay], checked: { ...next[currentDay].checked, [key]: !next[currentDay].checked[key] } };
-    return next;
-  });
+  const getDayLabel = (i) => {
+    if (arrivalDate) {
+      const d = new Date(arrivalDate + "T12:00:00");
+      d.setDate(d.getDate() + i);
+      const wd = d.toLocaleDateString(en ? "en-US" : "es-CO", { weekday: "short" });
+      return `${wd} ${d.getDate()}`;
+    }
+    return en ? `Day ${i+1}` : `Día ${i+1}`;
+  };
 
-  const setMenuForDay = (menuId) => setDayOrders(prev => {
-    const next = [...prev];
-    next[currentDay] = { ...next[currentDay], menuId, checked: {} };
-    return next;
-  });
+  const catPrice = (cat, menu) => {
+    if (!cat || !menu) return 0;
+    if (cat.full) return menu.fullPrice[tierIdx] || 0;
+    return menu.sections.flatMap(s => s.items)
+      .reduce((s, it) => cat.checked[it.name] ? s + (it.prices[tierIdx] || 0) : s, 0);
+  };
 
-  const setModeForDay = (mode) => setDayOrders(prev => {
-    const next = [...prev];
-    next[currentDay] = { ...next[currentDay], mode, checked: {} };
-    return next;
-  });
+  const dayPrice = (order) =>
+    BREAKFAST_MENUS.reduce((s, menu) => s + catPrice(order[menu.id], menu), 0);
 
-  const copyDayToAll = () => setDayOrders(prev =>
-    prev.map(() => ({ ...curOrder, checked: { ...curOrder.checked } }))
-  );
+  const tripTotal = dayOrders.reduce((s, o) => s + dayPrice(o), 0);
 
-  const curMode  = curOrder.mode || "individual";
-  const hasAny   = dayOrders.some(d => d.mode === "full" || Object.values(d.checked).some(Boolean));
-  const totalCOP = curMode === "full"
-    ? menu.fullPrice[tierIdx]
-    : menu.sections.flatMap(s => s.items)
-        .reduce((s, it) => checked[`${menu.id}:${it.name}`] ? s + it.prices[tierIdx] : s, 0);
+  const doAutosave = (orders, notesVal) => {
+    if (!kickoffId) return;
+    clearTimeout(autosaveRef.current);
+    autosaveRef.current = setTimeout(() => {
+      updateKickoffInSheet(kickoffId, {
+        breakfastOrderJson: JSON.stringify({ dayOrders: orders, tier, currency, notes: notesVal, stayNights }),
+      }).catch(() => {});
+    }, 1500);
+  };
+
+  const toggleFull = (dayIdx, catId) => {
+    setDayOrders(prev => {
+      const next = prev.map((d, i) => i !== dayIdx ? d : { ...d, [catId]: { ...d[catId], full: !d[catId].full } });
+      doAutosave(next, notes);
+      return next;
+    });
+  };
+
+  const toggleItem = (dayIdx, catId, itemName) => {
+    setDayOrders(prev => {
+      const next = prev.map((d, i) => i !== dayIdx ? d : {
+        ...d, [catId]: { ...d[catId], checked: { ...d[catId].checked, [itemName]: !d[catId].checked[itemName] } },
+      });
+      doAutosave(next, notes);
+      return next;
+    });
+  };
+
+  const setDayStatus = (dayIdx, status) => {
+    setDayOrders(prev => {
+      const next = prev.map((d, i) => i !== dayIdx ? d : { ...d, status });
+      doAutosave(next, notes);
+      return next;
+    });
+  };
+
+  const dayHasAny = (order) =>
+    BREAKFAST_MENUS.some(m => order[m.id]?.full || Object.values(order[m.id]?.checked || {}).some(Boolean));
+
+  const hasAnyOrder = dayOrders.some(dayHasAny);
 
   const handleSend = async () => {
     setSending(true);
     const paxLabel = groupSize ? `${groupSize} ${en ? "guests" : "personas"}` : `${tier} pax`;
     const lines = [];
     dayOrders.forEach((order, i) => {
-      const m = BREAKFAST_MENUS.find(x => x.id === order.menuId) || BREAKFAST_MENUS[0];
-      const isFullMode = order.mode === "full";
-      let dayItems;
-      if (isFullMode) {
-        dayItems = [`  🍽 ${en ? "Full Menu" : "Menú Completo"} — ${fmt(m.fullPrice[tierIdx])}`];
-      } else {
-        dayItems = m.sections.flatMap(sec =>
-          sec.items.filter(it => order.checked[`${order.menuId}:${it.name}`])
-            .map(it => `  · ${en ? it.name : it.name_es} — ${fmt(it.prices[tierIdx])}`)
-        );
-      }
-      if (!dayItems.length) return;
+      const dp = dayPrice(order);
+      if (!dayHasAny(order)) return;
       if (stayNights > 1) {
-        let dayLabel = en ? `Day ${i+1}` : `Día ${i+1}`;
-        if (arrivalDate) {
-          const d = new Date(arrivalDate + "T12:00:00");
-          d.setDate(d.getDate() + i);
-          dayLabel = d.toLocaleDateString(en ? "en-US" : "es-CO", { weekday: "long", month: "short", day: "numeric" });
-        }
-        lines.push(`*${dayLabel}: ${en ? m.label : m.label_es}*`);
+        const statusLabel = order.status === "confirmed" ? (en ? "Confirmed" : "Confirmado") : (en ? "Deciding" : "Aún decidiendo");
+        lines.push(`*${getDayLabel(i)} — ${statusLabel}*`);
       }
-      else lines.push(`*${en ? m.label : m.label_es}*`);
-      lines.push(...dayItems);
+      BREAKFAST_MENUS.forEach(menu => {
+        const cat = order[menu.id];
+        if (!cat) return;
+        const catLabel = en ? menu.label : menu.label_es;
+        if (cat.full) {
+          lines.push(`  · ${catLabel}: ${en ? "Full Menu" : "Menú Completo"} — ${fmt(menu.fullPrice[tierIdx])}`);
+        } else {
+          const items = menu.sections.flatMap(s => s.items).filter(it => cat.checked[it.name]);
+          if (items.length) {
+            const itemList = items.map(it => en ? it.name : it.name_es).join(", ");
+            const itemTotal = items.reduce((s, it) => s + (it.prices[tierIdx] || 0), 0);
+            lines.push(`  · ${catLabel}: ${itemList} — ${fmt(itemTotal)}`);
+          }
+        }
+      });
+      if (dp > 0) lines.push(`  ${en ? "Day total" : "Total día"}: ~${fmt(dp)}`);
       if (i < dayOrders.length - 1) lines.push("");
     });
     if (notes.trim()) lines.push(`\n📝 ${notes}`);
+    if (tripTotal > 0) lines.push(`\n*${en ? "Trip total" : "Total viaje"}: ~${fmt(tripTotal)}*`);
     const text = `☕ *Breakfast* ${guestName ? `· ${guestName}` : ""} · ${paxLabel}\n\n${lines.join("\n")}`;
     const now = new Date().toISOString();
     try {
@@ -4009,7 +4055,9 @@ function BreakfastCatalog() {
           {en ? "Got it! ☕" : "¡Listo! ☕"}
         </p>
         <p style={{fontSize:13,color:"#7a7570",lineHeight:1.6}}>
-          {en ? "Your breakfast order has been sent to your concierge. You can come back anytime to make changes." : "Tu pedido de desayuno fue enviado a tu concierge. Puedes volver cuando quieras para hacer cambios."}
+          {en
+            ? "Your breakfast order has been sent to your concierge. We'll have everything ready for you."
+            : "Tu pedido de desayuno fue enviado a tu concierge. Tendremos todo listo para ti."}
         </p>
         <button onClick={() => setSent(false)}
           style={{marginTop:32,fontSize:11,color:"#9a7d52",background:"none",border:"none",cursor:"pointer",letterSpacing:".1em",textTransform:"uppercase"}}>
@@ -4019,13 +4067,7 @@ function BreakfastCatalog() {
     </div>
   );
 
-  const menuTabStyle = (id) => ({
-    padding:"8px 20px", fontSize:12, fontWeight:500, letterSpacing:".06em", textTransform:"uppercase",
-    border:"none", cursor:"pointer", transition:"all .15s",
-    background: curOrder.menuId === id ? "#1a1814" : "transparent",
-    color: curOrder.menuId === id ? "#f7f4ef" : "#7a7570",
-    borderBottom: curOrder.menuId === id ? "2px solid #9a7d52" : "2px solid transparent",
-  });
+  const curOrder = dayOrders[currentDay] || EMPTY_DAY();
 
   return (
     <div style={{minHeight:"100vh",background:"#f7f4ef",fontFamily:"'Jost',sans-serif",color:"#1a1814"}}>
@@ -4039,7 +4081,6 @@ function BreakfastCatalog() {
           {guestName ? guestName + " · " : ""}
           {groupSize ? `${groupSize} ${en ? "guests" : "personas"}` : `${tier} ${en ? "guests" : "personas"}`}
         </p>
-        {/* Controls row */}
         <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:16,flexWrap:"wrap"}}>
           {!groupSize && (
             <div style={{display:"flex",gap:4,background:"rgba(255,255,255,.08)",borderRadius:6,padding:3}}>
@@ -4063,23 +4104,31 @@ function BreakfastCatalog() {
         </div>
       </div>
 
-      {/* Day tabs (only when stayNights > 1) */}
+      {/* How it works */}
+      <div style={{background:"#fdf8f2",borderBottom:"1px solid #e5ddd3",padding:"14px 20px"}}>
+        <div style={{maxWidth:680,margin:"0 auto",display:"flex",gap:10,alignItems:"flex-start"}}>
+          <span style={{fontSize:18,flexShrink:0}}>☕</span>
+          <div>
+            <p style={{fontSize:12,fontWeight:600,color:"#1a1814",marginBottom:3}}>
+              {en ? "How it works" : "Cómo funciona"}
+            </p>
+            <p style={{fontSize:11,color:"#7a7570",lineHeight:1.6,margin:0}}>
+              {en
+                ? "Choose what you'd like for breakfast each day of your stay. You can mix categories — pick individual dishes or go for the full menu of a category. Prices are per day for the whole group."
+                : "Elige lo que quieres para el desayuno cada día de tu estadía. Puedes combinar categorías — elige platos individuales o toma el menú completo de una categoría. Los precios son por día para todo el grupo."}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Day tabs */}
       {stayNights > 1 && (
         <div style={{background:"#f0ebe3",borderBottom:"1px solid #e5ddd3",padding:"10px 20px",overflowX:"auto"}}>
           <div style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap"}}>
             {Array.from({ length: stayNights }, (_, i) => {
-              const hasItems = dayOrders[i]?.mode === "full" || Object.values(dayOrders[i]?.checked || {}).some(Boolean);
+              const hasItems = dayHasAny(dayOrders[i] || EMPTY_DAY());
+              const confirmed = dayOrders[i]?.status === "confirmed";
               const isActive = currentDay === i;
-              let dayLabel;
-              if (arrivalDate) {
-                const d = new Date(arrivalDate + "T12:00:00");
-                d.setDate(d.getDate() + i);
-                const weekday = d.toLocaleDateString(en ? "en-US" : "es-CO", { weekday: "short" });
-                const dateNum = d.getDate();
-                dayLabel = `${weekday} ${dateNum}`;
-              } else {
-                dayLabel = en ? `Day ${i+1}` : `Día ${i+1}`;
-              }
               return (
                 <button key={i} onClick={() => setCurrentDay(i)} style={{
                   padding:"6px 16px", fontSize:11, fontWeight:500, letterSpacing:".06em",
@@ -4088,163 +4137,221 @@ function BreakfastCatalog() {
                   background: isActive ? "#9a7d52" : "#fff",
                   color: isActive ? "#fff" : hasItems ? "#9a7d52" : "#7a7570",
                 }}>
-                  {dayLabel}
-                  {hasItems && !isActive && <span style={{marginLeft:5,opacity:.7}}>✓</span>}
+                  {getDayLabel(i)}
+                  {confirmed && !isActive && <span style={{marginLeft:4,fontSize:9}}>✓</span>}
+                  {hasItems && !confirmed && !isActive && <span style={{marginLeft:5,opacity:.7}}>·</span>}
                 </button>
               );
             })}
-            {stayNights > 1 && Object.values(curOrder.checked).some(Boolean) && (
-              <button onClick={copyDayToAll} style={{
-                padding:"6px 14px", fontSize:10, letterSpacing:".06em", textTransform:"uppercase",
-                border:"1px dashed #d5ccc0", borderRadius:20, cursor:"pointer", background:"transparent",
-                color:"#9a9590",
-              }}>{en ? "Copy to all days" : "Copiar a todos los días"}</button>
-            )}
           </div>
         </div>
       )}
 
-      {/* Full menu vs Selección individual toggle */}
-      <div style={{background:"#f5f0e8",borderBottom:"1px solid #e5ddd3",padding:"10px 20px",display:"flex",justifyContent:"center",gap:8}}>
-        {[
-          { key:"full",       label: en ? "✓ Full menu"           : "✓ Menú completo",        desc: en ? "All dishes at a fixed price" : "Todos los platos a precio fijo" },
-          { key:"individual", label: en ? "≡ Individual selection" : "≡ Selección individual", desc: en ? "Choose specific items"       : "Elige artículos específicos" },
-        ].map(opt => {
-          const active = curMode === opt.key;
-          return (
-            <button key={opt.key} onClick={() => setModeForDay(opt.key)} style={{
-              padding:"8px 20px", fontSize:12, fontWeight: active ? 600 : 400,
-              border: `1.5px solid ${active ? "#9a7d52" : "#d5ccc0"}`,
-              borderRadius:8, cursor:"pointer", background: active ? "#9a7d52" : "#fff",
-              color: active ? "#fff" : "#7a7570", transition:"all .15s",
-            }}>
-              {opt.label}
-            </button>
-          );
-        })}
-      </div>
+      <div style={{maxWidth:680,margin:"0 auto",padding:"24px 20px 40px"}}>
 
-      {/* Menu type tabs */}
-      <div style={{background:"#fff",borderBottom:"1px solid #e5ddd3",display:"flex",justifyContent:"center",gap:0,overflowX:"auto"}}>
-        {BREAKFAST_MENUS.map(m => (
-          <button key={m.id} onClick={() => setMenuForDay(m.id)} style={menuTabStyle(m.id)}>
-            {en ? m.label : m.label_es}
-          </button>
-        ))}
-      </div>
-
-      <div style={{maxWidth:680,margin:"0 auto",padding:"32px 20px 80px"}}>
-        {/* Price note */}
-        <div style={{background:"#fdf8f2",border:"1px solid #e5ddd3",borderRadius:6,padding:"10px 16px",marginBottom:20,display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:16}}>💡</span>
-          <p style={{fontSize:11,color:"#7a7570",lineHeight:1.5,margin:0}}>
-            {en
-              ? "All prices are per day for your entire group — not per person."
-              : "Todos los precios son por día para todo el grupo — no por persona."}
-          </p>
-        </div>
-
-        {/* Full menu mode: show full menu card as the selection */}
-        {curMode === "full" && (
-          <div style={{background:"#f5f0e8",border:"2px solid #9a7d52",borderRadius:10,padding:"20px 24px",marginBottom:28,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div>
-              <p style={{fontSize:14,fontWeight:600,color:"#1a1814",marginBottom:4}}>
-                ✅ {en ? menu.label : menu.label_es} — {en ? "Full Menu" : "Menú Completo"}
-              </p>
-              <p style={{fontSize:11,color:"#7a7570",lineHeight:1.5}}>
-                {en ? "Includes all dishes in smaller portions, enough for the whole group." : "Incluye todos los platos en porciones menores, suficiente para todo el grupo."}
-              </p>
-            </div>
-            <div style={{textAlign:"right",flexShrink:0,marginLeft:16}}>
-              <span style={{fontSize:20,fontWeight:700,color:"#9a7d52",display:"block"}}>{fmt(menu.fullPrice[tierIdx])}</span>
-              <span style={{fontSize:9,color:"#9a9590",letterSpacing:".04em"}}>{en ? "per day / group" : "por día / grupo"}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Individual mode: Full menu reference card (display only) */}
-        {curMode === "individual" && (
-          <div style={{background:"#fff",border:"1px solid #e5ddd3",borderLeft:"3px solid #c8c0b8",borderRadius:8,padding:"12px 16px",marginBottom:20,display:"flex",justifyContent:"space-between",alignItems:"center",opacity:.7}}>
-            <p style={{fontSize:11,color:"#7a7570",margin:0}}>
-              {en ? "Full menu reference price:" : "Precio referencia menú completo:"}
-            </p>
-            <span style={{fontSize:13,fontWeight:500,color:"#9a7d52"}}>{fmt(menu.fullPrice[tierIdx])} <span style={{fontSize:9,color:"#9a9590"}}>{en?"/ day":"/ día"}</span></span>
-          </div>
-        )}
-
-        {/* Sections & Items — only in individual mode */}
-        {curMode === "individual" && menu.sections.map((sec, si) => (
-          <div key={si} style={{marginBottom:28}}>
-            <p style={{fontSize:9,fontWeight:500,letterSpacing:".18em",textTransform:"uppercase",color:"#9a7d52",marginBottom:12,paddingBottom:8,borderBottom:"1px solid #e5ddd3"}}>
-              {en ? sec.label : sec.label_es}
-            </p>
-            {sec.items.map((it, ii) => {
-              const key = `${menu.id}:${it.name}`;
-              const on  = !!checked[key];
+        {/* Status toggle for current day */}
+        {stayNights > 1 && (
+          <div style={{display:"flex",gap:8,marginBottom:24,alignItems:"center"}}>
+            <span style={{fontSize:11,color:"#7a7570",marginRight:4}}>{en ? "Status:" : "Estado:"}</span>
+            {[
+              { key:"pending",   label: en ? "Still deciding" : "Aún decidiendo" },
+              { key:"confirmed", label: en ? "Confirmed"      : "Confirmado" },
+            ].map(opt => {
+              const active = curOrder.status === opt.key;
               return (
-                <button key={ii} onClick={() => toggle(key)} style={{
-                  width:"100%",display:"flex",alignItems:"flex-start",gap:14,padding:"14px 16px",
-                  background: on ? "rgba(154,125,82,.07)" : "#fff",
-                  border:`1px solid ${on ? "#9a7d52" : "#e5ddd3"}`,
-                  borderRadius:6,marginBottom:6,cursor:"pointer",textAlign:"left",transition:"all .12s",
+                <button key={opt.key} onClick={() => setDayStatus(currentDay, opt.key)} style={{
+                  padding:"5px 14px", fontSize:11, fontWeight: active ? 600 : 400,
+                  border:`1.5px solid ${active ? (opt.key === "confirmed" ? "#16a34a" : "#9a7d52") : "#d5ccc0"}`,
+                  borderRadius:20, cursor:"pointer", transition:"all .15s",
+                  background: active ? (opt.key === "confirmed" ? "#dcfce7" : "#fdf8f2") : "#fff",
+                  color: active ? (opt.key === "confirmed" ? "#16a34a" : "#9a7d52") : "#7a7570",
                 }}>
-                  <div style={{
-                    width:16,height:16,borderRadius:3,flexShrink:0,marginTop:2,
-                    border:`1.5px solid ${on ? "#9a7d52" : "#c8c0b8"}`,
-                    background: on ? "#9a7d52" : "transparent",
-                    display:"flex",alignItems:"center",justifyContent:"center",
-                  }}>
-                    {on && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                  </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <p style={{fontSize:13,fontWeight:500,color:"#1a1814",marginBottom:2}}>
-                      {en ? it.name : it.name_es}
-                      {it.unitLabel && <span style={{fontSize:11,color:"#9a9590",marginLeft:6}}>{it.unitLabel}</span>}
-                    </p>
-                    {(en ? it.desc : it.desc_es) && (
-                      <p style={{fontSize:11,color:"#7a7570",lineHeight:1.5}}>{en ? it.desc : it.desc_es}</p>
-                    )}
-                  </div>
-                  <div style={{textAlign:"right",flexShrink:0,marginLeft:8}}>
-                    <span style={{fontSize:13,fontWeight:500,color:"#9a7d52",display:"block"}}>{fmt(it.prices[tierIdx])}</span>
-                    <span style={{fontSize:9,color:"#b8b0a8"}}>{en ? "/ day" : "/ día"}</span>
-                  </div>
+                  {opt.label}
                 </button>
               );
             })}
           </div>
-        ))}
+        )}
 
-        {/* Notes */}
-        <p style={{fontSize:11,color:"#9a9590",fontStyle:"italic",marginBottom:12,lineHeight:1.6}}>
+        {/* Per-category selection */}
+        {BREAKFAST_MENUS.map(menu => {
+          const cat = curOrder[menu.id] || EMPTY_CAT();
+          const cp = catPrice(cat, menu);
+          const catLabel = en ? menu.label : menu.label_es;
+          const BADGE_COLORS = { traditional:"#9a7d52", american:"#2563eb", healthy:"#16a34a" };
+          const badgeColor = BADGE_COLORS[menu.id] || "#9a7d52";
+          return (
+            <div key={menu.id} style={{marginBottom:28,background:"#fff",borderRadius:10,border:"1px solid #e5ddd3",overflow:"hidden"}}>
+              {/* Category header */}
+              <div style={{padding:"12px 16px",background:"#f9f6f2",borderBottom:"1px solid #e5ddd3",display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:11,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",
+                  color:badgeColor,background:`${badgeColor}18`,padding:"3px 10px",borderRadius:20}}>
+                  {catLabel}
+                </span>
+                {cp > 0 && (
+                  <span style={{fontSize:11,color:"#9a7d52",marginLeft:"auto",fontWeight:600}}>~{fmt(cp)}</span>
+                )}
+              </div>
+
+              {/* Items */}
+              <div style={{padding:"8px 12px"}}>
+                {menu.sections.map((sec, si) => (
+                  <div key={si} style={{marginBottom:4}}>
+                    {menu.sections.length > 1 && (
+                      <p style={{fontSize:9,fontWeight:500,letterSpacing:".16em",textTransform:"uppercase",
+                        color:"#b8b0a8",marginBottom:6,marginTop:si > 0 ? 10 : 4}}>
+                        {en ? sec.label : sec.label_es}
+                      </p>
+                    )}
+                    {sec.items.map((it, ii) => {
+                      const on = !!cat.checked[it.name];
+                      const disabled = cat.full;
+                      return (
+                        <button key={ii} onClick={() => !disabled && toggleItem(currentDay, menu.id, it.name)}
+                          style={{
+                            width:"100%",display:"flex",alignItems:"flex-start",gap:12,padding:"10px 12px",
+                            background: on && !disabled ? `${badgeColor}0d` : "#fff",
+                            border:`1px solid ${on && !disabled ? badgeColor : "#f0ebe3"}`,
+                            borderRadius:6,marginBottom:4,cursor: disabled ? "default" : "pointer",
+                            textAlign:"left",transition:"all .12s",opacity: disabled ? 0.45 : 1,
+                          }}>
+                          <div style={{
+                            width:15,height:15,borderRadius:3,flexShrink:0,marginTop:2,
+                            border:`1.5px solid ${on && !disabled ? badgeColor : "#c8c0b8"}`,
+                            background: on && !disabled ? badgeColor : "transparent",
+                            display:"flex",alignItems:"center",justifyContent:"center",
+                          }}>
+                            {on && !disabled && <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          </div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <p style={{fontSize:13,fontWeight:500,color:"#1a1814",marginBottom:1}}>
+                              {en ? it.name : it.name_es}
+                            </p>
+                            {(en ? it.desc : it.desc_es) && (
+                              <p style={{fontSize:11,color:"#9a9590",lineHeight:1.4}}>{en ? it.desc : it.desc_es}</p>
+                            )}
+                          </div>
+                          <span style={{fontSize:12,fontWeight:500,color:badgeColor,flexShrink:0,marginLeft:8}}>
+                            {fmt(it.prices[tierIdx])}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+
+                {/* Full menu option */}
+                <button onClick={() => toggleFull(currentDay, menu.id)} style={{
+                  width:"100%",display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
+                  marginTop:8,
+                  background: cat.full ? `${badgeColor}12` : "#f9f6f2",
+                  border:`1.5px solid ${cat.full ? badgeColor : "#d5ccc0"}`,
+                  borderRadius:8,cursor:"pointer",textAlign:"left",transition:"all .12s",
+                }}>
+                  <div style={{
+                    width:16,height:16,borderRadius:"50%",flexShrink:0,
+                    border:`1.5px solid ${cat.full ? badgeColor : "#c8c0b8"}`,
+                    background: cat.full ? badgeColor : "transparent",
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                  }}>
+                    {cat.full && <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                  </div>
+                  <div style={{flex:1}}>
+                    <p style={{fontSize:12,fontWeight:700,color: cat.full ? badgeColor : "#5a5550",marginBottom:1}}>
+                      {en ? `✦ Full ${catLabel} Menu` : `✦ Menú Completo ${catLabel}`}
+                    </p>
+                    <p style={{fontSize:10,color:"#9a9590"}}>
+                      {en ? "All dishes in shared portions for the group" : "Todos los platos en porciones compartidas para el grupo"}
+                    </p>
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <span style={{fontSize:15,fontWeight:700,color:badgeColor}}>{fmt(menu.fullPrice[tierIdx])}</span>
+                    <span style={{fontSize:9,color:"#b8b0a8",display:"block"}}>{en ? "/ day" : "/ día"}</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Order summary before submit */}
+        {hasAnyOrder && (
+          <div style={{background:"#fff",border:"1px solid #e5ddd3",borderRadius:10,overflow:"hidden",marginBottom:20}}>
+            <div style={{padding:"12px 16px",background:"#f9f6f2",borderBottom:"1px solid #e5ddd3"}}>
+              <p style={{fontSize:12,fontWeight:700,color:"#1a1814",letterSpacing:".04em"}}>
+                {en ? "Order Summary" : "Resumen del pedido"}
+              </p>
+            </div>
+            <div style={{padding:"12px 16px"}}>
+              {dayOrders.map((order, i) => {
+                const dp = dayPrice(order);
+                if (!dayHasAny(order)) return null;
+                const confirmed = order.status === "confirmed";
+                return (
+                  <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom: i < dayOrders.length - 1 ? "1px solid #f0ebe3" : "none"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                      <span style={{fontSize:12,fontWeight:600,color:"#1a1814"}}>
+                        {stayNights > 1 ? getDayLabel(i) : (en ? "Your order" : "Tu pedido")}
+                      </span>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        {stayNights > 1 && (
+                          <span style={{fontSize:10,color: confirmed ? "#16a34a" : "#d97706",fontWeight:600}}>
+                            {confirmed ? (en ? "Confirmed" : "Confirmado") : (en ? "Deciding" : "Aún decidiendo")}
+                          </span>
+                        )}
+                        {dp > 0 && <span style={{fontSize:12,color:"#9a7d52",fontWeight:600}}>~{fmt(dp)}</span>}
+                      </div>
+                    </div>
+                    {BREAKFAST_MENUS.map(menu => {
+                      const cat = order[menu.id];
+                      if (!cat) return null;
+                      const catLabel = en ? menu.label : menu.label_es;
+                      if (cat.full) return (
+                        <p key={menu.id} style={{fontSize:11,color:"#7a7570",margin:"2px 0"}}>
+                          · {catLabel}: {en ? "Full Menu" : "Menú Completo"}
+                        </p>
+                      );
+                      const items = menu.sections.flatMap(s => s.items).filter(it => cat.checked[it.name]);
+                      if (!items.length) return null;
+                      return (
+                        <p key={menu.id} style={{fontSize:11,color:"#7a7570",margin:"2px 0"}}>
+                          · {catLabel}: {items.map(it => en ? it.name : it.name_es).join(", ")}
+                        </p>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+              {tripTotal > 0 && (
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingTop:8,borderTop:"1px solid #e5ddd3"}}>
+                  <span style={{fontSize:12,fontWeight:600,color:"#1a1814"}}>
+                    {en ? "Estimated trip total" : "Total estimado del viaje"}
+                  </span>
+                  <span style={{fontSize:16,fontWeight:700,color:"#9a7d52"}}>~{fmt(tripTotal)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Food restrictions note */}
+        <p style={{fontSize:11,color:"#9a9590",fontStyle:"italic",marginBottom:8,lineHeight:1.6}}>
           {en
             ? "Note: Basic items (sugar, salt, oil, napkins) are not included. An additional cost of $10–$20 USD may apply."
             : "Nota: Los básicos (azúcar, sal, aceite, servilletas) no están incluidos. Puede aplicar un costo adicional de $10–$20 USD."}
         </p>
-        <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
-          placeholder={en ? "Anything else? Allergies, preferences…" : "¿Algo más? Alergias, preferencias…"}
+        <p style={{fontSize:11,color:"#9a9590",marginBottom:8,lineHeight:1.6}}>
+          {en ? "Do you have allergies or dietary restrictions? Let us know below." : "¿Tienes alergias o restricciones alimentarias? Cuéntanos abajo."}
+        </p>
+        <textarea value={notes} onChange={e => { setNotes(e.target.value); doAutosave(dayOrders, e.target.value); }} rows={3}
+          placeholder={en ? "Allergies, preferences, special requests…" : "Alergias, preferencias, peticiones especiales…"}
           style={{width:"100%",background:"#fff",border:"1px solid #e5ddd3",borderRadius:6,padding:"10px 14px",
-            fontSize:13,color:"#1a1814",outline:"none",resize:"none",marginBottom:16,fontFamily:"'Jost',sans-serif"}}/>
+            fontSize:13,color:"#1a1814",outline:"none",resize:"none",marginBottom:20,fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}}/>
 
-        {/* Total for current day */}
-        {totalCOP > 0 && (
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",background:"#fff",border:"1px solid #e5ddd3",borderRadius:6,marginBottom:14}}>
-            <div>
-              <span style={{fontSize:12,color:"#7a7570",letterSpacing:".04em",display:"block"}}>
-                {stayNights > 1
-                  ? (en ? `Day ${currentDay+1} — Estimated total` : `Día ${currentDay+1} — Total estimado`)
-                  : (en ? "Estimated total" : "Total estimado")}
-              </span>
-              <span style={{fontSize:10,color:"#b8b0a8"}}>{en ? "per day / whole group" : "por día / todo el grupo"}</span>
-            </div>
-            <span style={{fontSize:16,fontWeight:500,color:"#9a7d52"}}>{fmt(totalCOP)}</span>
-          </div>
-        )}
-
-        <button onClick={handleSend} disabled={!hasAny || sending} style={{
+        <button onClick={handleSend} disabled={!hasAnyOrder || sending} style={{
           width:"100%",padding:"14px",fontSize:12,fontWeight:500,letterSpacing:".1em",textTransform:"uppercase",
-          background: hasAny ? "#1a1814" : "#ccc",color:"#fff",border:"none",borderRadius:6,
-          cursor: hasAny ? "pointer" : "default",transition:"background .15s",
+          background: hasAnyOrder ? "#1a1814" : "#ccc",color:"#fff",border:"none",borderRadius:6,
+          cursor: hasAnyOrder ? "pointer" : "default",transition:"background .15s",
         }}>
           {sending ? (en ? "Sending…" : "Enviando…") : (en ? "Send order to concierge" : "Enviar pedido al concierge")}
         </button>
