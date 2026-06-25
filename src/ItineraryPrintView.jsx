@@ -113,7 +113,20 @@ function matchCart(cartRaw, catalog) {
   return out;
 }
 
-function buildDays(matched, lang, dayMeta) {
+const CITY_FULL = { CTG:"cartagena", MDE:"medellín", CDMX:"ciudad de méxico", TUL:"tulum", BOG:"bogotá" };
+function normCity(c) {
+  const u = String(c || "").trim().toUpperCase();
+  return CITY_FULL[u] || String(c || "").trim().toLowerCase();
+}
+
+function buildDays(matched, lang, dayMeta, tripCityRaw) {
+  const tripCities = String(tripCityRaw || "").split(",").map(normCity).filter(Boolean);
+  const svcMatchesTrip = (svcCity) => {
+    if (!svcCity || !tripCities.length) return true;
+    const n = normCity(svcCity);
+    return tripCities.some(tc => tc === n || tc.includes(n) || n.includes(tc));
+  };
+
   const map = new Map();
   matched.forEach(({ cartItem, service }, idx) => {
     const key = cl(cartItem?.dayLabel || cartItem?.day || "Itinerary");
@@ -121,6 +134,7 @@ function buildDays(matched, lang, dayMeta) {
     const desc = lang === "es"
       ? (service.description?.es || service.descriptionEs || service.description?.en || service.descriptionEn || "")
       : (service.description?.en || service.descriptionEn || service.description?.es || service.descriptionEs || "");
+    const cityMatches = svcMatchesTrip(service.city);
     map.get(key).push({
       sort         : Number(cartItem.sortOrder ?? idx),
       time         : cl(cartItem.timeLabel || cartItem.time || cartItem.startTime || service.schedule || ""),
@@ -133,13 +147,13 @@ function buildDays(matched, lang, dayMeta) {
         ? (service.highlights    || [])
         : (service.highlights_en || service.highlights || []),
       includes     : service.includes   || "",
-      location     : lang === "es"
-        ? (service.location_es || service.location || "")
-        : (service.location    || ""),
+      location     : cityMatches
+        ? (lang === "es" ? (service.location_es || service.location || "") : (service.location || ""))
+        : "",
       address      : service.address    || "",
       city         : service.city       || "",
-      price        : cartItem.priceOverride_cop || service.price_cop || service.priceCop || service.price_tier_1 || service.priceTier1 || "",
-      priceUsd     : cartItem.priceUsd != null ? num(cartItem.priceUsd) : num(service.price_tier_1 || service.priceTier1 || 0),
+      price        : cartItem.priceOverride_cop || (cityMatches ? (service.price_cop || service.priceCop || service.price_tier_1 || service.priceTier1 || "") : ""),
+      priceUsd     : cartItem.priceUsd != null ? num(cartItem.priceUsd) : (cityMatches ? num(service.price_tier_1 || service.priceTier1 || 0) : 0),
       priceUnit    : service.priceUnit  || "",
       deposit      : service.deposit    || "",
       cancellation : service.cancellation || "",
@@ -159,9 +173,13 @@ function buildDays(matched, lang, dayMeta) {
   const extraLabels = [...map.keys()].filter(k => !metaLabels.includes(k));
   const orderedLabels = [...metaLabels.filter(l => map.has(l)), ...extraLabels];
 
+  const parseTime = t => { const m = String(t||"").match(/^(\d{1,2}):(\d{2})/); return m ? +m[1]*60 + +m[2] : Infinity; };
   return orderedLabels.map(label => {
     const dm = metaList.find(d => cl(d.label) === label);
-    const items = (map.get(label) || []).sort((a, b) => a.sort - b.sort);
+    const items = (map.get(label) || []).sort((a, b) => {
+      const ta = parseTime(a.time), tb = parseTime(b.time);
+      return ta !== tb ? ta - tb : a.sort - b.sort;
+    });
     // Day band shows label; subtitle shows the descriptive title if set
     return { label, title: dm?.title || "", items };
   });
@@ -336,7 +354,7 @@ const CSS = `
     min-width:48px;color:#555;flex-shrink:0;
     font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;
   }
-  .sum-svc-name{flex:1;color:#333;font-weight:500;}
+  .sum-svc-name{flex:1;color:#111;font-weight:700;}
   .sum-svc-loc{color:#ccc;font-size:10px;flex-shrink:0;}
 
   /* ══════════════════════════════════════
@@ -836,7 +854,7 @@ function CoverPage({ kickoff, total, lang, editMode }) {
                 📖 {isEs ? "Ver Guía de Bienvenida" : "View Welcome Guide"}
               </div>
               <div style={{ fontSize: 9.5, color: "#6b7280", marginTop: 2 }}>
-                {isEs ? "Toda la info de tu estadía en un solo lugar." : "All the details for your stay in one place."}
+                {isEs ? "Información importante que debes tener en cuenta durante tu estadía." : "Important information to keep in mind during your stay."}
               </div>
             </div>
             <span style={{ fontSize: 14, color: "#0369a1" }}>→</span>
@@ -2014,7 +2032,7 @@ export default function ItineraryPrintView() {
       try { return JSON.parse(kickoff.itinerarySnapshot); } catch {}
     }
     if (!catalog.length) return [];
-    return buildDays(matchCart(kickoff.cart, catalog), lang, parseJsonField(kickoff.dayMeta));
+    return buildDays(matchCart(kickoff.cart, catalog), lang, parseJsonField(kickoff.dayMeta), kickoff.city);
   }, [kickoff, catalog, lang]);
 
   // Detect families/kids in group (show Family Friendly badge only then)
@@ -2158,15 +2176,7 @@ export default function ItineraryPrintView() {
         editMode={editMode}
       />
 
-      <WelcomePage
-        kickoff={kickoff}
-        lang={lang}
-        page={++pageNum}
-        total={total}
-        editMode={editMode}
-        localPreTrip={localPreTrip}
-        setLocalPreTrip={setLocalPreTrip}
-      />
+      {/* WelcomePage removed — content is repetitive with cover page */}
 
       {hasSummary && (
         <SummaryPage
