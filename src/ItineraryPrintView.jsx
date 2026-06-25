@@ -138,8 +138,8 @@ function buildDays(matched, lang, dayMeta) {
         : (service.location    || ""),
       address      : service.address    || "",
       city         : service.city       || "",
-      price        : service.price_cop  || service.priceCop || service.price_tier_1 || service.priceTier1 || "",
-      priceUsd     : num(service.price_tier_1 || service.priceTier1 || 0),
+      price        : cartItem.priceOverride_cop || service.price_cop || service.priceCop || service.price_tier_1 || service.priceTier1 || "",
+      priceUsd     : cartItem.priceUsd != null ? num(cartItem.priceUsd) : num(service.price_tier_1 || service.priceTier1 || 0),
       priceUnit    : service.priceUnit  || "",
       deposit      : service.deposit    || "",
       cancellation : service.cancellation || "",
@@ -1693,7 +1693,7 @@ function KeepInTouchPage({ kickoff, page, total }) {
     <div className="page" style={{ position: "relative", background: "#fff" }}>
       <PH kickoff={kickoff} />
 
-      <div style={{ padding: "28px 40px 0", textAlign: "center" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "40px 40px", textAlign: "center" }}>
         {/* Title */}
         <div style={{ fontSize: 26, fontWeight: 900, color: "#111", letterSpacing: "-.01em", marginBottom: 8 }}>
           Let's keep in touch!
