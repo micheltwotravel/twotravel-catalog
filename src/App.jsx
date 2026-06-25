@@ -3842,7 +3842,7 @@ function BreakfastCatalog() {
 
   const [lang,        setLang]        = React.useState(params.get("lang") === "es" ? "es" : "en");
   const [tier,        setTier]        = React.useState(initTier);
-  const [currency,    setCurrency]    = React.useState(currParam === "COP" ? "COP" : "USD");
+  const [currency,    setCurrency]    = React.useState("USD");
   const [groupSize,   setGroupSize]   = React.useState(gsParam > 0 ? gsParam : null);
   const [stayNights,  setStayNights]  = React.useState(urlNights || 1);
   const [guestName,   setGuestName]   = React.useState(params.get("guestName") || "");
@@ -3904,7 +3904,7 @@ function BreakfastCatalog() {
             }
             if (saved.notes) setNotes(saved.notes);
             if (saved.tier && BREAKFAST_TIERS.includes(saved.tier)) setTier(saved.tier);
-            if (saved.currency) setCurrency(saved.currency === "COP" ? "COP" : "USD");
+            // currency always resets to USD on load — don't restore saved preference
           } catch {}
         }
       })
@@ -4340,10 +4340,12 @@ function BreakfastCatalog() {
             : "Nota: Los básicos (azúcar, sal, aceite, servilletas) no están incluidos. Puede aplicar un costo adicional de $10–$20 USD."}
         </p>
         <p style={{fontSize:11,color:"#9a9590",marginBottom:8,lineHeight:1.6}}>
-          {en ? "Do you have allergies or dietary restrictions? Let us know below." : "¿Tienes alergias o restricciones alimentarias? Cuéntanos abajo."}
+          {en
+            ? "Dietary restrictions or allergies? Please include them in your check-in form — your concierge will have that information ready."
+            : "¿Restricciones alimentarias o alergias? Inclúyelas en tu formulario de check-in — tu concierge ya tendrá esa información."}
         </p>
-        <textarea value={notes} onChange={e => { setNotes(e.target.value); doAutosave(dayOrders, e.target.value); }} rows={3}
-          placeholder={en ? "Allergies, preferences, special requests…" : "Alergias, preferencias, peticiones especiales…"}
+        <textarea value={notes} onChange={e => { setNotes(e.target.value); doAutosave(dayOrders, e.target.value); }} rows={2}
+          placeholder={en ? "Any specific requests for your breakfast order…" : "Peticiones específicas para tu pedido de desayuno…"}
           style={{width:"100%",background:"#fff",border:"1px solid #e5ddd3",borderRadius:6,padding:"10px 14px",
             fontSize:13,color:"#1a1814",outline:"none",resize:"none",marginBottom:20,fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}}/>
 
