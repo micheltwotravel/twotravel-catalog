@@ -134,7 +134,10 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
     const desc = lang === "es"
       ? (service.description?.es || service.descriptionEs || service.description?.en || service.descriptionEn || "")
       : (service.description?.en || service.descriptionEn || service.description?.es || service.descriptionEs || "");
-    const cityMatches = svcMatchesTrip(service.city);
+    const rawLoc = lang === "es" ? (service.location_es || service.location || "") : (service.location || "");
+    const locLower = rawLoc.toLowerCase();
+    const locMentionsOtherCity = Object.values(CITY_FULL).some(cn => locLower.includes(cn) && !tripCities.includes(cn));
+    const cityMatches = svcMatchesTrip(service.city) && !locMentionsOtherCity;
     map.get(key).push({
       sort         : Number(cartItem.sortOrder ?? idx),
       time         : cl(cartItem.timeLabel || cartItem.time || cartItem.startTime || service.schedule || ""),
@@ -147,9 +150,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
         ? (service.highlights    || [])
         : (service.highlights_en || service.highlights || []),
       includes     : service.includes   || "",
-      location     : cityMatches
-        ? (lang === "es" ? (service.location_es || service.location || "") : (service.location || ""))
-        : "",
+      location     : cityMatches ? rawLoc : "",
       address      : service.address    || "",
       city         : service.city       || "",
       price        : cartItem.priceOverride_cop || (cityMatches ? (service.price_cop || service.priceCop || service.price_tier_1 || service.priceTier1 || "") : ""),
@@ -247,8 +248,9 @@ const CSS = `
     border-bottom:1px solid #e8e8e8;
     flex-shrink:0;
   }
-  .ph-left{font-size:9.5px;color:#999;line-height:1.8;}
+  .ph-left{font-size:9.5px;color:#999;line-height:1.6;}
   .ph-left b{display:block;font-size:10px;color:#222;font-weight:600;letter-spacing:.2px;}
+  .ph-left span{display:block;}
   .ph-right{
     font-size:10px;font-weight:700;letter-spacing:1.5px;
     text-transform:uppercase;color:#111;
@@ -343,7 +345,7 @@ const CSS = `
     color:#bbb;font-weight:600;flex-shrink:0;
   }
   .sum-day-label{font-size:12.5px;font-weight:700;color:#111;}
-  .sum-day-sub{font-size:10px;color:#bbb;margin-left:6px;text-transform:uppercase;letter-spacing:.8px;}
+  .sum-day-sub{font-size:10px;color:#555;margin-left:6px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;}
   .sum-svc-row{
     display:flex;gap:12px;
     font-size:11px;color:#666;
