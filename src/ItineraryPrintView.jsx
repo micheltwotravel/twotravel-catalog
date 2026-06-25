@@ -577,7 +577,7 @@ const CONCIERGE_TITLE_MAP = {
 };
 
 function PH({ kickoff }) {
-  const name  = kickoff.assignedConciergeName || "";
+  const name  = kickoff.assignedConciergeName || kickoff.assignedConcierge || "";
   const email = kickoff.assignedConciergeEmail || "";
   const title = kickoff.conciergeTitle || CONCIERGE_TITLE_MAP[name] || "";
   return (

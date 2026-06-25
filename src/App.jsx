@@ -3160,7 +3160,6 @@ function DrinksCatalog() {
       <div className="text-5xl">🥂</div>
       <h1 className="text-2xl font-semibold text-white">{T.successTitle}</h1>
       <p className="text-neutral-400 text-sm max-w-xs">{T.successBody}</p>
-      <p className="text-neutral-500 text-xs">You can come back anytime to make changes.</p>
       <button
         onClick={() => setSent(false)}
         className="mt-4 px-6 py-2.5 rounded-xl bg-white/10 text-white text-sm hover:bg-white/20"
