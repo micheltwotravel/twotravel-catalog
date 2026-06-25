@@ -3138,7 +3138,7 @@ function DrinksCatalog() {
       await fetch(GAS_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "sendSlackMessage", payload: { text: slackText, channelId: "C0BB4EPSAP4", slackToken: import.meta.env.VITE_SLACK_BOT_TOKEN || "" } }),
+        body: JSON.stringify({ action: "sendSlackMessage", payload: { text: slackText, channelId: import.meta.env.VITE_SLACK_CHANNEL_ID || "C0BB4EPSAP4", slackToken: import.meta.env.VITE_SLACK_BOT_TOKEN || "" } }),
       });
       if (kickoffId) {
         updateKickoffInSheet(kickoffId, { drinkOrder, drinkOrderAt: now, drinkOrderJson }).catch(() => {});
