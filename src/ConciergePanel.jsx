@@ -378,8 +378,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   const dd   = encodeURIComponent(cl(kickoff.departureDate));
 
   // Drinks
-  const drinksUrl     = `${BASE}/?mode=drinks&kickoffId=${kid}&lang=${lang}`;
-  const drinksDisplay = `twotravelvip.com/?mode=drinks&id=${kid}`;
+  const drinksUrl     = `${BASE}/d/${kid}`;
+  const drinksDisplay = `twotravelvip.com/d/${kid}`;
   doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
   dt(lang === "es" ? "Pedido de Bebidas" : "Drink Order", ML, y); y += 11;
   doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
@@ -390,8 +390,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   dtLink(drinksDisplay, ML, y, drinksUrl); y += 14;
 
   // Groceries
-  const grocUrl     = `${BASE}/?mode=groceries&kickoffId=${kid}&lang=${lang}`;
-  const grocDisplay = `twotravelvip.com/?mode=groceries&id=${kid}`;
+  const grocUrl     = `${BASE}/g/${kid}`;
+  const grocDisplay = `twotravelvip.com/g/${kid}`;
   doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
   dt(lang === "es" ? "Pedido de Mercado" : "Groceries Order", ML, y); y += 11;
   doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
@@ -407,8 +407,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   if (isCtg) {
     const gs   = parseInt(cl(kickoff.groupSize)) || 1;
     const tier = gs <= 5 ? "1-5" : gs <= 10 ? "6-10" : "11-20";
-    const bfUrl     = `${BASE}/?mode=breakfast&kickoffId=${kid}&lang=${lang}`;
-    const bfDisplay = `twotravelvip.com/?mode=breakfast&id=${kid}`;
+    const bfUrl     = `${BASE}/b/${kid}`;
+    const bfDisplay = `twotravelvip.com/b/${kid}`;
     doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
     dt(lang === "es" ? "Pedido de Desayuno" : "Breakfast Order", ML, y); y += 11;
     doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
@@ -1791,6 +1791,16 @@ function TierPickerModal({ title, kickoff, kind, onClose }) {
 
 
 /* Small reusable "copy link" button with ✓ feedback */
+function CopyIconButton({ url, borderClass = "border-gray-300 text-blue-600 bg-white hover:bg-blue-50" }) {
+  const [cp, setCp] = React.useState(false);
+  return (
+    <button type="button" title={url}
+      onClick={() => { navigator.clipboard.writeText(url).catch(()=>{}); setCp(true); setTimeout(()=>setCp(false),2000); }}
+      className={`px-2 py-2 rounded-r-lg border border-l-0 text-xs ${borderClass}`}
+    >{cp ? "✓" : "📋"}</button>
+  );
+}
+
 function CopyLinkButton({ url, label = "🔗 Link" }) {
   const [copied, setCopied] = React.useState(false);
   const handle = async () => {
@@ -3882,38 +3892,30 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               </div>
             );
           })()}
-          {/* Drinks catalog link */}
-          <a
-            href={(() => {
-              const u = new URL("/?mode=drinks", window.location.origin);
-              u.searchParams.set("kickoffId", kickoff.id);
-              if (kickoff.guestName)    u.searchParams.set("guestName",    kickoff.guestName);
-              if (kickoff.arrivalDate)  u.searchParams.set("arrivalDate",  kickoff.arrivalDate);
-              if (kickoff.departureDate) u.searchParams.set("departureDate", kickoff.departureDate);
-              if (kickoff.guestContact) u.searchParams.set("guestContact", kickoff.guestContact);
-              return u.toString();
-            })()}
-            target="_blank" rel="noreferrer"
-            className="px-3 py-2 rounded-lg border border-teal-300 text-sm text-teal-700 bg-teal-50 hover:bg-teal-100 flex items-center gap-1.5"
-            title="Abrir catálogo de bebidas del cliente"
-          >
-            🍹 Bebidas
-          </a>
-          {/* Groceries catalog link */}
-          <a
-            href={(() => {
-              const u = new URL("/?mode=groceries", window.location.origin);
-              u.searchParams.set("kickoffId", kickoff.id);
-              if (kickoff.guestName)    u.searchParams.set("guestName",    kickoff.guestName);
-              if (kickoff.guestContact) u.searchParams.set("guestContact", kickoff.guestContact);
-              return u.toString();
-            })()}
-            target="_blank" rel="noreferrer"
-            className="px-3 py-2 rounded-lg border border-orange-300 text-sm text-orange-700 bg-orange-50 hover:bg-orange-100 flex items-center gap-1.5"
-            title="Abrir lista de mercado del cliente"
-          >
-            🛒 Mercado
-          </a>
+          {/* Drinks catalog link + copy short link */}
+          <div className="flex items-center gap-0.5">
+            <a
+              href={`https://www.twotravelvip.com/d/${kickoff.id}`}
+              target="_blank" rel="noreferrer"
+              className="px-3 py-2 rounded-l-lg border border-teal-300 text-sm text-teal-700 bg-teal-50 hover:bg-teal-100 flex items-center gap-1.5"
+              title="Abrir catálogo de bebidas del cliente"
+            >
+              🍹 Bebidas
+            </a>
+            <CopyIconButton url={`https://www.twotravelvip.com/d/${kickoff.id}`} borderClass="border-teal-300 text-teal-600 bg-teal-50 hover:bg-teal-100" />
+          </div>
+          {/* Groceries catalog link + copy short link */}
+          <div className="flex items-center gap-0.5">
+            <a
+              href={`https://www.twotravelvip.com/g/${kickoff.id}`}
+              target="_blank" rel="noreferrer"
+              className="px-3 py-2 rounded-l-lg border border-orange-300 text-sm text-orange-700 bg-orange-50 hover:bg-orange-100 flex items-center gap-1.5"
+              title="Abrir lista de mercado del cliente"
+            >
+              🛒 Mercado
+            </a>
+            <CopyIconButton url={`https://www.twotravelvip.com/g/${kickoff.id}`} borderClass="border-orange-300 text-orange-600 bg-orange-50 hover:bg-orange-100" />
+          </div>
           {/* Breakfast link — CTG only */}
           {toCityCodeModule(kickoff.city || kickoff.destination || "") === "CTG" && (
             <BreakfastLink kickoff={kickoff} />
@@ -4512,24 +4514,14 @@ const toCityCodeModule = (raw) => {
 
 function BreakfastLink({ kickoff }) {
   const [bfCurr, setBfCurr] = React.useState("USD");
-  const bfUrl = (() => {
-    const u = new URL("/?mode=breakfast", window.location.origin);
-    u.searchParams.set("kickoffId", kickoff.id);
-    u.searchParams.set("lang", kickoff.lang || "en");
-    if (bfCurr === "COP") u.searchParams.set("currency", "COP");
-    return u.toString();
-  })();
+  const shortBfUrl = `https://www.twotravelvip.com/b/${kickoff.id}`;
   return (
     <div className="flex items-center gap-0">
-      <select value={bfCurr} onChange={e => setBfCurr(e.target.value)}
-        className="px-2 py-2 rounded-l-lg border border-r-0 border-amber-300 text-[11px] text-amber-700 bg-amber-50 hover:bg-amber-100 cursor-pointer">
-        <option value="USD">USD</option>
-        <option value="COP">COP</option>
-      </select>
-      <a href={bfUrl} target="_blank" rel="noreferrer"
-        className="px-3 py-2 rounded-r-lg border border-amber-300 text-sm text-amber-700 bg-amber-50 hover:bg-amber-100 flex items-center gap-1.5">
+      <a href={shortBfUrl} target="_blank" rel="noreferrer"
+        className="px-3 py-2 rounded-l-lg border border-amber-300 text-sm text-amber-700 bg-amber-50 hover:bg-amber-100 flex items-center gap-1.5">
         ☕ Desayuno
       </a>
+      <CopyIconButton url={shortBfUrl} borderClass="border-amber-300 text-amber-600 bg-amber-50 hover:bg-amber-100" />
     </div>
   );
 }
