@@ -3141,12 +3141,13 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
             {kickoff?.id && (() => {
               const ciLink = `https://twotravelvip.com/ci/${kickoff.id}`;
-              const waMsg  = `Hola! 👋 Para preparar todos los detalles de tu estadía, por favor completa este formulario de check-in:\n\n${ciLink}\n\nCompartelo con todo tu grupo antes de llegar. Nos ayuda a tener todo listo para ustedes 🙌`;
+              const waMsgEs = `Hola! 👋 Para preparar todos los detalles de tu estadía, por favor completa este formulario de check-in:\n\n${ciLink}\n\nCompartelo con todo tu grupo antes de llegar. Nos ayuda a tener todo listo para ustedes 🙌`;
+              const waMsgEn = `Hi! 👋 Please fill out this pre-check-in form so we can prepare every detail of your stay:\n\n${ciLink}\n\nShare it with your entire group before arrival. It helps us have everything ready for you 🙌`;
               return (
                 <div className="col-span-2 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
                   <p className="text-[11px] font-semibold text-indigo-700 mb-2">📋 Check-in Form</p>
                   <p className="text-[10px] text-indigo-500 font-mono break-all mb-2">{ciLink}</p>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <a href={ciLink} target="_blank" rel="noreferrer"
                       className="text-[11px] text-indigo-700 border border-indigo-300 bg-white rounded-lg px-3 py-1.5 hover:bg-indigo-100">
                       Abrir →
@@ -3156,10 +3157,15 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       className="text-[11px] text-indigo-700 border border-indigo-300 bg-white rounded-lg px-3 py-1.5 hover:bg-indigo-100">
                       Copiar link
                     </button>
-                    <a href={`https://wa.me/?text=${encodeURIComponent(waMsg)}`}
+                    <a href={`https://wa.me/?text=${encodeURIComponent(waMsgEs)}`}
                       target="_blank" rel="noreferrer"
                       className="text-[11px] text-green-700 border border-green-300 bg-green-50 rounded-lg px-3 py-1.5 hover:bg-green-100">
-                      WhatsApp cliente
+                      WhatsApp ES
+                    </a>
+                    <a href={`https://wa.me/?text=${encodeURIComponent(waMsgEn)}`}
+                      target="_blank" rel="noreferrer"
+                      className="text-[11px] text-green-700 border border-green-300 bg-green-50 rounded-lg px-3 py-1.5 hover:bg-green-100">
+                      WhatsApp EN
                     </a>
                   </div>
                 </div>
