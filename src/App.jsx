@@ -3062,6 +3062,7 @@ function DrinksCatalog() {
         if (!k) return;
         if (k.arrivalDate)   setKickoffArrival(k.arrivalDate);
         if (k.departureDate) setKickoffDepart(k.departureDate);
+        if (k.guestName && !prefillName) setGuestName(k.guestName);
         if (k.drinkOrderJson) {
           try {
             const saved = JSON.parse(k.drinkOrderJson);
@@ -3560,6 +3561,7 @@ function GroceryCatalog() {
       .then(res => {
         const k = res.data;
         if (!k) return;
+        if (k.guestName && !prefillName) setGuestName(k.guestName);
         if (k.groceryOrderJson) {
           try {
             const saved = JSON.parse(k.groceryOrderJson);
@@ -4349,6 +4351,7 @@ function BreakfastCatalog() {
           {en
             ? "Dietary restrictions or allergies? Please include them in your check-in form — your concierge will have that information ready."
             : "¿Restricciones alimentarias o alergias? Inclúyelas en tu formulario de check-in — tu concierge ya tendrá esa información."}
+          {kickoffId && <>{" "}<a href={`/?mode=questionnaire&kickoffId=${kickoffId}`} target="_blank" rel="noreferrer" style={{color:"#9a7d52",textDecoration:"underline"}}>{en ? "Open check-in form →" : "Abrir formulario →"}</a></>}
         </p>
         <textarea value={notes} onChange={e => { setNotes(e.target.value); doAutosave(dayOrders, e.target.value); }} rows={2}
           placeholder={en ? "Any specific requests for your breakfast order…" : "Peticiones específicas para tu pedido de desayuno…"}
