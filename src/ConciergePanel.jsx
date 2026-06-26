@@ -2902,6 +2902,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [accommodationAddrB,  setAccommodationAddrB]  = useState(kickoff?.accommodationAddrB  || "");
   const [accommodationUrlB,   setAccommodationUrlB]   = useState(kickoff?.accommodationUrlB   || "");
   const [barrioB,             setBarrioB]             = useState(kickoff?.barrioB             || "");
+  const [arrivalDateB,        setArrivalDateB]        = useState(kickoff?.arrivalDateB        || "");
+  const [departureDateB,      setDepartureDateB]      = useState(kickoff?.departureDateB      || "");
   const [showExtraAccom,      setShowExtraAccom]      = useState(!!(kickoff?.accommodationNameB));
   // City 2 accommodation
   const [accommodationName2, setAccommodationName2] = useState(kickoff?.accommodationName2 || "");
@@ -3045,6 +3047,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     accommodationAddrB:  accommodationAddrB.trim(),
     accommodationUrlB:   accommodationUrlB.trim(),
     barrioB:             barrioB.trim(),
+    arrivalDateB:        arrivalDateB.trim(),
+    departureDateB:      departureDateB.trim(),
     // City 2 dates & accommodation
     arrivalDate2:      arrivalDate2.trim(),
     departureDate2:    departureDate2.trim(),
@@ -3573,7 +3577,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   <div className="border border-violet-200 rounded-xl p-4 bg-violet-50/40">
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-[11px] font-semibold text-violet-700">🏠 Alojamiento adicional (misma ciudad)</p>
-                      <button type="button" onClick={() => { setShowExtraAccom(false); setAccommodationNameB(""); setAccommodationAddrB(""); setAccommodationUrlB(""); setBarrioB(""); }}
+                      <button type="button" onClick={() => { setShowExtraAccom(false); setAccommodationNameB(""); setAccommodationAddrB(""); setAccommodationUrlB(""); setBarrioB(""); setArrivalDateB(""); setDepartureDateB(""); }}
                         className="text-[10px] text-red-400 hover:text-red-600">Quitar</button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -3600,6 +3604,16 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                         <input value={accommodationUrlB} onChange={e => setAccommodationUrlB(e.target.value)}
                           className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                           placeholder="https://maps.app.goo.gl/..." />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-neutral-500">Check-in</label>
+                        <input type="date" value={arrivalDateB} onChange={e => setArrivalDateB(e.target.value)}
+                          className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white" />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-neutral-500">Check-out</label>
+                        <input type="date" value={departureDateB} onChange={e => setDepartureDateB(e.target.value)}
+                          className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white" />
                       </div>
                     </div>
                   </div>
