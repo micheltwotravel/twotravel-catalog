@@ -224,6 +224,10 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 
       <div class="form-row">
         <div class="form-group">
+          <label class="form-label">WhatsApp cliente *</label>
+          <input class="form-input" id="n-phone" placeholder="+57 300 000 0000" type="tel">
+        </div>
+        <div class="form-group">
           <label class="form-label">Gestionado por</label>
           <select class="form-select" id="n-person">
             <option value="">—</option>
@@ -446,7 +450,7 @@ function render(){
       <th>Gestionado por</th>
       <th>Comprobante</th>
       <th>Factura</th>
-      <th>WApp</th>
+      <th>Cobrar</th>
       <th>Estado</th>
       <th>Notas</th>
     </tr></thead>
@@ -512,11 +516,15 @@ function renderRow(p){
     <td><div class="person-wrap">${avatar}<span style="font-size:11px;color:var(--ink3)">${p.person||'—'}</span></div></td>
     <td><div class="cell" style="justify-content:center">${receipt}</div></td>
     <td><div class="cell" style="justify-content:center">${factura}</div></td>
-    <td><div class="cell" style="justify-content:center">
-      <a href="${waHref}" target="_blank" rel="noreferrer" title="Enviar cobro por WhatsApp"
-        style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#25d366;color:#fff;text-decoration:none">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.523 5.845L0 24l6.335-1.493A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.368l-.36-.214-3.726.878.936-3.617-.235-.374A9.818 9.818 0 1112 21.818z"/></svg>
-      </a>
+    <td><div class="cell" style="justify-content:center;gap:4px;flex-direction:column;align-items:center">
+      ${p.phone ? `
+        <button onclick="cobrar('${p.id}')" title="Enviar cobro por WhatsApp"
+          style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;font-size:10px;font-family:Jost,sans-serif;background:#25d366;color:#fff;border:none;border-radius:3px;cursor:pointer">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.523 5.845L0 24l6.335-1.493A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.368l-.36-.214-3.726.878.936-3.617-.235-.374A9.818 9.818 0 1112 21.818z"/></svg>
+          Cobrar
+        </button>
+        ${p.cobroAt ? `<span style="font-size:9px;color:var(--ink3)" title="Enviado: ${p.cobroAt.slice(0,10)}">✓ ${p.cobroAt.slice(5,10)}</span>` : ''}
+      ` : '<span style="font-size:10px;color:var(--border2)">sin tel.</span>'}
     </div></td>
     <td class="status-wrap"><span class="status-chip" style="background:${st.color}" onclick="openStatusPopup('${p.id}',event)">${st.label}</span></td>
     <td><div class="cell editable" ondblclick="editField('${p.id}','notes')" style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink3)">${esc(p.notes||'')}</div></td>
@@ -631,6 +639,7 @@ function openNewModal(){
   document.getElementById('n-desc').value = '';
   document.getElementById('n-amount').value = '';
   document.getElementById('n-currency').value = 'USD';
+  document.getElementById('n-phone').value = '';
   document.getElementById('n-person').value = '';
   document.getElementById('n-factura').value = '';
   document.getElementById('n-notes').value = '';
@@ -663,6 +672,7 @@ function createPago(){
     currency:   document.getElementById('n-currency').value,
     method:     '',
     person:     document.getElementById('n-person').value,
+    phone:      document.getElementById('n-phone').value.trim(),
     factura:    document.getElementById('n-factura').value.trim(),
     notes:      document.getElementById('n-notes').value.trim(),
     status:     'pend',
@@ -675,6 +685,50 @@ function createPago(){
   closeNewModal();
   render();
   showToast('Solicitud creada ✓');
+}
+
+/* ── COBRAR VIA WHATSAPP ── */
+async function cobrar(id) {
+  const p = pagos.find(x => x.id === id);
+  if (!p || !p.phone) return;
+  const isReminder = !!p.cobroAt;
+  const label = isReminder ? 'recordatorio' : 'cobro';
+  if (!confirm(`¿Enviar ${label} por WhatsApp a ${p.client}?`)) return;
+
+  const pdfLink = p.dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
+  const firstName = (p.client || '').split(/[\s,&]/)[0];
+  const montoStr = p.amount ? `${p.currency} $${parseFloat(p.amount).toLocaleString('es',{minimumFractionDigits:2})}` : '';
+
+  let msg;
+  if (isReminder) {
+    msg = p.dept === 'wedding'
+      ? `Hola ${firstName}! 💍 Te recordamos que tienes un pago pendiente con Two Lovers.\n\n${p.desc || ''}${montoStr ? '\n\n💰 Total: *' + montoStr + '*' : ''}\n\nMétodos de pago:\n${pdfLink}\n\n¡Estamos a tu disposición! — Two Lovers ✨`
+      : `Hola ${firstName}! 🌟 Te recordamos que tienes un pago pendiente con Two Travel.\n\n${p.desc || ''}${montoStr ? '\n\n💰 Total: *' + montoStr + '*' : ''}\n\nMétodos de pago:\n${pdfLink}\n\n¡Cualquier pregunta nos avisas! — Two Travel ✨`;
+  } else {
+    msg = p.dept === 'wedding'
+      ? `Hola ${firstName}! 💍\n\nEstamos muy emocionados de acompañarlos en este día tan especial.\n\nAquí el resumen de su pago pendiente:\n\n${p.desc || ''}${montoStr ? '\n\n💰 Total: *' + montoStr + '*' : ''}\n\nPueden realizar el pago con cualquiera de los métodos disponibles aquí:\n${pdfLink}\n\nCon todo el cariño,\n— Two Lovers ✨`
+      : `Hola ${firstName}! 🌟\n\nEsperamos que estés muy emocionado/a para tu próxima experiencia con Two Travel.\n\nAquí el resumen de tu pago pendiente:\n\n${p.desc || ''}${montoStr ? '\n\n💰 Total: *' + montoStr + '*' : ''}\n\nPuedes realizar el pago con cualquiera de los métodos disponibles aquí:\n${pdfLink}\n\nCualquier pregunta, con gusto te ayudamos. ¡Hasta pronto!\n— Two Travel ✨`;
+  }
+
+  showToast('Enviando...');
+  try {
+    const r = await fetch('/api/whatsapp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: p.phone, message: msg, type: isReminder ? 'reminder' : 'cobro' }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      p.cobroAt = new Date().toISOString();
+      save();
+      render();
+      showToast(`✅ ${isReminder ? 'Recordatorio' : 'Cobro'} enviado a ${p.client}`);
+    } else {
+      showToast('❌ Error: ' + (d.error || 'No se pudo enviar'));
+    }
+  } catch(err) {
+    showToast('❌ Error de red: ' + err.message);
+  }
 }
 
 /* ── TOAST ── */
