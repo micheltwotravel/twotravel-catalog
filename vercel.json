@@ -5,7 +5,8 @@
   "redirects": [
     { "source": "/b/:id", "destination": "/?mode=breakfast&kickoffId=:id", "permanent": false },
     { "source": "/d/:id", "destination": "/?mode=drinks&kickoffId=:id",    "permanent": false },
-    { "source": "/g/:id", "destination": "/?mode=groceries&kickoffId=:id", "permanent": false }
+    { "source": "/g/:id",  "destination": "/?mode=groceries&kickoffId=:id", "permanent": false },
+    { "source": "/ci/:id", "destination": "/?mode=checkin&kickoffId=:id",  "permanent": false }
   ],
   "rewrites": [
     { "source": "/((?!api/)(?!.*\\.html$).*)", "destination": "/index.html" }

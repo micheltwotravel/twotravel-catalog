@@ -3139,29 +3139,32 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               />
             </div>
 
-            <div className="col-span-2">
-              <label className="text-[11px] text-neutral-500">Link Check-in Form</label>
-              <input
-                type="url"
-                value={checkInFormUrl}
-                onChange={(e) => setCheckInFormUrl(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="https://... (link de Hotspot por grupo)"
-              />
-              {checkInFormUrl && (
-                <div className="flex items-center gap-3 mt-1">
-                  <a href={checkInFormUrl} target="_blank" rel="noreferrer"
-                    className="text-[10px] text-blue-600 underline">
-                    Abrir →
-                  </a>
-                  <a href={`https://wa.me/?text=${encodeURIComponent(`Hola! 👋 Para preparar todos los detalles de tu estadía, por favor completa este formulario de check-in:\n\n${checkInFormUrl}\n\nCompartelo con todo tu grupo antes de llegar. Nos ayuda a tener todo listo para ustedes 🙌`)}`}
-                    target="_blank" rel="noreferrer"
-                    className="text-[10px] text-green-700 bg-green-50 border border-green-300 rounded px-2 py-0.5 hover:bg-green-100 flex items-center gap-1">
-                    WhatsApp cliente
-                  </a>
+            {kickoff?.id && (() => {
+              const ciLink = `https://twotravelvip.com/ci/${kickoff.id}`;
+              const waMsg  = `Hola! 👋 Para preparar todos los detalles de tu estadía, por favor completa este formulario de check-in:\n\n${ciLink}\n\nCompartelo con todo tu grupo antes de llegar. Nos ayuda a tener todo listo para ustedes 🙌`;
+              return (
+                <div className="col-span-2 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
+                  <p className="text-[11px] font-semibold text-indigo-700 mb-2">📋 Check-in Form</p>
+                  <p className="text-[10px] text-indigo-500 font-mono break-all mb-2">{ciLink}</p>
+                  <div className="flex gap-2">
+                    <a href={ciLink} target="_blank" rel="noreferrer"
+                      className="text-[11px] text-indigo-700 border border-indigo-300 bg-white rounded-lg px-3 py-1.5 hover:bg-indigo-100">
+                      Abrir →
+                    </a>
+                    <button type="button"
+                      onClick={() => { navigator.clipboard.writeText(ciLink); }}
+                      className="text-[11px] text-indigo-700 border border-indigo-300 bg-white rounded-lg px-3 py-1.5 hover:bg-indigo-100">
+                      Copiar link
+                    </button>
+                    <a href={`https://wa.me/?text=${encodeURIComponent(waMsg)}`}
+                      target="_blank" rel="noreferrer"
+                      className="text-[11px] text-green-700 border border-green-300 bg-green-50 rounded-lg px-3 py-1.5 hover:bg-green-100">
+                      WhatsApp cliente
+                    </a>
+                  </div>
                 </div>
-              )}
-            </div>
+              );
+            })()}
 
             {/* ── FECHAS DE ESTADÍA (editables por el concierge) ── */}
             <div className="col-span-2 border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">

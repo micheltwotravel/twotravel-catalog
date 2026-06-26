@@ -3802,6 +3802,227 @@ const BREAKFAST_MENUS = [
   },
 ];
 
+function CheckinForm() {
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+  const params    = new URLSearchParams(window.location.search);
+  const kickoffId = params.get("kickoffId") || "";
+  const [lang, setLang] = React.useState(params.get("lang") === "es" ? "es" : "en");
+  const en = lang === "en";
+
+  const [kickoff,  setKickoff]  = React.useState(null);
+  const [loading,  setLoading]  = React.useState(!!kickoffId);
+  const [sending,  setSending]  = React.useState(false);
+  const [done,     setDone]     = React.useState(false);
+  const [error,    setError]    = React.useState("");
+
+  const empty = () => ({
+    fullName: "", passport: "", passportExpiry: "", nationality: "",
+    dietary: "", arrivalFlight: "", arrivalDate: "", arrivalTime: "",
+    departureFlight: "", departureDate: "", departureTime: "", whatsapp: "",
+  });
+  const [form, setForm] = React.useState(empty());
+
+  React.useEffect(() => {
+    if (!kickoffId) { setLoading(false); return; }
+    fetch(GAS_URL, {
+      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "getKickoffById", id: kickoffId }),
+    }).then(r => r.json()).then(res => {
+      if (res.data) setKickoff(res.data);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [kickoffId]);
+
+  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const submit = async () => {
+    if (!form.fullName.trim()) { setError(en ? "Full name is required." : "El nombre completo es requerido."); return; }
+    setSending(true); setError("");
+    try {
+      const res = await fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "saveCheckinResponse", kickoffId, response: { ...form, submittedAt: new Date().toISOString() } }),
+      });
+      const data = await res.json();
+      if (data.ok) { setDone(true); }
+      else setError(en ? "Something went wrong. Try again." : "Algo salió mal. Intenta de nuevo.");
+    } catch { setError(en ? "Connection error. Try again." : "Error de conexión. Intenta de nuevo."); }
+    finally { setSending(false); }
+  };
+
+  const tripLabel = (() => {
+    if (!kickoff) return "";
+    const city = String(kickoff.city || "").split(",")[0]?.trim();
+    const MAP = { CTG:"Cartagena", MDE:"Medellín", BOG:"Bogotá", CDMX:"Ciudad de México", TUL:"Tulum" };
+    const cityName = MAP[city?.toUpperCase()] || city;
+    const dates = kickoff.tripDates || "";
+    return [kickoff.guestName, cityName, dates].filter(Boolean).join(" · ");
+  })();
+
+  const inputCls = "w-full border border-neutral-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-neutral-400 bg-white";
+  const labelCls = "block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1";
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-stone-50">
+      <div className="text-sm text-neutral-400">{en ? "Loading…" : "Cargando…"}</div>
+    </div>
+  );
+
+  if (!kickoffId) return (
+    <div className="min-h-screen flex items-center justify-center bg-stone-50 px-6">
+      <div className="text-center">
+        <div className="text-3xl mb-3">✈️</div>
+        <p className="text-neutral-500 text-sm">{en ? "No trip found. Check your link." : "No se encontró el viaje. Revisa tu link."}</p>
+      </div>
+    </div>
+  );
+
+  if (done) return (
+    <div className="min-h-screen flex items-center justify-center bg-stone-50 px-6">
+      <div className="text-center max-w-sm">
+        <div className="text-5xl mb-4">🎉</div>
+        <h2 className="text-xl font-semibold text-neutral-800 mb-2">{en ? "All done!" : "¡Listo!"}</h2>
+        <p className="text-neutral-500 text-sm mb-6">
+          {en ? "Your info has been received. We'll have everything ready for your arrival." : "Tu información fue recibida. Tendremos todo listo para tu llegada."}
+        </p>
+        <button onClick={() => { setDone(false); setForm(empty()); }}
+          className="text-sm text-neutral-600 underline">
+          {en ? "Add another person" : "Agregar otra persona"}
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-stone-50 pb-16">
+      {/* Header */}
+      <div style={{ background: "linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%)" }} className="px-6 pt-10 pb-8">
+        <div className="max-w-lg mx-auto">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="text-white/50 text-[10px] uppercase tracking-widest mb-1">Two Travel</p>
+              <h1 className="text-white text-2xl font-bold">{en ? "Pre-Check-in" : "Pre-Check-in"}</h1>
+              {tripLabel && <p className="text-white/60 text-xs mt-1">{tripLabel}</p>}
+            </div>
+            <button onClick={() => setLang(en ? "es" : "en")}
+              className="text-white/60 text-xs border border-white/20 rounded-full px-3 py-1 hover:bg-white/10">
+              {en ? "ES" : "EN"}
+            </button>
+          </div>
+          <p className="text-white/70 text-sm leading-relaxed">
+            {en
+              ? "Please fill out this form individually. It helps us prepare your passport check-in, coordinate transport, and handle dietary needs."
+              : "Por favor completa este formulario de forma individual. Nos ayuda con el check-in, coordinar transporte y atender necesidades alimentarias."}
+          </p>
+        </div>
+      </div>
+
+      <div className="max-w-lg mx-auto px-5 mt-6 space-y-5">
+
+        {/* Personal */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
+          <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">
+            <span>🪪</span> {en ? "Personal Info" : "Información Personal"}
+          </h3>
+          <div className="space-y-3">
+            <div>
+              <label className={labelCls}>{en ? "Full name *" : "Nombre completo *"}</label>
+              <input value={form.fullName} onChange={set("fullName")} className={inputCls}
+                placeholder={en ? "As it appears on your passport" : "Como aparece en tu pasaporte"} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>{en ? "Passport #" : "N° Pasaporte"}</label>
+                <input value={form.passport} onChange={set("passport")} className={inputCls} placeholder="AB123456" />
+              </div>
+              <div>
+                <label className={labelCls}>{en ? "Expiry date" : "Vencimiento"}</label>
+                <input type="date" value={form.passportExpiry} onChange={set("passportExpiry")} className={inputCls} />
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>{en ? "Nationality" : "Nacionalidad"}</label>
+              <input value={form.nationality} onChange={set("nationality")} className={inputCls}
+                placeholder={en ? "e.g. American, Colombian…" : "ej. Colombiano, Americano…"} />
+            </div>
+            <div>
+              <label className={labelCls}>{en ? "WhatsApp number" : "WhatsApp"}</label>
+              <input type="tel" value={form.whatsapp} onChange={set("whatsapp")} className={inputCls}
+                placeholder="+57 300 000 0000" />
+            </div>
+          </div>
+        </div>
+
+        {/* Dietary */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
+          <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">
+            <span>🥗</span> {en ? "Dietary Needs & Allergies" : "Alimentación y Alergias"}
+          </h3>
+          <label className={labelCls}>{en ? "Any restrictions, allergies, or preferences?" : "¿Alguna restricción, alergia o preferencia?"}</label>
+          <textarea value={form.dietary} onChange={set("dietary")} rows={3} className={inputCls + " resize-none"}
+            placeholder={en ? "e.g. Gluten-free, nut allergy, vegan… or 'None'" : "ej. Sin gluten, alergia a mariscos, vegano… o 'Ninguna'"} />
+        </div>
+
+        {/* Arrival flight */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
+          <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">
+            <span>🛬</span> {en ? "Arrival Flight" : "Vuelo de Llegada"}
+          </h3>
+          <div className="space-y-3">
+            <div>
+              <label className={labelCls}>{en ? "Flight number" : "Número de vuelo"}</label>
+              <input value={form.arrivalFlight} onChange={set("arrivalFlight")} className={inputCls} placeholder="AV204" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>{en ? "Date" : "Fecha"}</label>
+                <input type="date" value={form.arrivalDate} onChange={set("arrivalDate")} className={inputCls}
+                  defaultValue={kickoff?.arrivalDate || ""} />
+              </div>
+              <div>
+                <label className={labelCls}>{en ? "Time" : "Hora"}</label>
+                <input type="time" value={form.arrivalTime} onChange={set("arrivalTime")} className={inputCls} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Departure flight */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
+          <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">
+            <span>🛫</span> {en ? "Departure Flight" : "Vuelo de Salida"}
+          </h3>
+          <div className="space-y-3">
+            <div>
+              <label className={labelCls}>{en ? "Flight number" : "Número de vuelo"}</label>
+              <input value={form.departureFlight} onChange={set("departureFlight")} className={inputCls} placeholder="AV205" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>{en ? "Date" : "Fecha"}</label>
+                <input type="date" value={form.departureDate} onChange={set("departureDate")} className={inputCls}
+                  defaultValue={kickoff?.departureDate || ""} />
+              </div>
+              <div>
+                <label className={labelCls}>{en ? "Time" : "Hora"}</label>
+                <input type="time" value={form.departureTime} onChange={set("departureTime")} className={inputCls} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+
+        <button onClick={submit} disabled={sending}
+          className="w-full py-4 rounded-2xl text-white font-semibold text-sm transition-all"
+          style={{ background: sending ? "#9ca3af" : "linear-gradient(135deg,#1a1a2e,#0f3460)" }}>
+          {sending ? (en ? "Sending…" : "Enviando…") : (en ? "Submit my info →" : "Enviar mi información →")}
+        </button>
+
+      </div>
+    </div>
+  );
+}
+
 function BreakfastCatalog() {
   const GAS_URL   = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
   const params      = new URLSearchParams(window.location.search);
@@ -4462,6 +4683,7 @@ function App() {
   if (mode === "drinks")             return <DrinksCatalog />;
   if (mode === "groceries")          return <GroceryCatalog />;
   if (mode === "breakfast")          return <BreakfastCatalog />;
+  if (mode === "checkin")            return <CheckinForm />;
   if (mode === "itinerary")          return <ItineraryPrintView />;
 
   return <FeedbackForm kickoffId={params.get("kickoffId") || ""} />;
