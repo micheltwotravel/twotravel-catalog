@@ -3140,7 +3140,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             </div>
 
             <div className="col-span-2">
-              <label className="text-[11px] text-neutral-500">Link Project Inform (pre-check-in)</label>
+              <label className="text-[11px] text-neutral-500">Link Check-in Form</label>
               <input
                 type="url"
                 value={checkInFormUrl}
