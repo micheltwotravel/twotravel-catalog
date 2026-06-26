@@ -118,14 +118,14 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 <div class="header">
   <a href="/" class="logo">Two Travel</a>
   <div class="hdiv"></div>
-  <span class="hls">Finanzas · Solicitudes de Pago</span>
+  <span class="hls">Finanzas · Cobro a Clientes</span>
   <div class="hright">
     <a href="/menu.html" class="back-btn">← Menú</a>
   </div>
 </div>
 
 <div class="toolbar">
-  <button class="tbtn primary" onclick="openNewModal()">+ Nueva solicitud</button>
+  <button class="tbtn primary" onclick="openNewModal()">+ Nuevo cobro</button>
   <div class="search-box">
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
     <input type="text" placeholder="Buscar..." oninput="searchQ=this.value;render()" id="search-input">
@@ -149,6 +149,8 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
     <option value="">Todos los depto.</option>
     <option value="concierge">Concierge</option>
     <option value="wedding">Bodas</option>
+    <option value="checkin">Check-in</option>
+    <option value="individual">Individual</option>
   </select>
   <button class="tbtn" onclick="exportCSV()">⬇ Excel</button>
   <span class="sync-info" id="sync-info">Cargando...</span>
@@ -163,7 +165,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 <div class="overlay" id="new-modal" style="display:none" onclick="if(event.target===this)closeNewModal()">
   <div class="modal">
     <div class="modal-head">
-      <span class="modal-title" id="modal-title-text">Nueva Solicitud de Pago</span>
+      <span class="modal-title" id="modal-title-text">Nuevo Cobro a Cliente</span>
       <button class="modal-close" onclick="closeNewModal()">×</button>
     </div>
     <div class="modal-body">
@@ -171,9 +173,11 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Departamento</label>
-          <select class="form-select" id="n-dept" onchange="updateCategoryOptions()">
+          <select class="form-select" id="n-dept" onchange="regenerateWaMsg()">
             <option value="concierge">Concierge</option>
             <option value="wedding">Bodas</option>
+            <option value="checkin">Check-in</option>
+            <option value="individual">Individual</option>
           </select>
         </div>
         <div class="form-group">
@@ -182,61 +186,45 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
         </div>
       </div>
 
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Cliente *</label>
+          <input class="form-input" id="n-client" placeholder="Ej. Jerome V., Ana & Luis" oninput="regenerateWaMsg()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monto *</label>
+          <div style="display:flex;gap:6px">
+            <select class="form-select" id="n-currency" style="width:90px;flex-shrink:0">
+              <option value="USD">USD $</option>
+              <option value="COP">COP $</option>
+              <option value="MXN">MXN $</option>
+            </select>
+            <input class="form-input" id="n-amount" type="number" placeholder="0.00" step="0.01" oninput="regenerateWaMsg()">
+          </div>
+        </div>
+      </div>
+
       <div class="form-row single">
         <div class="form-group">
-          <label class="form-label">Category / Product Service</label>
-          <select class="form-select" id="n-category" onchange="showCategoryHint()">
-            <option value="">Seleccionar...</option>
-          </select>
-          <span class="cat-hint" id="cat-hint"></span>
+          <label class="form-label">Descripción de servicios *</label>
+          <textarea class="form-textarea" id="n-desc" rows="3" placeholder="Ej. Chef Dinner + Boat + Spa 8 pax — pueden incluir varios servicios" oninput="regenerateWaMsg()"></textarea>
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Cliente / Trip</label>
-          <input class="form-input" id="n-client" placeholder="Ej. Jerome V., Boda Ana & Luis">
+          <label class="form-label">Categoría <span style="font-size:9px;color:var(--ink3)">(opcional)</span></label>
+          <input class="form-input" id="n-category" placeholder="Ej. Chef, Tour, Casa...">
         </div>
         <div class="form-group">
-          <label class="form-label">Proveedor</label>
+          <label class="form-label">Proveedor <span style="font-size:9px;color:var(--ink3)">(opcional)</span></label>
           <input class="form-input" id="n-vendor" placeholder="Ej. Dennis, Mar y Miel">
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Descripción del servicio</label>
-          <input class="form-input" id="n-desc" placeholder="Ej. Masajes spa 8 pax">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Monto</label>
-          <input class="form-input" id="n-amount" type="number" placeholder="0.00" step="0.01">
-        </div>
-      </div>
-
-      <div class="form-row triple">
-        <div class="form-group">
-          <label class="form-label">Moneda</label>
-          <select class="form-select" id="n-currency">
-            <option value="COP">COP $</option>
-            <option value="USD">USD $</option>
-            <option value="MXN">MXN $</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Método de pago</label>
-          <select class="form-select" id="n-method">
-            <option value="">—</option>
-            <option value="Transferencia">Transferencia</option>
-            <option value="Efectivo">Efectivo</option>
-            <option value="Tarjeta">Tarjeta</option>
-            <option value="Nequi">Nequi</option>
-            <option value="Daviplata">Daviplata</option>
-            <option value="Otro">Otro</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Solicitado por</label>
+          <label class="form-label">Gestionado por</label>
           <select class="form-select" id="n-person">
             <option value="">—</option>
             <option value="Alia">Alia</option>
@@ -246,26 +234,39 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
             <option value="Xilene">Xilene</option>
           </select>
         </div>
-      </div>
-
-      <div class="form-row single">
         <div class="form-group">
-          <label class="form-label">Link Factura / Pre-bill</label>
-          <input class="form-input" id="n-factura" placeholder="URL de Drive, Dropbox, o pega link de factura...">
+          <label class="form-label">Link Factura <span style="font-size:9px;color:var(--ink3)">(opcional)</span></label>
+          <input class="form-input" id="n-factura" placeholder="URL Drive, Dropbox...">
         </div>
       </div>
 
       <div class="form-row single">
         <div class="form-group">
-          <label class="form-label">Notas</label>
-          <textarea class="form-textarea" id="n-notes" placeholder="Notas adicionales, datos de pago, cuenta bancaria..."></textarea>
+          <label class="form-label">Mensaje al cliente <span style="font-size:9px;color:var(--ink3)">(para WhatsApp)</span></label>
+          <textarea class="form-textarea" id="n-wamsg" rows="6" style="font-size:11px;line-height:1.6"></textarea>
+          <div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap">
+            <button type="button" class="tbtn" style="font-size:10px;padding:4px 10px" onclick="regenerateWaMsg()">↺ Regenerar mensaje</button>
+            <a id="wa-preview-btn" href="#" target="_blank" rel="noreferrer"
+              class="tbtn" style="font-size:10px;padding:4px 10px;background:#25d366;color:#fff;border-color:#25d366;text-decoration:none"
+              onclick="updateWaLink(this)">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="display:inline;vertical-align:middle;margin-right:3px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.523 5.845L0 24l6.335-1.493A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.368l-.36-.214-3.726.878.936-3.617-.235-.374A9.818 9.818 0 1112 21.818z"/></svg>
+              Enviar por WhatsApp
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row single">
+        <div class="form-group">
+          <label class="form-label">Notas internas <span style="font-size:9px;color:var(--ink3)">(no se envían al cliente)</span></label>
+          <textarea class="form-textarea" id="n-notes" placeholder="Notas del equipo, datos de pago recibido..."></textarea>
         </div>
       </div>
 
     </div>
     <div class="modal-foot">
       <button class="tbtn" onclick="closeNewModal()">Cancelar</button>
-      <button class="tbtn primary" onclick="createPago()">Crear solicitud</button>
+      <button class="tbtn primary" onclick="createPago()">Guardar cobro</button>
     </div>
   </div>
 </div>
@@ -288,62 +289,69 @@ const MEMBERS = {
   Xilene: {bg:'#5a3d8a',i:'XI'},
 };
 
-const CATEGORIES = {
-  concierge: [
-    {group:'Casas y Botes', items:[
-      {v:'casa-nombre', l:'[Nombre de la casa/bote]', hint:'Usa el nombre exacto de la propiedad o embarcación'},
-    ]},
-    {group:'Chef', items:[
-      {v:'Service: O-Chef', l:'Service: O-Chef', hint:'Para México, Medellín, o Cartagena sin Mar y Miel'},
-      {v:'Cartagena: Chef Services: Chef Dinner', l:'Chef Services: Chef Dinner (Cartagena)'},
-      {v:'Cartagena: Chef Services: Boat Lunch Box', l:'Chef Services: Boat Lunch Box (Cartagena)'},
-      {v:'Cartagena: Chef Services: Chef On Board', l:'Chef Services: Chef On Board (Cartagena)'},
-      {v:'Cartagena: Chef Services: Brunch', l:'Chef Services: Brunch (Cartagena)'},
-      {v:'Cartagena: Chef Services: Chef at the villa', l:'Chef Services: Chef at the villa (Cartagena)'},
-    ]},
-    {group:'Tours y Actividades', items:[
-      {v:'Tour: Medellín tours and activities', l:'Tour: Medellín tours and activities', hint:'Ej. Comuna 13 Tour'},
-      {v:'Tour: Cartagena tours and activities', l:'Tour: Cartagena tours and activities', hint:'Ej. Cigar Rolling Tasting'},
-      {v:'Tour: Mexican tours and activities', l:'Tour: Mexican tours and activities', hint:'Ej. Taco Tour'},
-    ]},
-    {group:'Depósitos', items:[
-      {v:'Service: Deposits (Restaurants, Bars & Venues)', l:'Deposits (Restaurants, Bars & Venues)', hint:'⚠️ Recordar: depósitos ahora los pagan clientes directo al proveedor'},
-    ]},
-    {group:'Rentals', items:[
-      {v:'Service: Rentals', l:'Service: Rentals', hint:'Ej. snorkels, equipos de alquiler'},
-    ]},
-  ],
-  wedding: [
-    {group:'Gastos Operación', items:[
-      {v:'Business Expenses: Wedding Expenses', l:'Business Expenses: Wedding Expenses', hint:'Costos de operación que NO se cobran al cliente'},
-    ]},
-    {group:'Servicios de Boda', items:[
-      {v:'Wedding Cake', l:'Wedding Cake', hint:'Pudín, mesa de postres y similares'},
-      {v:'Wedding: Ceremony Officiant', l:'Wedding: Ceremony Officiant'},
-      {v:'Wedding: Church', l:'Wedding: Church'},
-      {v:'Wedding: Open Bar', l:'Wedding: Open Bar'},
-      {v:'Wedding: Production', l:'Wedding: Production', hint:'Hora loca, violinistas, mago, shows'},
-      {v:'Wedding: Wedding Bodyguard', l:'Wedding: Wedding Bodyguard'},
-      {v:'Wedding: Wedding Catering', l:'Wedding: Wedding Catering', hint:'Servicio Mar y Miel'},
-      {v:'Wedding: Wedding Chiva', l:'Wedding: Wedding Chiva'},
-      {v:'Wedding: Wedding Concierge', l:'Wedding: Wedding Concierge'},
-      {v:'Wedding: Wedding Decoration', l:'Wedding: Wedding Decoration'},
-      {v:'Wedding: Wedding DJ', l:'Wedding: Wedding DJ'},
-      {v:'Wedding: Wedding Hair & Makeup', l:'Wedding: Wedding Hair & Makeup'},
-      {v:'Wedding: Wedding Menu Tasting', l:'Wedding: Wedding Menu Tasting'},
-      {v:'Wedding: Wedding Photographer', l:'Wedding: Wedding Photographer'},
-      {v:'Wedding: Wedding Staff', l:'Wedding: Wedding Staff'},
-      {v:'Wedding: Wedding Transport', l:'Wedding: Wedding Transport'},
-      {v:'Wedding: Wedding Venue', l:'Wedding: Wedding Venue'},
-      {v:'Wedding: Other Services', l:'Wedding: Other Services', hint:'Niñeras, papelería, impresiones, trámites…'},
-    ]},
-  ],
+const DEPT_LABELS = {
+  concierge: {label:'CONCIERGE', bg:'#e6f0f5', color:'#3d5a8a'},
+  wedding:   {label:'BODAS',     bg:'#f5e6f0', color:'#8a3d5a'},
+  checkin:   {label:'CHECK-IN',  bg:'#e6f5ec', color:'#3d8a5a'},
+  individual:{label:'INDIVIDUAL',bg:'#f5f0e6', color:'#8a6d3d'},
 };
 
-const CAT_HINTS = {};
-Object.values(CATEGORIES).forEach(groups => {
-  groups.forEach(g => g.items.forEach(i => { if(i.hint) CAT_HINTS[i.v] = i.hint; }));
-});
+const BASE_URL = 'https://www.twotravelvip.com';
+const PDF_GENERAL  = BASE_URL + '/payment-options.pdf';
+const PDF_WEDDINGS = BASE_URL + '/payment-options-weddings.pdf';
+
+function buildWaMsg() {
+  const dept    = document.getElementById('n-dept').value;
+  const client  = (document.getElementById('n-client').value || '').trim();
+  const amount  = document.getElementById('n-amount').value;
+  const currency= document.getElementById('n-currency').value;
+  const desc    = (document.getElementById('n-desc').value || '').trim();
+  const firstName = client.split(/[\s,&]/)[0] || 'cliente';
+  const montoStr  = amount ? `${currency} $${parseFloat(amount).toLocaleString('es', {minimumFractionDigits:2, maximumFractionDigits:2})}` : '';
+  const pdfLink   = dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
+
+  if (dept === 'wedding') {
+    return [
+      `Hola ${firstName}! 💍`,
+      '',
+      `Estamos muy emocionados de acompañarlos en este día tan especial.`,
+      '',
+      desc ? `Aquí el resumen de su pago pendiente:\n\n${desc}` : 'Aquí el resumen de su pago pendiente:',
+      montoStr ? `\n💰 Total: *${montoStr}*` : '',
+      '',
+      `Para completar su reserva, pueden realizar el pago con cualquiera de los métodos disponibles aquí:`,
+      pdfLink,
+      '',
+      `Con todo el cariño,`,
+      `— Two Lovers ✨`,
+    ].filter(l => l !== undefined).join('\n');
+  } else {
+    return [
+      `Hola ${firstName}! 🌟`,
+      '',
+      `Esperamos que estés muy emocionado/a para tu próxima experiencia con Two Travel.`,
+      '',
+      desc ? `Aquí el resumen de tu pago pendiente:\n\n${desc}` : 'Aquí el resumen de tu pago pendiente:',
+      montoStr ? `\n💰 Total: *${montoStr}*` : '',
+      '',
+      `Para completar tu reserva, puedes realizar el pago con cualquiera de los métodos disponibles aquí:`,
+      pdfLink,
+      '',
+      `Cualquier pregunta, con gusto te ayudamos. ¡Hasta pronto!`,
+      `— Two Travel ✨`,
+    ].filter(l => l !== undefined).join('\n');
+  }
+}
+
+function regenerateWaMsg() {
+  document.getElementById('n-wamsg').value = buildWaMsg();
+}
+
+function updateWaLink(el) {
+  const msg = document.getElementById('n-wamsg').value || buildWaMsg();
+  el.href = 'https://wa.me/?text=' + encodeURIComponent(msg);
+}
+
 
 let pagos = [];
 let searchQ = '';
@@ -353,28 +361,6 @@ let filterDept = '';
 let activePopup = null;
 let editingId = null;
 
-/* ── CATEGORY DROPDOWN ── */
-function updateCategoryOptions(){
-  const dept = document.getElementById('n-dept').value;
-  const sel = document.getElementById('n-category');
-  sel.innerHTML = '<option value="">Seleccionar...</option>';
-  (CATEGORIES[dept] || []).forEach(group => {
-    const og = document.createElement('optgroup');
-    og.label = group.group;
-    group.items.forEach(item => {
-      const o = document.createElement('option');
-      o.value = item.v;
-      o.textContent = item.l;
-      og.appendChild(o);
-    });
-    sel.appendChild(og);
-  });
-  document.getElementById('cat-hint').textContent = '';
-}
-function showCategoryHint(){
-  const v = document.getElementById('n-category').value;
-  document.getElementById('cat-hint').textContent = CAT_HINTS[v] || '';
-}
 
 /* ── STORAGE ── */
 function save(){
@@ -453,15 +439,14 @@ function render(){
     <thead><tr>
       <th>Fecha</th>
       <th>Depto.</th>
-      <th>Category / Product Service</th>
+      <th>Categoría</th>
       <th>Cliente</th>
-      <th>Proveedor</th>
       <th>Descripción</th>
       <th>Monto</th>
-      <th>Método</th>
-      <th>Solicitado por</th>
+      <th>Gestionado por</th>
       <th>Comprobante</th>
       <th>Factura</th>
+      <th>WApp</th>
       <th>Estado</th>
       <th>Notas</th>
     </tr></thead>
@@ -489,9 +474,8 @@ function renderRow(p){
     ? `<span class="person-chip" style="background:${m.bg}" title="${p.person}">${m.i}</span>`
     : `<span style="color:var(--ink3);font-size:11px">—</span>`;
 
-  const deptBadge = p.dept === 'wedding'
-    ? `<span style="font-size:10px;background:#f0e6f5;color:#7a3d8a;padding:2px 7px;letter-spacing:.04em">BODAS</span>`
-    : `<span style="font-size:10px;background:#e6f0f5;color:#3d5a8a;padding:2px 7px;letter-spacing:.04em">CONCIERGE</span>`;
+  const _d = DEPT_LABELS[p.dept] || DEPT_LABELS.concierge;
+  const deptBadge = `<span style="font-size:10px;background:${_d.bg};color:${_d.color};padding:2px 7px;letter-spacing:.04em">${_d.label}</span>`;
 
   const amountFmt = p.amount
     ? `${p.currency || 'COP'} ${parseFloat(p.amount).toLocaleString('es')}`
@@ -505,23 +489,37 @@ function renderRow(p){
     ? `<a href="${esc(p.factura)}" target="_blank" style="font-size:10px;color:var(--gold);text-decoration:none;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;display:block" title="${esc(p.factura)}">🔗 Ver</a>`
     : `<span style="color:var(--border2);font-size:11px">—</span>`;
 
-  // Category display — shorten if too long
-  const catDisplay = (p.category||'').replace(/^(Service:|Tour:|Wedding:|Business Expenses:|Cartagena: Chef Services:)\s*/,'');
+  const pdfLink = p.dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
+  const waMsg = [
+    p.dept === 'wedding'
+      ? `Hola ${(p.client||'').split(/[\s,&]/)[0]}! 💍\n\nEstamos muy emocionados de acompañarlos en este día tan especial.\n\nAquí el resumen de su pago pendiente:\n\n${p.desc||''}`
+      : `Hola ${(p.client||'').split(/[\s,&]/)[0]}! 🌟\n\nEsperamos que estés muy emocionado/a para tu próxima experiencia con Two Travel.\n\nAquí el resumen de tu pago pendiente:\n\n${p.desc||''}`,
+    p.amount ? `\n💰 Total: *${p.currency} $${parseFloat(p.amount).toLocaleString('es',{minimumFractionDigits:2})}*` : '',
+    '\n',
+    p.dept === 'wedding'
+      ? `Pueden realizar el pago con cualquiera de los métodos disponibles aquí:\n${pdfLink}\n\nCon todo el cariño,\n— Two Lovers ✨`
+      : `Puedes realizar el pago con cualquiera de los métodos disponibles aquí:\n${pdfLink}\n\nCualquier pregunta, con gusto te ayudamos. ¡Hasta pronto!\n— Two Travel ✨`,
+  ].join('\n');
+  const waHref = 'https://wa.me/?text=' + encodeURIComponent(waMsg);
 
   return `<tr data-id="${p.id}">
     <td><div class="cell editable" ondblclick="editField('${p.id}','date')">${fmtDate(p.date)}</div></td>
     <td><div class="cell" style="justify-content:center">${deptBadge}</div></td>
-    <td><div class="cell" style="font-size:11px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(p.category||'')}">${esc(catDisplay||p.category||'—')}</div></td>
+    <td><div class="cell" style="font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(p.category||'')}">${esc(p.category||'—')}</div></td>
     <td><div class="cell editable" ondblclick="editField('${p.id}','client')">${esc(p.client||'')}</div></td>
-    <td><div class="cell editable" ondblclick="editField('${p.id}','vendor')">${esc(p.vendor||'')}</div></td>
-    <td><div class="cell editable" ondblclick="editField('${p.id}','desc')" style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.desc||'')}</div></td>
+    <td><div class="cell editable" ondblclick="editField('${p.id}','desc')" style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.desc||'')}</div></td>
     <td><div class="cell amount-cell">${amountFmt}</div></td>
-    <td><div class="cell" style="font-size:11px;color:var(--ink3)">${esc(p.method||'—')}</div></td>
     <td><div class="person-wrap">${avatar}<span style="font-size:11px;color:var(--ink3)">${p.person||'—'}</span></div></td>
     <td><div class="cell" style="justify-content:center">${receipt}</div></td>
     <td><div class="cell" style="justify-content:center">${factura}</div></td>
+    <td><div class="cell" style="justify-content:center">
+      <a href="${waHref}" target="_blank" rel="noreferrer" title="Enviar cobro por WhatsApp"
+        style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#25d366;color:#fff;text-decoration:none">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.523 5.845L0 24l6.335-1.493A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.368l-.36-.214-3.726.878.936-3.617-.235-.374A9.818 9.818 0 1112 21.818z"/></svg>
+      </a>
+    </div></td>
     <td class="status-wrap"><span class="status-chip" style="background:${st.color}" onclick="openStatusPopup('${p.id}',event)">${st.label}</span></td>
-    <td><div class="cell editable" ondblclick="editField('${p.id}','notes')" style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink3)">${esc(p.notes||'')}</div></td>
+    <td><div class="cell editable" ondblclick="editField('${p.id}','notes')" style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink3)">${esc(p.notes||'')}</div></td>
   </tr>`;
 }
 
@@ -532,7 +530,7 @@ function editField(id, field){
   const p = pagos.find(x=>x.id===id);
   if(!p) return;
   const el = document.querySelector(`tr[data-id="${id}"] td:nth-child(${
-    {date:1,client:4,vendor:5,desc:6,notes:13}[field]
+    {date:1,client:4,desc:5,notes:12}[field]
   }) .cell`);
   if(!el) return;
   const cur = p[field] || '';
@@ -623,49 +621,47 @@ function openLightbox(id){
 /* ── NEW PAGO MODAL ── */
 function openNewModal(){
   editingId = null;
-  document.getElementById('modal-title-text').textContent = 'Nueva Solicitud de Pago';
+  document.getElementById('modal-title-text').textContent = 'Nuevo Cobro a Cliente';
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('n-date').value = today;
   document.getElementById('n-dept').value = 'concierge';
-  updateCategoryOptions();
-  document.getElementById('n-category').value = '';
   document.getElementById('n-client').value = '';
   document.getElementById('n-vendor').value = '';
+  document.getElementById('n-category').value = '';
   document.getElementById('n-desc').value = '';
   document.getElementById('n-amount').value = '';
-  document.getElementById('n-currency').value = 'COP';
-  document.getElementById('n-method').value = '';
+  document.getElementById('n-currency').value = 'USD';
   document.getElementById('n-person').value = '';
   document.getElementById('n-factura').value = '';
   document.getElementById('n-notes').value = '';
-  document.getElementById('cat-hint').textContent = '';
+  document.getElementById('n-wamsg').value = '';
   document.getElementById('new-modal').style.display = 'flex';
-  setTimeout(()=>document.getElementById('n-client').focus(), 50);
+  setTimeout(()=>{ document.getElementById('n-client').focus(); }, 50);
+  setTimeout(()=>{ document.getElementById('n-wamsg').value = buildWaMsg(); }, 100);
 }
 function closeNewModal(){
   document.getElementById('new-modal').style.display = 'none';
   editingId = null;
 }
 function createPago(){
-  const category = document.getElementById('n-category').value;
-  const client   = document.getElementById('n-client').value.trim();
-  if(!category){ showToast('Selecciona una categoría'); return; }
-  if(!client){ showToast('Ingresa el cliente o trip'); return; }
-
-  // If "casa-nombre" placeholder, require them to fill actual name
-  const finalCategory = category === 'casa-nombre' ? (client || category) : category;
+  const client = document.getElementById('n-client').value.trim();
+  const desc   = document.getElementById('n-desc').value.trim();
+  const amount = document.getElementById('n-amount').value;
+  if(!client){ showToast('Ingresa el nombre del cliente'); return; }
+  if(!desc)  { showToast('Agrega una descripción de servicios'); return; }
+  if(!amount){ showToast('Ingresa el monto'); return; }
 
   const p = {
     id:         'pg' + Date.now(),
     dept:       document.getElementById('n-dept').value,
     date:       document.getElementById('n-date').value,
-    category:   finalCategory,
+    category:   document.getElementById('n-category').value.trim(),
     client:     client,
     vendor:     document.getElementById('n-vendor').value.trim(),
-    desc:       document.getElementById('n-desc').value.trim(),
-    amount:     document.getElementById('n-amount').value,
+    desc:       desc,
+    amount:     amount,
     currency:   document.getElementById('n-currency').value,
-    method:     document.getElementById('n-method').value,
+    method:     '',
     person:     document.getElementById('n-person').value,
     factura:    document.getElementById('n-factura').value.trim(),
     notes:      document.getElementById('n-notes').value.trim(),
@@ -728,17 +724,15 @@ function notifyStatusChange(p){
 
 /* ── EXPORT CSV ── */
 function exportCSV(){
-  const headers = ['Fecha','Depto.','Categoría','Cliente','Proveedor','Descripción','Monto','Moneda','Método','Solicitado por','Factura','Estado','Notas','Creado'];
+  const headers = ['Fecha','Depto.','Categoría','Cliente','Descripción','Monto','Moneda','Gestionado por','Factura','Estado','Notas','Creado'];
   const rows = pagos.map(p => [
     p.date||'',
     p.dept||'',
     p.category||'',
     p.client||'',
-    p.vendor||'',
     p.desc||'',
     p.amount||'',
     p.currency||'',
-    p.method||'',
     p.person||'',
     p.factura||'',
     (STATUSES[p.status]||STATUSES.pend).label,
@@ -758,7 +752,6 @@ function exportCSV(){
 }
 
 /* ── INIT ── */
-updateCategoryOptions();
 load();
 render();
 setSyncInfo('Cargando...');
