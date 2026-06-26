@@ -3596,7 +3596,7 @@ function GroceryCatalog() {
     try {
       await fetch(GAS_URL, {
         method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"sendSlackMessage", payload:{ text:slackText, channelId:"C0BB4EPSAP4", slackToken:import.meta.env.VITE_SLACK_BOT_TOKEN||"" }}),
+        body: JSON.stringify({ action:"sendSlackMessage", payload:{ text:slackText, channelId:import.meta.env.VITE_SLACK_CHANNEL_ID||"C0BB4EPSAP4", slackToken:import.meta.env.VITE_SLACK_BOT_TOKEN||"" }}),
       });
       if (kickoffId) {
         updateKickoffInSheet(kickoffId, { groceryOrder, groceryOrderAt: now, groceryOrderJson }).catch(()=>{});
@@ -3875,9 +3875,11 @@ function BreakfastCatalog() {
       .then(res => {
         const k = res.data;
         if (!k) return;
+        // nights from dates always wins — computed first, used to clamp saved orders
+        let dateNights = 0;
         if (!urlNights && k.arrivalDate && k.departureDate) {
-          const n = Math.round((new Date(k.departureDate) - new Date(k.arrivalDate)) / 86400000);
-          if (n > 0) setStayNights(n);
+          dateNights = Math.round((new Date(k.departureDate) - new Date(k.arrivalDate)) / 86400000);
+          if (dateNights > 0) setStayNights(dateNights);
         }
         if (!gsParam) {
           const gs = parseInt(k.groupSize) || 0;
@@ -3898,9 +3900,15 @@ function BreakfastCatalog() {
           try {
             const saved = JSON.parse(k.breakfastOrderJson);
             if (saved.dayOrders?.length) {
-              const nights = saved.stayNights || saved.dayOrders.length;
+              // dates take priority; only fall back to saved nights if no dates
+              const nights = dateNights > 0 ? dateNights : (saved.stayNights || saved.dayOrders.length);
               setStayNights(nights);
-              setDayOrders(saved.dayOrders.map(migrateDay));
+              const orders = saved.dayOrders.map(migrateDay);
+              // pad or trim saved orders to match actual nights
+              const adjusted = nights > orders.length
+                ? [...orders, ...Array.from({ length: nights - orders.length }, EMPTY_DAY)]
+                : orders.slice(0, nights);
+              setDayOrders(adjusted);
             }
             if (saved.notes) setNotes(saved.notes);
             if (saved.tier && BREAKFAST_TIERS.includes(saved.tier)) setTier(saved.tier);
@@ -4027,7 +4035,7 @@ function BreakfastCatalog() {
     const now = new Date().toISOString();
     try {
       await fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"sendSlackMessage", payload:{ text, channelId:"C0BB4EPSAP4", slackToken:import.meta.env.VITE_SLACK_BOT_TOKEN||"" }}),
+        body: JSON.stringify({ action:"sendSlackMessage", payload:{ text, channelId:import.meta.env.VITE_SLACK_CHANNEL_ID||"C0BB4EPSAP4", slackToken:import.meta.env.VITE_SLACK_BOT_TOKEN||"" }}),
       });
       if (kickoffId) {
         updateKickoffInSheet(kickoffId, {
