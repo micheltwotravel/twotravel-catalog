@@ -707,7 +707,7 @@ function notifyNewPago(p){
     factura: p.factura,
     notes: p.notes,
   };
-  fetch(GAS_URL, {method:'POST', body:JSON.stringify(body)}).catch(()=>{});
+  fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body)}).catch(()=>{});
 }
 
 function notifyStatusChange(p){
@@ -721,7 +721,7 @@ function notifyStatusChange(p){
     currency: p.currency,
     person: p.person,
   };
-  fetch(GAS_URL, {method:'POST', body:JSON.stringify(body)}).catch(()=>{});
+  fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body)}).catch(()=>{});
 }
 
 /* ── EXPORT CSV ── */
