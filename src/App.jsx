@@ -3853,11 +3853,12 @@ function BreakfastCatalog() {
   const [dayOrders,   setDayOrders]   = React.useState(() =>
     Array.from({ length: urlNights || 1 }, EMPTY_DAY)
   );
-  const [notes,       setNotes]       = React.useState("");
-  const [sent,        setSent]        = React.useState(false);
-  const [sending,     setSending]     = React.useState(false);
-  const [fxRate,      setFxRate]      = React.useState(4000);
-  const [arrivalDate, setArrivalDate] = React.useState(params.get("arrivalDate") || "");
+  const [notes,           setNotes]           = React.useState("");
+  const [sent,            setSent]            = React.useState(false);
+  const [sending,         setSending]         = React.useState(false);
+  const [fxRate,          setFxRate]          = React.useState(4000);
+  const [arrivalDate,     setArrivalDate]     = React.useState(params.get("arrivalDate") || "");
+  const [checkInFormUrl,  setCheckInFormUrl]  = React.useState("");
   const autosaveRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -3898,6 +3899,7 @@ function BreakfastCatalog() {
         }
         if (!params.get("guestName") && k.guestName) setGuestName(k.guestName);
         if (!params.get("arrivalDate") && k.arrivalDate) setArrivalDate(k.arrivalDate);
+        if (k.checkInFormUrl) setCheckInFormUrl(k.checkInFormUrl);
         if (k.breakfastOrderJson) {
           try {
             const saved = JSON.parse(k.breakfastOrderJson);
@@ -4351,7 +4353,7 @@ function BreakfastCatalog() {
           {en
             ? "Dietary restrictions or allergies? Please include them in your check-in form — your concierge will have that information ready."
             : "¿Restricciones alimentarias o alergias? Inclúyelas en tu formulario de check-in — tu concierge ya tendrá esa información."}
-          {kickoffId && <>{" "}<a href={`/?mode=questionnaire&kickoffId=${kickoffId}`} target="_blank" rel="noreferrer" style={{color:"#9a7d52",textDecoration:"underline"}}>{en ? "Open check-in form →" : "Abrir formulario →"}</a></>}
+          {checkInFormUrl && <>{" "}<a href={checkInFormUrl} target="_blank" rel="noreferrer" style={{color:"#9a7d52",textDecoration:"underline"}}>{en ? "Open check-in form →" : "Abrir formulario →"}</a></>}
         </p>
         <textarea value={notes} onChange={e => { setNotes(e.target.value); doAutosave(dayOrders, e.target.value); }} rows={2}
           placeholder={en ? "Any specific requests for your breakfast order…" : "Peticiones específicas para tu pedido de desayuno…"}

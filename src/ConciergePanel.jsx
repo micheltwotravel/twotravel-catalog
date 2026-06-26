@@ -2816,6 +2816,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [guestName, setGuestName] = useState(kickoff?.guestName || "");
   const [tripName, setTripName] = useState(kickoff?.tripName || "");
   const [guestContact, setGuestContact] = useState(kickoff?.guestContact || "");
+  const [checkInFormUrl, setCheckInFormUrl] = useState(kickoff?.checkInFormUrl || "");
   // Multi-concierge: stored as comma-separated names; edit as array of names
   const parseMultiConcierge = (raw) => {
     if (!raw) return [];
@@ -3066,6 +3067,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   };
 
   updates.guestContact = guestContact.trim();
+  updates.checkInFormUrl = checkInFormUrl.trim();
   const em = guestEmailState.trim();
   updates.email = em;
   updates.guestEmail = em;
@@ -3135,6 +3137,23 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                 placeholder="cliente@email.com"
               />
+            </div>
+
+            <div className="col-span-2">
+              <label className="text-[11px] text-neutral-500">Link Project Inform (pre-check-in)</label>
+              <input
+                type="url"
+                value={checkInFormUrl}
+                onChange={(e) => setCheckInFormUrl(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                placeholder="https://... (link de Hotspot por grupo)"
+              />
+              {checkInFormUrl && (
+                <a href={checkInFormUrl} target="_blank" rel="noreferrer"
+                  className="text-[10px] text-blue-600 underline mt-0.5 inline-block">
+                  Abrir →
+                </a>
+              )}
             </div>
 
             {/* ── FECHAS DE ESTADÍA (editables por el concierge) ── */}

@@ -800,6 +800,25 @@ function CoverPage({ kickoff, total, lang, editMode }) {
         )}
 
 
+        {/* Project Inform / Pre-check-in form link */}
+        {a.checkInFormUrl && (
+          <a href={a.checkInFormUrl} target="_blank" rel="noreferrer" style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            textDecoration: "none", background: "#faf5ff", border: "1px solid #d8b4fe",
+            borderRadius: 10, padding: "11px 16px", marginBottom: 10,
+          }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed" }}>
+                📋 {isEs ? "Formulario Pre-Check-in" : "Pre-Check-in Form"}
+              </div>
+              <div style={{ fontSize: 9.5, color: "#6b7280", marginTop: 2 }}>
+                {isEs ? "Completa tu información antes de llegar — tu concierge lo tendrá todo listo." : "Fill out your info before arriving — your concierge will have everything ready."}
+              </div>
+            </div>
+            <span style={{ fontSize: 14, color: "#7c3aed" }}>→</span>
+          </a>
+        )}
+
         {/* Action cards — Drinks, Groceries, Breakfast */}
         {a.id && (() => {
           const cardImg = { borderRadius: "8px 8px 0 0", width: "100%", height: 70, objectFit: "cover", display: "block" };
