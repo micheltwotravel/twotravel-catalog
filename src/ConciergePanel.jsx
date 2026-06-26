@@ -3149,10 +3149,17 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 placeholder="https://... (link de Hotspot por grupo)"
               />
               {checkInFormUrl && (
-                <a href={checkInFormUrl} target="_blank" rel="noreferrer"
-                  className="text-[10px] text-blue-600 underline mt-0.5 inline-block">
-                  Abrir →
-                </a>
+                <div className="flex items-center gap-3 mt-1">
+                  <a href={checkInFormUrl} target="_blank" rel="noreferrer"
+                    className="text-[10px] text-blue-600 underline">
+                    Abrir →
+                  </a>
+                  <a href={`https://wa.me/?text=${encodeURIComponent(`Hola! 👋 Para preparar todos los detalles de tu estadía, por favor completa este formulario de check-in:\n\n${checkInFormUrl}\n\nCompartelo con todo tu grupo antes de llegar. Nos ayuda a tener todo listo para ustedes 🙌`)}`}
+                    target="_blank" rel="noreferrer"
+                    className="text-[10px] text-green-700 bg-green-50 border border-green-300 rounded px-2 py-0.5 hover:bg-green-100 flex items-center gap-1">
+                    WhatsApp cliente
+                  </a>
+                </div>
               )}
             </div>
 
