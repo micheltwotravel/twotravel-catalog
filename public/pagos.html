@@ -690,38 +690,40 @@ function showToast(msg, duration=3000){
 }
 
 /* ── SLACK NOTIFICATIONS ── */
-function notifyNewPago(p){
-  const body = {
-    action: 'notifyNewPago',
-    id: p.id,
-    dept: p.dept,
-    date: p.date,
-    category: p.category,
-    client: p.client,
-    vendor: p.vendor,
-    desc: p.desc,
-    amount: p.amount,
-    currency: p.currency,
-    method: p.method,
-    person: p.person,
-    factura: p.factura,
-    notes: p.notes,
-  };
-  fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body)}).catch(()=>{});
+function slackMsg(text){
+  fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action:'sendSlackMessage', payload:{ text } })
+  }).catch(()=>{});
 }
-
+function notifyNewPago(p){
+  const dept   = p.dept === 'wedding' ? '💍 Bodas' : '🛎 Concierge';
+  const monto  = p.amount ? `${p.currency} ${parseFloat(p.amount).toLocaleString('es')}` : '—';
+  const cat    = (p.category||'').replace(/^(Service:|Tour:|Wedding:|Business Expenses:|Cartagena: Chef Services:)\s*/,'');
+  const lines  = [
+    `💸 *Nueva solicitud de pago* (${dept})`,
+    `*Categoría:* ${cat}`,
+    `*Cliente:* ${p.client||'—'}`,
+    p.vendor  ? `*Proveedor:* ${p.vendor}` : null,
+    p.desc    ? `*Descripción:* ${p.desc}` : null,
+    `*Monto:* ${monto}`,
+    p.method  ? `*Método:* ${p.method}` : null,
+    p.person  ? `*Solicitado por:* ${p.person}` : null,
+    p.notes   ? `*Notas:* ${p.notes}` : null,
+  ].filter(Boolean);
+  slackMsg(lines.join('\n'));
+}
 function notifyStatusChange(p){
-  const body = {
-    action: 'notifyPagoStatus',
-    id: p.id,
-    status: p.status,
-    category: p.category,
-    client: p.client,
-    amount: p.amount,
-    currency: p.currency,
-    person: p.person,
-  };
-  fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body)}).catch(()=>{});
+  const labels = { aprov:'✅ Aprobado', rech:'❌ Rechazado' };
+  const monto  = p.amount ? `${p.currency} ${parseFloat(p.amount).toLocaleString('es')}` : '—';
+  const cat    = (p.category||'').replace(/^(Service:|Tour:|Wedding:|Business Expenses:|Cartagena: Chef Services:)\s*/,'');
+  const lines  = [
+    `${labels[p.status]||p.status} — solicitud de pago`,
+    `*Categoría:* ${cat}`,
+    `*Cliente:* ${p.client||'—'}`,
+    `*Monto:* ${monto}`,
+    p.person ? `*Solicitado por:* ${p.person}` : null,
+  ].filter(Boolean);
+  slackMsg(lines.join('\n'));
 }
 
 /* ── EXPORT CSV ── */
