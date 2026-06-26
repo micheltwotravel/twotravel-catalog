@@ -4157,8 +4157,7 @@ function BreakfastCatalog() {
       <div style={{maxWidth:680,margin:"0 auto",padding:"24px 20px 40px"}}>
 
         {/* Status toggle for current day */}
-        {stayNights > 1 && (
-          <div style={{display:"flex",gap:8,marginBottom:24,alignItems:"center"}}>
+        <div style={{display:"flex",gap:8,marginBottom:24,alignItems:"center"}}>
             <span style={{fontSize:11,color:"#7a7570",marginRight:4}}>{en ? "Status:" : "Estado:"}</span>
             {[
               { key:"pending",   label: en ? "Still deciding" : "Aún decidiendo" },
@@ -4178,7 +4177,6 @@ function BreakfastCatalog() {
               );
             })}
           </div>
-        )}
 
         {/* Per-category selection */}
         {BREAKFAST_MENUS.map(menu => {
