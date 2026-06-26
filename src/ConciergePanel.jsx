@@ -2834,6 +2834,23 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // conciergeSummary intentionally read-only here (no UI field); excluded from saves to avoid overwriting
   // const [conciergeSummary] = useState(kickoff?.conciergeSummary || "");
   const [internalNotes, setInternalNotes] = useState(kickoff?.internalNotes || "");
+  // Operaciones
+  const [boatName,               setBoatName]               = useState(kickoff?.boatName               || "");
+  const [boatDay,                setBoatDay]                 = useState(kickoff?.boatDay                || "");
+  const [dock,                   setDock]                    = useState(kickoff?.dock                   || "");
+  const [beachClub,              setBeachClub]               = useState(kickoff?.beachClub              || "");
+  const [beachClubDay,           setBeachClubDay]            = useState(kickoff?.beachClubDay           || "");
+  const [juniorConcierge,        setJuniorConcierge]         = useState(kickoff?.juniorConcierge        || "");
+  const [juniorBoat,             setJuniorBoat]              = useState(kickoff?.juniorBoat             || "");
+  const [juniorBeachClub,        setJuniorBeachClub]         = useState(kickoff?.juniorBeachClub        || "");
+  const [earlyCheckin,           setEarlyCheckin]            = useState(!!(kickoff?.earlyCheckin));
+  const [preBillSent,            setPreBillSent]             = useState(!!(kickoff?.preBillSent));
+  const [preBillPaid,            setPreBillPaid]             = useState(!!(kickoff?.preBillPaid));
+  const [houseDrinkListSent,     setHouseDrinkListSent]      = useState(!!(kickoff?.houseDrinkListSent));
+  const [boatDrinkListSent,      setBoatDrinkListSent]       = useState(!!(kickoff?.boatDrinkListSent));
+  const [boatFoodReady,          setBoatFoodReady]           = useState(!!(kickoff?.boatFoodReady));
+  const [listSentToBoatOwner,    setListSentToBoatOwner]     = useState(!!(kickoff?.listSentToBoatOwner));
+  const [foodRestrictionsShared, setFoodRestrictionsShared]  = useState(!!(kickoff?.foodRestrictionsShared));
   const drinkOrder = kickoff?.drinkOrder || "";
   const [billingCurrency, setBillingCurrency] = useState("USD");
   const [billingSending, setBillingSending] = useState(false);
@@ -3071,6 +3088,23 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const em = guestEmailState.trim();
   updates.email = em;
   updates.guestEmail = em;
+  // Operaciones
+  updates.boatName               = boatName.trim();
+  updates.boatDay                = boatDay.trim();
+  updates.dock                   = dock.trim();
+  updates.beachClub              = beachClub.trim();
+  updates.beachClubDay           = beachClubDay.trim();
+  updates.juniorConcierge        = juniorConcierge.trim();
+  updates.juniorBoat             = juniorBoat.trim();
+  updates.juniorBeachClub        = juniorBeachClub.trim();
+  updates.earlyCheckin           = earlyCheckin;
+  updates.preBillSent            = preBillSent;
+  updates.preBillPaid            = preBillPaid;
+  updates.houseDrinkListSent     = houseDrinkListSent;
+  updates.boatDrinkListSent      = boatDrinkListSent;
+  updates.boatFoodReady          = boatFoodReady;
+  updates.listSentToBoatOwner    = listSentToBoatOwner;
+  updates.foodRestrictionsShared = foodRestrictionsShared;
 
   await onSave(kickoff.id, updates);
   setStatus(autoStatus);
@@ -3329,6 +3363,91 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 <option value="feedback_submitted">{STATUS_LABELS.feedback_submitted.es}</option>
                 <option value="done">{STATUS_LABELS.done.es}</option>
               </select>
+            </div>
+          </div>
+
+          {/* ── OPERACIONES ── */}
+          <div className="border border-orange-200 rounded-xl bg-orange-50/40 p-4 space-y-3">
+            <p className="text-[11px] font-semibold text-orange-700 uppercase tracking-wide">⚙️ Operaciones</p>
+
+            {/* Checklists */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              {[
+                ["preBillSent",            preBillSent,            setPreBillSent,            "Pre-bill enviado"],
+                ["preBillPaid",            preBillPaid,            setPreBillPaid,            "Pre-bill pagado"],
+                ["earlyCheckin",           earlyCheckin,           setEarlyCheckin,           "Early check-in/late check-out"],
+                ["houseDrinkListSent",     houseDrinkListSent,     setHouseDrinkListSent,     "Lista bebidas casa ✓"],
+                ["boatDrinkListSent",      boatDrinkListSent,      setBoatDrinkListSent,      "Lista bebidas bote ✓"],
+                ["boatFoodReady",          boatFoodReady,          setBoatFoodReady,          "Comida bote lista"],
+                ["listSentToBoatOwner",    listSentToBoatOwner,    setListSentToBoatOwner,    "Lista enviada a dueño bote"],
+                ["foodRestrictionsShared", foodRestrictionsShared, setFoodRestrictionsShared, "Restricciones alimentarias informadas"],
+              ].map(([key, val, setter, label]) => (
+                <label key={key} className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={val} onChange={e => setter(e.target.checked)}
+                    className="w-3.5 h-3.5 accent-orange-500" />
+                  <span className="text-[11px] text-neutral-700">{label}</span>
+                </label>
+              ))}
+            </div>
+
+            {/* Bote */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <div>
+                <label className="text-[10px] text-neutral-500">Nombre del bote</label>
+                <input value={boatName} onChange={e => setBoatName(e.target.value)}
+                  className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white"
+                  placeholder="Sea Star…" />
+              </div>
+              <div>
+                <label className="text-[10px] text-neutral-500">Día del bote</label>
+                <input type="date" value={boatDay} onChange={e => setBoatDay(e.target.value)}
+                  className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-[10px] text-neutral-500">Muelle / Dock</label>
+                <input value={dock} onChange={e => setDock(e.target.value)}
+                  className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white"
+                  placeholder="Club Náutico…" />
+              </div>
+            </div>
+
+            {/* Beach Club */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-neutral-500">Beach Club</label>
+                <input value={beachClub} onChange={e => setBeachClub(e.target.value)}
+                  className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white"
+                  placeholder="Mio…" />
+              </div>
+              <div>
+                <label className="text-[10px] text-neutral-500">Día beach club</label>
+                <input type="date" value={beachClubDay} onChange={e => setBeachClubDay(e.target.value)}
+                  className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white" />
+              </div>
+            </div>
+
+            {/* Junior concierges */}
+            <div className="grid grid-cols-1 gap-2">
+              <div>
+                <label className="text-[10px] text-neutral-500">Junior — grupo</label>
+                <input value={juniorConcierge} onChange={e => setJuniorConcierge(e.target.value)}
+                  className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white"
+                  placeholder="Nombre junior…" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-neutral-500">Junior — bote</label>
+                  <input value={juniorBoat} onChange={e => setJuniorBoat(e.target.value)}
+                    className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white"
+                    placeholder="Nombre junior…" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-neutral-500">Junior — beach club</label>
+                  <input value={juniorBeachClub} onChange={e => setJuniorBeachClub(e.target.value)}
+                    className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white"
+                    placeholder="Nombre junior…" />
+                </div>
+              </div>
             </div>
           </div>
 
