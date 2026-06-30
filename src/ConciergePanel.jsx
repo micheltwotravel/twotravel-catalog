@@ -2903,7 +2903,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [arrivals, setArrivals] = useState(() => {
     try { return JSON.parse(kickoff?.arrivals || "[]"); } catch { return []; }
   });
-  const addArrival  = () => setArrivals(a => [...a, { name:"", date:"", time:"", flight:"" }]);
+  const addArrival  = () => setArrivals(a => [...a, { name:"", date:"", time:"", flight:"", flightNumber:"", origin:"" }]);
   const removeArrival = (i) => setArrivals(a => a.filter((_,idx) => idx !== i));
   const patchArrival = (i, patch) => setArrivals(a => a.map((row,idx) => idx === i ? {...row,...patch} : row));
   const [guestEmailState,    setGuestEmailState]    = useState(kickoff?.email || kickoff?.guestEmail || "");
@@ -3950,28 +3950,48 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               <p className="text-[11px] text-neutral-400">Sin llegadas registradas. Úsalo cuando el grupo llega en vuelos distintos.</p>
             )}
             {arrivals.map((a, i) => (
-              <div key={i} className="grid grid-cols-12 gap-1.5 items-center bg-white border border-neutral-200 rounded-xl px-3 py-2">
-                <div className="col-span-4">
-                  <input value={a.name} onChange={e => patchArrival(i,{name:e.target.value})}
-                    placeholder="Quién (ej: Juan + María)"
-                    className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300" />
+              <div key={i} className="bg-white border border-neutral-200 rounded-xl px-3 py-2 space-y-1.5">
+                <div className="grid grid-cols-12 gap-1.5 items-center">
+                  <div className="col-span-5">
+                    <p className="text-[9px] text-neutral-400 mb-0.5">Quién</p>
+                    <input value={a.name} onChange={e => patchArrival(i,{name:e.target.value})}
+                      placeholder="Juan + María"
+                      className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300" />
+                  </div>
+                  <div className="col-span-3">
+                    <p className="text-[9px] text-neutral-400 mb-0.5">Fecha</p>
+                    <input type="date" value={a.date} onChange={e => patchArrival(i,{date:e.target.value})}
+                      className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent" />
+                  </div>
+                  <div className="col-span-3">
+                    <p className="text-[9px] text-neutral-400 mb-0.5">Hora llegada</p>
+                    <input type="time" value={a.time} onChange={e => patchArrival(i,{time:e.target.value})}
+                      className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent" />
+                  </div>
+                  <div className="col-span-1 flex justify-end items-end pb-0.5">
+                    <button type="button" onClick={() => removeArrival(i)}
+                      className="text-neutral-300 hover:text-red-500 text-xs">✕</button>
+                  </div>
                 </div>
-                <div className="col-span-2">
-                  <input type="date" value={a.date} onChange={e => patchArrival(i,{date:e.target.value})}
-                    className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent" />
-                </div>
-                <div className="col-span-2">
-                  <input type="time" value={a.time} onChange={e => patchArrival(i,{time:e.target.value})}
-                    className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent" />
-                </div>
-                <div className="col-span-3">
-                  <input value={a.flight} onChange={e => patchArrival(i,{flight:e.target.value})}
-                    placeholder="Vuelo / detalles"
-                    className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300" />
-                </div>
-                <div className="col-span-1 flex justify-end">
-                  <button type="button" onClick={() => removeArrival(i)}
-                    className="text-neutral-300 hover:text-red-500 text-xs">✕</button>
+                <div className="grid grid-cols-12 gap-1.5 items-center">
+                  <div className="col-span-4">
+                    <p className="text-[9px] text-neutral-400 mb-0.5">N° vuelo <span className="text-blue-400">(tracking)</span></p>
+                    <input value={a.flightNumber||""} onChange={e => patchArrival(i,{flightNumber:e.target.value.toUpperCase()})}
+                      placeholder="AV204"
+                      className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono" />
+                  </div>
+                  <div className="col-span-4">
+                    <p className="text-[9px] text-neutral-400 mb-0.5">Origen <span className="text-blue-400">(IATA)</span></p>
+                    <input value={a.origin||""} onChange={e => patchArrival(i,{origin:e.target.value.toUpperCase()})}
+                      placeholder="BOG"
+                      className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono" />
+                  </div>
+                  <div className="col-span-4">
+                    <p className="text-[9px] text-neutral-400 mb-0.5">Notas</p>
+                    <input value={a.flight||""} onChange={e => patchArrival(i,{flight:e.target.value})}
+                      placeholder="Detalles adicionales"
+                      className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300" />
+                  </div>
                 </div>
               </div>
             ))}

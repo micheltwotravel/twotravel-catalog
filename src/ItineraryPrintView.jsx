@@ -166,6 +166,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       familyFriendly: !!(service.family_friendly),
       dressCode    : cl(cartItem.dressCode || service.dressCode || service.dress_code || ""),
       confirmed    : cartItem.confirmed !== false,
+      priceTiers   : cartItem.priceTiers || service.priceTiers || service.price_tiers || "",
     });
   });
   // Respect dayMeta order if provided
@@ -479,6 +480,7 @@ const CSS = `
     color:#ccc;display:block;margin-bottom:3px;font-weight:500;
   }
   .ev-price-val{font-size:13px;font-weight:700;color:#111;}
+  .ev-price-tiers{font-size:10px;color:#6b7280;margin-top:2px;white-space:pre-line;}
 
   .ev-location{font-size:11px;color:#aaa;margin-bottom:11px;letter-spacing:.1px;}
 
@@ -1237,10 +1239,13 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
         {/* Title + price */}
         <div className="ev-title-row">
           <Editable value={it.title} tag="div" className="ev-title" editMode={editMode} onChange={v => patchItem?.("title", v)} />
-          {price && (
+          {(price || it.priceTiers) && (
             <div className="ev-price-col">
               <span className="ev-price-label">{isEs ? "Precio" : "Price"}</span>
-              <Editable value={price} tag="div" className="ev-price-val" editMode={editMode} onChange={v => patchItem?.("price", v)} />
+              {price && <Editable value={price} tag="div" className="ev-price-val" editMode={editMode} onChange={v => patchItem?.("price", v)} />}
+              {it.priceTiers && (
+                <Editable value={it.priceTiers} tag="div" className="ev-price-tiers" editMode={editMode} onChange={v => patchItem?.("priceTiers", v)} />
+              )}
             </div>
           )}
         </div>

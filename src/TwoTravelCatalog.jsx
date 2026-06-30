@@ -4301,12 +4301,14 @@ setCart([]);
       </span>
     </>
   ) : (
-    // Para restaurantes / bares / beach clubs / nightlife
     <span className="text-xs text-gray-600">
       {getServicePriceLevel(item, item.clientType || currentClientType) || t.variablePrice}
     </span>
   )}
 </div>
+{item.priceTiers && (
+  <p className="text-xs text-gray-500 mt-1" style={{whiteSpace:"pre-line"}}>{item.priceTiers}</p>
+)}
 
 
                       <label className="block text-xs text-gray-500 mt-2 mb-1">
@@ -4481,6 +4483,9 @@ setCart([]);
     ? `${formatPrice(convertPrice(item.price_cop))} · ${unitLabel(item.priceUnit, item.category)}`
     : getServicePriceLevel(item, item.clientType || currentClientType) || t.variablePrice}
 </p>
+{item.priceTiers && (
+  <p className="text-xs text-gray-400" style={{whiteSpace:"pre-line"}}>{item.priceTiers}</p>
+)}
 
                         {item.notes && (
                           <p className="text-xs text-gray-700 mt-1">

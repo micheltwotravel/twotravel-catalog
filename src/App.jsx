@@ -1437,6 +1437,7 @@ function UnifiedDashboard({ currentUser, onLogout }) {
             <div style={{display:"flex",alignItems:"center",gap:8,paddingLeft:8,borderLeft:"1px solid var(--border)"}}>
               <span style={{fontSize:11,color:"var(--text-3)"}}>{currentUser.name}</span>
               <span style={{fontSize:10,padding:"2px 7px",borderRadius:99,background:ROLE_META[currentUser.role]?.bg||"#e5e7eb",color:ROLE_META[currentUser.role]?.color||"#111",fontWeight:600}}>{ROLE_META[currentUser.role]?.label||currentUser.role}</span>
+              <a href="/?mode=pin" style={{fontSize:11,color:"var(--text-3)",textDecoration:"none"}}>🔑 PIN</a>
               <button onClick={onLogout} style={{fontSize:11,color:"var(--text-3)",background:"none",border:"none",cursor:"pointer"}}>Salir</button>
             </div>
           )}
@@ -5038,6 +5039,78 @@ function RegisterScreen() {
 }
 function isSuperAdmin(user) { return user && SUPER_ADMINS.includes((user.email||"").toLowerCase()); }
 
+// ─── CHANGE PIN ────────────────────────────────────────────────
+function ChangePinScreen({ user, onDone }) {
+  const [current, setCurrent] = useState("");
+  const [next,    setNext]    = useState("");
+  const [next2,   setNext2]   = useState("");
+  const [error,   setError]   = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done,    setDone]    = useState(false);
+
+  const handle = async (e) => {
+    e.preventDefault(); setError("");
+    if (next.length < 4)   { setError("PIN mínimo 4 dígitos"); return; }
+    if (next !== next2)    { setError("Los PINs no coinciden"); return; }
+    setLoading(true);
+    // Verify current PIN first
+    const verify = await fetch(GAS_URL, {
+      method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify({ action:"loginUser", payload:{ email: user.email, pin: current } }),
+    });
+    const vd = await verify.json();
+    if (!vd.ok) { setLoading(false); setError("PIN actual incorrecto"); return; }
+    // Update PIN
+    const res = await fetch(GAS_URL, {
+      method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify({ action:"updateUser", payload:{ email: user.email, pin: next } }),
+    });
+    const d = await res.json();
+    setLoading(false);
+    if (!d.ok) { setError(d.error || "Error al guardar"); return; }
+    setDone(true);
+  };
+
+  const inp = { width:"100%", border:"1px solid #e5ddd3", borderRadius:10, padding:"12px 16px", fontSize:18, textAlign:"center", letterSpacing:".3em", outline:"none", fontFamily:"'Jost',sans-serif", boxSizing:"border-box" };
+
+  return (
+    <div style={{minHeight:"100vh",background:"#f7f4ef",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Jost',sans-serif"}}>
+      <div style={{background:"#fff",borderRadius:16,padding:"40px 36px",boxShadow:"0 4px 24px rgba(0,0,0,.08)",width:340,textAlign:"center"}}>
+        <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:24,fontWeight:500,color:"#1a1814",marginBottom:4}}>Two Travel</p>
+        <p style={{fontSize:11,color:"#9a7d52",letterSpacing:".12em",textTransform:"uppercase",marginBottom:28}}>Cambiar PIN</p>
+        {done ? (
+          <div>
+            <p style={{fontSize:32,marginBottom:12}}>✅</p>
+            <p style={{fontSize:14,fontWeight:600,color:"#111",marginBottom:8}}>PIN actualizado</p>
+            <button onClick={onDone} style={{marginTop:16,background:"#1a1814",color:"#fff",border:"none",borderRadius:10,padding:"12px 24px",fontSize:13,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+              Volver al portal
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handle} style={{display:"flex",flexDirection:"column",gap:12}}>
+            <p style={{fontSize:12,color:"#6b7280",margin:"0 0 4px"}}>{user.email}</p>
+            <input type="password" inputMode="numeric" maxLength={8} value={current}
+              onChange={e=>{setCurrent(e.target.value);setError("");}}
+              placeholder="PIN actual" autoFocus style={inp} />
+            <input type="password" inputMode="numeric" maxLength={8} value={next}
+              onChange={e=>{setNext(e.target.value);setError("");}}
+              placeholder="PIN nuevo" style={inp} />
+            <input type="password" inputMode="numeric" maxLength={8} value={next2}
+              onChange={e=>{setNext2(e.target.value);setError("");}}
+              placeholder="Confirma PIN nuevo" style={inp} />
+            {error && <p style={{color:"#e05c5c",fontSize:12,margin:0}}>{error}</p>}
+            <button type="submit" disabled={loading||!current||!next||!next2}
+              style={{background:"#1a1814",color:"#fff",border:"none",borderRadius:10,padding:"13px",fontSize:13,cursor:"pointer",opacity:(!current||!next||!next2)?0.5:1,fontFamily:"'Jost',sans-serif"}}>
+              {loading ? "Guardando…" : "Cambiar PIN"}
+            </button>
+            <button type="button" onClick={onDone} style={{background:"none",border:"none",color:"#9ca3af",fontSize:11,cursor:"pointer"}}>Cancelar</button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── USER MANAGEMENT (super admin only) ───────────────────────────
 function UserManagement({ currentUser, onBack }) {
   const [users, setUsers]   = useState([]);
@@ -5204,6 +5277,10 @@ function App() {
   if (mode === "checkin")   return <CheckinForm />;
   if (mode === "itinerary") return <ItineraryPrintView />;
   if (mode === "register")  return <RegisterScreen />;
+  if (mode === "pin") {
+    if (!user) return <LoginScreen onLogin={login} />;
+    return <ChangePinScreen user={user} onDone={() => { window.location.href = "/?mode=dashboard"; }} />;
+  }
   if (!mode)                return <FeedbackForm kickoffId={kickoffId} />;
 
   // Protected routes
