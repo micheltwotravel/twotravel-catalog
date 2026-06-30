@@ -1430,7 +1430,7 @@ function UnifiedDashboard({ currentUser, onLogout }) {
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <a href={sheetUrl} target="_blank" rel="noreferrer" className="tt-btn-ghost" style={{textDecoration:"none"}}>Ver Sheet ↗</a>
-          {currentUser?.role === "admin" && (
+          {isSuperAdmin(currentUser) && (
             <a href="/?mode=users" className="tt-btn-ghost" style={{textDecoration:"none"}}>👥 Usuarios</a>
           )}
           {currentUser && (
@@ -4974,7 +4974,10 @@ function LoginScreen({ onLogin }) {
   );
 }
 
-// ─── USER MANAGEMENT (admin only) ─────────────────────────────────
+const SUPER_ADMINS = ["michel@two.travel","caro@two.travel","ray@two.travel"];
+function isSuperAdmin(user) { return user && SUPER_ADMINS.includes((user.email||"").toLowerCase()); }
+
+// ─── USER MANAGEMENT (super admin only) ───────────────────────────
 function UserManagement({ currentUser, onBack }) {
   const [users, setUsers]   = useState([]);
   const [loading, setLoading] = useState(true);
@@ -5125,7 +5128,10 @@ function App() {
       return <div style={{padding:40,textAlign:"center",color:"#6b7280"}}>Sin acceso.</div>;
     }
 
-    if (mode === "users") return <UserManagement currentUser={user} onBack={() => window.history.back()} />;
+    if (mode === "users") {
+      if (!isSuperAdmin(user)) return <div style={{padding:40,textAlign:"center",color:"#6b7280"}}>Sin acceso.</div>;
+      return <UserManagement currentUser={user} onBack={() => window.history.back()} />;
+    }
     if (mode === "concierge") return <ErrorBoundary><ConciergePanel onLogout={logout} currentUser={user} /></ErrorBoundary>;
     if (mode === "soporte")   return <ErrorBoundary><SoportePage /></ErrorBoundary>;
     if (mode === "soporte-dashboard") return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
