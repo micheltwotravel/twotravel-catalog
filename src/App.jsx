@@ -4891,7 +4891,7 @@ const ROLE_META = {
 // Modes each role can access
 const ROLE_ACCESS = {
   admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users"],
-  concierge: ["concierge","dashboard","tasks","reuniones"],
+  concierge: ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones"],
   junior:    ["dashboard"],
   finance:   ["dashboard","soporte"],
   marketing: ["dashboard"],
