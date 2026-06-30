@@ -3461,6 +3461,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             />
           </div>
 
+          {/* ── Check-in Responses ── */}
+          <CheckinResponsesSection kickoffId={kickoff?.id} />
+
           {/* ── Notas de reuniones ── */}
           <div className="border border-amber-200 rounded-xl bg-amber-50 p-3 space-y-3">
             <div className="flex items-center justify-between">
@@ -5251,6 +5254,160 @@ export function ReunionesPage() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function CheckinResponsesSection({ kickoffId }) {
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+  const [responses, setResponses] = useState([]);
+  const [loading,   setLoading]   = useState(false);
+  const [open,      setOpen]      = useState(false);
+
+  useEffect(() => {
+    if (!open || !kickoffId) return;
+    setLoading(true);
+    fetch(GAS_URL, {
+      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "getCheckinResponses", kickoffId }),
+    }).then(r => r.json()).then(d => {
+      if (d.ok) setResponses(d.data || []);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [open, kickoffId]);
+
+  const dietary = responses.filter(r => r.foodRestrictions || r.allergies);
+  const arrivals = responses.filter(r => r.arrivalFlight || r.arrivalDate);
+  const departures = responses.filter(r => r.departureFlight || r.departureDate);
+
+  const fmtDate = (s) => {
+    if (!s) return "";
+    try { return new Date(s + "T12:00:00").toLocaleDateString("es", { day: "numeric", month: "short" }); }
+    catch { return s; }
+  };
+
+  return (
+    <div className="border border-teal-200 rounded-xl bg-teal-50/40 overflow-hidden">
+      <button type="button" onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-teal-50 transition-colors">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold text-teal-700 uppercase tracking-wide">👥 Check-in Responses</span>
+          {responses.length > 0 && (
+            <span className="text-[10px] bg-teal-100 text-teal-700 rounded-full px-2 py-0.5 font-semibold">
+              {responses.length} {responses.length === 1 ? "persona" : "personas"}
+            </span>
+          )}
+        </div>
+        <span className="text-teal-500 text-xs">{open ? "▲" : "▼"}</span>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-4">
+          {loading && <p className="text-xs text-neutral-400 text-center py-3">Cargando…</p>}
+
+          {!loading && responses.length === 0 && (
+            <p className="text-xs text-neutral-400 text-center py-3">
+              Aún no hay respuestas del grupo.
+            </p>
+          )}
+
+          {!loading && responses.length > 0 && (<>
+
+            {/* Pasaportes */}
+            <div>
+              <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">🪪 Pasaportes</p>
+              <div className="space-y-1.5">
+                {responses.map((r, i) => (
+                  <div key={i} className="bg-white rounded-lg px-3 py-2 text-xs border border-teal-100 grid grid-cols-2 gap-x-3">
+                    <div>
+                      <span className="font-semibold text-neutral-800">{r.firstName} {r.lastName}</span>
+                      {r.nationality && <span className="text-neutral-400 ml-1">· {r.nationality}</span>}
+                    </div>
+                    <div className="text-neutral-500">
+                      {r.idType && <span>{r.idType}: </span>}
+                      <span className="font-mono">{r.idNumber || "—"}</span>
+                      {r.dob && <span className="text-neutral-400 ml-1">· {fmtDate(r.dob)}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Restricciones alimentarias */}
+            {dietary.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">🥗 Restricciones alimentarias</p>
+                <div className="space-y-1.5">
+                  {dietary.map((r, i) => (
+                    <div key={i} className="bg-white rounded-lg px-3 py-2 text-xs border border-orange-100">
+                      <span className="font-semibold text-neutral-700">{r.firstName} {r.lastName}: </span>
+                      {r.foodRestrictions && <span className="text-neutral-600">{r.foodRestrictions}</span>}
+                      {r.allergies && <span className="text-red-600 ml-1">⚠️ {r.allergies}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Vuelos llegada */}
+            {arrivals.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">🛬 Vuelos de llegada</p>
+                <div className="space-y-1.5">
+                  {arrivals.map((r, i) => (
+                    <div key={i} className="bg-white rounded-lg px-3 py-2 text-xs border border-teal-100 flex justify-between items-center">
+                      <span className="font-semibold text-neutral-700">{r.firstName} {r.lastName}</span>
+                      <span className="text-neutral-500">
+                        {r.arrivalAirline && <span>{r.arrivalAirline} </span>}
+                        {r.arrivalFlight && <span className="font-mono font-semibold text-neutral-700">{r.arrivalFlight}</span>}
+                        {r.arrivalDate && <span className="ml-1 text-neutral-400">· {fmtDate(r.arrivalDate)}</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Vuelos salida */}
+            {departures.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">🛫 Vuelos de salida</p>
+                <div className="space-y-1.5">
+                  {departures.map((r, i) => (
+                    <div key={i} className="bg-white rounded-lg px-3 py-2 text-xs border border-teal-100 flex justify-between items-center">
+                      <span className="font-semibold text-neutral-700">{r.firstName} {r.lastName}</span>
+                      <span className="text-neutral-500">
+                        {r.departureAirline && <span>{r.departureAirline} </span>}
+                        {r.departureFlight && <span className="font-mono font-semibold text-neutral-700">{r.departureFlight}</span>}
+                        {r.departureDate && <span className="ml-1 text-neutral-400">· {fmtDate(r.departureDate)}</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Contactos / WhatsApp */}
+            <div>
+              <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">📱 Contactos del grupo</p>
+              <div className="space-y-1.5">
+                {responses.filter(r => r.phone || r.email).map((r, i) => (
+                  <div key={i} className="bg-white rounded-lg px-3 py-2 text-xs border border-teal-100 flex justify-between">
+                    <span className="font-semibold text-neutral-700">
+                      {r.firstName} {r.lastName}
+                      {r.isGroupContact === "yes" && <span className="ml-1 text-teal-600 text-[9px]">★ contacto principal</span>}
+                    </span>
+                    <span className="text-neutral-500">
+                      {r.phone && <a href={`https://wa.me/${r.phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" className="text-green-600 hover:underline mr-2">{r.phone}</a>}
+                      {r.email && <span className="text-neutral-400">{r.email}</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </>)}
+        </div>
+      )}
     </div>
   );
 }
