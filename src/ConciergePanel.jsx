@@ -3175,13 +3175,13 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
             {kickoff?.id && (() => {
               const ciLink = checkInFormUrl.trim() || `https://twotravelvip.com/ci/${kickoff.id}`;
-              const waMsgEs = `Hola! 👋 Para preparar todos los detalles de tu estadía, por favor completa este formulario de check-in:\n\n${ciLink}\n\nCompartelo con todo tu grupo antes de llegar. Nos ayuda a tener todo listo para ustedes 🙌`;
-              const waMsgEn = `Hi! 👋 Please fill out this pre-check-in form so we can prepare every detail of your stay:\n\n${ciLink}\n\nShare it with your entire group before arrival. It helps us have everything ready for you 🙌`;
+              const waMsgEs = `Comparte este formulario con todo tu grupo para que podamos preparar cada detalle de tu estadía con anticipación. Esta información nos ayuda con:\n\n• Datos de pasaporte: requeridos por la mayoría de las villas como parte de su proceso oficial de check-in, y a veces para acceso al muelle o seguro de actividades.\n• Necesidades alimenticias y alergias: nos permite elegir restaurantes adecuados, avisar a los lugares con anticipación, y preparar al personal de la villa para desayunos y comidas en casa.\n• Información de vuelo: nos permite coordinar el transporte del aeropuerto y el número correcto de vehículos para la llegada y salida de tu grupo.\n\nPor favor asegúrate de que todos en tu grupo lo completen antes de llegar. Esto nos ayuda a evitar retrasos y tener todo listo para ustedes.\n\n${ciLink}`;
+              const waMsgEn = `Share this form with your entire group so we can prepare every detail of your stay in advance. This information helps us with:\n\n• Passport details: required by most villas as part of their official check-in process, and sometimes for dock access or activity insurance.\n• Dietary needs & allergies: this allows us to select suitable restaurants, notify venues in advance, and brief the villa staff for breakfasts and any meals at the house.\n• Flight information: this allows us to coordinate airport transportation and arrange the right number of vehicles for your group's arrival and departure.\n\nPlease make sure everyone in your group completes this before arrival. It helps us avoid delays and have everything ready for you.\n\n${ciLink}`;
               return (
                 <div className="col-span-2 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
                   <p className="text-[11px] font-semibold text-indigo-700 mb-1">📋 Check-in Form</p>
                   <p className="text-[10px] text-indigo-400 mb-2">Pega el link de HubSpot (o déjalo vacío para usar el de la plataforma). Guarda el kickoff para que el cliente lo vea en su PDF.</p>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 mb-2">
                     <input
                       type="url"
                       value={checkInFormUrl}
@@ -3193,6 +3193,18 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       className="text-[11px] text-indigo-700 border border-indigo-300 bg-white rounded-lg px-3 py-1.5 hover:bg-indigo-100 whitespace-nowrap">
                       Guardar
                     </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <a href={`https://wa.me/?text=${encodeURIComponent(waMsgEs)}`}
+                      target="_blank" rel="noreferrer"
+                      className="text-[11px] text-green-700 border border-green-300 bg-green-50 rounded-lg px-3 py-1.5 hover:bg-green-100">
+                      WhatsApp ES
+                    </a>
+                    <a href={`https://wa.me/?text=${encodeURIComponent(waMsgEn)}`}
+                      target="_blank" rel="noreferrer"
+                      className="text-[11px] text-green-700 border border-green-300 bg-green-50 rounded-lg px-3 py-1.5 hover:bg-green-100">
+                      WhatsApp EN
+                    </a>
                   </div>
                 </div>
               );
