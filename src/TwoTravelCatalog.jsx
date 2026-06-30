@@ -2250,6 +2250,18 @@ function parsePricingTiers(raw, model) {
   }).filter(Boolean);
 }
 
+/* Parse priceTiers text into [{label, price, qty}] */
+function parsePriceTiers(text) {
+  if (!text) return [];
+  return text.split("\n").map(line => {
+    const match = line.match(/\$?([\d.,]+)\s*(.*)/);
+    if (!match) return { label: line.trim(), price: 0, qty: 0 };
+    const price = parseInt(match[1].replace(/[.,]/g, ""), 10) || 0;
+    const label = match[2].trim() || line.trim();
+    return { label, price, qty: 0 };
+  }).filter(t => t.label);
+}
+
 /* Resolve price for a given group size (used in concierge cart) */
 function resolveVariablePrice(service, groupSizeNum) {
   const model  = service?.pricing_model;
@@ -2758,7 +2770,11 @@ price_tier_1: s.price_tier_1,
 price_tier_2: s.price_tier_2,
 clientType: currentClientType,
       priceUnit: s.priceUnit,
-      priceLevel: s.priceLevel, // ✅
+      priceLevel: s.priceLevel,
+      priceTiers: s.priceTiers || "",
+      priceTiers_en: s.priceTiers_en || "",
+      tierQuantities: parsePriceTiers(s.priceTiers || s.priceTiers_en || ""),
+      tierTotal: 0,
       notes: "",
     },
   ]);
@@ -2867,6 +2883,14 @@ useEffect(() => {
 
   const updateCartNotes = (cartId, notes) =>
     setCart((c) => (c.map((x) => (x.cartId === cartId ? { ...x, notes } : x))));
+  const updateCartTierQty = (cartId, tierIdx, qty) =>
+    setCart((c) => c.map((x) => {
+      if (x.cartId !== cartId) return x;
+      const tiers = [...(x.tierQuantities || [])];
+      tiers[tierIdx] = { ...tiers[tierIdx], qty: Math.max(0, qty) };
+      const total = tiers.reduce((s, t) => s + (t.price || 0) * (t.qty || 0), 0);
+      return { ...x, tierQuantities: tiers, tierTotal: total };
+    }));
 
       const handleSendKickoff = async () => {
   if (isSending) return;
@@ -4306,10 +4330,28 @@ setCart([]);
     </span>
   )}
 </div>
-{(item.priceTiers || item.priceTiers_en) && (
-  <p className="text-xs text-gray-500 mt-1" style={{whiteSpace:"pre-line"}}>
-    {lang === "en" ? (item.priceTiers_en || item.priceTiers) : (item.priceTiers || item.priceTiers_en)}
-  </p>
+{item.tierQuantities?.length > 0 && (
+  <div className="mt-2 border rounded-lg p-2 bg-gray-50 space-y-1">
+    {item.tierQuantities.map((tier, ti) => (
+      <div key={ti} className="flex items-center justify-between gap-2">
+        <span className="text-xs text-gray-600 flex-1">{tier.label}</span>
+        <span className="text-xs text-gray-400">{tier.price ? `$${tier.price.toLocaleString("es-CO")}` : ""}</span>
+        <div className="flex items-center gap-1">
+          <button onClick={() => updateCartTierQty(item.cartId, ti, (tier.qty||0)-1)}
+            className="w-5 h-5 rounded-full bg-gray-200 text-xs flex items-center justify-center">−</button>
+          <span className="text-xs w-4 text-center">{tier.qty||0}</span>
+          <button onClick={() => updateCartTierQty(item.cartId, ti, (tier.qty||0)+1)}
+            className="w-5 h-5 rounded-full bg-gray-200 text-xs flex items-center justify-center">+</button>
+        </div>
+      </div>
+    ))}
+    {item.tierTotal > 0 && (
+      <div className="flex justify-between items-center pt-1 border-t mt-1">
+        <span className="text-xs font-semibold text-gray-700">Total</span>
+        <span className="text-xs font-bold text-gray-900">${item.tierTotal.toLocaleString("es-CO")} COP</span>
+      </div>
+    )}
+  </div>
 )}
 
 

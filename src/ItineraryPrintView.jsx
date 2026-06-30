@@ -288,7 +288,9 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       familyFriendly: !!(service.family_friendly),
       dressCode    : cl(cartItem.dressCode || service.dressCode || service.dress_code || ""),
       confirmed    : cartItem.confirmed !== false,
-      priceTiers   : cartItem.priceTiers || (lang === "en" ? (service.priceTiers_en || service.priceTiers) : (service.priceTiers || service.priceTiers_en)) || service.price_tiers || "",
+      priceTiers      : cartItem.priceTiers || (lang === "en" ? (service.priceTiers_en || service.priceTiers) : (service.priceTiers || service.priceTiers_en)) || service.price_tiers || "",
+      tierQuantities  : cartItem.tierQuantities || [],
+      tierTotal       : cartItem.tierTotal || 0,
     });
   });
   // Respect dayMeta order if provided
@@ -1365,9 +1367,16 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
             <div className="ev-price-col">
               <span className="ev-price-label">{isEs ? "Precio" : "Price"}</span>
               {price && <Editable value={price} tag="div" className="ev-price-val" editMode={editMode} onChange={v => patchItem?.("price", v)} />}
-              {it.priceTiers && (
+              {it.tierQuantities?.length > 0 && it.tierQuantities.some(t => t.qty > 0) ? (
+                <div className="ev-price-tiers">
+                  {it.tierQuantities.filter(t => t.qty > 0).map((t, i) => (
+                    <div key={i}>{t.qty}× {t.label}{t.price ? ` — $${(t.price * t.qty).toLocaleString("es-CO")}` : ""}</div>
+                  ))}
+                  {it.tierTotal > 0 && <div style={{fontWeight:600, marginTop:2}}>Total: ${it.tierTotal.toLocaleString("es-CO")} COP</div>}
+                </div>
+              ) : it.priceTiers ? (
                 <Editable value={it.priceTiers} tag="div" className="ev-price-tiers" editMode={editMode} onChange={v => patchItem?.("priceTiers", v)} />
-              )}
+              ) : null}
             </div>
           )}
         </div>
