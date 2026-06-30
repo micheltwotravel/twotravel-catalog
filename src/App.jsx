@@ -4975,6 +4975,67 @@ function LoginScreen({ onLogin }) {
 }
 
 const SUPER_ADMINS = ["michel@two.travel","caro@two.travel","ray@two.travel"];
+
+function RegisterScreen() {
+  const [email, setEmail]     = useState("");
+  const [pin, setPin]         = useState("");
+  const [pin2, setPin2]       = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done, setDone]       = useState(false);
+  const [error, setError]     = useState("");
+
+  const handle = async (e) => {
+    e.preventDefault(); setError("");
+    if (!email.toLowerCase().endsWith("@two.travel")) { setError("Solo emails @two.travel"); return; }
+    if (pin.length < 4) { setError("PIN mínimo 4 dígitos"); return; }
+    if (pin !== pin2)   { setError("Los PINs no coinciden"); return; }
+    setLoading(true);
+    const res = await fetch(GAS_URL, {
+      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "registerUser", payload: { email: email.toLowerCase().trim(), pin } }),
+    });
+    const d = await res.json();
+    setLoading(false);
+    if (!d.ok) { setError(d.error || "Error al registrar"); return; }
+    setDone(true);
+  };
+
+  const inp = { width:"100%", border:"1px solid #e5ddd3", borderRadius:10, padding:"12px 16px", fontSize:14, outline:"none", fontFamily:"'Jost',sans-serif", boxSizing:"border-box" };
+
+  return (
+    <div style={{minHeight:"100vh",background:"#f7f4ef",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Jost',sans-serif"}}>
+      <div style={{background:"#fff",borderRadius:16,padding:"40px 36px",boxShadow:"0 4px 24px rgba(0,0,0,.08)",width:340,textAlign:"center"}}>
+        <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:24,fontWeight:500,color:"#1a1814",marginBottom:4}}>Two Travel</p>
+        <p style={{fontSize:11,color:"#9a7d52",letterSpacing:".12em",textTransform:"uppercase",marginBottom:28}}>Crear cuenta</p>
+        {done ? (
+          <div style={{textAlign:"center"}}>
+            <p style={{fontSize:32,marginBottom:12}}>✅</p>
+            <p style={{fontSize:14,fontWeight:600,color:"#111",marginBottom:8}}>Solicitud enviada</p>
+            <p style={{fontSize:12,color:"#6b7280",lineHeight:1.6}}>Le avisamos a los administradores. En cuanto aprueben tu acceso podrás entrar.</p>
+            <a href="/?mode=dashboard" style={{display:"block",marginTop:20,fontSize:12,color:"#9a7d52"}}>← Ir al login</a>
+          </div>
+        ) : (
+          <form onSubmit={handle} style={{display:"flex",flexDirection:"column",gap:12}}>
+            <input type="email" value={email} onChange={e=>{setEmail(e.target.value);setError("");}}
+              placeholder="tu@two.travel" autoFocus style={inp} />
+            <input type="password" inputMode="numeric" maxLength={8} value={pin}
+              onChange={e=>{setPin(e.target.value);setError("");}}
+              placeholder="Elige un PIN" style={{...inp,textAlign:"center",letterSpacing:".3em",fontSize:18}} />
+            <input type="password" inputMode="numeric" maxLength={8} value={pin2}
+              onChange={e=>{setPin2(e.target.value);setError("");}}
+              placeholder="Confirma el PIN" style={{...inp,textAlign:"center",letterSpacing:".3em",fontSize:18}} />
+            {error && <p style={{color:"#e05c5c",fontSize:12,margin:0}}>{error}</p>}
+            <button type="submit" disabled={loading||!email||!pin||!pin2}
+              style={{background:"#1a1814",color:"#fff",border:"none",borderRadius:10,padding:"13px",fontSize:13,cursor:"pointer",opacity:(!email||!pin||!pin2)?0.5:1}}>
+              {loading ? "Enviando…" : "Solicitar acceso"}
+            </button>
+            <a href="/?mode=dashboard" style={{fontSize:11,color:"#9ca3af"}}>Ya tengo cuenta → entrar</a>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
 function isSuperAdmin(user) { return user && SUPER_ADMINS.includes((user.email||"").toLowerCase()); }
 
 // ─── USER MANAGEMENT (super admin only) ───────────────────────────
@@ -5042,6 +5103,33 @@ function UserManagement({ currentUser, onBack }) {
             {addError && <span style={{fontSize:11,color:"#e05c5c",width:"100%"}}>{addError}</span>}
             <button type="submit" style={{background:"#111",color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,cursor:"pointer"}}>Guardar</button>
           </form>
+        )}
+
+        {/* Pending approvals */}
+        {!loading && users.filter(u => u.role === "pending").length > 0 && (
+          <div style={{background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:12,padding:16,marginBottom:16}}>
+            <p style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",color:"#92400e",marginBottom:10}}>⏳ Solicitudes pendientes</p>
+            {users.filter(u => u.role === "pending").map(u => (
+              <div key={u.email} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#fff",borderRadius:8,padding:"10px 14px",marginBottom:6,border:"1px solid #fde68a"}}>
+                <div>
+                  <span style={{fontWeight:600,fontSize:13,color:"#111"}}>{u.email}</span>
+                  <span style={{fontSize:11,color:"#9ca3af",marginLeft:8}}>solicita acceso</span>
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  {Object.entries(ROLE_META).filter(([r])=>r!=="pending").map(([role,meta]) => (
+                    <button key={role} onClick={() => { update(u.email,"role",role); update(u.email,"active","true"); }}
+                      style={{fontSize:10,padding:"4px 10px",borderRadius:99,border:`1px solid ${meta.border}`,cursor:"pointer",fontWeight:600,background:meta.bg,color:meta.color}}>
+                      {meta.label}
+                    </button>
+                  ))}
+                  <button onClick={() => update(u.email,"active","false")}
+                    style={{fontSize:10,padding:"4px 10px",borderRadius:99,border:"1px solid #fca5a5",cursor:"pointer",fontWeight:600,background:"#fee2e2",color:"#b91c1c"}}>
+                    Rechazar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
         {loading ? <p style={{color:"#9ca3af",fontSize:13,textAlign:"center",padding:32}}>Cargando usuarios…</p> : (
@@ -5115,6 +5203,7 @@ function App() {
   if (mode === "breakfast") return <BreakfastCatalog />;
   if (mode === "checkin")   return <CheckinForm />;
   if (mode === "itinerary") return <ItineraryPrintView />;
+  if (mode === "register")  return <RegisterScreen />;
   if (!mode)                return <FeedbackForm kickoffId={kickoffId} />;
 
   // Protected routes
