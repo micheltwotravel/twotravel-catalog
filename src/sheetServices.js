@@ -240,7 +240,11 @@ async function fetchCatalogFromSheet() {
 
   const csvText = await response.text();
 
-  const parsed = Papa.parse(csvText, {
+  // Row 2 is a Spanish display header row \u2014 strip it before parsing
+  const lines = csvText.split("\n");
+  const cleaned = lines.length > 1 ? [lines[0], ...lines.slice(2)].join("\n") : csvText;
+
+  const parsed = Papa.parse(cleaned, {
     header: true,
     skipEmptyLines: true,
     transformHeader: (h) =>
