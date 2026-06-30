@@ -3181,24 +3181,18 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 <div className="col-span-2 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
                   <p className="text-[11px] font-semibold text-indigo-700 mb-1">📋 Check-in Form</p>
                   <p className="text-[10px] text-indigo-400 mb-2">Pega el link de HubSpot (o déjalo vacío para usar el de la plataforma). Guarda el kickoff para que el cliente lo vea en su PDF.</p>
-                  <input
-                    type="url"
-                    value={checkInFormUrl}
-                    onChange={e => setCheckInFormUrl(e.target.value)}
-                    placeholder={`https://twotravelvip.com/ci/${kickoff.id}`}
-                    className="w-full border border-indigo-200 rounded-lg px-2 py-1.5 text-[11px] font-mono bg-white mb-2 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <a href={`https://wa.me/?text=${encodeURIComponent(waMsgEs)}`}
-                      target="_blank" rel="noreferrer"
-                      className="text-[11px] text-green-700 border border-green-300 bg-green-50 rounded-lg px-3 py-1.5 hover:bg-green-100">
-                      WhatsApp ES
-                    </a>
-                    <a href={`https://wa.me/?text=${encodeURIComponent(waMsgEn)}`}
-                      target="_blank" rel="noreferrer"
-                      className="text-[11px] text-green-700 border border-green-300 bg-green-50 rounded-lg px-3 py-1.5 hover:bg-green-100">
-                      WhatsApp EN
-                    </a>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={checkInFormUrl}
+                      onChange={e => setCheckInFormUrl(e.target.value)}
+                      placeholder={`https://twotravelvip.com/ci/${kickoff.id}`}
+                      className="flex-1 border border-indigo-200 rounded-lg px-2 py-1.5 text-[11px] font-mono bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
+                    />
+                    <button type="button" onClick={handleSave}
+                      className="text-[11px] text-indigo-700 border border-indigo-300 bg-white rounded-lg px-3 py-1.5 hover:bg-indigo-100 whitespace-nowrap">
+                      Guardar
+                    </button>
                   </div>
                 </div>
               );
