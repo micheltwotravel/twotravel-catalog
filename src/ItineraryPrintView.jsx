@@ -1488,12 +1488,12 @@ const CITY_GUIDE_SECTIONS = [
     icon: "🍽️",
     title: "Dining & Food",
     items: [
-      { id: "brunch", label: "Brunch Spots", desc: "Perfect for a relaxed late morning or early afternoon.", url: "https://maps.app.goo.gl/brunch" },
-      { id: "coffee", label: "Coffee Shops", desc: "Great for a quick pick-me-up or a casual meet-up.", url: "https://maps.app.goo.gl/coffee" },
-      { id: "dinner_walled", label: "Dinner – Walled City", desc: "Our top picks for dinner in Cartagena's historic center.", url: "https://maps.app.goo.gl/dinner-walled" },
-      { id: "casual_walled", label: "Casual Dining – Walled City", desc: "More laid-back options for an easy meal.", url: "https://maps.app.goo.gl/casual-walled" },
-      { id: "getsemani", label: "Restaurants in Getsemani", desc: "Trendy, local, and vibrant dining options.", url: "https://maps.app.goo.gl/getsemani" },
-      { id: "latenight", label: "Late-Night Eats", desc: "Ideal for post-party bites or late cravings.", url: "https://maps.app.goo.gl/latenight" },
+      { id: "brunch", label: "Brunch Spots", desc: "Perfect for a relaxed late morning or early afternoon.", url: "https://maps.app.goo.gl/XqbGsW5f3Gb6Bw8GA" },
+      { id: "coffee", label: "Coffee Shops", desc: "Great for a quick pick-me-up or a casual meet-up.", url: "https://maps.app.goo.gl/8Sk2eyN5PyKCNAcw5" },
+      { id: "dinner_walled", label: "Dinner – Walled City", desc: "Our top picks for dinner in Cartagena's historic center.", url: "https://maps.app.goo.gl/RpoHDyNRMcyXjyPC6" },
+      { id: "casual_walled", label: "Casual Dining – Walled City", desc: "More laid-back options for an easy meal.", url: "https://maps.app.goo.gl/8D1oCLWroj5mXCvx7" },
+      { id: "getsemani", label: "Restaurants in Getsemani", desc: "Trendy, local, and vibrant dining options.", url: "https://maps.app.goo.gl/pXCVbUS64qXw7DMs5" },
+      { id: "latenight", label: "Late-Night Eats", desc: "Ideal for post-party bites or late cravings.", url: "https://maps.app.goo.gl/4eycD4YFt4nGEqn58" },
     ],
   },
   {
@@ -1501,10 +1501,10 @@ const CITY_GUIDE_SECTIONS = [
     icon: "🎭",
     title: "Nightlife & Entertainment",
     items: [
-      { id: "rooftops", label: "Rooftops", desc: "Best spots for sunset views and cocktails.", url: "https://maps.app.goo.gl/rooftops" },
-      { id: "bars", label: "Bars", desc: "From chill drinks to lively atmospheres.", url: "https://maps.app.goo.gl/bars" },
-      { id: "nightclubs", label: "Nightclubs", desc: "Where to go for a proper night out.", url: "https://maps.app.goo.gl/nightclubs" },
-      { id: "gentlemens", label: "Gentleman's Clubs", desc: "Curated options for adult nightlife experiences.", url: "https://maps.app.goo.gl/gentlemens" },
+      { id: "rooftops", label: "Rooftops", desc: "Best spots for sunset views and cocktails.", url: "https://maps.app.goo.gl/ke3S9xDyKqfAsUky6" },
+      { id: "bars", label: "Bars", desc: "From chill drinks to lively atmospheres.", url: "https://maps.app.goo.gl/KAGw1LQBvhWb65XP8" },
+      { id: "nightclubs", label: "Nightclubs", desc: "Where to go for a proper night out.", url: "https://maps.app.goo.gl/QDZTGL5sH2tWaxzb6" },
+      { id: "gentlemens", label: "Gentleman's Clubs", desc: "Curated options for adult nightlife experiences.", url: "https://maps.app.goo.gl/34CwoubwzfiyMr9G8" },
     ],
   },
   {
@@ -1512,7 +1512,7 @@ const CITY_GUIDE_SECTIONS = [
     icon: "🏖️",
     title: "Beach & Day Experiences",
     items: [
-      { id: "beach_clubs", label: "Beach Clubs", desc: "The best spots for a day by the water.", url: "https://maps.app.goo.gl/beach-clubs" },
+      { id: "beach_clubs", label: "Beach Clubs", desc: "The best spots for a day by the water.", url: "https://maps.app.goo.gl/n5Vqe4547qqJUBGSA" },
     ],
   },
   {
@@ -1520,9 +1520,9 @@ const CITY_GUIDE_SECTIONS = [
     icon: "🛍️",
     title: "Shopping & Lifestyle",
     items: [
-      { id: "shopping", label: "Shopping & Souvenirs", desc: "Local boutiques, gifts, and artisan finds.", url: "https://maps.app.goo.gl/shopping" },
-      { id: "cigars", label: "Cigar Shops & Lounges", desc: "Premium cigars and relaxed atmospheres.", url: "https://maps.app.goo.gl/cigars" },
-      { id: "hair", label: "Hair & Barber Shops", desc: "Trusted spots for grooming and quick touch-ups.", url: "https://maps.app.goo.gl/hair" },
+      { id: "shopping", label: "Shopping & Souvenirs", desc: "Local boutiques, gifts, and artisan finds.", url: "https://maps.app.goo.gl/HJ3iWCeDoAinNv2L8" },
+      { id: "cigars", label: "Cigar Shops & Lounges", desc: "Premium cigars and relaxed atmospheres.", url: "https://maps.app.goo.gl/SCAChpWjLppZYfd76" },
+      { id: "hair", label: "Hair & Barber Shops", desc: "Trusted spots for grooming and quick touch-ups.", url: "https://maps.app.goo.gl/EBF2W9acSgh4aaxaA" },
     ],
   },
   {
@@ -1530,9 +1530,9 @@ const CITY_GUIDE_SECTIONS = [
     icon: "⚙️",
     title: "Essentials & Services",
     items: [
-      { id: "atms", label: "ATMs", desc: "Convenient locations to withdraw cash.", url: "https://maps.app.goo.gl/atms" },
-      { id: "pharmacies", label: "24/7 Pharmacies", desc: "For any last-minute needs.", url: "https://maps.app.goo.gl/pharmacies" },
-      { id: "emergency", label: "Hospitals & Police Stations", desc: "Nearby emergency services for peace of mind.", url: "https://maps.app.goo.gl/emergency" },
+      { id: "atms", label: "ATMs", desc: "Convenient locations to withdraw cash.", url: "https://maps.app.goo.gl/H2f4SgGZki4zLhh38" },
+      { id: "pharmacies", label: "24/7 Pharmacies", desc: "For any last-minute needs.", url: "https://maps.app.goo.gl/2snjVdKhHcnpEhJA6" },
+      { id: "emergency", label: "Hospitals & Police Stations", desc: "Nearby emergency services for peace of mind.", url: "https://maps.app.goo.gl/8yomj1ZFQWF7JuoT6" },
     ],
   },
 ];
