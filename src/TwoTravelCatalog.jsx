@@ -4306,8 +4306,10 @@ setCart([]);
     </span>
   )}
 </div>
-{item.priceTiers && (
-  <p className="text-xs text-gray-500 mt-1" style={{whiteSpace:"pre-line"}}>{item.priceTiers}</p>
+{(item.priceTiers || item.priceTiers_en) && (
+  <p className="text-xs text-gray-500 mt-1" style={{whiteSpace:"pre-line"}}>
+    {lang === "en" ? (item.priceTiers_en || item.priceTiers) : (item.priceTiers || item.priceTiers_en)}
+  </p>
 )}
 
 
@@ -4483,8 +4485,10 @@ setCart([]);
     ? `${formatPrice(convertPrice(item.price_cop))} · ${unitLabel(item.priceUnit, item.category)}`
     : getServicePriceLevel(item, item.clientType || currentClientType) || t.variablePrice}
 </p>
-{item.priceTiers && (
-  <p className="text-xs text-gray-400" style={{whiteSpace:"pre-line"}}>{item.priceTiers}</p>
+{(item.priceTiers || item.priceTiers_en) && (
+  <p className="text-xs text-gray-400" style={{whiteSpace:"pre-line"}}>
+    {lang === "en" ? (item.priceTiers_en || item.priceTiers) : (item.priceTiers || item.priceTiers_en)}
+  </p>
 )}
 
                         {item.notes && (

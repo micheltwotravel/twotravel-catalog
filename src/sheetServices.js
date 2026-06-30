@@ -205,6 +205,8 @@ video1: video1,
     deposit_es: row.deposit_es || row.deposit || "",    // Spanish
     cancellation:    row.cancellation || "",            // English
     cancellation_es: row.cancellation_es || "",         // Spanish
+    priceTiers:    row.pricetiers    || row.price_tiers    || "",
+    priceTiers_en: row.pricetiers_en || row.price_tiers_en || "",
     menuUrl:   row.menuurl   || row.menu_url   || row["menu url"]   || row.menuUrl   || "",
     mapsUrl:   row.mapsurl   || row.maps_url   || row["maps url"]   || row.mapsUrl   || "",
     // Dress code — dress_code = español · dress_code_en = inglés

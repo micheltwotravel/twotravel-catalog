@@ -288,7 +288,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       familyFriendly: !!(service.family_friendly),
       dressCode    : cl(cartItem.dressCode || service.dressCode || service.dress_code || ""),
       confirmed    : cartItem.confirmed !== false,
-      priceTiers   : cartItem.priceTiers || service.priceTiers || service.price_tiers || "",
+      priceTiers   : cartItem.priceTiers || (lang === "en" ? (service.priceTiers_en || service.priceTiers) : (service.priceTiers || service.priceTiers_en)) || service.price_tiers || "",
     });
   });
   // Respect dayMeta order if provided
