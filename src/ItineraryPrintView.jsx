@@ -75,6 +75,128 @@ function cleanBrackets(v) {
   return cl(v).replace(/[\[\]]/g, "");
 }
 
+// ─── FLIGHT TRACKER (web view only, no-print) ────────────────
+const FLIGHT_STATUS_LABELS = {
+  scheduled: { label: "Programado", color: "#2563eb", bg: "#eff6ff" },
+  active:    { label: "En vuelo",   color: "#059669", bg: "#ecfdf5" },
+  landed:    { label: "Aterrizó",   color: "#374151", bg: "#f3f4f6" },
+  cancelled: { label: "Cancelado",  color: "#dc2626", bg: "#fef2f2" },
+  diverted:  { label: "Desviado",   color: "#d97706", bg: "#fffbeb" },
+  unknown:   { label: "Sin datos",  color: "#9ca3af", bg: "#f9fafb" },
+};
+
+function FlightStatusChip({ status }) {
+  const s = FLIGHT_STATUS_LABELS[status] || FLIGHT_STATUS_LABELS.unknown;
+  return (
+    <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99,
+      background: s.bg, color: s.color, letterSpacing: ".05em", textTransform: "uppercase" }}>
+      {s.label}
+    </span>
+  );
+}
+
+function FlightCard({ arrival, lang }) {
+  const [data, setData]     = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]   = useState(null);
+  const isEs = lang === "es";
+
+  useEffect(() => {
+    if (!arrival.flightNumber) return;
+    setLoading(true);
+    const params = new URLSearchParams({ flight: arrival.flightNumber });
+    if (arrival.date) params.set("date", arrival.date);
+    fetch(`/api/flight-status?${params}`)
+      .then(r => r.json())
+      .then(d => { setData(d.data); setLoading(false); })
+      .catch(() => { setError(true); setLoading(false); });
+  }, [arrival.flightNumber, arrival.date]);
+
+  const fmtTime = (iso) => {
+    if (!iso) return null;
+    return new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" });
+  };
+
+  return (
+    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "14px 16px", marginBottom: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 15, color: "#111" }}>
+            ✈ {arrival.flightNumber}
+          </span>
+          {arrival.origin && <span style={{ fontSize: 11, color: "#6b7280" }}>{arrival.origin} → {data?.arrIata || "…"}</span>}
+          {arrival.name && <span style={{ fontSize: 11, color: "#9ca3af" }}>· {arrival.name}</span>}
+        </div>
+        {loading && <span style={{ fontSize: 11, color: "#9ca3af" }}>Consultando…</span>}
+        {data && <FlightStatusChip status={data.status} />}
+      </div>
+
+      {error && <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>No se pudo obtener información en tiempo real.</p>}
+
+      {data && (
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+          {data.depScheduled && (
+            <div>
+              <p style={{ fontSize: 9, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 2px" }}>
+                {isEs ? "Sale" : "Departs"}
+              </p>
+              <p style={{ fontSize: 12, fontWeight: 600, color: "#111", margin: 0 }}>
+                {fmtTime(data.depActual || data.depScheduled)}
+                {data.depDelay > 0 && (
+                  <span style={{ color: "#dc2626", fontSize: 10, marginLeft: 4 }}>+{data.depDelay}m</span>
+                )}
+              </p>
+              {data.depAirport && <p style={{ fontSize: 10, color: "#6b7280", margin: 0 }}>{data.depAirport}</p>}
+              {data.gate && <p style={{ fontSize: 10, color: "#6b7280", margin: 0 }}>Gate {data.gate}{data.terminal ? ` · T${data.terminal}` : ""}</p>}
+            </div>
+          )}
+          {data.arrScheduled && (
+            <div>
+              <p style={{ fontSize: 9, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 2px" }}>
+                {isEs ? "Llega" : "Arrives"}
+              </p>
+              <p style={{ fontSize: 12, fontWeight: 600, color: "#111", margin: 0 }}>
+                {fmtTime(data.arrActual || data.arrEstimated || data.arrScheduled)}
+                {data.arrDelay > 0 && (
+                  <span style={{ color: "#dc2626", fontSize: 10, marginLeft: 4 }}>+{data.arrDelay}m</span>
+                )}
+              </p>
+              {data.arrAirport && <p style={{ fontSize: 10, color: "#6b7280", margin: 0 }}>{data.arrAirport}</p>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!loading && !data && !error && arrival.date && (
+        <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
+          {isEs ? "Información disponible el día del vuelo." : "Flight info available on the day of travel."}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function FlightTracker({ kickoff, lang }) {
+  let arrivals = [];
+  try { arrivals = JSON.parse(kickoff.arrivals || "[]").filter(a => a.flightNumber); } catch {}
+  if (!arrivals.length) return null;
+  const isEs = lang === "es";
+
+  return (
+    <div className="no-print" style={{ maxWidth: 780, margin: "0 auto 24px", padding: "0 24px" }}>
+      <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 16, padding: 20 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "#374151", marginBottom: 12 }}>
+          ✈️ {isEs ? "Estado de vuelos" : "Flight Status"}
+        </p>
+        {arrivals.map((a, i) => <FlightCard key={i} arrival={a} lang={lang} />)}
+        <p style={{ fontSize: 10, color: "#9ca3af", margin: "8px 0 0", textAlign: "right" }}>
+          {isEs ? "Datos en tiempo real · Actualiza la página para refrescar" : "Live data · Refresh the page to update"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function fmtPrice(v) {
   const n = num(v);
   if (!n) return "";
@@ -2201,6 +2323,8 @@ export default function ItineraryPrintView() {
         lang={lang}
         editMode={editMode}
       />
+
+      <FlightTracker kickoff={kickoff} lang={lang} />
 
       {/* WelcomePage removed — content is repetitive with cover page */}
 
