@@ -235,7 +235,8 @@ video1: video1,
 }
 
 async function fetchCatalogFromSheet() {
-  const response = await fetch(`${SHEET_CSV_URL}&t=${Date.now()}`);
+  const sep = SHEET_CSV_URL.includes("?") ? "&" : "?";
+  const response = await fetch(`${SHEET_CSV_URL}${sep}t=${Date.now()}`);
   if (!response.ok) {
     throw new Error(`No se pudo cargar el catálogo: ${response.status}`);
   }
