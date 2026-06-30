@@ -77,20 +77,20 @@ function cleanBrackets(v) {
 
 // ─── FLIGHT TRACKER (web view only, no-print) ────────────────
 const FLIGHT_STATUS_LABELS = {
-  scheduled: { label: "Programado", color: "#2563eb", bg: "#eff6ff" },
-  active:    { label: "En vuelo",   color: "#059669", bg: "#ecfdf5" },
-  landed:    { label: "Aterrizó",   color: "#374151", bg: "#f3f4f6" },
-  cancelled: { label: "Cancelado",  color: "#dc2626", bg: "#fef2f2" },
-  diverted:  { label: "Desviado",   color: "#d97706", bg: "#fffbeb" },
-  unknown:   { label: "Sin datos",  color: "#9ca3af", bg: "#f9fafb" },
+  scheduled: { es: "Programado", en: "Scheduled", color: "#2563eb", bg: "#eff6ff" },
+  active:    { es: "En vuelo",   en: "In Flight",  color: "#059669", bg: "#ecfdf5" },
+  landed:    { es: "Aterrizó",   en: "Landed",     color: "#374151", bg: "#f3f4f6" },
+  cancelled: { es: "Cancelado",  en: "Cancelled",  color: "#dc2626", bg: "#fef2f2" },
+  diverted:  { es: "Desviado",   en: "Diverted",   color: "#d97706", bg: "#fffbeb" },
+  unknown:   { es: "Sin datos",  en: "No data",    color: "#9ca3af", bg: "#f9fafb" },
 };
 
-function FlightStatusChip({ status }) {
+function FlightStatusChip({ status, lang }) {
   const s = FLIGHT_STATUS_LABELS[status] || FLIGHT_STATUS_LABELS.unknown;
   return (
     <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99,
       background: s.bg, color: s.color, letterSpacing: ".05em", textTransform: "uppercase" }}>
-      {s.label}
+      {lang === "es" ? s.es : s.en}
     </span>
   );
 }
@@ -128,7 +128,7 @@ function FlightCard({ arrival, lang }) {
           {arrival.name && <span style={{ fontSize: 11, color: "#9ca3af" }}>· {arrival.name}</span>}
         </div>
         {loading && <span style={{ fontSize: 11, color: "#9ca3af" }}>Consultando…</span>}
-        {data && <FlightStatusChip status={data.status} />}
+        {data && <FlightStatusChip status={data.status} lang={lang} />}
       </div>
 
       {error && <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>No se pudo obtener información en tiempo real.</p>}
