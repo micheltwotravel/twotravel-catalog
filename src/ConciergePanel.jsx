@@ -3179,7 +3179,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               const waMsgEn = `Hi! 👋 Please fill out this pre-check-in form so we can prepare every detail of your stay:\n\n${ciLink}\n\nShare it with your entire group before arrival. It helps us have everything ready for you 🙌`;
               return (
                 <div className="col-span-2 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
-                  <p className="text-[11px] font-semibold text-indigo-700 mb-2">📋 Check-in Form</p>
+                  <p className="text-[11px] font-semibold text-indigo-700 mb-1">📋 Check-in Form</p>
+                  <p className="text-[10px] text-indigo-400 mb-2">Pega el link de HubSpot (o déjalo vacío para usar el de la plataforma). Guarda el kickoff para que el cliente lo vea en su PDF.</p>
                   <input
                     type="url"
                     value={checkInFormUrl}
@@ -3188,15 +3189,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     className="w-full border border-indigo-200 rounded-lg px-2 py-1.5 text-[11px] font-mono bg-white mb-2 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
                   />
                   <div className="flex flex-wrap gap-2">
-                    <a href={ciLink} target="_blank" rel="noreferrer"
-                      className="text-[11px] text-indigo-700 border border-indigo-300 bg-white rounded-lg px-3 py-1.5 hover:bg-indigo-100">
-                      Abrir →
-                    </a>
-                    <button type="button"
-                      onClick={() => { navigator.clipboard.writeText(ciLink); }}
-                      className="text-[11px] text-indigo-700 border border-indigo-300 bg-white rounded-lg px-3 py-1.5 hover:bg-indigo-100">
-                      Copiar link
-                    </button>
                     <a href={`https://wa.me/?text=${encodeURIComponent(waMsgEs)}`}
                       target="_blank" rel="noreferrer"
                       className="text-[11px] text-green-700 border border-green-300 bg-green-50 rounded-lg px-3 py-1.5 hover:bg-green-100">
