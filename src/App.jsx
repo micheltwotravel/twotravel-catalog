@@ -831,6 +831,207 @@ const handleSubmit = async (e) => {
     </div>
   );
 }
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+const JUNIOR_CONCIERGES = ["Valentina","Manuela","Isabella","Sofia","Daniela","Gabriela","Natalia","Carolina","Otro"];
+const CITY_LABELS_D = { cartagena:"Cartagena", medellin:"Medellín", bogota:"Bogotá", barranquilla:"Barranquilla", santamarta:"Santa Marta" };
+
+function cityLabel(code) {
+  if (!code) return "";
+  return CITY_LABELS_D[code.toLowerCase().trim()] || code;
+}
+
+function parseCity(k) {
+  const raw = String(k.city || "").trim();
+  const parts = raw.split(",").map(s => s.trim()).filter(Boolean);
+  return { city1: parts[0] || "", city2: k.city2 || parts[1] || "" };
+}
+
+function fmtDateShort(s) {
+  if (!s) return "";
+  try { return new Date(s + "T12:00:00").toLocaleDateString("es", { day:"numeric", month:"short" }); }
+  catch { return s; }
+}
+
+function orderStatus(k) {
+  const drinks = k.drinkOrderJson || k.drinkOrder ? "✅" : "—";
+  const grocery = k.groceryOrderJson || k.groceryOrder ? "✅" : "—";
+  const breakfast = (() => {
+    try {
+      const c = typeof k.cart === "string" ? JSON.parse(k.cart) : (k.cart || []);
+      return Array.isArray(c) && c.length ? "✅" : "—";
+    } catch { return "—"; }
+  })();
+  return { drinks, grocery, breakfast };
+}
+
+function ClientesTable({ kickoffs, loading }) {
+  const [cityFilter, setCityFilter] = useState("all");
+  const [period, setPeriod] = useState("all");
+  const [saving, setSaving] = useState({});
+
+  // Expand multi-city kickoffs into multiple rows
+  const rows = React.useMemo(() => {
+    const result = [];
+    kickoffs.forEach(k => {
+      const { city1, city2 } = parseCity(k);
+      result.push({ ...k, _rowCity: city1, _rowArrival: k.arrivalDate, _rowDeparture: k.departureDate });
+      if (city2 || k.arrivalDate2 || k.accommodationName2) {
+        result.push({ ...k, _rowCity: city2, _rowArrival: k.arrivalDate2, _rowDeparture: k.departureDate2, _isCity2: true });
+      }
+    });
+    return result;
+  }, [kickoffs]);
+
+  const now = new Date();
+  const filtered = rows.filter(r => {
+    if (cityFilter !== "all") {
+      const c = (r._rowCity || "").toLowerCase().trim();
+      if (c !== cityFilter) return false;
+    }
+    if (period !== "all" && r._rowArrival) {
+      const arr = new Date(r._rowArrival);
+      const diffDays = (arr - now) / 86400000;
+      if (period === "week"  && (diffDays < -7 || diffDays > 7))  return false;
+      if (period === "month" && (diffDays < -30 || diffDays > 30)) return false;
+    }
+    return true;
+  }).sort((a, b) => (a._rowArrival || "") > (b._rowArrival || "") ? 1 : -1);
+
+  const cities = ["all", ...Array.from(new Set(rows.map(r => (r._rowCity||"").toLowerCase().trim()).filter(Boolean)))];
+
+  async function saveField(kickoffId, field, value) {
+    setSaving(s => ({ ...s, [kickoffId + field]: true }));
+    try {
+      await fetch(GAS_URL, {
+        method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "updateKickoff", id: kickoffId, updates: { [field]: value } }),
+      });
+    } catch(e) { console.error(e); }
+    setSaving(s => ({ ...s, [kickoffId + field]: false }));
+  }
+
+  const thStyle = { fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", color:"#6b7280", padding:"8px 10px", background:"#f9fafb", borderBottom:"1px solid #e5e7eb", whiteSpace:"nowrap", textAlign:"left" };
+  const tdStyle = { fontSize:12, padding:"8px 10px", borderBottom:"1px solid #f3f4f6", verticalAlign:"middle" };
+
+  return (
+    <div>
+      {/* Filters */}
+      <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap", alignItems:"center" }}>
+        <span style={{ fontSize:11, color:"#6b7280", fontWeight:600 }}>Ciudad:</span>
+        {cities.map(c => (
+          <button key={c} onClick={() => setCityFilter(c)}
+            style={{ fontSize:11, padding:"4px 10px", borderRadius:99, border:"1px solid", cursor:"pointer",
+              background: cityFilter===c ? "#111" : "#fff",
+              color: cityFilter===c ? "#fff" : "#555",
+              borderColor: cityFilter===c ? "#111" : "#ddd" }}>
+            {c === "all" ? "Todas" : cityLabel(c)}
+          </button>
+        ))}
+        <span style={{ fontSize:11, color:"#6b7280", fontWeight:600, marginLeft:8 }}>Período:</span>
+        {[["all","Todo"],["week","Esta semana"],["month","Este mes"]].map(([v,l]) => (
+          <button key={v} onClick={() => setPeriod(v)}
+            style={{ fontSize:11, padding:"4px 10px", borderRadius:99, border:"1px solid", cursor:"pointer",
+              background: period===v ? "#111" : "#fff",
+              color: period===v ? "#fff" : "#555",
+              borderColor: period===v ? "#111" : "#ddd" }}>
+            {l}
+          </button>
+        ))}
+        <span style={{ fontSize:11, color:"#9ca3af", marginLeft:"auto" }}>{filtered.length} clientes</span>
+      </div>
+
+      {loading && <p style={{ fontSize:13, color:"#9ca3af", padding:24 }}>Cargando…</p>}
+
+      {!loading && (
+        <div style={{ overflowX:"auto", borderRadius:12, border:"1px solid #e5e7eb", background:"#fff" }}>
+          <table style={{ width:"100%", borderCollapse:"collapse" }}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Cliente</th>
+                <th style={thStyle}>Ciudad</th>
+                <th style={thStyle}>Fechas</th>
+                <th style={thStyle}>Pax</th>
+                <th style={thStyle}>Concierge</th>
+                <th style={thStyle}>Junior</th>
+                <th style={thStyle}>Itinerario</th>
+                <th style={thStyle}>Reuniones</th>
+                <th style={thStyle}>🍹 Bebidas</th>
+                <th style={thStyle}>🛒 Comida</th>
+                <th style={thStyle}>☕ Desayuno</th>
+                <th style={{ ...thStyle, minWidth:180 }}>📣 Marketing</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 && (
+                <tr><td colSpan={12} style={{ ...tdStyle, textAlign:"center", color:"#9ca3af", padding:32 }}>Sin clientes para este filtro.</td></tr>
+              )}
+              {filtered.map((r, i) => {
+                const { drinks, grocery, breakfast } = orderStatus(r);
+                const itinLink = `/?mode=itinerary&kickoffId=${r.id}`;
+                const reunLink = `/?mode=reuniones`;
+                const isSaving = (f) => saving[r.id + f];
+                return (
+                  <tr key={r.id + (r._isCity2 ? "_2" : "")} style={{ background: i%2===0?"#fff":"#fafafa" }}>
+                    <td style={tdStyle}>
+                      <div style={{ fontWeight:600, color:"#111" }}>{r.guestName || r.tripName || "—"}</div>
+                      {r.tripName && r.guestName && <div style={{ fontSize:10, color:"#9ca3af" }}>{r.tripName}</div>}
+                    </td>
+                    <td style={tdStyle}>
+                      <span style={{ fontSize:11, padding:"2px 8px", borderRadius:99, background:"#f3f4f6", color:"#374151", fontWeight:500 }}>
+                        {cityLabel(r._rowCity) || "—"}
+                      </span>
+                    </td>
+                    <td style={{ ...tdStyle, whiteSpace:"nowrap", color:"#6b7280" }}>
+                      {fmtDateShort(r._rowArrival)}{r._rowDeparture ? ` → ${fmtDateShort(r._rowDeparture)}` : ""}
+                    </td>
+                    <td style={{ ...tdStyle, textAlign:"center" }}>{r.pax || r.groupSize || "—"}</td>
+                    <td style={{ ...tdStyle, color:"#374151" }}>{r.assignedConciergeName || r.concierge || "—"}</td>
+                    <td style={tdStyle}>
+                      <select
+                        defaultValue={r.juniorConcierge || ""}
+                        onBlur={e => { if (e.target.value !== (r.juniorConcierge||"")) saveField(r.id, "juniorConcierge", e.target.value); }}
+                        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"3px 6px", background:"#fff", color:"#374151", cursor:"pointer" }}>
+                        <option value="">— asignar —</option>
+                        {JUNIOR_CONCIERGES.map(n => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                      {isSaving("juniorConcierge") && <span style={{ fontSize:9, color:"#9ca3af" }}> ↑</span>}
+                    </td>
+                    <td style={tdStyle}>
+                      <a href={itinLink} target="_blank" rel="noreferrer"
+                        style={{ fontSize:11, color:"#2563eb", textDecoration:"none", fontWeight:500 }}>
+                        Ver →
+                      </a>
+                    </td>
+                    <td style={tdStyle}>
+                      <a href={reunLink} target="_blank" rel="noreferrer"
+                        style={{ fontSize:11, color:"#7c3aed", textDecoration:"none", fontWeight:500 }}>
+                        Reuniones →
+                      </a>
+                    </td>
+                    <td style={{ ...tdStyle, textAlign:"center" }}>{drinks}</td>
+                    <td style={{ ...tdStyle, textAlign:"center" }}>{grocery}</td>
+                    <td style={{ ...tdStyle, textAlign:"center" }}>{breakfast}</td>
+                    <td style={tdStyle}>
+                      <input
+                        type="text"
+                        defaultValue={r.marketingNotes || ""}
+                        placeholder="Notas marketing…"
+                        onBlur={e => { if (e.target.value !== (r.marketingNotes||"")) saveField(r.id, "marketingNotes", e.target.value); }}
+                        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 8px", width:"100%", background:"#fff", boxSizing:"border-box" }}
+                      />
+                      {isSaving("marketingNotes") && <span style={{ fontSize:9, color:"#9ca3af" }}>guardando…</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UnifiedDashboard() {
   const sheetUrl =
     "https://docs.google.com/spreadsheets/d/1Tyv5cPTN0MjxezyWRjo-XuIRqOgaPwP-z1heZfgGiuQ/edit#gid=0";
@@ -1236,6 +1437,7 @@ function UnifiedDashboard() {
         {/* ── Tabs ── */}
         <div style={{display:"flex",gap:6,marginBottom:24,borderBottom:"1px solid var(--border)",paddingBottom:0}}>
           {[
+            { id: "clientes", label: "Clientes" },
             { id: "kpis",     label: "KPIs" },
             { id: "gestion",  label: "Gestión" },
             { id: "feedback", label: "Feedback" },
@@ -1257,6 +1459,11 @@ function UnifiedDashboard() {
             </button>
           ))}
         </div>
+
+        {/* ══ Clientes tab ══ */}
+        {tab === "clientes" && (
+          <ClientesTable kickoffs={kickoffs} loading={kLoading} />
+        )}
 
         {/* ══ KPIs tab ══ */}
         {tab === "kpis" && (
