@@ -929,19 +929,37 @@ function CoverPage({ kickoff, total, lang, editMode }) {
         {/* Project Inform / Pre-check-in form link */}
         {a.checkInFormUrl && (
           <a href={a.checkInFormUrl} target="_blank" rel="noreferrer" style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
+            display: "block",
             textDecoration: "none", background: "#faf5ff", border: "1px solid #d8b4fe",
             borderRadius: 10, padding: "11px 16px", marginBottom: 10,
           }}>
-            <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed" }}>
                 📋 {isEs ? "Check-in Form" : "Check-in Form"}
               </div>
-              <div style={{ fontSize: 9.5, color: "#6b7280", marginTop: 2 }}>
-                {isEs ? "Completa tu información antes de llegar — tu concierge lo tendrá todo listo." : "Fill out your info before arriving — your concierge will have everything ready."}
-              </div>
+              <span style={{ fontSize: 14, color: "#7c3aed" }}>→</span>
             </div>
-            <span style={{ fontSize: 14, color: "#7c3aed" }}>→</span>
+            <div style={{ fontSize: 9.5, color: "#6b7280", marginTop: 6, lineHeight: 1.5 }}>
+              {isEs
+                ? "Comparte este formulario con todo tu grupo para que podamos preparar cada detalle de tu estadía con anticipación. Esta información nos ayuda con:"
+                : "Share this form with your entire group so we can prepare every detail of your stay in advance. This information helps us with:"}
+            </div>
+            <ul style={{ fontSize: 9.5, color: "#6b7280", marginTop: 4, paddingLeft: 16, lineHeight: 1.5 }}>
+              <li>{isEs
+                ? "Datos de pasaporte: requeridos por la mayoría de las villas como parte de su proceso oficial de check-in, y a veces para acceso al muelle o seguro de actividades."
+                : "Passport details: required by most villas as part of their official check-in process, and sometimes for dock access or activity insurance."}</li>
+              <li>{isEs
+                ? "Necesidades alimenticias y alergias: nos permite elegir restaurantes adecuados, avisar a los lugares con anticipación, y preparar al personal de la villa para desayunos y comidas en casa."
+                : "Dietary needs & allergies: this allows us to select suitable restaurants, notify venues in advance, and brief the villa staff for breakfasts and any meals at the house."}</li>
+              <li>{isEs
+                ? "Información de vuelo: nos permite coordinar el transporte del aeropuerto y el número correcto de vehículos para la llegada y salida de tu grupo."
+                : "Flight information: this allows us to coordinate airport transportation and arrange the right number of vehicles for your group's arrival and departure."}</li>
+            </ul>
+            <div style={{ fontSize: 9.5, color: "#6b7280", marginTop: 4, lineHeight: 1.5 }}>
+              {isEs
+                ? "Por favor asegúrate de que todos en tu grupo lo completen antes de llegar. Esto nos ayuda a evitar retrasos y tener todo listo para ustedes."
+                : "Please make sure everyone in your group completes this before arrival. It helps us avoid delays and have everything ready for you."}
+            </div>
           </a>
         )}
 
