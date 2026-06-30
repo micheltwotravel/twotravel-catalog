@@ -3174,13 +3174,19 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             </div>
 
             {kickoff?.id && (() => {
-              const ciLink = `https://twotravelvip.com/ci/${kickoff.id}`;
+              const ciLink = checkInFormUrl.trim() || `https://twotravelvip.com/ci/${kickoff.id}`;
               const waMsgEs = `Hola! 👋 Para preparar todos los detalles de tu estadía, por favor completa este formulario de check-in:\n\n${ciLink}\n\nCompartelo con todo tu grupo antes de llegar. Nos ayuda a tener todo listo para ustedes 🙌`;
               const waMsgEn = `Hi! 👋 Please fill out this pre-check-in form so we can prepare every detail of your stay:\n\n${ciLink}\n\nShare it with your entire group before arrival. It helps us have everything ready for you 🙌`;
               return (
                 <div className="col-span-2 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
                   <p className="text-[11px] font-semibold text-indigo-700 mb-2">📋 Check-in Form</p>
-                  <p className="text-[10px] text-indigo-500 font-mono break-all mb-2">{ciLink}</p>
+                  <input
+                    type="url"
+                    value={checkInFormUrl}
+                    onChange={e => setCheckInFormUrl(e.target.value)}
+                    placeholder={`https://twotravelvip.com/ci/${kickoff.id}`}
+                    className="w-full border border-indigo-200 rounded-lg px-2 py-1.5 text-[11px] font-mono bg-white mb-2 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
+                  />
                   <div className="flex flex-wrap gap-2">
                     <a href={ciLink} target="_blank" rel="noreferrer"
                       className="text-[11px] text-indigo-700 border border-indigo-300 bg-white rounded-lg px-3 py-1.5 hover:bg-indigo-100">
