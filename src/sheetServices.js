@@ -7,8 +7,7 @@ import Papa from "papaparse";
    1) CATÁLOGO – CSV (SIGUE IGUAL)
    ============================================================ */
 
-const SHEET_CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNGpwNTGIWfyOOxSIFZgTdstPVL53Qhu_jUA1THG3J69YRdWI8SUsj4wHQsVOer2ykFzLMk2SozHuQ/pub?gid=190949837&single=true&output=csv";
+const SHEET_CSV_URL = "/api/catalog-csv";
 
 function parseNum(v) {
   const n = Number((v || "").toString().replace(/[^0-9.-]/g, ""));
