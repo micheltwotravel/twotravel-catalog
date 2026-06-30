@@ -3809,16 +3809,19 @@ function CheckinForm() {
   const [lang, setLang] = React.useState(params.get("lang") === "es" ? "es" : "en");
   const en = lang === "en";
 
-  const [kickoff,  setKickoff]  = React.useState(null);
-  const [loading,  setLoading]  = React.useState(!!kickoffId);
-  const [sending,  setSending]  = React.useState(false);
-  const [done,     setDone]     = React.useState(false);
-  const [error,    setError]    = React.useState("");
+  const [kickoff, setKickoff] = React.useState(null);
+  const [loading, setLoading] = React.useState(!!kickoffId);
+  const [sending, setSending] = React.useState(false);
+  const [done,    setDone]    = React.useState(false);
+  const [error,   setError]   = React.useState("");
 
   const empty = () => ({
-    fullName: "", passport: "", passportExpiry: "", nationality: "",
-    dietary: "", arrivalFlight: "", arrivalDate: "", arrivalTime: "",
-    departureFlight: "", departureDate: "", departureTime: "", whatsapp: "",
+    firstName: "", lastName: "", email: "", phone: "",
+    idType: "Passport", idNumber: "", dob: "", nationality: "", gender: "",
+    arrivalAirline: "", arrivalDate: "", arrivalFlight: "",
+    departureAirline: "", departureDate: "", departureFlight: "",
+    foodRestrictions: "", allergies: "", occasion: "", photoPermission: "",
+    isGroupContact: "",
   });
   const [form, setForm] = React.useState(empty());
 
@@ -3833,9 +3836,10 @@ function CheckinForm() {
   }, [kickoffId]);
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+  const setCheck = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.checked ? "yes" : "no" }));
 
   const submit = async () => {
-    if (!form.fullName.trim()) { setError(en ? "Full name is required." : "El nombre completo es requerido."); return; }
+    if (!form.firstName.trim()) { setError(en ? "First name is required." : "El nombre es requerido."); return; }
     setSending(true); setError("");
     try {
       const res = await fetch(GAS_URL, {
@@ -3843,7 +3847,7 @@ function CheckinForm() {
         body: JSON.stringify({ action: "saveCheckinResponse", kickoffId, response: { ...form, submittedAt: new Date().toISOString() } }),
       });
       const data = await res.json();
-      if (data.ok) { setDone(true); }
+      if (data.ok) setDone(true);
       else setError(en ? "Something went wrong. Try again." : "Algo salió mal. Intenta de nuevo.");
     } catch { setError(en ? "Connection error. Try again." : "Error de conexión. Intenta de nuevo."); }
     finally { setSending(false); }
@@ -3853,25 +3857,19 @@ function CheckinForm() {
     if (!kickoff) return "";
     const city = String(kickoff.city || "").split(",")[0]?.trim();
     const MAP = { CTG:"Cartagena", MDE:"Medellín", BOG:"Bogotá", CDMX:"Ciudad de México", TUL:"Tulum" };
-    const cityName = MAP[city?.toUpperCase()] || city;
-    const dates = kickoff.tripDates || "";
-    return [kickoff.guestName, cityName, dates].filter(Boolean).join(" · ");
+    return [kickoff.guestName, MAP[city?.toUpperCase()] || city, kickoff.tripDates].filter(Boolean).join(" · ");
   })();
 
-  const inputCls = "w-full border border-neutral-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-neutral-400 bg-white";
-  const labelCls = "block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1";
+  const inp = "w-full border border-neutral-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-neutral-400 bg-white";
+  const lbl = "block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1";
+  const sel = inp + " appearance-none";
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-50">
-      <div className="text-sm text-neutral-400">{en ? "Loading…" : "Cargando…"}</div>
-    </div>
-  );
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-stone-50"><p className="text-sm text-neutral-400">{en?"Loading…":"Cargando…"}</p></div>;
 
   if (!kickoffId) return (
     <div className="min-h-screen flex items-center justify-center bg-stone-50 px-6">
-      <div className="text-center">
-        <div className="text-3xl mb-3">✈️</div>
-        <p className="text-neutral-500 text-sm">{en ? "No trip found. Check your link." : "No se encontró el viaje. Revisa tu link."}</p>
+      <div className="text-center"><div className="text-4xl mb-3">✈️</div>
+        <p className="text-neutral-500 text-sm">{en?"No trip found. Check your link.":"No se encontró el viaje. Revisa tu link."}</p>
       </div>
     </div>
   );
@@ -3880,13 +3878,10 @@ function CheckinForm() {
     <div className="min-h-screen flex items-center justify-center bg-stone-50 px-6">
       <div className="text-center max-w-sm">
         <div className="text-5xl mb-4">🎉</div>
-        <h2 className="text-xl font-semibold text-neutral-800 mb-2">{en ? "All done!" : "¡Listo!"}</h2>
-        <p className="text-neutral-500 text-sm mb-6">
-          {en ? "Your info has been received. We'll have everything ready for your arrival." : "Tu información fue recibida. Tendremos todo listo para tu llegada."}
-        </p>
-        <button onClick={() => { setDone(false); setForm(empty()); }}
-          className="text-sm text-neutral-600 underline">
-          {en ? "Add another person" : "Agregar otra persona"}
+        <h2 className="text-xl font-semibold text-neutral-800 mb-2">{en?"All done!":"¡Listo!"}</h2>
+        <p className="text-neutral-500 text-sm mb-6">{en?"Your info has been received. We'll have everything ready for your arrival.":"Tu información fue recibida. Tendremos todo listo para tu llegada."}</p>
+        <button onClick={() => { setDone(false); setForm(empty()); }} className="text-sm text-neutral-600 underline">
+          {en?"Add another person":"Agregar otra persona"}
         </button>
       </div>
     </div>
@@ -3895,17 +3890,17 @@ function CheckinForm() {
   return (
     <div className="min-h-screen bg-stone-50 pb-16">
       {/* Header */}
-      <div style={{ background: "linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%)" }} className="px-6 pt-10 pb-8">
+      <div style={{ background:"linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%)" }} className="px-6 pt-10 pb-8">
         <div className="max-w-lg mx-auto">
           <div className="flex justify-between items-start mb-4">
             <div>
               <p className="text-white/50 text-[10px] uppercase tracking-widest mb-1">Two Travel</p>
-              <h1 className="text-white text-2xl font-bold">{en ? "Pre-Check-in" : "Pre-Check-in"}</h1>
+              <h1 className="text-white text-2xl font-bold">Pre-Check-in</h1>
               {tripLabel && <p className="text-white/60 text-xs mt-1">{tripLabel}</p>}
             </div>
-            <button onClick={() => setLang(en ? "es" : "en")}
+            <button onClick={() => setLang(en?"es":"en")}
               className="text-white/60 text-xs border border-white/20 rounded-full px-3 py-1 hover:bg-white/10">
-              {en ? "ES" : "EN"}
+              {en?"ES":"EN"}
             </button>
           </div>
           <p className="text-white/70 text-sm leading-relaxed">
@@ -3918,95 +3913,162 @@ function CheckinForm() {
 
       <div className="max-w-lg mx-auto px-5 mt-6 space-y-5">
 
-        {/* Personal */}
+        {/* 1. Personal */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
-          <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">
-            <span>🪪</span> {en ? "Personal Info" : "Información Personal"}
-          </h3>
+          <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">🪪 {en?"Personal Info":"Información Personal"}</h3>
           <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={lbl}>{en?"First name *":"Nombre *"}</label>
+                <input value={form.firstName} onChange={set("firstName")} className={inp}
+                  placeholder={en?"First name":"Nombre"} />
+              </div>
+              <div>
+                <label className={lbl}>{en?"Last name *":"Apellido *"}</label>
+                <input value={form.lastName} onChange={set("lastName")} className={inp}
+                  placeholder={en?"Last name":"Apellido"} />
+              </div>
+            </div>
             <div>
-              <label className={labelCls}>{en ? "Full name *" : "Nombre completo *"}</label>
-              <input value={form.fullName} onChange={set("fullName")} className={inputCls}
-                placeholder={en ? "As it appears on your passport" : "Como aparece en tu pasaporte"} />
+              <label className={lbl}>{en?"Email":"Correo electrónico"}</label>
+              <input type="email" value={form.email} onChange={set("email")} className={inp} placeholder="email@example.com" />
+            </div>
+            <div>
+              <label className={lbl}>{en?"Mobile / WhatsApp":"Celular / WhatsApp"}</label>
+              <input type="tel" value={form.phone} onChange={set("phone")} className={inp} placeholder="+1 305 000 0000" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>{en ? "Passport #" : "N° Pasaporte"}</label>
-                <input value={form.passport} onChange={set("passport")} className={inputCls} placeholder="AB123456" />
+                <label className={lbl}>{en?"ID Type":"Tipo de ID"}</label>
+                <select value={form.idType} onChange={set("idType")} className={sel}>
+                  <option value="Passport">{en?"Passport":"Pasaporte"}</option>
+                  <option value="ID Card">{en?"ID Card":"Cédula"}</option>
+                  <option value="Driver's License">{en?"Driver's License":"Licencia"}</option>
+                </select>
               </div>
               <div>
-                <label className={labelCls}>{en ? "Expiry date" : "Vencimiento"}</label>
-                <input type="date" value={form.passportExpiry} onChange={set("passportExpiry")} className={inputCls} />
+                <label className={lbl}>{en?"ID Number":"Número de ID"}</label>
+                <input value={form.idNumber} onChange={set("idNumber")} className={inp} placeholder="AB123456" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={lbl}>{en?"Date of birth":"Fecha de nacimiento"}</label>
+                <input type="date" value={form.dob} onChange={set("dob")} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>{en?"Gender":"Género"}</label>
+                <select value={form.gender} onChange={set("gender")} className={sel}>
+                  <option value="">{en?"Select…":"Seleccionar…"}</option>
+                  <option value="Male">{en?"Male":"Masculino"}</option>
+                  <option value="Female">{en?"Female":"Femenino"}</option>
+                  <option value="Non-binary">Non-binary</option>
+                  <option value="Prefer not to say">{en?"Prefer not to say":"Prefiero no decir"}</option>
+                </select>
               </div>
             </div>
             <div>
-              <label className={labelCls}>{en ? "Nationality" : "Nacionalidad"}</label>
-              <input value={form.nationality} onChange={set("nationality")} className={inputCls}
-                placeholder={en ? "e.g. American, Colombian…" : "ej. Colombiano, Americano…"} />
-            </div>
-            <div>
-              <label className={labelCls}>{en ? "WhatsApp number" : "WhatsApp"}</label>
-              <input type="tel" value={form.whatsapp} onChange={set("whatsapp")} className={inputCls}
-                placeholder="+57 300 000 0000" />
+              <label className={lbl}>{en?"Nationality":"Nacionalidad"}</label>
+              <input value={form.nationality} onChange={set("nationality")} className={inp}
+                placeholder={en?"e.g. American, Colombian…":"ej. Colombiano, Americano…"} />
             </div>
           </div>
         </div>
 
-        {/* Dietary */}
+        {/* 2. Dietary */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
-          <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">
-            <span>🥗</span> {en ? "Dietary Needs & Allergies" : "Alimentación y Alergias"}
-          </h3>
-          <label className={labelCls}>{en ? "Any restrictions, allergies, or preferences?" : "¿Alguna restricción, alergia o preferencia?"}</label>
-          <textarea value={form.dietary} onChange={set("dietary")} rows={3} className={inputCls + " resize-none"}
-            placeholder={en ? "e.g. Gluten-free, nut allergy, vegan… or 'None'" : "ej. Sin gluten, alergia a mariscos, vegano… o 'Ninguna'"} />
-        </div>
-
-        {/* Arrival flight */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
-          <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">
-            <span>🛬</span> {en ? "Arrival Flight" : "Vuelo de Llegada"}
-          </h3>
+          <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">🥗 {en?"Food & Health":"Alimentación y Salud"}</h3>
           <div className="space-y-3">
             <div>
-              <label className={labelCls}>{en ? "Flight number" : "Número de vuelo"}</label>
-              <input value={form.arrivalFlight} onChange={set("arrivalFlight")} className={inputCls} placeholder="AV204" />
+              <label className={lbl}>{en?"Food restrictions":"Restricciones alimentarias"}</label>
+              <textarea value={form.foodRestrictions} onChange={set("foodRestrictions")} rows={2} className={inp + " resize-none"}
+                placeholder={en?"Gluten-free, vegan, kosher… or None":"Sin gluten, vegano, kosher… o Ninguna"} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls}>{en ? "Date" : "Fecha"}</label>
-                <input type="date" value={form.arrivalDate} onChange={set("arrivalDate")} className={inputCls}
-                  defaultValue={kickoff?.arrivalDate || ""} />
-              </div>
-              <div>
-                <label className={labelCls}>{en ? "Time" : "Hora"}</label>
-                <input type="time" value={form.arrivalTime} onChange={set("arrivalTime")} className={inputCls} />
-              </div>
+            <div>
+              <label className={lbl}>{en?"Allergies / Medical conditions":"Alergias / Condiciones médicas"}</label>
+              <textarea value={form.allergies} onChange={set("allergies")} rows={2} className={inp + " resize-none"}
+                placeholder={en?"Nut allergy, asthma… or None":"Alergia a nueces, asma… o Ninguna"} />
             </div>
           </div>
         </div>
 
-        {/* Departure flight */}
+        {/* 3. Arrival */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
-          <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">
-            <span>🛫</span> {en ? "Departure Flight" : "Vuelo de Salida"}
-          </h3>
+          <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">🛬 {en?"Arrival Flight":"Vuelo de Llegada"}</h3>
           <div className="space-y-3">
-            <div>
-              <label className={labelCls}>{en ? "Flight number" : "Número de vuelo"}</label>
-              <input value={form.departureFlight} onChange={set("departureFlight")} className={inputCls} placeholder="AV205" />
-            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>{en ? "Date" : "Fecha"}</label>
-                <input type="date" value={form.departureDate} onChange={set("departureDate")} className={inputCls}
-                  defaultValue={kickoff?.departureDate || ""} />
+                <label className={lbl}>{en?"Airline":"Aerolínea"}</label>
+                <input value={form.arrivalAirline} onChange={set("arrivalAirline")} className={inp} placeholder="Avianca, Delta…" />
               </div>
               <div>
-                <label className={labelCls}>{en ? "Time" : "Hora"}</label>
-                <input type="time" value={form.departureTime} onChange={set("departureTime")} className={inputCls} />
+                <label className={lbl}>{en?"Flight #":"Vuelo #"}</label>
+                <input value={form.arrivalFlight} onChange={set("arrivalFlight")} className={inp} placeholder="AV204" />
               </div>
             </div>
+            <div>
+              <label className={lbl}>{en?"Arrival date":"Fecha de llegada"}</label>
+              <input type="date" value={form.arrivalDate} onChange={set("arrivalDate")} className={inp} />
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Departure */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
+          <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">🛫 {en?"Departure Flight":"Vuelo de Salida"}</h3>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={lbl}>{en?"Airline":"Aerolínea"}</label>
+                <input value={form.departureAirline} onChange={set("departureAirline")} className={inp} placeholder="Avianca, Delta…" />
+              </div>
+              <div>
+                <label className={lbl}>{en?"Flight #":"Vuelo #"}</label>
+                <input value={form.departureFlight} onChange={set("departureFlight")} className={inp} placeholder="AV205" />
+              </div>
+            </div>
+            <div>
+              <label className={lbl}>{en?"Departure date":"Fecha de salida"}</label>
+              <input type="date" value={form.departureDate} onChange={set("departureDate")} className={inp} />
+            </div>
+          </div>
+        </div>
+
+        {/* 5. Extras */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
+          <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">✨ {en?"A few more things":"Últimas preguntas"}</h3>
+          <div className="space-y-4">
+            <div>
+              <label className={lbl}>{en?"What are you celebrating?":"¿Qué están celebrando?"}</label>
+              <select value={form.occasion} onChange={set("occasion")} className={sel}>
+                <option value="">{en?"Select…":"Seleccionar…"}</option>
+                <option value="Birthday">{en?"Birthday":"Cumpleaños"}</option>
+                <option value="Bachelorette">{en?"Bachelorette":"Despedida de soltera"}</option>
+                <option value="Bachelor">{en?"Bachelor":"Despedida de soltero"}</option>
+                <option value="Anniversary">{en?"Anniversary":"Aniversario"}</option>
+                <option value="Honeymoon">{en?"Honeymoon":"Luna de miel"}</option>
+                <option value="Family trip">{en?"Family trip":"Viaje familiar"}</option>
+                <option value="Friends trip">{en?"Friends trip":"Viaje de amigos"}</option>
+                <option value="Corporate">{en?"Corporate":"Corporativo"}</option>
+                <option value="Nothing special">{en?"Nothing special":"Nada en especial"}</option>
+              </select>
+            </div>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" checked={form.photoPermission === "yes"} onChange={setCheck("photoPermission")}
+                className="mt-0.5 w-4 h-4 accent-neutral-800 shrink-0" />
+              <span className="text-sm text-neutral-600 leading-relaxed">
+                {en
+                  ? "I give permission to Two Travel to use my photos and videos for social media and marketing purposes."
+                  : "Autorizo a Two Travel a usar mis fotos y videos en redes sociales y materiales de marketing."}
+              </span>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" checked={form.isGroupContact === "yes"} onChange={setCheck("isGroupContact")}
+                className="mt-0.5 w-4 h-4 accent-neutral-800 shrink-0" />
+              <span className="text-sm text-neutral-600">
+                {en?"I am the main contact for this group.":"Soy el contacto principal del grupo."}
+              </span>
+            </label>
           </div>
         </div>
 
@@ -4015,8 +4077,12 @@ function CheckinForm() {
         <button onClick={submit} disabled={sending}
           className="w-full py-4 rounded-2xl text-white font-semibold text-sm transition-all"
           style={{ background: sending ? "#9ca3af" : "linear-gradient(135deg,#1a1a2e,#0f3460)" }}>
-          {sending ? (en ? "Sending…" : "Enviando…") : (en ? "Submit my info →" : "Enviar mi información →")}
+          {sending ? (en?"Sending…":"Enviando…") : (en?"Submit my info →":"Enviar mi información →")}
         </button>
+
+        <p className="text-center text-[10px] text-neutral-400 pb-4">
+          {en?"Your information is kept private and used only to prepare your trip.":"Tu información es privada y se usa únicamente para preparar tu viaje."}
+        </p>
 
       </div>
     </div>
