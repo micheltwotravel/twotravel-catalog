@@ -5191,8 +5191,8 @@ function UserManagement({ currentUser, onBack }) {
                 <div style={{display:"flex",gap:6}}>
                   {Object.entries(ROLE_META).filter(([r])=>r!=="pending").map(([role,meta]) => (
                     <button key={role} onClick={() => { update(u.email,"role",role); update(u.email,"active","true"); }}
-                      style={{fontSize:10,padding:"4px 10px",borderRadius:99,border:`1px solid ${meta.border}`,cursor:"pointer",fontWeight:600,background:meta.bg,color:meta.color}}>
-                      {meta.label}
+                      style={{fontSize:10,padding:"4px 10px",borderRadius:99,border:`${role==="concierge"?"2px":"1px"} solid ${meta.border}`,cursor:"pointer",fontWeight:600,background:meta.bg,color:meta.color,boxShadow:role==="concierge"?"0 0 0 2px #bfdbfe":undefined}}>
+                      {role==="concierge" ? "✓ "+meta.label : meta.label}
                     </button>
                   ))}
                   <button onClick={() => update(u.email,"active","false")}
