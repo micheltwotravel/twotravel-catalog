@@ -1032,7 +1032,7 @@ function ClientesTable({ kickoffs, loading }) {
   );
 }
 
-function UnifiedDashboard() {
+function UnifiedDashboard({ currentUser, onLogout }) {
   const sheetUrl =
     "https://docs.google.com/spreadsheets/d/1Tyv5cPTN0MjxezyWRjo-XuIRqOgaPwP-z1heZfgGiuQ/edit#gid=0";
 
@@ -1428,9 +1428,19 @@ function UnifiedDashboard() {
           <span style={{width:1,height:14,background:"var(--border)",display:"inline-block"}}/>
           <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Dashboard</span>
         </div>
-        <a href={sheetUrl} target="_blank" rel="noreferrer" className="tt-btn-ghost" style={{textDecoration:"none"}}>
-          Ver Sheet ↗
-        </a>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <a href={sheetUrl} target="_blank" rel="noreferrer" className="tt-btn-ghost" style={{textDecoration:"none"}}>Ver Sheet ↗</a>
+          {currentUser?.role === "admin" && (
+            <a href="/?mode=users" className="tt-btn-ghost" style={{textDecoration:"none"}}>👥 Usuarios</a>
+          )}
+          {currentUser && (
+            <div style={{display:"flex",alignItems:"center",gap:8,paddingLeft:8,borderLeft:"1px solid var(--border)"}}>
+              <span style={{fontSize:11,color:"var(--text-3)"}}>{currentUser.name}</span>
+              <span style={{fontSize:10,padding:"2px 7px",borderRadius:99,background:ROLE_META[currentUser.role]?.bg||"#e5e7eb",color:ROLE_META[currentUser.role]?.color||"#111",fontWeight:600}}>{ROLE_META[currentUser.role]?.label||currentUser.role}</span>
+              <button onClick={onLogout} style={{fontSize:11,color:"var(--text-3)",background:"none",border:"none",cursor:"pointer"}}>Salir</button>
+            </div>
+          )}
+        </div>
       </header>
 
       <div className="mx-auto max-w-7xl px-6 py-6">
@@ -4868,68 +4878,95 @@ function BreakfastCatalog() {
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
 // Change PINs and roles here. Roles: "admin" | "concierge" | "sales" | "viewer"
-const USERS = [
-  { name: "Michel",    pin: "1991", role: "admin" },
-  { name: "Ray",       pin: "2222", role: "concierge" },
-  { name: "Ross",      pin: "3333", role: "concierge" },
-  { name: "Caro",      pin: "4444", role: "sales" },
-];
-
-// Which modes each role can access
-const ROLE_ACCESS = {
-  admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones"],
-  concierge: ["concierge","tasks","reuniones"],
-  sales:     ["tasks","soporte","soporte-dashboard"],
-  viewer:    ["dashboard","kpi"],
+// ─── ROLES ───────────────────────────────────────────────────────
+const ROLE_META = {
+  admin:     { label: "Admin",     color: "#fff", bg: "#111",    border: "#111"    },
+  concierge: { label: "Concierge", color: "#fff", bg: "#2563eb", border: "#2563eb" },
+  junior:    { label: "Junior",    color: "#fff", bg: "#059669", border: "#059669" },
+  finance:   { label: "Finanzas",  color: "#fff", bg: "#d97706", border: "#d97706" },
+  marketing: { label: "Marketing", color: "#fff", bg: "#7c3aed", border: "#7c3aed" },
 };
 
-// Modes that require auth
-const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones"]);
+// Modes each role can access
+const ROLE_ACCESS = {
+  admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users"],
+  concierge: ["concierge","dashboard","tasks","reuniones"],
+  junior:    ["dashboard"],
+  finance:   ["dashboard","soporte"],
+  marketing: ["dashboard"],
+};
 
+const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users"]);
+
+// ─── AUTH ─────────────────────────────────────────────────────────
 function useAuth() {
   const [user, setUser] = useState(() => {
     try {
-      const s = JSON.parse(localStorage.getItem("tt_auth") || "null");
-      if (!s || !s.pin || Date.now() > s.exp) return null;
-      return USERS.find(u => u.pin === s.pin) || null;
+      const s = JSON.parse(localStorage.getItem("tt_auth2") || "null");
+      if (!s || !s.email || Date.now() > s.exp) return null;
+      return s;
     } catch { return null; }
   });
-  const login = (pin) => {
-    const found = USERS.find(u => u.pin === pin);
-    if (!found) return false;
-    localStorage.setItem("tt_auth", JSON.stringify({ pin, exp: Date.now() + 8 * 3600_000 }));
-    setUser(found);
-    return true;
+
+  const login = async (email, pin) => {
+    const res = await fetch(GAS_URL, {
+      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "loginUser", payload: { email: email.toLowerCase().trim(), pin } }),
+    });
+    const data = await res.json();
+    if (!data.ok) return { ok: false, error: data.error || "Credenciales incorrectas" };
+    const u = { ...data.user, exp: Date.now() + 12 * 3600_000 };
+    localStorage.setItem("tt_auth2", JSON.stringify(u));
+    setUser(u);
+    return { ok: true };
   };
-  const logout = () => { localStorage.removeItem("tt_auth"); setUser(null); };
+
+  const logout = () => { localStorage.removeItem("tt_auth2"); setUser(null); };
   return { user, login, logout };
 }
 
-function LoginScreen({ onLogin, targetMode }) {
+// ─── LOGIN SCREEN ─────────────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+  const [email, setEmail] = useState("");
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
-  const handle = (e) => {
+  const [loading, setLoading] = useState(false);
+
+  const handle = async (e) => {
     e.preventDefault();
-    if (!onLogin(pin)) { setError("PIN incorrecto"); setPin(""); }
+    setError(""); setLoading(true);
+    const res = await onLogin(email, pin);
+    setLoading(false);
+    if (!res.ok) { setError(res.error || "Credenciales incorrectas"); setPin(""); }
   };
+
   return (
     <div style={{minHeight:"100vh",background:"#f7f4ef",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Jost',sans-serif"}}>
-      <div style={{background:"#fff",borderRadius:16,padding:"40px 36px",boxShadow:"0 4px 24px rgba(0,0,0,.08)",width:320,textAlign:"center"}}>
-        <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:500,color:"#1a1814",marginBottom:4}}>Two Travel</p>
+      <div style={{background:"#fff",borderRadius:16,padding:"40px 36px",boxShadow:"0 4px 24px rgba(0,0,0,.08)",width:340,textAlign:"center"}}>
+        <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:24,fontWeight:500,color:"#1a1814",marginBottom:4}}>Two Travel</p>
         <p style={{fontSize:11,color:"#9a7d52",letterSpacing:".12em",textTransform:"uppercase",marginBottom:32}}>Internal Access</p>
-        <form onSubmit={handle}>
+        <form onSubmit={handle} style={{display:"flex",flexDirection:"column",gap:12}}>
+          <input
+            type="email"
+            value={email}
+            onChange={e => { setEmail(e.target.value); setError(""); }}
+            placeholder="tu@two.travel"
+            autoFocus
+            style={{width:"100%",border:"1px solid #e5ddd3",borderRadius:10,padding:"12px 16px",fontSize:13,outline:"none",fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}}
+          />
           <input
             type="password"
             inputMode="numeric"
+            maxLength={8}
             value={pin}
             onChange={e => { setPin(e.target.value); setError(""); }}
             placeholder="PIN"
-            autoFocus
-            style={{width:"100%",border:"1px solid #e5ddd3",borderRadius:10,padding:"12px 16px",fontSize:18,textAlign:"center",letterSpacing:".2em",outline:"none",fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}}
+            style={{width:"100%",border:"1px solid #e5ddd3",borderRadius:10,padding:"12px 16px",fontSize:18,textAlign:"center",letterSpacing:".3em",outline:"none",fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}}
           />
-          {error && <p style={{color:"#e05c5c",fontSize:12,marginTop:8}}>{error}</p>}
-          <button type="submit" style={{marginTop:16,width:"100%",background:"#1a1814",color:"#fff",border:"none",borderRadius:10,padding:"12px",fontSize:13,letterSpacing:".06em",cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
-            Entrar
+          {error && <p style={{color:"#e05c5c",fontSize:12,margin:0}}>{error}</p>}
+          <button type="submit" disabled={loading || !email || !pin}
+            style={{background:"#1a1814",color:"#fff",border:"none",borderRadius:10,padding:"13px",fontSize:13,letterSpacing:".06em",cursor:loading?"wait":"pointer",fontFamily:"'Jost',sans-serif",opacity:(!email||!pin)?0.5:1}}>
+            {loading ? "Verificando…" : "Entrar"}
           </button>
         </form>
       </div>
@@ -4937,29 +4974,167 @@ function LoginScreen({ onLogin, targetMode }) {
   );
 }
 
+// ─── USER MANAGEMENT (admin only) ─────────────────────────────────
+function UserManagement({ currentUser, onBack }) {
+  const [users, setUsers]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving]   = useState({});
+  const [showAdd, setShowAdd] = useState(false);
+  const [newUser, setNewUser] = useState({ email:"", name:"", pin:"", role:"concierge" });
+  const [addError, setAddError] = useState("");
+
+  const load = () => {
+    setLoading(true);
+    fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify({ action:"listUsers", payload:{ adminEmail: currentUser.email } }) })
+      .then(r => r.json()).then(d => { if (d.ok) setUsers(d.data || []); })
+      .finally(() => setLoading(false));
+  };
+  useEffect(load, []);
+
+  const update = async (email, field, value) => {
+    setSaving(s => ({ ...s, [email+field]: true }));
+    await fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify({ action:"updateUser", payload:{ adminEmail: currentUser.email, email, [field]: value } }) });
+    setSaving(s => ({ ...s, [email+field]: false }));
+    setUsers(us => us.map(u => u.email === email ? { ...u, [field]: value } : u));
+  };
+
+  const addUser = async (e) => {
+    e.preventDefault(); setAddError("");
+    if (!newUser.email || !newUser.name || !newUser.pin) { setAddError("Completa todos los campos"); return; }
+    const res = await fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify({ action:"upsertUser", payload:{ adminEmail: currentUser.email, ...newUser, email: newUser.email.toLowerCase() } }) });
+    const d = await res.json();
+    if (!d.ok) { setAddError(d.error || "Error"); return; }
+    setShowAdd(false); setNewUser({ email:"", name:"", pin:"", role:"concierge" }); load();
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:"#f7f4ef",fontFamily:"'Jost',sans-serif"}}>
+      <div style={{background:"#fff",borderBottom:"1px solid #e5e7eb",padding:"14px 24px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:"#6b7280"}}>← Volver</button>
+          <span style={{fontSize:14,fontWeight:600,color:"#111"}}>Gestión de usuarios</span>
+        </div>
+        <button onClick={() => setShowAdd(v => !v)}
+          style={{background:"#111",color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,cursor:"pointer",fontWeight:500}}>
+          + Agregar usuario
+        </button>
+      </div>
+
+      <div style={{maxWidth:900,margin:"24px auto",padding:"0 24px"}}>
+        {showAdd && (
+          <form onSubmit={addUser} style={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:12,padding:20,marginBottom:20,display:"flex",flexWrap:"wrap",gap:10,alignItems:"flex-end"}}>
+            <input placeholder="Nombre" value={newUser.name} onChange={e=>setNewUser(u=>({...u,name:e.target.value}))}
+              style={{flex:1,minWidth:120,border:"1px solid #e5e7eb",borderRadius:8,padding:"8px 12px",fontSize:12}} />
+            <input placeholder="email@two.travel" value={newUser.email} onChange={e=>setNewUser(u=>({...u,email:e.target.value}))}
+              style={{flex:2,minWidth:180,border:"1px solid #e5e7eb",borderRadius:8,padding:"8px 12px",fontSize:12}} />
+            <input placeholder="PIN" maxLength={8} value={newUser.pin} onChange={e=>setNewUser(u=>({...u,pin:e.target.value}))}
+              style={{width:80,border:"1px solid #e5e7eb",borderRadius:8,padding:"8px 12px",fontSize:12}} />
+            <select value={newUser.role} onChange={e=>setNewUser(u=>({...u,role:e.target.value}))}
+              style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"8px 12px",fontSize:12}}>
+              {Object.keys(ROLE_META).map(r => <option key={r} value={r}>{ROLE_META[r].label}</option>)}
+            </select>
+            {addError && <span style={{fontSize:11,color:"#e05c5c",width:"100%"}}>{addError}</span>}
+            <button type="submit" style={{background:"#111",color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,cursor:"pointer"}}>Guardar</button>
+          </form>
+        )}
+
+        {loading ? <p style={{color:"#9ca3af",fontSize:13,textAlign:"center",padding:32}}>Cargando usuarios…</p> : (
+          <div style={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:12,overflow:"hidden"}}>
+            <table style={{width:"100%",borderCollapse:"collapse"}}>
+              <thead>
+                <tr style={{background:"#f9fafb"}}>
+                  {["Nombre","Email","Rol","PIN","Activo"].map(h => (
+                    <th key={h} style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",color:"#6b7280",padding:"10px 16px",textAlign:"left",borderBottom:"1px solid #e5e7eb"}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((u, i) => (
+                  <tr key={u.email} style={{background:i%2===0?"#fff":"#fafafa",opacity:u.active==="false"||u.active===false?0.45:1}}>
+                    <td style={{padding:"10px 16px",fontSize:13,fontWeight:500,color:"#111"}}>{u.name}</td>
+                    <td style={{padding:"10px 16px",fontSize:12,color:"#6b7280"}}>{u.email}</td>
+                    <td style={{padding:"10px 16px"}}>
+                      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                        {Object.entries(ROLE_META).map(([role, meta]) => (
+                          <button key={role} onClick={() => update(u.email, "role", role)}
+                            disabled={saving[u.email+"role"]}
+                            style={{fontSize:10,padding:"3px 8px",borderRadius:99,border:`1px solid ${meta.border}`,cursor:"pointer",fontWeight:600,
+                              background: u.role===role ? meta.bg : "#fff",
+                              color: u.role===role ? meta.color : meta.bg,
+                              transition:"all .12s"}}>
+                            {meta.label}
+                          </button>
+                        ))}
+                      </div>
+                    </td>
+                    <td style={{padding:"10px 16px"}}>
+                      <input type="text" defaultValue={u.pin} maxLength={8}
+                        onBlur={e => { if (e.target.value !== u.pin) update(u.email, "pin", e.target.value); }}
+                        style={{width:70,border:"1px solid #e5e7eb",borderRadius:6,padding:"4px 8px",fontSize:12,fontFamily:"monospace"}} />
+                    </td>
+                    <td style={{padding:"10px 16px"}}>
+                      <button onClick={() => update(u.email, "active", u.active===false||u.active==="false" ? "true" : "false")}
+                        style={{fontSize:11,padding:"3px 10px",borderRadius:99,border:"1px solid",cursor:"pointer",fontWeight:500,
+                          background: u.active===false||u.active==="false" ? "#fee2e2" : "#f0fdf4",
+                          color: u.active===false||u.active==="false" ? "#b91c1c" : "#166534",
+                          borderColor: u.active===false||u.active==="false" ? "#fca5a5" : "#86efac"}}>
+                        {u.active===false||u.active==="false" ? "Inactivo" : "Activo"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── APP ──────────────────────────────────────────────────────────
 function App() {
-  const params = new URLSearchParams(window.location.search);
-  const mode = params.get("mode");
+  const params    = new URLSearchParams(window.location.search);
+  const mode      = params.get("mode");
   const kickoffId = params.get("kickoffId") || "";
   const { user, login, logout } = useAuth();
 
-  if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard /></ErrorBoundary>;
-  if (mode === "concierge")          return <ErrorBoundary><ConciergePanel /></ErrorBoundary>;
-  if (mode === "soporte")            return <ErrorBoundary><SoportePage /></ErrorBoundary>;
-  if (mode === "soporte-dashboard")  return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
-  if (mode === "tasks")              return <ErrorBoundary><TaskTracker /></ErrorBoundary>;
-  if (mode === "reuniones")          return <ErrorBoundary><ReunionesPage /></ErrorBoundary>;
+  // Public routes — no auth needed
   if (mode === "catalog" || mode === "questionnaire") {
     if (!kickoffId) return <WelcomeCatalogPage mode={mode} />;
     return <TwoTravelCatalog />;
   }
-  if (mode === "drinks")             return <DrinksCatalog />;
-  if (mode === "groceries")          return <GroceryCatalog />;
-  if (mode === "breakfast")          return <BreakfastCatalog />;
-  if (mode === "checkin")            return <CheckinForm />;
-  if (mode === "itinerary")          return <ItineraryPrintView />;
+  if (mode === "drinks")    return <DrinksCatalog />;
+  if (mode === "groceries") return <GroceryCatalog />;
+  if (mode === "breakfast") return <BreakfastCatalog />;
+  if (mode === "checkin")   return <CheckinForm />;
+  if (mode === "itinerary") return <ItineraryPrintView />;
+  if (!mode)                return <FeedbackForm kickoffId={kickoffId} />;
 
-  return <FeedbackForm kickoffId={params.get("kickoffId") || ""} />;
+  // Protected routes
+  if (PROTECTED_MODES.has(mode)) {
+    if (!user) return <LoginScreen onLogin={login} />;
+    const allowed = ROLE_ACCESS[user.role] || [];
+    if (!allowed.includes(mode)) {
+      // Redirect to their default landing
+      const def = allowed[0];
+      if (def) { window.location.href = `/?mode=${def}`; return null; }
+      return <div style={{padding:40,textAlign:"center",color:"#6b7280"}}>Sin acceso.</div>;
+    }
+
+    if (mode === "users") return <UserManagement currentUser={user} onBack={() => window.history.back()} />;
+    if (mode === "concierge") return <ErrorBoundary><ConciergePanel onLogout={logout} currentUser={user} /></ErrorBoundary>;
+    if (mode === "soporte")   return <ErrorBoundary><SoportePage /></ErrorBoundary>;
+    if (mode === "soporte-dashboard") return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
+    if (mode === "tasks")     return <ErrorBoundary><TaskTracker /></ErrorBoundary>;
+    if (mode === "reuniones") return <ErrorBoundary><ReunionesPage /></ErrorBoundary>;
+    if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard currentUser={user} onLogout={logout} /></ErrorBoundary>;
+  }
+
+  return <FeedbackForm kickoffId={kickoffId} />;
 }
 
 export default App;
