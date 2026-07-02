@@ -835,7 +835,7 @@ const handleSubmit = async (e) => {
 }
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 const JUNIOR_CONCIERGES_BY_CITY = {
-  cartagena: ["Juana","Esaira"],
+  cartagena: ["Juan David","Yosayro"],
   default:   [],
 };
 function juniorListForCity(cityCode) {
@@ -877,20 +877,13 @@ function parseDrinkSummary(k) {
     return lines.length ? lines.join(" · ") : null;
   } catch { return null; }
 }
-function OrderCell({ label, summary, at }) {
-  const [open, setOpen] = React.useState(false);
+function OrderCell({ summary, at }) {
   if (!summary) return <span style={{ color:"#d1d5db" }}>—</span>;
+  const lines = summary.split(" · ");
   return (
-    <div style={{ position:"relative" }}>
-      <button onClick={() => setOpen(o=>!o)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, padding:0 }} title="Ver pedido">✅</button>
-      {open && (
-        <div style={{ position:"absolute", zIndex:200, top:24, left:0, background:"#fff", border:"1px solid #e5e7eb", borderRadius:10, padding:"10px 14px", minWidth:240, maxWidth:320, boxShadow:"0 4px 20px rgba(0,0,0,.1)", fontSize:12, color:"#374151", lineHeight:1.7 }}>
-          <div style={{ fontWeight:600, marginBottom:4 }}>{label}</div>
-          {summary.split(" · ").map((l,i) => <div key={i}>• {l}</div>)}
-          {at && <div style={{ fontSize:10, color:"#9ca3af", marginTop:6 }}>Enviado: {new Date(at).toLocaleDateString("es-CO")}</div>}
-          <button onClick={() => setOpen(false)} style={{ marginTop:8, fontSize:11, color:"#9ca3af", background:"none", border:"none", cursor:"pointer" }}>Cerrar</button>
-        </div>
-      )}
+    <div style={{ fontSize:11, color:"#374151", lineHeight:1.5, textAlign:"left" }}>
+      {lines.map((l, i) => <div key={i} style={{ whiteSpace:"nowrap" }}>• {l}</div>)}
+      {at && <div style={{ fontSize:9, color:"#9ca3af", marginTop:2 }}>{new Date(at).toLocaleDateString("es-CO")}</div>}
     </div>
   );
 }
@@ -916,20 +909,48 @@ function ClientesTable({ kickoffs, loading }) {
     setGeneratingTasks(g => ({ ...g, [r.id]: true }));
     try {
       const cart = (() => { try { return JSON.parse(r.cart || "[]"); } catch { return []; } })();
-      const tasks = cart.filter(item => item && (item.name || item.displayName || item.title)).map(item => ({
-        taskName:    item.displayName || item.name || item.title || "Servicio",
-        kickoffId:   r.id,
-        kickoffName: r.guestName || r.tripName || "",
-        assignedTo:  r.assignedConciergeName || r.concierge || "",
-        dueDate:     r._rowArrival ? r._rowArrival.slice(0,10) : "",
-        status:      "Pendiente",
+      const items = cart.filter(item => item && (item.name || item.displayName || item.title));
+      if (!items.length) {
+        window.open("/handoffs.html?client=" + encodeURIComponent(r.guestName || r.tripName || "") + "&date=" + encodeURIComponent(r._rowArrival ? r._rowArrival.slice(0,10) : ""), "_blank");
+        return;
+      }
+
+      const clientName = r.guestName || r.tripName || "";
+      const dateStr    = r._rowArrival ? r._rowArrival.slice(0,10) : "";
+
+      // Crear handoffs (agregar a los existentes) — las tareas manuales van desde el panel de Tareas
+      const existingRes = await fetch(GAS_URL, { method:"POST", body: JSON.stringify({ action:"getHandoffs", payload:{} }) });
+      const existingJson = await existingRes.json().catch(() => ({ data:[] }));
+      const existing = existingJson.data || [];
+      const newHandoffs = items.map(item => ({
+        id:          "hf_" + Date.now() + "_" + Math.random().toString(36).slice(2,6),
+        client:      clientName,
+        date:        dateStr,
+        activity:    item.displayName || item.name || item.title || "Servicio",
+        pax:         r.pax || r.groupSize || "",
+        operator:    "",
+        bookingWhere:"",
+        travefy:     "",
+        confirmation:"",
+        person:      r.assignedConciergeName || r.concierge || "",
+        personLive:  "",
         notes:       [item.timeLabel||item.time||"", item.location||""].filter(Boolean).join(" · "),
-        source:      "concierge",
+        status:      "pending",
         createdAt:   new Date().toISOString(),
+        updatedAt:   new Date().toISOString(),
       }));
-      if (!tasks.length) { alert("Este cliente no tiene servicios en el carrito aún."); return; }
-      await Promise.all(tasks.map(t => fetch(GAS_URL, { method:"POST", body: JSON.stringify({ action:"saveTask", payload:t }) })));
-      alert(`✅ ${tasks.length} tarea(s) creadas para ${r.guestName || r.tripName}`);
+      await fetch(GAS_URL, { method:"POST", body: JSON.stringify({ action:"saveHandoffs", payload:{ handoffs: [...existing, ...newHandoffs] } }) });
+
+      // Monday: crear ítems en tablero Concierge + Logística
+      fetch(GAS_URL, { method:"POST", body: JSON.stringify({ action:"createMondayItems", payload:{
+        items: items.map(i => ({ name: i.displayName || i.name || i.title || "Servicio" })),
+        clientName,
+        date: dateStr,
+        pax: r.pax || r.groupSize || "",
+        concierge: r.assignedConciergeName || r.concierge || "",
+      }})}).catch(() => {});
+
+      alert(`✅ ${items.length} servicio(s) agregados al Handoff y enviados a Monday Logística para ${clientName}`);
     } catch(e) { alert("Error: " + e.message); }
     setGeneratingTasks(g => ({ ...g, [r.id]: false }));
   }
@@ -1080,7 +1101,7 @@ function ClientesTable({ kickoffs, loading }) {
                         Reuniones →
                       </a>
                     </td>
-                    <td style={{ ...tdStyle, textAlign:"center" }}><OrderCell label="🍹 Bebidas" summary={drinkSummary} at={r.drinkOrderAt} /></td>
+                    <td style={{ ...tdStyle }}><OrderCell summary={drinkSummary} at={r.drinkOrderAt} /></td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>{grocery}</td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>{breakfast}</td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>
@@ -1256,11 +1277,12 @@ function UnifiedDashboard({ currentUser, onLogout }) {
     new: { label: "Nuevo", color: "#6b7280" },
     client_submitted: { label: "Enviado por cliente", color: "#2563eb" },
     concierge_editing: { label: "En edición", color: "#d97706" },
+    sent_to_preview: { label: "Enviado a preview", color: "#ea580c" },
     sent_to_travify: { label: "Enviado a contabilidad", color: "#7c3aed" },
     feedback_submitted: { label: "Feedback enviado", color: "#059669" },
     done: { label: "Completado", color: "#16a34a" },
   };
-  const STATUS_KEYS = ["new", "client_submitted", "concierge_editing", "feedback_submitted", "done"];
+  const STATUS_KEYS = ["new", "client_submitted", "concierge_editing", "sent_to_preview", "feedback_submitted", "done"];
 
   const BarChartCard = ({ title, data }) => {
     const max = Math.max(...data.map((d) => d.value), 1);

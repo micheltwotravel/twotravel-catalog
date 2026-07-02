@@ -181,6 +181,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 
 <div class="toolbar">
   <button class="tbtn primary" onclick="openNewModal()">+ Nuevo handoff</button>
+  <button class="tbtn" id="btn-monday" onclick="sendToMonday()" style="border-color:#0073ea;color:#0073ea">↑ Mandar a Monday</button>
   <div class="search-box">
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
     <input type="text" placeholder="Buscar..." oninput="searchQ=this.value;render()" id="search-input">
@@ -916,17 +917,59 @@ document.addEventListener('click', closePopups);
 
 /* ── NEW HANDOFF MODAL ── */
 let prefillWeek = null;
-function openNewModal(wk){
+function openNewModal(wk, prefillClient, prefillDate){
   prefillWeek = wk || null;
-  // prefill date to Monday of week if week given
-  if(wk && wk !== 'sin-fecha'){
+  if(prefillClient) document.getElementById('n-client').value = prefillClient;
+  if(prefillDate){
+    document.getElementById('n-date').value = prefillDate + 'T10:00';
+  } else if(wk && wk !== 'sin-fecha'){
     document.getElementById('n-date').value = wk + 'T10:00';
   } else {
     const now = new Date();
     document.getElementById('n-date').value = now.toISOString().slice(0,16);
   }
   document.getElementById('new-modal').style.display = 'flex';
-  document.getElementById('n-client').focus();
+  document.getElementById('n-activity').focus();
+}
+
+async function sendToMonday(){
+  const btn = document.getElementById('btn-monday');
+  const clientFilter = document.getElementById('search-input')?.value?.trim() || '';
+  const toSend = handoffs.filter(h => !clientFilter || (h.client||'').toLowerCase().includes(clientFilter.toLowerCase()));
+  if(!toSend.length){ alert('No hay handoffs que mandar. Si quieres filtrar por cliente usa la búsqueda primero.'); return; }
+  const clientNames = [...new Set(toSend.map(h=>h.client).filter(Boolean))];
+  const confirm = window.confirm(`¿Mandar ${toSend.length} handoff(s) de ${clientNames.join(', ')} a Monday Logística?`);
+  if(!confirm) return;
+  btn.textContent = '…';
+  btn.disabled = true;
+  try {
+    const res = await fetch(GAS_URL, { method:'POST', body: JSON.stringify({
+      action: 'createMondayItems',
+      payload: {
+        items: toSend.map(h => ({ name: h.activity || 'Servicio' })),
+        clientName: clientNames.join(', '),
+        date: toSend[0]?.date || '',
+        pax: toSend[0]?.pax || '',
+        concierge: toSend[0]?.person || '',
+      }
+    })});
+    const json = await res.json().catch(()=>({}));
+    alert(`✅ ${toSend.length} item(s) enviados a Monday Logística`);
+  } catch(e) {
+    alert('Error al mandar a Monday: ' + e.message);
+  } finally {
+    btn.textContent = '↑ Mandar a Monday';
+    btn.disabled = false;
+  }
+}
+
+function checkUrlParams(){
+  const p = new URLSearchParams(window.location.search);
+  const client = p.get('client');
+  const date   = p.get('date');
+  if(client || date){
+    openNewModal(null, client || '', date || '');
+  }
 }
 function closeNewModal(){
   document.getElementById('new-modal').style.display = 'none';
@@ -962,7 +1005,7 @@ function createHandoff(){
 }
 
 /* ── INIT ── */
-load();
+load(); checkUrlParams();
 render();
 setSyncInfo('Cargando desde servidor...');
 loadFromGAS();

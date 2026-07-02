@@ -826,6 +826,7 @@ const STATUS_LABELS = {
   new:                { es: "Nuevo",                    en: "New" },
   client_submitted:   { es: "Cliente llenó selección",  en: "Client submitted" },
   concierge_editing:  { es: "Concierge editando",       en: "Concierge editing" },
+  sent_to_preview:    { es: "Enviado a preview",        en: "Sent to preview" },
   sent_to_travify:    { es: "Enviado a contabilidad",   en: "Sent to accounting" },
   feedback_submitted: { es: "Cliente llenó feedback",   en: "Feedback submitted" },
   done:               { es: "Cerrado",                  en: "Closed" },
@@ -850,6 +851,7 @@ const STATUS_CLASSES = {
   new: "bg-blue-100 text-blue-700 border-blue-300",
   client_submitted: "bg-indigo-100 text-indigo-800 border-indigo-300",
   concierge_editing: "bg-amber-100 text-amber-800 border-amber-300",
+  sent_to_preview: "bg-orange-100 text-orange-800 border-orange-300",
   sent_to_travify: "bg-purple-100 text-purple-800 border-purple-300",
   feedback_submitted: "bg-teal-100 text-teal-800 border-teal-300",
   done: "bg-emerald-100 text-emerald-700 border-emerald-300",
@@ -3363,6 +3365,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 <option value="new">{STATUS_LABELS.new.es}</option>
                 <option value="client_submitted">{STATUS_LABELS.client_submitted.es}</option>
                 <option value="concierge_editing">{STATUS_LABELS.concierge_editing.es}</option>
+                <option value="sent_to_preview">{STATUS_LABELS.sent_to_preview.es}</option>
                 <option value="sent_to_travify">{STATUS_LABELS.sent_to_travify.es}</option>
                 <option value="feedback_submitted">{STATUS_LABELS.feedback_submitted.es}</option>
                 <option value="done">{STATUS_LABELS.done.es}</option>
@@ -5689,20 +5692,24 @@ const loadKickoffs = async () => {
     const k = { ...(prevKickoff || {}), ...updates };
     // Parse cart: itinerary canvas items
     let cart = [];
-    try { cart = JSON.parse(typeof updates.cart === "string" ? updates.cart : JSON.stringify(updates.cart || prevKickoff?.cart || [])); } catch {}
+    try {
+      const raw = updates.cart ?? prevKickoff?.cart ?? [];
+      cart = JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw));
+    } catch {}
     if (!Array.isArray(cart)) cart = [];
     const items = cart.filter(item => item && (item.displayName || item.name || item.title));
 
-    if (!items.length) return; // nada que generar
+    if (!items.length) return;
 
     const clientName = k.guestName || k.tripName || "";
     const dateStr    = k.arrivalDate ? k.arrivalDate.slice(0, 10) : (k._rowArrival ? k._rowArrival.slice(0, 10) : "");
 
-    // Fetch existing handoffs, append new ones
+    // Fetch existing handoffs and replace this client's entries (upsert = no duplicates on re-saves)
     const existingRes = await fetch(GAS, { method: "POST", body: JSON.stringify({ action: "getHandoffs", payload: {} }) });
     const existingJson = await existingRes.json().catch(() => ({ data: [] }));
-    const existing = existingJson.data || [];
+    const existing = (existingJson.data || []).filter(h => h.client !== clientName);
 
+    const now = new Date().toISOString();
     const newHandoffs = items.map(item => ({
       id: "hf_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
       client: clientName,
@@ -5717,25 +5724,12 @@ const loadKickoffs = async () => {
       personLive: "",
       notes: [item.timeLabel || item.time || "", item.location || ""].filter(Boolean).join(" · "),
       status: "pending",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     }));
 
     await fetch(GAS, { method: "POST", body: JSON.stringify({ action: "saveHandoffs", payload: { handoffs: [...existing, ...newHandoffs] } }) });
-
-    // Monday Logística
-    fetch(GAS, { method: "POST", body: JSON.stringify({ action: "createMondayItems", payload: {
-      items: items.map(i => ({ name: i.displayName || i.name || i.title || "Servicio" })),
-      clientName, date: dateStr,
-      pax: k.groupSize || k.pax || "",
-      concierge: k.assignedConciergeName || k.assignedConcierge || "",
-    }})}).catch(() => {});
-
-    // Mark as generated so we don't repeat
-    await updateKickoffInSheet(id, { handoffsGenerated: "true" }).catch(() => {});
-    setKickoffs(prev => prev.map(kk => kk.id === id ? { ...kk, handoffsGenerated: "true" } : kk));
-
-    alert(`✅ ${newHandoffs.length} servicio(s) del itinerario agregados al Handoff y enviados a Monday Logística para ${clientName}`);
+    // Monday push is manual (button in Handoffs panel after client leaves)
   };
 
   const handleSaveEdit = async (id, updates) => {
@@ -5743,14 +5737,10 @@ const loadKickoffs = async () => {
     setRowLoadingId(id);
     await updateKickoffInSheet(id, updates);
 
-    // Auto-generate Handoffs when itinerary moves to "sent_to_travify" (enviado a finanzas)
-    if (updates.status === "sent_to_travify") {
+    // Sync Handoffs when itinerary is in preview or later (create on first, update on re-saves)
+    if (["sent_to_preview", "sent_to_travify", "feedback_submitted"].includes(updates.status)) {
       const prevKickoff = kickoffs.find(k => k.id === id);
-      const alreadyGenerated = prevKickoff?.handoffsGenerated === "true" || prevKickoff?.handoffsGenerated === true;
-      const prevStatus = prevKickoff?.status;
-      if (!alreadyGenerated && prevStatus !== "sent_to_travify") {
-        generateHandoffsFromItinerary(id, updates, prevKickoff).catch(e => console.warn("Handoff generation error:", e));
-      }
+      generateHandoffsFromItinerary(id, updates, prevKickoff).catch(e => console.warn("Handoff sync error:", e));
     }
 
     setKickoffs((prev) =>
@@ -5917,6 +5907,7 @@ const loadKickoffs = async () => {
               <option value="new">{statusLabel("new", portalLang)}</option>
               <option value="client_submitted">{statusLabel("client_submitted", portalLang)}</option>
               <option value="concierge_editing">{statusLabel("concierge_editing", portalLang)}</option>
+              <option value="sent_to_preview">{statusLabel("sent_to_preview", portalLang)}</option>
               <option value="sent_to_travify">{statusLabel("sent_to_travify", portalLang)}</option>
               <option value="feedback_submitted">{statusLabel("feedback_submitted", portalLang)}</option>
               <option value="done">{statusLabel("done", portalLang)}</option>
