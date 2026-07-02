@@ -1,39 +1,57 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
-  const { to, message, type } = req.body; // type: 'cobro' | 'reminder'
+  const { to, message, mediaUrl, facturaUrl } = req.body;
   if (!to || !message) return res.status(400).json({ ok: false, error: 'Missing to or message' });
 
-  const sid   = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const from  = 'whatsapp:+14155238886'; // Twilio sandbox
+  const token   = process.env.META_WA_TOKEN;
+  const phoneId = process.env.META_WA_PHONE_ID || '828425163689171';
 
-  if (!sid || !token) return res.status(500).json({ ok: false, error: 'Twilio credentials not configured' });
+  if (!token) return res.status(500).json({ ok: false, error: 'META_WA_TOKEN not configured' });
 
   const phone = to.replace(/\D/g, '');
-  const toWa  = `whatsapp:+${phone}`;
 
-  const params = new URLSearchParams({ From: from, To: toWa, Body: message });
-  // Attach factura PDF if provided (as priority), otherwise attach payment options PDF
-  const attachUrl = req.body.facturaUrl || req.body.mediaUrl;
-  if (attachUrl) params.append('MediaUrl0', attachUrl);
+  const attachUrl = facturaUrl || mediaUrl;
 
-  const twilioRes = await fetch(
-    `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+  let body;
+  if (attachUrl) {
+    body = {
+      messaging_product: 'whatsapp',
+      to: phone,
+      type: 'document',
+      document: {
+        link: attachUrl,
+        caption: message,
+        filename: 'factura.pdf',
+      },
+    };
+  } else {
+    body = {
+      messaging_product: 'whatsapp',
+      to: phone,
+      type: 'text',
+      text: { body: message, preview_url: false },
+    };
+  }
+
+  const metaRes = await fetch(
+    `https://graph.facebook.com/v25.0/${phoneId}/messages`,
     {
       method: 'POST',
       headers: {
-        'Authorization': 'Basic ' + Buffer.from(`${sid}:${token}`).toString('base64'),
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
       },
-      body: params.toString(),
+      body: JSON.stringify(body),
     }
   );
 
-  const data = await twilioRes.json();
-  if (data.sid) {
-    return res.status(200).json({ ok: true, messageSid: data.sid });
+  const data = await metaRes.json();
+
+  if (data.messages?.[0]?.id) {
+    return res.status(200).json({ ok: true, messageId: data.messages[0].id });
   } else {
-    return res.status(400).json({ ok: false, error: data.message || 'Twilio error' });
+    const errMsg = data.error?.message || JSON.stringify(data);
+    return res.status(400).json({ ok: false, error: errMsg });
   }
 }
