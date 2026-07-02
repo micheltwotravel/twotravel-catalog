@@ -88,7 +88,7 @@ function TaskCard({ task, onStatusChange, onEdit, accentColor }) {
           {task.tipo === "Meeting" ? "📅 " : ""}{task.taskName}
         </div>
         <div style={{ fontSize:12, color:"#7a7570", marginTop:3, display:"flex", gap:8, flexWrap:"wrap" }}>
-          {task.kickoffId && <span style={{ background:"#f5f0ea", padding:"1px 6px", borderRadius:10 }}>👰 {task.kickoffId}</span>}
+          {(task.kickoffName || task.kickoffId) && <span style={{ background:"#f5f0ea", padding:"1px 6px", borderRadius:10 }}>👰 {task.kickoffName || task.kickoffId}</span>}
           {task.fase && task.fase !== "General" && <span>📂 {task.fase}</span>}
           {task.assignedTo && <span>👤 {task.assignedTo}</span>}
         </div>
@@ -138,7 +138,7 @@ function Section({ id, title, color, accent, tasks, onStatusChange, onEdit, defa
 function TaskModal({ task, clientes, responsables, onSave, onDelete, onClose }) {
   const isNew = !task?.id;
   const [form, setForm] = useState({
-    kickoffId:   task?.kickoffId   || "",
+    kickoffName: task?.kickoffName || task?.kickoffId || "",
     taskName:    task?.taskName    || "",
     assignedTo:  task?.assignedTo  || "",
     fase:        task?.fase        || "General",
@@ -190,7 +190,7 @@ function TaskModal({ task, clientes, responsables, onSave, onDelete, onClose }) 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
             <div>
               <label style={lbl}>Cliente / Boda</label>
-              <input style={inp} list="cl-list" value={form.kickoffId} onChange={e=>set("kickoffId",e.target.value)} placeholder="Nombre del cliente" />
+              <input style={inp} list="cl-list" value={form.kickoffName} onChange={e=>set("kickoffName",e.target.value)} placeholder="Nombre del cliente" />
               <datalist id="cl-list">{clientes.map(c=><option key={c} value={c}/>)}</datalist>
             </div>
             <div>
@@ -291,7 +291,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
       const resp = (t.assignedTo||"").toLowerCase();
       if (!resp.includes(myName.toLowerCase()) && !resp.includes(myEmail.toLowerCase())) return false;
     }
-    if (filterCliente && t.kickoffId !== filterCliente) return false;
+    if (filterCliente && (t.kickoffName||t.kickoffId) !== filterCliente) return false;
     if (filterResp && !(t.assignedTo||"").toLowerCase().includes(filterResp.toLowerCase())) return false;
     if (filterQ) {
       const q = filterQ.toLowerCase();
@@ -304,7 +304,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
   const cats = categorizarTareas(filtered);
   const allActive = cats.overdue.length + cats.today.length + cats.upcoming.length;
 
-  const clientes    = [...new Set(tasks.map(t=>t.kickoffId).filter(Boolean))].sort();
+  const clientes    = [...new Set(tasks.map(t=>t.kickoffName||t.kickoffId).filter(Boolean))].sort();
   const responsables = [...new Set(tasks.flatMap(t=>(t.assignedTo||"").split(/[,;]/).map(s=>s.trim()).filter(Boolean)))].sort();
 
   async function handleStatusChange(task, newStatus) {

@@ -383,11 +383,35 @@ export default function BodaPanel({ currentUser, onLogout }) {
     if (selected) setSelected(newBodas.find(x => x.id === selected.id) || null);
   }, [selected]);
 
+  const AUTO_TASKS = [
+    { fase:"Onboarding",   taskName:"Schedule concierge call" },
+    { fase:"Onboarding",   taskName:"Solicitar venues" },
+    { fase:"Planning",     taskName:"Seleccionar proveedores" },
+    { fase:"Planning",     taskName:"Programar degustaciones" },
+    { fase:"Pre-Wedding",  taskName:"Minuto a minuto listo" },
+    { fase:"Wedding Day",  taskName:"Coordinación general" },
+    { fase:"Post-Wedding", taskName:"Factura final" },
+  ];
+
   const handleCreate = async (form) => {
     setSaving(true);
-    const res = await gasPost({ action: "saveBoda", payload: { ...form, id: uid(), createdAt: new Date().toISOString() } });
+    const bodaId = "boda_" + Date.now();
+    const res = await gasPost({ action: "saveBoda", payload: { ...form, id: bodaId, createdAt: new Date().toISOString() } });
+    if (res?.ok) {
+      // Auto-generar tareas estándar
+      await Promise.all(AUTO_TASKS.map(t => gasPost({ action: "saveTask", payload: {
+        taskName:    t.taskName,
+        fase:        t.fase,
+        kickoffId:   bodaId,
+        kickoffName: form.clienteName,
+        assignedTo:  form.responsable || "",
+        status:      "Pendiente",
+        source:      "bodas",
+        createdAt:   new Date().toISOString(),
+      }})));
+      setShowNew(false); load();
+    }
     setSaving(false);
-    if (res?.ok) { setShowNew(false); load(); }
   };
 
   const filtered = bodas.filter(b => {
