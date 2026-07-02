@@ -17,6 +17,14 @@ function isBoda(t) {
   return t.source === "bodas" || BODAS_FASES.has(t.fase) || String(t.kickoffId||"").startsWith("boda_");
 }
 
+function clienteLabel(t) {
+  if (t.kickoffName && !t.kickoffName.startsWith("boda_")) return t.kickoffName;
+  if (t.kickoffId && t.kickoffId.startsWith("boda_")) {
+    return t.kickoffId.replace(/^boda_/, "").replace(/_{2,}/g, " & ").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  }
+  return t.kickoffName || t.kickoffId || "";
+}
+
 function fmtDate(s) {
   if (!s) return "Sin fecha";
   const d = new Date(s);
@@ -88,7 +96,7 @@ function TaskCard({ task, onStatusChange, onEdit, accentColor }) {
           {task.tipo === "Meeting" ? "📅 " : ""}{task.taskName}
         </div>
         <div style={{ fontSize:12, color:"#7a7570", marginTop:3, display:"flex", gap:8, flexWrap:"wrap" }}>
-          {(task.kickoffName || task.kickoffId) && <span style={{ background:"#f5f0ea", padding:"1px 6px", borderRadius:10 }}>👰 {task.kickoffName || task.kickoffId}</span>}
+          {(task.kickoffName || task.kickoffId) && <span style={{ background:"#f5f0ea", padding:"1px 6px", borderRadius:10 }}>👰 {clienteLabel(task)}</span>}
           {task.fase && task.fase !== "General" && <span>📂 {task.fase}</span>}
           {task.assignedTo && <span>👤 {task.assignedTo}</span>}
         </div>
@@ -138,7 +146,7 @@ function Section({ id, title, color, accent, tasks, onStatusChange, onEdit, defa
 function TaskModal({ task, clientes, responsables, users, onSave, onDelete, onClose }) {
   const isNew = !task?.id;
   const [form, setForm] = useState({
-    kickoffName: task?.kickoffName || task?.kickoffId || "",
+    kickoffName: task ? clienteLabel(task) : "",
     taskName:    task?.taskName    || "",
     assignedTo:  task?.assignedTo  || "",
     fase:        task?.fase        || "General",
@@ -303,7 +311,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
       const email = (t.assignedEmail||"").toLowerCase();
       if (!resp.includes(myName.toLowerCase()) && !resp.includes(myEmail.toLowerCase()) && !email.includes(myEmail.toLowerCase())) return false;
     }
-    if (filterCliente && (t.kickoffName||t.kickoffId) !== filterCliente) return false;
+    if (filterCliente && clienteLabel(t) !== filterCliente) return false;
     if (filterResp) {
       const rv = filterResp.toLowerCase();
       const match = (t.assignedTo||"").toLowerCase().includes(rv) || (t.assignedEmail||"").toLowerCase().includes(rv);
@@ -311,7 +319,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
     }
     if (filterQ) {
       const q = filterQ.toLowerCase();
-      if (!((t.taskName||"").toLowerCase().includes(q) || (t.kickoffName||t.kickoffId||"").toLowerCase().includes(q) || (t.notes||"").toLowerCase().includes(q))) return false;
+      if (!((t.taskName||"").toLowerCase().includes(q) || clienteLabel(t).toLowerCase().includes(q) || (t.notes||"").toLowerCase().includes(q))) return false;
     }
     if (!showDone && ["Terminado","Cancelado"].includes(t.status)) return false;
     return true;
@@ -320,7 +328,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
   const cats = categorizarTareas(filtered);
   const allActive = cats.overdue.length + cats.today.length + cats.upcoming.length;
 
-  const clientes    = [...new Set(tasks.map(t=>t.kickoffName||t.kickoffId).filter(Boolean))].sort();
+  const clientes    = [...new Set(tasks.map(t=>clienteLabel(t)).filter(Boolean))].sort();
   // Responsables: usuarios reales del equipo (con fallback a los de las tareas)
   const responsables = users.length > 0
     ? users.map(u => ({ name: u.name, email: u.email }))
