@@ -834,7 +834,15 @@ const handleSubmit = async (e) => {
   );
 }
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
-const JUNIOR_CONCIERGES = ["Valentina","Manuela","Isabella","Sofia","Daniela","Gabriela","Natalia","Carolina","Otro"];
+const JUNIOR_CONCIERGES_BY_CITY = {
+  cartagena: ["Juana","Esaira"],
+  default:   [],
+};
+function juniorListForCity(cityCode) {
+  const c = (cityCode || "").toLowerCase();
+  if (c.includes("ctg") || c.includes("cartagena")) return JUNIOR_CONCIERGES_BY_CITY.cartagena;
+  return JUNIOR_CONCIERGES_BY_CITY.default;
+}
 const CITY_LABELS_D = { cartagena:"Cartagena", medellin:"Medellín", bogota:"Bogotá", barranquilla:"Barranquilla", santamarta:"Santa Marta" };
 
 function cityLabel(code) {
@@ -854,8 +862,40 @@ function fmtDateShort(s) {
   catch { return s; }
 }
 
+function parseDrinkSummary(k) {
+  try {
+    if (!k.drinkOrderJson) return null;
+    const d = JSON.parse(k.drinkOrderJson);
+    const lines = [];
+    ["house","boat"].forEach(loc => {
+      if (!d[loc]) return;
+      Object.entries(d[loc]).forEach(([name, qty]) => {
+        if (qty > 0) lines.push(`${qty}× ${name} (${loc === "house" ? "Casa" : "Bote"})`);
+      });
+    });
+    if (d.extra) lines.push(`Extras: ${d.extra}`);
+    return lines.length ? lines.join(" · ") : null;
+  } catch { return null; }
+}
+function OrderCell({ label, summary, at }) {
+  const [open, setOpen] = React.useState(false);
+  if (!summary) return <span style={{ color:"#d1d5db" }}>—</span>;
+  return (
+    <div style={{ position:"relative" }}>
+      <button onClick={() => setOpen(o=>!o)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, padding:0 }} title="Ver pedido">✅</button>
+      {open && (
+        <div style={{ position:"absolute", zIndex:200, top:24, left:0, background:"#fff", border:"1px solid #e5e7eb", borderRadius:10, padding:"10px 14px", minWidth:240, maxWidth:320, boxShadow:"0 4px 20px rgba(0,0,0,.1)", fontSize:12, color:"#374151", lineHeight:1.7 }}>
+          <div style={{ fontWeight:600, marginBottom:4 }}>{label}</div>
+          {summary.split(" · ").map((l,i) => <div key={i}>• {l}</div>)}
+          {at && <div style={{ fontSize:10, color:"#9ca3af", marginTop:6 }}>Enviado: {new Date(at).toLocaleDateString("es-CO")}</div>}
+          <button onClick={() => setOpen(false)} style={{ marginTop:8, fontSize:11, color:"#9ca3af", background:"none", border:"none", cursor:"pointer" }}>Cerrar</button>
+        </div>
+      )}
+    </div>
+  );
+}
 function orderStatus(k) {
-  const drinks = k.drinkOrderJson || k.drinkOrder ? "✅" : "—";
+  const drinkSummary = parseDrinkSummary(k) || (k.drinkOrder ? k.drinkOrder.slice(0,80) : null);
   const grocery = k.groceryOrderJson || k.groceryOrder ? "✅" : "—";
   const breakfast = (() => {
     try {
@@ -863,13 +903,36 @@ function orderStatus(k) {
       return Array.isArray(c) && c.length ? "✅" : "—";
     } catch { return "—"; }
   })();
-  return { drinks, grocery, breakfast };
+  return { drinkSummary, grocery, breakfast };
 }
 
 function ClientesTable({ kickoffs, loading }) {
   const [cityFilter, setCityFilter] = useState("all");
   const [period, setPeriod] = useState("all");
   const [saving, setSaving] = useState({});
+  const [generatingTasks, setGeneratingTasks] = useState({});
+
+  async function generateTasksFromKickoff(r) {
+    setGeneratingTasks(g => ({ ...g, [r.id]: true }));
+    try {
+      const cart = (() => { try { return JSON.parse(r.cart || "[]"); } catch { return []; } })();
+      const tasks = cart.filter(item => item && (item.name || item.displayName || item.title)).map(item => ({
+        taskName:    item.displayName || item.name || item.title || "Servicio",
+        kickoffId:   r.id,
+        kickoffName: r.guestName || r.tripName || "",
+        assignedTo:  r.assignedConciergeName || r.concierge || "",
+        dueDate:     r._rowArrival ? r._rowArrival.slice(0,10) : "",
+        status:      "Pendiente",
+        notes:       [item.timeLabel||item.time||"", item.location||""].filter(Boolean).join(" · "),
+        source:      "concierge",
+        createdAt:   new Date().toISOString(),
+      }));
+      if (!tasks.length) { alert("Este cliente no tiene servicios en el carrito aún."); return; }
+      await Promise.all(tasks.map(t => fetch(GAS_URL, { method:"POST", body: JSON.stringify({ action:"saveTask", payload:t }) })));
+      alert(`✅ ${tasks.length} tarea(s) creadas para ${r.guestName || r.tripName}`);
+    } catch(e) { alert("Error: " + e.message); }
+    setGeneratingTasks(g => ({ ...g, [r.id]: false }));
+  }
 
   // Expand multi-city kickoffs into multiple rows
   const rows = React.useMemo(() => {
@@ -960,6 +1023,7 @@ function ClientesTable({ kickoffs, loading }) {
                 <th style={thStyle}>🍹 Bebidas</th>
                 <th style={thStyle}>🛒 Comida</th>
                 <th style={thStyle}>☕ Desayuno</th>
+                <th style={thStyle}>✅ Tareas</th>
                 <th style={{ ...thStyle, minWidth:180 }}>📣 Marketing</th>
               </tr>
             </thead>
@@ -968,7 +1032,7 @@ function ClientesTable({ kickoffs, loading }) {
                 <tr><td colSpan={12} style={{ ...tdStyle, textAlign:"center", color:"#9ca3af", padding:32 }}>Sin clientes para este filtro.</td></tr>
               )}
               {filtered.map((r, i) => {
-                const { drinks, grocery, breakfast } = orderStatus(r);
+                const { drinkSummary, grocery, breakfast } = orderStatus(r);
                 const itinLink = `/?mode=itinerary&kickoffId=${r.id}`;
                 const reunLink = `/?mode=reuniones`;
                 const isSaving = (f) => saving[r.id + f];
@@ -989,14 +1053,20 @@ function ClientesTable({ kickoffs, loading }) {
                     <td style={{ ...tdStyle, textAlign:"center" }}>{r.pax || r.groupSize || "—"}</td>
                     <td style={{ ...tdStyle, color:"#374151" }}>{r.assignedConciergeName || r.concierge || "—"}</td>
                     <td style={tdStyle}>
-                      <select
-                        defaultValue={r.juniorConcierge || ""}
-                        onBlur={e => { if (e.target.value !== (r.juniorConcierge||"")) saveField(r.id, "juniorConcierge", e.target.value); }}
-                        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"3px 6px", background:"#fff", color:"#374151", cursor:"pointer" }}>
-                        <option value="">— asignar —</option>
-                        {JUNIOR_CONCIERGES.map(n => <option key={n} value={n}>{n}</option>)}
-                      </select>
-                      {isSaving("juniorConcierge") && <span style={{ fontSize:9, color:"#9ca3af" }}> ↑</span>}
+                      {(() => {
+                        const list = juniorListForCity(r._rowCity);
+                        if (!list.length) return <span style={{ fontSize:11, color:"#d1d5db" }}>—</span>;
+                        return <>
+                          <select
+                            defaultValue={r.juniorConcierge || ""}
+                            onBlur={e => { if (e.target.value !== (r.juniorConcierge||"")) saveField(r.id, "juniorConcierge", e.target.value); }}
+                            style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"3px 6px", background:"#fff", color:"#374151", cursor:"pointer" }}>
+                            <option value="">— asignar —</option>
+                            {list.map(n => <option key={n} value={n}>{n}</option>)}
+                          </select>
+                          {isSaving("juniorConcierge") && <span style={{ fontSize:9, color:"#9ca3af" }}> ↑</span>}
+                        </>;
+                      })()}
                     </td>
                     <td style={tdStyle}>
                       <a href={itinLink} target="_blank" rel="noreferrer"
@@ -1010,9 +1080,18 @@ function ClientesTable({ kickoffs, loading }) {
                         Reuniones →
                       </a>
                     </td>
-                    <td style={{ ...tdStyle, textAlign:"center" }}>{drinks}</td>
+                    <td style={{ ...tdStyle, textAlign:"center" }}><OrderCell label="🍹 Bebidas" summary={drinkSummary} at={r.drinkOrderAt} /></td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>{grocery}</td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>{breakfast}</td>
+                    <td style={{ ...tdStyle, textAlign:"center" }}>
+                      <button
+                        onClick={() => generateTasksFromKickoff(r)}
+                        disabled={generatingTasks[r.id]}
+                        title="Generar tareas desde el carrito"
+                        style={{ fontSize:11, padding:"3px 8px", borderRadius:6, border:"1px solid #e5e7eb", background: generatingTasks[r.id] ? "#f3f4f6" : "#fff", cursor:"pointer", color:"#374151" }}>
+                        {generatingTasks[r.id] ? "…" : "Generar"}
+                      </button>
+                    </td>
                     <td style={tdStyle}>
                       <input
                         type="text"
