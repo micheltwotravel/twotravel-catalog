@@ -4888,6 +4888,7 @@ const ROLE_META = {
   junior:    { label: "Junior",    color: "#fff", bg: "#059669", border: "#059669" },
   finance:   { label: "Finanzas",  color: "#fff", bg: "#d97706", border: "#d97706" },
   marketing: { label: "Marketing", color: "#fff", bg: "#7c3aed", border: "#7c3aed" },
+  bodas:     { label: "Two Lovers", color: "#fff", bg: "#be185d", border: "#be185d" },
 };
 
 // Modes each role can access
