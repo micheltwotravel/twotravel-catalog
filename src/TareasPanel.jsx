@@ -135,7 +135,7 @@ function Section({ id, title, color, accent, tasks, onStatusChange, onEdit, defa
 }
 
 // ── TaskModal ─────────────────────────────────────────────────────
-function TaskModal({ task, clientes, responsables, onSave, onDelete, onClose }) {
+function TaskModal({ task, clientes, responsables, users, onSave, onDelete, onClose }) {
   const isNew = !task?.id;
   const [form, setForm] = useState({
     kickoffName: task?.kickoffName || task?.kickoffId || "",
@@ -201,8 +201,14 @@ function TaskModal({ task, clientes, responsables, onSave, onDelete, onClose }) 
             </div>
             <div>
               <label style={lbl}>Responsable</label>
-              <input style={inp} list="resp-list" value={form.assignedTo} onChange={e=>set("assignedTo",e.target.value)} placeholder="Nombre o email" />
-              <datalist id="resp-list">{responsables.map(r=><option key={r} value={r}/>)}</datalist>
+              <select style={inp} value={form.assignedTo} onChange={e => {
+                const u = (users||[]).find(u => u.name === e.target.value);
+                set("assignedTo", e.target.value);
+                if (u) set("assignedEmail", u.email);
+              }}>
+                <option value="">Sin asignar</option>
+                {(users||[]).map(u => <option key={u.email} value={u.name}>{u.name}</option>)}
+              </select>
             </div>
             <div>
               <label style={lbl}>Fecha límite</label>
@@ -260,6 +266,7 @@ function TaskModal({ task, clientes, responsables, onSave, onDelete, onClose }) 
 // ── TareasPanel ───────────────────────────────────────────────────
 export default function TareasPanel({ currentUser, onLogout }) {
   const [tasks, setTasks]         = useState([]);
+  const [users, setUsers]         = useState([]); // {name, email, role}
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState("");
   const [modal, setModal]         = useState(null); // null | task object | {}
@@ -276,9 +283,13 @@ export default function TareasPanel({ currentUser, onLogout }) {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const res = await gas("listTasks");
-      if (res.ok) setTasks((res.data||[]).filter(isBoda));
-      else setError(res.error || "Error al cargar");
+      const [tasksRes, usersRes] = await Promise.all([
+        gas("listTasks"),
+        gas("listUsers"),
+      ]);
+      if (tasksRes.ok) setTasks((tasksRes.data||[]).filter(isBoda));
+      else setError(tasksRes.error || "Error al cargar");
+      if (usersRes.ok) setUsers((usersRes.data||[]).filter(u => u.active !== "false" && u.name));
     } catch { setError("No se pudo conectar"); }
     setLoading(false);
   }, []);
@@ -289,13 +300,18 @@ export default function TareasPanel({ currentUser, onLogout }) {
   const filtered = tasks.filter(t => {
     if (scope === "mine") {
       const resp = (t.assignedTo||"").toLowerCase();
-      if (!resp.includes(myName.toLowerCase()) && !resp.includes(myEmail.toLowerCase())) return false;
+      const email = (t.assignedEmail||"").toLowerCase();
+      if (!resp.includes(myName.toLowerCase()) && !resp.includes(myEmail.toLowerCase()) && !email.includes(myEmail.toLowerCase())) return false;
     }
     if (filterCliente && (t.kickoffName||t.kickoffId) !== filterCliente) return false;
-    if (filterResp && !(t.assignedTo||"").toLowerCase().includes(filterResp.toLowerCase())) return false;
+    if (filterResp) {
+      const rv = filterResp.toLowerCase();
+      const match = (t.assignedTo||"").toLowerCase().includes(rv) || (t.assignedEmail||"").toLowerCase().includes(rv);
+      if (!match) return false;
+    }
     if (filterQ) {
       const q = filterQ.toLowerCase();
-      if (!((t.taskName||"").toLowerCase().includes(q) || (t.kickoffId||"").toLowerCase().includes(q) || (t.notes||"").toLowerCase().includes(q))) return false;
+      if (!((t.taskName||"").toLowerCase().includes(q) || (t.kickoffName||t.kickoffId||"").toLowerCase().includes(q) || (t.notes||"").toLowerCase().includes(q))) return false;
     }
     if (!showDone && ["Terminado","Cancelado"].includes(t.status)) return false;
     return true;
@@ -305,7 +321,10 @@ export default function TareasPanel({ currentUser, onLogout }) {
   const allActive = cats.overdue.length + cats.today.length + cats.upcoming.length;
 
   const clientes    = [...new Set(tasks.map(t=>t.kickoffName||t.kickoffId).filter(Boolean))].sort();
-  const responsables = [...new Set(tasks.flatMap(t=>(t.assignedTo||"").split(/[,;]/).map(s=>s.trim()).filter(Boolean)))].sort();
+  // Responsables: usuarios reales del equipo (con fallback a los de las tareas)
+  const responsables = users.length > 0
+    ? users.map(u => ({ name: u.name, email: u.email }))
+    : [...new Set(tasks.flatMap(t=>(t.assignedTo||"").split(/[,;]/).map(s=>s.trim()).filter(Boolean)))].map(n=>({name:n,email:""}));
 
   async function handleStatusChange(task, newStatus) {
     setTasks(prev => prev.map(t => t.id===task.id ? {...t,status:newStatus} : t));
@@ -394,7 +413,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
           </select>
           <select style={{...inp, flex:1, minWidth:120}} value={filterResp} onChange={e=>setFilterResp(e.target.value)}>
             <option value="">👤 Todos</option>
-            {responsables.map(r=><option key={r} value={r}>{r}</option>)}
+            {responsables.map(r=><option key={r.email||r.name} value={r.email||r.name}>{r.name}</option>)}
           </select>
           <div style={{ display:"flex", gap:4, flex:2, minWidth:160 }}>
             <input ref={searchRef} style={{...inp, flex:1}} placeholder="🔍 Buscar..." onChange={e=>setFilterQ(e.target.value)} />
@@ -452,6 +471,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
           task={Object.keys(modal).length > 0 ? modal : null}
           clientes={clientes}
           responsables={responsables}
+          users={users}
           onSave={handleSave}
           onDelete={handleDelete}
           onClose={() => setModal(null)}
