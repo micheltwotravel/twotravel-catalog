@@ -4948,7 +4948,7 @@ function LoginScreen({ onLogin }) {
   return (
     <div style={{minHeight:"100vh",background:"#f7f4ef",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Jost',sans-serif"}}>
       <div style={{background:"#fff",borderRadius:16,padding:"40px 36px",boxShadow:"0 4px 24px rgba(0,0,0,.08)",width:340,textAlign:"center"}}>
-        <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:24,fontWeight:500,color:"#1a1814",marginBottom:4}}>Two Travel</p>
+        <img src="/logo.png" alt="Two Travel" style={{height:48,objectFit:"contain",marginBottom:24}} />
         <p style={{fontSize:11,color:"#9a7d52",letterSpacing:".12em",textTransform:"uppercase",marginBottom:32}}>Internal Access</p>
         <form onSubmit={handle} style={{display:"flex",flexDirection:"column",gap:12}}>
           <input
