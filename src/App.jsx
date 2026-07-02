@@ -23,6 +23,7 @@ import ConciergePanel, { ReunionesPage } from "./ConciergePanel";
 import TwoTravelCatalog from "./TwoTravelCatalog";
 import ItineraryPrintView from "./ItineraryPrintView";
 import BodaPanel from "./BodaPanel";
+import TareasPanel from "./TareasPanel";
 import { updateKickoffInSheet, fetchKickoffsFromSheet, saveKickoffToSheet } from "./sheetServices";
 
 const translations = {
@@ -4891,15 +4892,15 @@ const ROLE_META = {
 
 // Modes each role can access
 const ROLE_ACCESS = {
-  admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas"],
+  admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas"],
   concierge: ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones"],
   junior:    ["dashboard"],
   finance:   ["dashboard","soporte"],
   marketing: ["dashboard"],
-  bodas:     ["bodas","dashboard"],
+  bodas:     ["bodas","tareas-bodas","dashboard"],
 };
 
-const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas"]);
+const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas"]);
 
 // ─── AUTH ─────────────────────────────────────────────────────────
 function useAuth() {
@@ -5301,7 +5302,8 @@ function App() {
       return <UserManagement currentUser={user} onBack={() => window.history.back()} />;
     }
     if (mode === "concierge") return <ErrorBoundary><ConciergePanel onLogout={logout} currentUser={user} /></ErrorBoundary>;
-    if (mode === "bodas")     return <ErrorBoundary><BodaPanel currentUser={user} onLogout={logout} /></ErrorBoundary>;
+    if (mode === "bodas")        return <ErrorBoundary><BodaPanel currentUser={user} onLogout={logout} /></ErrorBoundary>;
+    if (mode === "tareas-bodas") return <ErrorBoundary><TareasPanel currentUser={user} onLogout={logout} /></ErrorBoundary>;
     if (mode === "soporte")   return <ErrorBoundary><SoportePage /></ErrorBoundary>;
     if (mode === "soporte-dashboard") return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
     if (mode === "tasks")     return <ErrorBoundary><TaskTracker /></ErrorBoundary>;
