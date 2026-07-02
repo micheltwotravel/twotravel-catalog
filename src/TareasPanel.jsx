@@ -3,9 +3,16 @@ import { useState, useEffect, useCallback } from "react";
 const BODAS_GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
 const FASES = ["General","Onboarding","Planning","Pre-Wedding","Wedding Day","Post-Wedding"];
-const ESTADOS_ACTIVOS = ["Pendiente","En curso"];
 const ESTADOS_TODOS = ["Pendiente","En curso","Terminado","Cancelado"];
 const TIPOS = ["Task","Meeting"];
+const BODAS_FASES = new Set(["Onboarding","Planning","Pre-Wedding","Wedding Day","Post-Wedding"]);
+
+function isBodaTask(t) {
+  // Es tarea de bodas si tiene fase de bodas, source="bodas", o kickoffId de boda
+  return t.source === "bodas" ||
+    BODAS_FASES.has(t.fase) ||
+    String(t.kickoffId || "").startsWith("boda_");
+}
 
 async function gasPost(action, payload = {}) {
   const res = await fetch(BODAS_GAS_URL, {
@@ -212,7 +219,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
     setLoading(true); setError("");
     try {
       const res = await gasPost("listTasks");
-      if (res.ok) setTasks(res.data || []);
+      if (res.ok) setTasks((res.data || []).filter(isBodaTask));
       else setError(res.error || "Error cargando tareas");
     } catch { setError("No se pudo conectar al servidor"); }
     setLoading(false);
@@ -231,7 +238,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
       await gasPost("updateTask", form);
       setTasks(prev => prev.map(t => t.id === form.id ? { ...t, ...form } : t));
     } else {
-      const res = await gasPost("saveTask", form);
+      const res = await gasPost("saveTask", { ...form, source: "bodas" });
       if (res.ok) await load();
     }
     setShowForm(false); setEditTask(null);
