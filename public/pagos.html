@@ -126,6 +126,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 
 <div class="toolbar">
   <button class="tbtn primary" onclick="openNewModal()">+ Nuevo cobro</button>
+  <button class="tbtn" id="btn-reminders" onclick="checkReminders()" style="border-color:#d97706;color:#d97706">🔔 Recordatorios</button>
   <div class="search-box">
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
     <input type="text" placeholder="Buscar..." oninput="searchQ=this.value;render()" id="search-input">
@@ -234,13 +235,31 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
             <option value="Alia">Alia</option>
             <option value="Caro">Caro</option>
             <option value="Dani">Dani</option>
+            <option value="Lyna">Lyna</option>
             <option value="Michel">Michel</option>
             <option value="Xilene">Xilene</option>
           </select>
         </div>
         <div class="form-group">
           <label class="form-label">Link Factura <span style="font-size:9px;color:var(--ink3)">(opcional)</span></label>
-          <input class="form-input" id="n-factura" placeholder="URL Drive, Dropbox...">
+          <input class="form-input" id="n-factura" placeholder="URL Drive, Dropbox..." oninput="regenerateWaMsg()">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Recordatorio <span style="font-size:9px;color:var(--ink3)">(fecha)</span></label>
+          <input class="form-input" id="n-reminder" type="date">
+        </div>
+        <div class="form-group" style="grid-column:span 2">
+          <label class="form-label">Plantilla de mensaje</label>
+          <select class="form-select" id="n-template" onchange="applyTemplate(this.value)">
+            <option value="cobro_inicial_concierge">💬 Cobro inicial — Concierge</option>
+            <option value="cobro_inicial_wedding">💍 Cobro inicial — Bodas</option>
+            <option value="recordatorio_suave">🔔 Recordatorio suave</option>
+            <option value="recordatorio_urgente">⚠️ Recordatorio urgente</option>
+            <option value="confirmacion_pago">✅ Confirmación de pago recibido</option>
+          </select>
         </div>
       </div>
 
@@ -289,6 +308,7 @@ const MEMBERS = {
   Alia:   {bg:'#9a7d52',i:'AL'},
   Caro:   {bg:'#3d8a5a',i:'CA'},
   Dani:   {bg:'#8a3d5a',i:'DA'},
+  Lyna:   {bg:'#c47d2a',i:'LY'},
   Michel: {bg:'#3d5a8a',i:'MI'},
   Xilene: {bg:'#5a3d8a',i:'XI'},
 };
@@ -304,47 +324,117 @@ const BASE_URL = 'https://www.twotravelvip.com';
 const PDF_GENERAL  = BASE_URL + '/payment-options.pdf';
 const PDF_WEDDINGS = BASE_URL + '/payment-options-weddings.pdf';
 
-function buildWaMsg() {
-  const dept    = document.getElementById('n-dept').value;
-  const client  = (document.getElementById('n-client').value || '').trim();
-  const amount  = document.getElementById('n-amount').value;
-  const currency= document.getElementById('n-currency').value;
-  const desc    = (document.getElementById('n-desc').value || '').trim();
-  const firstName = client.split(/[\s,&]/)[0] || 'cliente';
-  const montoStr  = amount ? `${currency} $${parseFloat(amount).toLocaleString('es', {minimumFractionDigits:2, maximumFractionDigits:2})}` : '';
-  const pdfLink   = dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
-
-  if (dept === 'wedding') {
-    return [
-      `Hola ${firstName}! 💍`,
-      '',
-      `Estamos muy emocionados de acompañarlos en este día tan especial.`,
-      '',
-      desc ? `Aquí el resumen de su pago pendiente:\n\n${desc}` : 'Aquí el resumen de su pago pendiente:',
-      montoStr ? `\n💰 Total: *${montoStr}*` : '',
-      '',
-      `Para completar su reserva, pueden realizar el pago con cualquiera de los métodos disponibles aquí:`,
-      pdfLink,
-      '',
-      `Con todo el cariño,`,
-      `— Two Lovers ✨`,
-    ].filter(l => l !== undefined).join('\n');
-  } else {
-    return [
+const TEMPLATES = {
+  cobro_inicial_concierge: {
+    label: '💬 Cobro inicial — Concierge',
+    build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [
       `Hola ${firstName}! 🌟`,
       '',
       `Esperamos que estés muy emocionado/a para tu próxima experiencia con Two Travel.`,
       '',
       desc ? `Aquí el resumen de tu pago pendiente:\n\n${desc}` : 'Aquí el resumen de tu pago pendiente:',
       montoStr ? `\n💰 Total: *${montoStr}*` : '',
+      facturaLink ? `\n🧾 Factura: ${facturaLink}` : '',
       '',
-      `Para completar tu reserva, puedes realizar el pago con cualquiera de los métodos disponibles aquí:`,
+      `Puedes realizar el pago con cualquiera de los métodos disponibles aquí:`,
       pdfLink,
       '',
       `Cualquier pregunta, con gusto te ayudamos. ¡Hasta pronto!`,
       `— Two Travel ✨`,
-    ].filter(l => l !== undefined).join('\n');
-  }
+    ].filter(l => l !== undefined).join('\n'),
+  },
+  cobro_inicial_wedding: {
+    label: '💍 Cobro inicial — Bodas',
+    build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [
+      `Hola ${firstName}! 💍`,
+      '',
+      `Estamos muy emocionados de acompañarlos en este día tan especial.`,
+      '',
+      desc ? `Aquí el resumen de su pago pendiente:\n\n${desc}` : 'Aquí el resumen de su pago pendiente:',
+      montoStr ? `\n💰 Total: *${montoStr}*` : '',
+      facturaLink ? `\n🧾 Factura: ${facturaLink}` : '',
+      '',
+      `Pueden realizar el pago con cualquiera de los métodos disponibles aquí:`,
+      pdfLink,
+      '',
+      `Con todo el cariño,`,
+      `— Two Lovers ✨`,
+    ].filter(l => l !== undefined).join('\n'),
+  },
+  recordatorio_suave: {
+    label: '🔔 Recordatorio suave',
+    build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [
+      `Hola ${firstName}! 😊`,
+      '',
+      `Queríamos recordarte que tienes un pago pendiente con nosotros.`,
+      desc ? `\n${desc}` : '',
+      montoStr ? `\n💰 Total: *${montoStr}*` : '',
+      facturaLink ? `\n🧾 Factura: ${facturaLink}` : '',
+      '',
+      `Métodos de pago disponibles:`,
+      pdfLink,
+      '',
+      `¡Cualquier duda nos cuentas! — Two Travel ✨`,
+    ].filter(l => l !== undefined).join('\n'),
+  },
+  recordatorio_urgente: {
+    label: '⚠️ Recordatorio urgente',
+    build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [
+      `Hola ${firstName},`,
+      '',
+      `Queremos informarte que tu pago aún está pendiente y necesitamos confirmación para continuar con tu reserva.`,
+      desc ? `\n${desc}` : '',
+      montoStr ? `\n💰 Total pendiente: *${montoStr}*` : '',
+      facturaLink ? `\n🧾 Factura: ${facturaLink}` : '',
+      '',
+      `Por favor realiza el pago a través de alguno de nuestros métodos:`,
+      pdfLink,
+      '',
+      `Si ya realizaste el pago, envíanos el comprobante. ¡Gracias!`,
+      `— Two Travel`,
+    ].filter(l => l !== undefined).join('\n'),
+  },
+  confirmacion_pago: {
+    label: '✅ Confirmación de pago recibido',
+    build: ({firstName, desc, montoStr}) => [
+      `Hola ${firstName}! 🎉`,
+      '',
+      `¡Confirmamos que recibimos tu pago exitosamente!`,
+      desc ? `\n${desc}` : '',
+      montoStr ? `\n💰 Monto: *${montoStr}*` : '',
+      '',
+      `Tu reserva está confirmada. Pronto te enviaremos todos los detalles.`,
+      '',
+      `¡Nos vemos pronto! — Two Travel ✨`,
+    ].filter(l => l !== undefined).join('\n'),
+  },
+};
+
+function getTemplateVars() {
+  const dept     = document.getElementById('n-dept').value;
+  const client   = (document.getElementById('n-client').value || '').trim();
+  const amount   = document.getElementById('n-amount').value;
+  const currency = document.getElementById('n-currency').value;
+  const desc     = (document.getElementById('n-desc').value || '').trim();
+  const factura  = (document.getElementById('n-factura')?.value || '').trim();
+  const firstName  = client.split(/[\s,&]/)[0] || 'cliente';
+  const montoStr   = amount ? `${currency} $${parseFloat(amount).toLocaleString('es', {minimumFractionDigits:2, maximumFractionDigits:2})}` : '';
+  const pdfLink    = dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
+  return { firstName, desc, montoStr, pdfLink, facturaLink: factura };
+}
+
+function buildWaMsg() {
+  const dept = document.getElementById('n-dept').value;
+  const tplKey = document.getElementById('n-template')?.value ||
+    (dept === 'wedding' ? 'cobro_inicial_wedding' : 'cobro_inicial_concierge');
+  const tpl = TEMPLATES[tplKey] || TEMPLATES['cobro_inicial_concierge'];
+  return tpl.build(getTemplateVars());
+}
+
+function applyTemplate(key) {
+  const tpl = TEMPLATES[key];
+  if (!tpl) return;
+  document.getElementById('n-wamsg').value = tpl.build(getTemplateVars());
 }
 
 function regenerateWaMsg() {
@@ -518,12 +608,24 @@ function renderRow(p){
     <td><div class="cell" style="justify-content:center">${factura}</div></td>
     <td><div class="cell" style="justify-content:center;gap:4px;flex-direction:column;align-items:center">
       ${p.phone ? `
-        <button onclick="cobrar('${p.id}')" title="Enviar cobro por WhatsApp"
-          style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;font-size:10px;font-family:Jost,sans-serif;background:#25d366;color:#fff;border:none;border-radius:3px;cursor:pointer">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.523 5.845L0 24l6.335-1.493A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.368l-.36-.214-3.726.878.936-3.617-.235-.374A9.818 9.818 0 1112 21.818z"/></svg>
-          Cobrar
-        </button>
+        <div style="display:flex;gap:3px;align-items:center">
+          <button onclick="cobrar('${p.id}')" title="Enviar cobro por WhatsApp"
+            style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;font-size:10px;font-family:Jost,sans-serif;background:#25d366;color:#fff;border:none;border-radius:3px;cursor:pointer">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.523 5.845L0 24l6.335-1.493A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.368l-.36-.214-3.726.878.936-3.617-.235-.374A9.818 9.818 0 1112 21.818z"/></svg>
+            ${p.cobroAt ? 'Recordar' : 'Cobrar'}
+          </button>
+          <select onchange="cobrar('${p.id}',this.value);this.value=''" title="Elegir plantilla"
+            style="font-size:9px;padding:2px 4px;border:1px solid #ccc;border-radius:3px;font-family:Jost,sans-serif;cursor:pointer;max-width:22px;opacity:.6">
+            <option value="">▾</option>
+            <option value="cobro_inicial_concierge">💬 Cobro inicial</option>
+            <option value="cobro_inicial_wedding">💍 Cobro bodas</option>
+            <option value="recordatorio_suave">🔔 Recordatorio suave</option>
+            <option value="recordatorio_urgente">⚠️ Recordatorio urgente</option>
+            <option value="confirmacion_pago">✅ Confirmación pago</option>
+          </select>
+        </div>
         ${p.cobroAt ? `<span style="font-size:9px;color:var(--ink3)" title="Enviado: ${p.cobroAt.slice(0,10)}">✓ ${p.cobroAt.slice(5,10)}</span>` : ''}
+        ${p.reminderDate ? `<span style="font-size:9px;padding:1px 5px;border-radius:2px;background:${p.reminderDate<=new Date().toISOString().slice(0,10)?'#fef2f2':'#fef9ec'};color:${p.reminderDate<=new Date().toISOString().slice(0,10)?'#dc2626':'#92400e'}">🔔 ${p.reminderDate}</span>` : ''}
       ` : '<span style="font-size:10px;color:var(--border2)">sin tel.</span>'}
     </div></td>
     <td class="status-wrap"><span class="status-chip" style="background:${st.color}" onclick="openStatusPopup('${p.id}',event)">${st.label}</span></td>
@@ -661,23 +763,24 @@ function createPago(){
   if(!amount){ showToast('Ingresa el monto'); return; }
 
   const p = {
-    id:         'pg' + Date.now(),
-    dept:       document.getElementById('n-dept').value,
-    date:       document.getElementById('n-date').value,
-    category:   document.getElementById('n-category').value.trim(),
-    client:     client,
-    vendor:     document.getElementById('n-vendor').value.trim(),
-    desc:       desc,
-    amount:     amount,
-    currency:   document.getElementById('n-currency').value,
-    method:     '',
-    person:     document.getElementById('n-person').value,
-    phone:      document.getElementById('n-phone').value.trim(),
-    factura:    document.getElementById('n-factura').value.trim(),
-    notes:      document.getElementById('n-notes').value.trim(),
-    status:     'pend',
-    receipt:    '',
-    createdAt:  new Date().toISOString(),
+    id:           'pg' + Date.now(),
+    dept:         document.getElementById('n-dept').value,
+    date:         document.getElementById('n-date').value,
+    category:     document.getElementById('n-category').value.trim(),
+    client:       client,
+    vendor:       document.getElementById('n-vendor').value.trim(),
+    desc:         desc,
+    amount:       amount,
+    currency:     document.getElementById('n-currency').value,
+    method:       '',
+    person:       document.getElementById('n-person').value,
+    phone:        document.getElementById('n-phone').value.trim(),
+    factura:      document.getElementById('n-factura').value.trim(),
+    reminderDate: document.getElementById('n-reminder').value,
+    notes:        document.getElementById('n-notes').value.trim(),
+    status:       'pend',
+    receipt:      '',
+    createdAt:    new Date().toISOString(),
   };
   pagos.unshift(p);
   save();
@@ -688,34 +791,37 @@ function createPago(){
 }
 
 /* ── COBRAR VIA WHATSAPP ── */
-async function cobrar(id) {
+async function cobrar(id, tplKey) {
   const p = pagos.find(x => x.id === id);
-  if (!p || !p.phone) return;
+  if (!p || !p.phone) { showToast('Este pago no tiene número de WhatsApp'); return; }
+
   const isReminder = !!p.cobroAt;
   const label = isReminder ? 'recordatorio' : 'cobro';
-  if (!confirm(`¿Enviar ${label} por WhatsApp a ${p.client}?`)) return;
 
-  const pdfLink = p.dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
+  // Pick template
+  const dept = p.dept || 'concierge';
+  const defaultTpl = isReminder ? 'recordatorio_suave' : (dept === 'wedding' ? 'cobro_inicial_wedding' : 'cobro_inicial_concierge');
+  const key = tplKey || defaultTpl;
+  const tpl = TEMPLATES[key] || TEMPLATES[defaultTpl];
+
+  const pdfLink   = dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
   const firstName = (p.client || '').split(/[\s,&]/)[0];
-  const montoStr = p.amount ? `${p.currency} $${parseFloat(p.amount).toLocaleString('es',{minimumFractionDigits:2})}` : '';
+  const montoStr  = p.amount ? `${p.currency} $${parseFloat(p.amount).toLocaleString('es',{minimumFractionDigits:2})}` : '';
+  const msg = tpl.build({ firstName, desc: p.desc || '', montoStr, pdfLink, facturaLink: p.factura || '' });
 
-  let msg;
-  if (isReminder) {
-    msg = p.dept === 'wedding'
-      ? `Hola ${firstName}! 💍 Te recordamos que tienes un pago pendiente con Two Lovers.\n\n${p.desc || ''}${montoStr ? '\n\n💰 Total: *' + montoStr + '*' : ''}\n\nMétodos de pago:\n${pdfLink}\n\n¡Estamos a tu disposición! — Two Lovers ✨`
-      : `Hola ${firstName}! 🌟 Te recordamos que tienes un pago pendiente con Two Travel.\n\n${p.desc || ''}${montoStr ? '\n\n💰 Total: *' + montoStr + '*' : ''}\n\nMétodos de pago:\n${pdfLink}\n\n¡Cualquier pregunta nos avisas! — Two Travel ✨`;
-  } else {
-    msg = p.dept === 'wedding'
-      ? `Hola ${firstName}! 💍\n\nEstamos muy emocionados de acompañarlos en este día tan especial.\n\nAquí el resumen de su pago pendiente:\n\n${p.desc || ''}${montoStr ? '\n\n💰 Total: *' + montoStr + '*' : ''}\n\nPueden realizar el pago con cualquiera de los métodos disponibles aquí:\n${pdfLink}\n\nCon todo el cariño,\n— Two Lovers ✨`
-      : `Hola ${firstName}! 🌟\n\nEsperamos que estés muy emocionado/a para tu próxima experiencia con Two Travel.\n\nAquí el resumen de tu pago pendiente:\n\n${p.desc || ''}${montoStr ? '\n\n💰 Total: *' + montoStr + '*' : ''}\n\nPuedes realizar el pago con cualquiera de los métodos disponibles aquí:\n${pdfLink}\n\nCualquier pregunta, con gusto te ayudamos. ¡Hasta pronto!\n— Two Travel ✨`;
-  }
+  if (!confirm(`¿Enviar ${label} por WhatsApp a ${p.client}?`)) return;
 
   showToast('Enviando...');
   try {
+    const body = { to: p.phone, message: msg, type: isReminder ? 'reminder' : 'cobro' };
+    // Attach PDF as media if possible
+    if (pdfLink) body.mediaUrl = pdfLink;
+    if (p.factura) body.facturaUrl = p.factura;
+
     const r = await fetch('/api/whatsapp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: p.phone, message: msg, type: isReminder ? 'reminder' : 'cobro' }),
+      body: JSON.stringify(body),
     });
     const d = await r.json();
     if (d.ok) {
@@ -728,6 +834,20 @@ async function cobrar(id) {
     }
   } catch(err) {
     showToast('❌ Error de red: ' + err.message);
+  }
+}
+
+/* ── RECORDATORIO PROGRAMADO ── */
+function getRemindersDue() {
+  const today = new Date().toISOString().slice(0,10);
+  return pagos.filter(p => p.reminderDate && p.reminderDate <= today && p.status === 'pend' && !p.reminderSentAt);
+}
+function checkReminders() {
+  const due = getRemindersDue();
+  if (!due.length) return;
+  const names = due.map(p=>p.client).join(', ');
+  if (confirm(`🔔 ${due.length} recordatorio(s) pendiente(s): ${names}\n\n¿Enviar ahora?`)) {
+    due.forEach(p => cobrar(p.id, 'recordatorio_suave'));
   }
 }
 
@@ -809,7 +929,13 @@ function exportCSV(){
 load();
 render();
 setSyncInfo('Cargando...');
-loadFromGAS();
+loadFromGAS().then(() => {
+  const due = getRemindersDue();
+  if (due.length) {
+    document.getElementById('btn-reminders').textContent = `🔔 Recordatorios (${due.length})`;
+    document.getElementById('btn-reminders').style.background = '#fef3c7';
+  }
+});
 </script>
 </body>
 </html>

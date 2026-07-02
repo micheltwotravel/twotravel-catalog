@@ -14,6 +14,9 @@ export default async function handler(req, res) {
   const toWa  = `whatsapp:+${phone}`;
 
   const params = new URLSearchParams({ From: from, To: toWa, Body: message });
+  // Attach factura PDF if provided (as priority), otherwise attach payment options PDF
+  const attachUrl = req.body.facturaUrl || req.body.mediaUrl;
+  if (attachUrl) params.append('MediaUrl0', attachUrl);
 
   const twilioRes = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
