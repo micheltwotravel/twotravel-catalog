@@ -383,28 +383,43 @@ export default function BodaPanel({ currentUser, onLogout }) {
     if (selected) setSelected(newBodas.find(x => x.id === selected.id) || null);
   }, [selected]);
 
-  const AUTO_TASKS = [
-    { fase:"Onboarding",   taskName:"Schedule concierge call" },
-    { fase:"Onboarding",   taskName:"Solicitar venues" },
-    { fase:"Planning",     taskName:"Seleccionar proveedores" },
-    { fase:"Planning",     taskName:"Programar degustaciones" },
-    { fase:"Pre-Wedding",  taskName:"Minuto a minuto listo" },
-    { fase:"Wedding Day",  taskName:"Coordinación general" },
-    { fase:"Post-Wedding", taskName:"Factura final" },
+  const WEDDING_TEMPLATE = [
+    { fase:"Onboarding",   taskName:"Crear chat con cliente y equipo",  mode:"kickoff",       offset:0  },
+    { fase:"Onboarding",   taskName:"Enviar mensaje de bienvenida",      mode:"kickoff",       offset:0  },
+    { fase:"Onboarding",   taskName:"Recopilar documentos",              mode:"kickoff",       offset:1  },
+    { fase:"Onboarding",   taskName:"Solicitar venues",                  mode:"kickoff",       offset:1  },
+    { fase:"Onboarding",   taskName:"Enviar budget sheets",              mode:"kickoff",       offset:2  },
+    { fase:"Onboarding",   taskName:"Schedule concierge call",           mode:"kickoff",       offset:7  },
+    { fase:"Planning",     taskName:"Seleccionar proveedores",           mode:"wedding_minus", offset:90 },
+    { fase:"Planning",     taskName:"Programar degustaciones",           mode:"wedding_minus", offset:60 },
+    { fase:"Pre-Wedding",  taskName:"Minuto a minuto listo",             mode:"wedding_minus", offset:30 },
+    { fase:"Wedding Day",  taskName:"Coordinación general",              mode:"wedding",       offset:0  },
+    { fase:"Post-Wedding", taskName:"Factura final",                     mode:"wedding_plus",  offset:2  },
   ];
+
+  function calcTaskDate(mode, offset, weddingDate) {
+    const now = new Date(); now.setHours(9,0,0,0);
+    const wedding = weddingDate ? new Date(weddingDate) : null;
+    const DAY = 86400000;
+    if (mode === "kickoff")       return new Date(now.getTime() + offset * DAY).toISOString().slice(0,10);
+    if (mode === "wedding_minus") return wedding ? new Date(wedding.getTime() - offset * DAY).toISOString().slice(0,10) : new Date(now.getTime() + offset * DAY).toISOString().slice(0,10);
+    if (mode === "wedding")       return wedding ? wedding.toISOString().slice(0,10) : new Date(now.getTime() + 120 * DAY).toISOString().slice(0,10);
+    if (mode === "wedding_plus")  return wedding ? new Date(wedding.getTime() + offset * DAY).toISOString().slice(0,10) : new Date(now.getTime() + (120 + offset) * DAY).toISOString().slice(0,10);
+    return "";
+  }
 
   const handleCreate = async (form) => {
     setSaving(true);
     const bodaId = "boda_" + Date.now();
     const res = await gasPost({ action: "saveBoda", payload: { ...form, id: bodaId, createdAt: new Date().toISOString() } });
     if (res?.ok) {
-      // Auto-generar tareas estándar
-      await Promise.all(AUTO_TASKS.map(t => gasPost({ action: "saveTask", payload: {
+      await Promise.all(WEDDING_TEMPLATE.map(t => gasPost({ action: "saveTask", payload: {
         taskName:    t.taskName,
         fase:        t.fase,
         kickoffId:   bodaId,
         kickoffName: form.clienteName,
         assignedTo:  form.responsable || "",
+        dueDate:     calcTaskDate(t.mode, t.offset, form.weddingDate),
         status:      "Pendiente",
         source:      "bodas",
         createdAt:   new Date().toISOString(),
