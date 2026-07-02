@@ -5684,10 +5684,74 @@ const loadKickoffs = async () => {
     }
   };
 
+  const generateHandoffsFromItinerary = async (id, updates, prevKickoff) => {
+    const GAS = TASK_API_URL;
+    const k = { ...(prevKickoff || {}), ...updates };
+    // Parse cart: itinerary canvas items
+    let cart = [];
+    try { cart = JSON.parse(typeof updates.cart === "string" ? updates.cart : JSON.stringify(updates.cart || prevKickoff?.cart || [])); } catch {}
+    if (!Array.isArray(cart)) cart = [];
+    const items = cart.filter(item => item && (item.displayName || item.name || item.title));
+
+    if (!items.length) return; // nada que generar
+
+    const clientName = k.guestName || k.tripName || "";
+    const dateStr    = k.arrivalDate ? k.arrivalDate.slice(0, 10) : (k._rowArrival ? k._rowArrival.slice(0, 10) : "");
+
+    // Fetch existing handoffs, append new ones
+    const existingRes = await fetch(GAS, { method: "POST", body: JSON.stringify({ action: "getHandoffs", payload: {} }) });
+    const existingJson = await existingRes.json().catch(() => ({ data: [] }));
+    const existing = existingJson.data || [];
+
+    const newHandoffs = items.map(item => ({
+      id: "hf_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+      client: clientName,
+      date: dateStr,
+      activity: item.displayName || item.name || item.title || "Servicio",
+      pax: k.groupSize || k.pax || "",
+      operator: "",
+      bookingWhere: "",
+      travefy: "",
+      confirmation: "",
+      person: k.assignedConciergeName || k.assignedConcierge || "",
+      personLive: "",
+      notes: [item.timeLabel || item.time || "", item.location || ""].filter(Boolean).join(" · "),
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }));
+
+    await fetch(GAS, { method: "POST", body: JSON.stringify({ action: "saveHandoffs", payload: { handoffs: [...existing, ...newHandoffs] } }) });
+
+    // Monday Logística
+    fetch(GAS, { method: "POST", body: JSON.stringify({ action: "createMondayItems", payload: {
+      items: items.map(i => ({ name: i.displayName || i.name || i.title || "Servicio" })),
+      clientName, date: dateStr,
+      pax: k.groupSize || k.pax || "",
+      concierge: k.assignedConciergeName || k.assignedConcierge || "",
+    }})}).catch(() => {});
+
+    // Mark as generated so we don't repeat
+    await updateKickoffInSheet(id, { handoffsGenerated: "true" }).catch(() => {});
+    setKickoffs(prev => prev.map(kk => kk.id === id ? { ...kk, handoffsGenerated: "true" } : kk));
+
+    alert(`✅ ${newHandoffs.length} servicio(s) del itinerario agregados al Handoff y enviados a Monday Logística para ${clientName}`);
+  };
+
   const handleSaveEdit = async (id, updates) => {
   try {
     setRowLoadingId(id);
     await updateKickoffInSheet(id, updates);
+
+    // Auto-generate Handoffs when itinerary moves to "sent_to_travify" (enviado a finanzas)
+    if (updates.status === "sent_to_travify") {
+      const prevKickoff = kickoffs.find(k => k.id === id);
+      const alreadyGenerated = prevKickoff?.handoffsGenerated === "true" || prevKickoff?.handoffsGenerated === true;
+      const prevStatus = prevKickoff?.status;
+      if (!alreadyGenerated && prevStatus !== "sent_to_travify") {
+        generateHandoffsFromItinerary(id, updates, prevKickoff).catch(e => console.warn("Handoff generation error:", e));
+      }
+    }
 
     setKickoffs((prev) =>
       prev.map((k) => {
