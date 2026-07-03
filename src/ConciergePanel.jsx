@@ -696,12 +696,12 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
    Lista fija de concierges
    ========================================= */
 const CONCIERGE_LIST = [
-  { name: "Alia Jadad",           email: "alia@two.travel",     phone: "+57 301 7618012",   city: "CTG", title: "Senior Concierge Cartagena" },
-  { name: "Carolina Lopez",       email: "caro@two.travel",     phone: "+57 300 8192062",   city: "CTG", title: "Senior Concierge Cartagena" },
-  { name: "Daniela Becerra",      email: "daniela@two.travel",  phone: "+57 304 4445285",   city: "MDE", title: "Senior Concierge Medellín"  },
-  { name: "Nataly Cruz",          email: "nataly@two.travel",   phone: "+52 1 55 2337 7241",city: "CDMX" },
-  { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   phone: "+52 1 55 4344 1382",city: "CDMX" },
-  { name: "Natalia Peniche",       email: "natalia@two.travel",  phone: "",                  city: "CDMX" },
+  { name: "Alia Jadad",           email: "alia@two.travel",     phone: "+57 301 7618012",   city: "CTG", title: "Senior Concierge Cartagena", calendarUrl: "" },
+  { name: "Carolina Lopez",       email: "caro@two.travel",     phone: "+57 300 8192062",   city: "CTG", title: "Senior Concierge Cartagena", calendarUrl: "https://meetings.hubspot.com/carotwotravel/caro-calendar?uuid=4ba96711-f96d-4fe3-b9eb-12a836826a81" },
+  { name: "Daniela Becerra",      email: "daniela@two.travel",  phone: "+57 304 4445285",   city: "MDE", title: "Senior Concierge Medellín",  calendarUrl: "" },
+  { name: "Nataly Cruz",          email: "nataly@two.travel",   phone: "+52 1 55 2337 7241",city: "CDMX", calendarUrl: "" },
+  { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   phone: "+52 1 55 4344 1382",city: "CDMX", calendarUrl: "" },
+  { name: "Natalia Peniche",       email: "natalia@two.travel",  phone: "",                  city: "CDMX", calendarUrl: "" },
 ];
 
 /* =========================================
@@ -1940,6 +1940,37 @@ function SummaryModal({ kickoff, onClose }) {
 </div>
 
 
+        {/* ── Briefing de Ventas ── */}
+        {(kickoff.briefHasHouse || kickoff.briefHasBoat || kickoff.briefBudget || kickoff.briefDietary || kickoff.briefPurpose || kickoff.briefNotes) && (() => {
+          const budgetLabel = { economy:"$ Economy", standard:"$$ Standard", premium:"$$$ Premium", luxury:"$$$$ Luxury", ultra:"$$$$$ Ultra-Luxury" };
+          const purposeLabel = { cumpleanos:"🎂 Cumpleaños", aniversario:"💑 Aniversario", despedida_soltero:"🥂 Despedida de soltero/a", vacaciones:"🏖️ Vacaciones", corporativo:"💼 Corporativo", boda:"💍 Boda", otro:"✨ Otro" };
+          const yesno = v => v === "si" ? "✅ Sí" : v === "no" ? "❌ No" : v === "por_confirmar" ? "⏳ Por confirmar" : v;
+          const rows = [
+            kickoff.briefPurpose   && { label:"🎯 Motivo",       val: purposeLabel[kickoff.briefPurpose] || kickoff.briefPurpose },
+            kickoff.briefBudget    && { label:"💰 Tier/Budget",  val: budgetLabel[kickoff.briefBudget] || kickoff.briefBudget },
+            kickoff.briefHasHouse  && { label:"🏠 Casa",         val: yesno(kickoff.briefHasHouse) },
+            kickoff.briefHasBoat   && { label:"⛵ Bote",         val: yesno(kickoff.briefHasBoat) },
+            kickoff.briefDietary   && { label:"🥗 Restricciones",val: kickoff.briefDietary },
+          ].filter(Boolean);
+          return (
+            <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 space-y-1.5">
+              <p className="text-xs font-semibold text-violet-800">📋 Briefing de Ventas</p>
+              {rows.map(({label, val}) => (
+                <div key={label} className="flex gap-2 text-xs">
+                  <span className="text-neutral-500 w-28 shrink-0">{label}</span>
+                  <span className="text-neutral-900 font-medium">{val}</span>
+                </div>
+              ))}
+              {kickoff.briefNotes && (
+                <div className="flex gap-2 text-xs mt-1 pt-1 border-t border-violet-200">
+                  <span className="text-neutral-500 w-28 shrink-0">📝 Nota</span>
+                  <span className="text-neutral-900">{kickoff.briefNotes}</span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* ── Quiz answers ── */}
         {(() => {
           let q = null;
@@ -2836,6 +2867,13 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // conciergeSummary intentionally read-only here (no UI field); excluded from saves to avoid overwriting
   // const [conciergeSummary] = useState(kickoff?.conciergeSummary || "");
   const [internalNotes, setInternalNotes] = useState(kickoff?.internalNotes || "");
+  // Briefing de Ventas
+  const [briefHasHouse,      setBriefHasHouse]      = useState(kickoff?.briefHasHouse      || "");
+  const [briefHasBoat,       setBriefHasBoat]        = useState(kickoff?.briefHasBoat       || "");
+  const [briefBudget,        setBriefBudget]         = useState(kickoff?.briefBudget        || "");
+  const [briefDietary,       setBriefDietary]        = useState(kickoff?.briefDietary       || "");
+  const [briefPurpose,       setBriefPurpose]        = useState(kickoff?.briefPurpose       || "");
+  const [briefNotes,         setBriefNotes]          = useState(kickoff?.briefNotes         || "");
   // Operaciones
   const [boatName,               setBoatName]               = useState(kickoff?.boatName               || "");
   const [boatDay,                setBoatDay]                 = useState(kickoff?.boatDay                || "");
@@ -3087,6 +3125,13 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
   updates.guestContact = guestContact.trim();
   updates.checkInFormUrl = checkInFormUrl.trim();
+  // Briefing de Ventas
+  updates.briefHasHouse = briefHasHouse;
+  updates.briefHasBoat  = briefHasBoat;
+  updates.briefBudget   = briefBudget;
+  updates.briefDietary  = briefDietary.trim();
+  updates.briefPurpose  = briefPurpose;
+  updates.briefNotes    = briefNotes.trim();
   const em = guestEmailState.trim();
   updates.email = em;
   updates.guestEmail = em;
@@ -3370,6 +3415,71 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 <option value="feedback_submitted">{STATUS_LABELS.feedback_submitted.es}</option>
                 <option value="done">{STATUS_LABELS.done.es}</option>
               </select>
+            </div>
+          </div>
+
+          {/* ── BRIEFING DE VENTAS ── */}
+          <div className="border border-violet-200 rounded-xl bg-violet-50/40 p-4 space-y-3">
+            <p className="text-[11px] font-semibold text-violet-700 uppercase tracking-wide">📋 Briefing de Ventas</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] text-neutral-500 mb-1 block">¿Tienen casa?</label>
+                <select value={briefHasHouse} onChange={e => setBriefHasHouse(e.target.value)}
+                  className="w-full border rounded-lg px-2 py-1.5 text-xs bg-white">
+                  <option value="">— sin info —</option>
+                  <option value="si">✅ Sí</option>
+                  <option value="no">❌ No</option>
+                  <option value="por_confirmar">⏳ Por confirmar</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-neutral-500 mb-1 block">¿Tienen bote?</label>
+                <select value={briefHasBoat} onChange={e => setBriefHasBoat(e.target.value)}
+                  className="w-full border rounded-lg px-2 py-1.5 text-xs bg-white">
+                  <option value="">— sin info —</option>
+                  <option value="si">✅ Sí</option>
+                  <option value="no">❌ No</option>
+                  <option value="por_confirmar">⏳ Por confirmar</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-neutral-500 mb-1 block">Tier / Budget</label>
+                <select value={briefBudget} onChange={e => setBriefBudget(e.target.value)}
+                  className="w-full border rounded-lg px-2 py-1.5 text-xs bg-white">
+                  <option value="">— sin info —</option>
+                  <option value="economy">$ Economy</option>
+                  <option value="standard">$$ Standard</option>
+                  <option value="premium">$$$ Premium</option>
+                  <option value="luxury">$$$$ Luxury</option>
+                  <option value="ultra">$$$$$ Ultra-Luxury</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-neutral-500 mb-1 block">Motivo del viaje</label>
+                <select value={briefPurpose} onChange={e => setBriefPurpose(e.target.value)}
+                  className="w-full border rounded-lg px-2 py-1.5 text-xs bg-white">
+                  <option value="">— sin info —</option>
+                  <option value="cumpleanos">🎂 Cumpleaños</option>
+                  <option value="aniversario">💑 Aniversario</option>
+                  <option value="despedida_soltero">🥂 Despedida de soltero/a</option>
+                  <option value="vacaciones">🏖️ Vacaciones</option>
+                  <option value="corporativo">💼 Corporativo</option>
+                  <option value="boda">💍 Boda</option>
+                  <option value="otro">✨ Otro</option>
+                </select>
+              </div>
+              <div className="col-span-2">
+                <label className="text-[10px] text-neutral-500 mb-1 block">Restricciones alimentarias</label>
+                <input value={briefDietary} onChange={e => setBriefDietary(e.target.value)}
+                  className="w-full border rounded-lg px-2 py-1.5 text-xs bg-white"
+                  placeholder="Vegano, sin gluten, alérgico a nueces…" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-[10px] text-neutral-500 mb-1 block">Nota de ventas</label>
+                <textarea value={briefNotes} onChange={e => setBriefNotes(e.target.value)}
+                  className="w-full border rounded-lg px-2 py-1.5 text-xs bg-white min-h-[60px]"
+                  placeholder="Contexto adicional del cliente…" />
+              </div>
             </div>
           </div>
 
@@ -4412,7 +4522,7 @@ function NewClientLinksModal({ kickoff, lang = "en", onClose }) {
             <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wide mb-2">
               {isEs ? "Mensaje listo para enviar" : "Ready-to-send message"}
             </p>
-            <div className="bg-white rounded-xl px-3 py-3 text-[11px] text-neutral-700 whitespace-pre-wrap leading-relaxed mb-3">
+            <div className="bg-white rounded-xl px-3 py-3 text-[11px] text-neutral-700 whitespace-pre-wrap leading-relaxed mb-3" style={{wordBreak:"break-all"}}>
               {msg}
             </div>
             <div className="flex gap-2">
@@ -5048,7 +5158,9 @@ export function ReunionesPage() {
   const handleAddMeeting = async (kickoffId, entry) => {
     const k = kickoffs.find(x => x.id === kickoffId);
     const existing = getMeetings(k);
-    await saveMeetings(kickoffId, [...existing, entry]);
+    // Auto-tag first meeting as Kickoff Call, rest as Follow-up
+    const autoType = existing.length === 0 ? "Kickoff Call" : (entry.type === "Kickoff Call" ? "Follow-up" : entry.type);
+    await saveMeetings(kickoffId, [...existing, { ...entry, type: autoType }]);
     setAddingFor(null);
   };
 
@@ -6301,6 +6413,17 @@ const loadKickoffs = async () => {
                                 style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"var(--text-1)",background:"none",border:"none",cursor:"pointer"}}>
                                 Ver resumen
                               </button>
+                              {(() => {
+                                const conciergeNames = String(k.assignedConcierge || "").split(",").map(s => s.trim()).filter(Boolean);
+                                const calUrl = conciergeNames.map(n => CONCIERGE_LIST.find(c => c.name === n)?.calendarUrl).find(Boolean);
+                                if (!calUrl) return null;
+                                return (
+                                  <button onClick={() => { setOpenMenuId(null); window.open(calUrl, "_blank"); }}
+                                    style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"#7c3aed",background:"none",border:"none",cursor:"pointer"}}>
+                                    📅 Agendar reunión
+                                  </button>
+                                );
+                              })()}
                               <button onClick={async () => {
                                 setOpenMenuId(null);
                                 const link = buildCatalogLink(k, Number(k.clientType ?? 1));
