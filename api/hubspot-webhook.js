@@ -79,7 +79,7 @@ export default async function handler(req, res) {
       const departureDate = pickProp(props, PROP_MAP.departureDate);
       const boatType    = pickProp(props, PROP_MAP.boatType);
 
-      // Get associated contact
+      // Get associated contact — contact name is the real client name
       let guestName = "", guestEmail = "", guestContact = "";
       const contactAssocs = deal.associations?.contacts?.results || [];
       if (contactAssocs.length) {
@@ -89,6 +89,8 @@ export default async function handler(req, res) {
         guestEmail   = cp.email || "";
         guestContact = cp.phone || cp.mobilephone || "";
       }
+      // Fallback: deal name often is "Client Name, City, Date" — take only what's before the first comma
+      if (!guestName) guestName = dealName.split(",")[0].trim();
 
       const hubspotDealUrl = `https://app.hubspot.com/contacts/deals/${dealId}`;
 
