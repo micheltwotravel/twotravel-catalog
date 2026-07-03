@@ -9,7 +9,8 @@ export default async function handler(req, res) {
     const clientId     = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const redirectUri  = process.env.GOOGLE_REDIRECT_URI;
-    const GAS          = process.env.VITE_TASK_API_URL || process.env.GAS_URL;
+    const GAS          = process.env.VITE_TASK_API_URL || process.env.GAS_URL
+      || "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
     if (!clientId || !clientSecret || !redirectUri) {
       return res.status(500).send("Missing Google OAuth env vars (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI)");
