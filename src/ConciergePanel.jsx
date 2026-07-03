@@ -2849,6 +2849,7 @@ function FeedbackResponseCard({ kickoffId }) {
 function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [guestName, setGuestName] = useState(kickoff?.guestName || "");
   const [tripName, setTripName] = useState(kickoff?.tripName || "");
+  const [lang, setLang] = useState(kickoff?.lang || "en");
   const [guestContact, setGuestContact] = useState(kickoff?.guestContact || "");
   const [checkInFormUrl, setCheckInFormUrl] = useState(kickoff?.checkInFormUrl || "");
   // Multi-concierge: stored as comma-separated names; edit as array of names
@@ -3124,6 +3125,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     itinerarySnapshot: "",
   };
 
+  updates.lang = lang;
   updates.guestContact = guestContact.trim();
   updates.checkInFormUrl = checkInFormUrl.trim();
   // Briefing de Ventas
@@ -3200,6 +3202,21 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                 placeholder="Nombre del viaje"
               />
+            </div>
+            <div className="col-span-2">
+              <label className="text-[11px] text-neutral-500">Idioma del cliente</label>
+              <div className="mt-1 flex gap-2">
+                <button type="button"
+                  onClick={() => setLang("es")}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${lang === "es" ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-indigo-400"}`}>
+                  🇨🇴 Español
+                </button>
+                <button type="button"
+                  onClick={() => setLang("en")}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${lang === "en" ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-indigo-400"}`}>
+                  🇺🇸 English
+                </button>
+              </div>
             </div>
             <div>
   <label className="text-[11px] text-neutral-500">Contacto</label>
@@ -6436,7 +6453,7 @@ const loadKickoffs = async () => {
                                 const concierge = conciergeNames.map(n => CONCIERGE_LIST.find(c => c.name === n)).find(Boolean);
                                 if (!concierge) return null;
                                 const slug = concierge.email.split("@")[0].toLowerCase();
-                                const bookLink = `https://www.twotravelvip.com/book.html?c=${slug}&kickoffId=${k.id}`;
+                                const bookLink = `https://www.twotravelvip.com/book.html?c=${slug}&kickoffId=${k.id}&lang=${k.lang || "en"}`;
                                 return (
                                   <button onClick={async () => {
                                     setOpenMenuId(null);

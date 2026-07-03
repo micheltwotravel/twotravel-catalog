@@ -267,7 +267,7 @@
     <div class="detail-row">
       <div class="detail-icon">◷</div>
       <div>
-        <div class="detail-label">Duración</div>
+        <div class="detail-label" id="lblDuration">Duración</div>
         <div class="duration-pills">
           <button class="dur-pill active" id="dur30" onclick="setDuration(30)">30 min</button>
           <button class="dur-pill" id="dur45" onclick="setDuration(45)">45 min</button>
@@ -278,7 +278,7 @@
     <div class="detail-row">
       <div class="detail-icon">▶</div>
       <div>
-        <div class="detail-label">Formato</div>
+        <div class="detail-label" id="lblFormat">Formato</div>
         <div class="detail-text">Google Meet</div>
       </div>
     </div>
@@ -286,7 +286,7 @@
     <div class="detail-row" id="selectedTimeDisplay" style="display:none">
       <div class="detail-icon">◉</div>
       <div>
-        <div class="detail-label">Seleccionado</div>
+        <div class="detail-label" id="lblSelected">Seleccionado</div>
         <div class="detail-text" id="selectedTimeText"></div>
       </div>
     </div>
@@ -297,9 +297,9 @@
 
     <!-- STEP 1: Calendar -->
     <div id="step1">
-      <div class="step-label">Paso 1 de 3</div>
-      <h1>Elige una fecha</h1>
-      <p class="step-sub">Selecciona el día para tu reunión</p>
+      <div class="step-label" id="s1label">Paso 1 de 3</div>
+      <h1 id="s1title">Elige una fecha</h1>
+      <p class="step-sub" id="s1sub">Selecciona el día para tu reunión</p>
       <div class="cal-header">
         <button class="cal-nav" onclick="prevMonth()">‹</button>
         <span class="cal-month" id="calTitle"></span>
@@ -310,9 +310,9 @@
 
     <!-- STEP 2: Slots -->
     <div id="step2" style="display:none">
-      <button class="btn-back" onclick="goStep(1)">← Cambiar fecha</button>
-      <div class="step-label">Paso 2 de 3</div>
-      <h1>Elige una hora</h1>
+      <button class="btn-back" id="s2back" onclick="goStep(1)">← Cambiar fecha</button>
+      <div class="step-label" id="s2label">Paso 2 de 3</div>
+      <h1 id="s2title">Elige una hora</h1>
       <p class="step-sub" id="step2Date"></p>
       <div id="slotsLoading" class="loading">Consultando disponibilidad…</div>
       <div class="slots-grid" id="slotsGrid" style="display:none"></div>
@@ -321,20 +321,20 @@
 
     <!-- STEP 3: Info -->
     <div id="step3" style="display:none">
-      <button class="btn-back" onclick="goStep(2)">← Cambiar hora</button>
-      <div class="step-label">Paso 3 de 3</div>
-      <h1>Tu información</h1>
+      <button class="btn-back" id="s3back" onclick="goStep(2)">← Cambiar hora</button>
+      <div class="step-label" id="s3label">Paso 3 de 3</div>
+      <h1 id="s3title">Tu información</h1>
       <p class="step-sub" id="step3Summary"></p>
       <div class="field">
-        <label>Nombre completo *</label>
+        <label id="lblName">Nombre completo *</label>
         <input type="text" id="clientName" placeholder="Ana García" />
       </div>
       <div class="field">
-        <label>Email *</label>
+        <label id="lblEmail">Email *</label>
         <input type="email" id="clientEmail" placeholder="ana@email.com" />
       </div>
       <div class="field">
-        <label>WhatsApp (opcional)</label>
+        <label id="lblPhone">WhatsApp (opcional)</label>
         <input type="tel" id="clientPhone" placeholder="+57 300 000 0000" />
       </div>
       <p class="error-msg" id="bookError" style="display:none"></p>
@@ -345,7 +345,7 @@
     <div id="step4" style="display:none">
       <div class="confirm-box">
         <div class="confirm-check">✓</div>
-        <div class="confirm-title">Reunión confirmada</div>
+        <div class="confirm-title" id="s4title">Reunión confirmada</div>
         <div class="confirm-sub" id="confirmText"></div>
         <a id="meetLinkBtn" class="meet-btn" target="_blank" style="display:none">Unirse a Google Meet</a>
       </div>
@@ -358,6 +358,69 @@
 const params    = new URLSearchParams(location.search);
 const slug      = params.get("c") || "";
 const kickoffId = params.get("kickoffId") || params.get("k") || "";
+const lang      = params.get("lang") || "en";
+
+const T = {
+  es: {
+    title:         "Agenda una reunión",
+    duration:      "Duración",
+    format:        "Formato",
+    selected:      "Seleccionado",
+    step1Label:    "Paso 1 de 3",
+    step1Title:    "Elige una fecha",
+    step1Sub:      "Selecciona el día para tu reunión",
+    step2Back:     "← Cambiar fecha",
+    step2Label:    "Paso 2 de 3",
+    step2Title:    "Elige una hora",
+    step2Loading:  "Consultando disponibilidad…",
+    step3Back:     "← Cambiar hora",
+    step3Label:    "Paso 3 de 3",
+    step3Title:    "Tu información",
+    nameLabel:     "Nombre completo *",
+    emailLabel:    "Email *",
+    phoneLabel:    "WhatsApp (opcional)",
+    bookBtn:       "Confirmar reunión",
+    booking:       "Confirmando…",
+    confirmTitle:  "Reunión confirmada",
+    meetBtn:       "Unirse a Google Meet",
+    errFields:     "Por favor llena nombre y email.",
+    errEmail:      "Email inválido.",
+    errNoSlots:    "No hay disponibilidad para este día. Elige otra fecha.",
+    errLoad:       "Error al cargar disponibilidad.",
+    confirmText:   (name, date, time, dur, email) =>
+      `Tu reunión con <strong>${name}</strong> está confirmada<br>para el <strong>${date}</strong> a las <strong>${time}</strong> (${dur} min)<br><br>Recibirás un correo de confirmación en <strong>${email}</strong>`,
+  },
+  en: {
+    title:         "Schedule a meeting",
+    duration:      "Duration",
+    format:        "Format",
+    selected:      "Selected",
+    step1Label:    "Step 1 of 3",
+    step1Title:    "Choose a date",
+    step1Sub:      "Select the day for your meeting",
+    step2Back:     "← Change date",
+    step2Label:    "Step 2 of 3",
+    step2Title:    "Choose a time",
+    step2Loading:  "Checking availability…",
+    step3Back:     "← Change time",
+    step3Label:    "Step 3 of 3",
+    step3Title:    "Your information",
+    nameLabel:     "Full name *",
+    emailLabel:    "Email *",
+    phoneLabel:    "WhatsApp (optional)",
+    bookBtn:       "Confirm meeting",
+    booking:       "Confirming…",
+    confirmTitle:  "Meeting confirmed",
+    meetBtn:       "Join Google Meet",
+    errFields:     "Please fill in your name and email.",
+    errEmail:      "Invalid email.",
+    errNoSlots:    "No availability for this day. Please choose another date.",
+    errLoad:       "Error loading availability.",
+    confirmText:   (name, date, time, dur, email) =>
+      `Your meeting with <strong>${name}</strong> is confirmed<br>for <strong>${date}</strong> at <strong>${time}</strong> (${dur} min)<br><br>You'll receive a confirmation email at <strong>${email}</strong>`,
+  },
+};
+const t = T[lang] || T.en;
 
 const CONCIERGES = {
   caro:    { name: "Carolina Lopez",        role: "Senior Concierge · Cartagena", initials: "CL" },
@@ -415,13 +478,17 @@ let selDate   = null;
 let selSlot   = null;
 
 const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAYS_ES   = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+const DAYS_EN   = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const MONTHS = lang === "es" ? MONTHS_ES : MONTHS_EN;
+const DAYS   = lang === "es" ? DAYS_ES   : DAYS_EN;
 
 function renderCalendar() {
-  document.getElementById("calTitle").textContent = `${MONTHS_ES[viewMonth]} ${viewYear}`;
+  document.getElementById("calTitle").textContent = `${MONTHS[viewMonth]} ${viewYear}`;
   const grid = document.getElementById("calGrid");
   grid.innerHTML = "";
-  DAYS_ES.forEach(d => {
+  DAYS.forEach(d => {
     const el = document.createElement("div"); el.className = "cal-day-label"; el.textContent = d; grid.appendChild(el);
   });
   const firstDay = new Date(viewYear, viewMonth, 1).getDay();
@@ -473,7 +540,7 @@ async function pickDate(iso) {
       document.getElementById("slotsError").textContent = "Error: " + data.error;
       document.getElementById("slotsError").style.display = "block";
     } else if (!data.slots?.length) {
-      document.getElementById("slotsError").textContent = "No hay disponibilidad para este día. Elige otra fecha.";
+      document.getElementById("slotsError").textContent = t.errNoSlots;
       document.getElementById("slotsError").style.display = "block";
     } else {
       data.slots.forEach(s => {
@@ -487,7 +554,7 @@ async function pickDate(iso) {
       grid.style.display = "grid";
     }
   } catch {
-    document.getElementById("slotsError").textContent = "Error al cargar disponibilidad.";
+    document.getElementById("slotsError").textContent = t.errLoad;
     document.getElementById("slotsError").style.display = "block";
   }
   document.getElementById("slotsLoading").style.display = "none";
@@ -512,10 +579,10 @@ async function confirmBook() {
   const phone = document.getElementById("clientPhone").value.trim();
   const errEl = document.getElementById("bookError");
   errEl.style.display = "none";
-  if (!name || !email) { errEl.textContent = "Por favor llena nombre y email."; errEl.style.display = "block"; return; }
-  if (!/\S+@\S+\.\S+/.test(email)) { errEl.textContent = "Email inválido."; errEl.style.display = "block"; return; }
+  if (!name || !email) { errEl.textContent = t.errFields; errEl.style.display = "block"; return; }
+  if (!/\S+@\S+\.\S+/.test(email)) { errEl.textContent = t.errEmail; errEl.style.display = "block"; return; }
   const btn = document.getElementById("bookBtn");
-  btn.disabled = true; btn.textContent = "Confirmando…";
+  btn.disabled = true; btn.textContent = t.booking;
   try {
     const res  = await fetch("/api/calendar/book", {
       method: "POST",
@@ -526,7 +593,7 @@ async function confirmBook() {
     if (!data.ok) throw new Error(data.error || "Error al agendar");
     goStep(4);
     document.getElementById("confirmText").innerHTML =
-      `Tu reunión con <strong>${profile?.name || "el concierge"}</strong> está confirmada<br>para el <strong>${formatDate(selDate)}</strong> a las <strong>${selSlot.start}</strong> (${duration} min)<br><br>Recibirás un correo de confirmación en <strong>${email}</strong>`;
+      t.confirmText(profile?.name || "Two Travel", formatDate(selDate), selSlot.start, duration, email);
     if (data.meetLink) {
       const meetBtn = document.getElementById("meetLinkBtn");
       meetBtn.href = data.meetLink; meetBtn.style.display = "inline-block";
@@ -543,10 +610,34 @@ function goStep(n) {
 }
 
 function formatDate(iso) {
-  return new Date(iso + "T12:00:00").toLocaleDateString("es-CO", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+  const locale = lang === "es" ? "es-CO" : "en-US";
+  return new Date(iso + "T12:00:00").toLocaleDateString(locale, { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+}
+
+function applyTranslations() {
+  document.getElementById("lblDuration").textContent  = t.duration;
+  document.getElementById("lblFormat").textContent    = t.format;
+  document.getElementById("lblSelected").textContent  = t.selected;
+  document.getElementById("s1label").textContent      = t.step1Label;
+  document.getElementById("s1title").textContent      = t.step1Title;
+  document.getElementById("s1sub").textContent        = t.step1Sub;
+  document.getElementById("s2back").textContent       = t.step2Back;
+  document.getElementById("s2label").textContent      = t.step2Label;
+  document.getElementById("s2title").textContent      = t.step2Title;
+  document.getElementById("slotsLoading").textContent = t.step2Loading;
+  document.getElementById("s3back").textContent       = t.step3Back;
+  document.getElementById("s3label").textContent      = t.step3Label;
+  document.getElementById("s3title").textContent      = t.step3Title;
+  document.getElementById("lblName").textContent      = t.nameLabel;
+  document.getElementById("lblEmail").textContent     = t.emailLabel;
+  document.getElementById("lblPhone").textContent     = t.phoneLabel;
+  document.getElementById("bookBtn").textContent      = t.bookBtn;
+  document.getElementById("s4title").textContent      = t.confirmTitle;
+  document.getElementById("meetLinkBtn").textContent  = t.meetBtn;
 }
 
 renderCalendar();
+applyTranslations();
 </script>
 </body>
 </html>
