@@ -212,7 +212,7 @@ function TaskModal({ task, clientes, responsables, users, onSave, onDelete, onCl
               <select style={inp} value={form.assignedTo} onChange={e => {
                 const u = (users||[]).find(u => u.name === e.target.value);
                 set("assignedTo", e.target.value);
-                if (u) set("assignedEmail", u.email);
+                // no enviamos email — notificaciones desactivadas
               }}>
                 <option value="">Sin asignar</option>
                 {(users||[]).map(u => <option key={u.email} value={u.name}>{u.name}</option>)}
@@ -271,13 +271,93 @@ function TaskModal({ task, clientes, responsables, users, onSave, onDelete, onCl
   );
 }
 
+// ── CalendarView ──────────────────────────────────────────────────
+function CalendarView({ tasks, onEdit }) {
+  const [refDate, setRefDate] = useState(() => { const d = new Date(); d.setDate(1); return d; });
+
+  const year  = refDate.getFullYear();
+  const month = refDate.getMonth();
+  const monthName = refDate.toLocaleDateString("es-CO", { month:"long", year:"numeric" });
+
+  // first cell = monday of the week containing day 1
+  const firstDay = new Date(year, month, 1);
+  const startOffset = (firstDay.getDay() + 6) % 7; // 0=Mon
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  // index tasks by date string YYYY-MM-DD
+  const byDate = {};
+  tasks.forEach(t => {
+    if (!t.dueDate || ["Terminado","Cancelado"].includes(t.status)) return;
+    const key = t.dueDate.slice(0,10);
+    if (!byDate[key]) byDate[key] = [];
+    byDate[key].push(t);
+  });
+
+  const todayStr = new Date().toISOString().slice(0,10);
+  const pad = n => String(n).padStart(2,"0");
+
+  const DOW = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+
+  return (
+    <div>
+      {/* nav */}
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
+        <button onClick={() => setRefDate(new Date(year, month-1, 1))} style={{ border:"1px solid #e5ddd3", borderRadius:8, padding:"4px 10px", cursor:"pointer", background:"#fff" }}>‹</button>
+        <span style={{ fontWeight:600, fontSize:15, textTransform:"capitalize" }}>{monthName}</span>
+        <button onClick={() => setRefDate(new Date(year, month+1, 1))} style={{ border:"1px solid #e5ddd3", borderRadius:8, padding:"4px 10px", cursor:"pointer", background:"#fff" }}>›</button>
+        <button onClick={() => setRefDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1))} style={{ border:"1px solid #e5ddd3", borderRadius:8, padding:"4px 8px", cursor:"pointer", background:"#fff", fontSize:11, color:"#7a7570" }}>Hoy</button>
+      </div>
+
+      {/* grid */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2 }}>
+        {DOW.map(d => (
+          <div key={d} style={{ textAlign:"center", fontSize:11, fontWeight:600, color:"#9a7d52", padding:"4px 0" }}>{d}</div>
+        ))}
+        {cells.map((day, i) => {
+          if (!day) return <div key={`e${i}`} />;
+          const key = `${year}-${pad(month+1)}-${pad(day)}`;
+          const dayTasks = byDate[key] || [];
+          const isToday = key === todayStr;
+          const isPast  = key < todayStr;
+          return (
+            <div key={key} style={{
+              minHeight:72, background: isToday ? "#fff8ee" : "#fff",
+              border: isToday ? "2px solid #9a7d52" : "1px solid #e5ddd3",
+              borderRadius:8, padding:"4px 5px", position:"relative",
+            }}>
+              <div style={{ fontSize:11, fontWeight: isToday?700:400, color: isPast&&!isToday?"#bbb":"#1a1814", marginBottom:3 }}>{day}</div>
+              {dayTasks.slice(0,3).map(t => (
+                <div key={t.id} onClick={() => onEdit(t)} title={t.taskName} style={{
+                  fontSize:10, lineHeight:1.3, padding:"2px 4px", borderRadius:4, marginBottom:2,
+                  background: isPast ? "#f4c7c3" : "#c9daf8",
+                  color: isPast ? "#7f1d1d" : "#1e3a5f",
+                  cursor:"pointer", overflow:"hidden", whiteSpace:"nowrap", textOverflow:"ellipsis",
+                }}>
+                  {clienteLabel(t) ? `${clienteLabel(t)}: ` : ""}{t.taskName}
+                </div>
+              ))}
+              {dayTasks.length > 3 && (
+                <div style={{ fontSize:9, color:"#9a7d52" }}>+{dayTasks.length-3} más</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── TareasPanel ───────────────────────────────────────────────────
 export default function TareasPanel({ currentUser, onLogout }) {
   const [tasks, setTasks]         = useState([]);
   const [users, setUsers]         = useState([]); // {name, email, role}
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState("");
-  const [modal, setModal]         = useState(null); // null | task object | {}
+  const [modal, setModal]         = useState(null);
+  const [vista, setVista]         = useState("lista"); // "lista" | "calendario"
   const [scope, setScope]         = useState("all"); // "all" | "mine"
   const [filterCliente, setFilterCliente] = useState("");
   const [filterResp, setFilterResp]       = useState("");
@@ -380,6 +460,9 @@ export default function TareasPanel({ currentUser, onLogout }) {
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           <span style={{ fontSize:12, color:"#9a7d52" }}>{currentUser?.name || currentUser?.email}</span>
+          <button onClick={() => setVista(v => v==="lista"?"calendario":"lista")} style={{ background:"none", border:"1px solid #555", color:"#9a7d52", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:12 }}>
+            {vista === "lista" ? "📅 Calendario" : "☰ Lista"}
+          </button>
           <button onClick={onLogout} style={{ background:"none", border:"1px solid #333", color:"#9a7d52", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:12 }}>Salir</button>
         </div>
       </div>
@@ -440,13 +523,14 @@ export default function TareasPanel({ currentUser, onLogout }) {
 
         {loading ? (
           <div style={{ textAlign:"center", color:"#9a7d52", padding:48 }}>Cargando tareas...</div>
+        ) : vista === "calendario" ? (
+          <CalendarView tasks={filtered} onEdit={setModal} />
         ) : (
           <>
             <Section title="⚠️ Atrasadas" color={COLORS.overdue} accent="#c0392b" tasks={cats.overdue} onStatusChange={handleStatusChange} onEdit={setModal} />
             <Section title="🔥 Para hoy"  color={COLORS.today}   accent="#e67e22" tasks={cats.today}   onStatusChange={handleStatusChange} onEdit={setModal} />
             <Section title="📅 Próximas"  color={COLORS.upcoming} accent="#2980b9" tasks={cats.upcoming} onStatusChange={handleStatusChange} onEdit={setModal} />
 
-            {/* Toggle terminadas */}
             <button onClick={()=>setShowDone(s=>!s)} style={{
               background:"none", border:"1px solid #e5ddd3", borderRadius:8,
               padding:"6px 14px", cursor:"pointer", fontSize:12, color:"#7a7570", marginBottom:8,
@@ -457,7 +541,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
               <Section title="✅ Terminadas" color={COLORS.done} accent="#34a853" tasks={cats.done} onStatusChange={handleStatusChange} onEdit={setModal} defaultOpen={true} />
             )}
 
-            {allActive === 0 && !loading && (
+            {allActive === 0 && (
               <div style={{ textAlign:"center", color:"#9a7d52", padding:40, background:"#fff", borderRadius:12, border:"1px solid #e5ddd3" }}>
                 ✅ No hay tareas activas con estos filtros
                 {(filterCliente||filterResp||filterQ||scope!=="all") && (

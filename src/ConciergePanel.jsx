@@ -5950,6 +5950,14 @@ const loadKickoffs = async () => {
     📅 Reuniones
   </a>
 
+  <a
+    href="/book-admin.html"
+    className="tt-btn-ghost"
+    title="Gestionar calendarios de booking"
+  >
+    🗓 Calendarios
+  </a>
+
   <button
     type="button"
     onClick={() => setPortalLang(l => l === "en" ? "es" : "en")}

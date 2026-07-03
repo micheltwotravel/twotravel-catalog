@@ -38,7 +38,7 @@ function daysUntil(d) {
 // ─────────────────────────────────────────────
 // BODA FORM
 // ─────────────────────────────────────────────
-function BodaForm({ boda, onSave, onCancel, saving }) {
+function BodaForm({ boda, onSave, onCancel, saving, users = [] }) {
   const [form, setForm] = useState({
     clienteName: boda?.clienteName || "",
     weddingDate: boda?.weddingDate || "",
@@ -67,7 +67,14 @@ function BodaForm({ boda, onSave, onCancel, saving }) {
         </div>
         <div>
           <label className="block text-[11px] text-neutral-500 mb-1">Responsable</label>
-          <input className={inp} value={form.responsable} onChange={e => set("responsable", e.target.value)} placeholder="Nombre o email" />
+          {users.length > 0 ? (
+            <select className={inp} value={form.responsable} onChange={e => set("responsable", e.target.value)}>
+              <option value="">— seleccionar —</option>
+              {users.map(u => <option key={u.email} value={u.name || u.email}>{u.name || u.email}</option>)}
+            </select>
+          ) : (
+            <input className={inp} value={form.responsable} onChange={e => set("responsable", e.target.value)} placeholder="Nombre o email" />
+          )}
         </div>
         <div>
           <label className="block text-[11px] text-neutral-500 mb-1">Venue</label>
@@ -118,13 +125,18 @@ function BodaForm({ boda, onSave, onCancel, saving }) {
 // ─────────────────────────────────────────────
 // TASK FORM
 // ─────────────────────────────────────────────
-function TaskForm({ bodaId, bodaName, onSave, onCancel, saving }) {
+function TaskForm({ bodaId, bodaName, users = [], onSave, onCancel, saving }) {
   const [form, setForm] = useState({
     taskName: "", assignedTo: "", assignedEmail: "", dueDate: "",
     status: "Pendiente", notes: "", phase: "General",
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const inp = "w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300/40";
+
+  function selectUser(name) {
+    const u = users.find(u => (u.name || u.email) === name);
+    setForm(f => ({ ...f, assignedTo: name, assignedEmail: u?.email || "" }));
+  }
 
   return (
     <div className="space-y-3 bg-rose-50 border border-rose-200 rounded-xl p-4">
@@ -134,7 +146,14 @@ function TaskForm({ bodaId, bodaName, onSave, onCancel, saving }) {
           <input className={inp} value={form.taskName} onChange={e => set("taskName", e.target.value)} placeholder="Descripción de la tarea *" />
         </div>
         <div>
-          <input className={inp} value={form.assignedTo} onChange={e => set("assignedTo", e.target.value)} placeholder="Responsable" />
+          {users.length > 0 ? (
+            <select className={inp} value={form.assignedTo} onChange={e => selectUser(e.target.value)}>
+              <option value="">— responsable —</option>
+              {users.map(u => <option key={u.email} value={u.name || u.email}>{u.name || u.email}</option>)}
+            </select>
+          ) : (
+            <input className={inp} value={form.assignedTo} onChange={e => set("assignedTo", e.target.value)} placeholder="Responsable" />
+          )}
         </div>
         <div>
           <input type="date" className={inp} value={form.dueDate} onChange={e => set("dueDate", e.target.value)} />
@@ -168,7 +187,7 @@ function TaskForm({ bodaId, bodaName, onSave, onCancel, saving }) {
 // ─────────────────────────────────────────────
 // TASKS LIST
 // ─────────────────────────────────────────────
-function BodaTasks({ bodaId, bodaName, tasks, onRefresh }) {
+function BodaTasks({ bodaId, bodaName, tasks, users, onRefresh }) {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
@@ -218,7 +237,7 @@ function BodaTasks({ bodaId, bodaName, tasks, onRefresh }) {
         </button>
       </div>
 
-      {showForm && <TaskForm bodaId={bodaId} bodaName={bodaName} onSave={handleSave} onCancel={() => setShowForm(false)} saving={saving} />}
+      {showForm && <TaskForm bodaId={bodaId} bodaName={bodaName} users={users} onSave={handleSave} onCancel={() => setShowForm(false)} saving={saving} />}
 
       {active.length === 0 && !showForm && (
         <p className="text-[11px] text-neutral-400 italic py-2">Sin tareas activas. Agrega una arriba.</p>
@@ -266,7 +285,7 @@ function BodaTasks({ bodaId, bodaName, tasks, onRefresh }) {
 // ─────────────────────────────────────────────
 // BODA DETAIL
 // ─────────────────────────────────────────────
-function BodaDetail({ boda, tasks, onBack, onRefresh, currentUser }) {
+function BodaDetail({ boda, tasks, users, onBack, onRefresh, currentUser }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const days = daysUntil(boda.weddingDate);
@@ -334,12 +353,12 @@ function BodaDetail({ boda, tasks, onBack, onRefresh, currentUser }) {
           </div>
         )}
 
-        {editing && <div className="mt-4"><BodaForm boda={boda} onSave={handleSave} onCancel={() => setEditing(false)} saving={saving} /></div>}
+        {editing && <div className="mt-4"><BodaForm boda={boda} onSave={handleSave} onCancel={() => setEditing(false)} saving={saving} users={users} /></div>}
       </div>
 
       {/* Tasks */}
       <div className="bg-white border border-neutral-200 rounded-xl p-5">
-        <BodaTasks bodaId={boda.id} bodaName={boda.clienteName} tasks={tasks} onRefresh={onRefresh} />
+        <BodaTasks bodaId={boda.id} bodaName={boda.clienteName} tasks={tasks} users={users} onRefresh={onRefresh} />
       </div>
     </div>
   );
@@ -351,6 +370,7 @@ function BodaDetail({ boda, tasks, onBack, onRefresh, currentUser }) {
 export default function BodaPanel({ currentUser, onLogout }) {
   const [bodas, setBodas] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [showNew, setShowNew] = useState(false);
@@ -360,12 +380,14 @@ export default function BodaPanel({ currentUser, onLogout }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [b, t] = await Promise.all([
+    const [b, t, u] = await Promise.all([
       gasPost({ action: "listBodas" }),
       gasPost({ action: "listTasks" }),
+      gasPost({ action: "listUsers" }),
     ]);
     setBodas(Array.isArray(b?.data) ? b.data : []);
     setTasks(Array.isArray(t?.data) ? t.data : []);
+    setUsers(Array.isArray(u?.data) ? u.data.filter(u => u.active !== "false") : []);
     setLoading(false);
   }, []);
 
@@ -411,18 +433,20 @@ export default function BodaPanel({ currentUser, onLogout }) {
   const handleCreate = async (form) => {
     setSaving(true);
     const bodaId = "boda_" + Date.now();
+    const respUser = users.find(u => u.name === form.responsable || u.email === form.responsable);
     const res = await gasPost({ action: "saveBoda", payload: { ...form, id: bodaId, createdAt: new Date().toISOString() } });
     if (res?.ok) {
       await Promise.all(WEDDING_TEMPLATE.map(t => gasPost({ action: "saveTask", payload: {
-        taskName:    t.taskName,
-        fase:        t.fase,
-        kickoffId:   bodaId,
-        kickoffName: form.clienteName,
-        assignedTo:  form.responsable || "",
-        dueDate:     calcTaskDate(t.mode, t.offset, form.weddingDate),
-        status:      "Pendiente",
-        source:      "bodas",
-        createdAt:   new Date().toISOString(),
+        taskName:      t.taskName,
+        fase:          t.fase,
+        kickoffId:     bodaId,
+        kickoffName:   form.clienteName,
+        assignedTo:    form.responsable || "",
+        assignedEmail: respUser?.email || "",
+        dueDate:       calcTaskDate(t.mode, t.offset, form.weddingDate),
+        status:        "Pendiente",
+        source:        "bodas",
+        createdAt:     new Date().toISOString(),
       }})));
       setShowNew(false); load();
     }
@@ -451,7 +475,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
     return (
       <div className="min-h-screen bg-neutral-50">
         <div className="max-w-3xl mx-auto px-4 py-6">
-          <BodaDetail boda={selected} tasks={tasks} onBack={() => setSelected(null)} onRefresh={handleRefresh} currentUser={currentUser} />
+          <BodaDetail boda={selected} tasks={tasks} users={users} onBack={() => setSelected(null)} onRefresh={handleRefresh} currentUser={currentUser} />
         </div>
       </div>
     );
@@ -499,7 +523,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
         {showNew && (
           <div className="bg-white border border-rose-200 rounded-xl p-5">
             <p className="text-sm font-semibold text-rose-700 mb-4">💍 Nueva boda</p>
-            <BodaForm onSave={handleCreate} onCancel={() => setShowNew(false)} saving={saving} />
+            <BodaForm onSave={handleCreate} onCancel={() => setShowNew(false)} saving={saving} users={users} />
           </div>
         )}
 
