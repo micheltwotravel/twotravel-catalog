@@ -12,24 +12,22 @@
 
   body {
     font-family: 'Jost', sans-serif;
-    background: #0f0e0c;
-    color: #f5f0e8;
+    background: #f5f2ee;
+    color: #1a1814;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
   }
 
-  /* ── Header ── */
   .header {
-    border-bottom: 1px solid #2a2620;
-    padding: 20px 32px;
+    background: #1a1814;
+    padding: 18px 32px;
     display: flex;
     align-items: center;
     justify-content: center;
   }
-  .header img { height: 32px; filter: brightness(0) invert(1); }
+  .header img { height: 30px; filter: brightness(0) invert(1); }
 
-  /* ── Layout ── */
   .layout {
     flex: 1;
     display: flex;
@@ -37,260 +35,217 @@
     max-width: 960px;
     margin: 0 auto;
     width: 100%;
-    padding: 40px 16px;
+    padding: 48px 16px;
   }
 
-  /* ── Left sidebar ── */
+  /* Sidebar */
   .sidebar {
-    width: 280px;
+    width: 270px;
     flex-shrink: 0;
     padding-right: 48px;
-    border-right: 1px solid #2a2620;
+    border-right: 1px solid #e0d9d0;
   }
-  .concierge-avatar {
-    width: 64px;
-    height: 64px;
+
+  .concierge-photo {
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
-    background: #2a2620;
-    border: 1px solid #3a3530;
+    object-fit: cover;
+    border: 2px solid #e0d9d0;
+    margin-bottom: 14px;
+    display: block;
+  }
+  .concierge-initials {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: #e8e2d9;
+    border: 2px solid #d8d0c4;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: 'Cormorant Garamond', serif;
-    font-size: 22px;
-    color: #c8a97e;
-    margin-bottom: 16px;
+    font-size: 24px;
+    color: #9a7d52;
+    margin-bottom: 14px;
   }
   .concierge-name {
     font-family: 'Cormorant Garamond', serif;
     font-size: 22px;
     font-weight: 500;
-    color: #f5f0e8;
-    margin-bottom: 4px;
+    color: #1a1814;
+    margin-bottom: 3px;
+    line-height: 1.2;
   }
   .concierge-role {
-    font-size: 12px;
+    font-size: 11px;
     color: #9a7d52;
-    letter-spacing: .04em;
+    letter-spacing: .06em;
     text-transform: uppercase;
     margin-bottom: 24px;
   }
-  .sidebar-detail {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-  .sidebar-icon { font-size: 16px; margin-top: 1px; }
-  .sidebar-text { font-size: 13px; color: #c8bfb0; line-height: 1.5; }
-  .sidebar-label { font-size: 11px; color: #6b6055; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
 
-  /* ── Main content ── */
-  .main {
-    flex: 1;
-    padding-left: 48px;
-  }
+  .divider { height: 1px; background: #e0d9d0; margin: 20px 0; }
 
-  /* ── Step indicator ── */
-  .step-label {
-    font-size: 11px;
+  .detail-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
+  .detail-icon { font-size: 13px; color: #9a7d52; margin-top: 2px; width: 16px; flex-shrink: 0; }
+  .detail-label { font-size: 10px; color: #9a9080; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1px; }
+  .detail-text { font-size: 13px; color: #3a3530; }
+
+  /* Duration selector */
+  .duration-pills { display: flex; gap: 8px; margin-top: 4px; }
+  .dur-pill {
+    padding: 5px 14px;
+    border-radius: 99px;
+    border: 1px solid #d8d0c4;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
     color: #6b6055;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    margin-bottom: 8px;
+    background: #fff;
+    transition: all .15s;
+    font-family: 'Jost', sans-serif;
   }
-  h1 {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 30px;
-    font-weight: 400;
-    color: #f5f0e8;
-    margin-bottom: 6px;
-  }
-  .step-sub {
-    font-size: 13px;
-    color: #9a7d52;
-    margin-bottom: 28px;
-  }
+  .dur-pill.active { background: #1a1814; color: #fff; border-color: #1a1814; }
 
-  /* ── Calendar ── */
-  .cal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
+  /* Main */
+  .main { flex: 1; padding-left: 48px; }
+
+  .step-label { font-size: 10px; color: #b0a090; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 8px; }
+  h1 { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 400; color: #1a1814; margin-bottom: 4px; }
+  .step-sub { font-size: 13px; color: #9a7d52; margin-bottom: 28px; }
+
+  /* Calendar */
+  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
   .cal-nav {
-    background: none;
-    border: 1px solid #2a2620;
+    background: #fff;
+    border: 1px solid #d8d0c4;
     border-radius: 8px;
     padding: 6px 14px;
     cursor: pointer;
     font-size: 16px;
-    color: #c8bfb0;
-    transition: border-color .15s, color .15s;
-  }
-  .cal-nav:hover { border-color: #9a7d52; color: #f5f0e8; }
-  .cal-month {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 18px;
-    color: #f5f0e8;
-    font-weight: 500;
-  }
-  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-  .cal-day-label {
-    text-align: center;
-    font-size: 10px;
     color: #6b6055;
-    font-weight: 600;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    padding: 4px 0 8px;
+    transition: all .15s;
   }
+  .cal-nav:hover { border-color: #9a7d52; color: #1a1814; }
+  .cal-month { font-family: 'Cormorant Garamond', serif; font-size: 20px; color: #1a1814; }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-day-label { text-align: center; font-size: 10px; color: #b0a090; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 4px 0 8px; }
   .cal-day {
     text-align: center;
     padding: 9px 4px;
     border-radius: 8px;
     cursor: pointer;
     font-size: 13px;
-    color: #c8bfb0;
+    color: #3a3530;
     transition: all .15s;
     border: 1px solid transparent;
+    background: transparent;
   }
-  .cal-day:hover:not(.disabled):not(.empty) {
-    background: #1e1c18;
-    border-color: #3a3530;
-    color: #f5f0e8;
-  }
-  .cal-day.selected { background: #9a7d52; color: #fff; border-color: #9a7d52; }
-  .cal-day.today { color: #c8a97e; font-weight: 600; }
-  .cal-day.disabled { color: #2a2620; cursor: default; }
+  .cal-day:hover:not(.disabled):not(.empty) { background: #fff; border-color: #d8d0c4; }
+  .cal-day.selected { background: #1a1814; color: #fff; }
+  .cal-day.today { color: #9a7d52; font-weight: 600; }
+  .cal-day.disabled { color: #d0c8bc; cursor: default; }
   .cal-day.empty { cursor: default; }
 
-  /* ── Time slots ── */
-  .slots-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  /* Slots */
+  .slots-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .slot {
-    padding: 11px 8px;
-    border: 1px solid #2a2620;
-    border-radius: 10px;
+    padding: 10px 6px;
+    border: 1px solid #d8d0c4;
+    border-radius: 8px;
     text-align: center;
     cursor: pointer;
     font-size: 13px;
-    font-weight: 500;
-    color: #c8bfb0;
+    color: #3a3530;
     transition: all .15s;
-    background: #1a1814;
+    background: #fff;
   }
-  .slot:hover { border-color: #9a7d52; color: #f5f0e8; }
-  .slot.selected { background: #9a7d52; color: #fff; border-color: #9a7d52; }
+  .slot:hover { border-color: #9a7d52; color: #1a1814; }
+  .slot.selected { background: #1a1814; color: #fff; border-color: #1a1814; }
 
-  /* ── Form ── */
-  .field { margin-bottom: 18px; }
-  label {
-    display: block;
-    font-size: 11px;
-    color: #6b6055;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    margin-bottom: 6px;
-  }
+  /* Form */
+  .field { margin-bottom: 16px; }
+  label { display: block; font-size: 10px; color: #9a9080; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
   input {
     width: 100%;
-    background: #1a1814;
-    border: 1px solid #2a2620;
+    background: #fff;
+    border: 1px solid #d8d0c4;
     border-radius: 10px;
-    padding: 12px 16px;
+    padding: 11px 14px;
     font-size: 14px;
-    color: #f5f0e8;
+    color: #1a1814;
     font-family: 'Jost', sans-serif;
     outline: none;
     transition: border-color .15s;
   }
-  input::placeholder { color: #4a4540; }
+  input::placeholder { color: #c0b8b0; }
   input:focus { border-color: #9a7d52; }
 
-  /* ── Buttons ── */
   .btn-primary {
     width: 100%;
-    background: #9a7d52;
+    background: #1a1814;
     color: #fff;
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     padding: 14px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     font-family: 'Jost', sans-serif;
-    letter-spacing: .04em;
+    letter-spacing: .06em;
     text-transform: uppercase;
     transition: opacity .15s;
     margin-top: 4px;
   }
-  .btn-primary:hover { opacity: .85; }
+  .btn-primary:hover { opacity: .82; }
   .btn-primary:disabled { opacity: .3; cursor: default; }
+
   .btn-back {
     background: none;
     border: none;
-    color: #6b6055;
+    color: #9a9080;
     font-size: 12px;
     cursor: pointer;
-    text-decoration: none;
     display: inline-flex;
     align-items: center;
     gap: 4px;
     margin-bottom: 20px;
     font-family: 'Jost', sans-serif;
     transition: color .15s;
+    padding: 0;
   }
-  .btn-back:hover { color: #9a7d52; }
+  .btn-back:hover { color: #1a1814; }
 
-  /* ── Confirmation ── */
-  .confirm-box { text-align: center; padding: 32px 0; }
-  .confirm-icon {
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    background: #1e2a1e;
-    border: 1px solid #2a4a2a;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    margin: 0 auto 20px;
+  /* Confirmation */
+  .confirm-box { text-align: center; padding: 40px 0; }
+  .confirm-check {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: #f0fdf4; border: 1px solid #bbf7d0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; color: #16a34a; margin: 0 auto 20px; font-weight: 300;
   }
-  .confirm-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 28px;
-    font-weight: 400;
-    margin-bottom: 12px;
-    color: #f5f0e8;
-  }
-  .confirm-sub { color: #9a9a9a; font-size: 14px; line-height: 1.7; }
+  .confirm-title { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 400; margin-bottom: 10px; }
+  .confirm-sub { color: #6b6055; font-size: 14px; line-height: 1.8; }
   .meet-btn {
-    display: inline-block;
-    margin-top: 20px;
-    background: #1e2a1e;
-    border: 1px solid #2a4a2a;
-    color: #4ade80;
-    border-radius: 10px;
-    padding: 12px 24px;
-    font-size: 13px;
-    font-weight: 600;
-    text-decoration: none;
-    font-family: 'Jost', sans-serif;
-    transition: background .15s;
+    display: inline-block; margin-top: 20px;
+    background: #1a1814; color: #fff;
+    border-radius: 10px; padding: 12px 24px;
+    font-size: 13px; font-weight: 600;
+    text-decoration: none; font-family: 'Jost', sans-serif;
+    letter-spacing: .04em; transition: opacity .15s;
   }
-  .meet-btn:hover { background: #243024; }
+  .meet-btn:hover { opacity: .82; }
 
-  /* ── Util ── */
-  .loading { text-align: center; color: #6b6055; padding: 32px; font-size: 13px; }
-  .error-msg { color: #f87171; font-size: 12px; margin-top: 8px; }
-  .divider { height: 1px; background: #2a2620; margin: 24px 0; }
+  .loading { text-align: center; color: #9a9080; padding: 32px; font-size: 13px; }
+  .error-msg { color: #dc2626; font-size: 12px; margin-top: 8px; }
 
-  /* ── Responsive ── */
   @media (max-width: 680px) {
     .layout { flex-direction: column; padding: 24px 16px; }
-    .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #2a2620; padding-right: 0; padding-bottom: 28px; margin-bottom: 28px; }
+    .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e0d9d0; padding-right: 0; padding-bottom: 28px; margin-bottom: 28px; }
     .main { padding-left: 0; }
+    .slots-grid { grid-template-columns: repeat(3, 1fr); }
   }
 </style>
 </head>
@@ -303,31 +258,36 @@
 <div class="layout">
   <!-- Sidebar -->
   <div class="sidebar">
-    <div class="concierge-avatar" id="conciergeAvatar">TT</div>
+    <div id="conciergePhotoWrap"></div>
     <div class="concierge-name" id="conciergeName">Two Travel</div>
     <div class="concierge-role" id="conciergeRole">Concierge</div>
 
     <div class="divider"></div>
 
-    <div class="sidebar-detail">
-      <span class="sidebar-icon">⏱</span>
+    <div class="detail-row">
+      <div class="detail-icon">◷</div>
       <div>
-        <div class="sidebar-label">Duración</div>
-        <div class="sidebar-text">30 minutos</div>
+        <div class="detail-label">Duración</div>
+        <div class="duration-pills">
+          <button class="dur-pill" id="dur15" onclick="setDuration(15)">15 min</button>
+          <button class="dur-pill active" id="dur30" onclick="setDuration(30)">30 min</button>
+        </div>
       </div>
     </div>
-    <div class="sidebar-detail">
-      <span class="sidebar-icon">🎥</span>
+
+    <div class="detail-row">
+      <div class="detail-icon">▶</div>
       <div>
-        <div class="sidebar-label">Formato</div>
-        <div class="sidebar-text">Google Meet</div>
+        <div class="detail-label">Formato</div>
+        <div class="detail-text">Google Meet</div>
       </div>
     </div>
-    <div class="sidebar-detail" id="selectedTimeDisplay" style="display:none">
-      <span class="sidebar-icon">📅</span>
+
+    <div class="detail-row" id="selectedTimeDisplay" style="display:none">
+      <div class="detail-icon">◉</div>
       <div>
-        <div class="sidebar-label">Seleccionado</div>
-        <div class="sidebar-text" id="selectedTimeText"></div>
+        <div class="detail-label">Seleccionado</div>
+        <div class="detail-text" id="selectedTimeText"></div>
       </div>
     </div>
   </div>
@@ -340,7 +300,6 @@
       <div class="step-label">Paso 1 de 3</div>
       <h1>Elige una fecha</h1>
       <p class="step-sub">Selecciona el día para tu reunión</p>
-
       <div class="cal-header">
         <button class="cal-nav" onclick="prevMonth()">‹</button>
         <span class="cal-month" id="calTitle"></span>
@@ -349,7 +308,7 @@
       <div class="cal-grid" id="calGrid"></div>
     </div>
 
-    <!-- STEP 2: Time slots -->
+    <!-- STEP 2: Slots -->
     <div id="step2" style="display:none">
       <button class="btn-back" onclick="goStep(1)">← Cambiar fecha</button>
       <div class="step-label">Paso 2 de 3</div>
@@ -366,7 +325,6 @@
       <div class="step-label">Paso 3 de 3</div>
       <h1>Tu información</h1>
       <p class="step-sub" id="step3Summary"></p>
-
       <div class="field">
         <label>Nombre completo *</label>
         <input type="text" id="clientName" placeholder="Ana García" />
@@ -386,10 +344,10 @@
     <!-- STEP 4: Confirmation -->
     <div id="step4" style="display:none">
       <div class="confirm-box">
-        <div class="confirm-icon">✓</div>
+        <div class="confirm-check">✓</div>
         <div class="confirm-title">Reunión confirmada</div>
         <div class="confirm-sub" id="confirmText"></div>
-        <a id="meetLinkBtn" class="meet-btn" target="_blank" style="display:none">🎥 Unirse a Google Meet</a>
+        <a id="meetLinkBtn" class="meet-btn" target="_blank" style="display:none">Unirse a Google Meet</a>
       </div>
     </div>
 
@@ -412,12 +370,34 @@ const CONCIERGES = {
 
 const profile = CONCIERGES[slug];
 if (profile) {
-  document.getElementById("conciergeName").textContent  = profile.name;
-  document.getElementById("conciergeRole").textContent  = profile.role;
-  document.getElementById("conciergeAvatar").textContent = profile.initials;
+  document.getElementById("conciergeName").textContent = profile.name;
+  document.getElementById("conciergeRole").textContent = profile.role;
+
+  // Try photo, fallback to initials
+  const wrap = document.getElementById("conciergePhotoWrap");
+  const img  = document.createElement("img");
+  img.className = "concierge-photo";
+  img.alt = profile.name;
+  img.src = `/concierge-photos/${slug}.jpg`;
+  img.onerror = () => {
+    img.remove();
+    const div = document.createElement("div");
+    div.className = "concierge-initials";
+    div.textContent = profile.initials;
+    wrap.appendChild(div);
+  };
+  wrap.appendChild(img);
 }
 
-// Calendar
+let duration = 30;
+function setDuration(d) {
+  duration = d;
+  document.getElementById("dur15").classList.toggle("active", d === 15);
+  document.getElementById("dur30").classList.toggle("active", d === 30);
+  // If date already selected, reload slots
+  if (selDate) pickDate(selDate);
+}
+
 let viewYear  = new Date().getFullYear();
 let viewMonth = new Date().getMonth();
 let selDate   = null;
@@ -430,30 +410,20 @@ function renderCalendar() {
   document.getElementById("calTitle").textContent = `${MONTHS_ES[viewMonth]} ${viewYear}`;
   const grid = document.getElementById("calGrid");
   grid.innerHTML = "";
-
   DAYS_ES.forEach(d => {
-    const el = document.createElement("div");
-    el.className = "cal-day-label";
-    el.textContent = d;
-    grid.appendChild(el);
+    const el = document.createElement("div"); el.className = "cal-day-label"; el.textContent = d; grid.appendChild(el);
   });
-
   const firstDay = new Date(viewYear, viewMonth, 1).getDay();
   const offset   = firstDay === 0 ? 6 : firstDay - 1;
   const total    = new Date(viewYear, viewMonth + 1, 0).getDate();
   const today    = new Date(); today.setHours(0,0,0,0);
-
   for (let i = 0; i < offset; i++) {
     const el = document.createElement("div"); el.className = "cal-day empty"; grid.appendChild(el);
   }
-
   for (let d = 1; d <= total; d++) {
     const date = new Date(viewYear, viewMonth, d);
     const iso  = date.toISOString().slice(0,10);
-    const el   = document.createElement("div");
-    el.className = "cal-day";
-    el.textContent = d;
-
+    const el   = document.createElement("div"); el.className = "cal-day"; el.textContent = d;
     if (date < today || date.getDay() === 0) {
       el.classList.add("disabled");
     } else {
@@ -465,13 +435,13 @@ function renderCalendar() {
   }
 }
 
-function prevMonth() {
-  if (viewMonth === 0) { viewMonth = 11; viewYear--; } else viewMonth--;
-  renderCalendar();
-}
-function nextMonth() {
-  if (viewMonth === 11) { viewMonth = 0; viewYear++; } else viewMonth++;
-  renderCalendar();
+function prevMonth() { if (viewMonth === 0) { viewMonth = 11; viewYear--; } else viewMonth--; renderCalendar(); }
+function nextMonth() { if (viewMonth === 11) { viewMonth = 0; viewYear++; } else viewMonth++; renderCalendar(); }
+
+function addMinutes(time, mins) {
+  const [h, m] = time.split(":").map(Number);
+  const total  = h * 60 + m + mins;
+  return `${String(Math.floor(total/60)).padStart(2,"0")}:${String(total%60).padStart(2,"0")}`;
 }
 
 async function pickDate(iso) {
@@ -484,22 +454,20 @@ async function pickDate(iso) {
   document.getElementById("slotsError").style.display  = "none";
 
   try {
-    const res  = await fetch(`/api/calendar/availability?concierge=${slug}&date=${iso}`);
+    const res  = await fetch(`/api/calendar/availability?concierge=${slug}&date=${iso}&duration=${duration}`);
     const data = await res.json();
     const grid = document.getElementById("slotsGrid");
     grid.innerHTML = "";
-
     if (!data.slots?.length) {
       document.getElementById("slotsError").textContent = "No hay disponibilidad para este día. Elige otra fecha.";
       document.getElementById("slotsError").style.display = "block";
     } else {
       data.slots.forEach(s => {
-        const el = document.createElement("div");
-        el.className = "slot";
+        const el  = document.createElement("div");
+        el.className  = "slot";
         el.textContent = s.start;
-        el.dataset.start = s.start;
-        el.dataset.end   = s.end;
-        el.onclick = () => pickSlot(el, s);
+        const end = addMinutes(s.start, duration);
+        el.onclick = () => pickSlot(el, { start: s.start, end });
         grid.appendChild(el);
       });
       grid.style.display = "grid";
@@ -515,11 +483,9 @@ function pickSlot(el, slot) {
   selSlot = slot;
   document.querySelectorAll(".slot").forEach(s => s.classList.remove("selected"));
   el.classList.add("selected");
-
   const display = document.getElementById("selectedTimeDisplay");
   document.getElementById("selectedTimeText").textContent = `${formatDate(selDate)}\n${slot.start} – ${slot.end}`;
   display.style.display = "flex";
-
   setTimeout(() => {
     goStep(3);
     document.getElementById("step3Summary").textContent = `${formatDate(selDate)} · ${slot.start} – ${slot.end}`;
@@ -532,49 +498,38 @@ async function confirmBook() {
   const phone = document.getElementById("clientPhone").value.trim();
   const errEl = document.getElementById("bookError");
   errEl.style.display = "none";
-
   if (!name || !email) { errEl.textContent = "Por favor llena nombre y email."; errEl.style.display = "block"; return; }
   if (!/\S+@\S+\.\S+/.test(email)) { errEl.textContent = "Email inválido."; errEl.style.display = "block"; return; }
-
   const btn = document.getElementById("bookBtn");
   btn.disabled = true; btn.textContent = "Confirmando…";
-
   try {
     const res  = await fetch("/api/calendar/book", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ concierge: slug, date: selDate, startTime: selSlot.start, endTime: selSlot.end, clientName: name, clientEmail: email, clientPhone: phone, kickoffId }),
+      body: JSON.stringify({ concierge: slug, date: selDate, startTime: selSlot.start, endTime: selSlot.end, clientName: name, clientEmail: email, clientPhone: phone, kickoffId, duration }),
     });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || "Error al agendar");
-
     goStep(4);
     document.getElementById("confirmText").innerHTML =
-      `Tu reunión con <strong style="color:#f5f0e8">${profile?.name || "el concierge"}</strong> está confirmada<br>para el <strong style="color:#f5f0e8">${formatDate(selDate)}</strong> a las <strong style="color:#f5f0e8">${selSlot.start}</strong><br><br>Recibirás un correo de confirmación en <strong style="color:#f5f0e8">${email}</strong>`;
-
+      `Tu reunión con <strong>${profile?.name || "el concierge"}</strong> está confirmada<br>para el <strong>${formatDate(selDate)}</strong> a las <strong>${selSlot.start}</strong> (${duration} min)<br><br>Recibirás un correo de confirmación en <strong>${email}</strong>`;
     if (data.meetLink) {
       const meetBtn = document.getElementById("meetLinkBtn");
-      meetBtn.href = data.meetLink;
-      meetBtn.style.display = "inline-block";
+      meetBtn.href = data.meetLink; meetBtn.style.display = "inline-block";
     }
   } catch(e) {
-    errEl.textContent = e.message;
-    errEl.style.display = "block";
-    btn.disabled = false;
-    btn.textContent = "Confirmar reunión";
+    errEl.textContent = e.message; errEl.style.display = "block";
+    btn.disabled = false; btn.textContent = "Confirmar reunión";
   }
 }
 
 function goStep(n) {
-  [1,2,3,4].forEach(i => {
-    document.getElementById(`step${i}`).style.display = i === n ? "block" : "none";
-  });
+  [1,2,3,4].forEach(i => document.getElementById(`step${i}`).style.display = i === n ? "block" : "none");
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function formatDate(iso) {
-  const d = new Date(iso + "T12:00:00");
-  return d.toLocaleDateString("es-CO", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+  return new Date(iso + "T12:00:00").toLocaleDateString("es-CO", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
 }
 
 renderCalendar();
