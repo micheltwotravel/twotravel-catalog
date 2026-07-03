@@ -470,7 +470,10 @@ async function pickDate(iso) {
     const data = await res.json();
     const grid = document.getElementById("slotsGrid");
     grid.innerHTML = "";
-    if (!data.slots?.length) {
+    if (data.error) {
+      document.getElementById("slotsError").textContent = "Error: " + data.error;
+      document.getElementById("slotsError").style.display = "block";
+    } else if (!data.slots?.length) {
       document.getElementById("slotsError").textContent = "No hay disponibilidad para este día. Elige otra fecha.";
       document.getElementById("slotsError").style.display = "block";
     } else {
