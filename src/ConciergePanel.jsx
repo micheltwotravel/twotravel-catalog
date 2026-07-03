@@ -702,6 +702,7 @@ const CONCIERGE_LIST = [
   { name: "Nataly Cruz",          email: "nataly@two.travel",   phone: "+52 1 55 2337 7241",city: "CDMX", calendarUrl: "" },
   { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   phone: "+52 1 55 4344 1382",city: "CDMX", calendarUrl: "" },
   { name: "Natalia Peniche",       email: "natalia@two.travel",  phone: "",                  city: "CDMX", calendarUrl: "" },
+  { name: "Michel Calderon",       email: "michel@two.travel",   phone: "+57 300 0000000",    city: "CTG", title: "Admin", calendarUrl: "" },
 ];
 
 /* =========================================
