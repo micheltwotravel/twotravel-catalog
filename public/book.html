@@ -357,7 +357,7 @@
 <script>
 const params    = new URLSearchParams(location.search);
 const slug      = params.get("c") || "";
-const kickoffId = params.get("k") || "";
+const kickoffId = params.get("kickoffId") || params.get("k") || "";
 
 const CONCIERGES = {
   caro:    { name: "Carolina Lopez",        role: "Senior Concierge · Cartagena", initials: "CL" },
