@@ -17,7 +17,8 @@ async function getAccessToken(refreshToken) {
 }
 
 export default async function handler(req, res) {
-  const { concierge, date } = req.query; // date = "2026-07-10"
+  const { concierge, date, duration: durParam } = req.query;
+  const slotMinutes = parseInt(durParam) === 45 ? 45 : 30;
   if (!concierge || !date) return res.status(400).json({ error: "Missing params" });
 
   const GAS = process.env.VITE_TASK_API_URL || process.env.GAS_URL
@@ -58,14 +59,15 @@ export default async function handler(req, res) {
   const fbData = await fbRes.json();
   const busy = fbData.calendars?.[calendarId]?.busy || [];
 
-  // Generate 30-min slots 8am–7pm, filter out busy ones
+  // Generate slots 8am–7pm based on duration, filter out busy ones
   const slots = [];
-  for (let h = 8; h < 19; h++) {
-    for (const m of [0, 30]) {
+  for (let totalMin = 8 * 60; totalMin + slotMinutes <= 19 * 60; totalMin += slotMinutes) {
+    {
+      const h = Math.floor(totalMin / 60), m = totalMin % 60;
+      const endTotal = totalMin + slotMinutes;
+      const endH = Math.floor(endTotal / 60), endM = endTotal % 60;
       const startHH = String(h).padStart(2, "0");
       const startMM = String(m).padStart(2, "0");
-      const endH = m === 30 ? h + 1 : h;
-      const endM = m === 30 ? 0 : 30;
       const endHH = String(endH).padStart(2, "0");
       const endMM = String(endM).padStart(2, "0");
 

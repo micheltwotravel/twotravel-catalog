@@ -269,8 +269,8 @@
       <div>
         <div class="detail-label">Duración</div>
         <div class="duration-pills">
-          <button class="dur-pill" id="dur15" onclick="setDuration(15)">15 min</button>
           <button class="dur-pill active" id="dur30" onclick="setDuration(30)">30 min</button>
+          <button class="dur-pill" id="dur45" onclick="setDuration(45)">45 min</button>
         </div>
       </div>
     </div>
@@ -404,9 +404,8 @@ if (profile) {
 let duration = 30;
 function setDuration(d) {
   duration = d;
-  document.getElementById("dur15").classList.toggle("active", d === 15);
   document.getElementById("dur30").classList.toggle("active", d === 30);
-  // If date already selected, reload slots
+  document.getElementById("dur45").classList.toggle("active", d === 45);
   if (selDate) pickDate(selDate);
 }
 
