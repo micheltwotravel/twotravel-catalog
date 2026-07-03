@@ -21,7 +21,7 @@ const PROP_MAP = {
 
 function pickProp(props, candidates) {
   for (const key of candidates) {
-    const val = props[key]?.value;
+    const val = props[key];
     if (val && val !== "" && val !== "null") return val;
   }
   return "";
@@ -69,7 +69,7 @@ export default async function handler(req, res) {
       const deal = await fetchDeal(dealId, token);
       const props = deal.properties || {};
 
-      const dealName    = props.dealname?.value || "Sin nombre";
+      const dealName    = props.dealname || "Sin nombre";
       const destination = pickProp(props, PROP_MAP.destination);
       const pax         = pickProp(props, PROP_MAP.pax);
       const budget      = pickProp(props, PROP_MAP.budget);
@@ -87,7 +87,7 @@ export default async function handler(req, res) {
         const cp = contact.properties || {};
         guestName    = [cp.firstname, cp.lastname].filter(Boolean).join(" ");
         guestEmail   = cp.email || "";
-        guestContact = cp.mobilephone || cp.phone || "";
+        guestContact = cp.phone || cp.mobilephone || "";
       }
 
       const hubspotDealUrl = `https://app.hubspot.com/contacts/deals/${dealId}`;
