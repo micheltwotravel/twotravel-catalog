@@ -244,9 +244,14 @@ async function loadCalendars() {
             </div>
           ` : ""}
         </div>
-        <a href="/api/auth/google-connect?concierge=${c.slug}" class="btn btn-dark" style="flex-shrink:0">
-          ${isConnected ? "Reconectar" : "Conectar"}
-        </a>
+        <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0">
+          <a href="/api/auth/google-connect?concierge=${c.slug}" class="btn btn-dark">
+            ${isConnected ? "Reconectar" : "Conectar"}
+          </a>
+          <a href="/book-admin.html?c=${c.slug}" class="btn btn-ghost" style="text-align:center">
+            Cambiar foto
+          </a>
+        </div>
       </div>
     `;
     container.appendChild(card);
