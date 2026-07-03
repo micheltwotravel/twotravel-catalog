@@ -4,101 +4,347 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Agenda una reunión · Two Travel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Helvetica Neue', sans-serif; background: #f7f5f2; color: #1a1814; min-height: 100vh; }
-  .page { max-width: 700px; margin: 0 auto; padding: 32px 16px; }
-  .logo { text-align: center; margin-bottom: 32px; }
-  .logo img { height: 36px; }
-  .card { background: #fff; border-radius: 16px; border: 1px solid #e8e2d9; padding: 28px; margin-bottom: 20px; }
-  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
-  .subtitle { color: #9a7d52; font-size: 14px; margin-bottom: 24px; }
-  .concierge-info { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
-  .avatar { width: 56px; height: 56px; border-radius: 50%; background: #e8e2d9; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: #9a7d52; flex-shrink: 0; }
-  .concierge-name { font-size: 18px; font-weight: 600; }
-  .concierge-role { font-size: 13px; color: #9a7d52; }
 
-  /* Step indicators */
-  .steps { display: flex; gap: 8px; margin-bottom: 28px; }
-  .step { flex: 1; height: 4px; border-radius: 2px; background: #e8e2d9; transition: background .3s; }
-  .step.active { background: #1a1814; }
-  .step.done   { background: #9a7d52; }
+  body {
+    font-family: 'Jost', sans-serif;
+    background: #0f0e0c;
+    color: #f5f0e8;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
 
-  /* Calendar */
-  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .cal-header button { background: none; border: 1px solid #e8e2d9; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 16px; color: #1a1814; }
-  .cal-header span { font-weight: 600; font-size: 15px; }
+  /* ── Header ── */
+  .header {
+    border-bottom: 1px solid #2a2620;
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .header img { height: 32px; filter: brightness(0) invert(1); }
+
+  /* ── Layout ── */
+  .layout {
+    flex: 1;
+    display: flex;
+    gap: 0;
+    max-width: 960px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 40px 16px;
+  }
+
+  /* ── Left sidebar ── */
+  .sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    padding-right: 48px;
+    border-right: 1px solid #2a2620;
+  }
+  .concierge-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #2a2620;
+    border: 1px solid #3a3530;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    color: #c8a97e;
+    margin-bottom: 16px;
+  }
+  .concierge-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 500;
+    color: #f5f0e8;
+    margin-bottom: 4px;
+  }
+  .concierge-role {
+    font-size: 12px;
+    color: #9a7d52;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .sidebar-detail {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .sidebar-icon { font-size: 16px; margin-top: 1px; }
+  .sidebar-text { font-size: 13px; color: #c8bfb0; line-height: 1.5; }
+  .sidebar-label { font-size: 11px; color: #6b6055; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
+
+  /* ── Main content ── */
+  .main {
+    flex: 1;
+    padding-left: 48px;
+  }
+
+  /* ── Step indicator ── */
+  .step-label {
+    font-size: 11px;
+    color: #6b6055;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 8px;
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 30px;
+    font-weight: 400;
+    color: #f5f0e8;
+    margin-bottom: 6px;
+  }
+  .step-sub {
+    font-size: 13px;
+    color: #9a7d52;
+    margin-bottom: 28px;
+  }
+
+  /* ── Calendar ── */
+  .cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .cal-nav {
+    background: none;
+    border: 1px solid #2a2620;
+    border-radius: 8px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 16px;
+    color: #c8bfb0;
+    transition: border-color .15s, color .15s;
+  }
+  .cal-nav:hover { border-color: #9a7d52; color: #f5f0e8; }
+  .cal-month {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    color: #f5f0e8;
+    font-weight: 500;
+  }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-  .cal-day-label { text-align: center; font-size: 11px; color: #9a9a9a; font-weight: 600; padding: 4px 0; }
-  .cal-day { text-align: center; padding: 8px 4px; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all .15s; border: 1px solid transparent; }
-  .cal-day:hover:not(.disabled):not(.empty) { background: #f5f0e8; border-color: #e8e2d9; }
-  .cal-day.selected { background: #1a1814; color: #fff; }
-  .cal-day.today { font-weight: 700; color: #9a7d52; }
-  .cal-day.disabled { color: #ccc; cursor: default; }
+  .cal-day-label {
+    text-align: center;
+    font-size: 10px;
+    color: #6b6055;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 4px 0 8px;
+  }
+  .cal-day {
+    text-align: center;
+    padding: 9px 4px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #c8bfb0;
+    transition: all .15s;
+    border: 1px solid transparent;
+  }
+  .cal-day:hover:not(.disabled):not(.empty) {
+    background: #1e1c18;
+    border-color: #3a3530;
+    color: #f5f0e8;
+  }
+  .cal-day.selected { background: #9a7d52; color: #fff; border-color: #9a7d52; }
+  .cal-day.today { color: #c8a97e; font-weight: 600; }
+  .cal-day.disabled { color: #2a2620; cursor: default; }
   .cal-day.empty { cursor: default; }
 
-  /* Time slots */
+  /* ── Time slots ── */
   .slots-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .slot { padding: 10px; border: 1px solid #e8e2d9; border-radius: 10px; text-align: center; cursor: pointer; font-size: 13px; font-weight: 500; transition: all .15s; background: #fff; }
-  .slot:hover { background: #f5f0e8; border-color: #c8bfb0; }
-  .slot.selected { background: #1a1814; color: #fff; border-color: #1a1814; }
+  .slot {
+    padding: 11px 8px;
+    border: 1px solid #2a2620;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #c8bfb0;
+    transition: all .15s;
+    background: #1a1814;
+  }
+  .slot:hover { border-color: #9a7d52; color: #f5f0e8; }
+  .slot.selected { background: #9a7d52; color: #fff; border-color: #9a7d52; }
 
-  /* Form */
-  label { display: block; font-size: 12px; color: #6b6055; margin-bottom: 4px; font-weight: 500; }
-  input, select { width: 100%; border: 1px solid #e8e2d9; border-radius: 10px; padding: 10px 14px; font-size: 14px; background: #fff; outline: none; transition: border .15s; }
-  input:focus, select:focus { border-color: #9a7d52; }
-  .field { margin-bottom: 16px; }
-  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  /* ── Form ── */
+  .field { margin-bottom: 18px; }
+  label {
+    display: block;
+    font-size: 11px;
+    color: #6b6055;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 6px;
+  }
+  input {
+    width: 100%;
+    background: #1a1814;
+    border: 1px solid #2a2620;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #f5f0e8;
+    font-family: 'Jost', sans-serif;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input::placeholder { color: #4a4540; }
+  input:focus { border-color: #9a7d52; }
 
-  /* Buttons */
-  .btn-primary { width: 100%; background: #1a1814; color: #fff; border: none; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+  /* ── Buttons ── */
+  .btn-primary {
+    width: 100%;
+    background: #9a7d52;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Jost', sans-serif;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    transition: opacity .15s;
+    margin-top: 4px;
+  }
   .btn-primary:hover { opacity: .85; }
-  .btn-primary:disabled { opacity: .4; cursor: default; }
-  .btn-back { background: none; border: none; color: #9a7d52; font-size: 13px; cursor: pointer; text-decoration: underline; margin-bottom: 16px; }
+  .btn-primary:disabled { opacity: .3; cursor: default; }
+  .btn-back {
+    background: none;
+    border: none;
+    color: #6b6055;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 20px;
+    font-family: 'Jost', sans-serif;
+    transition: color .15s;
+  }
+  .btn-back:hover { color: #9a7d52; }
 
-  /* Confirmation */
-  .confirm-box { text-align: center; padding: 20px 0; }
-  .confirm-icon { font-size: 52px; margin-bottom: 16px; }
-  .confirm-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-  .confirm-sub { color: #6b6055; font-size: 14px; line-height: 1.6; }
-  .meet-link { display: inline-block; margin-top: 16px; background: #f0fdf4; border: 1px solid #86efac; color: #166534; border-radius: 10px; padding: 10px 20px; font-size: 14px; font-weight: 600; text-decoration: none; }
+  /* ── Confirmation ── */
+  .confirm-box { text-align: center; padding: 32px 0; }
+  .confirm-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: #1e2a1e;
+    border: 1px solid #2a4a2a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin: 0 auto 20px;
+  }
+  .confirm-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 400;
+    margin-bottom: 12px;
+    color: #f5f0e8;
+  }
+  .confirm-sub { color: #9a9a9a; font-size: 14px; line-height: 1.7; }
+  .meet-btn {
+    display: inline-block;
+    margin-top: 20px;
+    background: #1e2a1e;
+    border: 1px solid #2a4a2a;
+    color: #4ade80;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    font-family: 'Jost', sans-serif;
+    transition: background .15s;
+  }
+  .meet-btn:hover { background: #243024; }
 
-  .loading { text-align: center; color: #9a7d52; padding: 32px; }
-  .error-msg { color: #dc2626; font-size: 13px; margin-top: 8px; }
+  /* ── Util ── */
+  .loading { text-align: center; color: #6b6055; padding: 32px; font-size: 13px; }
+  .error-msg { color: #f87171; font-size: 12px; margin-top: 8px; }
+  .divider { height: 1px; background: #2a2620; margin: 24px 0; }
+
+  /* ── Responsive ── */
+  @media (max-width: 680px) {
+    .layout { flex-direction: column; padding: 24px 16px; }
+    .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #2a2620; padding-right: 0; padding-bottom: 28px; margin-bottom: 28px; }
+    .main { padding-left: 0; }
+  }
 </style>
 </head>
 <body>
-<div class="page">
-  <div class="logo">
-    <img src="/twotravel-logo.png" alt="Two Travel" onerror="this.style.display='none'" />
-    <div style="font-size:18px;font-weight:700;letter-spacing:2px;color:#1a1814" id="logoFallback">TWO TRAVEL</div>
-  </div>
 
-  <div class="card" id="mainCard">
-    <!-- Concierge info -->
-    <div class="concierge-info" id="conciergeInfo">
-      <div class="avatar" id="conciergeAvatar">?</div>
+<div class="header">
+  <img src="/logo.png" alt="Two Travel" />
+</div>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="concierge-avatar" id="conciergeAvatar">TT</div>
+    <div class="concierge-name" id="conciergeName">Two Travel</div>
+    <div class="concierge-role" id="conciergeRole">Concierge</div>
+
+    <div class="divider"></div>
+
+    <div class="sidebar-detail">
+      <span class="sidebar-icon">⏱</span>
       <div>
-        <div class="concierge-name" id="conciergeName">Cargando…</div>
-        <div class="concierge-role" id="conciergeRole">Two Travel</div>
+        <div class="sidebar-label">Duración</div>
+        <div class="sidebar-text">30 minutos</div>
       </div>
     </div>
-
-    <!-- Step progress -->
-    <div class="steps">
-      <div class="step active" id="step1bar"></div>
-      <div class="step" id="step2bar"></div>
-      <div class="step" id="step3bar"></div>
+    <div class="sidebar-detail">
+      <span class="sidebar-icon">🎥</span>
+      <div>
+        <div class="sidebar-label">Formato</div>
+        <div class="sidebar-text">Google Meet</div>
+      </div>
     </div>
+    <div class="sidebar-detail" id="selectedTimeDisplay" style="display:none">
+      <span class="sidebar-icon">📅</span>
+      <div>
+        <div class="sidebar-label">Seleccionado</div>
+        <div class="sidebar-text" id="selectedTimeText"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
 
     <!-- STEP 1: Calendar -->
     <div id="step1">
+      <div class="step-label">Paso 1 de 3</div>
       <h1>Elige una fecha</h1>
-      <p class="subtitle">Selecciona el día para tu reunión</p>
+      <p class="step-sub">Selecciona el día para tu reunión</p>
+
       <div class="cal-header">
-        <button onclick="prevMonth()">‹</button>
-        <span id="calTitle"></span>
-        <button onclick="nextMonth()">›</button>
+        <button class="cal-nav" onclick="prevMonth()">‹</button>
+        <span class="cal-month" id="calTitle"></span>
+        <button class="cal-nav" onclick="nextMonth()">›</button>
       </div>
       <div class="cal-grid" id="calGrid"></div>
     </div>
@@ -106,18 +352,21 @@
     <!-- STEP 2: Time slots -->
     <div id="step2" style="display:none">
       <button class="btn-back" onclick="goStep(1)">← Cambiar fecha</button>
+      <div class="step-label">Paso 2 de 3</div>
       <h1>Elige una hora</h1>
-      <p class="subtitle" id="step2Date"></p>
+      <p class="step-sub" id="step2Date"></p>
       <div id="slotsLoading" class="loading">Consultando disponibilidad…</div>
       <div class="slots-grid" id="slotsGrid" style="display:none"></div>
       <p class="error-msg" id="slotsError" style="display:none"></p>
     </div>
 
-    <!-- STEP 3: Your info -->
+    <!-- STEP 3: Info -->
     <div id="step3" style="display:none">
       <button class="btn-back" onclick="goStep(2)">← Cambiar hora</button>
+      <div class="step-label">Paso 3 de 3</div>
       <h1>Tu información</h1>
-      <p class="subtitle" id="step3Summary"></p>
+      <p class="step-sub" id="step3Summary"></p>
+
       <div class="field">
         <label>Nombre completo *</label>
         <input type="text" id="clientName" placeholder="Ana García" />
@@ -131,46 +380,44 @@
         <input type="tel" id="clientPhone" placeholder="+57 300 000 0000" />
       </div>
       <p class="error-msg" id="bookError" style="display:none"></p>
-      <button class="btn-primary" id="bookBtn" onclick="confirmBook()">Confirmar reserva</button>
+      <button class="btn-primary" id="bookBtn" onclick="confirmBook()">Confirmar reunión</button>
     </div>
 
     <!-- STEP 4: Confirmation -->
     <div id="step4" style="display:none">
       <div class="confirm-box">
-        <div class="confirm-icon">✅</div>
-        <div class="confirm-title">¡Reunión agendada!</div>
+        <div class="confirm-icon">✓</div>
+        <div class="confirm-title">Reunión confirmada</div>
         <div class="confirm-sub" id="confirmText"></div>
-        <a id="meetLinkBtn" class="meet-link" target="_blank" style="display:none">🎥 Unirse a Google Meet</a>
+        <a id="meetLinkBtn" class="meet-btn" target="_blank" style="display:none">🎥 Unirse a Google Meet</a>
       </div>
     </div>
+
   </div>
 </div>
 
 <script>
-const params  = new URLSearchParams(location.search);
-const slug    = params.get("c") || "";
+const params    = new URLSearchParams(location.search);
+const slug      = params.get("c") || "";
 const kickoffId = params.get("k") || "";
 
-// Concierge profiles
 const CONCIERGES = {
-  caro:    { name: "Carolina Lopez",        role: "Senior Concierge Cartagena", initials: "CL" },
-  alia:    { name: "Alia Jadad",            role: "Senior Concierge Cartagena", initials: "AJ" },
-  daniela: { name: "Daniela Becerra",       role: "Senior Concierge Medellín",  initials: "DB" },
-  nataly:  { name: "Nataly Cruz",           role: "Senior Concierge CDMX",      initials: "NC" },
-  giulia:  { name: "Giulia Lorini Serrato", role: "Senior Concierge CDMX",      initials: "GL" },
-  natalia: { name: "Natalia Peniche",       role: "Senior Concierge CDMX",      initials: "NP" },
+  caro:    { name: "Carolina Lopez",        role: "Senior Concierge · Cartagena", initials: "CL" },
+  alia:    { name: "Alia Jadad",            role: "Senior Concierge · Cartagena", initials: "AJ" },
+  daniela: { name: "Daniela Becerra",       role: "Senior Concierge · Medellín",  initials: "DB" },
+  nataly:  { name: "Nataly Cruz",           role: "Senior Concierge · CDMX",      initials: "NC" },
+  giulia:  { name: "Giulia Lorini Serrato", role: "Senior Concierge · CDMX",      initials: "GL" },
+  natalia: { name: "Natalia Peniche",       role: "Senior Concierge · CDMX",      initials: "NP" },
 };
 
 const profile = CONCIERGES[slug];
 if (profile) {
-  document.getElementById("conciergeName").textContent = profile.name;
-  document.getElementById("conciergeRole").textContent = profile.role;
+  document.getElementById("conciergeName").textContent  = profile.name;
+  document.getElementById("conciergeRole").textContent  = profile.role;
   document.getElementById("conciergeAvatar").textContent = profile.initials;
-} else {
-  document.getElementById("conciergeName").textContent = "Two Travel";
 }
 
-// Calendar state
+// Calendar
 let viewYear  = new Date().getFullYear();
 let viewMonth = new Date().getMonth();
 let selDate   = null;
@@ -180,9 +427,7 @@ const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Ago
 const DAYS_ES   = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
 
 function renderCalendar() {
-  const title = `${MONTHS_ES[viewMonth]} ${viewYear}`;
-  document.getElementById("calTitle").textContent = title;
-
+  document.getElementById("calTitle").textContent = `${MONTHS_ES[viewMonth]} ${viewYear}`;
   const grid = document.getElementById("calGrid");
   grid.innerHTML = "";
 
@@ -193,32 +438,26 @@ function renderCalendar() {
     grid.appendChild(el);
   });
 
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
-  const offset   = firstDay === 0 ? 6 : firstDay - 1; // Mon-first
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const today = new Date(); today.setHours(0,0,0,0);
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const offset   = firstDay === 0 ? 6 : firstDay - 1;
+  const total    = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const today    = new Date(); today.setHours(0,0,0,0);
 
   for (let i = 0; i < offset; i++) {
-    const el = document.createElement("div");
-    el.className = "cal-day empty";
-    grid.appendChild(el);
+    const el = document.createElement("div"); el.className = "cal-day empty"; grid.appendChild(el);
   }
 
-  for (let d = 1; d <= daysInMonth; d++) {
+  for (let d = 1; d <= total; d++) {
     const date = new Date(viewYear, viewMonth, d);
     const iso  = date.toISOString().slice(0,10);
     const el   = document.createElement("div");
     el.className = "cal-day";
     el.textContent = d;
 
-    const isPast    = date < today;
-    const isSunday  = date.getDay() === 0;
-    const isToday   = date.toDateString() === today.toDateString();
-
-    if (isPast || isSunday) {
+    if (date < today || date.getDay() === 0) {
       el.classList.add("disabled");
     } else {
-      if (isToday) el.classList.add("today");
+      if (date.toDateString() === today.toDateString()) el.classList.add("today");
       if (selDate === iso) el.classList.add("selected");
       el.onclick = () => pickDate(iso);
     }
@@ -239,11 +478,10 @@ async function pickDate(iso) {
   selDate = iso;
   renderCalendar();
   goStep(2);
-
   document.getElementById("step2Date").textContent = formatDate(iso);
   document.getElementById("slotsLoading").style.display = "block";
-  document.getElementById("slotsGrid").style.display = "none";
-  document.getElementById("slotsError").style.display = "none";
+  document.getElementById("slotsGrid").style.display   = "none";
+  document.getElementById("slotsError").style.display  = "none";
 
   try {
     const res  = await fetch(`/api/calendar/availability?concierge=${slug}&date=${iso}`);
@@ -251,7 +489,7 @@ async function pickDate(iso) {
     const grid = document.getElementById("slotsGrid");
     grid.innerHTML = "";
 
-    if (!data.slots || data.slots.length === 0) {
+    if (!data.slots?.length) {
       document.getElementById("slotsError").textContent = "No hay disponibilidad para este día. Elige otra fecha.";
       document.getElementById("slotsError").style.display = "block";
     } else {
@@ -266,8 +504,8 @@ async function pickDate(iso) {
       });
       grid.style.display = "grid";
     }
-  } catch(e) {
-    document.getElementById("slotsError").textContent = "Error al cargar disponibilidad. Intenta de nuevo.";
+  } catch {
+    document.getElementById("slotsError").textContent = "Error al cargar disponibilidad.";
     document.getElementById("slotsError").style.display = "block";
   }
   document.getElementById("slotsLoading").style.display = "none";
@@ -277,8 +515,15 @@ function pickSlot(el, slot) {
   selSlot = slot;
   document.querySelectorAll(".slot").forEach(s => s.classList.remove("selected"));
   el.classList.add("selected");
-  setTimeout(() => goStep(3), 300);
-  document.getElementById("step3Summary").textContent = `${formatDate(selDate)} · ${selSlot.start} – ${selSlot.end}`;
+
+  const display = document.getElementById("selectedTimeDisplay");
+  document.getElementById("selectedTimeText").textContent = `${formatDate(selDate)}\n${slot.start} – ${slot.end}`;
+  display.style.display = "flex";
+
+  setTimeout(() => {
+    goStep(3);
+    document.getElementById("step3Summary").textContent = `${formatDate(selDate)} · ${slot.start} – ${slot.end}`;
+  }, 300);
 }
 
 async function confirmBook() {
@@ -292,50 +537,39 @@ async function confirmBook() {
   if (!/\S+@\S+\.\S+/.test(email)) { errEl.textContent = "Email inválido."; errEl.style.display = "block"; return; }
 
   const btn = document.getElementById("bookBtn");
-  btn.disabled = true;
-  btn.textContent = "Agendando…";
+  btn.disabled = true; btn.textContent = "Confirmando…";
 
   try {
     const res  = await fetch("/api/calendar/book", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        concierge:   slug,
-        date:        selDate,
-        startTime:   selSlot.start,
-        endTime:     selSlot.end,
-        clientName:  name,
-        clientEmail: email,
-        clientPhone: phone,
-        kickoffId,
-      }),
+      body: JSON.stringify({ concierge: slug, date: selDate, startTime: selSlot.start, endTime: selSlot.end, clientName: name, clientEmail: email, clientPhone: phone, kickoffId }),
     });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || "Error al agendar");
 
     goStep(4);
     document.getElementById("confirmText").innerHTML =
-      `Tu reunión con <strong>${profile?.name || "el concierge"}</strong> está confirmada para el<br><strong>${formatDate(selDate)} · ${selSlot.start}</strong><br><br>Te enviaremos un correo de confirmación a <strong>${email}</strong>`;
+      `Tu reunión con <strong style="color:#f5f0e8">${profile?.name || "el concierge"}</strong> está confirmada<br>para el <strong style="color:#f5f0e8">${formatDate(selDate)}</strong> a las <strong style="color:#f5f0e8">${selSlot.start}</strong><br><br>Recibirás un correo de confirmación en <strong style="color:#f5f0e8">${email}</strong>`;
 
     if (data.meetLink) {
-      const btn = document.getElementById("meetLinkBtn");
-      btn.href = data.meetLink;
-      btn.style.display = "inline-block";
+      const meetBtn = document.getElementById("meetLinkBtn");
+      meetBtn.href = data.meetLink;
+      meetBtn.style.display = "inline-block";
     }
   } catch(e) {
     errEl.textContent = e.message;
     errEl.style.display = "block";
     btn.disabled = false;
-    btn.textContent = "Confirmar reserva";
+    btn.textContent = "Confirmar reunión";
   }
 }
 
 function goStep(n) {
   [1,2,3,4].forEach(i => {
     document.getElementById(`step${i}`).style.display = i === n ? "block" : "none";
-    const bar = document.getElementById(`step${i}bar`);
-    if (bar) bar.className = "step " + (i < n ? "done" : i === n ? "active" : "");
   });
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function formatDate(iso) {
