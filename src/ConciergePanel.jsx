@@ -5958,6 +5958,17 @@ const loadKickoffs = async () => {
     🗓 Calendarios
   </a>
 
+  {currentUser?.name && (() => {
+    const found = CONCIERGE_LIST.find(c => c.name === currentUser.name);
+    if (!found) return null;
+    const slug = found.name.split(" ")[0].toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+    return (
+      <a href={`/book-admin.html?c=${slug}`} className="tt-btn-ghost" title="Mi perfil">
+        👤 Mi perfil
+      </a>
+    );
+  })()}
+
   <button
     type="button"
     onClick={() => setPortalLang(l => l === "en" ? "es" : "en")}

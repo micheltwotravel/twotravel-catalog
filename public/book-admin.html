@@ -3,95 +3,249 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Calendarios · Two Travel</title>
+<title>Mi perfil · Two Travel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Helvetica Neue', sans-serif; background: #f7f5f2; color: #1a1814; min-height: 100vh; }
-  .page { max-width: 600px; margin: 0 auto; padding: 32px 16px; }
-  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
-  .sub { color: #9a7d52; font-size: 14px; margin-bottom: 28px; }
-  .card { background: #fff; border-radius: 14px; border: 1px solid #e8e2d9; padding: 20px; margin-bottom: 14px; display: flex; align-items: center; gap: 16px; }
-  .avatar { width: 44px; height: 44px; border-radius: 50%; background: #e8e2d9; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: #9a7d52; flex-shrink: 0; }
-  .info { flex: 1; }
-  .name { font-weight: 600; font-size: 15px; }
-  .role { font-size: 12px; color: #9a7d52; }
-  .status { font-size: 12px; margin-top: 4px; }
-  .status.connected { color: #16a34a; }
-  .status.disconnected { color: #9a9a9a; }
-  .btn { padding: 8px 16px; border-radius: 8px; border: none; font-size: 13px; cursor: pointer; font-weight: 500; text-decoration: none; display: inline-block; }
-  .btn-connect { background: #1a1814; color: #fff; }
-  .btn-copy { background: #f5f0e8; color: #9a7d52; border: 1px solid #e8e2d9; }
-  .btn-copy:hover { background: #ede8e0; }
-  .link-box { background: #f5f0e8; border: 1px solid #e8e2d9; border-radius: 8px; padding: 8px 12px; font-size: 12px; font-family: monospace; word-break: break-all; margin-top: 8px; color: #6b5a3e; }
+  body { font-family: 'Jost', sans-serif; background: #f5f2ee; color: #1a1814; min-height: 100vh; }
+
+  .header { background: #1a1814; padding: 18px 32px; display: flex; align-items: center; justify-content: center; }
+  .header img { height: 36px; filter: brightness(0) invert(1); }
+
+  .page { max-width: 640px; margin: 0 auto; padding: 40px 16px; }
+  .back { font-size: 12px; color: #9a7d52; text-decoration: none; display: inline-block; margin-bottom: 24px; }
+
+  h1 { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 400; margin-bottom: 4px; }
+  .sub { color: #9a7d52; font-size: 13px; margin-bottom: 32px; }
+
+  .section-title {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: #9a9080;
+    margin-bottom: 12px; font-weight: 600;
+  }
+
+  .card {
+    background: #fff; border-radius: 14px; border: 1px solid #e0d9d0;
+    padding: 22px; margin-bottom: 16px;
+  }
+
+  /* Photo section */
+  .photo-section { display: flex; align-items: center; gap: 20px; }
+  .photo-preview {
+    width: 80px; height: 80px; border-radius: 50%;
+    object-fit: cover; border: 2px solid #e0d9d0; flex-shrink: 0;
+  }
+  .photo-initials {
+    width: 80px; height: 80px; border-radius: 50%;
+    background: #e8e2d9; border: 2px solid #d8d0c4; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cormorant Garamond', serif; font-size: 26px; color: #9a7d52;
+  }
+  .photo-actions { flex: 1; }
+  .photo-name { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+  .photo-role { font-size: 12px; color: #9a7d52; margin-bottom: 12px; }
+
+  .upload-btn {
+    position: relative; overflow: hidden; display: inline-block;
+    background: #1a1814; color: #fff; border: none; border-radius: 8px;
+    padding: 8px 18px; font-size: 12px; font-weight: 600; cursor: pointer;
+    font-family: 'Jost', sans-serif; letter-spacing: .04em; text-transform: uppercase;
+    transition: opacity .15s;
+  }
+  .upload-btn:hover { opacity: .82; }
+  .upload-btn input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; border: none; padding: 0;
+  }
+  .upload-hint { font-size: 11px; color: #b0a090; margin-top: 6px; }
+  .upload-status { font-size: 12px; margin-top: 8px; }
+  .upload-status.ok { color: #16a34a; }
+  .upload-status.err { color: #dc2626; }
+
+  /* Calendar section */
+  .cal-card { display: flex; align-items: center; gap: 16px; }
+  .cal-avatar { width: 44px; height: 44px; border-radius: 50%; background: #e8e2d9; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #9a7d52; flex-shrink: 0; }
+  .cal-info { flex: 1; }
+  .cal-name { font-weight: 600; font-size: 14px; }
+  .cal-role { font-size: 11px; color: #9a7d52; }
+  .cal-status { font-size: 11px; margin-top: 3px; }
+  .cal-status.connected { color: #16a34a; }
+  .cal-status.disconnected { color: #9a9a9a; }
+
+  .btn { padding: 7px 16px; border-radius: 8px; border: none; font-size: 12px; cursor: pointer; font-weight: 600; font-family: 'Jost', sans-serif; letter-spacing: .04em; text-transform: uppercase; text-decoration: none; display: inline-block; transition: opacity .15s; }
+  .btn:hover { opacity: .82; }
+  .btn-dark { background: #1a1814; color: #fff; }
+  .btn-ghost { background: #f5f0e8; color: #9a7d52; border: 1px solid #e0d9d0; }
+
+  .link-box { background: #f5f2ee; border: 1px solid #e0d9d0; border-radius: 8px; padding: 8px 12px; font-size: 11px; font-family: monospace; word-break: break-all; margin-top: 10px; color: #6b5a3e; }
+  .copy-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .copy-row .link-box { flex: 1; margin: 0; }
+
+  .divider { height: 1px; background: #e0d9d0; margin: 20px 0; }
+
   .toast { position: fixed; bottom: 24px; right: 24px; background: #1a1814; color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; }
   .toast.show { opacity: 1; }
-  .back { font-size: 12px; color: #9a7d52; text-decoration: none; display: inline-block; margin-bottom: 20px; }
 </style>
 </head>
 <body>
+
+<div class="header">
+  <img src="/logo.png" alt="Two Travel" />
+</div>
+
 <div class="page">
   <a href="/?mode=concierge" class="back">← Panel</a>
-  <h1>Calendarios de reuniones</h1>
-  <p class="sub">Conecta el Google Calendar de cada concierge para activar su link de booking.</p>
+  <h1>Mi perfil</h1>
+  <p class="sub">Gestiona tu foto y tu calendario de reuniones</p>
 
-  <div id="cards"></div>
+  <div class="section-title">Foto de perfil</div>
+  <div class="card">
+    <div class="photo-section">
+      <div id="photoPreviewWrap"></div>
+      <div class="photo-actions">
+        <div class="photo-name" id="myName">—</div>
+        <div class="photo-role" id="myRole">—</div>
+        <label class="upload-btn">
+          Subir foto
+          <input type="file" accept="image/jpeg,image/png,image/webp" onchange="uploadPhoto(this)" />
+        </label>
+        <div class="upload-hint">JPG, PNG o WebP · Máx 4 MB · Recomendado: cuadrada</div>
+        <div class="upload-status" id="uploadStatus"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:28px">Calendario de reuniones</div>
+  <div id="calCards"></div>
 </div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-const BASE = location.origin;
-
-const CONCIERGES = [
-  { slug: "caro",    name: "Carolina Lopez",        role: "Senior Concierge Cartagena", initials: "CL" },
-  { slug: "alia",    name: "Alia Jadad",            role: "Senior Concierge Cartagena", initials: "AJ" },
-  { slug: "daniela", name: "Daniela Becerra",       role: "Senior Concierge Medellín",  initials: "DB" },
-  { slug: "nataly",  name: "Nataly Cruz",           role: "Senior Concierge CDMX",      initials: "NC" },
-  { slug: "giulia",  name: "Giulia Lorini Serrato", role: "Senior Concierge CDMX",      initials: "GL" },
-  { slug: "natalia", name: "Natalia Peniche",       role: "Senior Concierge CDMX",      initials: "NP" },
-];
-
-// Check URL params for connection feedback
-const urlParams = new URLSearchParams(location.search);
-const connected = urlParams.get("connected");
-const error     = urlParams.get("error");
-if (connected) showToast(`✅ Calendario de ${connected} conectado`);
-if (error)     showToast(`❌ Error: ${error}`, 5000);
-
-// Check which concierges have tokens (via GAS)
+const BASE    = location.origin;
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
-async function loadStatus() {
-  let connected = {};
+const CONCIERGES = [
+  { slug: "caro",    name: "Carolina Lopez",        role: "Senior Concierge · Cartagena", initials: "CL" },
+  { slug: "alia",    name: "Alia Jadad",            role: "Senior Concierge · Cartagena", initials: "AJ" },
+  { slug: "daniela", name: "Daniela Becerra",       role: "Senior Concierge · Medellín",  initials: "DB" },
+  { slug: "nataly",  name: "Nataly Cruz",           role: "Senior Concierge · CDMX",      initials: "NC" },
+  { slug: "giulia",  name: "Giulia Lorini Serrato", role: "Senior Concierge · CDMX",      initials: "GL" },
+  { slug: "natalia", name: "Natalia Peniche",       role: "Senior Concierge · CDMX",      initials: "NP" },
+];
+
+// Detect current concierge from URL param ?c=slug or show all
+const params   = new URLSearchParams(location.search);
+const mySlug   = params.get("c") || "";
+const myProfile = CONCIERGES.find(c => c.slug === mySlug) || null;
+
+// URL feedback
+const connected = params.get("connected");
+const error     = params.get("error");
+if (connected) showToast("Calendario conectado correctamente");
+if (error)     showToast("Error: " + error, 4000);
+
+// Render my photo section
+function renderPhotoSection(photoUrl) {
+  const wrap = document.getElementById("photoPreviewWrap");
+  wrap.innerHTML = "";
+  if (photoUrl) {
+    const img = document.createElement("img");
+    img.className = "photo-preview";
+    img.src = photoUrl + "?t=" + Date.now();
+    img.onerror = () => renderInitials(wrap);
+    wrap.appendChild(img);
+  } else {
+    renderInitials(wrap);
+  }
+}
+
+function renderInitials(wrap) {
+  const div = document.createElement("div");
+  div.className = "photo-initials";
+  div.textContent = myProfile?.initials || "TT";
+  wrap.innerHTML = "";
+  wrap.appendChild(div);
+}
+
+async function loadMyPhoto() {
+  if (!myProfile) return;
+  document.getElementById("myName").textContent = myProfile.name;
+  document.getElementById("myRole").textContent = myProfile.role;
+  try {
+    const res  = await fetch(GAS_URL, { method:"POST", body: JSON.stringify({ action:"getCalendarToken", payload:{ concierge: `photo_${mySlug}` } }) });
+    const data = await res.json();
+    renderPhotoSection(data?.refreshToken || "");
+  } catch { renderPhotoSection(""); }
+}
+
+async function uploadPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 4 * 1024 * 1024) { setUploadStatus("La imagen debe ser menor a 4 MB", "err"); return; }
+  setUploadStatus("Subiendo…", "");
+
+  const res  = await fetch(`/api/upload-photo?concierge=${mySlug}`, {
+    method: "POST",
+    headers: { "Content-Type": file.type },
+    body: file,
+  });
+  const data = await res.json();
+  if (data.ok) {
+    // Save URL to GAS so book.html can retrieve it
+    await fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify({ action:"saveCalendarToken", payload:{ concierge: `photo_${mySlug}`, refreshToken: data.url } }),
+    });
+    setUploadStatus("Foto actualizada", "ok");
+    renderPhotoSection(data.url);
+  } else {
+    setUploadStatus("Error al subir: " + (data.error || "intenta de nuevo"), "err");
+  }
+}
+
+function setUploadStatus(msg, type) {
+  const el = document.getElementById("uploadStatus");
+  el.textContent = msg;
+  el.className = "upload-status " + type;
+}
+
+// Calendar cards (all concierges for admin, or just mine)
+async function loadCalendars() {
+  let connectedMap = {};
   try {
     const res  = await fetch(GAS_URL, { method:"POST", body: JSON.stringify({ action:"getCalendarTokens", payload:{} }) });
     const data = await res.json();
-    (data.tokens || []).forEach(t => { connected[t.concierge] = true; });
+    (data.tokens || []).forEach(t => { connectedMap[t.concierge] = true; });
   } catch {}
 
-  const container = document.getElementById("cards");
+  const list = mySlug ? CONCIERGES.filter(c => c.slug === mySlug) : CONCIERGES;
+  const container = document.getElementById("calCards");
   container.innerHTML = "";
 
-  CONCIERGES.forEach(c => {
-    const isConnected = !!connected[c.slug];
+  list.forEach(c => {
+    const isConnected = !!connectedMap[c.slug];
     const bookUrl = `${BASE}/book.html?c=${c.slug}`;
-
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `
-      <div class="avatar">${c.initials}</div>
-      <div class="info">
-        <div class="name">${c.name}</div>
-        <div class="role">${c.role}</div>
-        <div class="status ${isConnected ? "connected" : "disconnected"}">
-          ${isConnected ? "✅ Calendario conectado" : "⚪ Sin conectar"}
+      <div class="cal-card">
+        <div class="cal-avatar">${c.initials}</div>
+        <div class="cal-info">
+          <div class="cal-name">${c.name}</div>
+          <div class="cal-role">${c.role}</div>
+          <div class="cal-status ${isConnected ? "connected" : "disconnected"}">
+            ${isConnected ? "Calendario conectado" : "Sin conectar"}
+          </div>
+          ${isConnected ? `
+            <div class="copy-row">
+              <div class="link-box">${bookUrl}</div>
+              <button class="btn btn-ghost" onclick="copyLink('${bookUrl}')">Copiar</button>
+            </div>
+          ` : ""}
         </div>
-        ${isConnected ? `<div class="link-box">${bookUrl}</div>` : ""}
-      </div>
-      <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
-        <a href="/api/auth/google-connect?concierge=${c.slug}" class="btn btn-connect">
+        <a href="/api/auth/google-connect?concierge=${c.slug}" class="btn btn-dark" style="flex-shrink:0">
           ${isConnected ? "Reconectar" : "Conectar"}
         </a>
-        ${isConnected ? `<button class="btn btn-copy" onclick="copyLink('${bookUrl}')">Copiar link</button>` : ""}
       </div>
     `;
     container.appendChild(card);
@@ -99,7 +253,7 @@ async function loadStatus() {
 }
 
 function copyLink(url) {
-  navigator.clipboard.writeText(url).then(() => showToast("Link copiado ✓")).catch(() => prompt("Copia:", url));
+  navigator.clipboard.writeText(url).then(() => showToast("Link copiado")).catch(() => prompt("Copia:", url));
 }
 
 function showToast(msg, dur = 2500) {
@@ -109,7 +263,15 @@ function showToast(msg, dur = 2500) {
   setTimeout(() => t.classList.remove("show"), dur);
 }
 
-loadStatus();
+// Show photo section only if we know who we are
+if (myProfile) {
+  loadMyPhoto();
+} else {
+  document.querySelector(".photo-section").closest(".card").style.display = "none";
+  document.querySelectorAll(".section-title")[0].style.display = "none";
+}
+
+loadCalendars();
 </script>
 </body>
 </html>
