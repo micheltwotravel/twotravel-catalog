@@ -6433,12 +6433,17 @@ const loadKickoffs = async () => {
                               </button>
                               {(() => {
                                 const conciergeNames = String(k.assignedConcierge || "").split(",").map(s => s.trim()).filter(Boolean);
-                                const calUrl = conciergeNames.map(n => CONCIERGE_LIST.find(c => c.name === n)?.calendarUrl).find(Boolean);
-                                if (!calUrl) return null;
+                                const concierge = conciergeNames.map(n => CONCIERGE_LIST.find(c => c.name === n)).find(Boolean);
+                                if (!concierge) return null;
+                                const slug = concierge.email.split("@")[0].toLowerCase();
+                                const bookLink = `https://www.twotravelvip.com/book.html?c=${slug}&kickoffId=${k.id}`;
                                 return (
-                                  <button onClick={() => { setOpenMenuId(null); window.open(calUrl, "_blank"); }}
-                                    style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"#7c3aed",background:"none",border:"none",cursor:"pointer"}}>
-                                    📅 Agendar reunión
+                                  <button onClick={async () => {
+                                    setOpenMenuId(null);
+                                    try { await navigator.clipboard.writeText(bookLink); alert("Link de booking copiado — pásaselo al cliente por WhatsApp"); }
+                                    catch { prompt("Copia este link y mándalo al cliente:", bookLink); }
+                                  }} style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"#7c3aed",background:"none",border:"none",cursor:"pointer"}}>
+                                    📅 Copiar link de reunión
                                   </button>
                                 );
                               })()}
