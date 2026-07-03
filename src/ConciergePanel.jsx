@@ -5959,10 +5959,8 @@ const loadKickoffs = async () => {
     🗓 Calendarios
   </a>
 
-  {currentUser?.name && (() => {
-    const found = CONCIERGE_LIST.find(c => c.name === currentUser.name);
-    if (!found) return null;
-    const slug = found.name.split(" ")[0].toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+  {currentUser?.email && (() => {
+    const slug = currentUser.email.split("@")[0].toLowerCase();
     return (
       <a href={`/book-admin.html?c=${slug}`} className="tt-btn-ghost" title="Mi perfil">
         👤 Mi perfil
