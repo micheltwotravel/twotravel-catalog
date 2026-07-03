@@ -338,7 +338,25 @@ async function postToKickoffAPI(bodyObj) {
  * Retorna un array:
  * [{ id, guestName, tripName, createdAt, status, conciergeSummary, travifyText, internalNotes, cart }]
  */
-export async function fetchKickoffsFromSheet() {
+const KICKOFFS_CACHE_KEY = "tt_kickoffs_cache";
+const KICKOFFS_CACHE_TTL = 90 * 1000; // 90 segundos
+
+export function invalidateKickoffsCache() {
+  try { sessionStorage.removeItem(KICKOFFS_CACHE_KEY); } catch {}
+}
+
+export async function fetchKickoffsFromSheet({ forceRefresh = false } = {}) {
+  // Serve from cache if fresh
+  if (!forceRefresh) {
+    try {
+      const raw = sessionStorage.getItem(KICKOFFS_CACHE_KEY);
+      if (raw) {
+        const { ts, data } = JSON.parse(raw);
+        if (Date.now() - ts < KICKOFFS_CACHE_TTL) return data;
+      }
+    } catch {}
+  }
+
   const json = await postToKickoffAPI({ action: "listKickoffs" });
 
   let data = [];
@@ -367,12 +385,8 @@ export async function fetchKickoffsFromSheet() {
     } catch { return v; }
   };
 
-  return data.map((k) => ({
+  const result = data.map((k) => ({
     ...k,
-    // Always expose cart / dayMeta as real arrays — never as raw JSON strings.
-    // The Apps Script stores them as stringified JSON; parse once here so every
-    // component (ItineraryCanvas, KickoffCard, buildTravifyTextFromCart, …)
-    // can use them directly without individual guard code.
     cart:    parseJsonArr(k.cart),
     dayMeta: parseJsonArr(k.dayMeta ?? k.day_meta),
     checkIn:  sheetsTimeToLabel(k.checkIn),
@@ -381,18 +395,19 @@ export async function fetchKickoffsFromSheet() {
       k?.guestContact ?? k?.GuestContact ?? k?.guest_contact ??
       k?.contact ?? k?.Contact ?? k?.contacto ?? k?.Contacto ?? ""
     ).trim(),
-    // Main WhatsApp contact for the concierge assigned to this trip
     mainContact: String(
       k?.mainContact ?? k?.main_contact ?? k?.MainContact ??
       k?.whatsapp ?? k?.Whatsapp ?? k?.conciergePhone ?? ""
     ).trim(),
-    // Google Maps link for the accommodation address
     accommodationMapsUrl: String(
       k?.accommodationMapsUrl ?? k?.accommodation_maps_url ??
       k?.accommodationMap ?? k?.villaMap ?? k?.house_map ?? ""
     ).trim(),
     clientType: Number(k?.clientType || 1),
   }));
+
+  try { sessionStorage.setItem(KICKOFFS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}
+  return result;
 }
 
 
@@ -402,6 +417,7 @@ export async function fetchKickoffsFromSheet() {
  * { guestName, tripName, status, conciergeSummary, travifyText, internalNotes, cart }
  */
 export async function saveKickoffToSheet(payload) {
+  invalidateKickoffsCache();
   const json = await postToKickoffAPI({ action: "saveKickoff", payload });
 
   // Algunos backends devuelven { ok:true, id:"..." }
@@ -423,6 +439,7 @@ export async function saveKickoffToSheet(payload) {
  * { guestName, tripName, status, conciergeSummary, travifyText, internalNotes, cart }
  */
 export async function updateKickoffInSheet(id, updates) {
+  invalidateKickoffsCache();
   const json = await postToKickoffAPI({
     action: "updateKickoff",
     id,
@@ -436,6 +453,7 @@ export async function updateKickoffInSheet(id, updates) {
  * Borra un kickoff por id
  */
 export async function deleteKickoff(id) {
+  invalidateKickoffsCache();
   const json = await postToKickoffAPI({ action: "deleteKickoff", id });
   return json.ok === true;
 }
