@@ -20,7 +20,8 @@ export default async function handler(req, res) {
   const { concierge, date } = req.query; // date = "2026-07-10"
   if (!concierge || !date) return res.status(400).json({ error: "Missing params" });
 
-  const GAS = process.env.VITE_TASK_API_URL || process.env.GAS_URL;
+  const GAS = process.env.VITE_TASK_API_URL || process.env.GAS_URL
+    || "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
   // Get refresh token from GAS
   const tokenRes = await fetch(GAS, {
