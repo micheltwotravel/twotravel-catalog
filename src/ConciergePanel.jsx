@@ -2937,6 +2937,32 @@ function FeedbackResponseCard({ kickoffId }) {
   );
 }
 
+function DrawerSection({ title, children, defaultOpen = false, accent = "neutral" }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const colors = {
+    neutral: "border-neutral-200 bg-neutral-50 text-neutral-700",
+    violet:  "border-violet-200 bg-violet-50/50 text-violet-700",
+    orange:  "border-orange-200 bg-orange-50/50 text-orange-700",
+    amber:   "border-amber-200 bg-amber-50/50 text-amber-800",
+    blue:    "border-blue-200 bg-blue-50/50 text-blue-700",
+    indigo:  "border-indigo-200 bg-indigo-50/50 text-indigo-700",
+  };
+  const cls = colors[accent] || colors.neutral;
+  return (
+    <div className={`border rounded-2xl overflow-hidden ${cls.split(" ")[0]}`}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className={`w-full flex items-center justify-between px-4 py-3 text-left ${cls} transition-colors hover:brightness-95`}
+      >
+        <span className="text-[11px] font-semibold uppercase tracking-wide">{title}</span>
+        <span className="text-[10px] ml-2">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && <div className={`px-4 py-3 space-y-3 ${cls.split(" ")[1]}`}>{children}</div>}
+    </div>
+  );
+}
+
 function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [guestName, setGuestName] = useState(kickoff?.guestName || "");
   const [tripName, setTripName] = useState(kickoff?.tripName || "");
@@ -3528,8 +3554,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           </div>
 
           {/* ── BRIEFING DE VENTAS ── */}
-          <div className="border border-violet-200 rounded-xl bg-violet-50/40 p-4 space-y-3">
-            <p className="text-[11px] font-semibold text-violet-700 uppercase tracking-wide">📋 Briefing de Ventas</p>
+          <DrawerSection title="📋 Briefing de Ventas" accent="violet">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[10px] text-neutral-500 mb-1 block">¿Tienen casa?</label>
@@ -3590,11 +3615,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   placeholder="Contexto adicional del cliente…" />
               </div>
             </div>
-          </div>
+          </DrawerSection>
 
           {/* ── OPERACIONES ── */}
-          <div className="border border-orange-200 rounded-xl bg-orange-50/40 p-4 space-y-3">
-            <p className="text-[11px] font-semibold text-orange-700 uppercase tracking-wide">⚙️ Operaciones</p>
+          <DrawerSection title="⚙️ Operaciones" accent="orange">
 
             {/* Checklists */}
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -3675,7 +3699,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 </div>
               </div>
             </div>
-          </div>
+          </DrawerSection>
 
           <div>
             <label className="text-[11px] text-neutral-500">Notas internas</label>
@@ -3691,9 +3715,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           <CheckinResponsesSection kickoffId={kickoff?.id} />
 
           {/* ── Notas de reuniones ── */}
-          <div className="border border-amber-200 rounded-xl bg-amber-50 p-3 space-y-3">
+          <DrawerSection title="📋 Notas de reuniones" accent="amber" defaultOpen={true}>
             <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide">📋 Notas de reuniones</p>
+              <span />
               <button
                 type="button"
                 onClick={() => setMeetings(prev => [{ date: new Date().toISOString().slice(0,10), notes: "" }, ...prev])}
@@ -3731,8 +3755,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 />
               </div>
             ))}
-          </div>
-
+          </DrawerSection>
 
           {/* ── Feedback del cliente (respuestas del formulario) ── */}
           {(kickoff.status === "feedback_submitted" || kickoff.feedbackAt) && (
@@ -3810,8 +3833,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           })()}
 
           {/* ── Cover Info ─────────────────────────────── */}
-          <div className="border rounded-2xl p-4 bg-neutral-50 space-y-3">
-            <p className="text-xs font-semibold text-neutral-700">Portada del itinerario (PDF)</p>
+          <DrawerSection title="🖼️ Portada del itinerario (PDF)" accent="neutral">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] text-neutral-500">{city.includes(",") ? `Fechas ${cityFullName(city.split(",")[0]?.trim())}` : "Fechas del viaje"}</label>
@@ -4085,12 +4107,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   placeholder="https://drive.google.com/file/d/.../view" />
               </div>
             </div>
-          </div>
+          </DrawerSection>
 
           {/* ── Calificaciones por ciudad ── */}
-          <div className="border rounded-2xl p-4 bg-amber-50 border-amber-200 space-y-3">
+          <DrawerSection title="⭐ Calificaciones por ciudad" accent="amber">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-amber-800">⭐ Calificaciones por ciudad</p>
+              <span />
               <button
                 type="button"
                 onClick={addCityRating}
@@ -4161,12 +4183,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 />
               </div>
             ))}
-          </div>
+          </DrawerSection>
 
           {/* ── LLEGADAS MÚLTIPLES ─────────────────────────────── */}
-          <div className="border rounded-2xl p-4 bg-neutral-50 space-y-2">
+          <DrawerSection title="✈️ Llegadas del grupo" accent="neutral">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-neutral-700">✈️ Llegadas del grupo</p>
+              <span />
               <button type="button" onClick={addArrival}
                 className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-900 text-white hover:bg-neutral-700">
                 + Agregar llegada
@@ -4221,56 +4243,49 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 </div>
               </div>
             ))}
-          </div>
+          </DrawerSection>
 
           {/* PRE-TRIP INFO — page that appears before itinerary days in PDF */}
-          <div className="border rounded-2xl p-4 bg-neutral-50 space-y-2">
-            <p className="text-xs font-semibold text-neutral-700">Pre-Trip Information</p>
+          <DrawerSection title="📄 Pre-Trip Information" accent="neutral">
             <p className="text-[11px] text-neutral-400 leading-relaxed">
-              This block appears as a full page <em>before</em> the itinerary days in the PDF.
-              Include links (forms, WhatsApp, PDFs), notes, recommendations, promo info, etc.
-              One item per line. Lines starting with http/https render as clickable links.
+              Aparece como página antes del itinerario en el PDF. Links, recomendaciones, promo. Una línea por ítem.
             </p>
             <textarea
               value={preTripContent}
               onChange={(e) => setPreTripContent(e.target.value)}
               rows={8}
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm min-h-[140px] font-mono bg-white"
-              placeholder={`Pre Check-in Form: https://form.link/checkin\nDrink Calculator: https://two.travel/drinks\nCartagena City Guide: https://two.travel/guide.pdf\nWhatsApp Concierge: https://wa.me/573001234567\n\nPromo: Share @twotravelconcierge and get a discount on select experiences.\n\nCoffee recommendations: Amor Perfecto, Pergamino\nRooftop recommendations: Aloft, Alma`}
+              placeholder={`Pre Check-in Form: https://form.link/checkin\nDrink Calculator: https://two.travel/drinks\nCartagena City Guide: https://two.travel/guide.pdf\nWhatsApp Concierge: https://wa.me/573001234567`}
             />
-          </div>
+          </DrawerSection>
 
           {/* ITINERARIO — canvas con edición inline por día */}
-<div className="border rounded-2xl p-4 bg-white">
-  <div className="flex items-center justify-between mb-1">
-    <div className="text-sm font-semibold text-neutral-900">Itinerario</div>
-    {kickoff?.cart?.length > 0 && (
-      <a
-        href={`/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff.lang || "en"}`}
-        target="_blank" rel="noreferrer"
-        className="text-[11px] text-blue-600 hover:underline">
-        📄 Ver PDF →
-      </a>
-    )}
-  </div>
-  <div className="text-[11px] text-neutral-400 mb-3">
-    Agrupa actividades por día. Edita nombre, hora y precio directamente en cada fila.
-  </div>
-  <ItineraryCanvas
-    kickoff={kickoff}
-    onCartChange={(newCart, newDayMeta) => {
-      canvasCartRef.current    = newCart;
-      canvasDayMetaRef.current = newDayMeta;
-    }}
-    onSave={async (newCart, newDayMeta) => {
-      await onSilentUpdate(kickoff.id, {
-        cart:    JSON.stringify(newCart),
-        dayMeta: JSON.stringify(newDayMeta),
-        status: "concierge_editing",
-      });
-    }}
-  />
-</div>
+          <DrawerSection title="📅 Itinerario" accent="neutral" defaultOpen={true}>
+            <div className="flex items-center justify-between -mt-1 mb-1">
+              <span />
+              {kickoff?.cart?.length > 0 && (
+                <a href={`/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff.lang || "en"}`}
+                  target="_blank" rel="noreferrer"
+                  className="text-[11px] text-blue-600 hover:underline">
+                  📄 Ver PDF →
+                </a>
+              )}
+            </div>
+            <ItineraryCanvas
+              kickoff={kickoff}
+              onCartChange={(newCart, newDayMeta) => {
+                canvasCartRef.current    = newCart;
+                canvasDayMetaRef.current = newDayMeta;
+              }}
+              onSave={async (newCart, newDayMeta) => {
+                await onSilentUpdate(kickoff.id, {
+                  cart:    JSON.stringify(newCart),
+                  dayMeta: JSON.stringify(newDayMeta),
+                  status: "concierge_editing",
+                });
+              }}
+            />
+          </DrawerSection>
         </div>
 
 
