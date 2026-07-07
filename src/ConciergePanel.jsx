@@ -1,4 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const TASK_API_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
@@ -1300,16 +1308,43 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
   );
 }
 
+function SortableActivityRow({ item, onUpdate, onRemove, availableDays, groupSize }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: item._uid });
+  return (
+    <div ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+      className="flex items-stretch border-b border-neutral-100 last:border-0">
+      <button
+        type="button" {...attributes} {...listeners}
+        className="px-2 text-neutral-300 hover:text-neutral-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0 flex items-center select-none"
+        title="Arrastrar para reordenar"
+        onMouseDown={e => e.stopPropagation()}
+      >
+        ⠿
+      </button>
+      <div className="flex-1 min-w-0">
+        <ActivityRow item={item} onUpdate={onUpdate} onRemove={onRemove}
+          availableDays={availableDays} groupSize={groupSize} />
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════════
    DAY SECTION — one per day, collapsible, with editable header
 ═══════════════════════════════════════════════════════════════ */
 function DaySection({ label, meta, items, loadingServices, availableDays,
   onUpdateMeta, onRenameLabel, onRemoveDay,
-  onUpdateItem, onRemoveItem, onAddManual, onAddPreset, onAddFromCatalog, groupSize = 1, lang = "en" }) {
+  onUpdateItem, onRemoveItem, onAddManual, onAddPreset, onAddFromCatalog,
+  onReorderItems, dragHandleProps,
+  groupSize = 1, lang = "en" }) {
 
   const [editingLabel, setEditingLabel] = useState(false);
   const [localLabel,   setLocalLabel]   = useState(label);
   const [collapsed,    setCollapsed]    = useState(false);
+
+  const itemSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   useEffect(() => setLocalLabel(label), [label]);
 
@@ -1323,6 +1358,13 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
       {/* ── Day header band ── */}
       <div className="bg-neutral-900 px-4 py-3">
         <div className="flex items-center justify-between gap-2">
+          {/* Drag handle for day reordering */}
+          {dragHandleProps && (
+            <button type="button" {...dragHandleProps}
+              className="text-neutral-600 hover:text-neutral-400 cursor-grab active:cursor-grabbing touch-none flex-shrink-0 select-none mr-1"
+              title="Arrastrar para reordenar días"
+            >⠿</button>
+          )}
           {/* Editable date / day label */}
           {editingLabel ? (
             <input autoFocus value={localLabel}
@@ -1367,14 +1409,24 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
               Sin actividades — agrega una abajo.
             </div>
           ) : (
-            <div className="divide-y divide-neutral-100 bg-white">
-              {items.map(item => (
-                <ActivityRow key={item._uid || item.id} item={item}
-                  availableDays={availableDays}
-                  groupSize={groupSize}
-                  onUpdate={onUpdateItem} onRemove={onRemoveItem}/>
-              ))}
-            </div>
+            <DndContext sensors={itemSensors} collisionDetection={closestCenter}
+              onDragEnd={({ active, over }) => {
+                if (!over || active.id === over.id) return;
+                const oldIdx = items.findIndex(i => i._uid === active.id);
+                const newIdx = items.findIndex(i => i._uid === over.id);
+                if (oldIdx !== -1 && newIdx !== -1) onReorderItems?.(oldIdx, newIdx);
+              }}>
+              <SortableContext items={items.map(i => i._uid)} strategy={verticalListSortingStrategy}>
+                <div className="bg-white">
+                  {items.map(item => (
+                    <SortableActivityRow key={item._uid || item.id} item={item}
+                      availableDays={availableDays}
+                      groupSize={groupSize}
+                      onUpdate={onUpdateItem} onRemove={onRemoveItem} />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
           {/* Add buttons */}
           <div className="flex flex-wrap gap-1.5 px-4 py-2.5 bg-neutral-50 border-t border-neutral-100">
@@ -1409,6 +1461,17 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
    Source of truth: cart (flat items) + dayMeta (day-level titles)
    Both are persisted on save and drive PDF + Travefy output.
 ═══════════════════════════════════════════════════════════════ */
+function SortableDaySection({ label, ...props }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: label });
+  return (
+    <div ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}>
+      <DaySection label={label} dragHandleProps={{ ...attributes, ...listeners }} {...props} />
+    </div>
+  );
+}
+
 function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
   // Parse cart/dayMeta whether they arrive as arrays or JSON strings from the Sheet
   const parseArr = (v) => {
@@ -1425,6 +1488,27 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
   const [loadingServices, setLoadingServices] = useState(false);
   const [saving,   setSaving]   = useState(false);
   const [catalogTargetDay, setCatalogTargetDay] = useState(null);
+
+  const daySensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const reorderDays = ({ active, over }) => {
+    if (!over || active.id === over.id) return;
+    setDayMeta(prev => {
+      const oldIdx = prev.findIndex(dm => dm.label === active.id);
+      const newIdx = prev.findIndex(dm => dm.label === over.id);
+      if (oldIdx === -1 || newIdx === -1) return prev;
+      return arrayMove(prev, oldIdx, newIdx);
+    });
+  };
+
+  const reorderItemsInDay = (dayLabel, oldIdx, newIdx) => {
+    setCart(prev => {
+      const dayItems  = prev.filter(i => (i.dayLabel || "Sin día") === dayLabel);
+      const otherItems = prev.filter(i => (i.dayLabel || "Sin día") !== dayLabel);
+      const reordered = arrayMove(dayItems, oldIdx, newIdx).map((item, i) => ({ ...item, sortOrder: i }));
+      return [...otherItems, ...reordered];
+    });
+  };
 
   // Sync when kickoff changes (e.g. switching between kickoffs)
   useEffect(() => {
@@ -1652,27 +1736,34 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         </div>
       )}
 
-      {/* ── Day sections ── */}
-      {days.map(({ label, meta, items }) => (
-        <DaySection
-          key={label}
-          label={label}
-          meta={meta}
-          items={items}
-          loadingServices={loadingServices}
-          availableDays={days.map(d => d.label)}
-          groupSize={parseInt(kickoff?.groupSize || "1", 10) || 1}
-          lang={kickoff?.lang || "en"}
-          onUpdateMeta={patch => upsertDayMeta(label, patch)}
-          onRenameLabel={newLabel => renameDayLabel(label, newLabel)}
-          onRemoveDay={() => removeDay(label)}
-          onUpdateItem={updateItem}
-          onRemoveItem={removeItem}
-          onAddManual={() => addManualToDay(label)}
-          onAddPreset={(preset) => addPresetToDay(label, preset)}
-          onAddFromCatalog={() => setCatalogTargetDay(label)}
-        />
-      ))}
+      {/* ── Day sections (drag to reorder) ── */}
+      <DndContext sensors={daySensors} collisionDetection={closestCenter} onDragEnd={reorderDays}>
+        <SortableContext items={days.map(d => d.label)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-3">
+            {days.map(({ label, meta, items }) => (
+              <SortableDaySection
+                key={label}
+                label={label}
+                meta={meta}
+                items={items}
+                loadingServices={loadingServices}
+                availableDays={days.map(d => d.label)}
+                groupSize={parseInt(kickoff?.groupSize || "1", 10) || 1}
+                lang={kickoff?.lang || "en"}
+                onUpdateMeta={patch => upsertDayMeta(label, patch)}
+                onRenameLabel={newLabel => renameDayLabel(label, newLabel)}
+                onRemoveDay={() => removeDay(label)}
+                onUpdateItem={updateItem}
+                onRemoveItem={removeItem}
+                onReorderItems={(oldIdx, newIdx) => reorderItemsInDay(label, oldIdx, newIdx)}
+                onAddManual={() => addManualToDay(label)}
+                onAddPreset={(preset) => addPresetToDay(label, preset)}
+                onAddFromCatalog={() => setCatalogTargetDay(label)}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       {/* Catalog picker modal (per-day) */}
       {catalogTargetDay && (
