@@ -665,11 +665,22 @@ function renderProveedores(){
   main.innerHTML = html;
 }
 
+/* ── DEMO MODE ── */
+function loadDemo(){
+  comisiones = [{id:'cm001',date:'2026-06-10',vendor:'Bora Bora Beach Club',client:'Jerome V.',category:'Beach Club',desc:'Day pass x8 pax + botella',total:'2400',pct:'10',amount:'240',currency:'USD',person:'Caro',dueDate:'2026-06-30',notes:'Contacto: Carlos Bora Bora',status:'vencida',createdAt:'2026-06-10T10:00:00Z'},{id:'cm002',date:'2026-06-15',vendor:'Bora Bora Beach Club',client:'The Smith Family',category:'Beach Club',desc:'Day pass x6 pax',total:'1800',pct:'10',amount:'180',currency:'USD',person:'Caro',dueDate:'2026-07-15',notes:'',status:'pend',createdAt:'2026-06-15T10:00:00Z'},{id:'cm003',date:'2026-06-20',vendor:'Dennis Chef',client:'Ana & Luis W.',category:'Chef / Catering',desc:'Cena privada x10 pax en villa',total:'1500',pct:'15',amount:'225',currency:'USD',person:'Lyna',dueDate:'2026-07-20',notes:'Pago a 30 días',status:'facturada',createdAt:'2026-06-20T10:00:00Z'},{id:'cm004',date:'2026-05-28',vendor:'Dennis Chef',client:'Grupo Rodríguez',category:'Chef / Catering',desc:'Brunch x15 pax + decoración',total:'2200',pct:'15',amount:'330',currency:'USD',person:'Lyna',dueDate:'2026-06-28',notes:'',status:'cobrado',createdAt:'2026-05-28T10:00:00Z'},{id:'cm005',date:'2026-06-25',vendor:'Yacht Cartagena',client:'Marcus B.',category:'Boating',desc:'Bote privado speed boat x8 pax día completo',total:'3200',pct:'12',amount:'384',currency:'USD',person:'Michel',dueDate:'2026-07-25',notes:'DJ incluido',status:'pend',createdAt:'2026-06-25T10:00:00Z'},{id:'cm006',date:'2026-05-15',vendor:'Yacht Cartagena',client:'Sophie & Tom',category:'Boating',desc:'Catamarán x12 pax sunset',total:'2800',pct:'12',amount:'336',currency:'USD',person:'Michel',dueDate:'2026-06-15',notes:'',status:'cobrado',createdAt:'2026-05-15T10:00:00Z'},{id:'cm007',date:'2026-06-18',vendor:'Villa Vela',client:'Johnson Group',category:'Villa / Alojamiento',desc:'4 noches villa exclusiva 5 hab',total:'12000',pct:'8',amount:'960',currency:'USD',person:'Alia',dueDate:'2026-07-18',notes:'Acuerdo especial 8%',status:'pend',createdAt:'2026-06-18T10:00:00Z'},{id:'cm008',date:'2026-06-01',vendor:'Restaurante La Vitrola',client:'Paige R.',category:'Restaurant',desc:'Cena privada x4 pax menú degustación',total:'800',pct:'10',amount:'80',currency:'USD',person:'Dani',dueDate:'2026-07-01',notes:'',status:'vencida',createdAt:'2026-06-01T10:00:00Z'},{id:'cm009',date:'2026-07-02',vendor:'Restaurante La Vitrola',client:'Williams Family',category:'Restaurant',desc:'Almuerzo x6 pax',total:'600',pct:'10',amount:'60',currency:'USD',person:'Dani',dueDate:'2026-08-02',notes:'',status:'pend',createdAt:'2026-07-02T10:00:00Z'},{id:'cm010',date:'2026-06-05',vendor:'Spa Serena',client:'Ana & Luis W.',category:'Spa / Wellness',desc:'Masajes x4 pax + hidroterapia',total:'950',pct:'10',amount:'95',currency:'USD',person:'Xilene',dueDate:'2026-07-05',notes:'',status:'cobrado',createdAt:'2026-06-05T10:00:00Z'},{id:'cm011',date:'2026-06-28',vendor:'Cartagena Tours',client:'Marcus B.',category:'Tour / Excursión',desc:'Tour islas del Rosario x10 pax',total:'1100',pct:'12',amount:'132',currency:'USD',person:'Caro',dueDate:'2026-07-28',notes:'Incluye almuerzo',status:'pend',createdAt:'2026-06-28T10:00:00Z'},{id:'cm012',date:'2026-05-20',vendor:'Cartagena Tours',client:'Jerome V.',category:'Tour / Excursión',desc:'Chiva tour nocturno x8 pax',total:'640',pct:'12',amount:'76.8',currency:'USD',person:'Caro',dueDate:'2026-06-20',notes:'',status:'cobrado',createdAt:'2026-05-20T10:00:00Z'}];
+  setSyncInfo('Modo demo');
+  render();
+}
+
 /* ── INIT ── */
 load();
 render();
-setSyncInfo('Cargando...');
-loadFromGAS();
+if(new URLSearchParams(location.search).get('demo')==='1'){
+  loadDemo();
+} else {
+  setSyncInfo('Cargando...');
+  loadFromGAS();
+}
 </script>
 </body>
 </html>
