@@ -157,6 +157,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
     <option value="checkin">Check-in</option>
     <option value="individual">Individual</option>
   </select>
+  <button class="tbtn" onclick="testWhatsApp()" title="Verificar configuración de WhatsApp">🔍 Test WA</button>
   <button class="tbtn" onclick="exportCSV()">⬇ Excel</button>
   <span class="sync-info" id="sync-info">Cargando...</span>
 </div>
@@ -865,6 +866,30 @@ function checkReminders() {
   const names = due.map(p=>p.client).join(', ');
   if (confirm(`🔔 ${due.length} recordatorio(s) pendiente(s): ${names}\n\n¿Enviar ahora?`)) {
     due.forEach(p => cobrar(p.id, 'recordatorio_suave'));
+  }
+}
+
+/* ── WHATSAPP DIAGNOSTICO ── */
+async function testWhatsApp(){
+  const phone = prompt('Número para test (con código país, ej: 573001234567):');
+  if(!phone) return;
+  showToast('Probando...', 10000);
+  try{
+    const r = await fetch('/api/whatsapp',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ to: phone, message: '✅ Test Two Travel Portal — WhatsApp configurado correctamente.' })
+    });
+    const d = await r.json();
+    if(d.ok){
+      showToast('✅ Mensaje enviado OK · ID: ' + d.messageId, 6000);
+    } else {
+      const msg = '❌ Error Meta API:\n' + (d.error || JSON.stringify(d));
+      alert(msg);
+      showToast('❌ ' + (d.error||'Error').slice(0,60), 8000);
+    }
+  }catch(err){
+    alert('❌ Error de red: ' + err.message + '\n\nPosible causa: META_WA_TOKEN no configurado en Vercel.');
   }
 }
 
