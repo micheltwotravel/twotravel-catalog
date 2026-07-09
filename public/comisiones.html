@@ -212,7 +212,11 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
         </div>
       </div>
 
-      <div class="form-row">
+      <div class="form-row triple">
+        <div class="form-group">
+          <label class="form-label">Teléfono proveedor (WhatsApp)</label>
+          <input class="form-input" id="n-phone" type="tel" placeholder="573001234567">
+        </div>
         <div class="form-group">
           <label class="form-label">Gestionado por</label>
           <select class="form-select" id="n-person">
@@ -385,6 +389,7 @@ function render(){
       <th>Comisión</th>
       <th>Gestionado por</th>
       <th>Vencimiento</th>
+      <th>Cobrar</th>
       <th>Estado</th>
       <th>Notas</th>
     </tr></thead>
@@ -393,7 +398,7 @@ function render(){
   items.forEach(c => { html += renderRow(c, today); });
 
   html += `<tr class="add-row" onclick="openNewModal()">
-    <td colspan="12">+ Agregar comisión</td>
+    <td colspan="13">+ Agregar comisión</td>
   </tr>`;
   html += `</tbody></table></div>`;
 
@@ -423,6 +428,15 @@ function renderRow(c, today){
     <td><div class="cell amount-cell" style="color:#3d7a52">${fmtAmount(c.amount, c.currency)}</div></td>
     <td><div class="cell" style="gap:6px;padding:5px 8px">${avatar}<span style="font-size:11px;color:var(--ink3)">${c.person||'—'}</span></div></td>
     <td><div class="cell" style="font-size:11px;${dueStyle}">${fmtDate(c.dueDate)||'—'}</div></td>
+    <td><div class="cell" style="justify-content:center;flex-direction:column;gap:3px;padding:4px 6px">
+      ${c.phone ? `
+        <button onclick="cobrarComision('${c.id}')" style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;font-size:10px;font-family:Jost,sans-serif;background:#25d366;color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.523 5.845L0 24l6.335-1.493A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.368l-.36-.214-3.726.878.936-3.617-.235-.374A9.818 9.818 0 1112 21.818z"/></svg>
+          ${c.cobroAt ? 'Recordar' : 'Cobrar'}
+        </button>
+        ${c.cobroAt ? `<span style="font-size:9px;color:var(--ink3)">✓ ${c.cobroAt.slice(5,10)}</span>` : ''}
+      ` : '<span style="font-size:10px;color:var(--border2)">sin tel.</span>'}
+    </div></td>
     <td class="status-wrap"><span class="status-chip" style="background:${st.color}" onclick="openStatusPopup('${c.id}',event)">${st.label}</span></td>
     <td><div class="cell editable" ondblclick="editField('${c.id}','notes')" style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink3)">${esc(c.notes||'')}</div></td>
   </tr>`;
@@ -487,6 +501,7 @@ function openNewModal(){
   document.getElementById('n-pct').value = '';
   document.getElementById('n-amount').value = '';
   document.getElementById('n-currency').value = 'USD';
+  document.getElementById('n-phone').value = '';
   document.getElementById('n-person').value = '';
   document.getElementById('n-due').value = '';
   document.getElementById('n-notes').value = '';
@@ -516,6 +531,7 @@ function createComision(){
     pct:       document.getElementById('n-pct').value,
     amount:    document.getElementById('n-amount').value,
     currency:  document.getElementById('n-currency').value,
+    phone:     document.getElementById('n-phone').value.replace(/\D/g,''),
     person:    document.getElementById('n-person').value,
     dueDate:   document.getElementById('n-due').value,
     notes:     document.getElementById('n-notes').value.trim(),
@@ -535,6 +551,32 @@ function showToast(msg, duration=3000){
   t.className='toast'; t.textContent=msg;
   document.body.appendChild(t);
   setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, duration);
+}
+
+/* ── COBRAR COMISION (WhatsApp) ── */
+async function cobrarComision(id){
+  const c = comisiones.find(x=>x.id===id);
+  if(!c || !c.phone) return;
+  const isReminder = !!c.cobroAt;
+  const amtStr = c.amount ? `${c.currency} $${parseFloat(c.amount).toLocaleString('es',{minimumFractionDigits:2})}` : '';
+  const msg = isReminder
+    ? `Hola, te escribimos de Two Travel para recordarte la comisión pendiente por el servicio de ${c.desc||c.category||'nuestro cliente'} (${c.client||''}).\n\nMonto: ${amtStr}\n\nQuedamos atentos. ¡Gracias!`
+    : `Hola, te escribimos de Two Travel.\n\nTenemos pendiente el cobro de comisión por el servicio de ${c.desc||c.category||'nuestro cliente'} (${c.client||''}).\n\nMonto: ${amtStr}\n\nQuedamos atentos para coordinar el pago. ¡Gracias!`;
+  if(!confirm(`¿Enviar ${isReminder?'recordatorio':'cobro'} por WhatsApp a ${c.vendor}?`)) return;
+  showToast('Enviando...');
+  try{
+    const r = await fetch('/api/whatsapp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:c.phone,message:msg})});
+    const d = await r.json();
+    if(d.ok){
+      c.cobroAt = new Date().toISOString();
+      save(); render();
+      showToast(`✅ ${isReminder?'Recordatorio':'Cobro'} enviado a ${c.vendor}`);
+    } else {
+      showToast('❌ ' + (d.error||'Error al enviar'));
+    }
+  }catch(err){
+    showToast('❌ Error de red: ' + err.message);
+  }
 }
 
 /* ── EXPORT CSV ── */
