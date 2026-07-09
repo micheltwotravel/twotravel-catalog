@@ -242,8 +242,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
 
   // Trip name
   if (kickoff.tripName) {
-    doc.setFontSize(13); doc.setFont("helvetica","normal"); doc.setTextColor(90,90,90);
-    dt(cl(kickoff.tripName), ML, y + 6); y += 22;
+    doc.setFontSize(15); doc.setFont("helvetica","bold"); doc.setTextColor(30,30,30);
+    dt(cl(kickoff.tripName), ML, y + 8); y += 26;
   }
   y += 14;
 
@@ -1588,9 +1588,40 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
   };
 
   const addDay = () => {
-    const nextNum = dayMeta.filter(d => /^Día \d+$/i.test(d.label)).length + 1;
-    const label = `Día ${nextNum}`;
+    const nextNum = dayMeta.length + 1;
+    const arrDate = kickoff?.arrivalDate;
+    let label;
+    if (arrDate) {
+      const d = new Date(arrDate + "T12:00:00");
+      d.setDate(d.getDate() + (nextNum - 1));
+      const lang = kickoff?.lang || "en";
+      label = d.toLocaleDateString(lang === "es" ? "es-CO" : "en-US", { weekday: "long", month: "long", day: "numeric" });
+    } else {
+      label = `Día ${nextNum}`;
+    }
     setDayMeta(prev => [...prev, { label, title: "", sortOrder: prev.length }]);
+  };
+
+  const autoFillDayTitles = () => {
+    const arrDate = kickoff?.arrivalDate;
+    if (!arrDate) return;
+    const lang = kickoff?.lang || "en";
+    setDayMeta(prev => prev.map((dm, idx) => {
+      const d = new Date(arrDate + "T12:00:00");
+      d.setDate(d.getDate() + idx);
+      const label = d.toLocaleDateString(lang === "es" ? "es-CO" : "en-US", { weekday: "long", month: "long", day: "numeric" });
+      return { ...dm, label };
+    }));
+    setCart(prev => prev.map(item => {
+      const oldLabel = item.dayLabel || "Sin día";
+      const oldMeta = dayMeta.find(dm => dm.label === oldLabel);
+      if (!oldMeta) return item;
+      const idx = dayMeta.indexOf(oldMeta);
+      const d = new Date(arrDate + "T12:00:00");
+      d.setDate(d.getDate() + idx);
+      const newLabel = d.toLocaleDateString(lang === "es" ? "es-CO" : "en-US", { weekday: "long", month: "long", day: "numeric" });
+      return { ...item, dayLabel: newLabel };
+    }));
   };
 
   const removeDay = (label) => {
@@ -1713,6 +1744,13 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
             className="px-3 py-1.5 rounded-lg border border-neutral-200 text-xs hover:bg-neutral-50 text-neutral-600">
             + Agregar día
           </button>
+          {kickoff?.arrivalDate && days.length > 0 && (
+            <button type="button" onClick={autoFillDayTitles}
+              title="Renombrar días con día de semana y fecha según la fecha de llegada"
+              className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs hover:bg-amber-100">
+              🗓️ Auto-fechas
+            </button>
+          )}
           <button type="button" onClick={handleGenerateTasks} disabled={generating || !cart.length}
             title="Crea una tarea de confirmación por cada servicio del itinerario"
             className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs hover:bg-blue-100 disabled:opacity-40 transition">
@@ -1764,6 +1802,14 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
           </div>
         </SortableContext>
       </DndContext>
+
+      {/* Bottom "+ Add day" button */}
+      {days.length > 0 && (
+        <button type="button" onClick={addDay}
+          className="w-full py-2 rounded-xl border-2 border-dashed border-neutral-200 text-xs text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 transition">
+          + Agregar día
+        </button>
+      )}
 
       {/* Catalog picker modal (per-day) */}
       {catalogTargetDay && (
@@ -2491,27 +2537,33 @@ function CatalogPickerModal({ services, clientType = 1, lang = "en", city = "", 
     BOG:  ["bog","bogota","bogotá"],
   };
   const toCityCode = (raw) => {
-    // Handle comma-separated multi-city — take first city only
-    const first = String(raw || "").split(",")[0].trim().toLowerCase();
-    if (!first) return "";
+    const s = String(raw || "").split(",")[0].trim().toLowerCase();
+    if (!s) return "";
     for (const [code, aliases] of Object.entries(CITY_ALIASES)) {
-      if (aliases.includes(first) || first === code.toLowerCase()) return code;
+      if (aliases.includes(s) || s === code.toLowerCase()) return code;
     }
-    return first.toUpperCase();
+    return s.toUpperCase();
   };
   const CITY_LABELS = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" };
-  const kickoffCityCode = toCityCode(city); // e.g. "CTG", "CDMX"
 
-  // Base list: filter by city using canonical codes
+  // All city codes in this kickoff (multi-city trips have comma-separated values)
+  const kickoffCityCodes = useMemo(() => {
+    return String(city || "").split(",").map(c => toCityCode(c.trim())).filter(Boolean);
+  }, [city]);
+  const kickoffCityCode = kickoffCityCodes[0] || ""; // primary city
+
+  const [catalogCityFilter, setCatalogCityFilter] = useState(kickoffCityCode);
+
+  // Base list: filter by currently selected city tab
   const cityServices = useMemo(() => {
-    if (!kickoffCityCode) return services || [];
+    const filterCode = catalogCityFilter || kickoffCityCode;
+    if (!filterCode) return services || [];
     return (services || []).filter((s) => {
       const sCity = String(s.city || "").trim();
-      // Untagged services → only show for CTG (legacy catalog)
-      if (!sCity) return kickoffCityCode === "CTG";
-      return toCityCode(sCity) === kickoffCityCode;
+      if (!sCity) return filterCode === "CTG";
+      return toCityCode(sCity) === filterCode;
     });
-  }, [services, kickoffCityCode]);
+  }, [services, catalogCityFilter, kickoffCityCode]);
 
   // Suggested: 2 per category, in SUGGESTION_CATS order
   const suggested = useMemo(() => {
@@ -2574,7 +2626,7 @@ function CatalogPickerModal({ services, clientType = 1, lang = "en", city = "", 
 
   return (
     <Modal
-      title={kickoffCityCode ? `Agregar desde Catálogo · ${CITY_LABELS[kickoffCityCode] || kickoffCityCode}` : "Agregar desde Catálogo"}
+      title={kickoffCityCodes.length > 0 ? `Agregar desde Catálogo · ${kickoffCityCodes.map(c => CITY_LABELS[c] || c).join(" + ")}` : "Agregar desde Catálogo"}
       onClose={onClose}
       maxWidth="max-w-4xl"
       footer={
@@ -2591,6 +2643,17 @@ function CatalogPickerModal({ services, clientType = 1, lang = "en", city = "", 
         {!kickoffCityCode && (
           <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
             ⚠️ Este cliente no tiene ciudad asignada — se muestran todos los servicios. Asigna la ciudad al kickoff para filtrar correctamente.
+          </div>
+        )}
+        {kickoffCityCodes.length > 1 && (
+          <div className="flex gap-2">
+            {kickoffCityCodes.map(code => (
+              <button key={code} type="button"
+                onClick={() => setCatalogCityFilter(code)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${catalogCityFilter === code ? "bg-neutral-900 text-white border-neutral-900" : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50"}`}>
+                {CITY_LABELS[code] || code}
+              </button>
+            ))}
           </div>
         )}
         <input
@@ -3062,9 +3125,15 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [arrivals, setArrivals] = useState(() => {
     try { return JSON.parse(kickoff?.arrivals || "[]"); } catch { return []; }
   });
-  const addArrival  = () => setArrivals(a => [...a, { name:"", date:"", time:"", flight:"", flightNumber:"", origin:"" }]);
+  const addArrival  = () => setArrivals(a => [...a, { name:"", date:"", time:"", flight:"", flightNumber:"", origin:"", destination:"" }]);
   const removeArrival = (i) => setArrivals(a => a.filter((_,idx) => idx !== i));
   const patchArrival = (i, patch) => setArrivals(a => a.map((row,idx) => idx === i ? {...row,...patch} : row));
+  const [departures, setDepartures] = useState(() => {
+    try { return JSON.parse(kickoff?.departures || "[]"); } catch { return []; }
+  });
+  const addDeparture  = () => setDepartures(d => [...d, { name:"", date:"", time:"", flightNumber:"", origin:"", destination:"", notes:"" }]);
+  const removeDeparture = (i) => setDepartures(d => d.filter((_,idx) => idx !== i));
+  const patchDeparture = (i, patch) => setDepartures(d => d.map((row,idx) => idx === i ? {...row,...patch} : row));
   const [guestEmailState,    setGuestEmailState]    = useState(kickoff?.email || kickoff?.guestEmail || "");
   const [groupSize,          setGroupSize]          = useState(autoGroupSize);
   const [conciergeTitle,     setConciergeTitle]     = useState(kickoff?.conciergeTitle     || "");
@@ -3214,6 +3283,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     pdfNotes:          pdfNotes.trim(),
     // Multiple arrivals
     arrivals: JSON.stringify(arrivals.filter(a => a.name || a.date || a.flight)),
+    departures: JSON.stringify(departures.filter(d => d.name || d.date || d.flightNumber)),
     // Per-city ratings
     cityRatings: JSON.stringify(cityRatings.filter(r => r.city || r.rating > 0)),
     // Stay dates (set by concierge)
@@ -4178,17 +4248,18 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             ))}
           </DrawerSection>
 
-          {/* ── LLEGADAS MÚLTIPLES ─────────────────────────────── */}
-          <DrawerSection title="✈️ Llegadas del grupo" accent="neutral">
+          {/* ── LLEGADAS Y SALIDAS DEL GRUPO ─────────────────────────────── */}
+          <DrawerSection title="✈️ Llegadas y salidas del grupo" accent="neutral">
+            {/* Llegadas */}
             <div className="flex items-center justify-between">
-              <span />
+              <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">🛬 Llegadas</p>
               <button type="button" onClick={addArrival}
                 className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-900 text-white hover:bg-neutral-700">
                 + Agregar llegada
               </button>
             </div>
             {arrivals.length === 0 && (
-              <p className="text-[11px] text-neutral-400">Sin llegadas registradas. Úsalo cuando el grupo llega en vuelos distintos.</p>
+              <p className="text-[11px] text-neutral-400">Sin llegadas. Úsalo cuando el grupo llega en vuelos distintos.</p>
             )}
             {arrivals.map((a, i) => (
               <div key={i} className="bg-white border border-neutral-200 rounded-xl px-3 py-2 space-y-1.5">
@@ -4215,21 +4286,91 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   </div>
                 </div>
                 <div className="grid grid-cols-12 gap-1.5 items-center">
-                  <div className="col-span-4">
+                  <div className="col-span-3">
                     <p className="text-[9px] text-neutral-400 mb-0.5">N° vuelo <span className="text-blue-400">(tracking)</span></p>
                     <input value={a.flightNumber||""} onChange={e => patchArrival(i,{flightNumber:e.target.value.toUpperCase()})}
                       placeholder="AV204"
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono" />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-3">
                     <p className="text-[9px] text-neutral-400 mb-0.5">Origen <span className="text-blue-400">(IATA)</span></p>
                     <input value={a.origin||""} onChange={e => patchArrival(i,{origin:e.target.value.toUpperCase()})}
                       placeholder="BOG"
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono" />
                   </div>
-                  <div className="col-span-4">
+                  <div className="col-span-3">
+                    <p className="text-[9px] text-neutral-400 mb-0.5">Destino <span className="text-blue-400">(IATA)</span></p>
+                    <input value={a.destination||""} onChange={e => patchArrival(i,{destination:e.target.value.toUpperCase()})}
+                      placeholder="CTG"
+                      className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono" />
+                  </div>
+                  <div className="col-span-3">
                     <p className="text-[9px] text-neutral-400 mb-0.5">Notas</p>
                     <input value={a.flight||""} onChange={e => patchArrival(i,{flight:e.target.value})}
+                      placeholder="Detalles adicionales"
+                      className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300" />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Salidas */}
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-neutral-100">
+              <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">🛫 Salidas</p>
+              <button type="button" onClick={addDeparture}
+                className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-900 text-white hover:bg-neutral-700">
+                + Agregar salida
+              </button>
+            </div>
+            {departures.length === 0 && (
+              <p className="text-[11px] text-neutral-400">Sin salidas registradas.</p>
+            )}
+            {departures.map((d, i) => (
+              <div key={i} className="bg-white border border-neutral-200 rounded-xl px-3 py-2 space-y-1.5">
+                <div className="grid grid-cols-12 gap-1.5 items-center">
+                  <div className="col-span-5">
+                    <p className="text-[9px] text-neutral-400 mb-0.5">Quién</p>
+                    <input value={d.name} onChange={e => patchDeparture(i,{name:e.target.value})}
+                      placeholder="Juan + María"
+                      className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300" />
+                  </div>
+                  <div className="col-span-3">
+                    <p className="text-[9px] text-neutral-400 mb-0.5">Fecha</p>
+                    <input type="date" value={d.date} onChange={e => patchDeparture(i,{date:e.target.value})}
+                      className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent" />
+                  </div>
+                  <div className="col-span-3">
+                    <p className="text-[9px] text-neutral-400 mb-0.5">Hora salida</p>
+                    <input type="time" value={d.time} onChange={e => patchDeparture(i,{time:e.target.value})}
+                      className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent" />
+                  </div>
+                  <div className="col-span-1 flex justify-end items-end pb-0.5">
+                    <button type="button" onClick={() => removeDeparture(i)}
+                      className="text-neutral-300 hover:text-red-500 text-xs">✕</button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-12 gap-1.5 items-center">
+                  <div className="col-span-3">
+                    <p className="text-[9px] text-neutral-400 mb-0.5">N° vuelo <span className="text-blue-400">(tracking)</span></p>
+                    <input value={d.flightNumber||""} onChange={e => patchDeparture(i,{flightNumber:e.target.value.toUpperCase()})}
+                      placeholder="AV205"
+                      className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono" />
+                  </div>
+                  <div className="col-span-3">
+                    <p className="text-[9px] text-neutral-400 mb-0.5">Origen <span className="text-blue-400">(IATA)</span></p>
+                    <input value={d.origin||""} onChange={e => patchDeparture(i,{origin:e.target.value.toUpperCase()})}
+                      placeholder="CTG"
+                      className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono" />
+                  </div>
+                  <div className="col-span-3">
+                    <p className="text-[9px] text-neutral-400 mb-0.5">Destino <span className="text-blue-400">(IATA)</span></p>
+                    <input value={d.destination||""} onChange={e => patchDeparture(i,{destination:e.target.value.toUpperCase()})}
+                      placeholder="BOG"
+                      className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono" />
+                  </div>
+                  <div className="col-span-3">
+                    <p className="text-[9px] text-neutral-400 mb-0.5">Notas</p>
+                    <input value={d.notes||""} onChange={e => patchDeparture(i,{notes:e.target.value})}
                       placeholder="Detalles adicionales"
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300" />
                   </div>

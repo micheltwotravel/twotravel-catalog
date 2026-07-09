@@ -585,8 +585,8 @@ const CSS = `
 
   /* Meta: time · duration */
   .ev-meta{
-    font-size:8.5px;letter-spacing:2.5px;text-transform:uppercase;
-    color:#ccc;margin-bottom:10px;font-weight:500;
+    font-size:9px;letter-spacing:2px;text-transform:uppercase;
+    color:#888;margin-bottom:10px;font-weight:700;
   }
 
   /* Title + price row */
