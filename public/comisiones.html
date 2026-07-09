@@ -131,6 +131,9 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
     <option value="Michel">Michel</option>
     <option value="Xilene">Xilene</option>
   </select>
+  <div style="width:1px;height:22px;background:var(--border2);margin:0 2px"></div>
+  <button class="tbtn" id="view-lista" onclick="setView('lista')" style="background:var(--ink);color:#fff;border-color:var(--ink)">Lista</button>
+  <button class="tbtn" id="view-proveedores" onclick="setView('proveedores')">Por Proveedor</button>
   <button class="tbtn" onclick="exportCSV()">⬇ Excel</button>
   <span class="sync-info" id="sync-info">Cargando...</span>
 </div>
@@ -267,6 +270,7 @@ let searchQ = '';
 let filterStatus = '';
 let filterPerson = '';
 let activePopup = null;
+let currentView = 'lista';
 
 /* ── STORAGE ── */
 function save(){
@@ -332,6 +336,7 @@ function calcComision(){
 
 /* ── RENDER ── */
 function render(){
+  if(currentView === 'proveedores'){ renderProveedores(); return; }
   const main = document.getElementById('main');
   const today = new Date().toISOString().slice(0,10);
 
@@ -559,6 +564,105 @@ function exportCSV(){
   a.click();
   URL.revokeObjectURL(url);
   showToast('Exportando CSV...');
+}
+
+/* ── VIEW TOGGLE ── */
+function setView(v){
+  currentView = v;
+  document.getElementById('view-lista').style.cssText       = v==='lista'       ? 'background:var(--ink);color:#fff;border-color:var(--ink)' : '';
+  document.getElementById('view-proveedores').style.cssText = v==='proveedores' ? 'background:var(--ink);color:#fff;border-color:var(--ink)' : '';
+  render();
+}
+
+/* ── RENDER PROVEEDORES ── */
+function renderProveedores(){
+  const main = document.getElementById('main');
+  const today = new Date().toISOString().slice(0,10);
+
+  // Auto-mark overdue
+  comisiones.forEach(c => {
+    if(c.dueDate && c.dueDate < today && c.status === 'pend') c.status = 'vencida';
+  });
+
+  // Group by vendor
+  const map = {};
+  comisiones.forEach(c => {
+    const key = c.vendor || '(Sin nombre)';
+    if(!map[key]) map[key] = { vendor:key, category:c.category||'', items:[] };
+    map[key].items.push(c);
+  });
+
+  const vendors = Object.values(map).sort((a,b) => {
+    // Sort: vencidas first, then pendientes, then cobradas
+    const score = v => { const it = v.items; const hasV = it.some(c=>c.status==='vencida'); const hasP = it.some(c=>c.status==='pend'||c.status==='facturada'); return hasV?0:hasP?1:2; };
+    return score(a)-score(b);
+  });
+
+  if(!vendors.length){
+    main.innerHTML = `<div style="text-align:center;padding:60px;color:var(--ink3);font-size:13px">No hay comisiones registradas.</div>`;
+    return;
+  }
+
+  let html = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;padding-bottom:30px">`;
+
+  vendors.forEach(v => {
+    const items = v.items;
+    const pendItems  = items.filter(c=>c.status==='pend'||c.status==='facturada');
+    const vencItems  = items.filter(c=>c.status==='vencida');
+    const cobItems   = items.filter(c=>c.status==='cobrado');
+    const pendAmt    = pendItems.reduce((s,c)=>s+(parseFloat(c.amount)||0),0);
+    const vencAmt    = vencItems.reduce((s,c)=>s+(parseFloat(c.amount)||0),0);
+    const cobAmt     = cobItems.reduce((s,c) =>s+(parseFloat(c.amount)||0),0);
+    const allCobrado = items.every(c=>c.status==='cobrado');
+    const hasVencida = vencItems.length > 0;
+
+    const borderColor = hasVencida ? '#e05c5c' : allCobrado ? '#5cb87a' : 'var(--border)';
+    const headerBg    = hasVencida ? 'rgba(224,92,92,0.07)' : allCobrado ? 'rgba(92,184,122,0.07)' : 'var(--sand)';
+
+    // Category icon
+    const catIcon = {'Beach Club':'🏖','Boating':'⛵','Chef / Catering':'👨‍🍳','Restaurant':'🍽','Tour / Excursión':'🗺','Villa / Alojamiento':'🏡','Transporte':'🚗','Spa / Wellness':'💆','Otro':'📦'}[v.category]||'📋';
+
+    // Unique clients
+    const clients = [...new Set(items.map(c=>c.client).filter(Boolean))].slice(0,3);
+
+    html += `<div style="background:var(--white);border:1.5px solid ${borderColor};overflow:hidden">
+      <div style="background:${headerBg};padding:13px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid ${borderColor}">
+        <div>
+          <div style="font-size:13px;font-weight:500;color:var(--ink);display:flex;align-items:center;gap:7px">
+            <span>${catIcon}</span> ${esc(v.vendor)}
+          </div>
+          <div style="font-size:10px;color:var(--ink3);margin-top:3px;letter-spacing:.06em;text-transform:uppercase">${esc(v.category||'Sin categoría')}</div>
+        </div>
+        <div style="display:flex;gap:5px;flex-direction:column;align-items:flex-end">
+          ${hasVencida ? `<span style="background:#e05c5c;color:#fff;font-size:10px;padding:2px 8px;letter-spacing:.05em">VENCIDA</span>` : ''}
+          ${allCobrado ? `<span style="background:#5cb87a;color:#fff;font-size:10px;padding:2px 8px;letter-spacing:.05em">AL DÍA</span>` : ''}
+        </div>
+      </div>
+      <div style="padding:12px 16px">
+        <div style="display:flex;gap:10px;margin-bottom:12px">
+          ${vencAmt>0 ? `<div style="flex:1;text-align:center;padding:8px 6px;background:rgba(224,92,92,0.08);border:1px solid rgba(224,92,92,0.2)"><div style="font-size:17px;font-weight:300;color:#e05c5c">$${vencAmt.toLocaleString('es',{minimumFractionDigits:0})}</div><div style="font-size:9px;color:#e05c5c;letter-spacing:.06em;text-transform:uppercase;margin-top:2px">Vencido</div></div>` : ''}
+          ${pendAmt>0 ? `<div style="flex:1;text-align:center;padding:8px 6px;background:rgba(92,138,224,0.06);border:1px solid rgba(92,138,224,0.15)"><div style="font-size:17px;font-weight:300;color:#5c8ae0">$${pendAmt.toLocaleString('es',{minimumFractionDigits:0})}</div><div style="font-size:9px;color:#5c8ae0;letter-spacing:.06em;text-transform:uppercase;margin-top:2px">Pendiente</div></div>` : ''}
+          ${cobAmt>0 ? `<div style="flex:1;text-align:center;padding:8px 6px;background:rgba(92,184,122,0.06);border:1px solid rgba(92,184,122,0.15)"><div style="font-size:17px;font-weight:300;color:#5cb87a">$${cobAmt.toLocaleString('es',{minimumFractionDigits:0})}</div><div style="font-size:9px;color:#5cb87a;letter-spacing:.06em;text-transform:uppercase;margin-top:2px">Cobrado</div></div>` : ''}
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:10px">
+          ${items.slice(0,4).map(c => {
+            const st = STATUSES[c.status]||STATUSES.pend;
+            return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${st.color};flex-shrink:0"></span>
+              <span style="color:var(--ink);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.client||'—')}</span>
+              <span style="color:var(--ink3);font-size:10px;white-space:nowrap">${fmtDate(c.date)}</span>
+              <span style="color:${c.status==='vencida'?'#e05c5c':c.status==='cobrado'?'#5cb87a':'#5c8ae0'};font-weight:500;white-space:nowrap">$${(parseFloat(c.amount)||0).toLocaleString('es',{minimumFractionDigits:0})}</span>
+            </div>`;
+          }).join('')}
+          ${items.length>4 ? `<div style="padding-top:6px;font-size:10px;color:var(--ink3);text-align:center">+${items.length-4} más</div>` : ''}
+        </div>
+        <button onclick="setView('lista');searchQ=document.getElementById('search-input').value='${esc(v.vendor)}';document.getElementById('search-input').value='${esc(v.vendor)}';render()" style="margin-top:10px;width:100%;padding:7px;font-size:11px;letter-spacing:.05em;border:1px solid var(--border2);background:transparent;cursor:pointer;font-family:Jost,sans-serif;color:var(--ink3)">Ver detalle →</button>
+      </div>
+    </div>`;
+  });
+
+  html += `</div>`;
+  main.innerHTML = html;
 }
 
 /* ── INIT ── */
