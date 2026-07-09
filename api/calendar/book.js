@@ -44,7 +44,7 @@ export default async function handler(req, res) {
   const title = `Two Travel — ${type} con ${clientName}`;
 
   // Create Google Calendar event with Meet link
-  const eventRes = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1", {
+  const eventRes = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1&sendUpdates=all", {
     method: "POST",
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
     body: JSON.stringify({
