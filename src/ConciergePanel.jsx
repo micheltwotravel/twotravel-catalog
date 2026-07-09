@@ -1293,6 +1293,55 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
               />
             </div>
           )}
+          {/* Boating & Beach clubs — modalidad + tipo de bote + add-ons */}
+          {["boating","beach","beach-clubs","boating & beach"].some(k => String(item.category||"").toLowerCase().includes(k)) && (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Modalidad</span>
+                <div className="flex gap-1.5">
+                  {["Day Pass","Bote privado"].map(m => (
+                    <button key={m} type="button"
+                      onClick={() => onUpdate(item._uid, { boatModalidad: m })}
+                      className={`text-[10px] px-2 py-0.5 rounded-full border transition ${item.boatModalidad === m ? "bg-cyan-700 text-white border-cyan-700" : "border-neutral-300 text-neutral-500 hover:border-cyan-400"}`}>
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {item.boatModalidad === "Bote privado" && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Tipo de bote</span>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {["Speed boat","Yacht","Catamarán"].map(t => (
+                        <button key={t} type="button"
+                          onClick={() => onUpdate(item._uid, { boatType: item.boatType === t ? "" : t })}
+                          className={`text-[10px] px-2 py-0.5 rounded-full border transition ${item.boatType === t ? "bg-neutral-800 text-white border-neutral-800" : "border-neutral-300 text-neutral-500 hover:border-neutral-500"}`}>
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Add-ons</span>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {["DJ","Bartender","Comida en bote"].map(addon => {
+                        const current = item.boatAddons || [];
+                        const active = current.includes(addon);
+                        return (
+                          <button key={addon} type="button"
+                            onClick={() => onUpdate(item._uid, { boatAddons: active ? current.filter(a => a !== addon) : [...current, addon] })}
+                            className={`text-[10px] px-2 py-0.5 rounded-full border transition ${active ? "bg-violet-600 text-white border-violet-600" : "border-neutral-300 text-neutral-500 hover:border-violet-400"}`}>
+                            {addon}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
+          )}
           <div className="flex items-center gap-2">
             <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Notas</span>
             <input
@@ -1643,10 +1692,13 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
   };
 
   const addPresetToDay = (dayLabel, preset) => {
+    const accom = kickoff?.accommodationName || "";
+    const checkinTime  = kickoff?.checkIn  || "3:00 PM";
+    const checkoutTime = kickoff?.checkOut || "11:00 AM";
     const presets = {
-      checkin:   { name: "Check-in",  name_en: "Check-in",   category: "services", timeLabel: "3:00 PM",  notes: "" },
+      checkin:   { name: "Check-in",  name_en: "Check-in",   category: "services", timeLabel: checkinTime,  notes: "", ...(accom ? { location: accom } : {}) },
       breakfast: { name: "Desayuno",  name_en: "Breakfast",  category: "services", timeLabel: "8:00 AM",  notes: "" },
-      checkout:  { name: "Check-out", name_en: "Check-out",  category: "services", timeLabel: "11:00 AM", notes: "" },
+      checkout:  { name: "Check-out", name_en: "Check-out",  category: "services", timeLabel: checkoutTime, notes: "", ...(accom ? { location: accom } : {}) },
     };
     const p = presets[preset];
     if (!p) return;
