@@ -118,7 +118,11 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 <div class="header">
   <a href="/" class="logo">Two Travel</a>
   <div class="hdiv"></div>
-  <span class="hls">Finanzas · Cobro a Clientes</span>
+  <span class="hls">Finanzas</span>
+  <div style="display:flex;gap:0;margin-left:18px">
+    <a href="/pagos.html" style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 12px;border:1px solid var(--border2);text-decoration:none;background:var(--ink);color:#fff;border-color:var(--ink)">Cobro a Clientes</a>
+    <a href="/comisiones.html" style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 12px;border:1px solid var(--border2);text-decoration:none;color:var(--ink3);border-left:none">Comisiones</a>
+  </div>
   <div class="hright">
     <a href="/menu.html" class="back-btn">← Menú</a>
   </div>
@@ -560,7 +564,9 @@ function renderRow(p){
   const st = STATUSES[p.status] || STATUSES.pend;
   const fmtDate = d => {
     if(!d) return '';
-    const dt = new Date(d + 'T12:00:00');
+    // Handle both YYYY-MM-DD and full ISO timestamps
+    const dt = d.length === 10 ? new Date(d + 'T12:00:00') : new Date(d);
+    if(isNaN(dt)) return d;
     return dt.toLocaleDateString('es',{day:'numeric',month:'short',year:'numeric'});
   };
   const m = MEMBERS[p.person];

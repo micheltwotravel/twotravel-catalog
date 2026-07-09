@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Two Travel · Comisiones de Proveedores</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sand:#f7f4ef;--sand2:#efe9e0;--sand3:#e5ddd3;
+  --ink:#1a1814;--ink2:#3d3a35;--ink3:#7a7570;
+  --gold:#9a7d52;--gold2:#c4a272;--gold3:#e8d5b7;
+  --white:#ffffff;
+  --border:rgba(26,24,20,0.09);--border2:rgba(26,24,20,0.15);
+  --s-pend:#aaaaaa;--s-cobrado:#5cb87a;--s-facturada:#5c8ae0;--s-vencida:#e05c5c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color:var(--ink);font-weight:300;overflow:hidden}
+
+.header{height:54px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:0;position:fixed;top:0;left:0;right:0;z-index:100}
+.logo{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:500;letter-spacing:.04em;text-decoration:none;color:var(--ink)}
+.hdiv{width:1px;height:14px;background:var(--border2);margin:0 13px}
+.hls{font-size:10px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase}
+.hright{margin-left:auto;display:flex;align-items:center;gap:10px}
+.back-btn{font-size:11px;color:var(--ink3);text-decoration:none;letter-spacing:.06em;padding:5px 10px;border:1px solid var(--border2);transition:all .12s}
+.back-btn:hover{color:var(--ink);border-color:var(--gold)}
+.tab-nav{display:flex;gap:0;margin-left:18px}
+.tab-link{font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 12px;border:1px solid var(--border2);text-decoration:none;color:var(--ink3);transition:all .12s;background:transparent}
+.tab-link:hover{color:var(--gold);border-color:var(--gold)}
+.tab-link.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tab-link+.tab-link{border-left:none}
+
+.toolbar{position:fixed;top:54px;left:0;right:0;height:46px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:10px;z-index:99;overflow-x:auto}
+.tbtn{display:flex;align-items:center;gap:5px;padding:5px 12px;font-size:11px;letter-spacing:.05em;border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--ink2);font-family:'Jost',sans-serif;transition:all .12s;white-space:nowrap;flex-shrink:0}
+.tbtn:hover{border-color:var(--gold);color:var(--gold)}
+.tbtn.primary{background:var(--gold);color:var(--white);border-color:var(--gold)}
+.tbtn.primary:hover{background:var(--gold2);border-color:var(--gold2)}
+.search-box{display:flex;align-items:center;gap:7px;padding:5px 11px;border:1px solid var(--border2);background:var(--sand);font-size:11px;color:var(--ink3);font-family:'Jost',sans-serif;flex-shrink:0}
+.search-box input{border:none;background:transparent;outline:none;font-family:'Jost',sans-serif;font-size:11px;color:var(--ink);width:120px}
+.filter-sel{font-size:11px;padding:4px 8px;border:1px solid var(--border2);background:var(--white);font-family:'Jost',sans-serif;color:var(--ink2);outline:none;cursor:pointer;flex-shrink:0}
+.sync-info{margin-left:auto;font-size:10px;color:var(--ink3);letter-spacing:.04em;flex-shrink:0}
+
+.main{position:fixed;top:100px;left:0;right:0;bottom:0;overflow:auto;padding:20px 22px}
+
+.stats-bar{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.stat-card{background:var(--white);border:1px solid var(--border);padding:12px 18px;flex:1;min-width:120px}
+.stat-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+.stat-val{font-size:22px;font-weight:300;color:var(--ink)}
+.stat-sub{font-size:11px;color:var(--ink3);margin-top:2px}
+
+.table-wrap{overflow-x:auto;border:1px solid var(--border);background:var(--white);margin-bottom:20px}
+.ptable{width:100%;border-collapse:collapse;min-width:1000px}
+.ptable th{background:var(--sand);border-bottom:1px solid var(--border2);border-right:1px solid var(--border);padding:7px 10px;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);white-space:nowrap}
+.ptable td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:0;vertical-align:middle;height:38px;font-size:12px}
+.ptable td:last-child,.ptable th:last-child{border-right:none}
+.ptable tr:hover td{background:rgba(247,244,239,0.5)}
+.cell{padding:6px 10px;min-height:38px;display:flex;align-items:center;height:100%}
+.cell.editable:hover{background:rgba(154,125,82,0.06);cursor:text}
+
+.status-chip{display:inline-flex;align-items:center;padding:3px 10px;font-size:11px;border-radius:2px;color:#fff;white-space:nowrap;cursor:pointer;min-width:90px;justify-content:center}
+.status-wrap{display:flex;align-items:center;justify-content:center;padding:4px 6px}
+.status-popup{position:fixed;background:var(--white);border:1px solid var(--border2);box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:300;min-width:150px;padding:4px 0}
+.sp-item{padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.sp-item:hover{background:var(--sand)}
+.sp-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+.amount-cell{font-weight:500;font-size:12px;color:var(--ink)}
+.person-chip{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:8px;font-weight:500;color:#fff;flex-shrink:0}
+
+.pct-badge{display:inline-flex;align-items:center;padding:2px 7px;font-size:10px;background:#f0f7ef;color:#3d7a52;border-radius:2px;font-weight:500}
+
+.add-row td{padding:6px 10px;font-size:11px;color:var(--ink3);cursor:pointer;border-top:1px dashed var(--border2)}
+.add-row:hover td{color:var(--gold)}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--white);width:580px;max-width:96vw;max-height:92vh;overflow-y:auto}
+.modal-head{padding:20px 24px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--white);z-index:10}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:500}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink3)}
+.modal-body{padding:20px 24px}
+.modal-foot{padding:14px 24px 20px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--white)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.form-row.single{grid-template-columns:1fr}
+.form-row.triple{grid-template-columns:1fr 1fr 1fr}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.form-input,.form-select{border:1px solid var(--border2);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--ink);background:transparent;outline:none;width:100%}
+.form-select{background:var(--white);cursor:pointer}
+.form-input:focus,.form-select:focus{border-color:var(--gold)}
+.form-textarea{border:1px solid var(--border2);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--ink);background:transparent;outline:none;width:100%;resize:vertical;min-height:60px}
+.form-textarea:focus{border-color:var(--gold)}
+.pct-hint{font-size:10px;color:#3d7a52;font-weight:500;margin-top:3px}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 18px;font-size:12px;letter-spacing:.04em;z-index:600;border-radius:2px;pointer-events:none;opacity:1;transition:opacity .3s}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="/" class="logo">Two Travel</a>
+  <div class="hdiv"></div>
+  <span class="hls">Finanzas</span>
+  <div class="tab-nav">
+    <a href="/pagos.html" class="tab-link">Cobro a Clientes</a>
+    <a href="/comisiones.html" class="tab-link active">Comisiones</a>
+  </div>
+  <div class="hright">
+    <a href="/menu.html" class="back-btn">← Menú</a>
+  </div>
+</div>
+
+<div class="toolbar">
+  <button class="tbtn primary" onclick="openNewModal()">+ Nueva comisión</button>
+  <div class="search-box">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
+    <input type="text" placeholder="Buscar proveedor, cliente..." oninput="searchQ=this.value;render()" id="search-input">
+  </div>
+  <select class="filter-sel" onchange="filterStatus=this.value;render()">
+    <option value="">Todos los estados</option>
+    <option value="pend">Pendiente</option>
+    <option value="facturada">Facturada</option>
+    <option value="cobrado">Cobrada</option>
+    <option value="vencida">Vencida</option>
+  </select>
+  <select class="filter-sel" onchange="filterPerson=this.value;render()">
+    <option value="">Todos</option>
+    <option value="Alia">Alia</option>
+    <option value="Caro">Caro</option>
+    <option value="Dani">Dani</option>
+    <option value="Lyna">Lyna</option>
+    <option value="Michel">Michel</option>
+    <option value="Xilene">Xilene</option>
+  </select>
+  <button class="tbtn" onclick="exportCSV()">⬇ Excel</button>
+  <span class="sync-info" id="sync-info">Cargando...</span>
+</div>
+
+<div class="main" id="main"></div>
+<div id="status-popup" class="status-popup" style="display:none"></div>
+
+<!-- MODAL: Nueva comisión -->
+<div class="overlay" id="new-modal" style="display:none" onclick="if(event.target===this)closeNewModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">Nueva Comisión</span>
+      <button class="modal-close" onclick="closeNewModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Proveedor *</label>
+          <input class="form-input" id="n-vendor" placeholder="Ej. Bora Bora, Dennis Chef, Villa Vela">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha del servicio</label>
+          <input class="form-input" type="date" id="n-date">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Cliente / Grupo *</label>
+          <input class="form-input" id="n-client" placeholder="Ej. Jerome V., Ana & Luis">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Categoría</label>
+          <select class="form-select" id="n-category">
+            <option value="">—</option>
+            <option value="Beach Club">Beach Club</option>
+            <option value="Boating">Boating</option>
+            <option value="Chef / Catering">Chef / Catering</option>
+            <option value="Restaurant">Restaurante</option>
+            <option value="Tour / Excursión">Tour / Excursión</option>
+            <option value="Villa / Alojamiento">Villa / Alojamiento</option>
+            <option value="Transporte">Transporte</option>
+            <option value="Spa / Wellness">Spa / Wellness</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row single">
+        <div class="form-group">
+          <label class="form-label">Descripción del servicio</label>
+          <textarea class="form-textarea" id="n-desc" rows="2" placeholder="Ej. Day pass x8 pax + bebidas"></textarea>
+        </div>
+      </div>
+
+      <div class="form-row triple">
+        <div class="form-group">
+          <label class="form-label">Monto total servicio *</label>
+          <div style="display:flex;gap:6px">
+            <select class="form-select" id="n-currency" style="width:80px;flex-shrink:0" onchange="calcComision()">
+              <option value="USD">USD</option>
+              <option value="COP">COP</option>
+            </select>
+            <input class="form-input" id="n-total" type="number" placeholder="0" oninput="calcComision()">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">% Comisión</label>
+          <input class="form-input" id="n-pct" type="number" placeholder="10" min="0" max="100" step="0.5" oninput="calcComision()">
+          <span class="pct-hint" id="n-pct-hint"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monto comisión</label>
+          <input class="form-input" id="n-amount" type="number" placeholder="0" step="0.01">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Gestionado por</label>
+          <select class="form-select" id="n-person">
+            <option value="">—</option>
+            <option value="Alia">Alia</option>
+            <option value="Caro">Caro</option>
+            <option value="Dani">Dani</option>
+            <option value="Lyna">Lyna</option>
+            <option value="Michel">Michel</option>
+            <option value="Xilene">Xilene</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha de vencimiento</label>
+          <input class="form-input" type="date" id="n-due">
+        </div>
+      </div>
+
+      <div class="form-row single">
+        <div class="form-group">
+          <label class="form-label">Notas</label>
+          <textarea class="form-textarea" id="n-notes" rows="2" placeholder="Acuerdo, contacto, método de cobro..."></textarea>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="tbtn" onclick="closeNewModal()">Cancelar</button>
+      <button class="tbtn primary" onclick="createComision()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec';
+
+const STATUSES = {
+  pend:      { label:'Pendiente',  color:'#aaaaaa' },
+  facturada: { label:'Facturada',  color:'#5c8ae0' },
+  cobrado:   { label:'Cobrada',    color:'#5cb87a' },
+  vencida:   { label:'Vencida',    color:'#e05c5c' },
+};
+
+const MEMBERS = {
+  Alia:   {bg:'#9a7d52',i:'AL'},
+  Caro:   {bg:'#3d8a5a',i:'CA'},
+  Dani:   {bg:'#8a3d5a',i:'DA'},
+  Lyna:   {bg:'#c47d2a',i:'LY'},
+  Michel: {bg:'#3d5a8a',i:'MI'},
+  Xilene: {bg:'#5a3d8a',i:'XI'},
+};
+
+let comisiones = [];
+let searchQ = '';
+let filterStatus = '';
+let filterPerson = '';
+let activePopup = null;
+
+/* ── STORAGE ── */
+function save(){
+  localStorage.setItem('tt_comisiones', JSON.stringify(comisiones));
+  syncToGAS();
+}
+function load(){
+  const saved = localStorage.getItem('tt_comisiones');
+  if(saved){ try{ comisiones = JSON.parse(saved); }catch{} }
+}
+async function syncToGAS(){
+  try{
+    await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'saveComisiones',payload:{comisiones}})});
+  }catch{}
+}
+async function loadFromGAS(){
+  setSyncInfo('Sincronizando...');
+  try{
+    const r = await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'getComisiones'})});
+    const d = await r.json();
+    if(d.ok && d.data?.length){
+      comisiones = d.data;
+      localStorage.setItem('tt_comisiones', JSON.stringify(comisiones));
+      setSyncInfo('Sincronizado · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
+    } else {
+      setSyncInfo('Local');
+    }
+  }catch{
+    setSyncInfo('Local (sin conexión)');
+  }
+  render();
+}
+function setSyncInfo(t){ document.getElementById('sync-info').textContent = t; }
+
+/* ── HELPERS ── */
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(d){
+  if(!d) return '';
+  const dt = d.length === 10 ? new Date(d + 'T12:00:00') : new Date(d);
+  if(isNaN(dt)) return d;
+  return dt.toLocaleDateString('es',{day:'numeric',month:'short',year:'numeric'});
+}
+function fmtAmount(amount, currency){
+  if(!amount) return '—';
+  return `${currency||'USD'} ${parseFloat(amount).toLocaleString('es',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+}
+
+/* ── CALC COMISION ── */
+function calcComision(){
+  const total = parseFloat(document.getElementById('n-total').value) || 0;
+  const pct   = parseFloat(document.getElementById('n-pct').value)   || 0;
+  if(total && pct){
+    const com = (total * pct / 100);
+    document.getElementById('n-amount').value = com.toFixed(2);
+    const cur = document.getElementById('n-currency').value;
+    document.getElementById('n-pct-hint').textContent = `= ${cur} ${com.toLocaleString('es',{minimumFractionDigits:2})}`;
+  } else {
+    document.getElementById('n-pct-hint').textContent = '';
+  }
+}
+
+/* ── RENDER ── */
+function render(){
+  const main = document.getElementById('main');
+  const today = new Date().toISOString().slice(0,10);
+
+  // Auto-mark overdue
+  comisiones.forEach(c => {
+    if(c.dueDate && c.dueDate < today && c.status === 'pend') c.status = 'vencida';
+  });
+
+  let items = comisiones.filter(c => {
+    const q = searchQ.toLowerCase();
+    const matchQ = !q || [c.vendor,c.client,c.desc,c.category,c.notes].some(f=>(f||'').toLowerCase().includes(q));
+    const matchS = !filterStatus || c.status === filterStatus;
+    const matchP = !filterPerson || c.person === filterPerson;
+    return matchQ && matchS && matchP;
+  }).sort((a,b) => (b.createdAt||'') > (a.createdAt||'') ? 1 : -1);
+
+  // Stats
+  const total     = comisiones.length;
+  const pend      = comisiones.filter(c=>c.status==='pend').length;
+  const vencidas  = comisiones.filter(c=>c.status==='vencida').length;
+  const cobradas  = comisiones.filter(c=>c.status==='cobrado').length;
+  const totalCobrado = comisiones.filter(c=>c.status==='cobrado' && c.currency==='USD')
+    .reduce((s,c)=>s+(parseFloat(c.amount)||0),0);
+
+  let html = `<div class="stats-bar">
+    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val">${total}</div><div class="stat-sub">comisiones</div></div>
+    <div class="stat-card"><div class="stat-label">Pendientes</div><div class="stat-val" style="color:#aaa">${pend}</div><div class="stat-sub">por cobrar</div></div>
+    <div class="stat-card"><div class="stat-label">Vencidas</div><div class="stat-val" style="color:#e05c5c">${vencidas}</div><div class="stat-sub">urgente</div></div>
+    <div class="stat-card"><div class="stat-label">Cobradas</div><div class="stat-val" style="color:#5cb87a">${cobradas}</div><div class="stat-sub">USD $${totalCobrado.toLocaleString('es',{minimumFractionDigits:2})}</div></div>
+  </div>`;
+
+  if(!items.length){
+    html += `<div style="text-align:center;padding:60px;color:var(--ink3);font-size:13px">No hay comisiones. Crea la primera con "+ Nueva comisión".</div>`;
+    main.innerHTML = html; return;
+  }
+
+  html += `<div class="table-wrap"><table class="ptable">
+    <thead><tr>
+      <th>Fecha</th>
+      <th>Proveedor</th>
+      <th>Categoría</th>
+      <th>Cliente / Grupo</th>
+      <th>Descripción</th>
+      <th>Total servicio</th>
+      <th>%</th>
+      <th>Comisión</th>
+      <th>Gestionado por</th>
+      <th>Vencimiento</th>
+      <th>Estado</th>
+      <th>Notas</th>
+    </tr></thead>
+    <tbody>`;
+
+  items.forEach(c => { html += renderRow(c, today); });
+
+  html += `<tr class="add-row" onclick="openNewModal()">
+    <td colspan="12">+ Agregar comisión</td>
+  </tr>`;
+  html += `</tbody></table></div>`;
+
+  main.innerHTML = html;
+}
+
+function renderRow(c, today){
+  const st = STATUSES[c.status] || STATUSES.pend;
+  const m = MEMBERS[c.person];
+  const avatar = m
+    ? `<span class="person-chip" style="background:${m.bg}" title="${c.person}">${m.i}</span>`
+    : `<span style="color:var(--ink3);font-size:11px">—</span>`;
+
+  const isOverdue = c.dueDate && c.dueDate < today && c.status !== 'cobrado';
+  const dueStyle = isOverdue ? 'color:#dc2626;font-weight:500' : 'color:var(--ink3)';
+
+  const pctBadge = c.pct ? `<span class="pct-badge">${c.pct}%</span>` : '—';
+
+  return `<tr data-id="${c.id}">
+    <td><div class="cell editable" ondblclick="editField('${c.id}','date')">${fmtDate(c.date)}</div></td>
+    <td><div class="cell editable" style="font-weight:500" ondblclick="editField('${c.id}','vendor')">${esc(c.vendor||'')}</div></td>
+    <td><div class="cell" style="font-size:11px;color:var(--ink3)">${esc(c.category||'—')}</div></td>
+    <td><div class="cell editable" ondblclick="editField('${c.id}','client')">${esc(c.client||'')}</div></td>
+    <td><div class="cell" style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px" title="${esc(c.desc||'')}">${esc(c.desc||'—')}</div></td>
+    <td><div class="cell amount-cell" style="font-size:11px;color:var(--ink3)">${fmtAmount(c.total, c.currency)}</div></td>
+    <td><div class="cell" style="justify-content:center">${pctBadge}</div></td>
+    <td><div class="cell amount-cell" style="color:#3d7a52">${fmtAmount(c.amount, c.currency)}</div></td>
+    <td><div class="cell" style="gap:6px;padding:5px 8px">${avatar}<span style="font-size:11px;color:var(--ink3)">${c.person||'—'}</span></div></td>
+    <td><div class="cell" style="font-size:11px;${dueStyle}">${fmtDate(c.dueDate)||'—'}</div></td>
+    <td class="status-wrap"><span class="status-chip" style="background:${st.color}" onclick="openStatusPopup('${c.id}',event)">${st.label}</span></td>
+    <td><div class="cell editable" ondblclick="editField('${c.id}','notes')" style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink3)">${esc(c.notes||'')}</div></td>
+  </tr>`;
+}
+
+/* ── INLINE EDIT ── */
+function editField(id, field){
+  const c = comisiones.find(x=>x.id===id);
+  if(!c) return;
+  const colMap = {date:1,vendor:2,client:4,notes:12};
+  const el = document.querySelector(`tr[data-id="${id}"] td:nth-child(${colMap[field]}) .cell`);
+  if(!el) return;
+  const input = document.createElement('input');
+  input.type = field === 'date' ? 'date' : 'text';
+  input.value = c[field] || '';
+  input.style.cssText = 'width:100%;border:none;outline:none;font-family:Jost,sans-serif;font-size:12px;color:var(--ink);background:rgba(154,125,82,0.08);padding:6px 10px;height:38px';
+  const done = () => { c[field] = input.value; save(); render(); };
+  input.addEventListener('blur', done);
+  input.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); done(); } if(e.key==='Escape') render(); });
+  el.innerHTML = ''; el.appendChild(input); input.focus();
+}
+
+/* ── STATUS POPUP ── */
+function openStatusPopup(id, e){
+  e.stopPropagation();
+  closePopups();
+  const popup = document.getElementById('status-popup');
+  popup.innerHTML = Object.entries(STATUSES).map(([k,s]) =>
+    `<div class="sp-item" onclick="setStatus('${id}','${k}')"><span class="sp-dot" style="background:${s.color}"></span>${s.label}</div>`
+  ).join('');
+  positionPopup(popup, e);
+  activePopup = popup;
+}
+function setStatus(id, status){
+  const c = comisiones.find(x=>x.id===id);
+  if(c){ c.status = status; save(); }
+  closePopups(); render();
+}
+function positionPopup(popup, e){
+  popup.style.display = 'block';
+  const rect = e.target.getBoundingClientRect ? e.target.getBoundingClientRect() : {bottom:e.clientY,left:e.clientX};
+  let top = (rect.bottom||e.clientY)+4, left = rect.left||e.clientX;
+  if(left+180>window.innerWidth) left=window.innerWidth-185;
+  if(top+200>window.innerHeight) top=(rect.top||e.clientY)-205;
+  popup.style.top=top+'px'; popup.style.left=left+'px';
+}
+function closePopups(){
+  document.getElementById('status-popup').style.display='none';
+  activePopup=null;
+}
+document.addEventListener('click', closePopups);
+
+/* ── NEW COMISION MODAL ── */
+function openNewModal(){
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('n-date').value = today;
+  document.getElementById('n-vendor').value = '';
+  document.getElementById('n-client').value = '';
+  document.getElementById('n-category').value = '';
+  document.getElementById('n-desc').value = '';
+  document.getElementById('n-total').value = '';
+  document.getElementById('n-pct').value = '';
+  document.getElementById('n-amount').value = '';
+  document.getElementById('n-currency').value = 'USD';
+  document.getElementById('n-person').value = '';
+  document.getElementById('n-due').value = '';
+  document.getElementById('n-notes').value = '';
+  document.getElementById('n-pct-hint').textContent = '';
+  document.getElementById('new-modal').style.display = 'flex';
+  setTimeout(()=>{ document.getElementById('n-vendor').focus(); }, 50);
+}
+function closeNewModal(){
+  document.getElementById('new-modal').style.display = 'none';
+}
+function createComision(){
+  const vendor = document.getElementById('n-vendor').value.trim();
+  const client = document.getElementById('n-client').value.trim();
+  if(!vendor){ showToast('Ingresa el nombre del proveedor'); return; }
+  if(!client){ showToast('Ingresa el cliente o grupo'); return; }
+  const amount = document.getElementById('n-amount').value || document.getElementById('n-total').value;
+  if(!amount){ showToast('Ingresa el monto'); return; }
+
+  const c = {
+    id:        'cm' + Date.now(),
+    date:      document.getElementById('n-date').value,
+    vendor,
+    client,
+    category:  document.getElementById('n-category').value,
+    desc:      document.getElementById('n-desc').value.trim(),
+    total:     document.getElementById('n-total').value,
+    pct:       document.getElementById('n-pct').value,
+    amount:    document.getElementById('n-amount').value,
+    currency:  document.getElementById('n-currency').value,
+    person:    document.getElementById('n-person').value,
+    dueDate:   document.getElementById('n-due').value,
+    notes:     document.getElementById('n-notes').value.trim(),
+    status:    'pend',
+    createdAt: new Date().toISOString(),
+  };
+  comisiones.unshift(c);
+  save();
+  closeNewModal();
+  render();
+  showToast('Comisión registrada ✓');
+}
+
+/* ── TOAST ── */
+function showToast(msg, duration=3000){
+  const t = document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, duration);
+}
+
+/* ── EXPORT CSV ── */
+function exportCSV(){
+  const headers = ['Fecha','Proveedor','Categoría','Cliente','Descripción','Total Servicio','% Comisión','Monto Comisión','Moneda','Gestionado por','Vencimiento','Estado','Notas'];
+  const rows = comisiones.map(c => [
+    c.date||'',
+    c.vendor||'',
+    c.category||'',
+    c.client||'',
+    c.desc||'',
+    c.total||'',
+    c.pct ? c.pct+'%' : '',
+    c.amount||'',
+    c.currency||'',
+    c.person||'',
+    c.dueDate||'',
+    (STATUSES[c.status]||STATUSES.pend).label,
+    c.notes||'',
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`));
+  const csv = '﻿' + [headers.map(h=>`"${h}"`), ...rows].map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `comisiones_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Exportando CSV...');
+}
+
+/* ── INIT ── */
+load();
+render();
+setSyncInfo('Cargando...');
+loadFromGAS();
+</script>
+</body>
+</html>
