@@ -582,8 +582,8 @@ function renderRow(p){
     : '—';
 
   const receipt = p.receipt
-    ? `<img class="receipt-thumb" src="${p.receipt}" onclick="openLightbox('${p.id}')">`
-    : `<button class="receipt-btn" onclick="uploadReceipt('${p.id}',event)">📎</button>`;
+    ? `<a href="${esc(p.receipt)}" target="_blank" style="font-size:10px;color:#5c8ae0;text-decoration:none;white-space:nowrap" title="${esc(p.receipt)}">🔗 QB</a>`
+    : `<button class="receipt-btn" onclick="editReceiptLink('${p.id}',event)">+ Link QB</button>`;
 
   const factura = p.factura
     ? `<a href="${esc(p.factura)}" target="_blank" style="font-size:10px;color:var(--gold);text-decoration:none;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;display:block" title="${esc(p.factura)}">🔗 Ver</a>`
@@ -698,7 +698,18 @@ function closePopups(){
 }
 document.addEventListener('click', closePopups);
 
-/* ── RECEIPT UPLOAD ── */
+/* ── RECEIPT LINK (QuickBooks) ── */
+function editReceiptLink(id, e){
+  e.stopPropagation();
+  const p = pagos.find(x=>x.id===id);
+  if(!p) return;
+  const url = prompt('Link de QuickBooks:', p.receipt || '');
+  if(url === null) return;
+  p.receipt = url.trim();
+  save(); render();
+}
+
+/* ── RECEIPT UPLOAD (legacy, unused) ── */
 function uploadReceipt(id, e){
   e.stopPropagation();
   const input = document.createElement('input');
