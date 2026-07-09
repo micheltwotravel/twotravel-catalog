@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Two Travel · Weekly Update</title>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Jost',sans-serif;background:#f7f4ef;color:#1a1814;font-weight:300;min-height:100%}
+.page{max-width:720px;margin:0 auto;padding:60px 32px 80px}
+.eyebrow{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#9a7d52;margin-bottom:14px}
+h1{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:500;color:#1a1814;line-height:1.15;margin-bottom:8px}
+.subtitle{font-size:14px;color:#7a7570;margin-bottom:48px}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:48px}
+.metric{background:#fff;border:1px solid rgba(26,24,20,.09);padding:20px 22px}
+.metric-val{font-size:28px;font-weight:300;color:#1a1814;margin-bottom:4px}
+.metric-label{font-size:11px;color:#7a7570;letter-spacing:.04em}
+.section{margin-bottom:40px}
+.section-head{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.section-head span{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#7a7570;white-space:nowrap}
+.section-head::after{content:'';flex:1;height:1px;background:rgba(26,24,20,.09)}
+.item{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid rgba(26,24,20,.06)}
+.item:last-child{border-bottom:none}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:6px}
+.done{background:#5cb87a}
+.pending{background:#e8a020}
+.next{background:#c4a272}
+.item-body{flex:1}
+.item-title{font-size:14px;font-weight:500;color:#1a1814;margin-bottom:4px}
+.item-desc{font-size:13px;color:#7a7570;line-height:1.65}
+.tag{display:inline-flex;font-size:10px;letter-spacing:.06em;padding:2px 9px;margin-top:8px;margin-right:4px;border:1px solid}
+.tag.done{color:#3d7a52;border-color:#3d7a52;background:#f0f7ef}
+.tag.pending{color:#92580a;border-color:#e8a020;background:#fef8ec}
+.tag.next{color:#7a7570;border-color:#c4a272;background:#faf7f2}
+.links{display:flex;gap:16px;flex-wrap:wrap;margin-top:48px;padding-top:24px;border-top:1px solid rgba(26,24,20,.09)}
+.lnk{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#9a7d52;text-decoration:none;letter-spacing:.04em}
+.lnk:hover{color:#1a1814}
+.lnk svg{opacity:.6}
+.footer{margin-top:32px;font-size:11px;color:#aaa9a5;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="eyebrow">Two Travel · Internal update</div>
+  <h1>Platform progress<br>week of July 7, 2026</h1>
+  <div class="subtitle">Prepared for leadership review &nbsp;·&nbsp; July 9, 2026</div>
+
+  <div class="metrics">
+    <div class="metric"><div class="metric-val">12</div><div class="metric-label">Features shipped</div></div>
+    <div class="metric"><div class="metric-val">3</div><div class="metric-label">New pages built</div></div>
+    <div class="metric"><div class="metric-val">Fri Jul 11</div><div class="metric-label">Portal launch deadline</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span>Shipped this week</span></div>
+
+    <div class="item">
+      <div class="dot done"></div>
+      <div class="item-body">
+        <div class="item-title">Provider commissions dashboard</div>
+        <div class="item-desc">New page at twotravelvip.com/comisiones.html — full commission tracking with status (pending, invoiced, collected, overdue), a dashboard view grouped by provider showing what each one owes, and a WhatsApp "collect" button per row to message providers directly.</div>
+        <span class="tag done">Live</span>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="dot done"></div>
+      <div class="item-body">
+        <div class="item-title">Client billing page — QuickBooks link</div>
+        <div class="item-desc">Comprobante field replaced with a direct QuickBooks link input. Invoices now link to QB instead of uploading image files — faster and cleaner for Lyna's workflow.</div>
+        <span class="tag done">Live</span>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="dot done"></div>
+      <div class="item-body">
+        <div class="item-title">Google Meet invite — bilingual and friendly</div>
+        <div class="item-desc">Meeting confirmation emails now send automatically to the client. The invite description is warm and bilingual — English or Spanish based on the kickoff language setting.</div>
+        <span class="tag done">Live</span>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="dot done"></div>
+      <div class="item-body">
+        <div class="item-title">Concierge portal — 7 improvements from Caro's walkthrough</div>
+        <div class="item-desc">Arrivals with destination field · departure flights section · multi-city catalog tabs · "+ Add day" at bottom of itinerary · auto-dates from arrival date · trip name bold in PDF · activity time bold in web view · check-in/check-out presets pulled from kickoff data.</div>
+        <span class="tag done">Live</span>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="dot done"></div>
+      <div class="item-body">
+        <div class="item-title">Boating & beach club — full activity configuration</div>
+        <div class="item-desc">Boat modality (day pass / private boat) · boat type selector (speed boat, yacht, catamaran) · add-ons (DJ, bartender, food on boat). Beach club category standardized across the catalog.</div>
+        <span class="tag done">Live</span>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="dot done"></div>
+      <div class="item-body">
+        <div class="item-title">Check-in form — portal link</div>
+        <div class="item-desc">The form link now points to the portal's own /ci/[kickoffId] URL instead of HubSpot. Concierges copy the link directly from the kickoff panel — no more manual URL management.</div>
+        <span class="tag done">Live</span>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="dot done"></div>
+      <div class="item-body">
+        <div class="item-title">TikTok content — produced with Juan and Vale</div>
+        <div class="item-desc">Video shoot completed. Production took longer than planned but the final result came out well.</div>
+        <span class="tag done">Done</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span>In progress</span></div>
+
+    <div class="item">
+      <div class="dot pending"></div>
+      <div class="item-body">
+        <div class="item-title">WhatsApp Business — number verification</div>
+        <div class="item-desc">Meta verification pending. Waiting on Dina to complete the verification step. Once live, the "Collect" and "Remind" buttons in both billing pages will send real WhatsApp messages to clients and providers.</div>
+        <span class="tag pending">Waiting on Dina</span>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="dot pending"></div>
+      <div class="item-body">
+        <div class="item-title">Concierge portal — final feedback window</div>
+        <div class="item-desc">The portal is fully functional and ready to launch. The team has until Friday July 11 to submit any change requests. Launch is confirmed for Monday July 14 — no extensions.</div>
+        <span class="tag pending">Deadline: Fri Jul 11</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span>Coming up next week</span></div>
+
+    <div class="item">
+      <div class="dot next"></div>
+      <div class="item-body">
+        <div class="item-title">Meeting with Génesis — accounting integration</div>
+        <div class="item-desc">Reviewing how to connect the platform with the accounting process efficiently. Goal: reduce manual work between the portal and the accounting team.</div>
+        <span class="tag next">Scheduled</span>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="dot next"></div>
+      <div class="item-body">
+        <div class="item-title">Concierge portal — full team launch</div>
+        <div class="item-desc">Rollout to the full concierge team after the Friday feedback deadline closes.</div>
+        <span class="tag next">Mon Jul 14</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="links">
+    <a class="lnk" href="/comisiones.html?demo=1">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="8" y1="5" x2="8" y2="11"/></svg>
+      Commissions demo
+    </a>
+    <a class="lnk" href="/pagos.html">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="8" y1="5" x2="8" y2="11"/></svg>
+      Client billing
+    </a>
+    <a class="lnk" href="/">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="8" y1="5" x2="8" y2="11"/></svg>
+      Concierge portal
+    </a>
+  </div>
+
+  <div class="footer">Two Travel · twotravelvip.com · Confidential internal document</div>
+
+</div>
+</body>
+</html>
