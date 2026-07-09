@@ -18,7 +18,7 @@ async function getAccessToken(refreshToken) {
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { concierge, date, startTime, endTime, clientName, clientEmail, clientPhone, kickoffId, meetingType } = req.body;
+  const { concierge, date, startTime, endTime, clientName, clientEmail, clientPhone, kickoffId, meetingType, lang } = req.body;
   if (!concierge || !date || !startTime || !clientName || !clientEmail) {
     return res.status(400).json({ error: "Missing required fields" });
   }
@@ -58,7 +58,9 @@ export default async function handler(req, res) {
           conferenceSolutionKey: { type: "hangoutsMeet" },
         },
       },
-      description: `Reunión agendada desde Two Travel Portal\nCliente: ${clientName}\nEmail: ${clientEmail}\nTeléfono: ${clientPhone || "—"}`,
+      description: lang === "es"
+        ? `Hola ${clientName},\n\nTu reunión con Two Travel está confirmada. Estamos muy emocionados de conectar contigo y comenzar a planear tu experiencia.\n\nNos vemos pronto — cualquier pregunta antes de la llamada, escríbenos directamente.\n\nEl equipo de Two Travel\n\n—\n📧 ${clientEmail}${clientPhone ? `\n📱 ${clientPhone}` : ""}`
+        : `Hi ${clientName},\n\nYour call with Two Travel is confirmed — we're looking forward to connecting with you and starting to plan your experience.\n\nSee you soon! Feel free to reach out before the call if you have any questions.\n\nThe Two Travel Team\n\n—\n📧 ${clientEmail}${clientPhone ? `\n📱 ${clientPhone}` : ""}`,
     }),
   });
 
