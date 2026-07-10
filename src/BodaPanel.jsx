@@ -21,16 +21,30 @@ const FASES = ["Onboarding", "Planning", "Pre-Wedding", "Wedding Day", "Post-Wed
 const ESTADOS_BODA = ["Activa", "En pausa", "Terminada", "Cancelada"];
 const ESTADOS_TASK = ["Pendiente", "En curso", "Terminado", "Cancelado"];
 
+function parseDate(d) {
+  if (!d) return null;
+  if (typeof d === "string") return new Date(d.length === 10 ? d + "T12:00:00" : d);
+  return new Date(d);
+}
+
+function toDateInput(d) {
+  if (!d) return "";
+  const dt = parseDate(d);
+  if (!dt || isNaN(dt)) return "";
+  return dt.toISOString().slice(0, 10);
+}
+
 function fmtDate(d) {
   if (!d) return "";
-  const dt = typeof d === "string" ? new Date(d + "T12:00:00") : new Date(d);
-  if (isNaN(dt)) return d;
+  const dt = parseDate(d);
+  if (!dt || isNaN(dt)) return String(d);
   return dt.toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" });
 }
 
 function daysUntil(d) {
   if (!d) return null;
-  const dt = typeof d === "string" ? new Date(d + "T12:00:00") : new Date(d);
+  const dt = parseDate(d);
+  if (!dt || isNaN(dt)) return null;
   const today = new Date(); today.setHours(0,0,0,0);
   return Math.ceil((dt - today) / 86400000);
 }
@@ -41,7 +55,7 @@ function daysUntil(d) {
 function BodaForm({ boda, onSave, onCancel, saving, users = [] }) {
   const [form, setForm] = useState({
     clienteName: boda?.clienteName || "",
-    weddingDate: boda?.weddingDate || "",
+    weddingDate: toDateInput(boda?.weddingDate),
     venue: boda?.venue || "",
     responsable: boda?.responsable || "",
     phase: boda?.phase || "Onboarding",
