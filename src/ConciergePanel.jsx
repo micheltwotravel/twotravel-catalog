@@ -1149,7 +1149,7 @@ function mapManualToCartItem() {
 /* ═══════════════════════════════════════════════════════════════
    ACTIVITY ROW — inline-editable row inside a day section
 ═══════════════════════════════════════════════════════════════ */
-function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize = 1 }) {
+function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], groupSize = 1 }) {
   const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation || item.confirmed));
   return (
     <div className="px-4 py-2.5 hover:bg-neutral-50 transition-colors">
@@ -1223,6 +1223,13 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
           >
             {item.confirmed !== false ? "✅" : "📌"}
           </button>
+          {onResync && item.sku && (
+            <button type="button" onClick={() => onResync(item._uid)}
+              title="Resync desde catálogo (actualiza foto, descripción, precio)"
+              className="text-[11px] text-neutral-300 hover:text-blue-500 leading-none transition-colors">
+              🔄
+            </button>
+          )}
           <button type="button" onClick={() => setShowNotes(v => !v)}
             title="Notas"
             className="text-[11px] text-neutral-300 hover:text-neutral-600 leading-none">
@@ -1378,7 +1385,7 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
   );
 }
 
-function SortableActivityRow({ item, onUpdate, onRemove, availableDays, groupSize }) {
+function SortableActivityRow({ item, onUpdate, onRemove, onResync, availableDays, groupSize }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item._uid });
   return (
@@ -1394,7 +1401,7 @@ function SortableActivityRow({ item, onUpdate, onRemove, availableDays, groupSiz
         ⠿
       </button>
       <div className="flex-1 min-w-0">
-        <ActivityRow item={item} onUpdate={onUpdate} onRemove={onRemove}
+        <ActivityRow item={item} onUpdate={onUpdate} onRemove={onRemove} onResync={onResync}
           availableDays={availableDays} groupSize={groupSize} />
       </div>
     </div>
@@ -1406,7 +1413,7 @@ function SortableActivityRow({ item, onUpdate, onRemove, availableDays, groupSiz
 ═══════════════════════════════════════════════════════════════ */
 function DaySection({ label, meta, items, loadingServices, availableDays,
   onUpdateMeta, onRenameLabel, onRemoveDay,
-  onUpdateItem, onRemoveItem, onAddManual, onAddPreset, onAddFromCatalog,
+  onUpdateItem, onRemoveItem, onResyncItem, onAddManual, onAddPreset, onAddFromCatalog,
   onReorderItems, dragHandleProps,
   groupSize = 1, lang = "en" }) {
 
@@ -1492,7 +1499,7 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
                     <SortableActivityRow key={item._uid || item.id} item={item}
                       availableDays={availableDays}
                       groupSize={groupSize}
-                      onUpdate={onUpdateItem} onRemove={onRemoveItem} />
+                      onUpdate={onUpdateItem} onRemove={onRemoveItem} onResync={onResyncItem} />
                   ))}
                 </div>
               </SortableContext>
@@ -1715,6 +1722,32 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
   const removeItem = (uid) =>
     setCart(prev => prev.filter(i => i._uid !== uid));
 
+  const resyncItem = (uid) => {
+    const item = cart.find(i => i._uid === uid);
+    if (!item || !item.sku) return;
+    const svc = services.find(s => s.sku === item.sku || String(s.id) === String(item.id));
+    if (!svc) { alert("No se encontró el servicio en el catálogo. Puede que el SKU haya cambiado."); return; }
+    const groupSizeN = parseInt(kickoff?.groupSize, 10) || 1;
+    const updated = mapSvcToCartItem(svc, groupSizeN);
+    // Keep concierge-specific fields, update catalog-sourced fields
+    setCart(prev => prev.map(i => i._uid !== uid ? i : {
+      ...i,
+      name: updated.name,
+      name_en: updated.name_en,
+      description_es: updated.description_es,
+      description_en: updated.description_en,
+      price_cop: updated.price_cop,
+      price_tier_1: updated.price_tier_1,
+      price_tier_2: updated.price_tier_2,
+      base_price_cop: updated.base_price_cop,
+      priceUnit: updated.priceUnit,
+      priceUsd: updated.priceUsd,
+      quickbooksCode: updated.quickbooksCode,
+      category: updated.category,
+      subcategory: updated.subcategory,
+    }));
+  };
+
   const addManualToDay = (dayLabel) => {
     const count = cart.filter(i => (i.dayLabel || "Sin día") === dayLabel).length;
     setCart(prev => [...prev, { ...mapManualToCartItem(), dayLabel, sortOrder: count }]);
@@ -1898,6 +1931,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
                 onRemoveDay={() => removeDay(label)}
                 onUpdateItem={updateItem}
                 onRemoveItem={removeItem}
+                onResyncItem={resyncItem}
                 onReorderItems={(oldIdx, newIdx) => reorderItemsInDay(label, oldIdx, newIdx)}
                 onAddManual={() => addManualToDay(label)}
                 onAddPreset={(preset) => addPresetToDay(label, preset)}
@@ -3459,7 +3493,22 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   return (
     <>
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
-      <div className="w-full max-w-xl h-full bg-white shadow-xl flex flex-col">
+      <div className={`h-full bg-white shadow-xl flex ${pdfPreviewUrl ? "w-full flex-row" : "w-full max-w-xl flex-col"}`}>
+
+        {/* PDF split panel — shown on the left when preview is open */}
+        {pdfPreviewUrl && (
+          <div className="flex-1 h-full flex flex-col border-r border-neutral-200 bg-neutral-50">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 shrink-0 bg-white">
+              <span className="text-sm font-semibold text-neutral-800">Vista previa PDF</span>
+              <button type="button" onClick={() => { URL.revokeObjectURL(pdfPreviewUrl); setPdfPreviewUrl(null); }}
+                className="text-neutral-400 hover:text-neutral-700 text-lg leading-none px-2">✕</button>
+            </div>
+            <iframe src={pdfPreviewUrl} className="flex-1 w-full" title="PDF preview" />
+          </div>
+        )}
+
+        {/* Editor column */}
+        <div className={`flex flex-col ${pdfPreviewUrl ? "w-[480px] shrink-0" : "flex-1"}`}>
         <div className="px-5 py-4 border-b flex items-center justify-between">
           <div>
             <p className="text-[11px] text-neutral-500">Editar kick-off</p>
@@ -4705,24 +4754,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
     </div>
 
-    {/* PDF Preview Modal */}
-    {pdfPreviewUrl && (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60">
-        <div className="relative w-[92vw] h-[92vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 shrink-0">
-            <span className="text-sm font-semibold text-neutral-800">Vista previa del PDF</span>
-            <button
-              type="button"
-              onClick={() => { URL.revokeObjectURL(pdfPreviewUrl); setPdfPreviewUrl(null); }}
-              className="text-neutral-400 hover:text-neutral-700 text-lg leading-none px-2"
-            >
-              ✕
-            </button>
-          </div>
-          <iframe src={pdfPreviewUrl} className="flex-1 w-full" title="PDF preview" />
-        </div>
-      </div>
-    )}
+    </div>{/* end overlay */}
     </>
   );
 }
