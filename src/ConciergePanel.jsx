@@ -3165,6 +3165,132 @@ function DrawerSection({ title, children, defaultOpen = false, accent = "neutral
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   JUNIOR DRAWER — Operaciones-only view for junior concierges
+═══════════════════════════════════════════════════════════════ */
+function JuniorDrawer({ kickoff, onClose, onSave }) {
+  const [preBillSent,            setPreBillSent]            = useState(!!(kickoff?.preBillSent));
+  const [preBillPaid,            setPreBillPaid]            = useState(!!(kickoff?.preBillPaid));
+  const [earlyCheckin,           setEarlyCheckin]           = useState(!!(kickoff?.earlyCheckin));
+  const [houseDrinkListSent,     setHouseDrinkListSent]     = useState(!!(kickoff?.houseDrinkListSent));
+  const [boatDrinkListSent,      setBoatDrinkListSent]      = useState(!!(kickoff?.boatDrinkListSent));
+  const [boatFoodReady,          setBoatFoodReady]          = useState(!!(kickoff?.boatFoodReady));
+  const [listSentToBoatOwner,    setListSentToBoatOwner]    = useState(!!(kickoff?.listSentToBoatOwner));
+  const [foodRestrictionsShared, setFoodRestrictionsShared] = useState(!!(kickoff?.foodRestrictionsShared));
+  const [passportOk,             setPassportOk]             = useState(!!(kickoff?.passportOk));
+  const [boatName,   setBoatName]   = useState(kickoff?.boatName   || "");
+  const [boatDay,    setBoatDay]    = useState(kickoff?.boatDay    || "");
+  const [dock,       setDock]       = useState(kickoff?.dock       || "");
+  const [beachClub,  setBeachClub]  = useState(kickoff?.beachClub  || "");
+  const [beachClubDay, setBeachClubDay] = useState(kickoff?.beachClubDay || "");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave(kickoff.id, {
+      preBillSent, preBillPaid, earlyCheckin,
+      houseDrinkListSent, boatDrinkListSent, boatFoodReady,
+      listSentToBoatOwner, foodRestrictionsShared, passportOk,
+      boatName, boatDay, dock, beachClub, beachClubDay,
+    });
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
+      <div className="w-full max-w-md h-full bg-white shadow-xl flex flex-col">
+        {/* Header */}
+        <div className="px-5 py-4 border-b flex items-center justify-between">
+          <div>
+            <p className="text-[11px] text-neutral-500">Operaciones</p>
+            <p className="text-sm font-semibold text-neutral-900">{kickoff.tripName || kickoff.guestName}</p>
+            <p className="text-[11px] text-neutral-500">{kickoff.city} · {kickoff.groupSize && `${kickoff.groupSize} pers.`}</p>
+          </div>
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-600">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+          </button>
+        </div>
+
+        {/* Client summary (read-only) */}
+        <div className="px-5 py-3 bg-neutral-50 border-b text-[11px] text-neutral-600 space-y-1">
+          {kickoff.arrivalDate && <div>✈️ Llegada: <strong>{kickoff.arrivalDate?.slice(0,10)}</strong></div>}
+          {kickoff.departureDate && <div>🛫 Salida: <strong>{kickoff.departureDate?.slice(0,10)}</strong></div>}
+          {kickoff.accommodationName && <div>🏠 Villa: <strong>{kickoff.accommodationName}</strong></div>}
+          {kickoff.boatName && <div>⛵ Bote: <strong>{kickoff.boatName}</strong></div>}
+          {kickoff.briefDietary && <div>🥗 Dieta: <strong>{kickoff.briefDietary}</strong></div>}
+        </div>
+
+        {/* Operaciones */}
+        <div className="flex-1 overflow-auto p-5 space-y-5">
+          <div>
+            <p className="text-[10px] font-semibold text-orange-600 uppercase tracking-wider mb-3">Checklist</p>
+            <div className="grid grid-cols-1 gap-2">
+              {[
+                ["preBillSent",            preBillSent,            setPreBillSent,            "Pre-bill enviado"],
+                ["preBillPaid",            preBillPaid,            setPreBillPaid,            "Pre-bill pagado"],
+                ["earlyCheckin",           earlyCheckin,           setEarlyCheckin,           "Early check-in/late check-out"],
+                ["houseDrinkListSent",     houseDrinkListSent,     setHouseDrinkListSent,     "Lista bebidas casa ✓"],
+                ["boatDrinkListSent",      boatDrinkListSent,      setBoatDrinkListSent,      "Lista bebidas bote ✓"],
+                ["boatFoodReady",          boatFoodReady,          setBoatFoodReady,          "Comida bote lista"],
+                ["listSentToBoatOwner",    listSentToBoatOwner,    setListSentToBoatOwner,    "Lista enviada a dueño bote"],
+                ["foodRestrictionsShared", foodRestrictionsShared, setFoodRestrictionsShared, "Restricciones alimentarias informadas"],
+                ["passportOk",             passportOk,             setPassportOk,             "Pasaportes recolectados ✓"],
+              ].map(([key, val, setter, label]) => (
+                <label key={key} className="flex items-center gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={val} onChange={e => setter(e.target.checked)} className="w-4 h-4 accent-orange-500" />
+                  <span className={`text-sm ${val ? "line-through text-neutral-400" : "text-neutral-700"}`}>{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-semibold text-orange-600 uppercase tracking-wider mb-3">Logística</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] text-neutral-500">Bote</label>
+                <input value={boatName} onChange={e => setBoatName(e.target.value)} placeholder="Nombre…"
+                  className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs" />
+              </div>
+              <div>
+                <label className="text-[10px] text-neutral-500">Día bote</label>
+                <input type="date" value={boatDay} onChange={e => setBoatDay(e.target.value)}
+                  className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-[10px] text-neutral-500">Muelle / Dock</label>
+                <input value={dock} onChange={e => setDock(e.target.value)} placeholder="Club Náutico…"
+                  className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs" />
+              </div>
+              <div>
+                <label className="text-[10px] text-neutral-500">Beach Club</label>
+                <input value={beachClub} onChange={e => setBeachClub(e.target.value)} placeholder="Mio…"
+                  className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs" />
+              </div>
+              <div>
+                <label className="text-[10px] text-neutral-500">Día beach club</label>
+                <input type="date" value={beachClubDay} onChange={e => setBeachClubDay(e.target.value)}
+                  className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t bg-neutral-50 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-neutral-300 text-sm text-neutral-700 hover:bg-neutral-100">
+            Cancelar
+          </button>
+          <button type="button" onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-lg bg-orange-500 text-sm text-white hover:bg-orange-600 disabled:opacity-50">
+            {saving ? "Guardando…" : "Guardar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [guestName, setGuestName] = useState(kickoff?.guestName || "");
   const [tripName, setTripName] = useState(kickoff?.tripName || "");
@@ -6386,6 +6512,7 @@ const loadKickoffs = async () => {
     {loading ? "Actualizando…" : "Refrescar"}
   </button>
 
+  {currentUser?.role !== "junior" && (
   <button
     type="button"
     onClick={() => { setPendingLinkKind("both"); setCreateModalOpen(true); }}
@@ -6393,6 +6520,7 @@ const loadKickoffs = async () => {
   >
     + Nuevo cliente
   </button>
+  )}
 
   <a
     href="/menu.html"
@@ -6874,11 +7002,13 @@ const loadKickoffs = async () => {
                               }} style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"var(--text-1)",background:"none",border:"none",cursor:"pointer"}}>
                                 Copiar cuestionario
                               </button>
+                              {currentUser?.role !== "junior" && (<>
                               <div style={{height:1,background:"var(--border)",margin:"4px 0"}}/>
                               <button onClick={() => { setOpenMenuId(null); setSelectedForDelete(k); }}
                                 style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"#DC2626",background:"none",border:"none",cursor:"pointer"}}>
                                 Eliminar
                               </button>
+                              </>)}
                             </div>
                           )}
                         </div>
@@ -6901,13 +7031,20 @@ const loadKickoffs = async () => {
       )}
 
       {selectedForEdit && (
-        <EditDrawer
-          key={selectedForEdit.id}
-          kickoff={selectedForEdit}
-          onClose={() => setSelectedForEdit(null)}
-          onSave={handleSaveEdit}
-          onSilentUpdate={handleSilentUpdate}
-        />
+        currentUser?.role === "junior"
+          ? <JuniorDrawer
+              key={selectedForEdit.id}
+              kickoff={selectedForEdit}
+              onClose={() => setSelectedForEdit(null)}
+              onSave={handleSilentUpdate}
+            />
+          : <EditDrawer
+              key={selectedForEdit.id}
+              kickoff={selectedForEdit}
+              onClose={() => setSelectedForEdit(null)}
+              onSave={handleSaveEdit}
+              onSilentUpdate={handleSilentUpdate}
+            />
       )}
 
       {selectedForDelete && (

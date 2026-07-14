@@ -4996,13 +4996,13 @@ const ROLE_META = {
 const ROLE_ACCESS = {
   admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas"],
   concierge: ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones"],
-  junior:    ["dashboard"],
-  finance:   ["dashboard","soporte"],
+  junior:    ["concierge"],   // concierge panel but restricted to Operaciones drawer
+  finance:   ["pagos"],       // billing-only landing with links to pagos + comisiones
   marketing: ["dashboard"],
   bodas:     ["bodas","tareas-bodas","dashboard"],
 };
 
-const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas"]);
+const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos"]);
 
 // ─── AUTH ─────────────────────────────────────────────────────────
 function useAuth() {
@@ -5216,6 +5216,44 @@ function ChangePinScreen({ user, onDone }) {
   );
 }
 
+// ─── FINANCE LANDING ──────────────────────────────────────────────
+function FinanceLanding({ user, onLogout }) {
+  return (
+    <div style={{ minHeight:"100vh", background:"#f7f4ef", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:32 }}>
+      <div style={{ maxWidth:480, width:"100%" }}>
+        <div style={{ marginBottom:8, fontSize:10, letterSpacing:".15em", textTransform:"uppercase", color:"#9a7d52" }}>Two Travel · Finanzas</div>
+        <h1 style={{ fontFamily:"Georgia,serif", fontSize:28, fontWeight:500, color:"#1a1814", marginBottom:4 }}>Bienvenida, {user?.name?.split(" ")[0] || "Génesis"}</h1>
+        <p style={{ fontSize:13, color:"#7a7570", marginBottom:36 }}>Acceso al área de pagos y comisiones.</p>
+
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          <a href="/pagos.html" style={{ display:"flex", alignItems:"center", gap:16, padding:"20px 24px", background:"#fff", border:"1px solid rgba(26,24,20,.09)", borderRadius:8, textDecoration:"none", color:"#1a1814", transition:"box-shadow .15s" }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,.08)"}
+            onMouseLeave={e => e.currentTarget.style.boxShadow="none"}>
+            <span style={{ fontSize:24 }}>💳</span>
+            <div>
+              <div style={{ fontWeight:600, fontSize:14, marginBottom:2 }}>Pagos de clientes</div>
+              <div style={{ fontSize:12, color:"#7a7570" }}>Facturas, comprobantes y pre-bills por cliente</div>
+            </div>
+          </a>
+          <a href="/comisiones.html" style={{ display:"flex", alignItems:"center", gap:16, padding:"20px 24px", background:"#fff", border:"1px solid rgba(26,24,20,.09)", borderRadius:8, textDecoration:"none", color:"#1a1814", transition:"box-shadow .15s" }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,.08)"}
+            onMouseLeave={e => e.currentTarget.style.boxShadow="none"}>
+            <span style={{ fontSize:24 }}>🤝</span>
+            <div>
+              <div style={{ fontWeight:600, fontSize:14, marginBottom:2 }}>Comisiones a proveedores</div>
+              <div style={{ fontSize:12, color:"#7a7570" }}>Cobros pendientes, vencidos y pagados por proveedor</div>
+            </div>
+          </a>
+        </div>
+
+        <button onClick={onLogout} style={{ marginTop:32, fontSize:11, color:"#aaa9a5", background:"none", border:"none", cursor:"pointer", letterSpacing:".04em" }}>
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── USER MANAGEMENT (super admin only) ───────────────────────────
 function UserManagement({ currentUser, onBack }) {
   const [users, setUsers]   = useState([]);
@@ -5403,6 +5441,7 @@ function App() {
       if (!isSuperAdmin(user)) return <div style={{padding:40,textAlign:"center",color:"#6b7280"}}>Sin acceso.</div>;
       return <UserManagement currentUser={user} onBack={() => window.history.back()} />;
     }
+    if (mode === "pagos") return <FinanceLanding user={user} onLogout={logout} />;
     if (mode === "concierge") return <ErrorBoundary><ConciergePanel onLogout={logout} currentUser={user} /></ErrorBoundary>;
     if (mode === "bodas")        return <ErrorBoundary><BodaPanel currentUser={user} onLogout={logout} /></ErrorBoundary>;
     if (mode === "tareas-bodas") return <ErrorBoundary><TareasPanel currentUser={user} onLogout={logout} /></ErrorBoundary>;
