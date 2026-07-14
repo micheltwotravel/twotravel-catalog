@@ -3321,6 +3321,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [briefDietary,       setBriefDietary]        = useState(kickoff?.briefDietary       || "");
   const [briefPurpose,       setBriefPurpose]        = useState(kickoff?.briefPurpose       || "");
   const [briefNotes,         setBriefNotes]          = useState(kickoff?.briefNotes         || "");
+  const [passportInfo,       setPassportInfo]        = useState(kickoff?.passportInfo        || "");
   // Operaciones
   const [boatName,               setBoatName]               = useState(kickoff?.boatName               || "");
   const [boatDay,                setBoatDay]                 = useState(kickoff?.boatDay                || "");
@@ -3589,6 +3590,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   updates.briefDietary  = briefDietary.trim();
   updates.briefPurpose  = briefPurpose;
   updates.briefNotes    = briefNotes.trim();
+  updates.passportInfo  = passportInfo.trim();
   const em = guestEmailState.trim();
   updates.email = em;
   updates.guestEmail = em;
@@ -3950,9 +3952,15 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               </div>
               <div className="col-span-2">
                 <label className="text-[10px] text-neutral-500 mb-1 block">Restricciones alimentarias</label>
-                <input value={briefDietary} onChange={e => setBriefDietary(e.target.value)}
-                  className="w-full border rounded-lg px-2 py-1.5 text-xs bg-white"
+                <textarea value={briefDietary} onChange={e => setBriefDietary(e.target.value)}
+                  className="w-full border rounded-lg px-2 py-1.5 text-xs bg-white min-h-[52px]"
                   placeholder="Vegano, sin gluten, alérgico a nueces…" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-[10px] text-neutral-500 mb-1 block">Información personal / Pasaportes</label>
+                <textarea value={passportInfo} onChange={e => setPassportInfo(e.target.value)}
+                  className="w-full border rounded-lg px-2 py-1.5 text-xs bg-white min-h-[80px]"
+                  placeholder={"Juan Pérez · PP123456 · vence 2026-08\nMaría García · CC9876543"} />
               </div>
               <div className="col-span-2">
                 <label className="text-[10px] text-neutral-500 mb-1 block">Nota de ventas</label>
@@ -6810,6 +6818,11 @@ const loadKickoffs = async () => {
                         {k.briefDietary && (
                           <span title={k.briefDietary} style={{fontSize:9,background:"#FFF7ED",color:"#C2410C",border:"1px solid #FED7AA",borderRadius:3,padding:"0px 5px",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"inline-block",verticalAlign:"middle"}}>
                             🥗 {k.briefDietary}
+                          </span>
+                        )}
+                        {k.passportInfo && (
+                          <span title={k.passportInfo} style={{fontSize:9,background:"#F0FDF4",color:"#15803D",border:"1px solid #BBF7D0",borderRadius:3,padding:"0px 5px",maxWidth:130,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"inline-block",verticalAlign:"middle"}}>
+                            🛂 {k.passportInfo.split("\n")[0]}
                           </span>
                         )}
                       </div>
