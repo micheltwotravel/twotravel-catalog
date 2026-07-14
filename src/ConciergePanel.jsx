@@ -174,9 +174,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
         ? (svc?.description?.es || item.description_es || svc?.description?.en || item.description_en || "")
         : (svc?.description?.en || item.description_en || svc?.description?.es || item.description_es || ""),
       highlights : svc
-        ? (lang === "es"
-            ? (svc.highlights    || [])
-            : (svc.highlights_en?.length ? svc.highlights_en : svc.highlights || []))
+        ? (lang === "es" ? (svc.highlights || []) : (svc.highlights_en || []))
         : [],
       category   : cl(item.category || svc?.category || ""),
       pax        : Number(item.pax   || 0),
@@ -540,6 +538,18 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       const timePart = item.time ? `${item.time}   ` : "";
       doc.setFontSize(10.5); doc.setFont("helvetica","bold"); doc.setTextColor(15,15,15);
       dt(se(timePart + item.name), ML, y); y += 15;
+
+      // Price (deposit amount) — show COP price when set
+      const itemPriceCop = Number(item.price_cop ?? 0);
+      if (itemPriceCop > 0) {
+        const paxCount = Number(item.pax || 1);
+        const isPerPerson = String(item.priceUnit || "").toLowerCase().includes("person");
+        const priceStr = isPerPerson && paxCount > 1
+          ? `${new Intl.NumberFormat("es-CO").format(itemPriceCop)} × ${paxCount} pers = ${new Intl.NumberFormat("es-CO").format(itemPriceCop * paxCount)} COP`
+          : `${new Intl.NumberFormat("es-CO").format(itemPriceCop)} COP`;
+        doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(100,100,100);
+        dt(priceStr, ML, y); y += 12;
+      }
 
       // Confirmation status — show badge only when explicitly confirmed (true), skip when recommendation (false/undefined)
       if (item.confirmed === true) {
@@ -1530,7 +1540,15 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
     }
     return [];
   };
-  const withUid = (arr) => arr.map((item, i) => item._uid ? item : { ...item, _uid: `${item.id ?? "m"}_${i}_${Date.now()}` });
+  const withUid = (arr) => {
+    const seen = new Set();
+    return arr.map((item, i) => {
+      const uid = item._uid || `${item.id ?? "m"}_${i}_${Date.now()}`;
+      if (seen.has(uid)) return { ...item, _uid: `${uid}_dup_${i}` };
+      seen.add(uid);
+      return { ...item, _uid: uid };
+    });
+  };
   const [cart,     setCart]     = useState(withUid(parseArr(kickoff?.cart)));
   const [dayMeta,  setDayMeta]  = useState(parseArr(kickoff?.dayMeta));
   const [services, setServices] = useState([]);
@@ -1763,12 +1781,15 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
   const handleSave = async () => {
     try {
       setSaving(true);
-      // Rebuild flat cart with clean sortOrders per day
+      // Rebuild flat cart with clean sortOrders per day, deduplicating by _uid
       const newCart = [];
+      const seenUids = new Set();
       days.forEach(({ label, items }) =>
-        items.forEach((item, i) =>
-          newCart.push({ ...item, dayLabel: label, sortOrder: i })
-        )
+        items.forEach((item, i) => {
+          if (item._uid && seenUids.has(item._uid)) return;
+          if (item._uid) seenUids.add(item._uid);
+          newCart.push({ ...item, dayLabel: label, sortOrder: i });
+        })
       );
       await onSave(newCart, dayMeta);
     } catch (e) {
@@ -3130,8 +3151,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [billingSending, setBillingSending] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
   // Track latest ItineraryCanvas state so main "Guardar" always includes it
-  const canvasCartRef    = useRef(null);
-  const canvasDayMetaRef = useRef(null);
+  // Pre-seeded from kickoff so they're never null even if onCartChange hasn't fired yet
+  const canvasCartRef    = useRef(Array.isArray(kickoff?.cart)    ? kickoff.cart    : []);
+  const canvasDayMetaRef = useRef(Array.isArray(kickoff?.dayMeta) ? kickoff.dayMeta : []);
   const [liveFxRate, setLiveFxRate] = useState(3489); // 3560 TRM - 2%
   useEffect(() => {
     fetch("https://api.frankfurter.app/latest?from=USD&to=COP")
@@ -3358,8 +3380,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     barrio2:             barrio2.trim(),
     accommodationPhoto2: accommodationPhoto2.trim(),
     // Always include latest canvas state so itinerary edits aren't lost
-    ...(canvasCartRef.current    != null ? { cart:    JSON.stringify(canvasCartRef.current)    } : {}),
-    ...(canvasDayMetaRef.current != null ? { dayMeta: JSON.stringify(canvasDayMetaRef.current) } : {}),
+    cart:    JSON.stringify(canvasCartRef.current),
+    dayMeta: JSON.stringify(canvasDayMetaRef.current),
     // Clear itinerarySnapshot so client link rebuilds from fresh cart data
     itinerarySnapshot: "",
   };
@@ -6092,18 +6114,19 @@ const loadKickoffs = async () => {
 
   // Updates kickoff locally + in sheet but does NOT close the drawer
   const handleSilentUpdate = async (id, updates) => {
+    // Update local state immediately (optimistic) so reopening the drawer shows latest edits
+    setKickoffs((prev) =>
+      prev.map((k) => {
+        if (k.id !== id) return k;
+        const next = { ...k, ...updates };
+        if ("guestContact" in updates && String(updates.guestContact || "").trim() === "") {
+          next.guestContact = k.guestContact || "";
+        }
+        return next;
+      })
+    );
     try {
       await updateKickoffInSheet(id, updates);
-      setKickoffs((prev) =>
-        prev.map((k) => {
-          if (k.id !== id) return k;
-          const next = { ...k, ...updates };
-          if ("guestContact" in updates && String(updates.guestContact || "").trim() === "") {
-            next.guestContact = k.guestContact || "";
-          }
-          return next;
-        })
-      );
     } catch (err) {
       console.error("Silent update failed:", err);
     }
