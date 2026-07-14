@@ -1193,12 +1193,23 @@ function ActivityRow({ item, onUpdate, onRemove, availableDays = [], groupSize =
             const isPerPerson = !isTransport && String(item.priceUnit || "").toLowerCase().includes("person");
             const pax = parseInt(groupSize, 10);
             const unitPrice = Number(item.priceOverride_cop ?? item.price_cop ?? 0);
-            if (!isPerPerson || pax < 2 || !unitPrice) return null;
-            const total = new Intl.NumberFormat("es-CO").format(unitPrice * pax);
+            const showTotal = isPerPerson && pax >= 2 && unitPrice > 0;
+            const total = showTotal ? new Intl.NumberFormat("es-CO").format(unitPrice * pax) : null;
             return (
-              <span className="block text-right text-[9px] text-indigo-500 leading-tight mt-0.5">
-                × {pax} pers = {total}
-              </span>
+              <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                {/* Per-person / per-group toggle */}
+                <button type="button"
+                  title={isPerPerson ? "Por persona — click para cambiar a por grupo" : "Por grupo — click para cambiar a por persona"}
+                  onClick={() => onUpdate(item._uid, { priceUnit: isPerPerson ? "per group" : "per person" })}
+                  className={`text-[8px] px-1.5 py-0 rounded border leading-4 transition ${isPerPerson ? "text-indigo-600 border-indigo-300 bg-indigo-50" : "text-neutral-400 border-neutral-200 bg-transparent hover:border-neutral-400"}`}>
+                  {isPerPerson ? "×pers" : "grupo"}
+                </button>
+                {showTotal && (
+                  <span className="text-[9px] text-indigo-500 leading-tight">
+                    ×{pax} = {total}
+                  </span>
+                )}
+              </div>
             );
           })()}
         </div>
@@ -3146,6 +3157,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [boatFoodReady,          setBoatFoodReady]           = useState(!!(kickoff?.boatFoodReady));
   const [listSentToBoatOwner,    setListSentToBoatOwner]     = useState(!!(kickoff?.listSentToBoatOwner));
   const [foodRestrictionsShared, setFoodRestrictionsShared]  = useState(!!(kickoff?.foodRestrictionsShared));
+  const [passportOk,             setPassportOk]              = useState(!!(kickoff?.passportOk));
   const drinkOrder = kickoff?.drinkOrder || "";
   const [billingCurrency, setBillingCurrency] = useState("USD");
   const [billingSending, setBillingSending] = useState(false);
@@ -3416,6 +3428,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   updates.boatFoodReady          = boatFoodReady;
   updates.listSentToBoatOwner    = listSentToBoatOwner;
   updates.foodRestrictionsShared = foodRestrictionsShared;
+  updates.passportOk             = passportOk;
 
   await onSave(kickoff.id, updates);
   setStatus(autoStatus);
@@ -3768,6 +3781,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 ["boatFoodReady",          boatFoodReady,          setBoatFoodReady,          "Comida bote lista"],
                 ["listSentToBoatOwner",    listSentToBoatOwner,    setListSentToBoatOwner,    "Lista enviada a dueño bote"],
                 ["foodRestrictionsShared", foodRestrictionsShared, setFoodRestrictionsShared, "Restricciones alimentarias informadas"],
+                ["passportOk",             passportOk,             setPassportOk,             "Pasaportes recolectados ✓"],
               ].map(([key, val, setter, label]) => (
                 <label key={key} className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={val} onChange={e => setter(e.target.checked)}
@@ -6606,6 +6620,18 @@ const loadKickoffs = async () => {
 
                     <td style={{fontWeight:500,color:"var(--text-1)"}}>
                       {k.guestName || "Sin nombre"}
+                      <div style={{display:"flex",gap:4,marginTop:2,flexWrap:"wrap"}}>
+                        {k.passportOk && (
+                          <span title="Pasaportes recolectados" style={{fontSize:9,background:"#EFF6FF",color:"#1D4ED8",border:"1px solid #BFDBFE",borderRadius:3,padding:"0px 5px",fontWeight:600}}>
+                            🛂 passport ✓
+                          </span>
+                        )}
+                        {k.briefDietary && (
+                          <span title={k.briefDietary} style={{fontSize:9,background:"#FFF7ED",color:"#C2410C",border:"1px solid #FED7AA",borderRadius:3,padding:"0px 5px",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"inline-block",verticalAlign:"middle"}}>
+                            🥗 {k.briefDietary}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={{color:"var(--text-2)"}}>
                       {k.tripName || <span style={{color:"var(--text-3)",fontStyle:"italic"}}>—</span>}
