@@ -1724,10 +1724,31 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
     const accom = kickoff?.accommodationName || "";
     const checkinTime  = kickoff?.checkIn  || "3:00 PM";
     const checkoutTime = kickoff?.checkOut || "11:00 AM";
+    const lang = kickoff?.lang || "en";
     const presets = {
-      checkin:   { name: "Check-in",  name_en: "Check-in",   category: "services", timeLabel: checkinTime,  notes: "", ...(accom ? { location: accom } : {}) },
-      breakfast: { name: "Desayuno",  name_en: "Breakfast",  category: "services", timeLabel: "8:00 AM",  notes: "" },
-      checkout:  { name: "Check-out", name_en: "Check-out",  category: "services", timeLabel: checkoutTime, notes: "", ...(accom ? { location: accom } : {}) },
+      checkin: {
+        name: "Check-in", name_en: "Check-in", category: "services",
+        timeLabel: checkinTime,
+        ...(accom ? { location: accom } : {}),
+        notes: lang === "es"
+          ? `Su villa estará disponible a partir de las ${checkinTime}.${accom ? ` Nos encontraremos en ${accom} para acompañarlos durante el proceso de check-in.` : " Estaremos con ustedes para acompañarlos durante el proceso."} Por favor avísennos su hora estimada de llegada.`
+          : `Your villa will be available from ${checkinTime}.${accom ? ` We will meet you at ${accom} to accompany you through the check-in process.` : " We will be there to accompany you through the process."} Please let us know your estimated arrival time.`,
+      },
+      breakfast: {
+        name: "Desayuno", name_en: "Breakfast", category: "services",
+        timeLabel: "8:00 AM",
+        notes: lang === "es"
+          ? "El desayuno estará listo en la villa. Por favor indíquennos si tienen alguna restricción alimentaria o preferencia especial."
+          : "Breakfast will be ready at the villa. Please let us know if you have any dietary restrictions or special preferences.",
+      },
+      checkout: {
+        name: "Check-out", name_en: "Check-out", category: "services",
+        timeLabel: checkoutTime,
+        ...(accom ? { location: accom } : {}),
+        notes: lang === "es"
+          ? `El check-out es a las ${checkoutTime}.${accom ? ` Si necesitan guardar equipaje en ${accom} o coordinar un late check-out, por favor avísennos con anticipación.` : " Si necesitan guardar equipaje o coordinar un late check-out, avísennos con anticipación."}`
+          : `Check-out is at ${checkoutTime}.${accom ? ` If you need to store luggage at ${accom} or arrange a late check-out, please let us know in advance.` : " If you need to store luggage or arrange a late check-out, please let us know in advance."}`,
+      },
     };
     const p = presets[preset];
     if (!p) return;
