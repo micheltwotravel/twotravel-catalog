@@ -3353,6 +3353,16 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
       .catch(() => {});
   }, []);
 
+  // Auto-open PDF side panel when drawer mounts (if cart has items)
+  useEffect(() => {
+    const cart = Array.isArray(kickoff?.cart) ? kickoff.cart : [];
+    if (!cart.length) return;
+    sendItineraryPdfToSlack(kickoff, kickoff?.lang || "en", "USD", "preview", 3489)
+      .then(url => { if (url) setPdfPreviewUrl(url); })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Editable arrival/departure dates (concierge sets these)
   const [arrivalDate,   setArrivalDate]   = useState(kickoff?.arrivalDate   || "");
   const [departureDate, setDepartureDate] = useState(kickoff?.departureDate || "");
