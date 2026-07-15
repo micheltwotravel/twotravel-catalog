@@ -3633,7 +3633,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
         )}
 
         {/* Editor column */}
-        <div className={`flex flex-col ${pdfPreviewUrl ? "w-[480px] shrink-0" : "flex-1"}`}>
+        <div className={`flex flex-col min-h-0 ${pdfPreviewUrl ? "w-[480px] shrink-0 h-full" : "flex-1"}`}>
         <div className="px-5 py-4 border-b flex items-center justify-between">
           <div>
             <p className="text-[11px] text-neutral-500">Editar kick-off</p>
