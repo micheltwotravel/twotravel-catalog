@@ -171,8 +171,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
         ? cl(svc?.location_es || svc?.location || "")
         : cl(svc?.location    || ""),
       description: lang === "es"
-        ? (svc?.description?.es || item.description_es || svc?.description?.en || item.description_en || "")
-        : (svc?.description?.en || item.description_en || svc?.description?.es || item.description_es || ""),
+        ? (svc?.description?.es || item.description_es || svc?.description?.en || item.description_en || item.notes || "")
+        : (svc?.description?.en || item.description_en || svc?.description?.es || item.description_es || item.notes || ""),
       highlights : svc
         ? (lang === "es" ? (svc.highlights || []) : (svc.highlights_en || []))
         : [],
