@@ -774,12 +774,19 @@ function CoverPage({ kickoff, total, lang, editMode }) {
 
   return (
     <div className="page">
-      {/* Top bar with logo — no cover photo */}
-      <div style={{ background:"#111", padding:"18px 40px", display:"flex", alignItems:"center" }}>
-        <img src={ttLogo} alt="Two Travel"
-          style={{ height: 36, objectFit: "contain", filter: "brightness(0) invert(1)" }}
+      {/* Hero — branded city photo if selected, else dark + logo */}
+      {coverImgUrl ? (
+        <img src={coverImgUrl} alt="Cover"
+          style={{ width:"100%", height:320, objectFit:"cover", objectPosition:"center 30%", display:"block", flexShrink:0 }}
+          onError={e => { e.target.style.display="none"; }}
         />
-      </div>
+      ) : (
+        <div style={{ width:"100%", height:320, flexShrink:0, background:"linear-gradient(150deg,#0a0a0a 0%,#1a1a1a 50%,#222 100%)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <img src={ttLogo} alt="Two Travel"
+            style={{ maxHeight:160, maxWidth:380, objectFit:"contain", filter:"brightness(0) invert(1)" }}
+          />
+        </div>
+      )}
 
       <PH kickoff={a}/>
 
@@ -1004,6 +1011,31 @@ function CoverPage({ kickoff, total, lang, editMode }) {
             <span style={{ fontSize: 14, color: "#0369a1" }}>→</span>
           </a>
         )}
+
+        {/* Schedule a meeting */}
+        {(() => {
+          const conciergeEmail = a.assignedConciergeEmail || "";
+          const conciergeName  = a.assignedConciergeName || a.assignedConcierge || "";
+          if (!conciergeEmail && !conciergeName) return null;
+          const bookUrl = `/?mode=book&c=${encodeURIComponent(conciergeEmail)}&cn=${encodeURIComponent(conciergeName)}&k=${encodeURIComponent(a.id||"")}&g=${encodeURIComponent(a.guestName||"")}&lang=${lang}`;
+          return (
+            <a href={bookUrl} style={{
+              display:"flex", alignItems:"center", justifyContent:"space-between",
+              textDecoration:"none", background:"#f0fdf4", border:"1px solid #bbf7d0",
+              borderRadius:10, padding:"11px 16px", marginBottom:10,
+            }}>
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:"#15803d" }}>
+                  📅 {isEs ? `Agendar reunión con ${conciergeName}` : `Schedule a meeting with ${conciergeName}`}
+                </div>
+                <div style={{ fontSize:9.5, color:"#6b7280", marginTop:2 }}>
+                  {isEs ? "30 minutos · Elige el día y hora que mejor te convenga." : "30 minutes · Pick the day and time that works best for you."}
+                </div>
+              </div>
+              <span style={{ fontSize:14, color:"#15803d" }}>→</span>
+            </a>
+          );
+        })()}
 
         {/* Cancellation / reservation note */}
         <div style={{

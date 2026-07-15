@@ -22,6 +22,7 @@ class ErrorBoundary extends Component {
 import ConciergePanel, { ReunionesPage } from "./ConciergePanel";
 import TwoTravelCatalog from "./TwoTravelCatalog";
 import ItineraryPrintView from "./ItineraryPrintView";
+import { BookingPage } from "./BookingPage";
 import BodaPanel from "./BodaPanel";
 import TareasPanel from "./TareasPanel";
 import { updateKickoffInSheet, fetchKickoffsFromSheet, saveKickoffToSheet } from "./sheetServices";
@@ -2908,7 +2909,7 @@ function TaskTracker() {
                       <div key={col.id} style={{flexShrink:0,width:272,display:"flex",flexDirection:"column",gap:8}}>
                         {/* Column header */}
                         <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 4px"}}>
-                          <span style={{width:8,height:8,borderRadius:"50%",background:col.dot.replace("bg-","").replace("stone-400","#9CA3AF").replace("blue-500","#3B82F6").replace("violet-500","#8B5CF6").replace("emerald-500","#10B981"),flexShrink:0,background:col.id==="todo"?"#9CA3AF":col.id==="in_progress"?"#3B82F6":col.id==="in_review"?"#8B5CF6":"#10B981"}}/>
+                          <span style={{width:8,height:8,borderRadius:"50%",flexShrink:0,background:col.id==="todo"?"#9CA3AF":col.id==="in_progress"?"#3B82F6":col.id==="in_review"?"#8B5CF6":"#10B981"}}/>
                           <span style={{fontSize:11,fontWeight:600,color:"var(--text-2)",letterSpacing:".04em"}}>{col.label}</span>
                           <span style={{marginLeft:"auto",fontSize:10.5,fontWeight:500,color:"var(--text-3)",background:"var(--border-soft)",borderRadius:3,padding:"1px 6px"}}>{colTasks.length}</span>
                         </div>
@@ -5419,6 +5420,16 @@ function App() {
   if (mode === "breakfast") return <BreakfastCatalog />;
   if (mode === "checkin")   return <CheckinForm />;
   if (mode === "itinerary") return <ItineraryPrintView />;
+  if (mode === "book") {
+    const params = new URLSearchParams(window.location.search);
+    return <BookingPage
+      conciergeEmail={params.get("c") || ""}
+      conciergeName={params.get("cn") || "Your Concierge"}
+      kickoffId={params.get("k") || ""}
+      guestName={params.get("g") || ""}
+      lang={params.get("lang") || "en"}
+    />;
+  }
   if (mode === "register")  return <RegisterScreen />;
   if (mode === "pin") {
     if (!user) return <LoginScreen onLogin={login} />;
@@ -5448,7 +5459,7 @@ function App() {
     if (mode === "soporte")   return <ErrorBoundary><SoportePage /></ErrorBoundary>;
     if (mode === "soporte-dashboard") return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
     if (mode === "tasks")     return <ErrorBoundary><TaskTracker /></ErrorBoundary>;
-    if (mode === "reuniones") return <ErrorBoundary><ReunionesPage /></ErrorBoundary>;
+    if (mode === "reuniones") return <ErrorBoundary><ReunionesPage currentUser={user} /></ErrorBoundary>;
     if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard currentUser={user} onLogout={logout} /></ErrorBoundary>;
   }
 

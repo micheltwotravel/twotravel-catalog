@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { AvailabilityManager } from "./BookingPage";
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
   DragOverlay,
@@ -171,8 +172,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
         ? cl(svc?.location_es || svc?.location || "")
         : cl(svc?.location    || ""),
       description: lang === "es"
-        ? (svc?.description?.es || item.description_es || svc?.description?.en || item.description_en || "")
-        : (svc?.description?.en || item.description_en || svc?.description?.es || item.description_es || ""),
+        ? (svc?.description?.es || item.description_es || svc?.description?.en || item.description_en || item.notes || "")
+        : (svc?.description?.en || item.description_en || svc?.description?.es || item.description_es || item.notes || ""),
       highlights : svc
         ? (lang === "es" ? (svc.highlights || []) : (svc.highlights_en || []))
         : [],
@@ -215,7 +216,12 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   };
   const checkY = (need = 30) => { if (y + need > PH - 48) newPage(); };
 
-  // Pre-fetch accommodation photos (async, before rendering)
+  const checkInUrl = cl(kickoff.checkInFormUrl || "");
+
+  // Pre-fetch photos (async, before rendering)
+  const coverPhotoB64  = kickoff.coverPhotoId
+    ? await fetchImgB64(`https://lh3.googleusercontent.com/d/${kickoff.coverPhotoId}`).catch(() => null)
+    : null;
   const accomPhotoB64  = await fetchImgB64(driveImgUrl(cl(kickoff.accommodationPhoto  || ""))).catch(() => null);
   const accomPhotoB64_2 = await fetchImgB64(driveImgUrl(cl(kickoff.accommodationPhoto2 || ""))).catch(() => null);
 
@@ -229,7 +235,17 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   dt("PRIVATE CONCIERGE", ML, 54);
   dt(new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}), MR, 54, { align:"right" });
 
-  y = 112;
+  // Cover photo hero (full-width, below header band)
+  if (coverPhotoB64) {
+    try {
+      const imgH = 220;
+      doc.addImage(coverPhotoB64, "JPEG", 0, 76, PW, imgH);
+      y = 76 + imgH + 20;
+    } catch(e) { y = 112; }
+  } else {
+    y = 112;
+  }
+
   // Eyebrow
   doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(120,120,120);
   dt("YOUR ITINERARY", ML, y); y += 18;
@@ -425,6 +441,19 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     dtLink(bfDisplay, ML, y, bfUrl); y += 14;
   }
 
+  // Check-in Form (if concierge set a HubSpot link)
+  if (checkInUrl) {
+    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
+    dt(lang === "es" ? "Formulario de Check-in" : "Check-in Form", ML, y); y += 11;
+    doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
+    dt(lang === "es"
+      ? "Completa tu formulario de pre-llegada antes de tu viaje."
+      : "Complete your pre-arrival check-in form before your trip.", ML, y); y += 10;
+    doc.setTextColor(30,100,200);
+    const shortCheckIn = checkInUrl.replace(/^https?:\/\//, "").slice(0, 60);
+    dtLink(shortCheckIn, ML, y, checkInUrl); y += 14;
+  }
+
   // Welcome guide
   y += 4;
   doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
@@ -438,50 +467,61 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   dt("Two Travel · twotravelvip.com", PW/2, PH - 22, { align:"center" });
 
   // ── PRE-TRIP CONTENT PAGE ───────────────────────────────────
-  const preTripText = cl(kickoff.preTripContent || kickoff.preTrip || kickoff.pre_trip || "");
-  if (preTripText) {
-    newPage();
-    doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(12,12,12);
-    dt(lang === "es" ? "ANTES DE TU LLEGADA" : "BEFORE YOUR ARRIVAL", ML, y); y += 20;
-    doc.setDrawColor(12,12,12); doc.setLineWidth(1.2);
-    doc.line(ML, y, ML + 50, y); doc.setLineWidth(0.5); y += 16;
+  const autoPreTrip = lang === "es"
+    ? [
+        `ANTES DE TU LLEGADA`,
+        "",
+        `Por favor revisa esto antes de tu llegada. Tiene informacion util para tu viaje.`,
+        "",
+        ...(checkInUrl ? [`Formulario de Pre Check-in: ${checkInUrl}`] : []),
+        `Calculadora de bebidas: https://two.travel/drinks`,
+        `Guia de Cartagena (PDF): https://two.travel/ctg-guide.pdf`,
+        `WhatsApp Concierge: https://wa.me/573001234567`,
+        "",
+        `PROMO`,
+        "",
+        `Comparte como es viajar con Two Travel y obtén descuentos en tus experiencias. Síguenos @twotravelconcierge en Instagram y @twotravelvip en TikTok.`,
+        "",
+        `Nota: La publicación debe hacerse durante la estadía. Se requiere un tag por persona. Para servicios grupales todos los miembros deben participar.`,
+      ]
+    : [
+        `BEFORE YOUR ARRIVAL`,
+        "",
+        `Please take a look at this before your arrival. It has some helpful info for your trip.`,
+        "",
+        ...(checkInUrl ? [`Pre Check-in Form: ${checkInUrl}`] : []),
+        `Drink Calculator: https://two.travel/drinks`,
+        `Cartagena City Guide (PDF): https://two.travel/ctg-guide.pdf`,
+        `WhatsApp Concierge: https://wa.me/573001234567`,
+        "",
+        `PROMO`,
+        "",
+        `Show everyone how amazing it is to travel with Two Travel's concierge service and get discounts on your experiences. Follow us @twotravelconcierge on Instagram and @twotravelvip on TikTok.`,
+        "",
+        `Note: The post must be made during your stay. One tag per person required to redeem. For group services all members must participate for the discount to apply.`,
+      ];
 
-    preTripText.split("\n").forEach(line => {
-      const l = cl(line);
-      if (!l) { checkY(8); y += 6; return; }
-      checkY(14);
-      const isUrl = l.startsWith("http");
-      const isLabel = l.includes(": http");
-      if (isUrl || isLabel) {
-        doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(30,100,200);
-      } else if (l.toUpperCase() === l && l.length < 60) {
-        // ALL CAPS line = section header
-        doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(60,60,60);
-        y += 4;
-      } else {
-        doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40);
-      }
-      const wrapped = sts(se(l), TW);
-      wrapped.forEach(wl => { checkY(13); dt(wl, ML, y); y += 13; });
-    });
-  }
+  newPage();
+  doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(12,12,12);
+  doc.setDrawColor(12,12,12); doc.setLineWidth(1.2);
+  doc.line(ML, y, ML + 50, y); doc.setLineWidth(0.5); y += 16;
 
-  // ── ARRIVALS / FLIGHTS ──────────────────────────────────────
-  const arrivalsArr = (() => {
-    try { return JSON.parse(kickoff.arrivals || "[]").filter(a => a.name || a.flight || a.date); } catch { return []; }
-  })();
-  if (arrivalsArr.length > 0) {
-    checkY(60);
-    doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(120,120,120);
-    dt((lang === "es" ? "LLEGADAS" : "ARRIVALS").toUpperCase(), ML, y); y += 14;
-    arrivalsArr.forEach(a => {
-      checkY(18);
-      const parts = [a.name, a.flight, a.date, a.time ? `· ${a.time}` : ""].filter(Boolean).join("   ");
-      doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(30,30,30);
-      dt(se(parts), ML, y); y += 14;
-    });
-    y += 6;
-  }
+  autoPreTrip.forEach(line => {
+    const l = cl(line);
+    if (!l) { checkY(8); y += 6; return; }
+    checkY(14);
+    const isLink = l.includes(": http") || l.startsWith("http");
+    if (isLink) {
+      doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(30,100,200);
+    } else if (l.toUpperCase() === l && l.length < 60) {
+      doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(12,12,12);
+      y += 4;
+    } else {
+      doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40);
+    }
+    const wrapped = sts(se(l), TW);
+    wrapped.forEach(wl => { checkY(13); dt(wl, ML, y); y += 13; });
+  });
 
   // ── DAY PAGES ───────────────────────────────────────────────
   orderedDays.forEach(({ label, title }) => {
@@ -577,12 +617,6 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
         dt(line, ML + 4, y); y += 12;
       });
 
-      // Highlights
-      (item.highlights || []).slice(0,4).forEach(hl => {
-        checkY(13);
-        doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(90,90,90);
-        dt("·  " + cl(hl), ML + 4, y); y += 12;
-      });
 
       y += 10;
       // Divider between services (not after last)
@@ -1691,21 +1725,26 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
     const arrDate = kickoff?.arrivalDate;
     if (!arrDate) return;
     const lang = kickoff?.lang || "en";
-    setDayMeta(prev => prev.map((dm, idx) => {
+    // Build label map: old label → new date label (uses `days` which combines cart + dayMeta)
+    const labelMap = {};
+    days.forEach((day, idx) => {
       const d = new Date(arrDate + "T12:00:00");
       d.setDate(d.getDate() + idx);
-      const label = d.toLocaleDateString(lang === "es" ? "es-CO" : "en-US", { weekday: "long", month: "long", day: "numeric" });
-      return { ...dm, label };
-    }));
+      labelMap[day.label] = d.toLocaleDateString(lang === "es" ? "es-CO" : "en-US", { weekday: "long", month: "long", day: "numeric" });
+    });
+    setDayMeta(prev => {
+      const updated = prev.map(dm => ({ ...dm, label: labelMap[dm.label] || dm.label }));
+      // Add entries for any orphan days not yet in dayMeta
+      days.forEach((day, idx) => {
+        if (!prev.find(dm => dm.label === day.label)) {
+          updated.push({ label: labelMap[day.label] || day.label, title: day.meta?.title || "", sortOrder: idx });
+        }
+      });
+      return updated;
+    });
     setCart(prev => prev.map(item => {
       const oldLabel = item.dayLabel || "Sin día";
-      const oldMeta = dayMeta.find(dm => dm.label === oldLabel);
-      if (!oldMeta) return item;
-      const idx = dayMeta.indexOf(oldMeta);
-      const d = new Date(arrDate + "T12:00:00");
-      d.setDate(d.getDate() + idx);
-      const newLabel = d.toLocaleDateString(lang === "es" ? "es-CO" : "en-US", { weekday: "long", month: "long", day: "numeric" });
-      return { ...item, dayLabel: newLabel };
+      return labelMap[oldLabel] ? { ...item, dayLabel: labelMap[oldLabel] } : item;
     }));
   };
 
@@ -2131,8 +2170,22 @@ function Modal({ title, children, footer, onClose, maxWidth = "max-w-3xl" }) {
    ========================================= */
 
 function SummaryModal({ kickoff, onClose }) {
+  const [copiedMsg, setCopiedMsg] = React.useState(false);
   if (!kickoff) return null;
 
+  const lang = kickoff.lang || "en";
+  const ct   = kickoff.clientType || 1;
+  const isEs = lang === "es";
+  const name = (kickoff.guestName || "").split(" ")[0] || (isEs ? "viajero" : "traveler");
+  const link = buildOnboardLink(kickoff, ct, lang);
+  const quizMsg = isEs
+    ? `Hola ${name} 👋 Bienvenido/a a Two Travel. Aquí tienes tu acceso personalizado — en este link vas a encontrar la bienvenida a tu viaje, un cuestionario rápido y luego el catálogo con todas las experiencias disponibles para ti:\n\n${link}`
+    : `Hi ${name} 👋 Welcome to Two Travel! Here's your personalized access — this link takes you through your trip welcome, a quick questionnaire, and then the full catalog of experiences available for you:\n\n${link}`;
+
+  const handleCopyMsg = async () => {
+    try { await navigator.clipboard.writeText(quizMsg); } catch { prompt("Copia este mensaje:", quizMsg); }
+    setCopiedMsg(true); setTimeout(() => setCopiedMsg(false), 2000);
+  };
 
   return (
     <Modal
@@ -2244,6 +2297,33 @@ function SummaryModal({ kickoff, onClose }) {
             </div>
           );
         })()}
+
+        {/* ── Mensaje cuestionario ── */}
+        {link && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-emerald-800">📲 Mensaje para enviar cuestionario</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyMsg}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-700 text-white text-[11px] hover:bg-emerald-800 transition"
+                >
+                  {copiedMsg ? "✓ Copiado" : "Copiar"}
+                </button>
+                <a
+                  href={`https://wa.me/${(kickoff.guestContact||"").replace(/\D/g,"")}?text=${encodeURIComponent(quizMsg)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2.5 py-1 rounded-lg bg-green-600 text-white text-[11px] hover:bg-green-700 transition"
+                >
+                  WhatsApp
+                </a>
+              </div>
+            </div>
+            <pre className="text-[11px] text-neutral-700 whitespace-pre-wrap font-sans">{quizMsg}</pre>
+          </div>
+        )}
 
         {/* ── Quiz answers ── */}
         {(() => {
@@ -3616,8 +3696,35 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   updates.foodRestrictionsShared = foodRestrictionsShared;
   updates.passportOk             = passportOk;
 
+  // Trip-level / itinerary fields
+  updates.arrivalDate            = arrivalDate;
+  updates.departureDate          = departureDate;
+  updates.arrivalDate2           = arrivalDate2;
+  updates.departureDate2         = departureDate2;
+  updates.arrivalDateB           = arrivalDateB;
+  updates.departureDateB         = departureDateB;
+  updates.tripDates              = tripDates;
+  updates.tripDates2             = tripDates2;
+  updates.groupSize              = groupSize;
+  updates.city                   = cityFullName(city) || city;
+  updates.conciergeTitle         = conciergeTitle.trim();
+  updates.checkIn                = checkIn;
+  updates.checkOut               = checkOut;
+  updates.tripName               = tripName.trim();
+  updates.accommodationName      = accommodationName.trim();
+  updates.accommodationAddr      = accommodationAddr.trim();
+  updates.accommodationUrl       = accommodationUrl.trim();
+  updates.accommodationName2     = accommodationName2.trim();
+  updates.accommodationAddr2     = accommodationAddr2.trim();
+  updates.accommodationUrl2      = accommodationUrl2.trim();
+  updates.accommodationNameB     = accommodationNameB.trim();
+  updates.accommodationAddrB     = accommodationAddrB.trim();
+  updates.accommodationUrlB      = accommodationUrlB.trim();
+
   await onSave(kickoff.id, updates);
   setStatus(autoStatus);
+  // Refresh client itinerary view after save
+  setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${lang || kickoff?.lang || "en"}&_t=${Date.now()}`);
 };
 
 
@@ -4674,20 +4781,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             ))}
           </DrawerSection>
 
-          {/* PRE-TRIP INFO — page that appears before itinerary days in PDF */}
-          <DrawerSection title="📄 Pre-Trip Information" accent="neutral">
-            <p className="text-[11px] text-neutral-400 leading-relaxed">
-              Aparece como página antes del itinerario en el PDF. Links, recomendaciones, promo. Una línea por ítem.
-            </p>
-            <textarea
-              value={preTripContent}
-              onChange={(e) => setPreTripContent(e.target.value)}
-              rows={8}
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm min-h-[140px] font-mono bg-white"
-              placeholder={`Pre Check-in Form: https://form.link/checkin\nDrink Calculator: https://two.travel/drinks\nCartagena City Guide: https://two.travel/guide.pdf\nWhatsApp Concierge: https://wa.me/573001234567`}
-            />
-          </DrawerSection>
-
           {/* ITINERARIO — canvas con edición inline por día */}
           <DrawerSection title="📅 Itinerario" accent="neutral" defaultOpen={true}>
             <div className="flex items-center justify-between -mt-1 mb-1">
@@ -5654,7 +5747,8 @@ function MeetingFormModal({ kickoffs, initial, onSave, onClose }) {
 }
 
 /* ── Meeting card ── */
-export function ReunionesPage() {
+export function ReunionesPage({ currentUser }) {
+  const [pageTab, setPageTab] = useState("meetings"); // "meetings" | "availability"
   const [kickoffs,      setKickoffs]      = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [error,         setError]         = useState("");
@@ -5792,6 +5886,20 @@ export function ReunionesPage() {
         <div style={{ display:"flex", alignItems:"center", gap:16 }}>
           <a href="/?mode=concierge" style={{ fontSize:12, color:"#9a7d52", textDecoration:"none" }}>← Panel</a>
           <span style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:600, color:"#f5f0e8" }}>Reuniones</span>
+          <div style={{ display:"flex", gap:4, marginLeft:24 }}>
+            <button type="button" onClick={() => setPageTab("meetings")}
+              style={{ padding:"4px 12px", borderRadius:20, border:"none", cursor:"pointer", fontSize:12, fontWeight:500,
+                background: pageTab === "meetings" ? "#9a7d52" : "transparent",
+                color: pageTab === "meetings" ? "#fff" : "#9a7d52" }}>
+              Agenda
+            </button>
+            <button type="button" onClick={() => setPageTab("availability")}
+              style={{ padding:"4px 12px", borderRadius:20, border:"none", cursor:"pointer", fontSize:12, fontWeight:500,
+                background: pageTab === "availability" ? "#9a7d52" : "transparent",
+                color: pageTab === "availability" ? "#fff" : "#9a7d52" }}>
+              Mi disponibilidad
+            </button>
+          </div>
         </div>
         {/* KPIs inline */}
         <div style={{ display:"flex", gap:20 }}>
@@ -5810,7 +5918,20 @@ export function ReunionesPage() {
         </div>
       </div>
 
+      {/* ── Availability panel ── */}
+      {pageTab === "availability" && (
+        <div style={{ flex:1, overflow:"auto", padding:"32px", display:"flex", justifyContent:"center" }}>
+          <div style={{ width:"100%", maxWidth:600 }}>
+            <AvailabilityManager
+              conciergeEmail={currentUser?.email || ""}
+              conciergeName={currentUser?.name || currentUser?.email || ""}
+            />
+          </div>
+        </div>
+      )}
+
       {/* ── 2-panel body ── */}
+      {pageTab === "meetings" && (
       <div style={{ display:"flex", flex:1, overflow:"hidden", minHeight:0 }}>
 
         {/* LEFT: client list */}
@@ -5928,6 +6049,7 @@ export function ReunionesPage() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }
@@ -6403,7 +6525,6 @@ const loadKickoffs = async () => {
       })
     );
 
-    setSelectedForEdit(null);
   } catch (err) {
     console.error("handleSaveEdit error:", err);
     alert("No se pudieron guardar los cambios.\n\nDetalle: " + (err?.message || String(err)));
