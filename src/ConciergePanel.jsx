@@ -3353,11 +3353,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
       .catch(() => {});
   }, []);
 
-  // Auto-open PDF side panel when drawer mounts
+  // Auto-open client web itinerary in side panel when drawer mounts
   useEffect(() => {
-    sendItineraryPdfToSlack(kickoff, kickoff?.lang || "en", "USD", "preview", 3489)
-      .then(url => { if (url) setPdfPreviewUrl(url); })
-      .catch(() => {});
+    setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}`);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -3632,8 +3630,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
         {pdfPreviewUrl && (
           <div className="flex-1 h-full flex flex-col border-r border-neutral-200 bg-neutral-50">
             <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 shrink-0 bg-white">
-              <span className="text-sm font-semibold text-neutral-800">Vista previa PDF</span>
-              <button type="button" onClick={() => { URL.revokeObjectURL(pdfPreviewUrl); setPdfPreviewUrl(null); }}
+              <span className="text-sm font-semibold text-neutral-800">👁 Vista del cliente</span>
+              <button type="button" onClick={() => { if (pdfPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(pdfPreviewUrl); setPdfPreviewUrl(null); }}
                 className="text-neutral-400 hover:text-neutral-700 text-lg leading-none px-2">✕</button>
             </div>
             <iframe src={pdfPreviewUrl} className="flex-1 w-full" title="PDF preview" />
