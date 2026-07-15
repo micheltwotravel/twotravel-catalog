@@ -171,8 +171,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
         ? cl(svc?.location_es || svc?.location || "")
         : cl(svc?.location    || ""),
       description: lang === "es"
-        ? (svc?.description?.es || item.description_es || svc?.description?.en || item.description_en || item.notes || "")
-        : (svc?.description?.en || item.description_en || svc?.description?.es || item.description_es || item.notes || ""),
+        ? (svc?.description?.es || item.description_es || svc?.description?.en || item.description_en || "")
+        : (svc?.description?.en || item.description_en || svc?.description?.es || item.description_es || ""),
       highlights : svc
         ? (lang === "es" ? (svc.highlights || []) : (svc.highlights_en || []))
         : [],
@@ -1725,7 +1725,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
   const resyncItem = (uid) => {
     const item = cart.find(i => i._uid === uid);
     if (!item || !item.sku) return;
-    const svc = services.find(s => s.sku === item.sku || String(s.id) === String(item.id));
+    const svc = services.find(s => s.sku === item.sku);
     if (!svc) { alert("No se encontró el servicio en el catálogo. Puede que el SKU haya cambiado."); return; }
     const groupSizeN = parseInt(kickoff?.groupSize, 10) || 1;
     const updated = mapSvcToCartItem(svc, groupSizeN);
@@ -1763,24 +1763,21 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         name: "Check-in", name_en: "Check-in", category: "services",
         timeLabel: checkinTime,
         ...(accom ? { location: accom } : {}),
-        notes: lang === "es"
-          ? `Su villa estará disponible a partir de las ${checkinTime}.${accom ? ` Nos encontraremos en ${accom} para acompañarlos durante el proceso de check-in.` : " Estaremos con ustedes para acompañarlos durante el proceso."} Por favor avísennos su hora estimada de llegada.`
-          : `Your villa will be available from ${checkinTime}.${accom ? ` We will meet you at ${accom} to accompany you through the check-in process.` : " We will be there to accompany you through the process."} Please let us know your estimated arrival time.`,
+        description_es: `Su villa estará disponible a partir de las ${checkinTime}.${accom ? ` Nos encontraremos en ${accom} para acompañarlos durante el proceso de check-in.` : " Estaremos con ustedes para acompañarlos durante el proceso."} Por favor avísennos su hora estimada de llegada.`,
+        description_en: `Your villa will be available from ${checkinTime}.${accom ? ` We will meet you at ${accom} to accompany you through the check-in process.` : " We will be there to accompany you through the process."} Please let us know your estimated arrival time.`,
       },
       breakfast: {
         name: "Desayuno", name_en: "Breakfast", category: "services",
         timeLabel: "8:00 AM",
-        notes: lang === "es"
-          ? "El desayuno estará listo en la villa. Por favor indíquennos si tienen alguna restricción alimentaria o preferencia especial."
-          : "Breakfast will be ready at the villa. Please let us know if you have any dietary restrictions or special preferences.",
+        description_es: "El desayuno estará listo en la villa. Por favor indíquennos si tienen alguna restricción alimentaria o preferencia especial.",
+        description_en: "Breakfast will be ready at the villa. Please let us know if you have any dietary restrictions or special preferences.",
       },
       checkout: {
         name: "Check-out", name_en: "Check-out", category: "services",
         timeLabel: checkoutTime,
         ...(accom ? { location: accom } : {}),
-        notes: lang === "es"
-          ? `El check-out es a las ${checkoutTime}.${accom ? ` Si necesitan guardar equipaje en ${accom} o coordinar un late check-out, por favor avísennos con anticipación.` : " Si necesitan guardar equipaje o coordinar un late check-out, avísennos con anticipación."}`
-          : `Check-out is at ${checkoutTime}.${accom ? ` If you need to store luggage at ${accom} or arrange a late check-out, please let us know in advance.` : " If you need to store luggage or arrange a late check-out, please let us know in advance."}`,
+        description_es: `El check-out es a las ${checkoutTime}.${accom ? ` Si necesitan guardar equipaje en ${accom} o coordinar un late check-out, por favor avísennos con anticipación.` : " Si necesitan guardar equipaje o coordinar un late check-out, avísennos con anticipación."}`,
+        description_en: `Check-out is at ${checkoutTime}.${accom ? ` If you need to store luggage at ${accom} or arrange a late check-out, please let us know in advance.` : " If you need to store luggage or arrange a late check-out, please let us know in advance."}`,
       },
     };
     const p = presets[preset];
@@ -6822,7 +6819,7 @@ const loadKickoffs = async () => {
                         )}
                         {k.passportInfo && (
                           <span title={k.passportInfo} style={{fontSize:9,background:"#F0FDF4",color:"#15803D",border:"1px solid #BBF7D0",borderRadius:3,padding:"0px 5px",maxWidth:130,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"inline-block",verticalAlign:"middle"}}>
-                            🛂 {k.passportInfo.split("\n")[0]}
+                            🪪 {k.passportInfo.split("\n")[0]}
                           </span>
                         )}
                       </div>
