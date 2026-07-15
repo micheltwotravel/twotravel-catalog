@@ -754,7 +754,7 @@ function CoverPage({ kickoff, total, lang, editMode }) {
   const a   = kickoff;
   const isEs = lang === "es";
 
-  const titleLine = a.guestName || "Two Travel Concierge";
+  const titleLine = a.tripName || a.guestName || "Two Travel Concierge";
 
   // Always use full month names; re-derive from ISO dates if available
   const fmtFullDate = (iso) => {
@@ -774,32 +774,11 @@ function CoverPage({ kickoff, total, lang, editMode }) {
 
   return (
     <div className="page">
-      {/* Hero — branded city photo if selected, else default dark + logo */}
-      <div className="cover-hero-placeholder" style={{
-        background: coverImgUrl
-          ? "transparent"
-          : "linear-gradient(160deg,#1a1410 0%,#0d0d0d 60%,#111 100%)",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 0,
-        position: "relative",
-        overflow: "hidden",
-      }}>
-        {coverImgUrl ? (
-          <img
-            src={coverImgUrl}
-            alt="Cover"
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-            onError={e => {
-              e.target.style.display = "none";
-              e.target.parentElement.style.background = "linear-gradient(160deg,#1a1410 0%,#0d0d0d 60%,#111 100%)";
-            }}
-          />
-        ) : (
-          <img src={ttLogo} alt="Two Travel"
-            style={{ maxHeight: 160, maxWidth: 380, objectFit: "contain", filter: "brightness(0) invert(1)" }}
-          />
-        )}
+      {/* Top bar with logo — no cover photo */}
+      <div style={{ background:"#111", padding:"18px 40px", display:"flex", alignItems:"center" }}>
+        <img src={ttLogo} alt="Two Travel"
+          style={{ height: 36, objectFit: "contain", filter: "brightness(0) invert(1)" }}
+        />
       </div>
 
       <PH kickoff={a}/>
