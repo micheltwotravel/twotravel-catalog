@@ -3353,10 +3353,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
       .catch(() => {});
   }, []);
 
-  // Auto-open PDF side panel when drawer mounts (if cart has items)
+  // Auto-open PDF side panel when drawer mounts
   useEffect(() => {
-    const cart = Array.isArray(kickoff?.cart) ? kickoff.cart : [];
-    if (!cart.length) return;
     sendItineraryPdfToSlack(kickoff, kickoff?.lang || "en", "USD", "preview", 3489)
       .then(url => { if (url) setPdfPreviewUrl(url); })
       .catch(() => {});
