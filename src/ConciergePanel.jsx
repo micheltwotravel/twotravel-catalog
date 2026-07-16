@@ -3820,6 +3820,19 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               />
             </div>
 
+            {/* Check-in Form URL (HubSpot link pasted by concierge) */}
+            <div className="col-span-2">
+              <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1 block">🔗 Link Check-in HubSpot</label>
+              <input
+                type="url"
+                value={checkInFormUrl}
+                onChange={e => setCheckInFormUrl(e.target.value)}
+                className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
+                placeholder="https://share.hsforms.com/..."
+              />
+              <p className="text-[10px] text-neutral-400 mt-1">Pega el link del formulario de HubSpot — aparece como botón en el PDF y en la página pre-viaje.</p>
+            </div>
+
             {kickoff?.id && (() => {
               const ciLink = `https://twotravelvip.com/ci/${kickoff.id}`;
               const waMsgEs = `Comparte este formulario con todo tu grupo para que podamos preparar cada detalle de tu estadía con anticipación. Esta información nos ayuda con:\n\n• Datos de pasaporte: requeridos por la mayoría de las villas como parte de su proceso oficial de check-in, y a veces para acceso al muelle o seguro de actividades.\n• Necesidades alimenticias y alergias: nos permite elegir restaurantes adecuados, avisar a los lugares con anticipación, y preparar al personal de la villa para desayunos y comidas en casa.\n• Información de vuelo: nos permite coordinar el transporte del aeropuerto y el número correcto de vehículos para la llegada y salida de tu grupo.\n\nPor favor asegúrate de que todos en tu grupo lo completen antes de llegar. Esto nos ayuda a evitar retrasos y tener todo listo para ustedes.\n\n${ciLink}`;

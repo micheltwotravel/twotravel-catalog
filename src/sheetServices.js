@@ -446,7 +446,8 @@ export async function updateKickoffInSheet(id, updates) {
     updates,
   });
 
-  return json.ok === true || json?.ok === undefined;
+  if (json.ok === false) throw new Error(json.error || "GAS updateKickoff falló");
+  return true;
 }
 
 /**
