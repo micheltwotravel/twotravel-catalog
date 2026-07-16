@@ -119,6 +119,9 @@ export function AvailabilityManager({ conciergeEmail, conciergeName }) {
   const [newBlock,  setNewBlock]  = useState({ date: "", start: "", end: "", reason: "" });
   // Multi-window editor: { dayKey, idx, start, end } or null
   const [addingWin, setAddingWin] = useState(null);
+  // Visual calendar: { "2026-07-21": ["09:00","09:30",...], ... }
+  const [manualSlots,    setManualSlots]    = useState({});
+  const [calWeekOffset,  setCalWeekOffset]  = useState(0);
 
   const load = useCallback(async () => {
     if (!conciergeEmail) { setLoading(false); return; }
@@ -126,8 +129,9 @@ export function AvailabilityManager({ conciergeEmail, conciergeName }) {
     try {
       const r = await gasGet({ action: "getAvailability", email: conciergeEmail });
       if (r.ok) {
-        if (r.schedule) setSchedule({ ...DEFAULT_SCHEDULE, ...r.schedule });
-        if (r.settings) setSettings({ ...DEFAULT_SETTINGS, ...r.settings });
+        if (r.schedule)    setSchedule({ ...DEFAULT_SCHEDULE, ...r.schedule });
+        if (r.settings)    setSettings({ ...DEFAULT_SETTINGS, ...r.settings });
+        if (r.manualSlots) setManualSlots(r.manualSlots);
         setBlocked(r.blocked  || []);
         setBookings(r.bookings || []);
       }
@@ -140,7 +144,7 @@ export function AvailabilityManager({ conciergeEmail, conciergeName }) {
   const save = async () => {
     setSaving(true);
     try {
-      await gasPost({ action: "saveAvailability", email: conciergeEmail, schedule, settings, blocked });
+      await gasPost({ action: "saveAvailability", email: conciergeEmail, schedule, settings, blocked, manualSlots });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch { alert("Error guardando"); }
@@ -257,6 +261,7 @@ export function AvailabilityManager({ conciergeEmail, conciergeName }) {
         <button type="button" style={tabStyle("bookings")} onClick={() => setTab("bookings")}>
           📋 Reservas {bookings.length > 0 && <span style={{ background: "#9a7d52", color: "#fff", borderRadius: 10, fontSize: 10, padding: "1px 5px", marginLeft: 4 }}>{bookings.length}</span>}
         </button>
+        <button type="button" style={tabStyle("calendar")} onClick={() => setTab("calendar")}>📆 Calendario</button>
       </div>
 
       <div style={{ padding: "20px 20px 0" }}>
@@ -468,6 +473,174 @@ export function AvailabilityManager({ conciergeEmail, conciergeName }) {
             )}
           </div>
         )}
+        {/* ── Visual calendar ── */}
+        {tab === "calendar" && (() => {
+          const HOUR_START = 8;
+          const HOUR_END   = 20;
+          const slots30    = [];
+          for (let h = HOUR_START; h < HOUR_END; h++) {
+            slots30.push(`${String(h).padStart(2,"0")}:00`);
+            slots30.push(`${String(h).padStart(2,"0")}:30`);
+          }
+
+          const today = new Date();
+          const dow = today.getDay();
+          const monday = new Date(today);
+          monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + calWeekOffset * 7);
+          const weekDays = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date(monday);
+            d.setDate(monday.getDate() + i);
+            return d.toISOString().slice(0, 10);
+          });
+
+          const todayStr = today.toISOString().slice(0, 10);
+          const DAY_SHORT = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+
+          const toggleSlot = (dateStr, time) => {
+            setManualSlots(prev => {
+              const daySlots = prev[dateStr] || [];
+              const has = daySlots.includes(time);
+              const next = has ? daySlots.filter(t => t !== time) : [...daySlots, time].sort();
+              if (next.length === 0) {
+                const { [dateStr]: _, ...rest } = prev;
+                return rest;
+              }
+              return { ...prev, [dateStr]: next };
+            });
+          };
+
+          const totalSelected = Object.values(manualSlots).reduce((s, arr) => s + arr.length, 0);
+
+          const colW = 52;
+          const timeColW = 46;
+
+          return (
+            <div style={{ paddingBottom: 20 }}>
+              {/* Week nav */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                <div style={{ fontSize: 12, color: "#9a7d52" }}>
+                  Haz clic en los bloques para marcar cuándo estás disponible
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <button type="button" onClick={() => setCalWeekOffset(o => o - 1)}
+                    style={{ background: "#f5f0e8", border: "1px solid #e5ddd3", borderRadius: 7, padding: "4px 10px", fontSize: 13, cursor: "pointer", color: "#9a7d52" }}>‹</button>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#1a1814", minWidth: 100, textAlign: "center" }}>
+                    {new Date(weekDays[0] + "T12:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" })}
+                    {" – "}
+                    {new Date(weekDays[6] + "T12:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" })}
+                  </span>
+                  <button type="button" onClick={() => setCalWeekOffset(o => o + 1)}
+                    style={{ background: "#f5f0e8", border: "1px solid #e5ddd3", borderRadius: 7, padding: "4px 10px", fontSize: 13, cursor: "pointer", color: "#9a7d52" }}>›</button>
+                  {calWeekOffset !== 0 && (
+                    <button type="button" onClick={() => setCalWeekOffset(0)}
+                      style={{ background: "none", border: "none", fontSize: 11, color: "#bbb", cursor: "pointer" }}>Hoy</button>
+                  )}
+                </div>
+              </div>
+
+              {/* Grid */}
+              <div style={{ overflowX: "auto" }}>
+                <div style={{ display: "grid", gridTemplateColumns: `${timeColW}px repeat(7, ${colW}px)`, minWidth: timeColW + colW * 7 }}>
+
+                  {/* Header row */}
+                  <div style={{ gridColumn: 1 }} />
+                  {weekDays.map((dateStr, i) => {
+                    const isToday = dateStr === todayStr;
+                    return (
+                      <div key={dateStr} style={{
+                        textAlign: "center", padding: "4px 2px 8px",
+                        borderLeft: "1px solid #f0ebe3",
+                      }}>
+                        <div style={{ fontSize: 10, color: "#aaa", textTransform: "uppercase", letterSpacing: ".06em" }}>
+                          {DAY_SHORT[i]}
+                        </div>
+                        <div style={{
+                          fontSize: 13, fontWeight: 600,
+                          color: isToday ? "#fff" : "#1a1814",
+                          background: isToday ? "#1a1814" : "transparent",
+                          borderRadius: "50%", width: 26, height: 26,
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          marginTop: 2,
+                        }}>
+                          {new Date(dateStr + "T12:00:00").getDate()}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Slot rows */}
+                  {slots30.map((time, rowIdx) => {
+                    const showLabel = time.endsWith(":00");
+                    return (
+                      <React.Fragment key={time}>
+                        {/* Time label */}
+                        <div style={{
+                          gridColumn: 1, textAlign: "right", paddingRight: 8,
+                          fontSize: 10, color: showLabel ? "#aaa" : "transparent",
+                          lineHeight: "22px", height: 22,
+                          borderTop: showLabel ? "1px solid #f0ebe3" : "none",
+                          userSelect: "none",
+                        }}>
+                          {showLabel ? time : "·"}
+                        </div>
+                        {/* Day cells */}
+                        {weekDays.map((dateStr, colIdx) => {
+                          const selected = (manualSlots[dateStr] || []).includes(time);
+                          const isPast   = dateStr < todayStr || (dateStr === todayStr && time < `${String(today.getHours()).padStart(2,"0")}:${today.getMinutes() >= 30 ? "30" : "00"}`);
+                          return (
+                            <div
+                              key={dateStr + time}
+                              onClick={() => !isPast && toggleSlot(dateStr, time)}
+                              style={{
+                                height: 22,
+                                borderLeft: "1px solid #f0ebe3",
+                                borderTop: showLabel ? "1px solid #f0ebe3" : "1px solid #faf9f7",
+                                background: selected
+                                  ? "#d1f5e0"
+                                  : isPast
+                                  ? "#faf9f7"
+                                  : "#fff",
+                                cursor: isPast ? "default" : "pointer",
+                                transition: "background .1s",
+                                position: "relative",
+                              }}
+                              title={selected ? `${time} — disponible` : isPast ? "" : `${time} — clic para marcar`}
+                            >
+                              {selected && (
+                                <div style={{
+                                  position: "absolute", inset: 1,
+                                  background: "#22c55e22",
+                                  borderRadius: 2,
+                                  borderLeft: "3px solid #16a34a",
+                                }} />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Legend */}
+              <div style={{ display: "flex", gap: 16, marginTop: 14, fontSize: 11, color: "#888", alignItems: "center" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 14, height: 14, background: "#d1f5e0", border: "1px solid #16a34a", borderRadius: 3, display: "inline-block" }} />
+                  Disponible
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 14, height: 14, background: "#fff", border: "1px solid #e5ddd3", borderRadius: 3, display: "inline-block" }} />
+                  Sin marcar
+                </span>
+                <span style={{ marginLeft: "auto", color: "#9a7d52", fontWeight: 600 }}>
+                  {totalSelected} bloque{totalSelected !== 1 ? "s" : ""} marcado{totalSelected !== 1 ? "s" : ""}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+
       </div>
 
       {/* Save footer */}
