@@ -306,10 +306,16 @@ function BodaDetail({ boda, tasks, users, onBack, onRefresh, currentUser }) {
 
   const handleSave = async (form) => {
     setSaving(true);
-    await gasPost({ action: "updateBoda", id: boda.id, updates: { ...form } });
-    setSaving(false);
-    setEditing(false);
-    onRefresh();
+    try {
+      const res = await gasPost({ action: "updateBoda", id: boda.id, updates: { ...form } });
+      if (res?.ok === false) throw new Error(res.error || "GAS updateBoda falló");
+      setEditing(false);
+      onRefresh();
+    } catch (err) {
+      alert("Error al guardar: " + err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const phaseColors = {
