@@ -2304,13 +2304,8 @@ export default function ItineraryPrintView() {
 
   const days = useMemo(() => {
     if (!kickoff) return [];
-    // Skip snapshot if cart has block items (nota libre) — always rebuild from cart
-    const cartItems = parseJsonField(kickoff.cart);
-    const hasBlocks = Array.isArray(cartItems) && cartItems.some(i => i.type === "block");
-    if (!hasBlocks && kickoff.itinerarySnapshot) {
-      try { return JSON.parse(kickoff.itinerarySnapshot); } catch {}
-    }
     if (!catalog.length) return [];
+    // Always rebuild from cart so kickoff editor changes always reflect here
     return buildDays(matchCart(kickoff.cart, catalog), lang, parseJsonField(kickoff.dayMeta), kickoff.city);
   }, [kickoff, catalog, lang]);
 
