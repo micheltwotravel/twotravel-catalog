@@ -1314,12 +1314,15 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
                 </button>
                 {isPerPerson && (
                   <input
-                    type="number" min="1"
+                    type="text" inputMode="numeric" pattern="[0-9]*"
                     value={item.pax || ""}
-                    onChange={e => onUpdate(item._uid, { pax: e.target.value === "" ? null : Number(e.target.value) })}
+                    onChange={e => {
+                      const v = e.target.value.replace(/\D/g, "");
+                      onUpdate(item._uid, { pax: v === "" ? null : Number(v) });
+                    }}
                     placeholder={String(pax)}
                     title="N° personas para este servicio"
-                    className="w-8 text-[9px] text-center text-indigo-600 border-b border-indigo-200 focus:outline-none bg-transparent placeholder-indigo-300"
+                    className="w-10 text-[10px] text-center text-indigo-600 border border-indigo-200 rounded px-1 py-0.5 focus:outline-none bg-white"
                   />
                 )}
                 {showTotal && (

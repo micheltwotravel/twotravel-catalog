@@ -1452,8 +1452,8 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
                 <Editable value={it.priceTiers} tag="div" className="ev-price-tiers" editMode={editMode} onChange={v => patchItem?.("priceTiers", v)} />
               ) : null}
               {it.confirmation && (
-                <div style={{fontSize:9,color:"#6b7280",marginTop:3}}>
-                  ✓ {it.confirmation}
+                <div style={{fontSize:8,color:"#9ca3af",marginTop:4,letterSpacing:"0.3px",fontStyle:"italic"}}>
+                  {isEs ? "Confirmado por" : "Confirmed by"} {it.confirmation}
                 </div>
               )}
             </div>
@@ -1462,7 +1462,9 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
 
         {/* Confirmation (when no price shown) */}
         {it.confirmation && !price && !it.priceTiers && (
-          <div style={{fontSize:9,color:"#6b7280",marginBottom:4}}>✓ {it.confirmation}</div>
+          <div style={{fontSize:8,color:"#9ca3af",marginBottom:4,letterSpacing:"0.3px",fontStyle:"italic"}}>
+            {isEs ? "Confirmado por" : "Confirmed by"} {it.confirmation}
+          </div>
         )}
 
         {/* Location subtitle */}
