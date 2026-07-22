@@ -1368,17 +1368,14 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
       {/* ── Right: content ── */}
       <div className="ev-content">
 
-        {/* Meta / time */}
-        {(timePart || durPart) && (
+        {/* Meta / time — edit mode only */}
+        {editMode && (timePart || durPart) && (
           <div className="ev-meta">
-            {editMode ? (
-              <>
-                <Editable value={timePart} editMode={editMode} onChange={v => patchItem?.("time", v)} />
-                {timePart && durPart ? " · " : ""}
-                <Editable value={durPart} editMode={editMode} onChange={v => patchItem?.("duration", v)} />
-                {" · "}{tzPart}
-              </>
-            ) : metaParts.join(" · ")}
+            <>
+              <Editable value={timePart} editMode={editMode} onChange={v => patchItem?.("time", v)} />
+              {timePart && durPart ? " · " : ""}
+              <Editable value={durPart} editMode={editMode} onChange={v => patchItem?.("duration", v)} />
+            </>
           </div>
         )}
 
@@ -1465,6 +1462,18 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
             {incList.map((h, i) => (
               <Editable key={i} value={h} tag="div" className="ev-list-item" editMode={editMode} />
             ))}
+          </div>
+        )}
+
+        {/* Schedule */}
+        {(timePart || durPart) && (
+          <div className="ev-terms">
+            <b>{isEs ? "Horario: " : "Schedule: "}</b>
+            {editMode ? (
+              <Editable value={[timePart, durPart].filter(Boolean).join(" · ")} editMode={editMode} onChange={v => patchItem?.("time", v)} />
+            ) : (
+              [timePart, durPart].filter(Boolean).join(" · ")
+            )}
           </div>
         )}
 
