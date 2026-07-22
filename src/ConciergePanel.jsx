@@ -13,6 +13,7 @@ const TASK_API_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFI
 
 import {
   fetchKickoffsFromSheet,
+  fetchItineraryItems,
   fetchServicesFromSheet,
   updateKickoffInSheet,
   deleteKickoff,
@@ -1192,10 +1193,11 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
         {/* Time picker */}
         <div className="col-span-2">
           <input
-            type="time"
+            type="text"
             value={item.timeLabel || ""}
             onChange={e => onUpdate(item._uid, { timeLabel: e.target.value })}
-            className="w-full text-xs text-neutral-500 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent"
+            placeholder="8:00 AM"
+            className="w-full text-xs text-neutral-500 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
           />
         </div>
         {/* Name */}
@@ -1605,6 +1607,11 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
   const [loadingServices, setLoadingServices] = useState(false);
   const [saving,   setSaving]   = useState(false);
   const [catalogTargetDay, setCatalogTargetDay] = useState(null);
+  const [itineraryItems, setItineraryItems] = useState([]);
+
+  useEffect(() => {
+    fetchItineraryItems().then(setItineraryItems).catch(() => {});
+  }, []);
 
   const daySensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -1803,12 +1810,17 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         description_es: `Su villa estará disponible a partir de las ${checkinTime}.${accom ? ` Nos encontraremos en ${accom} para acompañarlos durante el proceso de check-in.` : " Estaremos con ustedes para acompañarlos durante el proceso."} Por favor avísennos su hora estimada de llegada.`,
         description_en: `Your villa will be available from ${checkinTime}.${accom ? ` We will meet you at ${accom} to accompany you through the check-in process.` : " We will be there to accompany you through the process."} Please let us know your estimated arrival time.`,
       },
-      breakfast: {
-        name: "Desayuno en la Villa", name_en: "Breakfast at the Villa", category: "services",
-        timeLabel: "8:00 AM",
-        description_es: "Una mezcla de desayunos locales e internacionales será servida en su comedor. El servicio de cocinero está incluido con el alquiler de la villa.\n\nNota: El precio final dependerá del costo de los mercados. Por favor revisen el formulario de menú de desayuno y hagan su selección para cada día allí.",
-        description_en: "A mix of local and international breakfast dishes will be served in your dining room. Cook service is included with the villa rental.\n\nNote: The final price will depend on the cost of groceries. Please review the Breakfast Menu Form and make your menu selection for each day there.",
-      },
+      breakfast: (() => {
+        const sheetItem = itineraryItems.find(i => /breakfast/i.test(i.name));
+        return {
+          name: "Desayuno en la Villa", name_en: sheetItem?.name || "Breakfast at the Villa",
+          category: "services",
+          timeLabel: "8:00 AM",
+          ...(sheetItem?.image ? { image: sheetItem.image } : {}),
+          description_es: "Una mezcla de desayunos locales e internacionales será servida en su comedor. El servicio de cocinero está incluido con el alquiler de la villa.\n\nNota: El precio final dependerá del costo de los mercados. Por favor revisen el formulario de menú de desayuno y hagan su selección para cada día allí.",
+          description_en: sheetItem?.description || "A mix of local and international breakfast dishes will be served in your dining room. Cook service is included with the villa rental.\n\nNote: The final price will depend on the cost of groceries. Please review the Breakfast Menu Form and make your menu selection for each day there.",
+        };
+      })(),
       checkout: {
         name: "Check-out", name_en: "Check-out", category: "services",
         timeLabel: checkoutTime,

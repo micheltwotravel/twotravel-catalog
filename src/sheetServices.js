@@ -450,6 +450,12 @@ export async function updateKickoffInSheet(id, updates) {
   return true;
 }
 
+export async function fetchItineraryItems() {
+  const res = await fetch(`${KICKOFF_API_URL}?action=listItineraryItems&t=${Date.now()}`);
+  const json = await res.json();
+  return json.ok ? (json.data || []) : [];
+}
+
 /**
  * Borra un kickoff por id
  */
