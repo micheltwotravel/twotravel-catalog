@@ -281,9 +281,13 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
   };
 
   const map = new Map();
-  matched.forEach(({ cartItem, service }, idx) => {
+  matched.forEach(({ cartItem, service, isBlock }, idx) => {
     const key = cl(cartItem?.dayLabel || cartItem?.day || "Itinerary");
     if (!map.has(key)) map.set(key, []);
+    if (isBlock) {
+      map.get(key).push({ isBlock: true, cartItem, sort: Number(cartItem.sortOrder ?? idx) });
+      return;
+    }
     const desc = lang === "es"
       ? (service.description?.es || service.descriptionEs || service.description?.en || service.descriptionEn || "")
       : (service.description?.en || service.descriptionEn || service.description?.es || service.descriptionEs || "");

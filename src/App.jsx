@@ -900,9 +900,20 @@ function orderStatus(k) {
   return { drinkSummary, grocery, breakfast };
 }
 
+function lastClientOrder(k) {
+  const candidates = [];
+  if (k.drinkOrderAt)   candidates.push({ label: "🍹 Bebidas",  at: k.drinkOrderAt });
+  if (k.groceryOrderAt) candidates.push({ label: "🛒 Mercado",  at: k.groceryOrderAt });
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => new Date(b.at) - new Date(a.at));
+  const top = candidates[0];
+  return { label: top.label, at: top.at };
+}
+
 function ClientesTable({ kickoffs, loading }) {
   const [cityFilter, setCityFilter] = useState("all");
   const [period, setPeriod] = useState("all");
+  const [search, setSearch] = useState("");
   const [saving, setSaving] = useState({});
   const [generatingTasks, setGeneratingTasks] = useState({});
 
@@ -981,6 +992,11 @@ function ClientesTable({ kickoffs, loading }) {
       if (period === "week"  && (diffDays < -7 || diffDays > 7))  return false;
       if (period === "month" && (diffDays < -30 || diffDays > 30)) return false;
     }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      const name = (r.guestName || r.tripName || "").toLowerCase();
+      if (!name.includes(q)) return false;
+    }
     return true;
   }).sort((a, b) => (a._rowArrival || "") > (b._rowArrival || "") ? 1 : -1);
 
@@ -1024,6 +1040,12 @@ function ClientesTable({ kickoffs, loading }) {
             {l}
           </button>
         ))}
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="🔍 Buscar cliente…"
+          style={{ fontSize:11, padding:"4px 10px", borderRadius:99, border:"1px solid #ddd", outline:"none", background:"#fff", color:"#111", minWidth:160 }}
+        />
         <span style={{ fontSize:11, color:"#9ca3af", marginLeft:"auto" }}>{filtered.length} clientes</span>
       </div>
 
@@ -1042,6 +1064,7 @@ function ClientesTable({ kickoffs, loading }) {
                 <th style={thStyle}>Junior</th>
                 <th style={thStyle}>Itinerario</th>
                 <th style={thStyle}>Reuniones</th>
+                <th style={thStyle}>Último pedido</th>
                 <th style={thStyle}>🍹 Bebidas</th>
                 <th style={thStyle}>🛒 Comida</th>
                 <th style={thStyle}>☕ Desayuno</th>
@@ -1102,6 +1125,20 @@ function ClientesTable({ kickoffs, loading }) {
                         Reuniones →
                       </a>
                     </td>
+                    <td style={tdStyle}>{(() => {
+                      const lo = lastClientOrder(r);
+                      if (!lo) return <span style={{ color:"#d1d5db" }}>—</span>;
+                      return (
+                        <div style={{ fontSize:11 }}>
+                          <div style={{ fontWeight:600, color:"#374151" }}>{lo.label}</div>
+                          <div style={{ fontSize:9, color:"#9ca3af", marginTop:1 }}>
+                            {new Date(lo.at).toLocaleDateString("es-CO", { day:"numeric", month:"short", year:"numeric" })}
+                            {" · "}
+                            {new Date(lo.at).toLocaleTimeString("es-CO", { hour:"2-digit", minute:"2-digit" })}
+                          </div>
+                        </div>
+                      );
+                    })()}</td>
                     <td style={{ ...tdStyle }}><OrderCell summary={drinkSummary} at={r.drinkOrderAt} /></td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>{grocery}</td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>{breakfast}</td>
