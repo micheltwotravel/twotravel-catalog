@@ -1804,10 +1804,10 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         description_en: `Your villa will be available from ${checkinTime}.${accom ? ` We will meet you at ${accom} to accompany you through the check-in process.` : " We will be there to accompany you through the process."} Please let us know your estimated arrival time.`,
       },
       breakfast: {
-        name: "Desayuno", name_en: "Breakfast", category: "services",
+        name: "Desayuno en la Villa", name_en: "Breakfast at the Villa", category: "services",
         timeLabel: "8:00 AM",
-        description_es: "El desayuno estará listo en la villa. Por favor indíquennos si tienen alguna restricción alimentaria o preferencia especial.",
-        description_en: "Breakfast will be ready at the villa. Please let us know if you have any dietary restrictions or special preferences.",
+        description_es: "Una mezcla de desayunos locales e internacionales será servida en su comedor. El servicio de cocinero está incluido con el alquiler de la villa.\n\nNota: El precio final dependerá del costo de los mercados. Por favor revisen el formulario de menú de desayuno y hagan su selección para cada día allí.",
+        description_en: "A mix of local and international breakfast dishes will be served in your dining room. Cook service is included with the villa rental.\n\nNote: The final price will depend on the cost of groceries. Please review the Breakfast Menu Form and make your menu selection for each day there.",
       },
       checkout: {
         name: "Check-out", name_en: "Check-out", category: "services",
