@@ -880,11 +880,22 @@ function parseDrinkSummary(k) {
 }
 function OrderCell({ summary, at, empty = "—" }) {
   if (!summary) return <span style={{ color:"#d1d5db" }}>{empty}</span>;
-  const lines = summary.split(" · ");
+  const items = summary.split(/[,·]/).map(s => s.trim()).filter(Boolean).slice(0, 4);
   return (
-    <div style={{ fontSize:11, color:"#374151", lineHeight:1.5 }}>
-      {lines.map((l, i) => <div key={i}>• {l}</div>)}
-      {at && <div style={{ fontSize:9, color:"#9ca3af", marginTop:2 }}>{fmtOrderAt(at)}</div>}
+    <div>
+      <div style={{ display:"flex", flexWrap:"wrap", gap:3, marginBottom: at ? 4 : 0 }}>
+        {items.map((l, i) => (
+          <span key={i} style={{
+            fontSize:10, background:"#f3f4f6", color:"#374151",
+            borderRadius:4, padding:"1px 5px", whiteSpace:"nowrap",
+          }}>{l}</span>
+        ))}
+      </div>
+      {at && (
+        <div style={{ fontSize:9.5, color:"#6b7280", fontWeight:500 }}>
+          {fmtOrderAt(at)}
+        </div>
+      )}
     </div>
   );
 }
@@ -900,19 +911,24 @@ function orderStatus(k) {
     } catch { return k.groceryOrder ? k.groceryOrder.slice(0,60) : "✅"; }
   })();
   const breakfastSummary = (() => {
+    if (!k.breakfastOrderJson && !k.breakfastOrder) return null;
     try {
-      const c = typeof k.cart === "string" ? JSON.parse(k.cart) : (k.cart || []);
-      const b = Array.isArray(c) ? c.find(i => /breakfast|desayuno/i.test(i.name || i.displayName || "")) : null;
-      return b ? (b.displayName || b.name || "✅ Incluido") : null;
-    } catch { return null; }
+      const b = JSON.parse(k.breakfastOrderJson || "{}");
+      const days = b.dayOrders || {};
+      const items = Object.values(days).flatMap(d => Object.entries(d).filter(([,v])=>v).map(([name])=>name));
+      const uniq = [...new Set(items)].slice(0,3);
+      return uniq.length ? uniq.join(", ") : "✅ Pedido";
+    } catch { return k.breakfastOrder ? k.breakfastOrder.slice(0,60) : "✅"; }
   })();
-  return { drinkSummary, grocerySummary, breakfastSummary };
+  const breakfastAt = k.breakfastOrderAt || null;
+  return { drinkSummary, grocerySummary, breakfastSummary, breakfastAt };
 }
 
 function lastClientOrder(k) {
   const candidates = [];
-  if (k.drinkOrderAt)   candidates.push({ label: "🍹 Bebidas",   at: k.drinkOrderAt });
-  if (k.groceryOrderAt) candidates.push({ label: "🛒 Mercado",   at: k.groceryOrderAt });
+  if (k.drinkOrderAt)     candidates.push({ label: "🍹 Bebidas",   at: k.drinkOrderAt });
+  if (k.groceryOrderAt)   candidates.push({ label: "🛒 Mercado",   at: k.groceryOrderAt });
+  if (k.breakfastOrderAt) candidates.push({ label: "☕ Desayuno",  at: k.breakfastOrderAt });
   if (!candidates.length) return null;
   candidates.sort((a, b) => new Date(b.at) - new Date(a.at));
   return candidates[0];
@@ -1092,7 +1108,7 @@ function ClientesTable({ kickoffs, loading }) {
                 <tr><td colSpan={12} style={{ ...tdStyle, textAlign:"center", color:"#9ca3af", padding:32 }}>Sin clientes para este filtro.</td></tr>
               )}
               {filtered.map((r, i) => {
-                const { drinkSummary, grocerySummary, breakfastSummary } = orderStatus(r);
+                const { drinkSummary, grocerySummary, breakfastSummary, breakfastAt } = orderStatus(r);
                 const itinLink = `/?mode=itinerary&kickoffId=${r.id}`;
                 const reunLink = `/?mode=reuniones`;
                 const isSaving = (f) => saving[r.id + f];
@@ -1156,7 +1172,7 @@ function ClientesTable({ kickoffs, loading }) {
                     })()}</td>
                     <td style={tdStyle}><OrderCell summary={drinkSummary} at={r.drinkOrderAt} /></td>
                     <td style={tdStyle}><OrderCell summary={grocerySummary} at={r.groceryOrderAt} /></td>
-                    <td style={tdStyle}><OrderCell summary={breakfastSummary} /></td>
+                    <td style={tdStyle}><OrderCell summary={breakfastSummary} at={breakfastAt} /></td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>
                       <button
                         onClick={() => generateTasksFromKickoff(r)}
