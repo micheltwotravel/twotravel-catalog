@@ -1361,9 +1361,9 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
             </button>
           )}
           <button type="button" onClick={() => setShowNotes(v => !v)}
-            title="Notas / imagen"
-            className="text-base text-neutral-400 hover:text-neutral-700 leading-none font-medium">
-            ✎
+            title="Editar detalles"
+            className={`text-[11px] px-2 py-0.5 rounded border leading-none transition-colors ${showNotes ? "bg-violet-100 text-violet-700 border-violet-300" : "text-neutral-400 border-neutral-200 hover:text-violet-600 hover:border-violet-300"}`}>
+            ✏️ Editar
           </button>
           <button type="button" onClick={() => onRemove(item._uid)}
             title="Quitar"
@@ -1552,7 +1552,7 @@ function RichTextBlock({ item, onUpdate, onRemove }) {
   }, []);
 
   return (
-    <div className="border-l-4 border-violet-300 bg-violet-50/60 mx-3 my-1.5 rounded-r-xl overflow-hidden">
+    <div className="bg-violet-50/70 mx-3 my-2 rounded-xl overflow-hidden border border-violet-200 shadow-sm">
       {/* Toolbar */}
       <div className={`flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-white border-b border-violet-100 transition-all ${showToolbar ? "" : "hidden"}`}>
         {[["bold","B","font-bold"],["italic","I","italic"],["underline","U","underline"],["strikeThrough","S","line-through"]].map(([cmd,lbl,cls])=>(
@@ -1612,11 +1612,11 @@ function RichTextBlock({ item, onUpdate, onRemove }) {
           onBlur={() => { setShowToolbar(false); setColorOpen(false); setHlOpen(false); saveHtml(); }}
           onInput={saveHtml}
           data-placeholder="Escribe una nota, instrucción, mensaje especial…"
-          className="min-h-[48px] px-3 py-2.5 text-sm text-neutral-800 focus:outline-none"
+          className="min-h-[48px] px-4 py-3 text-sm text-neutral-800 focus:outline-none text-center"
           style={{wordBreak:"break-word"}}
         />
         {!item.html && (
-          <div className="absolute top-2.5 left-3 text-sm text-neutral-400 pointer-events-none select-none">
+          <div className="absolute top-3 left-0 right-0 text-sm text-neutral-400 pointer-events-none select-none text-center">
             Escribe una nota, instrucción, mensaje especial…
           </div>
         )}
