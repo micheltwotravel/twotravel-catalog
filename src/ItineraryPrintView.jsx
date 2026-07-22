@@ -1498,20 +1498,10 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
           </div>
         )}
 
-        {/* Footer: address + map + QB */}
+        {/* Footer: address + QB (map link removed — already shown above as "View on Map →") */}
         <div className="ev-footer">
-          {(it.address || it.city) && (
-            <span>
-              {[it.address, it.city ? it.city.charAt(0).toUpperCase() + it.city.slice(1) : ""].filter(Boolean).join(", ")}
-              {it.mapsUrl && !it.mapsUrl.includes("menuUrl") && (
-                <> ·{" "}
-                  <a href={it.mapsUrl} className="ev-footer-link"
-                    target="_blank" rel="noreferrer">
-                    {isEs ? "mapa" : "map"}
-                  </a>
-                </>
-              )}
-            </span>
+          {it.address && (
+            <span>{it.address}</span>
           )}
           {it.qbCode && isConfirmed && !HIDE_PRICE_CATS.has(it.category) && (
             <div className="ev-qb">
