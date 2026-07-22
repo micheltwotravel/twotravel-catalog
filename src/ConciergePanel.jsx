@@ -1682,7 +1682,13 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
   const [itineraryItems, setItineraryItems] = useState([]);
 
   useEffect(() => {
-    fetchItineraryItems().then(setItineraryItems).catch(() => {});
+    fetchItineraryItems().then(items => {
+      const filtered = items.filter(i => {
+        const n = (i.name_en || i.name_es || "").toLowerCase();
+        return !n.includes("check-in") && !n.includes("check-out") && !n.includes("checkin") && !n.includes("checkout");
+      });
+      setItineraryItems(filtered);
+    }).catch(() => {});
   }, []);
 
   const daySensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
