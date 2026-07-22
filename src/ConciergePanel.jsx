@@ -18,6 +18,7 @@ import {
   updateKickoffInSheet,
   deleteKickoff,
   saveKickoffToSheet,
+  uploadImageToDrive,
 } from "./sheetServices";
 
 import {
@@ -1184,6 +1185,76 @@ function mapManualToCartItem() {
 /* ═══════════════════════════════════════════════════════════════
    ACTIVITY ROW — inline-editable row inside a day section
 ═══════════════════════════════════════════════════════════════ */
+function ImageField({ item, onUpdate }) {
+  const [uploading, setUploading] = React.useState(false);
+  const [dragOver, setDragOver] = React.useState(false);
+  const fileRef = React.useRef();
+
+  async function handleFile(file) {
+    if (!file || !file.type.startsWith("image/")) return;
+    setUploading(true);
+    try {
+      const url = await uploadImageToDrive(file);
+      onUpdate(item._uid, { image: url });
+    } catch {
+      alert("No se pudo subir la imagen. Intenta de nuevo.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function onPaste(e) {
+    const f = Array.from(e.clipboardData?.items || []).find(i => i.type.startsWith("image/"))?.getAsFile();
+    if (f) { e.preventDefault(); handleFile(f); }
+  }
+
+  function onDrop(e) {
+    e.preventDefault(); setDragOver(false);
+    handleFile(e.dataTransfer?.files?.[0]);
+  }
+
+  return (
+    <div className="flex items-start gap-2">
+      <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0 pt-1">Imagen</span>
+      <div className="flex-1 flex flex-col gap-1">
+        {item.image ? (
+          <div className="relative w-full">
+            <img src={item.image} alt="" className="w-full max-h-24 object-cover rounded border border-neutral-200" />
+            <button type="button" onClick={() => onUpdate(item._uid, { image: "" })}
+              className="absolute top-1 right-1 bg-white/80 rounded px-1 text-[10px] text-red-500 hover:text-red-700">✕ quitar</button>
+          </div>
+        ) : (
+          <div
+            onPaste={onPaste}
+            onDrop={onDrop}
+            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onClick={() => fileRef.current?.click()}
+            className={`flex flex-col items-center justify-center gap-1 border-2 border-dashed rounded-lg py-3 cursor-pointer transition-colors text-center
+              ${dragOver ? "border-blue-400 bg-blue-50" : "border-neutral-200 hover:border-neutral-400"}`}
+          >
+            <input ref={fileRef} type="file" accept="image/*" className="hidden"
+              onChange={e => handleFile(e.target.files?.[0])} />
+            {uploading
+              ? <span className="text-[10px] text-neutral-400">Subiendo…</span>
+              : <>
+                  <span className="text-lg">🖼️</span>
+                  <span className="text-[10px] text-neutral-400">Pegar · arrastrar · o click para elegir</span>
+                </>
+            }
+          </div>
+        )}
+        <input
+          value={item.image || ""}
+          onChange={e => onUpdate(item._uid, { image: e.target.value })}
+          placeholder="o pega un link…"
+          className="text-[10px] text-neutral-400 border-b border-dashed border-neutral-100 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
+        />
+      </div>
+    </div>
+  );
+}
+
 function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], groupSize = 1, lang = "en" }) {
   const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation || item.confirmed));
   return (
@@ -1413,19 +1484,7 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
               className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Imagen</span>
-            <input
-              value={item.image || ""}
-              onChange={e => onUpdate(item._uid, { image: e.target.value })}
-              placeholder="URL de imagen o Google Drive…"
-              className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
-            />
-            {item.image && (
-              <button type="button" onClick={() => onUpdate(item._uid, { image: "" })}
-                title="Quitar imagen" className="text-[10px] text-red-400 hover:text-red-600 shrink-0">✕</button>
-            )}
-          </div>
+          <ImageField item={item} onUpdate={onUpdate} />
         </div>
       )}
     </div>
