@@ -4077,7 +4077,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               <p className="text-[10px] text-neutral-400 mt-1">Pega el link del formulario de HubSpot — aparece como botón en el PDF y en la página pre-viaje.</p>
             </div>
 
-            {kickoff?.id && (() => {
+            {false && kickoff?.id && (() => {
               const ciLink = `https://twotravelvip.com/ci/${kickoff.id}`;
               const cityName = cityFullName(checkInCity) || checkInCity || "";
               const cityLine = cityName ? ` en ${cityName}` : "";
