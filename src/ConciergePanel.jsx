@@ -6444,19 +6444,20 @@ const loadKickoffs = async () => {
         return text.includes(q);
       })
       .sort((a, b) => {
-        const da = new Date(a.createdAt || 0).getTime();
-        const db = new Date(b.createdAt || 0).getTime();
+        const da = new Date(a.lastModified || a.createdAt || 0).getTime();
+        const db = new Date(b.lastModified || b.createdAt || 0).getTime();
         return db - da;
       });
   }, [kickoffs, search, statusFilter, conciergeFilter]);
 
   // Updates kickoff locally + in sheet but does NOT close the drawer
   const handleSilentUpdate = async (id, updates) => {
+    const stamped = { ...updates, lastModified: new Date().toISOString() };
     // Update local state immediately (optimistic) so reopening the drawer shows latest edits
     setKickoffs((prev) =>
       prev.map((k) => {
         if (k.id !== id) return k;
-        const next = { ...k, ...updates };
+        const next = { ...k, ...stamped };
         if ("guestContact" in updates && String(updates.guestContact || "").trim() === "") {
           next.guestContact = k.guestContact || "";
         }
@@ -6464,7 +6465,7 @@ const loadKickoffs = async () => {
       })
     );
     try {
-      await updateKickoffInSheet(id, updates);
+      await updateKickoffInSheet(id, stamped);
     } catch (err) {
       console.error("Silent update failed:", err);
     }
@@ -6518,6 +6519,7 @@ const loadKickoffs = async () => {
   const handleSaveEdit = async (id, updates) => {
   try {
     setRowLoadingId(id);
+    updates.lastModified = new Date().toISOString();
     await updateKickoffInSheet(id, updates);
 
     // Sync Handoffs when itinerary is in preview or later (create on first, update on re-saves)
