@@ -3374,6 +3374,11 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [lang, setLang] = useState(kickoff?.lang || "en");
   const [guestContact, setGuestContact] = useState(kickoff?.guestContact || "");
   const [checkInFormUrl, setCheckInFormUrl] = useState(kickoff?.checkInFormUrl || "");
+  const [checkInCity,    setCheckInCity]    = useState(() => {
+    if (kickoff?.checkInCity) return kickoff.checkInCity;
+    // default to first city of kickoff
+    return (kickoff?.city || "").split(",")[0].trim().toUpperCase() || "";
+  });
   // Multi-concierge: stored as comma-separated names; edit as array of names
   const parseMultiConcierge = (raw) => {
     if (!raw) return [];
@@ -3666,6 +3671,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   updates.lang = lang;
   updates.guestContact = guestContact.trim();
   updates.checkInFormUrl = checkInFormUrl.trim();
+  updates.checkInCity    = checkInCity;
   // Briefing de Ventas
   updates.briefHasHouse = briefHasHouse;
   updates.briefHasBoat  = briefHasBoat;
@@ -3835,11 +3841,42 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
             {kickoff?.id && (() => {
               const ciLink = `https://twotravelvip.com/ci/${kickoff.id}`;
-              const waMsgEs = `Comparte este formulario con todo tu grupo para que podamos preparar cada detalle de tu estadía con anticipación. Esta información nos ayuda con:\n\n• Datos de pasaporte: requeridos por la mayoría de las villas como parte de su proceso oficial de check-in, y a veces para acceso al muelle o seguro de actividades.\n• Necesidades alimenticias y alergias: nos permite elegir restaurantes adecuados, avisar a los lugares con anticipación, y preparar al personal de la villa para desayunos y comidas en casa.\n• Información de vuelo: nos permite coordinar el transporte del aeropuerto y el número correcto de vehículos para la llegada y salida de tu grupo.\n\nPor favor asegúrate de que todos en tu grupo lo completen antes de llegar. Esto nos ayuda a evitar retrasos y tener todo listo para ustedes.\n\n${ciLink}`;
-              const waMsgEn = `Share this form with your entire group so we can prepare every detail of your stay in advance. This information helps us with:\n\n• Passport details: required by most villas as part of their official check-in process, and sometimes for dock access or activity insurance.\n• Dietary needs & allergies: this allows us to select suitable restaurants, notify venues in advance, and brief the villa staff for breakfasts and any meals at the house.\n• Flight information: this allows us to coordinate airport transportation and arrange the right number of vehicles for your group's arrival and departure.\n\nPlease make sure everyone in your group completes this before arrival. It helps us avoid delays and have everything ready for you.\n\n${ciLink}`;
+              const cityName = cityFullName(checkInCity) || checkInCity || "";
+              const cityLine = cityName ? ` en ${cityName}` : "";
+              const cityLineEn = cityName ? ` in ${cityName}` : "";
+              const waMsgEs = `Comparte este formulario con todo tu grupo para que podamos preparar cada detalle de tu estadía${cityLine} con anticipación. Esta información nos ayuda con:\n\n• Datos de pasaporte: requeridos por la mayoría de las villas como parte de su proceso oficial de check-in, y a veces para acceso al muelle o seguro de actividades.\n• Necesidades alimenticias y alergias: nos permite elegir restaurantes adecuados, avisar a los lugares con anticipación, y preparar al personal de la villa para desayunos y comidas en casa.\n• Información de vuelo: nos permite coordinar el transporte del aeropuerto y el número correcto de vehículos para la llegada y salida de tu grupo.\n\nPor favor asegúrate de que todos en tu grupo lo completen antes de llegar. Esto nos ayuda a evitar retrasos y tener todo listo para ustedes.\n\n${ciLink}`;
+              const waMsgEn = `Share this form with your entire group so we can prepare every detail of your stay${cityLineEn} in advance. This information helps us with:\n\n• Passport details: required by most villas as part of their official check-in process, and sometimes for dock access or activity insurance.\n• Dietary needs & allergies: this allows us to select suitable restaurants, notify venues in advance, and brief the villa staff for breakfasts and any meals at the house.\n• Flight information: this allows us to coordinate airport transportation and arrange the right number of vehicles for your group's arrival and departure.\n\nPlease make sure everyone in your group completes this before arrival. It helps us avoid delays and have everything ready for you.\n\n${ciLink}`;
+
+              // Cities from this kickoff
+              const kickoffCities = city.split(",").map(c => c.trim().toUpperCase()).filter(Boolean);
+
               return (
                 <div className="col-span-2 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
                   <p className="text-[11px] font-semibold text-indigo-700 mb-2">📋 Check-in Form</p>
+
+                  {/* City selector — only if kickoff has multiple cities */}
+                  {kickoffCities.length > 1 && (
+                    <div className="mb-3">
+                      <label className="text-[10px] text-indigo-600 font-semibold uppercase tracking-wide mb-1 block">📍 Ciudad del formulario</label>
+                      <div className="flex gap-2 flex-wrap">
+                        {kickoffCities.map(code => (
+                          <button
+                            key={code}
+                            type="button"
+                            onClick={() => setCheckInCity(code)}
+                            className={`text-[11px] px-3 py-1.5 rounded-lg border font-medium transition-colors ${
+                              checkInCity === code
+                                ? "bg-indigo-600 text-white border-indigo-600"
+                                : "bg-white text-indigo-700 border-indigo-300 hover:bg-indigo-100"
+                            }`}
+                          >
+                            {cityFullName(code) || code}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex gap-2 mb-2">
                     <span className="flex-1 border border-indigo-200 rounded-lg px-2 py-1.5 text-[11px] font-mono bg-white text-indigo-600 truncate">{ciLink}</span>
                     <button type="button" onClick={() => navigator.clipboard.writeText(ciLink)}
@@ -6930,7 +6967,12 @@ const loadKickoffs = async () => {
                     </td>
 
                     <td style={{color:"var(--text-2)"}}>
-                      {k.assignedConcierge || <span style={{color:"var(--text-3)",fontStyle:"italic"}}>—</span>}
+                      {(() => {
+                        const v = String(k.assignedConcierge || "").trim();
+                        // Pure numeric = stale HubSpot owner ID, not a name
+                        if (!v || /^\d+$/.test(v)) return <span style={{color:"var(--text-3)",fontStyle:"italic"}}>—</span>;
+                        return v;
+                      })()}
                     </td>
 
                     <td>
