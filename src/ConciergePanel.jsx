@@ -1299,7 +1299,7 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
           {(() => {
             const isTransport = String(item.category || "").toLowerCase().includes("transport");
             const isPerPerson = !isTransport && String(item.priceUnit || "").toLowerCase().includes("person");
-            const pax = parseInt(groupSize, 10);
+            const pax = parseInt(item.pax || groupSize, 10);
             const unitPrice = Number(item.priceOverride_cop ?? item.price_cop ?? 0);
             const showTotal = isPerPerson && pax >= 2 && unitPrice > 0;
             const total = showTotal ? new Intl.NumberFormat("es-CO").format(unitPrice * pax) : null;
@@ -1312,9 +1312,19 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
                   className={`text-[8px] px-1.5 py-0 rounded border leading-4 transition ${isPerPerson ? "text-indigo-600 border-indigo-300 bg-indigo-50" : "text-neutral-400 border-neutral-200 bg-transparent hover:border-neutral-400"}`}>
                   {isPerPerson ? "×pers" : "grupo"}
                 </button>
+                {isPerPerson && (
+                  <input
+                    type="number" min="1"
+                    value={item.pax || ""}
+                    onChange={e => onUpdate(item._uid, { pax: e.target.value === "" ? null : Number(e.target.value) })}
+                    placeholder={String(pax)}
+                    title="N° personas para este servicio"
+                    className="w-8 text-[9px] text-center text-indigo-600 border-b border-indigo-200 focus:outline-none bg-transparent placeholder-indigo-300"
+                  />
+                )}
                 {showTotal && (
                   <span className="text-[9px] text-indigo-500 leading-tight">
-                    ×{pax} = {total}
+                    = {total}
                   </span>
                 )}
               </div>

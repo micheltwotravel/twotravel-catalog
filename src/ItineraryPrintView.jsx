@@ -305,7 +305,8 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       city         : service.city       || "",
       price        : cartItem.priceOverride_cop || (cityMatches ? (service.price_cop || service.priceCop || service.price_tier_1 || service.priceTier1 || "") : ""),
       priceUsd     : cartItem.priceUsd != null ? num(cartItem.priceUsd) : (cityMatches ? num(service.price_tier_1 || service.priceTier1 || 0) : 0),
-      priceUnit    : service.priceUnit  || "",
+      priceUnit    : cartItem.priceUnit || service.priceUnit || "",
+      pax          : Number(cartItem.pax || 0),
       deposit      : service.deposit    || "",
       cancellation : service.cancellation || "",
       menuUrl      : service.menuUrl    || "",
@@ -318,6 +319,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
         ? (cartItem.dressCode_en || service.dressCode_en || service.dress_code_en || "")
         : (cartItem.dressCode || service.dressCode || service.dress_code || "")),
       confirmed    : cartItem.confirmed !== false,
+      confirmation : cartItem.confirmation || "",
       priceTiers      : cartItem.priceTiers || (lang === "en" ? (service.priceTiers_en || service.priceTiers) : (service.priceTiers || service.priceTiers_en)) || service.price_tiers || "",
       tierQuantities  : cartItem.tierQuantities || [],
       tierTotal       : cartItem.tierTotal || 0,
@@ -1429,6 +1431,16 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
             <div className="ev-price-col">
               <span className="ev-price-label">{isEs ? "Precio" : "Price"}</span>
               {price && <Editable value={price} tag="div" className="ev-price-val" editMode={editMode} onChange={v => patchItem?.("price", v)} />}
+              {(() => {
+                const isPerPerson = String(it.priceUnit || "").toLowerCase().includes("person");
+                const pax = it.pax || 0;
+                if (!isPerPerson || !price) return null;
+                const unitNum = Number(String(it.price || "").replace(/\D/g, ""));
+                const paxNum = pax || 1;
+                if (!unitNum || paxNum <= 1) return <div style={{fontSize:9,color:"#6b7280"}}>× {isEs ? "persona" : "person"}</div>;
+                const total = new Intl.NumberFormat("es-CO").format(unitNum * paxNum);
+                return <div style={{fontSize:9,color:"#6b7280"}}>×{paxNum} = ${total}</div>;
+              })()}
               {it.tierQuantities?.length > 0 && it.tierQuantities.some(t => t.qty > 0) ? (
                 <div className="ev-price-tiers">
                   {it.tierQuantities.filter(t => t.qty > 0).map((t, i) => (
@@ -1439,9 +1451,19 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
               ) : it.priceTiers ? (
                 <Editable value={it.priceTiers} tag="div" className="ev-price-tiers" editMode={editMode} onChange={v => patchItem?.("priceTiers", v)} />
               ) : null}
+              {it.confirmation && (
+                <div style={{fontSize:9,color:"#6b7280",marginTop:3}}>
+                  ✓ {it.confirmation}
+                </div>
+              )}
             </div>
           )}
         </div>
+
+        {/* Confirmation (when no price shown) */}
+        {it.confirmation && !price && !it.priceTiers && (
+          <div style={{fontSize:9,color:"#6b7280",marginBottom:4}}>✓ {it.confirmation}</div>
+        )}
 
         {/* Location subtitle */}
         {it.location && (
