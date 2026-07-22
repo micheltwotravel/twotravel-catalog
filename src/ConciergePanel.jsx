@@ -1184,7 +1184,7 @@ function mapManualToCartItem() {
 /* ═══════════════════════════════════════════════════════════════
    ACTIVITY ROW — inline-editable row inside a day section
 ═══════════════════════════════════════════════════════════════ */
-function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], groupSize = 1 }) {
+function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], groupSize = 1, lang = "en" }) {
   const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation || item.confirmed));
   return (
     <div className={`px-4 py-2.5 hover:bg-neutral-50 transition-colors${item.ghost ? " opacity-40 bg-neutral-50" : ""}`}
@@ -1203,7 +1203,7 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
         {/* Name */}
         <div className="col-span-6">
           <input
-            value={item.displayName || item.name || ""}
+            value={item.displayName || (lang === "en" ? (item.name_en || item.name) : item.name) || ""}
             onChange={e => onUpdate(item._uid, { displayName: e.target.value })}
             placeholder="Nombre del servicio"
             className="w-full text-sm font-medium text-neutral-900 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent"
@@ -1419,7 +1419,7 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
   );
 }
 
-function SortableActivityRow({ item, onUpdate, onRemove, onResync, availableDays, groupSize }) {
+function SortableActivityRow({ item, onUpdate, onRemove, onResync, availableDays, groupSize, lang = "en" }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item._uid });
   return (
@@ -1436,7 +1436,7 @@ function SortableActivityRow({ item, onUpdate, onRemove, onResync, availableDays
       </button>
       <div className="flex-1 min-w-0">
         <ActivityRow item={item} onUpdate={onUpdate} onRemove={onRemove} onResync={onResync}
-          availableDays={availableDays} groupSize={groupSize} />
+          availableDays={availableDays} groupSize={groupSize} lang={lang} />
       </div>
     </div>
   );
@@ -1532,7 +1532,7 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
                   {items.map(item => (
                     <SortableActivityRow key={item._uid || item.id} item={item}
                       availableDays={availableDays}
-                      groupSize={groupSize}
+                      groupSize={groupSize} lang={lang}
                       onUpdate={onUpdateItem} onRemove={onRemoveItem} onResync={onResyncItem} />
                   ))}
                 </div>

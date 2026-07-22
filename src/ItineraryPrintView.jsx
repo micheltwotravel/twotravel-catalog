@@ -266,8 +266,8 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       time         : cl(cartItem.timeLabel || cartItem.time || cartItem.startTime || service.schedule || ""),
       duration     : cl(service.duration || ""),
       title        : cl(lang === "en"
-        ? (cartItem.displayName || service.name_en || service.name || cartItem.name || "")
-        : (cartItem.displayName || service.name    || cartItem.name || "")),
+        ? (cartItem.displayName || cartItem.name_en || service.name_en || service.name || cartItem.name || "")
+        : (cartItem.displayName || cartItem.name    || service.name    || "")),
       description  : desc,
       highlights   : lang === "es"
         ? (service.highlights    || [])
