@@ -2096,11 +2096,13 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
           onPick={svc => {
             const count = cart.filter(i => (i.dayLabel || "Sin día") === catalogTargetDay).length;
             const newItem = mapServiceToCartItem(svc, kickoff?.clientType || 1, parseInt(kickoff?.groupSize || "1") || 1);
+            const lang = kickoff?.lang || "en";
             setCart(prev => [...prev, {
               ...newItem,
               _uid: `${newItem.id}_${Date.now()}_${Math.random()}`,
               dayLabel: catalogTargetDay,
               sortOrder: count,
+              displayName: lang === "en" ? (svc.name_en || svc.name || "") : (svc.name || ""),
             }]);
             setCatalogTargetDay(null);
           }}
