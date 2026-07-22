@@ -1186,7 +1186,8 @@ function mapManualToCartItem() {
 function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], groupSize = 1 }) {
   const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation || item.confirmed));
   return (
-    <div className="px-4 py-2.5 hover:bg-neutral-50 transition-colors">
+    <div className={`px-4 py-2.5 hover:bg-neutral-50 transition-colors${item.ghost ? " opacity-40 bg-neutral-50" : ""}`}
+         title={item.ghost ? "👻 Fantasma — no visible al cliente" : undefined}>
       <div className="grid grid-cols-12 gap-x-2 items-center">
         {/* Time picker */}
         <div className="col-span-2">
@@ -1256,6 +1257,14 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
             className="text-[11px] leading-none opacity-60 hover:opacity-100 transition-opacity"
           >
             {item.confirmed !== false ? "✅" : "📌"}
+          </button>
+          <button
+            type="button"
+            onClick={() => onUpdate(item._uid, { ghost: !item.ghost })}
+            title={item.ghost ? "Visible al cliente (click para ocultar)" : "Ocultar al cliente (fantasma)"}
+            className={`text-[11px] leading-none transition-opacity ${item.ghost ? "opacity-100" : "opacity-30 hover:opacity-70"}`}
+          >
+            👻
           </button>
           {onResync && item.sku && (
             <button type="button" onClick={() => onResync(item._uid)}

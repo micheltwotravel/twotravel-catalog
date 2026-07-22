@@ -218,6 +218,7 @@ function matchCart(cartRaw, catalog) {
   const cart = parseJsonField(cartRaw);
   const out = [];
   for (const item of cart) {
+    if (item.ghost) continue;
     const sku = cl(item.sku);
     const id  = cl(item.id);
     const nl  = cl(item.name || item.displayName).toLowerCase();
@@ -265,8 +266,8 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       time         : cl(cartItem.timeLabel || cartItem.time || cartItem.startTime || service.schedule || ""),
       duration     : cl(service.duration || ""),
       title        : cl(lang === "en"
-        ? (cartItem.name_en || cartItem.displayName || cartItem.title || cartItem.name || service.name_en || service.name || "")
-        : (cartItem.displayName || cartItem.title || cartItem.name || service.name || "")),
+        ? (cartItem.displayName || service.name_en || service.name || cartItem.name || "")
+        : (cartItem.displayName || service.name    || cartItem.name || "")),
       description  : desc,
       highlights   : lang === "es"
         ? (service.highlights    || [])
