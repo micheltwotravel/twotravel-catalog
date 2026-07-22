@@ -6969,9 +6969,13 @@ const loadKickoffs = async () => {
                     <td style={{color:"var(--text-2)"}}>
                       {(() => {
                         const v = String(k.assignedConcierge || "").trim();
-                        // Pure numeric = stale HubSpot owner ID, not a name
-                        if (!v || /^\d+$/.test(v)) return <span style={{color:"var(--text-3)",fontStyle:"italic"}}>—</span>;
-                        return v;
+                        if (!v) return <span style={{color:"var(--text-3)",fontStyle:"italic"}}>—</span>;
+                        // Strip numeric HubSpot IDs, keep only name parts
+                        const names = v.split(",")
+                          .map(p => p.trim())
+                          .filter(p => p && !/^\d+$/.test(p));
+                        if (!names.length) return <span style={{color:"var(--text-3)",fontStyle:"italic"}}>—</span>;
+                        return names.join(", ");
                       })()}
                     </td>
 
