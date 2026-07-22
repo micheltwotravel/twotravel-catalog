@@ -6453,17 +6453,20 @@ const loadKickoffs = async () => {
   // Updates kickoff locally + in sheet but does NOT close the drawer
   const handleSilentUpdate = async (id, updates) => {
     const stamped = { ...updates, lastModified: new Date().toISOString() };
-    // Update local state immediately (optimistic) so reopening the drawer shows latest edits
-    setKickoffs((prev) =>
-      prev.map((k) => {
-        if (k.id !== id) return k;
+    // Update local state immediately (optimistic); bubble to front so it sorts first
+    setKickoffs((prev) => {
+      let updated = null;
+      const rest = prev.filter((k) => {
+        if (k.id !== id) return true;
         const next = { ...k, ...stamped };
         if ("guestContact" in updates && String(updates.guestContact || "").trim() === "") {
           next.guestContact = k.guestContact || "";
         }
-        return next;
-      })
-    );
+        updated = next;
+        return false;
+      });
+      return updated ? [updated, ...rest] : prev;
+    });
     try {
       await updateKickoffInSheet(id, stamped);
     } catch (err) {
