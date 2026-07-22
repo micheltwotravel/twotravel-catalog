@@ -2587,8 +2587,8 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
           kickoffCodes.flatMap(code => CITY_CONFIG[code]?.aliases || [code.toLowerCase()])
         );
         const sCity = String(s.city || "").trim();
-        // Untagged services → only show for Cartagena (legacy)
-        if (!sCity) return kickoffCodes.includes("CTG");
+        // Untagged services → legacy Cartagena content, only show for pure-CTG kickoffs
+        if (!sCity) return kickoffCodes.length === 1 && kickoffCodes[0] === "CTG";
         // Service may also be tagged with multiple cities
         const sCodes = sCity.split(",").map(c => toCityCode(c.trim())).filter(Boolean);
         return sCodes.some(code => kickoffCodes.includes(code))

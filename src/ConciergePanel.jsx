@@ -3387,6 +3387,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [assignedConcierges, setAssignedConcierges] = useState(
     parseMultiConcierge(kickoff?.assignedConcierge || kickoff?.assignedConciergeName || "")
   );
+  // { "Carolina Lopez": "CTG", "Daniela Becerra": "MDE" }
+  const [conciergesCities, setConciergesCities] = useState(() => {
+    try { return JSON.parse(kickoff?.conciergesCities || "{}"); } catch { return {}; }
+  });
   // Derived single values for backward compat
   const assignedConcierge      = assignedConcierges[0] || "";
   const assignedConciergeEmail = assignedConcierges
@@ -3615,6 +3619,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     assignedConcierge:      assignedConcierges.join(", "),
     assignedConciergeName:  assignedConcierges.join(", "),
     assignedConciergeEmail: assignedConciergeEmail,
+    conciergesCities:       JSON.stringify(conciergesCities),
     // Cover fields
     tripDates:         tripDates.trim(),
     city:              city.trim(),
@@ -4010,27 +4015,65 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   <span className="ml-1 text-neutral-400">({assignedConcierges.join(", ")})</span>
                 )}
               </label>
-              <div className="border rounded-lg divide-y bg-white max-h-40 overflow-y-auto">
-                {CONCIERGE_LIST.map(c => {
-                  const checked = assignedConcierges.includes(c.name);
-                  return (
-                    <label key={c.email} className="flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 cursor-pointer text-sm">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => {
-                          setAssignedConcierges(prev =>
-                            checked ? prev.filter(n => n !== c.name) : [...prev, c.name]
-                          );
-                        }}
-                        className="rounded"
-                      />
-                      <span className="flex-1">{c.name}</span>
-                      <span className="text-[10px] text-neutral-400">{c.city}</span>
-                    </label>
-                  );
-                })}
-              </div>
+              {(() => {
+                const kickoffCityList = city.split(",").map(c => c.trim().toUpperCase()).filter(Boolean);
+                const multiCity = kickoffCityList.length > 1;
+                return (
+                  <div className="border rounded-lg divide-y bg-white">
+                    {CONCIERGE_LIST.map(c => {
+                      const checked = assignedConcierges.includes(c.name);
+                      return (
+                        <div key={c.email} className="px-3 py-2 hover:bg-neutral-50">
+                          <label className="flex items-center gap-2 cursor-pointer text-sm">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setAssignedConcierges(prev =>
+                                  checked ? prev.filter(n => n !== c.name) : [...prev, c.name]
+                                );
+                                if (!checked) {
+                                  // Auto-assign default city when checking
+                                  const defaultCity = kickoffCityList.find(code => code === c.city) || kickoffCityList[0] || c.city;
+                                  setConciergesCities(prev => ({ ...prev, [c.name]: defaultCity }));
+                                } else {
+                                  setConciergesCities(prev => { const { [c.name]: _, ...rest } = prev; return rest; });
+                                }
+                              }}
+                              className="rounded"
+                            />
+                            <span className="flex-1">{c.name}</span>
+                            {!checked && <span className="text-[10px] text-neutral-400">{c.city}</span>}
+                          </label>
+                          {checked && multiCity && (
+                            <div className="flex gap-1.5 mt-1.5 ml-6">
+                              {kickoffCityList.map(code => (
+                                <button
+                                  key={code}
+                                  type="button"
+                                  onClick={() => setConciergesCities(prev => ({ ...prev, [c.name]: code }))}
+                                  className={`text-[10px] px-2 py-0.5 rounded-full border font-medium transition-colors ${
+                                    conciergesCities[c.name] === code
+                                      ? "bg-indigo-600 text-white border-indigo-600"
+                                      : "bg-white text-neutral-500 border-neutral-300 hover:border-indigo-400"
+                                  }`}
+                                >
+                                  {cityFullName(code) || code}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {checked && !multiCity && (
+                            <div className="ml-6 mt-0.5">
+                              <span className="text-[10px] text-indigo-600 font-medium">{cityFullName(conciergesCities[c.name] || c.city) || c.city}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="sm:col-span-2">
@@ -6970,10 +7013,16 @@ const loadKickoffs = async () => {
                       {(() => {
                         const v = String(k.assignedConcierge || "").trim();
                         if (!v) return <span style={{color:"var(--text-3)",fontStyle:"italic"}}>—</span>;
-                        // Strip numeric HubSpot IDs, keep only name parts
-                        const names = v.split(",")
-                          .map(p => p.trim())
-                          .filter(p => p && !/^\d+$/.test(p));
+                        const names = v.split(",").map(p => {
+                          const part = p.trim();
+                          if (!part) return null;
+                          // Resolve phone number → name
+                          const byPhone = CONCIERGE_LIST.find(c => c.phone.replace(/\D/g,"") === part.replace(/\D/g,"") && part.replace(/\D/g,"").length > 5);
+                          if (byPhone) return byPhone.name;
+                          // Drop pure numeric HubSpot owner IDs
+                          if (/^\d+$/.test(part)) return null;
+                          return part;
+                        }).filter(Boolean);
                         if (!names.length) return <span style={{color:"var(--text-3)",fontStyle:"italic"}}>—</span>;
                         return names.join(", ");
                       })()}
