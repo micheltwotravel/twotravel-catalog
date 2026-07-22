@@ -1298,7 +1298,8 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
           />
           {(() => {
             const isTransport = String(item.category || "").toLowerCase().includes("transport");
-            const isPerPerson = !isTransport && String(item.priceUnit || "").toLowerCase().includes("person");
+            const isPerVehicle = isTransport || String(item.priceUnit || "").toLowerCase().includes("vehicle");
+            const isPerPerson = !isPerVehicle && String(item.priceUnit || "").toLowerCase().includes("person");
             const pax = parseInt(item.pax || groupSize, 10);
             const unitPrice = Number(item.priceOverride_cop ?? item.price_cop ?? 0);
             const showTotal = isPerPerson && pax >= 2 && unitPrice > 0;
@@ -1307,10 +1308,10 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
               <div className="flex items-center justify-end gap-1.5 mt-0.5">
                 {/* Per-person / per-group toggle */}
                 <button type="button"
-                  title={isPerPerson ? "Por persona — click para cambiar a por grupo" : "Por grupo — click para cambiar a por persona"}
-                  onClick={() => onUpdate(item._uid, { priceUnit: isPerPerson ? "per group" : "per person" })}
-                  className={`text-[8px] px-1.5 py-0 rounded border leading-4 transition ${isPerPerson ? "text-indigo-600 border-indigo-300 bg-indigo-50" : "text-neutral-400 border-neutral-200 bg-transparent hover:border-neutral-400"}`}>
-                  {isPerPerson ? "×pers" : "grupo"}
+                  title={isPerVehicle ? "Por vehículo" : isPerPerson ? "Por persona — click para cambiar a por grupo" : "Por grupo — click para cambiar a por persona"}
+                  onClick={() => !isPerVehicle && onUpdate(item._uid, { priceUnit: isPerPerson ? "per group" : "per person" })}
+                  className={`text-[8px] px-1.5 py-0 rounded border leading-4 transition ${isPerVehicle ? "text-emerald-600 border-emerald-300 bg-emerald-50 cursor-default" : isPerPerson ? "text-indigo-600 border-indigo-300 bg-indigo-50" : "text-neutral-400 border-neutral-200 bg-transparent hover:border-neutral-400"}`}>
+                  {isPerVehicle ? "×veh" : isPerPerson ? "×pers" : "grupo"}
                 </button>
                 {isPerPerson && (
                   <input

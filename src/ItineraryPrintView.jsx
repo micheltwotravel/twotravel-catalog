@@ -1432,14 +1432,34 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
               <span className="ev-price-label">{isEs ? "Precio" : "Price"}</span>
               {price && <Editable value={price} tag="div" className="ev-price-val" editMode={editMode} onChange={v => patchItem?.("price", v)} />}
               {(() => {
-                const isPerPerson = String(it.priceUnit || "").toLowerCase().includes("person");
-                const pax = it.pax || 0;
-                if (!isPerPerson || !price) return null;
-                const unitNum = Number(String(it.price || "").replace(/\D/g, ""));
-                const paxNum = pax || 1;
-                if (!unitNum || paxNum <= 1) return <div style={{fontSize:9,color:"#6b7280"}}>× {isEs ? "persona" : "person"}</div>;
-                const total = new Intl.NumberFormat("es-CO").format(unitNum * paxNum);
-                return <div style={{fontSize:9,color:"#6b7280"}}>×{paxNum} = ${total}</div>;
+                const unit = String(it.priceUnit || "").toLowerCase();
+                const isPerPerson  = unit.includes("person");
+                const isPerVehicle = unit.includes("vehicle") || unit.includes("vehículo") || unit.includes("vehiculo");
+                if (!price) return null;
+                if (isPerVehicle) {
+                  return (
+                    <div style={{fontSize:8,color:"#9ca3af",letterSpacing:"0.4px",textTransform:"uppercase",marginTop:2}}>
+                      {isEs ? "por vehículo" : "per vehicle"}
+                    </div>
+                  );
+                }
+                if (isPerPerson) {
+                  const pax = it.pax || 0;
+                  const unitNum = Number(String(it.price || "").replace(/\D/g, ""));
+                  const paxNum = pax || 1;
+                  if (!unitNum || paxNum <= 1) return (
+                    <div style={{fontSize:8,color:"#9ca3af",letterSpacing:"0.4px",textTransform:"uppercase",marginTop:2}}>
+                      {isEs ? "por persona" : "per person"}
+                    </div>
+                  );
+                  const total = new Intl.NumberFormat("es-CO").format(unitNum * paxNum);
+                  return (
+                    <div style={{fontSize:8,color:"#9ca3af",letterSpacing:"0.4px",textTransform:"uppercase",marginTop:2}}>
+                      {isEs ? "por persona" : "per person"} · ×{paxNum} = <span style={{color:"#6b7280",fontWeight:600}}>${total}</span>
+                    </div>
+                  );
+                }
+                return null;
               })()}
               {it.tierQuantities?.length > 0 && it.tierQuantities.some(t => t.qty > 0) ? (
                 <div className="ev-price-tiers">
