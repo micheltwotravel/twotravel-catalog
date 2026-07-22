@@ -1253,7 +1253,7 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
             type="button"
             onClick={() => { onUpdate(item._uid, { confirmed: !(item.confirmed !== false) }); setShowNotes(true); }}
             title={item.confirmed !== false ? "Marcar como recomendación" : "Marcar como confirmado"}
-            className="text-[13px] leading-none opacity-60 hover:opacity-100 transition-opacity"
+            className="text-[11px] leading-none opacity-60 hover:opacity-100 transition-opacity"
           >
             {item.confirmed !== false ? "✅" : "📌"}
           </button>
@@ -1333,17 +1333,6 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
               className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
             />
           </div>
-          {["restaurants","bars","nightlife","beach-clubs"].includes(normCatPanel(item.category)) && (
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Dress code</span>
-              <input
-                value={item.dressCode || ""}
-                onChange={e => onUpdate(item._uid, { dressCode: e.target.value })}
-                placeholder="Formal / Smart casual / No shorts…"
-                className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
-              />
-            </div>
-          )}
           {String(item.category || "").toLowerCase().includes("transport") && (
             <div className="flex items-center gap-2">
               <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Pasajeros</span>
@@ -3907,7 +3896,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
             {/* ── FECHAS DE ESTADÍA (editables por el concierge) ── */}
             <div className="col-span-2 border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
-              <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — Ciudad 1{city.includes(",") ? ` — ${cityFullName(city.split(",")[0]?.trim())}` : ""}</p>
+              <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — {cityFullName(city.split(",")[0]?.trim()) || city.split(",")[0]?.trim() || "Ciudad 1"}</p>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
