@@ -2304,8 +2304,10 @@ export default function ItineraryPrintView() {
 
   const days = useMemo(() => {
     if (!kickoff) return [];
-    // Use saved snapshot if present (concierge edited & saved)
-    if (kickoff.itinerarySnapshot) {
+    // Skip snapshot if cart has block items (nota libre) — always rebuild from cart
+    const cartItems = parseJsonField(kickoff.cart);
+    const hasBlocks = Array.isArray(cartItems) && cartItems.some(i => i.type === "block");
+    if (!hasBlocks && kickoff.itinerarySnapshot) {
       try { return JSON.parse(kickoff.itinerarySnapshot); } catch {}
     }
     if (!catalog.length) return [];
