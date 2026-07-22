@@ -219,19 +219,45 @@ function matchCart(cartRaw, catalog) {
   const out = [];
   for (const item of cart) {
     if (item.ghost) continue;
+    const itemName = cl(item.displayName || item.name || "");
+    if (!itemName) continue;
     const sku = cl(item.sku);
     const id  = cl(item.id);
-    const nl  = cl(item.name || item.displayName).toLowerCase();
-    const s =
+    const nl  = itemName.toLowerCase();
+    // Only match catalog for items that came from catalog (have a sku or non-preset id)
+    const isPreset = !sku && (!id || id.startsWith("preset_") || id.startsWith("manual_"));
+    const s = isPreset ? null : (
       catalog.find(s => sku && s.sku === sku) ||
       catalog.find(s => id  && String(s.id) === id) ||
-      catalog.find(s => nl  && s.name.toLowerCase() === nl) ||
-      catalog.find(s => nl  && s.name.toLowerCase().startsWith(nl)) ||
-      (nl.length >= 4
-        ? catalog.find(s =>
-            s.name.toLowerCase().includes(nl) || nl.includes(s.name.toLowerCase()))
-        : null);
-    if (s) out.push({ cartItem: item, service: s });
+      catalog.find(s => nl  && s.name.toLowerCase() === nl)
+    );
+    // Always include the item; use catalog data when matched, cart item's own data otherwise
+    const svc = s || {
+      name: item.name || item.displayName || "",
+      name_en: item.name_en || item.name || "",
+      description: { es: item.description_es || "", en: item.description_en || "" },
+      descriptionEs: item.description_es || "",
+      descriptionEn: item.description_en || "",
+      image: driveImgUrl(item.image || ""),
+      category: item.category || "",
+      location: item.location || "",
+      city: item.city || "",
+      schedule: "",
+      cancellation: item.cancellation || "",
+      dressCode: "",
+      dressCode_en: "",
+      deposit: item.deposit || "",
+      menuUrl: item.menuUrl || "",
+      mapsUrl: item.mapsUrl || "",
+      quickbooksCode: item.quickbooksCode || "",
+      family_friendly: false,
+      highlights: [],
+      highlights_en: [],
+      includes: "",
+      priceUnit: item.priceUnit || "",
+      priceTiers: "",
+    };
+    out.push({ cartItem: item, service: svc });
   }
   return out;
 }
@@ -263,7 +289,8 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
     const cityMatches = svcMatchesTrip(service.city) && !locMentionsOtherCity;
     map.get(key).push({
       sort         : Number(cartItem.sortOrder ?? idx),
-      time         : cl(cartItem.timeLabel || cartItem.time || cartItem.startTime || service.schedule || ""),
+      time         : cl(cartItem.timeLabel || cartItem.time || cartItem.startTime || ""),
+      schedule     : cl(service.schedule || ""),
       duration     : cl(service.duration || ""),
       title        : cl(lang === "en"
         ? (cartItem.displayName || cartItem.name_en || service.name_en || service.name || cartItem.name || "")
@@ -591,6 +618,13 @@ const CSS = `
     font-size:9px;letter-spacing:2px;text-transform:uppercase;
     color:#888;margin-bottom:10px;font-weight:700;
   }
+  .ev-time-badge{
+    display:inline-block;
+    font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+    color:#1a1a1a;background:#f0f0f0;border-radius:4px;
+    padding:2px 8px;margin-bottom:8px;
+  }
+  .ev-time-dur{font-weight:400;color:#666;}
 
   /* Title + price row */
   .ev-title-row{
@@ -1371,14 +1405,13 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
       {/* ── Right: content ── */}
       <div className="ev-content">
 
-        {/* Meta / time — edit mode only */}
-        {editMode && (timePart || durPart) && (
-          <div className="ev-meta">
-            <>
-              <Editable value={timePart} editMode={editMode} onChange={v => patchItem?.("time", v)} />
-              {timePart && durPart ? " · " : ""}
-              <Editable value={durPart} editMode={editMode} onChange={v => patchItem?.("duration", v)} />
-            </>
+        {/* Time badge — always visible when set */}
+        {timePart && (
+          <div className="ev-time-badge">
+            {editMode
+              ? <Editable value={timePart} editMode={editMode} onChange={v => patchItem?.("time", v)} />
+              : timePart}
+            {durPart && <span className="ev-time-dur"> · {durPart}</span>}
           </div>
         )}
 
@@ -1468,15 +1501,10 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
           </div>
         )}
 
-        {/* Schedule */}
-        {(timePart || durPart) && (
+        {/* Schedule (catalog hours, no label) */}
+        {it.schedule && (
           <div className="ev-terms">
-            <b>{isEs ? "Horario: " : "Schedule: "}</b>
-            {editMode ? (
-              <Editable value={[timePart, durPart].filter(Boolean).join(" · ")} editMode={editMode} onChange={v => patchItem?.("time", v)} />
-            ) : (
-              [timePart, durPart].filter(Boolean).join(" · ")
-            )}
+            <Editable value={it.schedule} editMode={editMode} />
           </div>
         )}
 

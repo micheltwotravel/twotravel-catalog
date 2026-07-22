@@ -1189,7 +1189,7 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
   return (
     <div className={`px-4 py-2.5 hover:bg-neutral-50 transition-colors${item.ghost ? " opacity-40 bg-neutral-50" : ""}`}
          title={item.ghost ? "👻 Fantasma — no visible al cliente" : undefined}>
-      <div className="grid grid-cols-12 gap-x-2 items-center">
+      <div className="grid grid-cols-12 gap-x-2 gap-y-1 items-center">
         {/* Time picker */}
         <div className="col-span-2">
           <input
@@ -1201,7 +1201,7 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
           />
         </div>
         {/* Name */}
-        <div className="col-span-6">
+        <div className="col-span-7">
           <input
             value={item.displayName || (lang === "en" ? (item.name_en || item.name) : item.name) || ""}
             onChange={e => onUpdate(item._uid, { displayName: e.target.value })}
@@ -1250,13 +1250,13 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
             );
           })()}
         </div>
-        {/* Actions */}
-        <div className="col-span-1 flex items-center justify-end gap-1.5">
+        {/* Actions row */}
+        <div className="col-span-12 flex items-center justify-end gap-3 pt-0.5">
           <button
             type="button"
             onClick={() => { onUpdate(item._uid, { confirmed: !(item.confirmed !== false) }); setShowNotes(true); }}
             title={item.confirmed !== false ? "Marcar como recomendación" : "Marcar como confirmado"}
-            className="text-[11px] leading-none opacity-60 hover:opacity-100 transition-opacity"
+            className="text-lg leading-none opacity-70 hover:opacity-100 transition-opacity"
           >
             {item.confirmed !== false ? "✅" : "📌"}
           </button>
@@ -1264,25 +1264,25 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
             type="button"
             onClick={() => onUpdate(item._uid, { ghost: !item.ghost })}
             title={item.ghost ? "Visible al cliente (click para ocultar)" : "Ocultar al cliente (fantasma)"}
-            className={`text-[11px] leading-none transition-opacity ${item.ghost ? "opacity-100" : "opacity-30 hover:opacity-70"}`}
+            className={`text-lg leading-none transition-opacity ${item.ghost ? "opacity-100" : "opacity-25 hover:opacity-70"}`}
           >
             👻
           </button>
           {onResync && item.sku && (
             <button type="button" onClick={() => onResync(item._uid)}
-              title="Resync desde catálogo (actualiza foto, descripción, precio)"
-              className="text-[11px] text-neutral-300 hover:text-blue-500 leading-none transition-colors">
+              title="Resync desde catálogo"
+              className="text-lg text-neutral-300 hover:text-blue-500 leading-none transition-colors">
               🔄
             </button>
           )}
           <button type="button" onClick={() => setShowNotes(v => !v)}
-            title="Notas"
-            className="text-[11px] text-neutral-300 hover:text-neutral-600 leading-none">
+            title="Notas / imagen"
+            className="text-base text-neutral-400 hover:text-neutral-700 leading-none font-medium">
             ✎
           </button>
           <button type="button" onClick={() => onRemove(item._uid)}
             title="Quitar"
-            className="text-[11px] text-neutral-300 hover:text-red-500 leading-none">
+            className="text-sm text-neutral-300 hover:text-red-500 leading-none">
             ✕
           </button>
         </div>
@@ -1412,6 +1412,19 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
               placeholder="Mesa, alergias, instrucciones…"
               className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
             />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Imagen</span>
+            <input
+              value={item.image || ""}
+              onChange={e => onUpdate(item._uid, { image: e.target.value })}
+              placeholder="URL de imagen o Google Drive…"
+              className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
+            />
+            {item.image && (
+              <button type="button" onClick={() => onUpdate(item._uid, { image: "" })}
+                title="Quitar imagen" className="text-[10px] text-red-400 hover:text-red-600 shrink-0">✕</button>
+            )}
           </div>
         </div>
       )}
