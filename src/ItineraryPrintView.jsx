@@ -286,7 +286,9 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       qbCode       : service.quickbooksCode || service.quickbooks_code || "",
       category     : service.category   || "",
       familyFriendly: !!(service.family_friendly),
-      dressCode    : cl(cartItem.dressCode || service.dressCode || service.dress_code || ""),
+      dressCode    : cl(lang === "en"
+        ? (cartItem.dressCode_en || service.dressCode_en || service.dress_code_en || "")
+        : (cartItem.dressCode || service.dressCode || service.dress_code || "")),
       confirmed    : cartItem.confirmed !== false,
       priceTiers      : cartItem.priceTiers || (lang === "en" ? (service.priceTiers_en || service.priceTiers) : (service.priceTiers || service.priceTiers_en)) || service.price_tiers || "",
       tierQuantities  : cartItem.tierQuantities || [],
