@@ -219,6 +219,10 @@ function matchCart(cartRaw, catalog) {
   const out = [];
   for (const item of cart) {
     if (item.ghost) continue;
+    if (item.type === "block") {
+      if (item.html) out.push({ cartItem: item, service: null, isBlock: true });
+      continue;
+    }
     const itemName = cl(item.displayName || item.name || "");
     if (!itemName) continue;
     const sku = cl(item.sku);
@@ -2090,17 +2094,26 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
       </div>
 
       <div style={{ flex: 1 }}>
-        {day.items.map((it, i) => (
-          <EventBlock
-            key={i}
-            it={it}
-            lang={lang}
-            editMode={editMode}
-            hasFamilies={hasFamilies}
-            onRemove={onRemoveItem ? () => onRemoveItem(i) : undefined}
-            patchItem={patchItemFn ? (field, val) => patchItemFn(i, field, val) : undefined}
-          />
-        ))}
+        {day.items.map((it, i) => it.isBlock
+          ? (
+            <div key={i} style={{ margin: "10px 0", position: "relative" }}>
+              {editMode && onRemoveItem && (
+                <button onClick={() => onRemoveItem(i)} style={{position:"absolute",top:4,right:4,border:"none",background:"none",cursor:"pointer",color:"#9ca3af",fontSize:11}}>✕</button>
+              )}
+              <div dangerouslySetInnerHTML={{ __html: it.cartItem.html }} style={{ fontSize: 13, color: "#111827", lineHeight: 1.6 }} />
+            </div>
+          ) : (
+            <EventBlock
+              key={i}
+              it={it}
+              lang={lang}
+              editMode={editMode}
+              hasFamilies={hasFamilies}
+              onRemove={onRemoveItem ? () => onRemoveItem(i) : undefined}
+              patchItem={patchItemFn ? (field, val) => patchItemFn(i, field, val) : undefined}
+            />
+          )
+        )}
 
         {/* Add service button (edit mode only) */}
         {editMode && onAddItem && (
@@ -2141,7 +2154,7 @@ export default function ItineraryPrintView() {
   const [catalog,   setCatalog]   = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState("");
-  const [editMode,  setEditMode]  = useState(false);
+  const [editMode,  setEditMode]  = useState(canEdit);
   // Mutable deep-copy of days used during edit mode (add/remove days & items)
   const [editDays,  setEditDays]  = useState(null);
   // Catalog picker: { dayIndex } when open, null when closed

@@ -1531,10 +1531,123 @@ function SortableActivityRow({ item, onUpdate, onRemove, onResync, availableDays
 /* ═══════════════════════════════════════════════════════════════
    DAY SECTION — one per day, collapsible, with editable header
 ═══════════════════════════════════════════════════════════════ */
+const COLORS = ["#111827","#6b7280","#ef4444","#f97316","#eab308","#22c55e","#3b82f6","#8b5cf6","#ec4899","#ffffff"];
+const HIGHLIGHTS = ["transparent","#fef08a","#bbf7d0","#bfdbfe","#fecaca","#f5d0fe","#fed7aa"];
+
+function RichTextBlock({ item, onUpdate, onRemove }) {
+  const ref = React.useRef();
+  const [showToolbar, setShowToolbar] = React.useState(false);
+  const [colorOpen, setColorOpen] = React.useState(false);
+  const [hlOpen, setHlOpen] = React.useState(false);
+
+  const exec = (cmd, val) => { document.execCommand(cmd, false, val); ref.current?.focus(); };
+
+  const saveHtml = () => {
+    if (ref.current) onUpdate(item._uid, { html: ref.current.innerHTML });
+  };
+
+  React.useEffect(() => {
+    if (ref.current && ref.current.innerHTML !== (item.html || ""))
+      ref.current.innerHTML = item.html || "";
+  }, []);
+
+  return (
+    <div className="border-l-4 border-violet-300 bg-violet-50/60 mx-3 my-1.5 rounded-r-xl overflow-hidden">
+      {/* Toolbar */}
+      <div className={`flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-white border-b border-violet-100 transition-all ${showToolbar ? "" : "hidden"}`}>
+        {[["bold","B","font-bold"],["italic","I","italic"],["underline","U","underline"],["strikeThrough","S","line-through"]].map(([cmd,lbl,cls])=>(
+          <button key={cmd} type="button" onMouseDown={e=>{e.preventDefault();exec(cmd);}}
+            className={`text-[11px] px-1.5 py-0.5 rounded hover:bg-neutral-100 text-neutral-700 ${cls}`}>{lbl}</button>
+        ))}
+        <div className="w-px h-4 bg-neutral-200 mx-0.5"/>
+        {[["1","H1","text-base font-bold"],["2","H2","text-sm font-semibold"],["3","body","text-xs"],["4","sm","text-[10px]"]].map(([sz,lbl])=>(
+          <button key={sz} type="button" onMouseDown={e=>{e.preventDefault();exec("fontSize",sz);}}
+            className="text-[11px] px-1.5 py-0.5 rounded hover:bg-neutral-100 text-neutral-600">{lbl}</button>
+        ))}
+        <div className="w-px h-4 bg-neutral-200 mx-0.5"/>
+        {[["justifyLeft","⬅"],["justifyCenter","↔"],["justifyRight","➡"]].map(([cmd,lbl])=>(
+          <button key={cmd} type="button" onMouseDown={e=>{e.preventDefault();exec(cmd);}}
+            className="text-[11px] px-1.5 py-0.5 rounded hover:bg-neutral-100 text-neutral-600">{lbl}</button>
+        ))}
+        <div className="w-px h-4 bg-neutral-200 mx-0.5"/>
+        <button type="button" onMouseDown={e=>{e.preventDefault();exec("insertUnorderedList");}}
+          className="text-[11px] px-1.5 py-0.5 rounded hover:bg-neutral-100 text-neutral-600">• Lista</button>
+        <div className="w-px h-4 bg-neutral-200 mx-0.5"/>
+        {/* Text color */}
+        <div className="relative">
+          <button type="button" onMouseDown={e=>{e.preventDefault();setColorOpen(v=>!v);setHlOpen(false);}}
+            className="text-[11px] px-1.5 py-0.5 rounded hover:bg-neutral-100 text-neutral-600">A🎨</button>
+          {colorOpen && (
+            <div className="absolute top-full left-0 z-50 flex flex-wrap gap-1 bg-white border border-neutral-200 rounded-lg p-1.5 shadow-lg w-28">
+              {COLORS.map(c=>(
+                <button key={c} type="button" onMouseDown={e=>{e.preventDefault();exec("foreColor",c);setColorOpen(false);}}
+                  style={{background:c,border:"1px solid #e5e7eb"}} className="w-5 h-5 rounded"/>
+              ))}
+            </div>
+          )}
+        </div>
+        {/* Highlight */}
+        <div className="relative">
+          <button type="button" onMouseDown={e=>{e.preventDefault();setHlOpen(v=>!v);setColorOpen(false);}}
+            className="text-[11px] px-1.5 py-0.5 rounded hover:bg-neutral-100 text-neutral-600">✏️</button>
+          {hlOpen && (
+            <div className="absolute top-full left-0 z-50 flex flex-wrap gap-1 bg-white border border-neutral-200 rounded-lg p-1.5 shadow-lg w-28">
+              {HIGHLIGHTS.map(c=>(
+                <button key={c} type="button" onMouseDown={e=>{e.preventDefault();exec("hiliteColor",c);setHlOpen(false);}}
+                  style={{background:c===("transparent"?"#f9fafb":c),border:"1px solid #e5e7eb"}} className="w-5 h-5 rounded">
+                  {c==="transparent"&&<span className="text-[8px] text-neutral-400">✕</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Editable area */}
+      <div className="relative group">
+        <div
+          ref={ref}
+          contentEditable
+          suppressContentEditableWarning
+          onFocus={() => setShowToolbar(true)}
+          onBlur={() => { setShowToolbar(false); setColorOpen(false); setHlOpen(false); saveHtml(); }}
+          onInput={saveHtml}
+          data-placeholder="Escribe una nota, instrucción, mensaje especial…"
+          className="min-h-[48px] px-3 py-2.5 text-sm text-neutral-800 focus:outline-none"
+          style={{wordBreak:"break-word"}}
+        />
+        {!item.html && (
+          <div className="absolute top-2.5 left-3 text-sm text-neutral-400 pointer-events-none select-none">
+            Escribe una nota, instrucción, mensaje especial…
+          </div>
+        )}
+        <button type="button" onClick={() => onRemove(item._uid)}
+          className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 text-[10px] text-neutral-400 hover:text-red-500 transition-opacity">✕</button>
+      </div>
+    </div>
+  );
+}
+
+function SortableRichTextBlock({ item, onUpdate, onRemove }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: item._uid });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div className="flex items-start">
+        <button type="button" {...attributes} {...listeners}
+          className="text-neutral-300 hover:text-neutral-500 cursor-grab active:cursor-grabbing touch-none px-1 pt-3 select-none text-xs">⠿</button>
+        <div className="flex-1">
+          <RichTextBlock item={item} onUpdate={onUpdate} onRemove={onRemove} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DaySection({ label, meta, items, loadingServices, availableDays,
   onUpdateMeta, onRenameLabel, onRemoveDay,
   onUpdateItem, onRemoveItem, onResyncItem, onAddManual, onAddPreset, onAddFromCatalog,
-  onReorderItems, dragHandleProps,
+  onAddBlock, onReorderItems, dragHandleProps,
   groupSize = 1, lang = "en" }) {
 
   const [editingLabel, setEditingLabel] = useState(false);
@@ -1615,12 +1728,13 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
               }}>
               <SortableContext items={items.map(i => i._uid)} strategy={verticalListSortingStrategy}>
                 <div className="bg-white">
-                  {items.map(item => (
-                    <SortableActivityRow key={item._uid || item.id} item={item}
-                      availableDays={availableDays}
-                      groupSize={groupSize} lang={lang}
-                      onUpdate={onUpdateItem} onRemove={onRemoveItem} onResync={onResyncItem} />
-                  ))}
+                  {items.map(item => item.type === "block"
+                    ? <SortableRichTextBlock key={item._uid} item={item} onUpdate={onUpdateItem} onRemove={onRemoveItem} />
+                    : <SortableActivityRow key={item._uid || item.id} item={item}
+                        availableDays={availableDays}
+                        groupSize={groupSize} lang={lang}
+                        onUpdate={onUpdateItem} onRemove={onRemoveItem} onResync={onResyncItem} />
+                  )}
                 </div>
               </SortableContext>
             </DndContext>
@@ -1644,6 +1758,10 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
             <button type="button" onClick={onAddFromCatalog} disabled={loadingServices}
               className="text-xs text-neutral-500 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-400 rounded-lg px-3 py-1.5 bg-white disabled:opacity-40 transition-colors">
               {loadingServices ? "Cargando…" : "+ Catálogo"}
+            </button>
+            <button type="button" onClick={onAddBlock}
+              className="text-xs text-violet-600 hover:text-violet-900 border border-violet-200 hover:border-violet-400 rounded-lg px-3 py-1.5 bg-violet-50 transition-colors">
+              ✍️ Nota libre
             </button>
           </div>
         </>
@@ -1884,6 +2002,14 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
     }));
   };
 
+  const addBlockToDay = (dayLabel) => {
+    const count = cart.filter(i => (i.dayLabel || "Sin día") === dayLabel).length;
+    setCart(prev => [...prev, {
+      _uid: `block_${Date.now()}_${Math.random()}`,
+      type: "block", html: "", dayLabel, sortOrder: count,
+    }]);
+  };
+
   const addManualToDay = (dayLabel) => {
     const count = cart.filter(i => (i.dayLabel || "Sin día") === dayLabel).length;
     setCart(prev => [...prev, { ...mapManualToCartItem(), dayLabel, sortOrder: count }]);
@@ -2074,6 +2200,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
                 onReorderItems={(oldIdx, newIdx) => reorderItemsInDay(label, oldIdx, newIdx)}
                 onAddManual={() => addManualToDay(label)}
                 onAddPreset={(preset) => addPresetToDay(label, preset)}
+                onAddBlock={() => addBlockToDay(label)}
                 onAddFromCatalog={() => setCatalogTargetDay(label)}
               />
             ))}
@@ -3548,8 +3675,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   }, []);
 
   // Auto-open client web itinerary in side panel when drawer mounts
+  const iframeRef = useRef(null);
   useEffect(() => {
-    setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}`);
+    setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}&edit=1`);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -3857,7 +3985,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               <button type="button" onClick={() => { if (pdfPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(pdfPreviewUrl); setPdfPreviewUrl(null); }}
                 className="text-neutral-400 hover:text-neutral-700 text-lg leading-none px-2">✕</button>
             </div>
-            <iframe src={pdfPreviewUrl} className="flex-1 w-full" title="PDF preview" />
+            <iframe ref={iframeRef} src={pdfPreviewUrl} className="flex-1 w-full" title="PDF preview" />
           </div>
         )}
 
@@ -4933,6 +5061,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   dayMeta: JSON.stringify(newDayMeta),
                   status: "concierge_editing",
                 });
+                if (iframeRef.current) {
+                  const base = `${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}&edit=1`;
+                  iframeRef.current.src = `${base}&_t=${Date.now()}`;
+                }
               }}
             />
           </DrawerSection>
