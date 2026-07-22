@@ -299,10 +299,10 @@ export function AvailabilityManager({ conciergeEmail, conciergeName }) {
                     {d.active && !showMulti && (
                       <>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <input type="time" value={d.start || "09:00"} onChange={e => patchDay(key, { start: e.target.value })}
+                          <input type="text" inputMode="numeric" pattern="[0-9:]*" placeholder="HH:MM" value={d.start || "09:00"} onChange={e => patchDay(key, { start: e.target.value })}
                             style={{ border: "1px solid #e5ddd3", borderRadius: 7, padding: "4px 8px", fontSize: 13 }} />
                           <span style={{ color: "#aaa", fontSize: 13 }}>→</span>
-                          <input type="time" value={d.end || "18:00"} onChange={e => patchDay(key, { end: e.target.value })}
+                          <input type="text" inputMode="numeric" pattern="[0-9:]*" placeholder="HH:MM" value={d.end || "18:00"} onChange={e => patchDay(key, { end: e.target.value })}
                             style={{ border: "1px solid #e5ddd3", borderRadius: 7, padding: "4px 8px", fontSize: 13 }} />
                         </div>
                         <button type="button" onClick={() => addWindow(key)}
@@ -321,19 +321,19 @@ export function AvailabilityManager({ conciergeEmail, conciergeName }) {
                     <div style={{ marginTop: 8, marginLeft: 118, display: "flex", flexDirection: "column", gap: 6 }}>
                       {/* Base window */}
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <input type="time" value={d.start || "09:00"} onChange={e => patchDay(key, { start: e.target.value })}
+                        <input type="text" inputMode="numeric" pattern="[0-9:]*" placeholder="HH:MM" value={d.start || "09:00"} onChange={e => patchDay(key, { start: e.target.value })}
                           style={{ border: "1px solid #e5ddd3", borderRadius: 7, padding: "4px 8px", fontSize: 12 }} />
                         <span style={{ color: "#aaa" }}>→</span>
-                        <input type="time" value={d.end || "18:00"} onChange={e => patchDay(key, { end: e.target.value })}
+                        <input type="text" inputMode="numeric" pattern="[0-9:]*" placeholder="HH:MM" value={d.end || "18:00"} onChange={e => patchDay(key, { end: e.target.value })}
                           style={{ border: "1px solid #e5ddd3", borderRadius: 7, padding: "4px 8px", fontSize: 12 }} />
                         <span style={{ fontSize: 11, color: "#9a7d52", paddingLeft: 4 }}>Ventana 1</span>
                       </div>
                       {wins.map((w, i) => (
                         <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <input type="time" value={w.start} onChange={e => patchWindow(key, i, { start: e.target.value })}
+                          <input type="text" inputMode="numeric" pattern="[0-9:]*" placeholder="HH:MM" value={w.start} onChange={e => patchWindow(key, i, { start: e.target.value })}
                             style={{ border: "1px solid #e5ddd3", borderRadius: 7, padding: "4px 8px", fontSize: 12 }} />
                           <span style={{ color: "#aaa" }}>→</span>
-                          <input type="time" value={w.end} onChange={e => patchWindow(key, i, { end: e.target.value })}
+                          <input type="text" inputMode="numeric" pattern="[0-9:]*" placeholder="HH:MM" value={w.end} onChange={e => patchWindow(key, i, { end: e.target.value })}
                             style={{ border: "1px solid #e5ddd3", borderRadius: 7, padding: "4px 8px", fontSize: 12 }} />
                           <span style={{ fontSize: 11, color: "#9a7d52" }}>Ventana {i + 2}</span>
                           <button type="button" onClick={() => removeWindow(key, i)}
@@ -367,13 +367,13 @@ export function AvailabilityManager({ conciergeEmail, conciergeName }) {
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 10, color: "#999", marginBottom: 3 }}>Desde</label>
-                  <input type="time" value={newBlock.start}
+                  <input type="text" inputMode="numeric" pattern="[0-9:]*" placeholder="HH:MM" value={newBlock.start}
                     onChange={e => setNewBlock(b => ({ ...b, start: e.target.value }))}
                     style={{ border: "1px solid #e5ddd3", borderRadius: 7, padding: "6px 8px", fontSize: 12 }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 10, color: "#999", marginBottom: 3 }}>Hasta</label>
-                  <input type="time" value={newBlock.end}
+                  <input type="text" inputMode="numeric" pattern="[0-9:]*" placeholder="HH:MM" value={newBlock.end}
                     onChange={e => setNewBlock(b => ({ ...b, end: e.target.value }))}
                     style={{ border: "1px solid #e5ddd3", borderRadius: 7, padding: "6px 8px", fontSize: 12 }} />
                 </div>

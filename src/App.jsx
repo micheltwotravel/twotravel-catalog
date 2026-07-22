@@ -878,36 +878,51 @@ function parseDrinkSummary(k) {
     return lines.length ? lines.join(" · ") : null;
   } catch { return null; }
 }
-function OrderCell({ summary, at }) {
-  if (!summary) return <span style={{ color:"#d1d5db" }}>—</span>;
+function OrderCell({ summary, at, empty = "—" }) {
+  if (!summary) return <span style={{ color:"#d1d5db" }}>{empty}</span>;
   const lines = summary.split(" · ");
   return (
-    <div style={{ fontSize:11, color:"#374151", lineHeight:1.5, textAlign:"left" }}>
-      {lines.map((l, i) => <div key={i} style={{ whiteSpace:"nowrap" }}>• {l}</div>)}
-      {at && <div style={{ fontSize:9, color:"#9ca3af", marginTop:2 }}>{new Date(at).toLocaleDateString("es-CO")}</div>}
+    <div style={{ fontSize:11, color:"#374151", lineHeight:1.5 }}>
+      {lines.map((l, i) => <div key={i}>• {l}</div>)}
+      {at && <div style={{ fontSize:9, color:"#9ca3af", marginTop:2 }}>{fmtOrderAt(at)}</div>}
     </div>
   );
 }
 function orderStatus(k) {
   const drinkSummary = parseDrinkSummary(k) || (k.drinkOrder ? k.drinkOrder.slice(0,80) : null);
-  const grocery = k.groceryOrderJson || k.groceryOrder ? "✅" : "—";
-  const breakfast = (() => {
+  const grocerySummary = (() => {
+    if (!k.groceryOrderJson && !k.groceryOrder) return null;
+    try {
+      const g = JSON.parse(k.groceryOrderJson || "{}");
+      const items = Object.entries(g.checked || {}).filter(([,v])=>v).map(([k])=>k);
+      if (g.others) items.push(g.others.slice(0,40));
+      return items.slice(0,4).join(", ") || "✅ Pedido enviado";
+    } catch { return k.groceryOrder ? k.groceryOrder.slice(0,60) : "✅"; }
+  })();
+  const breakfastSummary = (() => {
     try {
       const c = typeof k.cart === "string" ? JSON.parse(k.cart) : (k.cart || []);
-      return Array.isArray(c) && c.length ? "✅" : "—";
-    } catch { return "—"; }
+      const b = Array.isArray(c) ? c.find(i => /breakfast|desayuno/i.test(i.name || i.displayName || "")) : null;
+      return b ? (b.displayName || b.name || "✅ Incluido") : null;
+    } catch { return null; }
   })();
-  return { drinkSummary, grocery, breakfast };
+  return { drinkSummary, grocerySummary, breakfastSummary };
 }
 
 function lastClientOrder(k) {
   const candidates = [];
-  if (k.drinkOrderAt)   candidates.push({ label: "🍹 Bebidas",  at: k.drinkOrderAt });
-  if (k.groceryOrderAt) candidates.push({ label: "🛒 Mercado",  at: k.groceryOrderAt });
+  if (k.drinkOrderAt)   candidates.push({ label: "🍹 Bebidas",   at: k.drinkOrderAt });
+  if (k.groceryOrderAt) candidates.push({ label: "🛒 Mercado",   at: k.groceryOrderAt });
   if (!candidates.length) return null;
   candidates.sort((a, b) => new Date(b.at) - new Date(a.at));
-  const top = candidates[0];
-  return { label: top.label, at: top.at };
+  return candidates[0];
+}
+
+function fmtOrderAt(at) {
+  if (!at) return "";
+  const d = new Date(at);
+  return d.toLocaleDateString("es-CO", { day:"numeric", month:"short" }) + " · " +
+         d.toLocaleTimeString("es-CO", { hour:"2-digit", minute:"2-digit" });
 }
 
 function ClientesTable({ kickoffs, loading }) {
@@ -1077,7 +1092,7 @@ function ClientesTable({ kickoffs, loading }) {
                 <tr><td colSpan={12} style={{ ...tdStyle, textAlign:"center", color:"#9ca3af", padding:32 }}>Sin clientes para este filtro.</td></tr>
               )}
               {filtered.map((r, i) => {
-                const { drinkSummary, grocery, breakfast } = orderStatus(r);
+                const { drinkSummary, grocerySummary, breakfastSummary } = orderStatus(r);
                 const itinLink = `/?mode=itinerary&kickoffId=${r.id}`;
                 const reunLink = `/?mode=reuniones`;
                 const isSaving = (f) => saving[r.id + f];
@@ -1139,9 +1154,9 @@ function ClientesTable({ kickoffs, loading }) {
                         </div>
                       );
                     })()}</td>
-                    <td style={{ ...tdStyle }}><OrderCell summary={drinkSummary} at={r.drinkOrderAt} /></td>
-                    <td style={{ ...tdStyle, textAlign:"center" }}>{grocery}</td>
-                    <td style={{ ...tdStyle, textAlign:"center" }}>{breakfast}</td>
+                    <td style={tdStyle}><OrderCell summary={drinkSummary} at={r.drinkOrderAt} /></td>
+                    <td style={tdStyle}><OrderCell summary={grocerySummary} at={r.groceryOrderAt} /></td>
+                    <td style={tdStyle}><OrderCell summary={breakfastSummary} /></td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>
                       <button
                         onClick={() => generateTasksFromKickoff(r)}

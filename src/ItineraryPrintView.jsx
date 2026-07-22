@@ -2555,8 +2555,8 @@ export default function ItineraryPrintView() {
         />
       )}
 
-      {/* ── PDF free-text block (edit mode only) ── */}
-      {editMode && (
+      {/* ── PDF free-text block (legacy — replaced by per-day blocks) ── */}
+      {false && editMode && (
         <div className="no-print" style={{
           maxWidth: 680, margin: "32px auto 0", padding: "20px 24px",
           background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10,
