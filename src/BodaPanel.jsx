@@ -583,6 +583,18 @@ export default function BodaPanel({ currentUser, onLogout }) {
                 return d < new Date().setHours(0,0,0,0);
               });
 
+              const handleDelete = async (e) => {
+                e.stopPropagation();
+                if (!window.confirm(`¿Eliminar "${boda.clienteName}"? Esta acción no se puede deshacer.`)) return;
+                try {
+                  const res = await gasPost({ action: "deleteBoda", id: boda.id });
+                  if (res?.ok === false) throw new Error(res.error || "Error al eliminar");
+                  setBodas(prev => prev.filter(b => b.id !== boda.id));
+                } catch (err) {
+                  alert("Error al eliminar: " + err.message);
+                }
+              };
+
               return (
                 <div key={boda.id} onClick={() => setSelected(boda)}
                   className="bg-white border border-neutral-200 rounded-xl px-5 py-4 flex items-center gap-4 cursor-pointer hover:border-rose-300 hover:shadow-sm transition-all">
@@ -619,6 +631,11 @@ export default function BodaPanel({ currentUser, onLogout }) {
                     </span>
                     <p className="text-neutral-300 text-sm mt-1">→</p>
                   </div>
+                  <button
+                    onClick={handleDelete}
+                    title="Eliminar boda"
+                    className="flex-shrink-0 text-neutral-300 hover:text-red-500 transition-colors text-lg leading-none px-1"
+                  >🗑</button>
                 </div>
               );
             })}
