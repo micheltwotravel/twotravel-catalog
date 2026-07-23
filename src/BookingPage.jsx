@@ -24,7 +24,11 @@ async function gasPost(body) {
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify(body),
   });
-  return r.json();
+  const text = await r.text();
+  try { return JSON.parse(text); } catch {
+    console.error("gasPost non-JSON response:", text?.slice(0, 400));
+    throw new Error(text?.slice(0, 200) || "Respuesta inválida del servidor");
+  }
 }
 
 // ── Time helpers ──────────────────────────────────────────────────────────────
@@ -147,7 +151,7 @@ export function AvailabilityManager({ conciergeEmail, conciergeName }) {
       await gasPost({ action: "saveAvailability", email: conciergeEmail, schedule, settings, blocked, manualSlots });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    } catch { alert("Error guardando"); }
+    } catch (e) { alert("Error guardando: " + (e?.message || e)); }
     setSaving(false);
   };
 
@@ -181,6 +185,9 @@ export function AvailabilityManager({ conciergeEmail, conciergeName }) {
 
   const addBlock = () => {
     if (!newBlock.date || !newBlock.start || !newBlock.end) return;
+    if (toMin(newBlock.end) <= toMin(newBlock.start)) {
+      alert("La hora de fin debe ser mayor a la hora de inicio"); return;
+    }
     setBlocked(b => [...b, { ...newBlock, id: Date.now() }]);
     setNewBlock({ date: "", start: "", end: "", reason: "" });
   };
