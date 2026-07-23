@@ -2290,7 +2290,7 @@ export default function ItineraryPrintView() {
   useEffect(() => {
     if (!kickoffId) { setError("No kickoffId in URL"); setLoading(false); return; }
     Promise.all([
-      fetchKickoffsFromSheet().then(list =>
+      fetchKickoffsFromSheet({ forceRefresh: true }).then(list =>
         list.find(k => String(k.id) === String(kickoffId))
       ),
       fetchServicesFromSheet(),
