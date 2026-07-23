@@ -3627,7 +3627,9 @@ function parseHSDate(str) {
   return yr + "-" + String(m[1]).padStart(2,"0") + "-" + String(m[2]).padStart(2,"0");
 }
 function normalizeFlightNum(s) {
-  return (s || "").replace(/\s+/g,"").toUpperCase();
+  // Only digits — client sometimes types "AA 2173", we only want "2173"
+  const digits = (s || "").replace(/\D/g,"");
+  return digits || (s || "").replace(/\s+/g,"").toUpperCase();
 }
 
 function HubSpotImport({ onImport }) {
@@ -3793,6 +3795,37 @@ function HubSpotImport({ onImport }) {
       )}
     </div>
   );
+}
+
+function FlightRouteHint({ flightNumber, date }) {
+  const [route, setRoute] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const timerRef = React.useRef();
+
+  React.useEffect(() => {
+    if (!flightNumber || flightNumber.length < 2) { setRoute(null); return; }
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      setLoading(true);
+      const params = new URLSearchParams({ flight: flightNumber });
+      if (date) params.set("date", date);
+      fetch(`/api/flight-status?${params}`)
+        .then(r => r.json())
+        .then(d => {
+          const f = d.data;
+          if (f) setRoute(`${f.depIata || f.depAirport || "?"} → ${f.arrIata || f.arrAirport || "?"} · ${f.airline || ""}`);
+          else setRoute(null);
+          setLoading(false);
+        })
+        .catch(() => { setRoute(null); setLoading(false); });
+    }, 900);
+    return () => clearTimeout(timerRef.current);
+  }, [flightNumber, date]);
+
+  if (!flightNumber) return null;
+  if (loading) return <span className="text-[9px] text-neutral-300 ml-1">buscando…</span>;
+  if (!route) return null;
+  return <span className="text-[9px] text-blue-400 ml-1">{route}</span>;
 }
 
 function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
@@ -5131,9 +5164,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               <div key={i} className="bg-white border border-neutral-200 rounded-xl px-3 py-2">
                 <div className="grid grid-cols-12 gap-1.5 items-center">
                   <div className="col-span-3">
-                    <p className="text-[9px] text-neutral-400 mb-0.5">N° vuelo <span className="text-blue-400">✈</span></p>
+                    <p className="text-[9px] text-neutral-400 mb-0.5">
+                      N° vuelo <span className="text-blue-400">✈</span>
+                      <FlightRouteHint flightNumber={a.flightNumber} date={a.date} />
+                    </p>
                     <input value={a.flightNumber||""} onChange={e => patchArrival(i,{flightNumber:e.target.value.toUpperCase()})}
-                      placeholder="AV204"
+                      placeholder="2173"
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono font-bold" />
                   </div>
                   <div className="col-span-3">
@@ -5175,9 +5211,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               <div key={i} className="bg-white border border-neutral-200 rounded-xl px-3 py-2">
                 <div className="grid grid-cols-12 gap-1.5 items-center">
                   <div className="col-span-3">
-                    <p className="text-[9px] text-neutral-400 mb-0.5">N° vuelo <span className="text-blue-400">✈</span></p>
+                    <p className="text-[9px] text-neutral-400 mb-0.5">
+                      N° vuelo <span className="text-blue-400">✈</span>
+                      <FlightRouteHint flightNumber={d.flightNumber} date={d.date} />
+                    </p>
                     <input value={d.flightNumber||""} onChange={e => patchDeparture(i,{flightNumber:e.target.value.toUpperCase()})}
-                      placeholder="AV205"
+                      placeholder="1144"
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono font-bold" />
                   </div>
                   <div className="col-span-3">

@@ -85,116 +85,140 @@ const FLIGHT_STATUS_LABELS = {
   unknown:   { es: "Sin datos",  en: "No data",    color: "#9ca3af", bg: "#f9fafb" },
 };
 
-function FlightStatusChip({ status, lang }) {
-  const s = FLIGHT_STATUS_LABELS[status] || FLIGHT_STATUS_LABELS.unknown;
-  return (
-    <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99,
-      background: s.bg, color: s.color, letterSpacing: ".05em", textTransform: "uppercase" }}>
-      {lang === "es" ? s.es : s.en}
-    </span>
-  );
-}
-
-function FlightCard({ arrival, lang }) {
-  const [data, setData]     = useState(null);
+function useFlightData(flightNumber, date) {
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState(null);
-  const isEs = lang === "es";
-
   useEffect(() => {
-    if (!arrival.flightNumber) return;
+    if (!flightNumber) return;
     setLoading(true);
-    const params = new URLSearchParams({ flight: arrival.flightNumber });
-    if (arrival.date) params.set("date", arrival.date);
+    const params = new URLSearchParams({ flight: flightNumber });
+    if (date) params.set("date", date);
     fetch(`/api/flight-status?${params}`)
       .then(r => r.json())
-      .then(d => { setData(d.data); setLoading(false); })
-      .catch(() => { setError(true); setLoading(false); });
-  }, [arrival.flightNumber, arrival.date]);
+      .then(d => { setData(d.data || null); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [flightNumber, date]);
+  return { data, loading };
+}
 
-  const fmtTime = (iso) => {
-    if (!iso) return null;
-    return new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" });
+const STATUS_STYLE = {
+  scheduled: { bg: "#f0fdf4", color: "#15803d", label_es: "En horario", label_en: "On time" },
+  active:    { bg: "#eff6ff", color: "#1d4ed8", label_es: "En vuelo",   label_en: "In flight" },
+  landed:    { bg: "#f9fafb", color: "#374151", label_es: "Aterrizó",   label_en: "Landed" },
+  cancelled: { bg: "#fef2f2", color: "#dc2626", label_es: "Cancelado",  label_en: "Cancelled" },
+  diverted:  { bg: "#fffbeb", color: "#d97706", label_es: "Desviado",   label_en: "Diverted" },
+  unknown:   { bg: "#f9fafb", color: "#9ca3af", label_es: "Sin datos",  label_en: "Unknown" },
+};
+
+function FlightRow({ flight, lang, type }) {
+  const { data, loading } = useFlightData(flight.flightNumber, flight.date);
+  const isEs = lang === "es";
+  const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString("es-CO", { hour:"2-digit", minute:"2-digit", timeZone:"America/Bogota" }) : "—";
+  const fmtDate = iso => {
+    if (!iso) return flight.date || "";
+    return new Date(iso).toLocaleDateString("es-CO", { day:"numeric", month:"short", timeZone:"America/Bogota" });
   };
+  const st = data?.status ? (STATUS_STYLE[data.status] || STATUS_STYLE.unknown) : null;
+  const depTime = data ? fmtTime(data.depActual || data.depScheduled) : (flight.time || "—");
+  const arrTime = data ? fmtTime(data.arrActual || data.arrEstimated || data.arrScheduled) : "—";
+  const route = data ? `${data.depIata || ""}  →  ${data.arrIata || ""}` : "";
 
   return (
-    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "14px 16px", marginBottom: 8 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 15, color: "#111" }}>
-            ✈ {arrival.flightNumber}
-          </span>
-          {arrival.origin && <span style={{ fontSize: 11, color: "#6b7280" }}>{arrival.origin} → {data?.arrIata || "…"}</span>}
-          {arrival.name && <span style={{ fontSize: 11, color: "#9ca3af" }}>· {arrival.name}</span>}
+    <div style={{ display:"grid", gridTemplateColumns:"90px 1fr 90px 90px 90px", alignItems:"center", gap:12,
+      padding:"12px 0", borderBottom:"1px solid #f3f4f6" }}>
+      {/* Flight # */}
+      <div>
+        <div style={{ fontFamily:"monospace", fontWeight:700, fontSize:14, color:"#111", letterSpacing:".04em" }}>
+          {flight.flightNumber || "—"}
         </div>
-        {loading && <span style={{ fontSize: 11, color: "#9ca3af" }}>Consultando…</span>}
-        {data && <FlightStatusChip status={data.status} lang={lang} />}
+        {data?.airline && <div style={{ fontSize:9, color:"#9ca3af", marginTop:1 }}>{data.airline}</div>}
       </div>
-
-      {error && <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>No se pudo obtener información en tiempo real.</p>}
-
-      {data && (
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-          {data.depScheduled && (
-            <div>
-              <p style={{ fontSize: 9, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 2px" }}>
-                {isEs ? "Sale" : "Departs"}
-              </p>
-              <p style={{ fontSize: 12, fontWeight: 600, color: "#111", margin: 0 }}>
-                {fmtTime(data.depActual || data.depScheduled)}
-                {data.depDelay > 0 && (
-                  <span style={{ color: "#dc2626", fontSize: 10, marginLeft: 4 }}>+{data.depDelay}m</span>
-                )}
-              </p>
-              {data.depAirport && <p style={{ fontSize: 10, color: "#6b7280", margin: 0 }}>{data.depAirport}</p>}
-              {data.gate && <p style={{ fontSize: 10, color: "#6b7280", margin: 0 }}>Gate {data.gate}{data.terminal ? ` · T${data.terminal}` : ""}</p>}
-            </div>
-          )}
-          {data.arrScheduled && (
-            <div>
-              <p style={{ fontSize: 9, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 2px" }}>
-                {isEs ? "Llega" : "Arrives"}
-              </p>
-              <p style={{ fontSize: 12, fontWeight: 600, color: "#111", margin: 0 }}>
-                {fmtTime(data.arrActual || data.arrEstimated || data.arrScheduled)}
-                {data.arrDelay > 0 && (
-                  <span style={{ color: "#dc2626", fontSize: 10, marginLeft: 4 }}>+{data.arrDelay}m</span>
-                )}
-              </p>
-              {data.arrAirport && <p style={{ fontSize: 10, color: "#6b7280", margin: 0 }}>{data.arrAirport}</p>}
-            </div>
-          )}
+      {/* Route */}
+      <div>
+        <div style={{ fontSize:13, color:"#374151", fontWeight:500 }}>
+          {route || (flight.name ? flight.name : <span style={{ color:"#d1d5db" }}>—</span>)}
         </div>
-      )}
-
-      {!loading && !data && !error && arrival.date && (
-        <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
-          {isEs ? "Información disponible el día del vuelo." : "Flight info available on the day of travel."}
-        </p>
-      )}
+        {route && flight.name && <div style={{ fontSize:10, color:"#9ca3af" }}>{flight.name}</div>}
+        {data?.depAirport && !route.includes(data.depAirport) && (
+          <div style={{ fontSize:9, color:"#9ca3af" }}>{data.depAirport} → {data.arrAirport}</div>
+        )}
+      </div>
+      {/* Date */}
+      <div style={{ textAlign:"center" }}>
+        <div style={{ fontSize:11, color:"#374151" }}>{fmtDate(data?.depScheduled)}</div>
+        {data?.depDelay > 0 && <div style={{ fontSize:9, color:"#dc2626" }}>+{data.depDelay}m</div>}
+      </div>
+      {/* Dep / Arr time */}
+      <div style={{ textAlign:"center" }}>
+        <div style={{ fontSize:10, color:"#9ca3af", textTransform:"uppercase", letterSpacing:".06em", marginBottom:2 }}>
+          {type === "arrival" ? (isEs ? "Sale" : "Dep") : (isEs ? "Sale" : "Dep")}
+        </div>
+        <div style={{ fontSize:13, fontWeight:600, color:"#111" }}>{loading ? "…" : depTime}</div>
+        {data?.gate && <div style={{ fontSize:9, color:"#9ca3af" }}>Gate {data.gate}</div>}
+      </div>
+      <div style={{ textAlign:"center" }}>
+        <div style={{ fontSize:10, color:"#9ca3af", textTransform:"uppercase", letterSpacing:".06em", marginBottom:2 }}>
+          {type === "arrival" ? (isEs ? "Llega" : "Arr") : (isEs ? "Llega" : "Arr")}
+        </div>
+        <div style={{ fontSize:13, fontWeight:600, color:"#111" }}>{loading ? "…" : arrTime}</div>
+        {st && (
+          <span style={{ fontSize:8, fontWeight:700, padding:"1px 6px", borderRadius:99,
+            background:st.bg, color:st.color, letterSpacing:".06em", textTransform:"uppercase" }}>
+            {isEs ? st.label_es : st.label_en}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
 
-function FlightTracker({ kickoff, lang }) {
-  let arrivals = [];
-  try { arrivals = JSON.parse(kickoff.arrivals || "[]").filter(a => a.flightNumber); } catch {}
-  if (!arrivals.length) return null;
+function FlightBlock({ kickoff, lang, type }) {
+  let flights = [];
+  const key = type === "arrival" ? "arrivals" : "departures";
+  try { flights = JSON.parse(kickoff[key] || "[]").filter(f => f.flightNumber); } catch {}
+  if (!flights.length) return null;
   const isEs = lang === "es";
+  const label = type === "arrival"
+    ? (isEs ? "Vuelos de llegada" : "Arrival Flights")
+    : (isEs ? "Vuelos de salida" : "Departure Flights");
 
   return (
-    <div style={{ maxWidth: 780, margin: "0 auto 24px", padding: "0 24px" }}>
-      <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 16, padding: 20 }}>
-        <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "#374151", marginBottom: 12 }}>
-          ✈️ {isEs ? "Estado de vuelos" : "Flight Status"}
-        </p>
-        {arrivals.map((a, i) => <FlightCard key={i} arrival={a} lang={lang} />)}
-        <p style={{ fontSize: 10, color: "#9ca3af", margin: "8px 0 0", textAlign: "right" }}>
-          {isEs ? "Datos en tiempo real · Actualiza la página para refrescar" : "Live data · Refresh the page to update"}
-        </p>
+    <div style={{ maxWidth:780, margin:"0 auto 24px", padding:"0 24px" }}>
+      <div style={{ background:"#fff", border:"1px solid #e5e7eb", borderRadius:16, overflow:"hidden" }}>
+        {/* Header */}
+        <div style={{ background:"#1a1814", padding:"14px 20px", display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ fontSize:16 }}>{type === "arrival" ? "🛬" : "🛫"}</span>
+          <span style={{ color:"#fff", fontWeight:700, fontSize:12, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</span>
+        </div>
+        {/* Column headers */}
+        <div style={{ display:"grid", gridTemplateColumns:"90px 1fr 90px 90px 90px", gap:12,
+          padding:"8px 20px", background:"#f9fafb", borderBottom:"1px solid #e5e7eb" }}>
+          {["Vuelo","Ruta","Fecha",isEs?"Sale":"Dep",isEs?"Llega":"Arr"].map(h => (
+            <div key={h} style={{ fontSize:9, fontWeight:600, color:"#9ca3af", textTransform:"uppercase", letterSpacing:".08em",
+              textAlign: h === "Vuelo" || h === "Ruta" ? "left" : "center" }}>{h}</div>
+          ))}
+        </div>
+        {/* Rows */}
+        <div style={{ padding:"0 20px" }}>
+          {flights.map((f, i) => <FlightRow key={i} flight={f} lang={lang} type={type} />)}
+        </div>
+        <div style={{ padding:"8px 20px 12px", textAlign:"right" }}>
+          <span style={{ fontSize:9, color:"#d1d5db" }}>
+            {isEs ? "Actualiza la página para refrescar datos en tiempo real" : "Refresh page for live data"}
+          </span>
+        </div>
       </div>
     </div>
   );
+}
+
+// Keep old name for arrival block placed at top
+function FlightTracker({ kickoff, lang }) {
+  return <FlightBlock kickoff={kickoff} lang={lang} type="arrival" />;
+}
+// Departure block placed at end
+function DepartureTracker({ kickoff, lang }) {
+  return <FlightBlock kickoff={kickoff} lang={lang} type="departure" />;
 }
 
 function fmtPrice(v) {
@@ -2514,6 +2538,8 @@ export default function ItineraryPrintView() {
           });
         }}
       />
+
+      <DepartureTracker kickoff={kickoff} lang={lang} />
 
       {/* ── Let's Keep in Touch page ── */}
       <KeepInTouchPage kickoff={kickoff} page={++pageNum} total={total} />
