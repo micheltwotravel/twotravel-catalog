@@ -1353,13 +1353,6 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
           >
             👻
           </button>
-          {onResync && item.sku && (
-            <button type="button" onClick={() => onResync(item._uid)}
-              title="Resync desde catálogo"
-              className="text-lg text-neutral-300 hover:text-blue-500 leading-none transition-colors">
-              🔄
-            </button>
-          )}
           <button type="button" onClick={() => setShowNotes(v => !v)}
             title="Editar detalles"
             className={`text-[11px] px-2 py-0.5 rounded border leading-none transition-colors ${showNotes ? "bg-violet-100 text-violet-700 border-violet-300" : "text-neutral-400 border-neutral-200 hover:text-violet-600 hover:border-violet-300"}`}>
