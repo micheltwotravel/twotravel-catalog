@@ -4432,8 +4432,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             />
           </div>
 
-          {/* ── Check-in Responses ── */}
-          <CheckinResponsesSection kickoffId={kickoff?.id} />
+          {/* Check-in Responses hidden */}
 
           {/* ── Notas de reuniones ── */}
           <DrawerSection title="📋 Notas de reuniones" accent="amber" defaultOpen={true}>
