@@ -183,7 +183,7 @@ function FlightTracker({ kickoff, lang }) {
   const isEs = lang === "es";
 
   return (
-    <div className="no-print" style={{ maxWidth: 780, margin: "0 auto 24px", padding: "0 24px" }}>
+    <div style={{ maxWidth: 780, margin: "0 auto 24px", padding: "0 24px" }}>
       <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 16, padding: 20 }}>
         <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "#374151", marginBottom: 12 }}>
           ✈️ {isEs ? "Estado de vuelos" : "Flight Status"}

@@ -4071,7 +4071,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     meetingNotes:      JSON.stringify(meetings),
     pdfNotes:          pdfNotes.trim(),
     // Multiple arrivals
-    arrivals: JSON.stringify(arrivals.filter(a => a.name || a.date || a.flight)),
+    arrivals: JSON.stringify(arrivals.filter(a => a.name || a.date || a.flight || a.flightNumber)),
     departures: JSON.stringify(departures.filter(d => d.name || d.date || d.flightNumber)),
     // Per-city ratings
     cityRatings: JSON.stringify(cityRatings.filter(r => r.city || r.rating > 0)),
@@ -6232,9 +6232,7 @@ export function ReunionesPage({ currentUser }) {
           assignedConcierge: String(k?.assignedConcierge || k?.AssignedConcierge || "").trim(),
         }));
         setKickoffs(arr);
-        const urlKickoffId = new URLSearchParams(window.location.search).get("kickoffId");
-        const preselect = urlKickoffId && arr.find(k => k.id === urlKickoffId);
-        setSelectedId(preselect ? urlKickoffId : arr.length > 0 ? arr[0].id : null);
+        if (arr.length > 0) setSelectedId(arr[0].id);
       })
       .catch(e => setError(String(e?.message || e)))
       .finally(() => setLoading(false));
