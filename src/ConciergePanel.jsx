@@ -1938,28 +1938,47 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
 
   const autoFillDayTitles = () => {
     const arrDate = kickoff?.arrivalDate;
-    if (!arrDate) return;
+    if (!arrDate) { alert("Necesitas configurar la fecha de llegada primero."); return; }
     const lang = kickoff?.lang || "en";
-    // Build label map: old label → new date label (uses `days` which combines cart + dayMeta)
-    const labelMap = {};
-    days.forEach((day, idx) => {
+    const loc  = lang === "es" ? "es-CO" : "en-US";
+
+    // Calculate total days from arrival to departure
+    const depDate = kickoff?.departureDate;
+    const totalDays = (() => {
+      if (!depDate) return Math.max(days.length, 1);
+      const diff = Math.round(
+        (new Date(depDate + "T12:00:00") - new Date(arrDate + "T12:00:00")) / 86400000
+      );
+      return Math.max(diff, 1);
+    })();
+
+    // Build date labels for each day slot
+    const dateLabels = Array.from({ length: totalDays }, (_, idx) => {
       const d = new Date(arrDate + "T12:00:00");
       d.setDate(d.getDate() + idx);
-      labelMap[day.label] = d.toLocaleDateString(lang === "es" ? "es-CO" : "en-US", { weekday: "long", month: "long", day: "numeric" });
+      return d.toLocaleDateString(loc, { weekday: "long", month: "long", day: "numeric" });
     });
-    setDayMeta(prev => {
-      const updated = prev.map(dm => ({ ...dm, label: labelMap[dm.label] || dm.label }));
-      // Add entries for any orphan days not yet in dayMeta
-      days.forEach((day, idx) => {
-        if (!prev.find(dm => dm.label === day.label)) {
-          updated.push({ label: labelMap[day.label] || day.label, title: day.meta?.title || "", sortOrder: idx });
-        }
+
+    // Build rename map from existing day labels → new date labels
+    const labelMap = {};
+    days.forEach((day, idx) => {
+      if (idx < dateLabels.length) labelMap[day.label] = dateLabels[idx];
+    });
+
+    // Update dayMeta: rename existing + add missing days
+    setDayMeta(() => {
+      const result = dateLabels.map((label, idx) => {
+        const existing = days[idx];
+        const oldMeta  = existing ? dayMeta.find(dm => dm.label === existing.label) : null;
+        return { label, title: oldMeta?.title || "", sortOrder: idx };
       });
-      return updated;
+      return result;
     });
+
+    // Rename cart items to new labels
     setCart(prev => prev.map(item => {
-      const oldLabel = item.dayLabel || "Sin día";
-      return labelMap[oldLabel] ? { ...item, dayLabel: labelMap[oldLabel] } : item;
+      const old = item.dayLabel || "Sin día";
+      return labelMap[old] ? { ...item, dayLabel: labelMap[old] } : item;
     }));
   };
 
