@@ -5072,6 +5072,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   dayMeta: JSON.stringify(newDayMeta),
                   status: "concierge_editing",
                 });
+                // Small delay so GAS sheet write propagates before iframe re-fetches
+                await new Promise(r => setTimeout(r, 1500));
                 if (iframeRef.current) {
                   const base = `${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}&edit=1`;
                   iframeRef.current.src = `${base}&_t=${Date.now()}`;
