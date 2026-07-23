@@ -3612,6 +3612,117 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
   );
 }
 
+const GAS_URL_HS = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+
+function HubSpotImport({ onImport }) {
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState("");
+  const [results, setResults] = React.useState([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+
+  async function search() {
+    if (!query.trim()) return;
+    setLoading(true);
+    setError("");
+    setResults([]);
+    try {
+      const r = await fetch("/api/hubspot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "get_contacts", data: { limit: 20 } }),
+      });
+      const d = await r.json();
+      const q = query.toLowerCase();
+      const matches = (d.contacts || []).filter(c => {
+        const name = (c.properties?.dealname || "").toLowerCase();
+        const contactName = (c._contact?.fullName || "").toLowerCase();
+        const email = (c._contact?.email || "").toLowerCase();
+        return name.includes(q) || contactName.includes(q) || email.includes(q);
+      }).slice(0, 10);
+      setResults(matches);
+      if (matches.length === 0) setError("Sin resultados para: " + query);
+    } catch (e) {
+      setError("Error conectando con HubSpot");
+    }
+    setLoading(false);
+  }
+
+  function importDeal(deal) {
+    const p = deal.properties || {};
+    const c = deal._contact || {};
+    // Detect language from deal name or description
+    const desc = (p.description || p.dealname || "").toLowerCase();
+    const lang = (desc.includes("medellín") || desc.includes("cartagena") || desc.includes("cdmx") || desc.includes("ciudad de méxico") || desc.includes("tulum")) ? "es" : "en";
+    // Map destination to city code
+    const destMap = { cartagena:"CTG", medellín:"MDE", medellin:"MDE", "ciudad de mexico":"CDMX", cdmx:"CDMX", tulum:"TUL", bogotá:"BOG", bogota:"BOG" };
+    let city = "";
+    for (const [k, v] of Object.entries(destMap)) {
+      if (desc.includes(k)) { city = v; break; }
+    }
+    onImport({
+      guestName:    c.fullName || "",
+      tripName:     p.dealname || "",
+      guestContact: c.phone || "",
+      guestEmail:   c.email || "",
+      city,
+      lang,
+    });
+    setOpen(false);
+    setQuery("");
+    setResults([]);
+  }
+
+  if (!open) return (
+    <button type="button" onClick={() => setOpen(true)}
+      className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-orange-200 bg-orange-50 text-orange-700 text-xs font-semibold hover:bg-orange-100 transition-colors">
+      <span>🔗</span> Importar desde HubSpot
+    </button>
+  );
+
+  return (
+    <div className="rounded-xl border border-orange-200 bg-orange-50 p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-orange-700">🔗 Buscar deal en HubSpot</span>
+        <button type="button" onClick={() => { setOpen(false); setResults([]); setQuery(""); }}
+          className="text-orange-400 hover:text-orange-700 text-xs">✕</button>
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && search()}
+          placeholder="Nombre del cliente o del viaje…"
+          className="flex-1 border border-orange-200 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-orange-400"
+          autoFocus
+        />
+        <button type="button" onClick={search} disabled={loading}
+          className="px-3 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold hover:bg-orange-700 disabled:opacity-50">
+          {loading ? "…" : "Buscar"}
+        </button>
+      </div>
+      {error && <p className="text-[11px] text-orange-500">{error}</p>}
+      {results.length > 0 && (
+        <div className="space-y-1 max-h-48 overflow-y-auto">
+          {results.map(deal => (
+            <button key={deal.id} type="button" onClick={() => importDeal(deal)}
+              className="w-full text-left px-3 py-2 rounded-lg bg-white border border-orange-100 hover:border-orange-400 hover:bg-orange-50 transition-colors">
+              <div className="text-xs font-semibold text-neutral-800">{deal.properties?.dealname || "—"}</div>
+              {deal._contact && (
+                <div className="text-[10px] text-neutral-500">
+                  {deal._contact.fullName && <span>{deal._contact.fullName} · </span>}
+                  {deal._contact.email && <span>{deal._contact.email}</span>}
+                  {deal._contact.phone && <span> · {deal._contact.phone}</span>}
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [guestName, setGuestName] = useState(kickoff?.guestName || "");
   const [tripName, setTripName] = useState(kickoff?.tripName || "");
@@ -4021,6 +4132,18 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
         </div>
 
         <div className="flex-1 overflow-auto p-5 space-y-4">
+
+          {/* ── HUBSPOT IMPORT ─────────────────────────────────────── */}
+          <HubSpotImport onImport={({ guestName: gn, tripName: tn, guestContact: gc, guestEmail: ge, city: ct, groupSize: gs, lang: lg }) => {
+            if (gn) setGuestName(gn);
+            if (tn) setTripName(tn);
+            if (gc) setGuestContact(gc);
+            if (ge) setGuestEmailState(ge);
+            if (ct) setCity(ct);
+            if (gs) setGroupSize(String(gs));
+            if (lg) setLang(lg);
+          }} />
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] text-neutral-500">Huésped</label>
