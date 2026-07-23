@@ -5800,12 +5800,13 @@ function parseMeetings(raw) {
 }
 
 /* ── Inline meeting form (no modal, embedded in panel) ── */
-function MeetingFormInline({ kickoffId, initial, onSave, onCancel }) {
+function MeetingFormInline({ kickoffId, initial, defaultEmail, onSave, onCancel }) {
   const [date,   setDate]   = useState(initial?.date   || new Date().toISOString().slice(0,10));
   const [time,   setTime]   = useState(initial?.time   || "10:00");
   const [type,   setType]   = useState(initial?.type   || "Kickoff Call");
   const [status, setStatus] = useState(initial?.status || "scheduled");
   const [notes,  setNotes]  = useState(initial?.notes  || "");
+  const [email,  setEmail]  = useState(initial?.email  || defaultEmail || "");
   const [tasks,  setTasks]  = useState(initial?.tasks  || []);
   const [newTask,setNewTask]= useState("");
   const [saving, setSaving] = useState(false);
@@ -5814,7 +5815,7 @@ function MeetingFormInline({ kickoffId, initial, onSave, onCancel }) {
 
   const handle = async () => {
     setSaving(true);
-    onSave({ id: initial?.id || newMeetingId(), date, time, type, status, notes, tasks })
+    onSave({ id: initial?.id || newMeetingId(), date, time, type, status, notes, email: email.trim(), tasks })
       .catch(()=>{}).finally(()=>setSaving(false));
   };
 
@@ -5834,6 +5835,7 @@ function MeetingFormInline({ kickoffId, initial, onSave, onCancel }) {
           {MEETING_STATUSES.map(s=><option key={s.value} value={s.value}>{s.dot} {s.label}</option>)}
         </select>
       </div>
+      <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Correo del cliente" style={{ ...inp, marginBottom:8 }} />
       <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} placeholder="Notas de la llamada…" style={{ ...inp, resize:"vertical", marginBottom:8 }} />
       {tasks.map((t,i)=>(
         <div key={i} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
@@ -6286,6 +6288,7 @@ export function ReunionesPage({ currentUser }) {
                   <MeetingFormInline
                     kickoffId={selectedId}
                     initial={null}
+                    defaultEmail={selectedKickoff?.email || selectedKickoff?.guestEmail || ""}
                     onSave={(entry) => handleAddMeeting(selectedId, entry)}
                     onCancel={()=>setAddingFor(null)}
                   />
@@ -6310,6 +6313,7 @@ export function ReunionesPage({ currentUser }) {
                         <MeetingFormInline
                           kickoffId={selectedId}
                           initial={{ ...m }}
+                          defaultEmail={selectedKickoff?.email || selectedKickoff?.guestEmail || ""}
                           onSave={(entry) => handleEditMeeting(selectedId, entry)}
                           onCancel={()=>setEditingMeeting(null)}
                         />
