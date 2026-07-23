@@ -2150,21 +2150,20 @@ export default function ItineraryPrintView() {
   const [cityGuideHidden, setCityGuideHidden] = useState("");
   const [cityGuideIntro, setCityGuideIntro] = useState("");
 
-  // Sync editDays from computed days (or itinerarySnapshot) each time editMode is activated
+  // Sync editDays from computed days (or itinerarySnapshot) when editMode is active and data is loaded
   useEffect(() => {
-    if (editMode) {
-      let base = days;
-      if (kickoff?.itinerarySnapshot) {
-        try { base = JSON.parse(kickoff.itinerarySnapshot); } catch {}
-      }
-      setEditDays(JSON.parse(JSON.stringify(base)));
-      setLocalPreTrip(null);
-      setPdfNotes(kickoff?.pdfNotes || "");
-      setCityGuideHidden(kickoff?.cityGuideHidden || "");
-      setCityGuideIntro(kickoff?.cityGuideIntro || "");
+    if (!editMode || !kickoff) return;
+    let base = days;
+    if (kickoff?.itinerarySnapshot) {
+      try { base = JSON.parse(kickoff.itinerarySnapshot); } catch {}
     }
+    setEditDays(JSON.parse(JSON.stringify(base)));
+    setLocalPreTrip(null);
+    setPdfNotes(kickoff?.pdfNotes || "");
+    setCityGuideHidden(kickoff?.cityGuideHidden || "");
+    setCityGuideIntro(kickoff?.cityGuideIntro || "");
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editMode]);
+  }, [editMode, kickoff]);
 
   /* ── Edit-mode mutation helpers ── */
   const removeDay = (di) =>

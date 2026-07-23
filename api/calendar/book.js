@@ -41,7 +41,7 @@ export default async function handler(req, res) {
   const endISO   = `${date}T${endTime}:00-05:00`;
 
   const type = meetingType || "Kickoff Call";
-  const title = `Two Travel — ${type} con ${clientName}`;
+  const title = `Two Travel — ${type} with ${clientName}`;
 
   // Create Google Calendar event with Meet link
   const eventRes = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1&sendUpdates=all", {
