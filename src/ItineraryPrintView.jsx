@@ -2005,8 +2005,8 @@ function KeepInTouchPage({ kickoff, page, total }) {
               style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}
             >
               {s.icon}
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#111" }}>{s.label}</div>
-              <div style={{ fontSize: 10, color: "#777" }}>{s.handle}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#111", textAlign: "center" }}>{s.label}</div>
+              <div style={{ fontSize: 10, color: "#777", textAlign: "center" }}>{s.handle}</div>
             </a>
           ))}
         </div>
