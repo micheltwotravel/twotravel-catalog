@@ -2282,13 +2282,9 @@ export default function ItineraryPrintView() {
 
   const days = useMemo(() => {
     if (!kickoff) return [];
-    if (!catalog.length) return [];
     const cartRaw = kickoff.cart;
     const matched = matchCart(cartRaw, catalog);
-    console.log("[PDF] cart raw:", cartRaw);
-    console.log("[PDF] matched items:", matched.length, matched);
     const result = buildDays(matched, lang, parseJsonField(kickoff.dayMeta), kickoff.city);
-    console.log("[PDF] days built:", result.length, result);
     return result;
   }, [kickoff, catalog, lang]);
 
