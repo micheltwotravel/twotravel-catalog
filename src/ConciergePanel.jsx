@@ -5808,10 +5808,29 @@ function MeetingFormInline({ kickoffId, initial, defaultEmail, onSave, onCancel 
   const [notes,  setNotes]  = useState(initial?.notes  || "");
   const [email,  setEmail]  = useState(initial?.email  || defaultEmail || "");
   const [tasks,  setTasks]  = useState(initial?.tasks  || []);
-  const [newTask,setNewTask]= useState("");
-  const [saving, setSaving] = useState(false);
+  const [newTask,  setNewTask]  = useState("");
+  const [saving,   setSaving]  = useState(false);
+  const [aiFixing, setAiFixing] = useState(false);
 
   const addTask = () => { if (!newTask.trim()) return; setTasks(t=>[...t,{text:newTask.trim(),done:false}]); setNewTask(""); };
+
+  const fixWithAI = async () => {
+    if (!notes.trim() || aiFixing) return;
+    setAiFixing(true);
+    try {
+      const r = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemOverride: "Eres un asistente de redacción para concierges de viaje de lujo. El usuario te dará notas escritas rápido con errores tipográficos, palabras pegadas o sin estructura. Tu tarea: corregir ortografía, separar ideas en frases claras, organizar en puntos si hay más de una idea, y mantener un tono profesional conciso en el idioma original (español o inglés). Devuelve SOLO las notas corregidas y organizadas, sin introducción ni explicación.",
+          messages: [{ role: "user", content: notes.trim() }],
+        }),
+      });
+      const data = await r.json();
+      if (data.text) setNotes(data.text);
+    } catch {}
+    setAiFixing(false);
+  };
 
   const handle = async () => {
     setSaving(true);
@@ -5836,7 +5855,13 @@ function MeetingFormInline({ kickoffId, initial, defaultEmail, onSave, onCancel 
         </select>
       </div>
       <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Correo del cliente" style={{ ...inp, marginBottom:8 }} />
-      <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} placeholder="Notas de la llamada…" style={{ ...inp, resize:"vertical", marginBottom:8 }} />
+      <div style={{ position:"relative", marginBottom:8 }}>
+        <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3} placeholder="Notas de la llamada…" style={{ ...inp, resize:"vertical", paddingRight:110 }} />
+        <button type="button" onClick={fixWithAI} disabled={aiFixing || !notes.trim()}
+          style={{ position:"absolute", top:7, right:7, background: aiFixing ? "#e5ddd3" : "#f0ebff", color: aiFixing ? "#aaa" : "#7c3aed", border:"1px solid #d8b4fe", borderRadius:6, padding:"3px 9px", fontSize:11, fontWeight:600, cursor: aiFixing || !notes.trim() ? "default" : "pointer", fontFamily:"'Jost',sans-serif", whiteSpace:"nowrap" }}>
+          {aiFixing ? "…" : "✨ Corregir"}
+        </button>
+      </div>
       {tasks.map((t,i)=>(
         <div key={i} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
           <input type="checkbox" checked={t.done} onChange={()=>setTasks(ts=>ts.map((x,j)=>j===i?{...x,done:!x.done}:x))} />
