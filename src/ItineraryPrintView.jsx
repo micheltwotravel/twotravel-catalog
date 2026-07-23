@@ -313,6 +313,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       address      : service.address    || "",
       city         : service.city       || "",
       price        : cartItem.priceOverride_cop || (cityMatches ? (service.price_cop || service.priceCop || service.price_tier_1 || service.priceTier1 || "") : ""),
+      priceIsOverride: !!cartItem.priceOverride_cop,
       priceUsd     : cartItem.priceUsd != null ? num(cartItem.priceUsd) : (cityMatches ? num(service.price_tier_1 || service.priceTier1 || 0) : 0),
       priceUnit    : cartItem.priceUnit || service.priceUnit || "",
       pax          : Number(cartItem.pax || 0),
@@ -1368,7 +1369,7 @@ const HIDE_PRICE_CATS = new Set(["restaurants","bars","nightlife","beach-clubs",
 
 function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
   const isConfirmed = it.confirmed !== false;
-  const showPrice = isConfirmed && !HIDE_PRICE_CATS.has(String(it.category || "").trim().toLowerCase());
+  const showPrice = isConfirmed && (it.priceIsOverride || !HIDE_PRICE_CATS.has(String(it.category || "").trim().toLowerCase()));
   const price    = showPrice ? fmtPrice(it.price) : "";
   const hiList   = splitList(it.highlights);
   const incList  = splitList(it.includes);
