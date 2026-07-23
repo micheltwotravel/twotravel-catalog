@@ -1,19 +1,34 @@
-// Returns available 30-min slots for a concierge on a given date
-// Uses Google Calendar free/busy API with stored refresh token
+// Returns available slots for a concierge on a given date
+// Reads schedule + calendar blocks from GAS (which reads CalendarApp for shared calendars)
 
-async function getAccessToken(refreshToken) {
-  const res = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id:     process.env.GOOGLE_CLIENT_ID,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET,
-      refresh_token: refreshToken,
-      grant_type:    "refresh_token",
-    }),
-  });
-  const data = await res.json();
-  return data.access_token;
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+
+const SLUG_TO_EMAIL = {
+  caro:    "caro@two.travel",
+  alia:    "alia@two.travel",
+  daniela: "daniela@two.travel",
+  nataly:  "nataly@two.travel",
+  giulia:  "giulia@two.travel",
+  natalia: "natalia@two.travel",
+  michel:  "michel@two.travel",
+};
+
+const DEFAULT_SCHEDULE = {
+  mon: { active: true,  start: "09:00", end: "18:00" },
+  tue: { active: true,  start: "09:00", end: "18:00" },
+  wed: { active: true,  start: "09:00", end: "18:00" },
+  thu: { active: true,  start: "09:00", end: "18:00" },
+  fri: { active: true,  start: "09:00", end: "18:00" },
+  sat: { active: false, start: "09:00", end: "14:00" },
+  sun: { active: false, start: "09:00", end: "13:00" },
+};
+
+function toMin(t) {
+  const [h, m] = (t || "00:00").split(":").map(Number);
+  return h * 60 + (m || 0);
+}
+function fromMin(m) {
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 }
 
 export default async function handler(req, res) {
@@ -21,70 +36,63 @@ export default async function handler(req, res) {
   const slotMinutes = parseInt(durParam) === 45 ? 45 : 30;
   if (!concierge || !date) return res.status(400).json({ error: "Missing params" });
 
-  const GAS = process.env.VITE_TASK_API_URL || process.env.GAS_URL
-    || "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+  const email = SLUG_TO_EMAIL[concierge] || (concierge.includes("@") ? concierge : `${concierge}@two.travel`);
 
-  // Get refresh token from GAS
-  const tokenRes = await fetch(GAS, {
-    method: "POST",
-    body: JSON.stringify({ action: "getCalendarToken", payload: { concierge } }),
-  });
-  const tokenData = await tokenRes.json();
-  const refreshToken = tokenData?.refreshToken;
-  if (!refreshToken) return res.status(404).json({ error: "Concierge calendar not connected" });
-
-  const accessToken = await getAccessToken(refreshToken);
-
-  // Build time range for the requested date (8am–7pm local)
-  const timeMin = `${date}T08:00:00-05:00`;
-  const timeMax = `${date}T19:00:00-05:00`;
-
-  // Get calendar ID (primary)
-  const calListRes = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary", {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  const calInfo = await calListRes.json();
-  const calendarId = calInfo.id || "primary";
-
-  // Free/busy query
-  const fbRes = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      timeMin,
-      timeMax,
-      items: [{ id: calendarId }],
-    }),
-  });
-  const fbData = await fbRes.json();
-  const busy = fbData.calendars?.[calendarId]?.busy || [];
-
-  // Generate slots 8am–7pm based on duration, filter out busy ones
-  const slots = [];
-  for (let totalMin = 8 * 60; totalMin + slotMinutes <= 19 * 60; totalMin += slotMinutes) {
-    {
-      const h = Math.floor(totalMin / 60), m = totalMin % 60;
-      const endTotal = totalMin + slotMinutes;
-      const endH = Math.floor(endTotal / 60), endM = endTotal % 60;
-      const startHH = String(h).padStart(2, "0");
-      const startMM = String(m).padStart(2, "0");
-      const endHH = String(endH).padStart(2, "0");
-      const endMM = String(endM).padStart(2, "0");
-
-      const slotStart = `${date}T${startHH}:${startMM}:00-05:00`;
-      const slotEnd   = `${date}T${endHH}:${endMM}:00-05:00`;
-
-      const isBusy = busy.some(b => {
-        const bs = new Date(b.start), be = new Date(b.end);
-        const ss = new Date(slotStart), se = new Date(slotEnd);
-        return ss < be && se > bs;
-      });
-
-      if (!isBusy) {
-        slots.push({ start: `${startHH}:${startMM}`, end: `${endHH}:${endMM}` });
-      }
+  // Fetch schedule + blocked slots from GAS
+  let schedule = DEFAULT_SCHEDULE;
+  let blocked  = [];
+  let bookings = [];
+  try {
+    const r = await fetch(`${GAS_URL}?action=getAvailability&email=${encodeURIComponent(email)}`);
+    const data = await r.json();
+    if (data.ok) {
+      schedule = { ...DEFAULT_SCHEDULE, ...(data.schedule || {}) };
+      blocked  = data.blocked  || [];
+      bookings = data.bookings || [];
     }
+  } catch (e) {
+    console.error("GAS fetch error:", e.message);
   }
 
-  res.json({ date, concierge, slots });
+  // Check if this day of week is active
+  const dow = new Date(date + "T12:00:00").getDay(); // 0=Sun,1=Mon,...,6=Sat
+  const DAY_KEYS = ["sun","mon","tue","wed","thu","fri","sat"];
+  const dayKey = DAY_KEYS[dow];
+  const daySch = schedule[dayKey] || { active: false };
+  if (!daySch.active) {
+    return res.json({ date, concierge, slots: [] });
+  }
+
+  // Build busy intervals from blocked + bookings
+  const busy = [];
+  blocked.filter(b => b.date === date && !b.fromCalendar === false || b.date === date).forEach(b => {
+    busy.push({ s: toMin(b.start), e: toMin(b.end) });
+  });
+  // Also include fromCalendar blocks (calendar events)
+  blocked.filter(b => b.date === date).forEach(b => {
+    const s = toMin(b.start), e = toMin(b.end);
+    if (!busy.find(x => x.s === s && x.e === e)) busy.push({ s, e });
+  });
+  bookings.filter(b => b.date === date).forEach(b => {
+    const s = toMin(b.time);
+    busy.push({ s: s - 30, e: s + (b.duration || slotMinutes) + 30 });
+  });
+
+  // Generate slots within schedule window
+  const windows = daySch.windows?.length
+    ? daySch.windows
+    : [{ start: daySch.start || "09:00", end: daySch.end || "18:00" }];
+
+  const slots = [];
+  windows.forEach(win => {
+    const wStart = toMin(win.start);
+    const wEnd   = toMin(win.end);
+    for (let t = wStart; t + slotMinutes <= wEnd; t += slotMinutes) {
+      const slotEnd = t + slotMinutes;
+      const isBlocked = busy.some(b => t < b.e && slotEnd > b.s);
+      if (!isBlocked) slots.push({ start: fromMin(t), end: fromMin(slotEnd) });
+    }
+  });
+
+  res.json({ date, concierge, slots: [...new Map(slots.map(s => [s.start, s])).values()] });
 }

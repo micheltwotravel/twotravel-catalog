@@ -502,7 +502,7 @@ function renderCalendar() {
     const date = new Date(viewYear, viewMonth, d);
     const iso  = date.toISOString().slice(0,10);
     const el   = document.createElement("div"); el.className = "cal-day"; el.textContent = d;
-    if (date < today || date.getDay() === 0) {
+    if (date < today || date.getDay() === 0 || date.getDay() === 6) {
       el.classList.add("disabled");
     } else {
       if (date.toDateString() === today.toDateString()) el.classList.add("today");
