@@ -1090,6 +1090,8 @@ function ClientesTable({ kickoffs, loading }) {
                 <th style={thStyle}>Cliente</th>
                 <th style={thStyle}>Ciudad</th>
                 <th style={thStyle}>Fechas</th>
+                <th style={thStyle}>Check-in/out</th>
+                <th style={thStyle}>Casa</th>
                 <th style={thStyle}>Pax</th>
                 <th style={thStyle}>Concierge</th>
                 <th style={thStyle}>Junior</th>
@@ -1100,17 +1102,19 @@ function ClientesTable({ kickoffs, loading }) {
                 <th style={thStyle}>🛒 Comida</th>
                 <th style={thStyle}>☕ Desayuno</th>
                 <th style={thStyle}>✅ Tareas</th>
+                <th style={thStyle}>🛥 Boat Day</th>
+                <th style={thStyle}>🛒 Grocery $</th>
                 <th style={{ ...thStyle, minWidth:180 }}>📣 Marketing</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={12} style={{ ...tdStyle, textAlign:"center", color:"#9ca3af", padding:32 }}>Sin clientes para este filtro.</td></tr>
+                <tr><td colSpan={16} style={{ ...tdStyle, textAlign:"center", color:"#9ca3af", padding:32 }}>Sin clientes para este filtro.</td></tr>
               )}
               {filtered.map((r, i) => {
                 const { drinkSummary, grocerySummary, breakfastSummary, breakfastAt } = orderStatus(r);
                 const itinLink = `/?mode=itinerary&kickoffId=${r.id}`;
-                const reunLink = `/?mode=reuniones`;
+                const reunLink = `/?mode=reuniones&kickoffId=${r.id}`;
                 const isSaving = (f) => saving[r.id + f];
                 return (
                   <tr key={r.id + (r._isCity2 ? "_2" : "")} style={{ background: i%2===0?"#fff":"#fafafa" }}>
@@ -1125,6 +1129,14 @@ function ClientesTable({ kickoffs, loading }) {
                     </td>
                     <td style={{ ...tdStyle, whiteSpace:"nowrap", color:"#6b7280" }}>
                       {fmtDateShort(r._rowArrival)}{r._rowDeparture ? ` → ${fmtDateShort(r._rowDeparture)}` : ""}
+                    </td>
+                    <td style={{ ...tdStyle, whiteSpace:"nowrap", color:"#6b7280", fontSize:11 }}>
+                      {r.checkIn ? <div>In: {r.checkIn}</div> : null}
+                      {r.checkOut ? <div>Out: {r.checkOut}</div> : null}
+                      {!r.checkIn && !r.checkOut ? <span style={{ color:"#d1d5db" }}>—</span> : null}
+                    </td>
+                    <td style={{ ...tdStyle, fontSize:11, color:"#374151", maxWidth:120 }}>
+                      {r._isCity2 ? (r.accommodationName2 || <span style={{ color:"#d1d5db" }}>—</span>) : (r.accommodationName || <span style={{ color:"#d1d5db" }}>—</span>)}
                     </td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>{r.pax || r.groupSize || "—"}</td>
                     <td style={{ ...tdStyle, color:"#374151" }}>{r.assignedConciergeName || r.concierge || "—"}</td>
@@ -1181,6 +1193,26 @@ function ClientesTable({ kickoffs, loading }) {
                         style={{ fontSize:11, padding:"3px 8px", borderRadius:6, border:"1px solid #e5e7eb", background: generatingTasks[r.id] ? "#f3f4f6" : "#fff", cursor:"pointer", color:"#374151" }}>
                         {generatingTasks[r.id] ? "…" : "Generar"}
                       </button>
+                    </td>
+                    <td style={tdStyle}>
+                      <input
+                        type="text"
+                        defaultValue={r.boatDay || ""}
+                        placeholder="Notas boat day…"
+                        onBlur={e => { if (e.target.value !== (r.boatDay||"")) saveField(r.id, "boatDay", e.target.value); }}
+                        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 8px", width:"100%", background:"#fff", boxSizing:"border-box", minWidth:100 }}
+                      />
+                      {isSaving("boatDay") && <span style={{ fontSize:9, color:"#9ca3af" }}>guardando…</span>}
+                    </td>
+                    <td style={tdStyle}>
+                      <input
+                        type="text"
+                        defaultValue={r.groceryBudget || ""}
+                        placeholder="$50–100"
+                        onBlur={e => { if (e.target.value !== (r.groceryBudget||"")) saveField(r.id, "groceryBudget", e.target.value); }}
+                        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 8px", width:80, background:"#fff", boxSizing:"border-box" }}
+                      />
+                      {isSaving("groceryBudget") && <span style={{ fontSize:9, color:"#9ca3af" }}>guardando…</span>}
                     </td>
                     <td style={tdStyle}>
                       <input

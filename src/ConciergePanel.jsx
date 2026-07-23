@@ -6075,7 +6075,9 @@ export function ReunionesPage({ currentUser }) {
           assignedConcierge: String(k?.assignedConcierge || k?.AssignedConcierge || "").trim(),
         }));
         setKickoffs(arr);
-        if (arr.length > 0) setSelectedId(arr[0].id);
+        const urlKickoffId = new URLSearchParams(window.location.search).get("kickoffId");
+        const preselect = urlKickoffId && arr.find(k => k.id === urlKickoffId);
+        setSelectedId(preselect ? urlKickoffId : arr.length > 0 ? arr[0].id : null);
       })
       .catch(e => setError(String(e?.message || e)))
       .finally(() => setLoading(false));
