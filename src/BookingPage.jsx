@@ -21,7 +21,7 @@ async function gasGet(params) {
 async function gasPost(body) {
   const r = await fetch(GAS, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify(body),
   });
   return r.json();
@@ -687,6 +687,10 @@ export function BookingPage({ conciergeEmail, conciergeName, kickoffId, guestNam
     return d.toISOString().slice(0, 10);
   });
   const slots    = selDate ? getAvailableSlots(selDate, sched, avail?.blocked || [], avail?.bookings || [], cfg.minGap, cfg.slotDuration) : [];
+  const availDates = dates.filter(d => getAvailableSlots(d, sched, avail?.blocked || [], avail?.bookings || [], cfg.minGap, cfg.slotDuration).length > 0);
+  const selDateIdx = availDates.indexOf(selDate);
+  const prevDate   = selDateIdx > 0 ? availDates[selDateIdx - 1] : null;
+  const nextDate   = selDateIdx < availDates.length - 1 ? availDates[selDateIdx + 1] : null;
 
   const confirm = async () => {
     setBooking(true);
@@ -792,6 +796,14 @@ export function BookingPage({ conciergeEmail, conciergeName, kickoffId, guestNam
       {/* Time slots */}
       {selDate && (
         <div style={{ marginBottom: 24 }}>
+          {/* Date navigation */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <button type="button" onClick={() => { setSelDate(prevDate); setSelTime(""); }} disabled={!prevDate}
+              style={{ background: "none", border: "none", cursor: prevDate ? "pointer" : "default", fontSize: 20, color: prevDate ? "#111" : "#ddd", padding: "0 4px" }}>←</button>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>{fmtDateLong(selDate, lang)}</span>
+            <button type="button" onClick={() => { setSelDate(nextDate); setSelTime(""); }} disabled={!nextDate}
+              style={{ background: "none", border: "none", cursor: nextDate ? "pointer" : "default", fontSize: 20, color: nextDate ? "#111" : "#ddd", padding: "0 4px" }}>→</button>
+          </div>
           <p style={{ fontSize: 13, fontWeight: 600, color: "#444", marginBottom: 10 }}>
             {isEs ? "Elige un horario:" : "Pick a time:"}
           </p>

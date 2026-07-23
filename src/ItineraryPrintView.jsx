@@ -229,7 +229,8 @@ function matchCart(cartRaw, catalog) {
     const id  = cl(item.id);
     const nl  = itemName.toLowerCase();
     // Only match catalog for items that came from catalog (have a sku or non-preset id)
-    const isPreset = !sku && (!id || id.startsWith("preset_") || id.startsWith("manual_"));
+    const isCheckinOut = /check.?in|check.?out/i.test(itemName);
+    const isPreset = isCheckinOut || (!sku && (!id || id.startsWith("preset_") || id.startsWith("manual_")));
     const s = isPreset ? null : (
       catalog.find(s => sku && s.sku === sku) ||
       catalog.find(s => id  && String(s.id) === id) ||

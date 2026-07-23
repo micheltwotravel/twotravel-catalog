@@ -2147,7 +2147,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
             className="px-3 py-1.5 rounded-lg border border-neutral-200 text-xs hover:bg-neutral-50 text-neutral-600">
             + Agregar día
           </button>
-          {kickoff?.arrivalDate && days.length > 0 && (
+          {days.length > 0 && (
             <button type="button" onClick={autoFillDayTitles}
               title="Renombrar días con día de semana y fecha según la fecha de llegada"
               className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs hover:bg-amber-100">

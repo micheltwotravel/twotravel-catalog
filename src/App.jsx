@@ -4881,6 +4881,36 @@ function BreakfastCatalog() {
 
               {/* Items */}
               <div style={{padding:"8px 12px"}}>
+                {/* Full menu option — top */}
+                <button onClick={() => toggleFull(currentDay, menu.id)} style={{
+                  width:"100%",display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
+                  marginBottom:10,
+                  background: cat.full ? `${badgeColor}12` : "#f9f6f2",
+                  border:`1.5px solid ${cat.full ? badgeColor : "#d5ccc0"}`,
+                  borderRadius:8,cursor:"pointer",textAlign:"left",transition:"all .12s",
+                }}>
+                  <div style={{
+                    width:16,height:16,borderRadius:"50%",flexShrink:0,
+                    border:`1.5px solid ${cat.full ? badgeColor : "#c8c0b8"}`,
+                    background: cat.full ? badgeColor : "transparent",
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                  }}>
+                    {cat.full && <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                  </div>
+                  <div style={{flex:1}}>
+                    <p style={{fontSize:12,fontWeight:700,color: cat.full ? badgeColor : "#5a5550",marginBottom:1}}>
+                      {en ? `✦ Full ${catLabel} Menu` : `✦ Menú Completo ${catLabel}`}
+                    </p>
+                    <p style={{fontSize:10,color:"#9a9590"}}>
+                      {en ? "All dishes in shared portions for the group" : "Todos los platos en porciones compartidas para el grupo"}
+                    </p>
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <span style={{fontSize:15,fontWeight:700,color:badgeColor}}>{fmt(menu.fullPrice[tierIdx])}</span>
+                    <span style={{fontSize:9,color:"#b8b0a8",display:"block"}}>{en ? "/ day" : "/ día"}</span>
+                  </div>
+                </button>
+
                 {menu.sections.map((sec, si) => (
                   <div key={si} style={{marginBottom:4}}>
                     {menu.sections.length > 1 && (
@@ -4926,35 +4956,6 @@ function BreakfastCatalog() {
                   </div>
                 ))}
 
-                {/* Full menu option */}
-                <button onClick={() => toggleFull(currentDay, menu.id)} style={{
-                  width:"100%",display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
-                  marginTop:8,
-                  background: cat.full ? `${badgeColor}12` : "#f9f6f2",
-                  border:`1.5px solid ${cat.full ? badgeColor : "#d5ccc0"}`,
-                  borderRadius:8,cursor:"pointer",textAlign:"left",transition:"all .12s",
-                }}>
-                  <div style={{
-                    width:16,height:16,borderRadius:"50%",flexShrink:0,
-                    border:`1.5px solid ${cat.full ? badgeColor : "#c8c0b8"}`,
-                    background: cat.full ? badgeColor : "transparent",
-                    display:"flex",alignItems:"center",justifyContent:"center",
-                  }}>
-                    {cat.full && <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                  </div>
-                  <div style={{flex:1}}>
-                    <p style={{fontSize:12,fontWeight:700,color: cat.full ? badgeColor : "#5a5550",marginBottom:1}}>
-                      {en ? `✦ Full ${catLabel} Menu` : `✦ Menú Completo ${catLabel}`}
-                    </p>
-                    <p style={{fontSize:10,color:"#9a9590"}}>
-                      {en ? "All dishes in shared portions for the group" : "Todos los platos en porciones compartidas para el grupo"}
-                    </p>
-                  </div>
-                  <div style={{textAlign:"right",flexShrink:0}}>
-                    <span style={{fontSize:15,fontWeight:700,color:badgeColor}}>{fmt(menu.fullPrice[tierIdx])}</span>
-                    <span style={{fontSize:9,color:"#b8b0a8",display:"block"}}>{en ? "/ day" : "/ día"}</span>
-                  </div>
-                </button>
               </div>
             </div>
           );
