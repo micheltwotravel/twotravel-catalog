@@ -3612,111 +3612,183 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
   );
 }
 
-const GAS_URL_HS = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+const CITY_CODE_MAP = { cartagena:"CTG", medellin:"MDE", "ciudad de mexico":"CDMX", cdmx:"CDMX", tulum:"TUL", bogota:"BOG", "mexico city":"CDMX" };
+function detectCityCode(str) {
+  const s = (str || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+  for (const [k, v] of Object.entries(CITY_CODE_MAP)) { if (s.includes(k)) return v; }
+  return "";
+}
+function parseHSDate(str) {
+  // "6/27/26" → "2026-06-27"
+  if (!str) return "";
+  const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (!m) return "";
+  const yr = m[3].length === 2 ? "20" + m[3] : m[3];
+  return yr + "-" + String(m[1]).padStart(2,"0") + "-" + String(m[2]).padStart(2,"0");
+}
+function normalizeFlightNum(s) {
+  return (s || "").replace(/\s+/g,"").toUpperCase();
+}
 
 function HubSpotImport({ onImport }) {
-  const [open, setOpen] = React.useState(false);
-  const [query, setQuery] = React.useState("");
-  const [results, setResults] = React.useState([]);
-  const [loading, setLoading] = React.useState(false);
+  const [preview, setPreview] = React.useState(null);
   const [error, setError] = React.useState("");
+  const fileRef = React.useRef();
 
-  async function search() {
-    if (!query.trim()) return;
-    setLoading(true);
+  function handleFile(file) {
     setError("");
-    setResults([]);
-    try {
-      const r = await fetch("/api/hubspot", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "get_contacts", data: { limit: 20 } }),
-      });
-      const d = await r.json();
-      const q = query.toLowerCase();
-      const matches = (d.contacts || []).filter(c => {
-        const name = (c.properties?.dealname || "").toLowerCase();
-        const contactName = (c._contact?.fullName || "").toLowerCase();
-        const email = (c._contact?.email || "").toLowerCase();
-        return name.includes(q) || contactName.includes(q) || email.includes(q);
-      }).slice(0, 10);
-      setResults(matches);
-      if (matches.length === 0) setError("Sin resultados para: " + query);
-    } catch (e) {
-      setError("Error conectando con HubSpot");
-    }
-    setLoading(false);
+    setPreview(null);
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const text = e.target.result;
+        // Support both TSV (Google Sheets export) and CSV
+        const lines = text.trim().split(/\r?\n/);
+        const sep = lines[0].includes("\t") ? "\t" : ",";
+        const headers = lines[0].split(sep).map(h => h.replace(/^"|"$/g,"").trim());
+        const rows = lines.slice(1).filter(l => l.trim()).map(line => {
+          const vals = line.split(sep);
+          const obj = {};
+          headers.forEach((h, i) => { obj[h] = (vals[i] || "").replace(/^"|"$/g,"").trim(); });
+          return obj;
+        });
+        if (!rows.length) { setError("El archivo no tiene datos"); return; }
+
+        const g = h => rows[0][h] || "";
+
+        // City from first row
+        const city = detectCityCode(g("Where are you traveling to?"));
+
+        // Group size
+        const groupSize = rows.length;
+
+        // Contact (first row = lead contact)
+        const contactName = [g("Contact first name") || g("First Name"), g("Contact last name") || g("Last Name")].filter(Boolean).join(" ");
+        const contactEmail = g("Contact email") || g("Email");
+        const contactPhone = g("Mobile Phone Number");
+
+        // Arrivals: group passengers by flight number+date
+        const arrMap = {};
+        rows.forEach(r => {
+          const fn = normalizeFlightNum(r["Arrival Flight Number"]);
+          const dt = parseHSDate(r["Arrival Date"]);
+          if (!fn && !dt) return;
+          const key = fn + "|" + dt;
+          if (!arrMap[key]) arrMap[key] = { flightNumber: fn, date: dt, time: "", names: [] };
+          const nm = [r["First Name"], r["Last Name"]].filter(Boolean).join(" ");
+          if (nm) arrMap[key].names.push(nm);
+        });
+        const arrivals = Object.values(arrMap).map(a => ({
+          flightNumber: a.flightNumber, date: a.date, time: "", name: a.names.join(", ")
+        }));
+
+        // Departures: same grouping
+        const depMap = {};
+        rows.forEach(r => {
+          const fn = normalizeFlightNum(r["Departure Flight Number"]);
+          const dt = parseHSDate(r["Departure Date"]);
+          if (!fn && !dt) return;
+          const key = fn + "|" + dt;
+          if (!depMap[key]) depMap[key] = { flightNumber: fn, date: dt, time: "", names: [] };
+          const nm = [r["First Name"], r["Last Name"]].filter(Boolean).join(" ");
+          if (nm) depMap[key].names.push(nm);
+        });
+        const departures = Object.values(depMap).map(d => ({
+          flightNumber: d.flightNumber, date: d.date, time: "", name: d.names.join(", ")
+        }));
+
+        // Passport info block (for internal use, NOT shown in PDF)
+        const passportLines = rows.map(r => {
+          const name = [r["First Name"], r["Last Name"]].filter(Boolean).join(" ");
+          const id = [r["ID Type"], r["ID Number"]].filter(Boolean).join(": ");
+          const dob = r["Date of Birth"] ? "DOB " + r["Date of Birth"] : "";
+          const nat = r["Nationality"] || "";
+          return [name, id, dob, nat].filter(Boolean).join(" · ");
+        });
+        const passportInfo = passportLines.join("\n");
+
+        // Dietary / medical
+        const dietLines = rows.map(r => {
+          const name = [r["First Name"], r["Last Name"]].filter(Boolean).join(" ");
+          const food = r["Food Restrictions"] || "";
+          const allergy = r["Allergies and/or Medical Conditions"] || "";
+          if (!food && !allergy) return null;
+          return name + ": " + [food, allergy].filter(Boolean).join(" / ");
+        }).filter(Boolean);
+        const dietInfo = dietLines.join("\n");
+
+        // Photos permission
+        const photoPerms = rows.map(r => {
+          const name = [r["First Name"], r["Last Name"]].filter(Boolean).join(" ");
+          const perm = (r["I give permission to Two Travel to use my photos and videos for social media and marketing purposes."] || "").toLowerCase();
+          return name + ": " + (perm === "yes" ? "SI" : "NO");
+        }).join(", ");
+
+        setPreview({ city, groupSize, contactName, contactEmail, contactPhone, arrivals, departures, passportInfo, dietInfo, photoPerms, rows });
+      } catch(err) {
+        setError("Error leyendo el archivo: " + err.message);
+      }
+    };
+    reader.readAsText(file);
   }
 
-  function importDeal(deal) {
-    const p = deal.properties || {};
-    const c = deal._contact || {};
-    // Detect language from deal name or description
-    const desc = (p.description || p.dealname || "").toLowerCase();
-    const lang = (desc.includes("medellín") || desc.includes("cartagena") || desc.includes("cdmx") || desc.includes("ciudad de méxico") || desc.includes("tulum")) ? "es" : "en";
-    // Map destination to city code
-    const destMap = { cartagena:"CTG", medellín:"MDE", medellin:"MDE", "ciudad de mexico":"CDMX", cdmx:"CDMX", tulum:"TUL", bogotá:"BOG", bogota:"BOG" };
-    let city = "";
-    for (const [k, v] of Object.entries(destMap)) {
-      if (desc.includes(k)) { city = v; break; }
-    }
-    onImport({
-      guestName:    c.fullName || "",
-      tripName:     p.dealname || "",
-      guestContact: c.phone || "",
-      guestEmail:   c.email || "",
-      city,
-      lang,
-    });
-    setOpen(false);
-    setQuery("");
-    setResults([]);
+  function confirmImport() {
+    if (!preview) return;
+    onImport(preview);
+    setPreview(null);
+    if (fileRef.current) fileRef.current.value = "";
   }
-
-  if (!open) return (
-    <button type="button" onClick={() => setOpen(true)}
-      className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-orange-200 bg-orange-50 text-orange-700 text-xs font-semibold hover:bg-orange-100 transition-colors">
-      <span>🔗</span> Importar desde HubSpot
-    </button>
-  );
 
   return (
     <div className="rounded-xl border border-orange-200 bg-orange-50 p-3 space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-orange-700">🔗 Buscar deal en HubSpot</span>
-        <button type="button" onClick={() => { setOpen(false); setResults([]); setQuery(""); }}
-          className="text-orange-400 hover:text-orange-700 text-xs">✕</button>
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-semibold text-orange-700">📋 Sheet de HubSpot</span>
+        <span className="text-[10px] text-orange-400">Sube el CSV/TSV exportado del form de pre-check-in</span>
       </div>
-      <div className="flex gap-2">
-        <input
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && search()}
-          placeholder="Nombre del cliente o del viaje…"
-          className="flex-1 border border-orange-200 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-orange-400"
-          autoFocus
-        />
-        <button type="button" onClick={search} disabled={loading}
-          className="px-3 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold hover:bg-orange-700 disabled:opacity-50">
-          {loading ? "…" : "Buscar"}
-        </button>
-      </div>
-      {error && <p className="text-[11px] text-orange-500">{error}</p>}
-      {results.length > 0 && (
-        <div className="space-y-1 max-h-48 overflow-y-auto">
-          {results.map(deal => (
-            <button key={deal.id} type="button" onClick={() => importDeal(deal)}
-              className="w-full text-left px-3 py-2 rounded-lg bg-white border border-orange-100 hover:border-orange-400 hover:bg-orange-50 transition-colors">
-              <div className="text-xs font-semibold text-neutral-800">{deal.properties?.dealname || "—"}</div>
-              {deal._contact && (
-                <div className="text-[10px] text-neutral-500">
-                  {deal._contact.fullName && <span>{deal._contact.fullName} · </span>}
-                  {deal._contact.email && <span>{deal._contact.email}</span>}
-                  {deal._contact.phone && <span> · {deal._contact.phone}</span>}
-                </div>
-              )}
+      <label className="flex items-center gap-2 cursor-pointer w-full py-2 px-3 rounded-lg border border-dashed border-orange-300 bg-white hover:bg-orange-50 transition-colors">
+        <span className="text-orange-500 text-sm">⬆</span>
+        <span className="text-xs text-orange-600 font-medium">Seleccionar archivo (.csv o .tsv)</span>
+        <input ref={fileRef} type="file" accept=".csv,.tsv,.txt" className="hidden"
+          onChange={e => e.target.files[0] && handleFile(e.target.files[0])} />
+      </label>
+      {error && <p className="text-[11px] text-red-500">{error}</p>}
+      {preview && (
+        <div className="bg-white rounded-lg border border-orange-200 p-3 space-y-2 text-[11px]">
+          <div className="font-semibold text-neutral-700 mb-1">Vista previa — {preview.rows.length} pasajero{preview.rows.length !== 1 ? "s" : ""}</div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-neutral-600">
+            {preview.city && <div><span className="text-neutral-400">Ciudad:</span> {preview.city}</div>}
+            {preview.contactName && <div><span className="text-neutral-400">Contacto:</span> {preview.contactName}</div>}
+            {preview.contactEmail && <div><span className="text-neutral-400">Email:</span> {preview.contactEmail}</div>}
+            {preview.contactPhone && <div><span className="text-neutral-400">Tel:</span> {preview.contactPhone}</div>}
+          </div>
+          {preview.arrivals.length > 0 && (
+            <div className="text-neutral-600">
+              <span className="text-neutral-400">Llegadas:</span>{" "}
+              {preview.arrivals.map((a,i) => <span key={i}>{a.flightNumber} {a.date}{i < preview.arrivals.length-1 ? " / " : ""}</span>)}
+            </div>
+          )}
+          {preview.departures.length > 0 && (
+            <div className="text-neutral-600">
+              <span className="text-neutral-400">Salidas:</span>{" "}
+              {preview.departures.map((d,i) => <span key={i}>{d.flightNumber} {d.date}{i < preview.departures.length-1 ? " / " : ""}</span>)}
+            </div>
+          )}
+          {preview.passportInfo && (
+            <div className="text-neutral-500 bg-neutral-50 rounded p-1.5 whitespace-pre-wrap font-mono text-[10px]">{preview.passportInfo}</div>
+          )}
+          {preview.dietInfo && (
+            <div className="text-neutral-600"><span className="text-neutral-400">Dieta:</span> {preview.dietInfo}</div>
+          )}
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={confirmImport}
+              className="flex-1 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold hover:bg-orange-700">
+              Importar al kickoff
             </button>
-          ))}
+            <button type="button" onClick={() => { setPreview(null); if (fileRef.current) fileRef.current.value = ""; }}
+              className="px-3 py-1.5 rounded-lg border border-neutral-200 text-xs text-neutral-500 hover:bg-neutral-50">
+              Cancelar
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -4134,14 +4206,16 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
         <div className="flex-1 overflow-auto p-5 space-y-4">
 
           {/* ── HUBSPOT IMPORT ─────────────────────────────────────── */}
-          <HubSpotImport onImport={({ guestName: gn, tripName: tn, guestContact: gc, guestEmail: ge, city: ct, groupSize: gs, lang: lg }) => {
-            if (gn) setGuestName(gn);
-            if (tn) setTripName(tn);
-            if (gc) setGuestContact(gc);
-            if (ge) setGuestEmailState(ge);
+          <HubSpotImport onImport={({ contactName, contactEmail, contactPhone, city: ct, groupSize: gs, arrivals: arr, departures: dep, passportInfo: pi, dietInfo }) => {
+            if (contactName) setGuestName(contactName);
+            if (contactEmail) setGuestEmailState(contactEmail);
+            if (contactPhone) setGuestContact(contactPhone);
             if (ct) setCity(ct);
             if (gs) setGroupSize(String(gs));
-            if (lg) setLang(lg);
+            if (arr && arr.length) setArrivals(arr);
+            if (dep && dep.length) setDepartures(dep);
+            if (pi) setPassportInfo(pi);
+            if (dietInfo) setInternalNotes(prev => (prev ? prev + "\n\n" : "") + "DIETA/ALERGIAS:\n" + dietInfo);
           }} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
