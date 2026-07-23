@@ -2284,8 +2284,13 @@ export default function ItineraryPrintView() {
   const days = useMemo(() => {
     if (!kickoff) return [];
     if (!catalog.length) return [];
-    // Always rebuild from cart so kickoff editor changes always reflect here
-    return buildDays(matchCart(kickoff.cart, catalog), lang, parseJsonField(kickoff.dayMeta), kickoff.city);
+    const cartRaw = kickoff.cart;
+    const matched = matchCart(cartRaw, catalog);
+    console.log("[PDF] cart raw:", cartRaw);
+    console.log("[PDF] matched items:", matched.length, matched);
+    const result = buildDays(matched, lang, parseJsonField(kickoff.dayMeta), kickoff.city);
+    console.log("[PDF] days built:", result.length, result);
+    return result;
   }, [kickoff, catalog, lang]);
 
   // Detect families/kids in group (show Family Friendly badge only then)
