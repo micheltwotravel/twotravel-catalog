@@ -1071,29 +1071,32 @@ function OrderCell({ summary, at, empty = "—", fullText }) {
       </div>
       {open && (
         <div style={{
-          position:"absolute", zIndex:200, top:"110%", left:0,
-          background:"#fff", border:"1px solid #e5e7eb", borderRadius:10,
-          boxShadow:"0 4px 24px rgba(0,0,0,.13)", padding:"14px 16px",
-          minWidth:240, maxWidth:320,
+          position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
+          zIndex:9999, background:"#fff", border:"1px solid #e5e7eb", borderRadius:16,
+          boxShadow:"0 8px 48px rgba(0,0,0,.18)", padding:0,
+          minWidth:340, maxWidth:480, width:"90vw",
         }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-            <span style={{ fontSize:11, fontWeight:700, color:"#374151", textTransform:"uppercase", letterSpacing:".05em" }}>Pedido</span>
-            <button onClick={() => setOpen(false)} style={{ border:"none", background:"none", cursor:"pointer", color:"#9ca3af", fontSize:14, lineHeight:1, padding:0 }}>✕</button>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 18px", borderBottom:"1px solid #f3f4f6" }}>
+            <span style={{ fontSize:12, fontWeight:700, color:"#111", letterSpacing:".04em" }}>🛒 Pedido completo</span>
+            <button onClick={() => setOpen(false)} style={{ border:"none", background:"none", cursor:"pointer", color:"#9ca3af", fontSize:16, lineHeight:1, padding:"0 2px" }}>✕</button>
           </div>
-          <div style={{ fontSize:11, color:"#374151", whiteSpace:"pre-wrap", lineHeight:1.6, marginBottom:10, maxHeight:160, overflowY:"auto" }}>
+          <div style={{ fontSize:12, color:"#374151", whiteSpace:"pre-wrap", lineHeight:1.7, padding:"16px 18px", maxHeight:320, overflowY:"auto" }}>
             {summary}
           </div>
           {at && (
-            <div style={{ fontSize:10, color:"#9ca3af", marginBottom:10, borderTop:"1px solid #f3f4f6", paddingTop:8 }}>
+            <div style={{ fontSize:10.5, color:"#9ca3af", padding:"8px 18px", borderTop:"1px solid #f3f4f6" }}>
               📅 Enviado: <b>{fmtOrderAt(at)}</b>
             </div>
           )}
-          <button
-            onClick={() => { navigator.clipboard.writeText(copyText).catch(()=>{}); setOpen(false); }}
-            style={{ width:"100%", background:"#111827", color:"#fff", border:"none", borderRadius:6, padding:"7px 12px", fontSize:11, fontWeight:600, cursor:"pointer" }}
-          >📋 Copiar lista</button>
+          <div style={{ padding:"12px 18px", borderTop:"1px solid #f3f4f6" }}>
+            <button
+              onClick={() => { navigator.clipboard.writeText(copyText).catch(()=>{}); setOpen(false); }}
+              style={{ width:"100%", background:"#111827", color:"#fff", border:"none", borderRadius:8, padding:"9px 14px", fontSize:12, fontWeight:600, cursor:"pointer" }}
+            >📋 Copiar lista completa</button>
+          </div>
         </div>
       )}
+      {open && <div onClick={() => setOpen(false)} style={{ position:"fixed", inset:0, zIndex:9998 }} />}
     </div>
   );
 }
@@ -1255,14 +1258,18 @@ function ClientesTable({ kickoffs, loading }) {
   const now = new Date();
   const filtered = rows.filter(r => {
     if (cityFilter !== "all") {
-      const c = (r._rowCity || "").toLowerCase().trim();
-      if (c !== cityFilter) return false;
+      if (normCity(r._rowCity) !== cityFilter) return false;
     }
     if (period !== "all" && r._rowArrival) {
-      const arr = new Date(r._rowArrival);
-      const diffDays = (arr - now) / 86400000;
-      if (period === "week"  && (diffDays < -7 || diffDays > 7))  return false;
-      if (period === "month" && (diffDays < -30 || diffDays > 30)) return false;
+      const arr = new Date(r._rowArrival + "T12:00:00");
+      if (period === "week") {
+        const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0,0,0,0);
+        const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6); weekEnd.setHours(23,59,59,999);
+        if (arr < weekStart || arr > weekEnd) return false;
+      }
+      if (period === "month") {
+        if (arr.getMonth() !== now.getMonth() || arr.getFullYear() !== now.getFullYear()) return false;
+      }
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -1272,7 +1279,17 @@ function ClientesTable({ kickoffs, loading }) {
     return true;
   }).sort((a, b) => (a._rowArrival || "") > (b._rowArrival || "") ? 1 : -1);
 
-  const cities = ["all", ...Array.from(new Set(rows.map(r => (r._rowCity||"").toLowerCase().trim()).filter(Boolean)))];
+  // Normalize city codes: "ctg"/"cartagena" → "cartagena", "mde"/"medellin" → "medellin", etc.
+  function normCity(raw) {
+    const c = (raw||"").toLowerCase().trim();
+    if (c === "ctg" || c === "cartagena") return "cartagena";
+    if (c === "mde" || c === "medellin" || c === "medellín") return "medellin";
+    if (c === "bog" || c === "bogota" || c === "bogotá") return "bogota";
+    if (c === "baq" || c === "barranquilla") return "barranquilla";
+    if (c === "smr" || c === "santamarta" || c === "santa marta") return "santamarta";
+    return c;
+  }
+  const cities = ["all", ...Array.from(new Set(rows.map(r => normCity(r._rowCity)).filter(Boolean)))];
 
   async function saveField(kickoffId, field, value) {
     setSaving(s => ({ ...s, [kickoffId + field]: true }));
@@ -1450,7 +1467,7 @@ function ClientesTable({ kickoffs, loading }) {
                       </button>
                     </td>
                     <td style={tdStyle}>
-                      {(r._rowCity || "").toLowerCase().includes("ctg") || (r._rowCity || "").toLowerCase().includes("cartagena")
+                      {normCity(r._rowCity) === "cartagena"
                         ? <BoatDayCell kickoffId={r.id} value={r.boatDay || ""} onSave={saveField} saving={isSaving("boatDay")} />
                         : <span style={{ color:"#d1d5db", fontSize:11 }}>—</span>}
                     </td>
@@ -3854,7 +3871,7 @@ function DrinksCatalog() {
       <div className="bg-neutral-950 text-white px-6 pt-6 pb-5">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <img src="/logo.png" alt="Two Travel" className="h-7 mb-2 opacity-90" />
+            <img src="/logo.png" alt="Two Travel" className="h-7 mb-2 opacity-90" style={{filter:"brightness(0) invert(1)"}} />
             <h1 className="text-xl font-semibold">{T.heading}</h1>
           </div>
           {/* Language toggle */}
@@ -4313,7 +4330,7 @@ function GroceryCatalog() {
       <div className="bg-neutral-950 text-white px-6 pt-6 pb-5">
         <div className="flex items-start justify-between mb-2">
           <div>
-            <img src="/logo.png" alt="Two Travel" className="h-7 mb-2 opacity-90" />
+            <img src="/logo.png" alt="Two Travel" className="h-7 mb-2 opacity-90" style={{filter:"brightness(0) invert(1)"}} />
             <h1 className="text-xl font-semibold">{lang==="en" ? "🛒 Grocery List" : "🛒 Lista de Mercado"}</h1>
           </div>
           {/* Language toggle */}
@@ -5816,7 +5833,7 @@ function App() {
     if (mode === "soporte")   return <ErrorBoundary><SoportePage /></ErrorBoundary>;
     if (mode === "soporte-dashboard") return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
     if (mode === "tasks")     return <ErrorBoundary><TaskTracker /></ErrorBoundary>;
-    if (mode === "reuniones") return <ErrorBoundary><ReunionesPage currentUser={user} /></ErrorBoundary>;
+    if (mode === "reuniones") return <ErrorBoundary><ReunionesPage currentUser={user} initialKickoffId={params.get("kickoffId") || ""} /></ErrorBoundary>;
     if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard currentUser={user} onLogout={logout} /></ErrorBoundary>;
   }
 

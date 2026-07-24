@@ -1435,6 +1435,7 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
               ? <Editable value={timePart} editMode={editMode} onChange={v => patchItem?.("time", v)} />
               : timePart}
             {durPart && <span className="ev-time-dur"> · {durPart}</span>}
+            <span style={{ fontWeight:400, color:"#b45309", fontSize:8, letterSpacing:".5px", marginLeft:2 }}>COT</span>
           </div>
         )}
 

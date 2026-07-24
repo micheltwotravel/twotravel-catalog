@@ -1990,23 +1990,45 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         const accom = kickoff?.accommodationName || "";
         const checkinTime  = kickoff?.checkIn  || "3:00 PM";
         const checkoutTime = kickoff?.checkOut || "11:00 AM";
+        // Breakfast service from catalog (if available)
+        const bfService = itineraryItems.find(i => /breakfast/i.test(i.name_en) || /desayuno/i.test(i.name_es));
         if (firstLabel) {
           setCart(prev => {
-            const hasCheckin = prev.some(i => i.dayLabel === firstLabel && (i.name === "Check-in" || i.name_en === "Check-in"));
-            const hasCheckout = prev.some(i => i.dayLabel === lastLabel && (i.name === "Check-out" || i.name_en === "Check-out"));
+            const hasCheckin  = prev.some(i => i.dayLabel === firstLabel && (i.name === "Check-in" || i.name_en === "Check-in"));
+            const hasCheckout = prev.some(i => i.dayLabel === lastLabel  && (i.name === "Check-out" || i.name_en === "Check-out"));
             const toAdd = [];
+            // Check-in on day 1
             if (!hasCheckin && firstLabel) {
               toAdd.push({ ...mapManualToCartItem(), _uid: `preset_checkin_${Date.now()}`, id: `preset_checkin_${Date.now()}`,
                 name: "Check-in", name_en: "Check-in", category: "services", timeLabel: checkinTime,
                 description_es: `Su villa estará disponible a partir de las ${checkinTime}.`, description_en: `Your villa will be available from ${checkinTime}.`,
                 ...(accom ? { location: accom } : {}), dayLabel: firstLabel, sortOrder: 0 });
             }
+            // Check-out on last day
             if (!hasCheckout && lastLabel && lastLabel !== firstLabel) {
               toAdd.push({ ...mapManualToCartItem(), _uid: `preset_checkout_${Date.now()}`, id: `preset_checkout_${Date.now()}`,
                 name: "Check-out", name_en: "Check-out", category: "services", timeLabel: checkoutTime,
                 description_es: `El check-out es a las ${checkoutTime}.`, description_en: `Check-out is at ${checkoutTime}.`,
                 ...(accom ? { location: accom } : {}), dayLabel: lastLabel, sortOrder: 0 });
             }
+            // Breakfasts: day 2 through second-to-last (they don't breakfast on arrival day or checkout day)
+            const bfDays = currentMeta.slice(1, currentMeta.length - 1);
+            bfDays.forEach((dm, idx) => {
+              const alreadyHasBf = prev.some(i => i.dayLabel === dm.label && (/breakfast/i.test(i.name_en) || /desayuno/i.test(i.name)));
+              const addedBf = toAdd.some(i => i.dayLabel === dm.label && (/breakfast/i.test(i.name_en) || /desayuno/i.test(i.name)));
+              if (!alreadyHasBf && !addedBf) {
+                toAdd.push({ ...mapManualToCartItem(),
+                  _uid: `preset_bf_${dm.label}_${Date.now() + idx}`, id: `preset_bf_${dm.label}_${Date.now() + idx}`,
+                  name:    bfService?.name_es || "Desayuno en la Villa",
+                  name_en: bfService?.name_en || "Breakfast at the Villa",
+                  category: "services", timeLabel: "9:00 AM",
+                  ...(bfService?.image ? { image: bfService.image } : {}),
+                  description_es: bfService?.description_es || "Una mezcla de desayunos locales e internacionales será servida en su comedor.",
+                  description_en: bfService?.description    || "A mix of local and international breakfast dishes will be served in your dining room.",
+                  dayLabel: dm.label, sortOrder: 1,
+                });
+              }
+            });
             return toAdd.length ? [...prev, ...toAdd] : prev;
           });
         }
@@ -5289,8 +5311,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       N° vuelo <span className="text-blue-400">✈</span>
                       <FlightRouteHint flightNumber={a.flightNumber} date={a.date} />
                     </p>
-                    <input value={a.flightNumber||""} onChange={e => patchArrival(i,{flightNumber:e.target.value.toUpperCase()})}
-                      placeholder="2173"
+                    <input value={a.flightNumber||""} onChange={e => patchArrival(i,{flightNumber:e.target.value.replace(/[^A-Z0-9 ]/gi,"").toUpperCase()})}
+                      placeholder="AV 2173"
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono font-bold" />
                   </div>
                   <div className="col-span-3">
@@ -5336,8 +5358,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       N° vuelo <span className="text-blue-400">✈</span>
                       <FlightRouteHint flightNumber={d.flightNumber} date={d.date} />
                     </p>
-                    <input value={d.flightNumber||""} onChange={e => patchDeparture(i,{flightNumber:e.target.value.toUpperCase()})}
-                      placeholder="1144"
+                    <input value={d.flightNumber||""} onChange={e => patchDeparture(i,{flightNumber:e.target.value.replace(/[^A-Z0-9 ]/gi,"").toUpperCase()})}
+                      placeholder="AV 1144"
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono font-bold" />
                   </div>
                   <div className="col-span-3">
@@ -5367,16 +5389,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
           {/* ITINERARIO — canvas con edición inline por día */}
           <DrawerSection title="📅 Itinerario" accent="neutral" defaultOpen={true}>
-            <div className="flex items-center justify-between -mt-1 mb-1">
-              <span />
-              {kickoff?.cart?.length > 0 && (
-                <a href={`/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff.lang || "en"}`}
-                  target="_blank" rel="noreferrer"
-                  className="text-[11px] text-blue-600 hover:underline">
-                  📄 Ver PDF →
-                </a>
-              )}
-            </div>
+            <div className="-mt-1 mb-1" />
             <ItineraryCanvas
               kickoff={kickoff}
               onCartChange={(newCart, newDayMeta) => {
@@ -6076,51 +6089,82 @@ const WA_SVG = <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColo
 
 function PresetMessages({ kickoff }) {
   const [open, setOpen] = React.useState(false);
+  const [copied, setCopied] = React.useState(null);
   const first = (kickoff.guestName || "").split(" ")[0] || "";
-  const accom = kickoff.accommodationName || "la villa";
   const isEs = (kickoff.lang || "en") === "es";
   const phone = (kickoff.guestContact || "").replace(/\D/g, "");
   const waBase = phone ? `https://wa.me/${phone}?text=` : `https://wa.me/?text=`;
+  const base = "https://www.twotravelvip.com";
+  const id = kickoff.id || "";
+  const copy = (key, text) => {
+    navigator.clipboard.writeText(text).catch(()=>{});
+    setCopied(key); setTimeout(() => setCopied(null), 1500);
+  };
   const msgs = [
     {
-      icon: "🏨", label: "Check-in",
+      key: "catalogo", icon: "📖", label: isEs ? "Catálogo" : "Catalog",
+      url: `${base}/c/${id}`,
       text: isEs
-        ? `Hola ${first}! 👋 Hoy es el gran día. Les esperamos en ${accom} para el check-in a partir de las ${kickoff.checkIn || "3:00 PM"}. ¡Bienvenidos! 🎉`
-        : `Hi ${first}! 👋 Today's the big day! We'll meet you at ${accom} for check-in from ${kickoff.checkIn || "3:00 PM"} onwards. Welcome! 🎉`,
+        ? `Hola ${first}! 👋 Aquí está tu catálogo personalizado con todas las experiencias disponibles para tu estadía. Explóralo y cuéntanos qué te interesa.\n${base}/c/${id}`
+        : `Hi ${first}! 👋 Here's your personalized catalog with all the experiences available during your stay. Take a look and let us know what interests you!\n${base}/c/${id}`,
     },
     {
-      icon: "🛥", label: "Boat Day",
+      key: "bebidas", icon: "🍹", label: isEs ? "Bebidas" : "Drink Order",
+      url: `${base}/d/${id}`,
       text: isEs
-        ? `Hola ${first}! 🛥 Recordatorio — mañana es el día de bote. Salida a las 8:30 AM. Traigan protector solar, traje de baño y cámara. ¡Va a estar increíble! ☀️`
-        : `Hi ${first}! 🛥 Reminder — tomorrow is Boat Day! Departure at 8:30 AM. Don't forget sunscreen, swimwear and a camera. It's going to be amazing! ☀️`,
+        ? `Hola ${first}! 🍹 Para tener todo listo en la villa antes de que lleguen, compártenos tu selección de bebidas aquí:\n${base}/d/${id}`
+        : `Hi ${first}! 🍹 To have everything ready at the villa before you arrive, please share your drinks selection here:\n${base}/d/${id}`,
     },
     {
-      icon: "🧳", label: "Check-out",
+      key: "desayuno", icon: "☕", label: isEs ? "Desayuno" : "Breakfast",
+      url: `${base}/b/${id}`,
       text: isEs
-        ? `Hola ${first}! 🧳 Recordatorio — check-out de ${accom} mañana a las ${kickoff.checkOut || "11:00 AM"}. Avísennos si necesitan guardar maletas o coordinar algo. ¡Fue un placer tenerlos! 🙌`
-        : `Hi ${first}! 🧳 Reminder — check-out at ${accom} is tomorrow at ${kickoff.checkOut || "11:00 AM"}. Let us know if you need to store luggage. It was a pleasure having you! 🙌`,
+        ? `Hola ${first}! ☕ Aquí puedes seleccionar el menú de desayuno para cada día de tu estadía. ¡Nos encargamos del resto!\n${base}/b/${id}`
+        : `Hi ${first}! ☕ Here you can choose your breakfast menu for each day of your stay. We'll take care of the rest!\n${base}/b/${id}`,
+    },
+    {
+      key: "mercado", icon: "🛒", label: isEs ? "Mercado" : "Groceries",
+      url: `${base}/g/${id}`,
+      text: isEs
+        ? `Hola ${first}! 🛒 Cuéntanos qué productos quieren tener disponibles en la villa y los coordinamos antes de su llegada:\n${base}/g/${id}`
+        : `Hi ${first}! 🛒 Let us know what products you'd like available at the villa and we'll have them ready before you arrive:\n${base}/g/${id}`,
+    },
+    {
+      key: "feedback", icon: "⭐", label: "Feedback",
+      url: `${base}/f/${id}`,
+      text: isEs
+        ? `Hola ${first}! ⭐ Esperamos que hayan tenido una experiencia increíble. ¿Nos dejan sus comentarios? Nos ayuda mucho a seguir mejorando:\n${base}/f/${id}`
+        : `Hi ${first}! ⭐ We hope you had an amazing experience! Would you mind leaving us some feedback? It really helps us keep improving:\n${base}/f/${id}`,
     },
   ];
   return (
     <div>
       <button type="button" onClick={() => setOpen(v => !v)}
         className="text-xs text-neutral-500 hover:text-neutral-800 border border-neutral-200 rounded-lg px-2.5 py-1.5 bg-white flex items-center gap-1">
-        💬 Mensajes {open ? "▲" : "▼"}
+        🔗 Links plataforma {open ? "▲" : "▼"}
       </button>
       {open && (
         <div className="mt-2 flex flex-col gap-2">
           {msgs.map(m => (
-            <div key={m.label} className="border border-neutral-200 rounded-lg overflow-hidden">
+            <div key={m.key} className="border border-neutral-200 rounded-lg overflow-hidden">
               <div className="px-3 py-1.5 bg-neutral-50 border-b border-neutral-100 flex items-center justify-between">
                 <span className="text-xs font-semibold text-neutral-600">{m.icon} {m.label}</span>
                 <div className="flex gap-1">
-                  <button type="button" onClick={() => navigator.clipboard.writeText(m.text).catch(()=>{})}
-                    className="text-[10px] px-2 py-0.5 rounded border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800">📋</button>
+                  <a href={m.url} target="_blank" rel="noreferrer"
+                    className="text-[10px] px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-blue-700">🔗 Ver</a>
+                  <button type="button" onClick={() => copy(m.key + "_url", m.url)}
+                    className="text-[10px] px-2 py-0.5 rounded border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800">
+                    {copied === m.key + "_url" ? "✓" : "📋 URL"}
+                  </button>
+                  <button type="button" onClick={() => copy(m.key + "_msg", m.text)}
+                    className="text-[10px] px-2 py-0.5 rounded border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800">
+                    {copied === m.key + "_msg" ? "✓" : "💬 Msg"}
+                  </button>
                   <a href={waBase + encodeURIComponent(m.text)} target="_blank" rel="noreferrer"
                     className="text-[10px] px-2 py-0.5 rounded border border-green-200 bg-green-50 text-green-700 flex items-center gap-0.5">{WA_SVG} WA</a>
                 </div>
               </div>
-              <p className="px-3 py-2 text-[11px] text-neutral-600 leading-relaxed">{m.text}</p>
+              <p className="px-3 py-2 text-[10px] text-blue-600 font-mono truncate">{m.url}</p>
             </div>
           ))}
         </div>
@@ -6430,12 +6474,12 @@ function MeetingFormModal({ kickoffs, initial, onSave, onClose }) {
 }
 
 /* ── Meeting card ── */
-export function ReunionesPage({ currentUser }) {
+export function ReunionesPage({ currentUser, initialKickoffId }) {
   const [pageTab, setPageTab] = useState("meetings"); // "meetings" | "availability"
   const [kickoffs,      setKickoffs]      = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [error,         setError]         = useState("");
-  const [selectedId,    setSelectedId]    = useState(null); // kickoff id in right panel
+  const [selectedId,    setSelectedId]    = useState(initialKickoffId || null); // kickoff id in right panel
   const [filterConcierge, setFilterConcierge] = useState("all");
   const [search,        setSearch]        = useState("");
   const [addingFor,     setAddingFor]     = useState(null); // kickoffId when inline form open
@@ -6451,7 +6495,7 @@ export function ReunionesPage({ currentUser }) {
           assignedConcierge: String(k?.assignedConcierge || k?.AssignedConcierge || "").trim(),
         }));
         setKickoffs(arr);
-        if (arr.length > 0) setSelectedId(arr[0].id);
+        if (arr.length > 0 && !initialKickoffId) setSelectedId(arr[0].id);
       })
       .catch(e => setError(String(e?.message || e)))
       .finally(() => setLoading(false));
