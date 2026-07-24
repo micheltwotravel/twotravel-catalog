@@ -878,6 +878,137 @@ function parseDrinkSummary(k) {
     return lines.length ? lines.join(" · ") : null;
   } catch { return null; }
 }
+function parseCSVLineDash(line) {
+  const out = []; let cur = "", inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+    else if (ch === ',' && !inQ) { out.push(cur); cur = ""; }
+    else cur += ch;
+  }
+  out.push(cur); return out;
+}
+function normalizeFlightNumDash(s) {
+  if (!s) return ""; s = s.toUpperCase().replace(/\s+/g,"").replace(/[^A-Z0-9]/g,"");
+  const m = s.match(/^([A-Z]{2,3})(\d{1,4}[A-Z]?)$/); if (!m) return s; return m[1]+" "+m[2];
+}
+function parseHSDateDash(s) {
+  if (!s) return ""; const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[1].padStart(2,"0")}-${m[2].padStart(2,"0")}`;
+  const iso = s.match(/(\d{4})-(\d{2})-(\d{2})/); if (iso) return iso[0]; return s;
+}
+function DashboardImportModal({ kickoffId, guestName, onDone, onSaveField }) {
+  const [preview, setPreview] = React.useState(null);
+  const [error, setError] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const fileRef = React.useRef();
+
+  function handleFile(file) {
+    setError(""); setPreview(null);
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const text = e.target.result;
+        const lines = text.trim().split(/\r?\n/);
+        const sep = lines[0].includes("\t") ? "\t" : ",";
+        const split = sep === "\t" ? l => l.split("\t") : parseCSVLineDash;
+        const headers = split(lines[0]).map(h => h.replace(/^"|"$/g,"").trim());
+        const rows = lines.slice(1).filter(l => l.trim()).map(line => {
+          const vals = split(line); const obj = {};
+          headers.forEach((h, i) => { obj[h] = (vals[i] || "").replace(/^"|"$/g,"").trim(); });
+          return obj;
+        });
+        if (!rows.length) { setError("Sin datos"); return; }
+        const g = h => rows[0][h] || "";
+        const passportLines = rows.map(r => {
+          const name = [r["First Name"], r["Last Name"]].filter(Boolean).join(" ");
+          const id = [r["ID Type"], r["ID Number"]].filter(Boolean).join(": ");
+          const dob = r["Date of Birth"] ? "DOB " + r["Date of Birth"] : "";
+          const nat = r["Nationality"] || "";
+          return [name, id, dob, nat].filter(Boolean).join(" · ");
+        });
+        const dietLines = rows.map(r => {
+          const name = [r["First Name"], r["Last Name"]].filter(Boolean).join(" ");
+          const food = r["Food Restrictions"] || "";
+          const allergy = r["Allergies and/or Medical Conditions"] || "";
+          if (!food && !allergy) return null;
+          return name + ": " + [food, allergy].filter(Boolean).join(" / ");
+        }).filter(Boolean);
+        const arrMap = {};
+        rows.forEach(r => {
+          const fn = normalizeFlightNumDash(r["Arrival Flight Number"]);
+          const dt = parseHSDateDash(r["Arrival Date"]);
+          if (!fn && !dt) return;
+          const key = fn + "|" + dt;
+          if (!arrMap[key]) arrMap[key] = { flightNumber: fn, date: dt, names: [] };
+          const nm = [r["First Name"], r["Last Name"]].filter(Boolean).join(" ");
+          if (nm) arrMap[key].names.push(nm);
+        });
+        const depMap = {};
+        rows.forEach(r => {
+          const fn = normalizeFlightNumDash(r["Departure Flight Number"]);
+          const dt = parseHSDateDash(r["Departure Date"]);
+          if (!fn && !dt) return;
+          const key = fn + "|" + dt;
+          if (!depMap[key]) depMap[key] = { flightNumber: fn, date: dt, names: [] };
+          const nm = [r["First Name"], r["Last Name"]].filter(Boolean).join(" ");
+          if (nm) depMap[key].names.push(nm);
+        });
+        const arrivals = Object.values(arrMap).map(a => ({ flightNumber: a.flightNumber, date: a.date, time: "", name: a.names.join(", ") }));
+        const departures = Object.values(depMap).map(d => ({ flightNumber: d.flightNumber, date: d.date, time: "", name: d.names.join(", ") }));
+        const contactName = [g("Contact first name") || g("First Name"), g("Contact last name") || g("Last Name")].filter(Boolean).join(" ");
+        const contactPhone = g("Mobile Phone Number");
+        setPreview({ rows: rows.length, contactName, contactPhone, arrivals, departures, passportInfo: passportLines.join("\n"), dietInfo: dietLines.join("\n") });
+      } catch(err) { setError("Error: " + err.message); }
+    };
+    reader.readAsText(file);
+  }
+
+  async function confirmImport() {
+    if (!preview) return;
+    setSaving(true);
+    const updates = {};
+    if (preview.passportInfo) updates.passportInfo = preview.passportInfo;
+    if (preview.dietInfo) updates.dietInfo = preview.dietInfo;
+    if (preview.contactPhone) updates.guestContact = preview.contactPhone;
+    if (preview.arrivals.length) updates.arrivals = JSON.stringify(preview.arrivals);
+    if (preview.departures.length) updates.departures = JSON.stringify(preview.departures);
+    if (preview.contactName && !guestName) updates.guestName = preview.contactName;
+    for (const [field, value] of Object.entries(updates)) { await onSaveField(kickoffId, field, value); }
+    setSaving(false);
+    onDone();
+  }
+
+  return (
+    <div onClick={e => e.stopPropagation()} style={{ position:"fixed", inset:0, zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div onClick={onDone} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.4)" }} />
+      <div style={{ position:"relative", background:"#fff", borderRadius:14, padding:24, minWidth:320, maxWidth:440, boxShadow:"0 8px 40px rgba(0,0,0,0.18)", zIndex:1 }}>
+        <div style={{ fontWeight:700, fontSize:13, marginBottom:4 }}>📋 Importar Sheet HubSpot</div>
+        <div style={{ fontSize:11, color:"#6b7280", marginBottom:16 }}>{guestName || kickoffId}</div>
+        <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", padding:"10px 14px", borderRadius:8, border:"2px dashed #fed7aa", background:"#fff7ed", marginBottom:12 }}>
+          <span style={{ fontSize:16 }}>⬆</span>
+          <span style={{ fontSize:12, color:"#92400e", fontWeight:500 }}>Subir CSV / TSV del pre-check-in</span>
+          <input ref={fileRef} type="file" accept=".csv,.tsv,.txt" style={{ display:"none" }} onChange={e => e.target.files[0] && handleFile(e.target.files[0])} />
+        </label>
+        {error && <div style={{ fontSize:11, color:"#ef4444", marginBottom:10 }}>{error}</div>}
+        {preview && (
+          <div style={{ background:"#f9fafb", borderRadius:8, padding:12, marginBottom:14, fontSize:11, color:"#374151" }}>
+            <div style={{ fontWeight:600, marginBottom:6 }}>{preview.rows} pasajero{preview.rows !== 1 ? "s" : ""}</div>
+            {preview.contactName && <div><span style={{ color:"#9ca3af" }}>Contacto:</span> {preview.contactName}</div>}
+            {preview.contactPhone && <div><span style={{ color:"#9ca3af" }}>Tel:</span> {preview.contactPhone}</div>}
+            {preview.arrivals.length > 0 && <div><span style={{ color:"#9ca3af" }}>Llegadas:</span> {preview.arrivals.map(a => a.flightNumber + " " + a.date).join(" / ")}</div>}
+            {preview.departures.length > 0 && <div><span style={{ color:"#9ca3af" }}>Salidas:</span> {preview.departures.map(d => d.flightNumber + " " + d.date).join(" / ")}</div>}
+            {preview.passportInfo && <div style={{ marginTop:4, color:"#9ca3af", whiteSpace:"pre-wrap", fontSize:10, fontFamily:"monospace" }}>{preview.passportInfo}</div>}
+          </div>
+        )}
+        <div style={{ display:"flex", gap:8 }}>
+          {preview && <button onClick={confirmImport} disabled={saving} style={{ flex:1, padding:"8px 14px", borderRadius:8, background:"#ea580c", color:"#fff", border:"none", cursor:"pointer", fontSize:12, fontWeight:600 }}>{saving ? "Guardando…" : "Importar"}</button>}
+          <button onClick={onDone} style={{ flex:1, padding:"8px 14px", borderRadius:8, border:"1px solid #e5e7eb", background:"#fff", cursor:"pointer", fontSize:12, color:"#6b7280" }}>Cerrar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 function PassportPopup({ passportInfo, dietInfo, guestName }) {
   const [open, setOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
@@ -1056,6 +1187,7 @@ function ClientesTable({ kickoffs, loading }) {
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState({});
   const [generatingTasks, setGeneratingTasks] = useState({});
+  const [importModal, setImportModal] = useState(null); // { kickoffId, guestName }
 
   async function generateTasksFromKickoff(r) {
     setGeneratingTasks(g => ({ ...g, [r.id]: true }));
@@ -1229,8 +1361,16 @@ function ClientesTable({ kickoffs, loading }) {
                 return (
                   <tr key={r.id + (r._isCity2 ? "_2" : "")} style={{ background: i%2===0?"#fff":"#fafafa" }}>
                     <td style={tdStyle}>
-                      <div style={{ fontWeight:600, color:"#111" }}>{r.guestName || r.tripName || "—"}</div>
-                      {r.tripName && r.guestName && <div style={{ fontSize:10, color:"#9ca3af" }}>{r.tripName}</div>}
+                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                        <div>
+                          <div style={{ fontWeight:600, color:"#111" }}>{r.guestName || r.tripName || "—"}</div>
+                          {r.tripName && r.guestName && <div style={{ fontSize:10, color:"#9ca3af" }}>{r.tripName}</div>}
+                        </div>
+                        <button
+                          onClick={() => setImportModal({ kickoffId: r.id, guestName: r.guestName || r.tripName })}
+                          title="Importar sheet HubSpot"
+                          style={{ fontSize:12, background:"none", border:"none", cursor:"pointer", color:"#d97706", padding:"2px 3px", flexShrink:0 }}>📋</button>
+                      </div>
                     </td>
                     <td style={tdStyle}>
                       <span style={{ fontSize:11, padding:"2px 8px", borderRadius:99, background:"#f3f4f6", color:"#374151", fontWeight:500 }}>
@@ -1310,7 +1450,9 @@ function ClientesTable({ kickoffs, loading }) {
                       </button>
                     </td>
                     <td style={tdStyle}>
-                      <BoatDayCell kickoffId={r.id} value={r.boatDay || ""} onSave={saveField} saving={isSaving("boatDay")} />
+                      {(r._rowCity || "").toLowerCase().includes("ctg") || (r._rowCity || "").toLowerCase().includes("cartagena")
+                        ? <BoatDayCell kickoffId={r.id} value={r.boatDay || ""} onSave={saveField} saving={isSaving("boatDay")} />
+                        : <span style={{ color:"#d1d5db", fontSize:11 }}>—</span>}
                     </td>
                     <td style={tdStyle}>
                       <input
@@ -1338,6 +1480,14 @@ function ClientesTable({ kickoffs, loading }) {
             </tbody>
           </table>
         </div>
+      )}
+      {importModal && (
+        <DashboardImportModal
+          kickoffId={importModal.kickoffId}
+          guestName={importModal.guestName}
+          onSaveField={saveField}
+          onDone={() => setImportModal(null)}
+        />
       )}
     </div>
   );

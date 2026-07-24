@@ -1738,6 +1738,7 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
               { key: "checkin",   label: "🏨 Check-in" },
               { key: "breakfast", label: lang === "es" ? "☕ Desayuno" : "☕ Breakfast" },
               { key: "boatday",   label: "🛥 Boat Day" },
+              { key: "pickup",    label: "🚐 Traslado" },
               { key: "checkout",  label: "🧳 Check-out" },
             ].map(({ key, label: pl }) => (
               <button key={key} type="button" onClick={() => onAddPreset?.(key)}
@@ -2097,6 +2098,16 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         description_es: "¡Día de bote! Salida desde el muelle a las 8:30 AM. Recuerden traer protector solar, traje de baño y cámara. Su concierge estará presente para coordinar todo el día.",
         description_en: "Boat day! Departure from the dock at 8:30 AM. Please bring sunscreen, swimwear and a camera. Your concierge will be there to coordinate the full day.",
       },
+      pickup: (() => {
+        const guest = (kickoff?.guestName || "").split(" ")[0] || "grupo";
+        return {
+          name: `Traslado para ${guest} (Van)`, name_en: `Transfer for ${guest} (Van)`,
+          category: "transportation", timeLabel: "",
+          description_es: `Traslado aeropuerto → villa para ${kickoff?.guestName || "el grupo"}. Vehículo: Van / SUV. Por favor confirmar número de vuelo y hora de llegada.`,
+          description_en: `Airport → villa transfer for ${kickoff?.guestName || "the group"}. Vehicle: Van / SUV. Please confirm flight number and arrival time.`,
+          notes: `${kickoff?.guestName || ""} — verificar vuelo y # de maletas`,
+        };
+      })(),
       checkout: {
         name: "Check-out", name_en: "Check-out", category: "services",
         timeLabel: checkoutTime,
@@ -3552,10 +3563,11 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
   const [listSentToBoatOwner,    setListSentToBoatOwner]    = useState(!!(kickoff?.listSentToBoatOwner));
   const [foodRestrictionsShared, setFoodRestrictionsShared] = useState(!!(kickoff?.foodRestrictionsShared));
   const [passportOk,             setPassportOk]             = useState(!!(kickoff?.passportOk));
-  const [boatName,   setBoatName]   = useState(kickoff?.boatName   || "");
-  const [boatDay,    setBoatDay]    = useState(kickoff?.boatDay    || "");
-  const [dock,       setDock]       = useState(kickoff?.dock       || "");
-  const [beachClub,  setBeachClub]  = useState(kickoff?.beachClub  || "");
+  const [boatName,      setBoatName]      = useState(kickoff?.boatName      || "");
+  const [boatDay,       setBoatDay]       = useState(kickoff?.boatDay       || "");
+  const [boatDayType,   setBoatDayType]   = useState(kickoff?.boatDayType   || "");
+  const [dock,          setDock]          = useState(kickoff?.dock          || "");
+  const [beachClub,     setBeachClub]     = useState(kickoff?.beachClub     || "");
   const [beachClubDay, setBeachClubDay] = useState(kickoff?.beachClubDay || "");
   const [saving, setSaving] = useState(false);
 
@@ -3565,7 +3577,7 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
       preBillSent, preBillPaid, earlyCheckin,
       houseDrinkListSent, boatDrinkListSent, boatFoodReady,
       listSentToBoatOwner, foodRestrictionsShared, passportOk,
-      boatName, boatDay, dock, beachClub, beachClubDay,
+      boatName, boatDay, boatDayType, dock, beachClub, beachClubDay,
     });
     setSaving(false);
     onClose();
@@ -3621,6 +3633,17 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
 
           <div>
             <p className="text-[10px] font-semibold text-orange-600 uppercase tracking-wider mb-3">Logística</p>
+            <div className="col-span-2 mb-2">
+              <label className="text-[10px] text-neutral-500 block mb-1">Tipo</label>
+              <div className="flex gap-1.5 flex-wrap">
+                {[{ v:"private",label:"🛥 Bote Privado"},{v:"beach",label:"☀️ Beach Club"},{v:"both",label:"🏖️ Ambos"}].map(({v,label})=>(
+                  <button key={v} type="button" onClick={()=>setBoatDayType(boatDayType===v?"":v)}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${boatDayType===v?"bg-sky-600 text-white border-sky-600":"bg-white text-neutral-600 border-neutral-300 hover:border-sky-400"}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[10px] text-neutral-500">Bote</label>
@@ -3938,6 +3961,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // Operaciones
   const [boatName,               setBoatName]               = useState(kickoff?.boatName               || "");
   const [boatDay,                setBoatDay]                 = useState(kickoff?.boatDay                || "");
+  const [boatDayType,            setBoatDayType]             = useState(kickoff?.boatDayType            || "");
   const [dock,                   setDock]                    = useState(kickoff?.dock                   || "");
   const [beachClub,              setBeachClub]               = useState(kickoff?.beachClub              || "");
   const [beachClubDay,           setBeachClubDay]            = useState(kickoff?.beachClubDay           || "");
@@ -4220,6 +4244,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // Operaciones
   updates.boatName               = boatName.trim();
   updates.boatDay                = boatDay.trim();
+  updates.boatDayType            = boatDayType;
   updates.dock                   = dock.trim();
   updates.beachClub              = beachClub.trim();
   updates.beachClubDay           = beachClubDay.trim();
@@ -4685,6 +4710,21 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             </div>
 
             {/* Bote */}
+            <div className="pt-1">
+              <label className="text-[10px] text-neutral-500 block mb-1">Tipo de actividad acuática</label>
+              <div className="flex gap-1.5 flex-wrap">
+                {[
+                  { v: "private", label: "🛥 Bote Privado" },
+                  { v: "beach",   label: "☀️ Beach Club Day Pass" },
+                  { v: "both",    label: "🏖️ Ambos" },
+                ].map(({ v, label }) => (
+                  <button key={v} type="button" onClick={() => setBoatDayType(boatDayType === v ? "" : v)}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${boatDayType === v ? "bg-sky-600 text-white border-sky-600" : "bg-white text-neutral-600 border-neutral-300 hover:border-sky-400"}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-2 pt-1">
               <div>
                 <label className="text-[10px] text-neutral-500">Nombre del bote</label>
