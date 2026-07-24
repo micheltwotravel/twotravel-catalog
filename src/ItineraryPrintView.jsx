@@ -981,6 +981,20 @@ function CoverPage({ kickoff, total, lang, editMode }) {
         )}
 
 
+        {/* Schedule kickoff call link */}
+        {a.kickoffCallUrl && (
+          <a href={a.kickoffCallUrl} target="_blank" rel="noreferrer" style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            textDecoration: "none", background: "#eff6ff", border: "1px solid #93c5fd",
+            borderRadius: 10, padding: "11px 16px", marginBottom: 10,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#1d4ed8" }}>
+              📅 {isEs ? "Agendar Kickoff Call" : "Schedule Kickoff Call"}
+            </div>
+            <span style={{ fontSize: 16, color: "#1d4ed8" }}>→</span>
+          </a>
+        )}
+
         {/* Project Inform / Pre-check-in form link */}
         {a.checkInFormUrl && (
           <a href={a.checkInFormUrl} target="_blank" rel="noreferrer" style={{

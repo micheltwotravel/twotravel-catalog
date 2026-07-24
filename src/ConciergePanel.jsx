@@ -3855,6 +3855,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [lang, setLang] = useState(kickoff?.lang || "en");
   const [guestContact, setGuestContact] = useState(kickoff?.guestContact || "");
   const [checkInFormUrl, setCheckInFormUrl] = useState(kickoff?.checkInFormUrl || "");
+  const [kickoffCallUrl, setKickoffCallUrl] = useState(kickoff?.kickoffCallUrl || "");
   const [checkInCity,    setCheckInCity]    = useState(() => {
     if (kickoff?.checkInCity) return kickoff.checkInCity;
     // default to first city of kickoff
@@ -4158,6 +4159,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   updates.lang = lang;
   updates.guestContact = guestContact.trim();
   updates.checkInFormUrl = checkInFormUrl.trim();
+  updates.kickoffCallUrl = kickoffCallUrl.trim();
   updates.checkInCity    = checkInCity;
   // Briefing de Ventas
   updates.briefHasHouse = briefHasHouse;
@@ -4338,6 +4340,19 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 placeholder="https://share.hsforms.com/..."
               />
               <p className="text-[10px] text-neutral-400 mt-1">Pega el link del formulario de HubSpot — aparece como botón en el PDF y en la página pre-viaje.</p>
+            </div>
+
+            {/* Kickoff Call scheduling link */}
+            <div className="col-span-2">
+              <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1 block">📅 Link Agendar Kickoff Call</label>
+              <input
+                type="url"
+                value={kickoffCallUrl}
+                onChange={e => setKickoffCallUrl(e.target.value)}
+                className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+                placeholder="https://calendly.com/two-travel/..."
+              />
+              <p className="text-[10px] text-neutral-400 mt-1">Link de Calendly o Cal.com — aparece como botón azul en el PDF para que el cliente agende su kickoff call.</p>
             </div>
 
             {false && kickoff?.id && (() => {
@@ -5388,6 +5403,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               </div>
             );
           })()}
+          {/* Pre-set WhatsApp messages */}
+          <PresetMessages kickoff={kickoff} />
           {/* Billing — send to Slack */}
           {kickoff?.cart?.length > 0 && (
             <div className="flex items-center gap-1">
@@ -5969,6 +5986,63 @@ const toCityCodeModule = (raw) => {
   }
   return first.toUpperCase();
 };
+
+const WA_SVG = <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.523 5.845L0 24l6.335-1.493A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.368l-.36-.214-3.726.878.936-3.617-.235-.374A9.818 9.818 0 1112 21.818z"/></svg>;
+
+function PresetMessages({ kickoff }) {
+  const [open, setOpen] = React.useState(false);
+  const first = (kickoff.guestName || "").split(" ")[0] || "";
+  const accom = kickoff.accommodationName || "la villa";
+  const isEs = (kickoff.lang || "en") === "es";
+  const phone = (kickoff.guestContact || "").replace(/\D/g, "");
+  const waBase = phone ? `https://wa.me/${phone}?text=` : `https://wa.me/?text=`;
+  const msgs = [
+    {
+      icon: "🏨", label: "Check-in",
+      text: isEs
+        ? `Hola ${first}! 👋 Hoy es el gran día. Les esperamos en ${accom} para el check-in a partir de las ${kickoff.checkIn || "3:00 PM"}. ¡Bienvenidos! 🎉`
+        : `Hi ${first}! 👋 Today's the big day! We'll meet you at ${accom} for check-in from ${kickoff.checkIn || "3:00 PM"} onwards. Welcome! 🎉`,
+    },
+    {
+      icon: "🛥", label: "Boat Day",
+      text: isEs
+        ? `Hola ${first}! 🛥 Recordatorio — mañana es el día de bote. Salida a las 8:30 AM. Traigan protector solar, traje de baño y cámara. ¡Va a estar increíble! ☀️`
+        : `Hi ${first}! 🛥 Reminder — tomorrow is Boat Day! Departure at 8:30 AM. Don't forget sunscreen, swimwear and a camera. It's going to be amazing! ☀️`,
+    },
+    {
+      icon: "🧳", label: "Check-out",
+      text: isEs
+        ? `Hola ${first}! 🧳 Recordatorio — check-out de ${accom} mañana a las ${kickoff.checkOut || "11:00 AM"}. Avísennos si necesitan guardar maletas o coordinar algo. ¡Fue un placer tenerlos! 🙌`
+        : `Hi ${first}! 🧳 Reminder — check-out at ${accom} is tomorrow at ${kickoff.checkOut || "11:00 AM"}. Let us know if you need to store luggage. It was a pleasure having you! 🙌`,
+    },
+  ];
+  return (
+    <div>
+      <button type="button" onClick={() => setOpen(v => !v)}
+        className="text-xs text-neutral-500 hover:text-neutral-800 border border-neutral-200 rounded-lg px-2.5 py-1.5 bg-white flex items-center gap-1">
+        💬 Mensajes {open ? "▲" : "▼"}
+      </button>
+      {open && (
+        <div className="mt-2 flex flex-col gap-2">
+          {msgs.map(m => (
+            <div key={m.label} className="border border-neutral-200 rounded-lg overflow-hidden">
+              <div className="px-3 py-1.5 bg-neutral-50 border-b border-neutral-100 flex items-center justify-between">
+                <span className="text-xs font-semibold text-neutral-600">{m.icon} {m.label}</span>
+                <div className="flex gap-1">
+                  <button type="button" onClick={() => navigator.clipboard.writeText(m.text).catch(()=>{})}
+                    className="text-[10px] px-2 py-0.5 rounded border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800">📋</button>
+                  <a href={waBase + encodeURIComponent(m.text)} target="_blank" rel="noreferrer"
+                    className="text-[10px] px-2 py-0.5 rounded border border-green-200 bg-green-50 text-green-700 flex items-center gap-0.5">{WA_SVG} WA</a>
+                </div>
+              </div>
+              <p className="px-3 py-2 text-[11px] text-neutral-600 leading-relaxed">{m.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function BreakfastLink({ kickoff }) {
   const [bfCurr, setBfCurr] = React.useState("USD");
