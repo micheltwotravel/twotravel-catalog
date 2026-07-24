@@ -1035,9 +1035,9 @@ function MarketingCell({ kickoffId, value, onSave, saving }) {
         value={text}
         onChange={e => setText(e.target.value)}
         onBlur={e => { if (e.target.value !== value) onSave(kickoffId, "marketingNotes", e.target.value); }}
-        rows={3}
+        rows={5}
         placeholder="Notas de marketing…"
-        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 8px", width:"100%", background:"#fff", boxSizing:"border-box", resize:"vertical", lineHeight:1.4 }}
+        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"6px 8px", width:"100%", background:"#fff", boxSizing:"border-box", resize:"vertical", lineHeight:1.5, minHeight:90 }}
       />
       <div style={{ display:"flex", gap:4, marginTop:3, alignItems:"center" }}>
         {saving && <span style={{ fontSize:9, color:"#9ca3af" }}>guardando…</span>}
@@ -1111,75 +1111,95 @@ function OrderCell({ summary, at, empty = "—", fullText }) {
         )}
       </div>
       {open && (
-        <div style={{
-          position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
-          zIndex:9999, background:"#fff", border:"1px solid #e5e7eb", borderRadius:16,
-          boxShadow:"0 8px 48px rgba(0,0,0,.18)", padding:0,
-          minWidth:340, maxWidth:480, width:"90vw",
-        }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 18px", borderBottom:"1px solid #f3f4f6" }}>
-            <span style={{ fontSize:12, fontWeight:700, color:"#111", letterSpacing:".04em" }}>🛒 Pedido completo</span>
-            <button onClick={() => setOpen(false)} style={{ border:"none", background:"none", cursor:"pointer", color:"#9ca3af", fontSize:16, lineHeight:1, padding:"0 2px" }}>✕</button>
-          </div>
-          <div style={{ fontSize:12, color:"#374151", whiteSpace:"pre-wrap", lineHeight:1.7, padding:"16px 18px", maxHeight:320, overflowY:"auto" }}>
-            {summary}
-          </div>
-          {at && (
-            <div style={{ fontSize:10.5, color:"#9ca3af", padding:"8px 18px", borderTop:"1px solid #f3f4f6" }}>
-              📅 Enviado: <b>{fmtOrderAt(at)}</b>
+        <div style={{ position:"fixed", inset:0, zIndex:9998, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", padding:16 }} onClick={() => setOpen(false)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background:"#fff", borderRadius:20, boxShadow:"0 16px 64px rgba(0,0,0,.25)",
+            width:"min(720px, 96vw)", maxHeight:"88vh", display:"flex", flexDirection:"column",
+          }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"18px 24px", borderBottom:"1px solid #f3f4f6", flexShrink:0 }}>
+              <span style={{ fontSize:14, fontWeight:700, color:"#111" }}>🛒 Pedido completo</span>
+              <button onClick={() => setOpen(false)} style={{ border:"none", background:"none", cursor:"pointer", color:"#9ca3af", fontSize:20, lineHeight:1, padding:"0 4px" }}>✕</button>
             </div>
-          )}
-          <div style={{ padding:"12px 18px", borderTop:"1px solid #f3f4f6" }}>
-            <button
-              onClick={() => { navigator.clipboard.writeText(copyText).catch(()=>{}); setOpen(false); }}
-              style={{ width:"100%", background:"#111827", color:"#fff", border:"none", borderRadius:8, padding:"9px 14px", fontSize:12, fontWeight:600, cursor:"pointer" }}
-            >📋 Copiar lista completa</button>
+            <div style={{ fontSize:13, color:"#374151", whiteSpace:"pre-wrap", lineHeight:1.8, padding:"20px 24px", overflowY:"auto", flex:1 }}>
+              {summary}
+            </div>
+            {at && (
+              <div style={{ fontSize:11, color:"#9ca3af", padding:"10px 24px", borderTop:"1px solid #f3f4f6", flexShrink:0 }}>
+                📅 Enviado: <b>{fmtOrderAt(at)}</b>
+              </div>
+            )}
+            <div style={{ padding:"14px 24px", borderTop:"1px solid #f3f4f6", flexShrink:0 }}>
+              <button
+                onClick={() => { navigator.clipboard.writeText(copyText).catch(()=>{}); setOpen(false); }}
+                style={{ width:"100%", background:"#111827", color:"#fff", border:"none", borderRadius:10, padding:"11px 16px", fontSize:13, fontWeight:600, cursor:"pointer" }}
+              >📋 Copiar lista completa</button>
+            </div>
           </div>
         </div>
-      )}
-      {open && <div onClick={() => setOpen(false)} style={{ position:"fixed", inset:0, zIndex:9998 }} />}
+      )}}
     </div>
   );
 }
-function BoatDayCell({ kickoffId, value, onSave, saving }) {
-  const [text, setText] = React.useState(value);
-  const [aiLoading, setAiLoading] = React.useState(false);
-  const organizeWithAI = async () => {
-    if (!text.trim() || aiLoading) return;
-    setAiLoading(true);
-    try {
-      const r = await fetch("/api/chat", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({
-          systemOverride: "Eres un asistente de concierge de lujo en Cartagena. El usuario te da notas rápidas del día de bote de un cliente. Organiza esto en un itinerario bonito con horarios claros, emojis y formato limpio. Máximo 8 líneas. Solo devuelve el itinerario, sin introducción.",
-          messages:[{role:"user",content:text.trim()}],
-        }),
-      });
-      const d = await r.json();
-      if (d.text) { setText(d.text); onSave(kickoffId, "boatDay", d.text); }
-    } catch {}
-    setAiLoading(false);
+function BoatDayCell({ kickoffId, boatName: initBoatName, boatDay: initBoatDay, boatProvider: initProvider, dock: initDock, boatNotes: initNotes, onSave }) {
+  const parse = v => { try { return JSON.parse(v||"{}"); } catch { return {}; } };
+  const init = parse(initNotes);
+  const [open, setOpen] = React.useState(false);
+  const [fecha,    setFecha]    = React.useState(init.fecha    || initBoatDay  || "");
+  const [nombre,   setNombre]   = React.useState(init.nombre   || initBoatName || "");
+  const [proveedor,setProveedor]= React.useState(init.proveedor|| initProvider || "");
+  const [muelle,   setMuelle]   = React.useState(init.muelle   || initDock     || "");
+  const [nota,     setNota]     = React.useState(init.nota     || "");
+
+  const hasData = fecha || nombre || proveedor || muelle || nota;
+
+  const save = () => {
+    const data = { fecha, nombre, proveedor, muelle, nota };
+    onSave(kickoffId, "boatNotes", JSON.stringify(data));
+    if (fecha    !== initBoatDay)   onSave(kickoffId, "boatDay",      fecha);
+    if (nombre   !== initBoatName)  onSave(kickoffId, "boatName",     nombre);
+    if (muelle   !== initDock)      onSave(kickoffId, "dock",         muelle);
   };
+
   return (
-    <div style={{ position:"relative", minWidth:140 }}>
-      <textarea
-        value={text}
-        onChange={e => setText(e.target.value)}
-        onBlur={e => { if (e.target.value !== value) onSave(kickoffId, "boatDay", e.target.value); }}
-        rows={3}
-        placeholder="Notas boat day…"
-        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 8px", width:"100%", background:"#fff", boxSizing:"border-box", resize:"vertical", lineHeight:1.4 }}
-      />
-      <div style={{ display:"flex", gap:4, marginTop:3, alignItems:"center" }}>
-        {saving && <span style={{ fontSize:9, color:"#9ca3af" }}>guardando…</span>}
-        <button
-          onClick={organizeWithAI}
-          disabled={aiLoading || !text.trim()}
-          title="Organizar con IA"
-          style={{ fontSize:10, padding:"2px 7px", borderRadius:5, border:"1px solid #d8b4fe", background: aiLoading ? "#f5f3ff" : "#f0ebff", color:"#7c3aed", cursor: aiLoading || !text.trim() ? "default" : "pointer", fontWeight:600 }}
-        >{aiLoading ? "…" : "✨ IA"}</button>
-      </div>
+    <div>
+      <button onClick={() => setOpen(true)} style={{ fontSize:11, padding:"3px 8px", borderRadius:6, border:"1px solid #e5e7eb", background: hasData ? "#f0f9ff" : "#fff", cursor:"pointer", color: hasData ? "#0369a1" : "#9ca3af", fontWeight: hasData ? 600 : 400 }}>
+        {hasData ? "🛥 Ver detalle" : "🛥 —"}
+      </button>
+      {open && (
+        <div style={{ position:"fixed", inset:0, zIndex:9998, background:"rgba(0,0,0,0.45)", display:"flex", alignItems:"center", justifyContent:"center", padding:16 }} onClick={() => setOpen(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:16, boxShadow:"0 12px 48px rgba(0,0,0,.2)", width:"min(480px,96vw)", overflow:"hidden" }}>
+            <div style={{ background:"#f0f9ff", padding:"14px 20px", borderBottom:"1px solid #bae6fd", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <span style={{ fontWeight:700, fontSize:13, color:"#0369a1" }}>🛥 Boat Day</span>
+              <button onClick={() => setOpen(false)} style={{ border:"none", background:"none", cursor:"pointer", color:"#9ca3af", fontSize:18 }}>✕</button>
+            </div>
+            <div style={{ padding:20, display:"flex", flexDirection:"column", gap:12 }}>
+              {[
+                { label:"Fecha", value:fecha, set:setFecha, type:"date" },
+                { label:"Nombre del bote", value:nombre, set:setNombre, placeholder:"Sea Star…" },
+                { label:"Proveedor", value:proveedor, set:setProveedor, placeholder:"Empresa o contacto…" },
+                { label:"Muelle", value:muelle, set:setMuelle, placeholder:"Club Náutico…" },
+              ].map(({ label, value, set, type, placeholder }) => (
+                <div key={label}>
+                  <label style={{ fontSize:10, fontWeight:700, color:"#6b7280", textTransform:"uppercase", letterSpacing:".06em", display:"block", marginBottom:4 }}>{label}</label>
+                  <input type={type||"text"} value={value} onChange={e => set(e.target.value)}
+                    placeholder={placeholder||""}
+                    style={{ width:"100%", fontSize:12, border:"1px solid #e5e7eb", borderRadius:8, padding:"7px 10px", boxSizing:"border-box", background:"#f9fafb" }} />
+                </div>
+              ))}
+              <div>
+                <label style={{ fontSize:10, fontWeight:700, color:"#6b7280", textTransform:"uppercase", letterSpacing:".06em", display:"block", marginBottom:4 }}>Nota</label>
+                <textarea value={nota} onChange={e => setNota(e.target.value)} rows={4}
+                  placeholder="Detalles adicionales…"
+                  style={{ width:"100%", fontSize:12, border:"1px solid #e5e7eb", borderRadius:8, padding:"7px 10px", boxSizing:"border-box", background:"#f9fafb", resize:"vertical", lineHeight:1.5 }} />
+              </div>
+              <button onClick={() => { save(); setOpen(false); }}
+                style={{ width:"100%", background:"#0369a1", color:"#fff", border:"none", borderRadius:9, padding:"10px", fontSize:13, fontWeight:700, cursor:"pointer", marginTop:4 }}>
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1509,7 +1529,7 @@ function ClientesTable({ kickoffs, loading }) {
                     </td>
                     <td style={tdStyle}>
                       {normCity(r._rowCity) === "cartagena"
-                        ? <BoatDayCell kickoffId={r.id} value={r.boatDay || ""} onSave={saveField} saving={isSaving("boatDay")} />
+                        ? <BoatDayCell kickoffId={r.id} boatDay={r.boatDay||""} boatName={r.boatName||""} boatProvider={r.boatProvider||""} dock={r.dock||""} boatNotes={r.boatNotes||""} onSave={saveField} />
                         : <span style={{ color:"#d1d5db", fontSize:11 }}>—</span>}
                     </td>
                     <td style={tdStyle}>
