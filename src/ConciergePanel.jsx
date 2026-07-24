@@ -1840,8 +1840,28 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
 
   // Sync when kickoff changes (e.g. switching between kickoffs)
   useEffect(() => {
-    setCart(withUid(parseArr(kickoff?.cart)));
-    setDayMeta(parseArr(kickoff?.dayMeta));
+    const newCart = withUid(parseArr(kickoff?.cart));
+    const newMeta = parseArr(kickoff?.dayMeta);
+    setCart(newCart);
+    // Auto-generate days from arrival/departure if dayMeta is empty and dates exist
+    if (newMeta.length === 0 && kickoff?.arrivalDate && kickoff?.departureDate) {
+      const arrDate = kickoff.arrivalDate;
+      const depDate = kickoff.departureDate;
+      const lang = kickoff?.lang || "en";
+      const loc = lang === "es" ? "es-CO" : "en-US";
+      const totalDays = Math.max(
+        Math.round((new Date(depDate + "T12:00:00") - new Date(arrDate + "T12:00:00")) / 86400000),
+        1
+      );
+      const autoMeta = Array.from({ length: totalDays }, (_, idx) => {
+        const d = new Date(arrDate + "T12:00:00");
+        d.setDate(d.getDate() + idx);
+        return { label: d.toLocaleDateString(loc, { weekday: "long", month: "long", day: "numeric" }), title: "", sortOrder: idx };
+      });
+      setDayMeta(autoMeta);
+    } else {
+      setDayMeta(newMeta);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kickoff?.id]);
 
@@ -2121,13 +2141,28 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
       },
       pickup: (() => {
         const guest = (kickoff?.guestName || "").split(" ")[0] || "grupo";
-        return {
-          name: `Traslado para ${guest} (Van)`, name_en: `Transfer for ${guest} (Van)`,
-          category: "transportation", timeLabel: "",
-          description_es: `Traslado aeropuerto → villa para ${kickoff?.guestName || "el grupo"}. Vehículo: Van / SUV. Por favor confirmar número de vuelo y hora de llegada.`,
-          description_en: `Airport → villa transfer for ${kickoff?.guestName || "the group"}. Vehicle: Van / SUV. Please confirm flight number and arrival time.`,
-          notes: `${kickoff?.guestName || ""} — verificar vuelo y # de maletas`,
-        };
+        const accom = kickoff?.accommodationName || "la villa";
+        // Try to get arrival flight info
+        let arrFlight = null;
+        try { const arr = JSON.parse(kickoff?.arrivals || "[]"); arrFlight = arr.find(a => a.flightNumber) || null; } catch {}
+        const flightNum = arrFlight?.flightNumber || "";
+        const arrTime = arrFlight?.time || "";
+        return [
+          {
+            name: `Llegan al aeropuerto`, name_en: `Arrive at the Airport`,
+            category: "transportation",
+            timeLabel: arrTime,
+            description_es: `${kickoff?.guestName || "El grupo"} llega al aeropuerto${flightNum ? ` en el vuelo ${flightNum}` : ""}. Su concierge los estará esperando en llegadas internacionales con un letrero con su nombre.`,
+            description_en: `${kickoff?.guestName || "The group"} arrives at the airport${flightNum ? ` on flight ${flightNum}` : ""}. Your concierge will be waiting at arrivals with a sign with your name.`,
+          },
+          {
+            name: `Traslado al alojamiento`, name_en: `Transfer to Accommodation`,
+            category: "transportation", timeLabel: "",
+            description_es: `Traslado privado aeropuerto → ${accom}. Vehículo: Van / SUV con aire acondicionado. Todas las maletas incluidas.`,
+            description_en: `Private transfer airport → ${accom}. Vehicle: Van / SUV with air conditioning. All luggage included.`,
+            notes: `${kickoff?.guestName || ""} — verificar vuelo y # de maletas`,
+          }
+        ];
       })(),
       checkout: {
         name: "Check-out", name_en: "Check-out", category: "services",
@@ -2139,9 +2174,17 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
     };
     const p = presets[preset];
     if (!p) return;
-    const uid = `preset_${preset}_${Date.now()}`;
     const count = cart.filter(i => (i.dayLabel || "Sin día") === dayLabel).length;
-    setCart(prev => [...prev, { ...mapManualToCartItem(), ...p, _uid: uid, id: uid, dayLabel, sortOrder: count }]);
+    if (Array.isArray(p)) {
+      const now = Date.now();
+      setCart(prev => [...prev, ...p.map((item, i) => {
+        const uid = `preset_${preset}_${now}_${i}`;
+        return { ...mapManualToCartItem(), ...item, _uid: uid, id: uid, dayLabel, sortOrder: count + i };
+      })]);
+    } else {
+      const uid = `preset_${preset}_${Date.now()}`;
+      setCart(prev => [...prev, { ...mapManualToCartItem(), ...p, _uid: uid, id: uid, dayLabel, sortOrder: count }]);
+    }
   };
 
   /* ── Generate tasks from cart ── */
