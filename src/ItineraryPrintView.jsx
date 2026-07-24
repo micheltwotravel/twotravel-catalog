@@ -1503,9 +1503,33 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
         </div>
 
         {/* Confirmation (when no price shown) */}
-        {it.confirmation && !price && !it.priceTiers && (
+        {it.confirmation && !price && !it.priceTiers && it.category !== "transportation" && (
           <div style={{fontSize:8,color:"#9ca3af",marginBottom:4,letterSpacing:"0.3px",fontStyle:"italic"}}>
             {isEs ? "Confirmado por" : "Confirmed by"} {it.confirmation}
+          </div>
+        )}
+
+        {/* Transport details grid — like TripIt style */}
+        {it.category === "transportation" && (it.confirmation || it.notes || price) && (
+          <div style={{display:"flex",gap:16,marginBottom:10,marginTop:4,flexWrap:"wrap"}}>
+            {it.confirmation && (
+              <div>
+                <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>{isEs?"Confirmado por":"Confirmed by"}</div>
+                <div style={{fontSize:11,fontWeight:600,color:"#374151"}}>{it.confirmation}</div>
+              </div>
+            )}
+            {it.notes && (
+              <div>
+                <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>Carrier</div>
+                <div style={{fontSize:11,fontWeight:600,color:"#374151"}}>{it.notes}</div>
+              </div>
+            )}
+            {price && (
+              <div>
+                <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>Price</div>
+                <div style={{fontSize:11,fontWeight:600,color:"#374151"}}>{price}</div>
+              </div>
+            )}
           </div>
         )}
 

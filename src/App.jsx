@@ -1009,6 +1009,47 @@ function DashboardImportModal({ kickoffId, guestName, onDone, onSaveField }) {
     </div>
   );
 }
+function MarketingCell({ kickoffId, value, onSave, saving }) {
+  const [text, setText] = React.useState(value);
+  const [aiLoading, setAiLoading] = React.useState(false);
+  const organizeWithAI = async () => {
+    if (aiLoading) return;
+    setAiLoading(true);
+    try {
+      const context = text.trim() || "No hay notas aún.";
+      const r = await fetch("/api/chat", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          systemOverride: "Eres un experto en marketing de viajes de lujo. El usuario te da notas crudas sobre un cliente y su viaje. Escribe 2-3 ideas de contenido para redes sociales (Instagram/Stories) sobre este cliente o su estadía, sin revelar datos privados. Máximo 6 líneas. Solo devuelve las ideas numeradas, sin introducción.",
+          messages:[{role:"user", content:context}],
+        }),
+      });
+      const d = await r.json();
+      if (d.text) { setText(d.text); onSave(kickoffId, "marketingNotes", d.text); }
+    } catch {}
+    setAiLoading(false);
+  };
+  return (
+    <div style={{ position:"relative", minWidth:180 }}>
+      <textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onBlur={e => { if (e.target.value !== value) onSave(kickoffId, "marketingNotes", e.target.value); }}
+        rows={3}
+        placeholder="Notas de marketing…"
+        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 8px", width:"100%", background:"#fff", boxSizing:"border-box", resize:"vertical", lineHeight:1.4 }}
+      />
+      <div style={{ display:"flex", gap:4, marginTop:3, alignItems:"center" }}>
+        {saving && <span style={{ fontSize:9, color:"#9ca3af" }}>guardando…</span>}
+        <button onClick={organizeWithAI} disabled={aiLoading}
+          title="Generar ideas de marketing con IA"
+          style={{ fontSize:10, padding:"2px 7px", borderRadius:5, border:"1px solid #fbcfe8", background: aiLoading ? "#fdf2f8" : "#fce7f3", color:"#be185d", cursor: aiLoading ? "default" : "pointer", fontWeight:600 }}>
+          {aiLoading ? "…" : "✨ IA"}
+        </button>
+      </div>
+    </div>
+  );
+}
 function PassportPopup({ passportInfo, dietInfo, guestName }) {
   const [open, setOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
@@ -1482,14 +1523,7 @@ function ClientesTable({ kickoffs, loading }) {
                       {isSaving("groceryBudget") && <span style={{ fontSize:9, color:"#9ca3af" }}>guardando…</span>}
                     </td>
                     <td style={tdStyle}>
-                      <input
-                        type="text"
-                        defaultValue={r.marketingNotes || ""}
-                        placeholder="Notas marketing…"
-                        onBlur={e => { if (e.target.value !== (r.marketingNotes||"")) saveField(r.id, "marketingNotes", e.target.value); }}
-                        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 8px", width:"100%", background:"#fff", boxSizing:"border-box" }}
-                      />
-                      {isSaving("marketingNotes") && <span style={{ fontSize:9, color:"#9ca3af" }}>guardando…</span>}
+                      <MarketingCell kickoffId={r.id} value={r.marketingNotes || ""} onSave={saveField} saving={isSaving("marketingNotes")} />
                     </td>
                   </tr>
                 );

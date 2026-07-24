@@ -192,11 +192,15 @@ export function AvailabilityManager({ conciergeEmail, conciergeName }) {
     setNewBlock({ date: "", start: "", end: "", reason: "" });
   };
 
+  // Use local date string to avoid UTC-shift bug in Colombia (UTC-5)
+  function localDateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  }
   // Next 14 days for preview
   const previewDates = Array.from({ length: 14 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i);
-    return d.toISOString().slice(0, 10);
+    return localDateStr(d);
   });
 
   const tabStyle = (k) => ({
@@ -497,10 +501,10 @@ export function AvailabilityManager({ conciergeEmail, conciergeName }) {
           const weekDays = Array.from({ length: 7 }, (_, i) => {
             const d = new Date(monday);
             d.setDate(monday.getDate() + i);
-            return d.toISOString().slice(0, 10);
+            return localDateStr(d);
           });
 
-          const todayStr = today.toISOString().slice(0, 10);
+          const todayStr = localDateStr(today);
           const DAY_SHORT = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
 
           const toggleSlot = (dateStr, time) => {
@@ -689,9 +693,12 @@ export function BookingPage({ conciergeEmail, conciergeName, kickoffId, guestNam
 
   const sched    = avail?.schedule ? { ...DEFAULT_SCHEDULE, ...avail.schedule } : DEFAULT_SCHEDULE;
   const cfg      = avail?.settings ? { ...DEFAULT_SETTINGS, ...avail.settings } : DEFAULT_SETTINGS;
+  function _localDateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  }
   const dates    = Array.from({ length: 14 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() + i + 1);
-    return d.toISOString().slice(0, 10);
+    return _localDateStr(d);
   });
   const slots    = selDate ? getAvailableSlots(selDate, sched, avail?.blocked || [], avail?.bookings || [], cfg.minGap, cfg.slotDuration) : [];
   const availDates = dates.filter(d => getAvailableSlots(d, sched, avail?.blocked || [], avail?.bookings || [], cfg.minGap, cfg.slotDuration).length > 0);
