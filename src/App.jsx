@@ -1162,8 +1162,15 @@ function BoatDayCell({ kickoffId, boatName: initBoatName, boatDay: initBoatDay, 
 
   return (
     <div>
-      <button onClick={() => setOpen(true)} style={{ fontSize:11, padding:"3px 8px", borderRadius:6, border:"1px solid #e5e7eb", background: hasData ? "#f0f9ff" : "#fff", cursor:"pointer", color: hasData ? "#0369a1" : "#9ca3af", fontWeight: hasData ? 600 : 400 }}>
-        {hasData ? "🛥 Ver detalle" : "🛥 —"}
+      <button onClick={() => setOpen(true)} style={{ fontSize:11, padding:"4px 8px", borderRadius:6, border:"1px solid #e5e7eb", background: hasData ? "#f0f9ff" : "#fff", cursor:"pointer", color: hasData ? "#0369a1" : "#9ca3af", fontWeight: hasData ? 600 : 400, textAlign:"left", maxWidth:160, display:"block" }}>
+        {hasData ? (
+          <span>
+            <span style={{display:"block", fontWeight:700}}>🛥 {nombre || "Boat Day"}</span>
+            {fecha && <span style={{display:"block", fontSize:10, color:"#6b7280"}}>{fecha}</span>}
+            {proveedor && <span style={{display:"block", fontSize:10, color:"#6b7280"}}>{proveedor}</span>}
+            {nota && <span style={{display:"block", fontSize:10, color:"#6b7280", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:140}}>{nota.slice(0,60)}{nota.length>60?"…":""}</span>}
+          </span>
+        ) : "🛥 —"}
       </button>
       {open && (
         <div style={{ position:"fixed", inset:0, zIndex:9998, background:"rgba(0,0,0,0.45)", display:"flex", alignItems:"center", justifyContent:"center", padding:16 }} onClick={() => setOpen(false)}>

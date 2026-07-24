@@ -266,12 +266,10 @@ async function loadCalendars() {
           <div class="cal-status ${isConnected ? "connected" : "disconnected"}">
             ${isConnected ? "Calendario conectado" : "Sin conectar"}
           </div>
-          ${isConnected ? `
-            <div class="copy-row">
+          <div class="copy-row">
               <div class="link-box">${bookUrl}</div>
               <button class="btn btn-ghost" onclick="copyLink('${bookUrl}')">Copiar</button>
             </div>
-          ` : ""}
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0">
           <a href="/api/auth/google-connect?concierge=${c.slug}" class="btn btn-dark">
