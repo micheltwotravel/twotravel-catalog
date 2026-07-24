@@ -3618,6 +3618,18 @@ function detectCityCode(str) {
   for (const [k, v] of Object.entries(CITY_CODE_MAP)) { if (s.includes(k)) return v; }
   return "";
 }
+function parseCSVLine(line) {
+  const result = [];
+  let cur = "", inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+    else if (ch === ',' && !inQ) { result.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  result.push(cur);
+  return result;
+}
 function parseHSDate(str) {
   // "6/27/26" → "2026-06-27"
   if (!str) return "";
@@ -3647,9 +3659,10 @@ function HubSpotImport({ onImport }) {
         // Support both TSV (Google Sheets export) and CSV
         const lines = text.trim().split(/\r?\n/);
         const sep = lines[0].includes("\t") ? "\t" : ",";
-        const headers = lines[0].split(sep).map(h => h.replace(/^"|"$/g,"").trim());
+        const splitLine = sep === "\t" ? l => l.split("\t") : parseCSVLine;
+        const headers = splitLine(lines[0]).map(h => h.replace(/^"|"$/g,"").trim());
         const rows = lines.slice(1).filter(l => l.trim()).map(line => {
-          const vals = line.split(sep);
+          const vals = splitLine(line);
           const obj = {};
           headers.forEach((h, i) => { obj[h] = (vals[i] || "").replace(/^"|"$/g,"").trim(); });
           return obj;
