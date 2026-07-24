@@ -878,24 +878,101 @@ function parseDrinkSummary(k) {
     return lines.length ? lines.join(" · ") : null;
   } catch { return null; }
 }
-function OrderCell({ summary, at, empty = "—" }) {
-  if (!summary) return <span style={{ color:"#d1d5db" }}>{empty}</span>;
+function OrderCell({ summary, at, empty = "—", fullText }) {
+  const [open, setOpen] = React.useState(false);
+  if (!summary) return (
+    <span style={{ color:"#d1d5db", fontSize:16, cursor:"default" }} title="Pendiente">⏰</span>
+  );
   const items = summary.split(/[,·]/).map(s => s.trim()).filter(Boolean).slice(0, 4);
+  const copyText = fullText || summary;
   return (
-    <div>
-      <div style={{ display:"flex", flexWrap:"wrap", gap:3, marginBottom: at ? 4 : 0 }}>
-        {items.map((l, i) => (
-          <span key={i} style={{
-            fontSize:10, background:"#f3f4f6", color:"#374151",
-            borderRadius:4, padding:"1px 5px", whiteSpace:"nowrap",
-          }}>{l}</span>
-        ))}
+    <div style={{ position:"relative" }}>
+      <div
+        onClick={() => setOpen(v => !v)}
+        style={{ cursor:"pointer" }}
+        title="Ver detalle"
+      >
+        <div style={{ display:"flex", flexWrap:"wrap", gap:3, marginBottom: at ? 4 : 0 }}>
+          {items.map((l, i) => (
+            <span key={i} style={{
+              fontSize:10, background:"#f3f4f6", color:"#374151",
+              borderRadius:4, padding:"1px 5px", whiteSpace:"nowrap",
+            }}>{l}</span>
+          ))}
+        </div>
+        {at && (
+          <div style={{ fontSize:9.5, color:"#6b7280", fontWeight:500 }}>
+            {fmtOrderAt(at)}
+          </div>
+        )}
       </div>
-      {at && (
-        <div style={{ fontSize:9.5, color:"#6b7280", fontWeight:500 }}>
-          {fmtOrderAt(at)}
+      {open && (
+        <div style={{
+          position:"absolute", zIndex:200, top:"110%", left:0,
+          background:"#fff", border:"1px solid #e5e7eb", borderRadius:10,
+          boxShadow:"0 4px 24px rgba(0,0,0,.13)", padding:"14px 16px",
+          minWidth:240, maxWidth:320,
+        }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+            <span style={{ fontSize:11, fontWeight:700, color:"#374151", textTransform:"uppercase", letterSpacing:".05em" }}>Pedido</span>
+            <button onClick={() => setOpen(false)} style={{ border:"none", background:"none", cursor:"pointer", color:"#9ca3af", fontSize:14, lineHeight:1, padding:0 }}>✕</button>
+          </div>
+          <div style={{ fontSize:11, color:"#374151", whiteSpace:"pre-wrap", lineHeight:1.6, marginBottom:10, maxHeight:160, overflowY:"auto" }}>
+            {summary}
+          </div>
+          {at && (
+            <div style={{ fontSize:10, color:"#9ca3af", marginBottom:10, borderTop:"1px solid #f3f4f6", paddingTop:8 }}>
+              📅 Enviado: <b>{fmtOrderAt(at)}</b>
+            </div>
+          )}
+          <button
+            onClick={() => { navigator.clipboard.writeText(copyText).catch(()=>{}); setOpen(false); }}
+            style={{ width:"100%", background:"#111827", color:"#fff", border:"none", borderRadius:6, padding:"7px 12px", fontSize:11, fontWeight:600, cursor:"pointer" }}
+          >📋 Copiar lista</button>
         </div>
       )}
+    </div>
+  );
+}
+function BoatDayCell({ kickoffId, value, onSave, saving }) {
+  const [text, setText] = React.useState(value);
+  const [aiLoading, setAiLoading] = React.useState(false);
+  const organizeWithAI = async () => {
+    if (!text.trim() || aiLoading) return;
+    setAiLoading(true);
+    try {
+      const r = await fetch("/api/chat", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          systemOverride: "Eres un asistente de concierge de lujo en Cartagena. El usuario te da notas rápidas del día de bote de un cliente. Organiza esto en un itinerario bonito con horarios claros, emojis y formato limpio. Máximo 8 líneas. Solo devuelve el itinerario, sin introducción.",
+          messages:[{role:"user",content:text.trim()}],
+        }),
+      });
+      const d = await r.json();
+      if (d.text) { setText(d.text); onSave(kickoffId, "boatDay", d.text); }
+    } catch {}
+    setAiLoading(false);
+  };
+  return (
+    <div style={{ position:"relative", minWidth:140 }}>
+      <textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onBlur={e => { if (e.target.value !== value) onSave(kickoffId, "boatDay", e.target.value); }}
+        rows={3}
+        placeholder="Notas boat day…"
+        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 8px", width:"100%", background:"#fff", boxSizing:"border-box", resize:"vertical", lineHeight:1.4 }}
+      />
+      <div style={{ display:"flex", gap:4, marginTop:3, alignItems:"center" }}>
+        {saving && <span style={{ fontSize:9, color:"#9ca3af" }}>guardando…</span>}
+        <button
+          onClick={organizeWithAI}
+          disabled={aiLoading || !text.trim()}
+          title="Organizar con IA"
+          style={{ fontSize:10, padding:"2px 7px", borderRadius:5, border:"1px solid #d8b4fe", background: aiLoading ? "#f5f3ff" : "#f0ebff", color:"#7c3aed", cursor: aiLoading || !text.trim() ? "default" : "pointer", fontWeight:600 }}
+        >{aiLoading ? "…" : "✨ IA"}</button>
+      </div>
     </div>
   );
 }
@@ -1195,14 +1272,7 @@ function ClientesTable({ kickoffs, loading }) {
                       </button>
                     </td>
                     <td style={tdStyle}>
-                      <input
-                        type="text"
-                        defaultValue={r.boatDay || ""}
-                        placeholder="Notas boat day…"
-                        onBlur={e => { if (e.target.value !== (r.boatDay||"")) saveField(r.id, "boatDay", e.target.value); }}
-                        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 8px", width:"100%", background:"#fff", boxSizing:"border-box", minWidth:100 }}
-                      />
-                      {isSaving("boatDay") && <span style={{ fontSize:9, color:"#9ca3af" }}>guardando…</span>}
+                      <BoatDayCell kickoffId={r.id} value={r.boatDay || ""} onSave={saveField} saving={isSaving("boatDay")} />
                     </td>
                     <td style={tdStyle}>
                       <input
@@ -1239,7 +1309,7 @@ function UnifiedDashboard({ currentUser, onLogout }) {
   const sheetUrl =
     "https://docs.google.com/spreadsheets/d/1Tyv5cPTN0MjxezyWRjo-XuIRqOgaPwP-z1heZfgGiuQ/edit#gid=0";
 
-  const [tab, setTab] = useState("kpis");
+  const [tab, setTab] = useState("clientes");
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [destinationFilter, setDestinationFilter] = useState("all");
@@ -4326,9 +4396,7 @@ function CheckinForm() {
             </button>
           </div>
           <p className="text-white/70 text-sm leading-relaxed">
-            {en
-              ? "Please fill out this form individually. It helps us prepare your passport check-in, coordinate transport, and handle dietary needs."
-              : "Por favor completa este formulario de forma individual. Nos ayuda con el check-in, coordinar transporte y atender necesidades alimentarias."}
+            {en ? "One form per person." : "Un formulario por persona."}
           </p>
         </div>
       </div>

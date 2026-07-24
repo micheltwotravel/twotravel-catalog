@@ -1605,11 +1605,11 @@ function RichTextBlock({ item, onUpdate, onRemove }) {
           onBlur={() => { setShowToolbar(false); setColorOpen(false); setHlOpen(false); saveHtml(); }}
           onInput={saveHtml}
           data-placeholder="Escribe una nota, instrucción, mensaje especial…"
-          className="min-h-[48px] px-4 py-3 text-sm text-neutral-800 focus:outline-none text-center"
+          className="min-h-[48px] px-4 py-3 text-sm text-neutral-800 focus:outline-none"
           style={{wordBreak:"break-word"}}
         />
         {!item.html && (
-          <div className="absolute top-3 left-0 right-0 text-sm text-neutral-400 pointer-events-none select-none text-center">
+          <div className="absolute top-3 left-4 right-0 text-sm text-neutral-400 pointer-events-none select-none">
             Escribe una nota, instrucción, mensaje especial…
           </div>
         )}
@@ -1737,6 +1737,7 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
             {[
               { key: "checkin",   label: "🏨 Check-in" },
               { key: "breakfast", label: lang === "es" ? "☕ Desayuno" : "☕ Breakfast" },
+              { key: "boatday",   label: "🛥 Boat Day" },
               { key: "checkout",  label: "🧳 Check-out" },
             ].map(({ key, label: pl }) => (
               <button key={key} type="button" onClick={() => onAddPreset?.(key)}
@@ -2046,12 +2047,18 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
           name:    s?.name_es || "Desayuno en la Villa",
           name_en: s?.name_en || "Breakfast at the Villa",
           category: "services",
-          timeLabel: "8:00 AM",
+          timeLabel: "9:00 AM",
           ...(s?.image ? { image: s.image } : {}),
           description_es: s?.description_es || "Una mezcla de desayunos locales e internacionales será servida en su comedor. El servicio de cocinero está incluido con el alquiler de la villa.",
           description_en: s?.description    || "A mix of local and international breakfast dishes will be served in your dining room. Cook service is included with the villa rental.",
         };
       })(),
+      boatday: {
+        name: "Día de Bote", name_en: "Boat Day", category: "actividades",
+        timeLabel: "8:30 AM",
+        description_es: "¡Día de bote! Salida desde el muelle a las 8:30 AM. Recuerden traer protector solar, traje de baño y cámara. Su concierge estará presente para coordinar todo el día.",
+        description_en: "Boat day! Departure from the dock at 8:30 AM. Please bring sunscreen, swimwear and a camera. Your concierge will be there to coordinate the full day.",
+      },
       checkout: {
         name: "Check-out", name_en: "Check-out", category: "services",
         timeLabel: checkoutTime,
@@ -2982,6 +2989,7 @@ const SUGGESTION_CATS = [
   { id: "transportation", ids: ["transportation"],           label: "🚗 Transporte" },
   { id: "chef",           ids: ["chef"],                     label: "👨‍🍳 Chef Privado" },
   { id: "services",       ids: ["services"],                 label: "✨ Servicios" },
+  { id: "paquetes",       ids: ["paquetes","packages"],      label: "📦 Paquetes" },
 ];
 
 function CatalogPickerModal({ services, clientType = 1, lang = "en", city = "", onClose, onPick }) {

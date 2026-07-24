@@ -53,11 +53,7 @@ const cl  = (v) => String(v ?? "").trim();
 const num = (v) => { const n = Number(cl(v).replace(/[^0-9.-]/g, "")); return isNaN(n) ? 0 : n; };
 
 /* Default pre-trip content shown when concierge hasn't filled the block yet */
-const DEFAULT_PRETRIP_PDF = `Pre Check-in Form: https://forms.gle/REPLACE_WITH_FORM_LINK
-Drink Calculator: https://two.travel/drinks
-WhatsApp Concierge: https://wa.me/573001234567
-
-Promo!
+const DEFAULT_PRETRIP_PDF = `Promo!
 Share your experience with Two Travel on Instagram @twotravelconcierge or TikTok @twotravelvip and receive a discount on select services. Tag must be posted during your stay. One tag per person required.`;
 
 /** Ensures a date string is YYYY-MM-DD for QB billing fields */
@@ -1556,6 +1552,13 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
           </div>
         )}
 
+        {/* Concierge notes for this service */}
+        {it.notes && (
+          <div style={{ fontSize:11, color:"#6b7280", fontStyle:"italic", marginBottom:8, background:"#f9fafb", borderLeft:"3px solid #e5e7eb", paddingLeft:8, paddingTop:4, paddingBottom:4, borderRadius:"0 4px 4px 0" }}>
+            📌 {it.notes}
+          </div>
+        )}
+
         {/* Schedule (catalog hours, no label) */}
         {it.schedule && (
           <div className="ev-terms">
@@ -2103,11 +2106,16 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
       <div style={{ flex: 1 }}>
         {day.items.map((it, i) => it.isBlock
           ? (
-            <div key={i} style={{ margin: "10px 0", position: "relative" }}>
-              {editMode && onRemoveItem && (
-                <button onClick={() => onRemoveItem(i)} style={{position:"absolute",top:4,right:4,border:"none",background:"none",cursor:"pointer",color:"#9ca3af",fontSize:11}}>✕</button>
-              )}
-              <div dangerouslySetInnerHTML={{ __html: it.cartItem.html }} style={{ fontSize: 13, color: "#111827", lineHeight: 1.6 }} />
+            <div key={i} style={{ margin: "10px 0", position: "relative", display:"flex", borderBottom:"1px solid #f0f0f0" }}>
+              <div style={{ width:"40%", flexShrink:0, background:"linear-gradient(145deg,#f5f5f5 0%,#ebebeb 100%)", display:"flex", alignItems:"center", justifyContent:"center", minHeight:80 }}>
+                <span style={{ fontSize:24, opacity:.15 }}>✦</span>
+              </div>
+              <div style={{ flex:1, padding:"18px 28px" }}>
+                {editMode && onRemoveItem && (
+                  <button onClick={() => onRemoveItem(i)} style={{position:"absolute",top:8,right:8,border:"none",background:"none",cursor:"pointer",color:"#9ca3af",fontSize:11,zIndex:2}}>✕</button>
+                )}
+                <div dangerouslySetInnerHTML={{ __html: it.cartItem.html }} style={{ fontSize: 13, color: "#111827", lineHeight: 1.6 }} />
+              </div>
             </div>
           ) : (
             <EventBlock
