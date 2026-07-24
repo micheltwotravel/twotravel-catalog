@@ -878,6 +878,38 @@ function parseDrinkSummary(k) {
     return lines.length ? lines.join(" · ") : null;
   } catch { return null; }
 }
+function PassportPopup({ passportInfo, dietInfo, guestName }) {
+  const [open, setOpen] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
+  const text = [passportInfo && `🛂 Pasaporte:\n${passportInfo}`, dietInfo && `🥗 Dieta/Alergias:\n${dietInfo}`].filter(Boolean).join("\n\n");
+  const copy = () => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); };
+  return (
+    <div style={{ position:"relative", display:"inline-block" }}>
+      <button onClick={() => setOpen(o => !o)} title="Ver info de pasaporte y dieta"
+        style={{ fontSize:16, background:"none", border:"none", cursor:"pointer", padding:"2px 4px" }}>🛂</button>
+      {open && (
+        <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:9999, background:"#fff", border:"1px solid #e5e7eb", borderRadius:12, boxShadow:"0 8px 32px rgba(0,0,0,0.18)", padding:20, minWidth:280, maxWidth:400 }}>
+          <div style={{ fontWeight:700, fontSize:13, color:"#111", marginBottom:12 }}>{guestName || "Cliente"}</div>
+          {passportInfo && <div style={{ marginBottom:12 }}>
+            <div style={{ fontSize:11, fontWeight:600, color:"#6b7280", marginBottom:4 }}>🛂 PASAPORTE / ID</div>
+            <div style={{ fontSize:12, color:"#374151", whiteSpace:"pre-wrap", background:"#f9fafb", borderRadius:8, padding:"8px 10px" }}>{passportInfo}</div>
+          </div>}
+          {dietInfo && <div style={{ marginBottom:12 }}>
+            <div style={{ fontSize:11, fontWeight:600, color:"#6b7280", marginBottom:4 }}>🥗 DIETA / ALERGIAS</div>
+            <div style={{ fontSize:12, color:"#374151", whiteSpace:"pre-wrap", background:"#f9fafb", borderRadius:8, padding:"8px 10px" }}>{dietInfo}</div>
+          </div>}
+          <div style={{ display:"flex", gap:8, marginTop:4 }}>
+            <button onClick={copy} style={{ flex:1, fontSize:11, padding:"6px 10px", borderRadius:7, border:"1px solid #e5e7eb", background:"#f9fafb", cursor:"pointer", color:"#374151" }}>
+              {copied ? "✓ Copiado" : "Copiar"}
+            </button>
+            <button onClick={() => setOpen(false)} style={{ fontSize:11, padding:"6px 10px", borderRadius:7, border:"1px solid #e5e7eb", background:"#fff", cursor:"pointer", color:"#6b7280" }}>Cerrar</button>
+          </div>
+        </div>
+      )}
+      {open && <div onClick={() => setOpen(false)} style={{ position:"fixed", inset:0, zIndex:9998 }} />}
+    </div>
+  );
+}
 function OrderCell({ summary, at, empty = "—", fullText }) {
   const [open, setOpen] = React.useState(false);
   if (!summary) return (
@@ -1172,6 +1204,7 @@ function ClientesTable({ kickoffs, loading }) {
                 <th style={thStyle}>Pax</th>
                 <th style={thStyle}>Concierge</th>
                 <th style={thStyle}>Junior</th>
+                <th style={thStyle}>🛂 Info</th>
                 <th style={thStyle}>Itinerario</th>
                 <th style={thStyle}>Reuniones</th>
                 <th style={thStyle}>Último pedido</th>
@@ -1186,7 +1219,7 @@ function ClientesTable({ kickoffs, loading }) {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={16} style={{ ...tdStyle, textAlign:"center", color:"#9ca3af", padding:32 }}>Sin clientes para este filtro.</td></tr>
+                <tr><td colSpan={17} style={{ ...tdStyle, textAlign:"center", color:"#9ca3af", padding:32 }}>Sin clientes para este filtro.</td></tr>
               )}
               {filtered.map((r, i) => {
                 const { drinkSummary, grocerySummary, breakfastSummary, breakfastAt } = orderStatus(r);
@@ -1232,6 +1265,11 @@ function ClientesTable({ kickoffs, loading }) {
                           {isSaving("juniorConcierge") && <span style={{ fontSize:9, color:"#9ca3af" }}> ↑</span>}
                         </>;
                       })()}
+                    </td>
+                    <td style={{ ...tdStyle, textAlign:"center" }}>
+                      {(r.passportInfo || r.dietInfo) ? (
+                        <PassportPopup passportInfo={r.passportInfo} dietInfo={r.dietInfo} guestName={r.guestName} />
+                      ) : <span style={{ color:"#d1d5db", fontSize:12 }}>—</span>}
                     </td>
                     <td style={tdStyle}>
                       <a href={itinLink} target="_blank" rel="noreferrer"
