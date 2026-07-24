@@ -1976,6 +1976,44 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
     }));
   };
 
+  const autoFillWithDefaults = () => {
+    const arrDate = kickoff?.arrivalDate;
+    if (!arrDate) { alert("Necesitas configurar la fecha de llegada primero."); return; }
+    autoFillDayTitles();
+    // After dates are filled, wait a tick then add presets on the right days
+    setTimeout(() => {
+      setDayMeta(currentMeta => {
+        const firstLabel = currentMeta[0]?.label;
+        const lastLabel  = currentMeta[currentMeta.length - 1]?.label;
+        const lang = kickoff?.lang || "en";
+        const accom = kickoff?.accommodationName || "";
+        const checkinTime  = kickoff?.checkIn  || "3:00 PM";
+        const checkoutTime = kickoff?.checkOut || "11:00 AM";
+        if (firstLabel) {
+          setCart(prev => {
+            const hasCheckin = prev.some(i => i.dayLabel === firstLabel && (i.name === "Check-in" || i.name_en === "Check-in"));
+            const hasCheckout = prev.some(i => i.dayLabel === lastLabel && (i.name === "Check-out" || i.name_en === "Check-out"));
+            const toAdd = [];
+            if (!hasCheckin && firstLabel) {
+              toAdd.push({ ...mapManualToCartItem(), _uid: `preset_checkin_${Date.now()}`, id: `preset_checkin_${Date.now()}`,
+                name: "Check-in", name_en: "Check-in", category: "services", timeLabel: checkinTime,
+                description_es: `Su villa estará disponible a partir de las ${checkinTime}.`, description_en: `Your villa will be available from ${checkinTime}.`,
+                ...(accom ? { location: accom } : {}), dayLabel: firstLabel, sortOrder: 0 });
+            }
+            if (!hasCheckout && lastLabel && lastLabel !== firstLabel) {
+              toAdd.push({ ...mapManualToCartItem(), _uid: `preset_checkout_${Date.now()}`, id: `preset_checkout_${Date.now()}`,
+                name: "Check-out", name_en: "Check-out", category: "services", timeLabel: checkoutTime,
+                description_es: `El check-out es a las ${checkoutTime}.`, description_en: `Check-out is at ${checkoutTime}.`,
+                ...(accom ? { location: accom } : {}), dayLabel: lastLabel, sortOrder: 0 });
+            }
+            return toAdd.length ? [...prev, ...toAdd] : prev;
+          });
+        }
+        return currentMeta;
+      });
+    }, 50);
+  };
+
   const removeDay = (label) => {
     if (!window.confirm(`¿Eliminar "${label}" y todas sus actividades?`)) return;
     setCart(prev => prev.filter(i => (i.dayLabel || "Sin día") !== label));
@@ -2167,11 +2205,18 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
             + Agregar día
           </button>
           {days.length > 0 && (
-            <button type="button" onClick={autoFillDayTitles}
-              title="Renombrar días con día de semana y fecha según la fecha de llegada"
-              className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs hover:bg-amber-100">
-              🗓️ Auto-fechas
-            </button>
+            <span className="flex gap-1">
+              <button type="button" onClick={autoFillDayTitles}
+                title="Renombrar días con fecha"
+                className="px-3 py-1.5 rounded-l-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs hover:bg-amber-100">
+                🗓️ Fechas
+              </button>
+              <button type="button" onClick={autoFillWithDefaults}
+                title="Fechas + agrega check-in y check-out automáticamente"
+                className="px-3 py-1.5 rounded-r-lg border-t border-b border-r border-amber-200 bg-amber-50 text-amber-700 text-xs hover:bg-amber-100">
+                + defaults
+              </button>
+            </span>
           )}
           <button type="button" onClick={handleGenerateTasks} disabled={generating || !cart.length}
             title="Crea una tarea de confirmación por cada servicio del itinerario"
