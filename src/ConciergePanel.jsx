@@ -1573,7 +1573,7 @@ function RichTextBlock({ item, onUpdate, onRemove }) {
             <div className="absolute top-full left-0 z-50 flex flex-wrap gap-1 bg-white border border-neutral-200 rounded-lg p-1.5 shadow-lg w-28">
               {COLORS.map(c=>(
                 <button key={c} type="button" onMouseDown={e=>{e.preventDefault();exec("foreColor",c);setColorOpen(false);}}
-                  style={{background:c,border:"1px solid #e5e7eb"}} className="w-5 h-5 rounded"/>
+                  style={{background:c,border:"1px solid #e5e7eb",width:20,height:20,borderRadius:4,flexShrink:0,display:"block"}}/>
               ))}
             </div>
           )}
@@ -1583,11 +1583,11 @@ function RichTextBlock({ item, onUpdate, onRemove }) {
           <button type="button" onMouseDown={e=>{e.preventDefault();setHlOpen(v=>!v);setColorOpen(false);}}
             className="text-[11px] px-1.5 py-0.5 rounded hover:bg-neutral-100 text-neutral-600">✏️</button>
           {hlOpen && (
-            <div className="absolute top-full left-0 z-50 flex flex-wrap gap-1 bg-white border border-neutral-200 rounded-lg p-1.5 shadow-lg w-28">
+            <div className="absolute top-full left-0 z-50 flex flex-wrap gap-1 bg-white border border-neutral-200 rounded-lg p-1.5 shadow-lg" style={{width:132}}>
               {HIGHLIGHTS.map(c=>(
                 <button key={c} type="button" onMouseDown={e=>{e.preventDefault();exec("hiliteColor",c);setHlOpen(false);}}
-                  style={{background:c==="transparent"?"#f9fafb":c,border:"1px solid #e5e7eb"}} className="w-5 h-5 rounded">
-                  {c==="transparent"&&<span className="text-[8px] text-neutral-400">✕</span>}
+                  style={{background:c==="transparent"?"#f9fafb":c,border:"1px solid #ccc",width:20,height:20,borderRadius:4,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {c==="transparent"&&<span style={{fontSize:8,color:"#9ca3af"}}>✕</span>}
                 </button>
               ))}
             </div>
