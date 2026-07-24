@@ -2140,8 +2140,24 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         description_en: "Boat day! Departure from the dock at 8:30 AM. Please bring sunscreen, swimwear and a camera. Your concierge will be there to coordinate the full day.",
       },
       pickup: (() => {
-        const guest = (kickoff?.guestName || "").split(" ")[0] || "grupo";
-        const accom = kickoff?.accommodationName || "la villa";
+        const guestName = kickoff?.guestName || "";
+        const accom = kickoff?.accommodationName || "the accommodation";
+        const accomEs = kickoff?.accommodationName || "el alojamiento";
+        // Airport name by city
+        const cityRaw = (kickoff?._rowCity || kickoff?.city || "").toLowerCase();
+        const AIRPORTS = {
+          ctg: { en: "Rafael Núñez International Airport", es: "Aeropuerto Internacional Rafael Núñez", code: "CTG" },
+          cartagena: { en: "Rafael Núñez International Airport", es: "Aeropuerto Internacional Rafael Núñez", code: "CTG" },
+          mde: { en: "José María Córdova International Airport", es: "Aeropuerto Internacional José María Córdova", code: "MDE" },
+          medellin: { en: "José María Córdova International Airport", es: "Aeropuerto Internacional José María Córdova", code: "MDE" },
+          medellín: { en: "José María Córdova International Airport", es: "Aeropuerto Internacional José María Córdova", code: "MDE" },
+          bog: { en: "El Dorado International Airport", es: "Aeropuerto Internacional El Dorado", code: "BOG" },
+          bogota: { en: "El Dorado International Airport", es: "Aeropuerto Internacional El Dorado", code: "BOG" },
+          bogotá: { en: "El Dorado International Airport", es: "Aeropuerto Internacional El Dorado", code: "BOG" },
+          cdmx: { en: "Benito Juárez International Airport", es: "Aeropuerto Internacional Benito Juárez", code: "MEX" },
+          mexico: { en: "Benito Juárez International Airport", es: "Aeropuerto Internacional Benito Juárez", code: "MEX" },
+        };
+        const airport = AIRPORTS[cityRaw] || { en: "the airport", es: "el aeropuerto", code: "" };
         // Try to get arrival flight info
         let arrFlight = null;
         try { const arr = JSON.parse(kickoff?.arrivals || "[]"); arrFlight = arr.find(a => a.flightNumber) || null; } catch {}
@@ -2149,18 +2165,21 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         const arrTime = arrFlight?.time || "";
         return [
           {
-            name: `Llegan al aeropuerto`, name_en: `Arrive at the Airport`,
+            name: `Pick up at ${airport.en}`, name_en: `Pick up at ${airport.en}`,
+            name_es: `Pick up en ${airport.es}`,
             category: "transportation",
             timeLabel: arrTime,
-            description_es: `${kickoff?.guestName || "El grupo"} llega al aeropuerto${flightNum ? ` en el vuelo ${flightNum}` : ""}. Su concierge los estará esperando en llegadas internacionales con un letrero con su nombre.`,
-            description_en: `${kickoff?.guestName || "The group"} arrives at the airport${flightNum ? ` on flight ${flightNum}` : ""}. Your concierge will be waiting at arrivals with a sign with your name.`,
+            description_en: `When you come out, make sure you turn to the **right** where you will find our representative waiting to direct you to the van. Even if you arrive in separate groups, your reservations will always be under the group leader's name: **${guestName || "group leader"}**${flightNum ? `\n\nFlight: ${flightNum}` : ""}`,
+            description_es: `Al salir, gira a la **derecha** donde encontrarás a nuestro representante esperando para dirigirte a la van. Aunque lleguen en grupos separados, su reserva siempre estará a nombre de: **${guestName || "líder del grupo"}**${flightNum ? `\n\nVuelo: ${flightNum}` : ""}`,
+            notes: "Minivan",
           },
           {
-            name: `Traslado al alojamiento`, name_en: `Transfer to Accommodation`,
+            name: `Transfer to ${accom}`, name_en: `Transfer to ${accom}`,
+            name_es: `Traslado a ${accomEs}`,
             category: "transportation", timeLabel: "",
-            description_es: `Traslado privado aeropuerto → ${accom}. Vehículo: Van / SUV con aire acondicionado. Todas las maletas incluidas.`,
-            description_en: `Private transfer airport → ${accom}. Vehicle: Van / SUV with air conditioning. All luggage included.`,
-            notes: `${kickoff?.guestName || ""} — verificar vuelo y # de maletas`,
+            description_en: `Private transfer ${airport.code ? airport.code + " →" : "airport →"} ${accom}. Vehicle: Minivan / SUV with air conditioning. All luggage included.\n\n* Services between 19:00 - 6:00 will generate a 10% night fee`,
+            description_es: `Traslado privado ${airport.code ? airport.code + " →" : "aeropuerto →"} ${accomEs}. Vehículo: Minivan / SUV con aire acondicionado. Todas las maletas incluidas.\n\n* Servicios entre 19:00 - 6:00 generan un recargo nocturno del 10%`,
+            notes: `${guestName} — verificar vuelo y # de maletas`,
           }
         ];
       })(),
