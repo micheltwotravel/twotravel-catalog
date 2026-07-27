@@ -1074,10 +1074,20 @@ function CoverPage({ kickoff, total, lang, editMode }) {
 
         {/* Schedule a meeting */}
         {(() => {
-          const conciergeEmail = a.assignedConciergeEmail || "";
           const conciergeName  = a.assignedConciergeName || a.assignedConcierge || "";
-          if (!conciergeEmail && !conciergeName) return null;
-          const bookUrl = `/?mode=book&c=${encodeURIComponent(conciergeEmail)}&cn=${encodeURIComponent(conciergeName)}&k=${encodeURIComponent(a.id||"")}&g=${encodeURIComponent(a.guestName||"")}&lang=${lang}`;
+          if (!conciergeName) return null;
+          // Map name → slug for book.html
+          const SLUG_MAP = {
+            "carolina": "caro", "caro": "caro",
+            "alia": "alia",
+            "daniela": "daniela",
+            "nataly": "nataly",
+            "giulia": "giulia",
+            "natalia": "natalia",
+            "michel": "michel",
+          };
+          const slug = SLUG_MAP[conciergeName.toLowerCase().split(" ")[0]] || conciergeName.toLowerCase().split(" ")[0];
+          const bookUrl = `https://www.twotravelvip.com/book.html?c=${slug}`;
           return (
             <a href={bookUrl} style={{
               display:"flex", alignItems:"center", justifyContent:"space-between",
