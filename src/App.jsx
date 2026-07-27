@@ -3796,8 +3796,10 @@ function DrinksCatalog() {
   const [fxRate,     setFxRate]     = React.useState(4000);
   const [prevOrderAt,setPrevOrderAt]= React.useState(""); // ISO date of last submission
   const [loading,    setLoading]    = React.useState(!!kickoffId);
-  const [kickoffArrival, setKickoffArrival] = React.useState("");
-  const [kickoffDepart,  setKickoffDepart]  = React.useState("");
+  const [kickoffArrival,    setKickoffArrival]    = React.useState("");
+  const [kickoffDepart,     setKickoffDepart]     = React.useState("");
+  const [coverPhotoId,      setCoverPhotoId]      = React.useState("");
+  const [kickoffConcierge,  setKickoffConcierge]  = React.useState("");
 
   // Fetch live exchange rate + existing order
   React.useEffect(() => {
@@ -3830,6 +3832,9 @@ function DrinksCatalog() {
           } catch {}
         }
         if (k.drinkOrderAt) setPrevOrderAt(k.drinkOrderAt);
+        if (k.coverPhotoId) setCoverPhotoId(k.coverPhotoId);
+        const cn = k.concierge || k.assignedConciergeName || "";
+        if (cn) setKickoffConcierge(cn);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -3929,24 +3934,55 @@ function DrinksCatalog() {
   return (
     <div className="min-h-screen bg-neutral-50 pb-28">
       {/* Header */}
-      <div className="bg-neutral-950 text-white px-6 pt-6 pb-5">
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <img src="/logo.png" alt="Two Travel" className="h-7 mb-2 opacity-90" style={{filter:"brightness(0) invert(1)"}} />
-            <h1 className="text-xl font-semibold">{T.heading}</h1>
+      <div className="bg-neutral-950 text-white">
+        {/* Cover photo hero */}
+        {coverPhotoId && (
+          <div style={{position:"relative",height:200,overflow:"hidden"}}>
+            <img src={`https://lh3.googleusercontent.com/d/${coverPhotoId}`} alt=""
+              style={{width:"100%",height:"100%",objectFit:"cover",opacity:.55}}
+              onError={e=>e.target.style.display="none"}/>
+            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 60%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:24,gap:6}}>
+              <img src="/logo.png" alt="Two Travel" style={{height:18,filter:"brightness(0) invert(1)",opacity:.85}}/>
+              <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:500,color:"#f7f4ef",margin:0,textAlign:"center"}}>
+                {lang==="en" ? "Drink List" : "Lista de Bebidas"}
+              </h1>
+            </div>
           </div>
-          {/* Language toggle */}
-          <button
-            onClick={() => setLang(l => l === "en" ? "es" : "en")}
-            className="flex-shrink-0 mt-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition"
-          >
-            {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
-          </button>
-        </div>
-        {/* Instructions */}
-        <div className="bg-white/10 rounded-xl px-4 py-3 space-y-1.5 text-sm text-neutral-300">
-          <p>{T.instr1}</p>
-          <p className="text-neutral-400 text-xs italic">{T.instr2}</p>
+        )}
+        <div className="px-6 pt-5 pb-5">
+          {!coverPhotoId && (
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <img src="/logo.png" alt="Two Travel" className="h-7 mb-2 opacity-90" style={{filter:"brightness(0) invert(1)"}} />
+                <h1 className="text-xl font-semibold">{T.heading}</h1>
+              </div>
+              <button onClick={() => setLang(l => l === "en" ? "es" : "en")}
+                className="flex-shrink-0 mt-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition">
+                {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
+              </button>
+            </div>
+          )}
+          {coverPhotoId && (
+            <div className="flex items-center justify-between mb-3">
+              {kickoffConcierge ? (
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"rgba(255,255,255,.8)",fontWeight:600,flexShrink:0}}>
+                    {kickoffConcierge.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}
+                  </div>
+                  <span style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>{kickoffConcierge}</span>
+                </div>
+              ) : <div/>}
+              <button onClick={() => setLang(l => l === "en" ? "es" : "en")}
+                className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition">
+                {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
+              </button>
+            </div>
+          )}
+          {/* Instructions */}
+          <div className="bg-white/10 rounded-xl px-4 py-3 space-y-1.5 text-sm text-neutral-300">
+            <p>{T.instr1}</p>
+            <p className="text-neutral-400 text-xs italic">{T.instr2}</p>
+          </div>
         </div>
       </div>
 
@@ -4304,9 +4340,11 @@ function GroceryCatalog() {
   const [others,    setOthers]    = React.useState("");
   const [sent,      setSent]      = React.useState(false);
   const [sending,   setSending]   = React.useState(false);
-  const [prevAt,    setPrevAt]    = React.useState("");
-  const [loading,   setLoading]   = React.useState(!!kickoffId);
-  const [guestName, setGuestName] = React.useState(prefillName);
+  const [prevAt,           setPrevAt]           = React.useState("");
+  const [loading,          setLoading]          = React.useState(!!kickoffId);
+  const [guestName,        setGuestName]        = React.useState(prefillName);
+  const [coverPhotoId,     setCoverPhotoId]     = React.useState("");
+  const [kickoffConcierge, setKickoffConcierge] = React.useState("");
 
   // Load existing order
   React.useEffect(() => {
@@ -4328,6 +4366,9 @@ function GroceryCatalog() {
           } catch {}
         }
         if (k.groceryOrderAt) setPrevAt(k.groceryOrderAt);
+        if (k.coverPhotoId) setCoverPhotoId(k.coverPhotoId);
+        const cn = k.concierge || k.assignedConciergeName || "";
+        if (cn) setKickoffConcierge(cn);
       })
       .catch(()=>{})
       .finally(()=>setLoading(false));
@@ -4388,21 +4429,52 @@ function GroceryCatalog() {
   return (
     <div className="min-h-screen bg-neutral-50 pb-28">
       {/* Header */}
-      <div className="bg-neutral-950 text-white px-6 pt-6 pb-5">
-        <div className="flex items-start justify-between mb-2">
-          <div>
-            <img src="/logo.png" alt="Two Travel" className="h-7 mb-2 opacity-90" style={{filter:"brightness(0) invert(1)"}} />
-            <h1 className="text-xl font-semibold">{lang==="en" ? "🛒 Grocery List" : "🛒 Lista de Mercado"}</h1>
+      <div className="bg-neutral-950 text-white">
+        {/* Cover photo hero */}
+        {coverPhotoId && (
+          <div style={{position:"relative",height:200,overflow:"hidden"}}>
+            <img src={`https://lh3.googleusercontent.com/d/${coverPhotoId}`} alt=""
+              style={{width:"100%",height:"100%",objectFit:"cover",opacity:.55}}
+              onError={e=>e.target.style.display="none"}/>
+            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 60%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:24,gap:6}}>
+              <img src="/logo.png" alt="Two Travel" style={{height:18,filter:"brightness(0) invert(1)",opacity:.85}}/>
+              <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:500,color:"#f7f4ef",margin:0,textAlign:"center"}}>
+                {lang==="en" ? "Grocery List" : "Lista de Mercado"}
+              </h1>
+            </div>
           </div>
-          {/* Language toggle */}
-          <button
-            onClick={() => setLang(l => l === "en" ? "es" : "en")}
-            className="flex-shrink-0 mt-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition"
-          >
-            {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
-          </button>
+        )}
+        <div className="px-6 pt-5 pb-5">
+          {!coverPhotoId && (
+            <div className="flex items-start justify-between mb-2">
+              <div>
+                <img src="/logo.png" alt="Two Travel" className="h-7 mb-2 opacity-90" style={{filter:"brightness(0) invert(1)"}} />
+                <h1 className="text-xl font-semibold">{lang==="en" ? "🛒 Grocery List" : "🛒 Lista de Mercado"}</h1>
+              </div>
+              <button onClick={() => setLang(l => l === "en" ? "es" : "en")}
+                className="flex-shrink-0 mt-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition">
+                {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
+              </button>
+            </div>
+          )}
+          {coverPhotoId && (
+            <div className="flex items-center justify-between mb-2">
+              {kickoffConcierge ? (
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"rgba(255,255,255,.8)",fontWeight:600,flexShrink:0}}>
+                    {kickoffConcierge.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}
+                  </div>
+                  <span style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>{kickoffConcierge}</span>
+                </div>
+              ) : <div/>}
+              <button onClick={() => setLang(l => l === "en" ? "es" : "en")}
+                className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition">
+                {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
+              </button>
+            </div>
+          )}
+          <p className="text-sm text-neutral-400">{lang==="en" ? "Check the items you'd like us to have ready at the villa." : "Marca los productos que quieres que tengamos listos en la villa."}</p>
         </div>
-        <p className="text-sm text-neutral-400">{lang==="en" ? "Check the items you'd like us to have ready at the villa." : "Marca los productos que quieres que tengamos listos en la villa."}</p>
       </div>
 
       <div className="max-w-xl mx-auto px-4 pt-4 space-y-4">
@@ -4900,8 +4972,10 @@ function BreakfastCatalog() {
   const [sent,            setSent]            = React.useState(false);
   const [sending,         setSending]         = React.useState(false);
   const [fxRate,          setFxRate]          = React.useState(4000);
-  const [arrivalDate,     setArrivalDate]     = React.useState(params.get("arrivalDate") || "");
-  const [checkInFormUrl,  setCheckInFormUrl]  = React.useState("");
+  const [arrivalDate,      setArrivalDate]      = React.useState(params.get("arrivalDate") || "");
+  const [checkInFormUrl,   setCheckInFormUrl]   = React.useState("");
+  const [coverPhotoId,     setCoverPhotoId]     = React.useState("");
+  const [kickoffConcierge, setKickoffConcierge] = React.useState("");
   const autosaveRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -4962,6 +5036,9 @@ function BreakfastCatalog() {
             // currency always resets to USD on load — don't restore saved preference
           } catch {}
         }
+        if (k.coverPhotoId) setCoverPhotoId(k.coverPhotoId);
+        const cn = k.concierge || k.assignedConciergeName || "";
+        if (cn) setKickoffConcierge(cn);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -5126,35 +5203,63 @@ function BreakfastCatalog() {
   return (
     <div style={{minHeight:"100vh",background:"#f7f4ef",fontFamily:"'Jost',sans-serif",color:"#1a1814"}}>
       {/* Header */}
-      <div style={{background:"#1a1814",padding:"28px 24px 24px",textAlign:"center"}}>
-        <img src="/logo.png" alt="Two Travel" style={{height:28,opacity:.85,marginBottom:16,filter:"brightness(0) invert(1)"}} />
-        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:30,fontWeight:500,color:"#f7f4ef",marginBottom:6}}>
-          {en ? "Breakfast Menu" : "Menú de Desayuno"}
-        </h1>
-        <p style={{fontSize:12,color:"#9a7d52",letterSpacing:".06em"}}>
-          {guestName ? guestName + " · " : ""}
-          {groupSize ? `${groupSize} ${en ? "guests" : "personas"}` : `${tier} ${en ? "guests" : "personas"}`}
-        </p>
-        <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:16,flexWrap:"wrap"}}>
-          {!groupSize && (
-            <div style={{display:"flex",gap:4,background:"rgba(255,255,255,.08)",borderRadius:6,padding:3}}>
-              {BREAKFAST_TIERS.map(t => (
-                <button key={t} onClick={() => setTier(t)} style={{
-                  padding:"4px 12px",fontSize:11,borderRadius:4,border:"none",cursor:"pointer",transition:"all .15s",
-                  background: tier === t ? "#9a7d52" : "transparent",
-                  color: tier === t ? "#fff" : "rgba(255,255,255,.5)",
-                }}>{t} pax</button>
-              ))}
+      <div style={{background:"#1a1814"}}>
+        {/* Cover photo hero */}
+        {coverPhotoId && (
+          <div style={{position:"relative",height:200,overflow:"hidden"}}>
+            <img src={`https://lh3.googleusercontent.com/d/${coverPhotoId}`} alt=""
+              style={{width:"100%",height:"100%",objectFit:"cover",opacity:.55}}
+              onError={e=>e.target.style.display="none"}/>
+            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 60%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:24,gap:6}}>
+              <img src="/logo.png" alt="Two Travel" style={{height:18,filter:"brightness(0) invert(1)",opacity:.85}}/>
+              <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:500,color:"#f7f4ef",margin:0,textAlign:"center"}}>
+                {en ? "Breakfast Menu" : "Menú de Desayuno"}
+              </h1>
+            </div>
+          </div>
+        )}
+        <div style={{padding:"24px 24px 20px",textAlign:"center"}}>
+          {!coverPhotoId && (
+            <>
+              <img src="/logo.png" alt="Two Travel" style={{height:28,opacity:.85,marginBottom:16,filter:"brightness(0) invert(1)"}} />
+              <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:30,fontWeight:500,color:"#f7f4ef",marginBottom:6}}>
+                {en ? "Breakfast Menu" : "Menú de Desayuno"}
+              </h1>
+            </>
+          )}
+          {coverPhotoId && kickoffConcierge && (
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:12}}>
+              <div style={{width:26,height:26,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"rgba(255,255,255,.8)",fontWeight:600,flexShrink:0}}>
+                {kickoffConcierge.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}
+              </div>
+              <span style={{fontSize:12,color:"rgba(255,255,255,.65)"}}>{kickoffConcierge}</span>
             </div>
           )}
-          <button onClick={() => setCurrency(c => c === "COP" ? "USD" : "COP")} style={{
-            padding:"4px 14px",fontSize:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",
-            border:"1px solid rgba(255,255,255,.15)",borderRadius:6,cursor:"pointer",
-          }}>{currency} ⇄</button>
-          <button onClick={() => setLang(l => l === "en" ? "es" : "en")} style={{
-            padding:"4px 14px",fontSize:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",
-            border:"1px solid rgba(255,255,255,.15)",borderRadius:6,cursor:"pointer",
-          }}>{en ? "ES" : "EN"}</button>
+          <p style={{fontSize:12,color:"#9a7d52",letterSpacing:".06em"}}>
+            {guestName ? guestName + " · " : ""}
+            {groupSize ? `${groupSize} ${en ? "guests" : "personas"}` : `${tier} ${en ? "guests" : "personas"}`}
+          </p>
+          <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:16,flexWrap:"wrap"}}>
+            {!groupSize && (
+              <div style={{display:"flex",gap:4,background:"rgba(255,255,255,.08)",borderRadius:6,padding:3}}>
+                {BREAKFAST_TIERS.map(t => (
+                  <button key={t} onClick={() => setTier(t)} style={{
+                    padding:"4px 12px",fontSize:11,borderRadius:4,border:"none",cursor:"pointer",transition:"all .15s",
+                    background: tier === t ? "#9a7d52" : "transparent",
+                    color: tier === t ? "#fff" : "rgba(255,255,255,.5)",
+                  }}>{t} pax</button>
+                ))}
+              </div>
+            )}
+            <button onClick={() => setCurrency(c => c === "COP" ? "USD" : "COP")} style={{
+              padding:"4px 14px",fontSize:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",
+              border:"1px solid rgba(255,255,255,.15)",borderRadius:6,cursor:"pointer",
+            }}>{currency} ⇄</button>
+            <button onClick={() => setLang(l => l === "en" ? "es" : "en")} style={{
+              padding:"4px 14px",fontSize:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",
+              border:"1px solid rgba(255,255,255,.15)",borderRadius:6,cursor:"pointer",
+            }}>{en ? "ES" : "EN"}</button>
+          </div>
         </div>
       </div>
 
