@@ -3998,12 +3998,12 @@ function HubSpotImport({ onImport }) {
 }
 
 function FlightRouteHint({ flightNumber, date }) {
-  const [route, setRoute] = React.useState(null);
+  const [info, setInfo] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const timerRef = React.useRef();
 
   React.useEffect(() => {
-    if (!flightNumber || flightNumber.length < 2) { setRoute(null); return; }
+    if (!flightNumber || flightNumber.length < 2) { setInfo(null); return; }
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setLoading(true);
@@ -4012,20 +4012,33 @@ function FlightRouteHint({ flightNumber, date }) {
       fetch(`/api/flight-status?${params}`)
         .then(r => r.json())
         .then(d => {
-          const f = d.data;
-          if (f) setRoute(`${f.depIata || f.depAirport || "?"} → ${f.arrIata || f.arrAirport || "?"} · ${f.airline || ""}`);
-          else setRoute(null);
+          setInfo(d.data || null);
           setLoading(false);
         })
-        .catch(() => { setRoute(null); setLoading(false); });
+        .catch(() => { setInfo(null); setLoading(false); });
     }, 900);
     return () => clearTimeout(timerRef.current);
   }, [flightNumber, date]);
 
   if (!flightNumber) return null;
   if (loading) return <span className="text-[9px] text-neutral-300 ml-1">buscando…</span>;
-  if (!route) return null;
-  return <span className="text-[9px] text-blue-400 ml-1">{route}</span>;
+  if (!info) return null;
+
+  const STATUS_LABEL = { scheduled:"En horario", active:"En vuelo ✈", landed:"Aterrizó ✅", cancelled:"Cancelado ❌", diverted:"Desviado ⚠️" };
+  const statusLabel = STATUS_LABEL[info.status] || info.status || "";
+  const statusColor = info.status === "landed" ? "text-green-500" : info.status === "cancelled" ? "text-red-500" : info.status === "active" ? "text-blue-400" : "text-neutral-400";
+  const delay = info.arrDelay || info.depDelay || 0;
+  const arrTime = info.arrActual || info.arrEstimated || info.arrScheduled || "";
+  const arrFmt = arrTime ? new Date(arrTime).toLocaleTimeString("es-CO", { hour:"2-digit", minute:"2-digit", timeZone:"America/Bogota" }) : "";
+
+  return (
+    <span className="text-[9px] ml-1 inline-flex items-center gap-1 flex-wrap">
+      <span className="text-blue-400">{info.depIata || "?"} → {info.arrIata || "?"} · {info.airline || ""}</span>
+      {statusLabel && <span className={`font-semibold ${statusColor}`}>{statusLabel}</span>}
+      {delay > 5 && <span className="text-amber-400">+{delay}min</span>}
+      {arrFmt && <span className="text-neutral-400">arr {arrFmt}</span>}
+    </span>
+  );
 }
 
 function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
@@ -5902,7 +5915,8 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
     clientType: 1,
   });
   const [selectedConcierges, setSelectedConcierges] = React.useState([]);
-  const [submitting, setSubmitting] = React.useState(false);
+  const [submitting,         setSubmitting]         = React.useState(false);
+  const [customCityInput,    setCustomCityInput]    = React.useState("");
 
   const toggleConcierge = (name) => {
     setSelectedConcierges(prev => {
@@ -5989,7 +6003,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
             <label className="block text-[11px] font-medium text-neutral-500 mb-1.5">
               Ciudad(es) <span className="text-red-400">*</span>
             </label>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1.5 items-center">
               {[
                 { code: "CTG",  label: "Cartagena" },
                 { code: "MDE",  label: "Medellín" },
@@ -6016,6 +6030,44 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
                   </button>
                 );
               })}
+              {/* Custom cities already in form.city that are NOT preset codes */}
+              {(form.city ? form.city.split(",").map(s=>s.trim()).filter(Boolean) : [])
+                .filter(c => !["CTG","MDE","CDMX","TUL"].includes(c))
+                .map(c => (
+                  <button key={c} type="button"
+                    onClick={() => {
+                      const next = form.city.split(",").map(s=>s.trim()).filter(x => x !== c);
+                      setForm(p => ({ ...p, city: next.join(",") }));
+                    }}
+                    className="px-3 py-1.5 rounded-full text-xs font-medium border bg-neutral-900 text-white border-neutral-900 flex items-center gap-1">
+                    {c} <span className="opacity-60">✕</span>
+                  </button>
+                ))
+              }
+              {/* Otra ciudad — inline input */}
+              <input
+                value={customCityInput}
+                onChange={e => setCustomCityInput(e.target.value.toUpperCase())}
+                onKeyDown={e => {
+                  if ((e.key === "Enter" || e.key === ",") && customCityInput.trim()) {
+                    e.preventDefault();
+                    const code = customCityInput.trim();
+                    const existing = form.city ? form.city.split(",").map(s=>s.trim()).filter(Boolean) : [];
+                    if (!existing.includes(code)) setForm(p => ({ ...p, city: [...existing, code].join(",") }));
+                    setCustomCityInput("");
+                  }
+                }}
+                onBlur={() => {
+                  if (customCityInput.trim()) {
+                    const code = customCityInput.trim();
+                    const existing = form.city ? form.city.split(",").map(s=>s.trim()).filter(Boolean) : [];
+                    if (!existing.includes(code)) setForm(p => ({ ...p, city: [...existing, code].join(",") }));
+                    setCustomCityInput("");
+                  }
+                }}
+                placeholder="Otra… (Enter)"
+                className="px-3 py-1.5 rounded-full text-xs border border-dashed border-neutral-300 bg-white text-neutral-500 w-28 focus:outline-none focus:border-neutral-500 placeholder:text-neutral-300"
+              />
             </div>
             {form.city && form.city.split(",").filter(Boolean).length >= 2 && (
               <p className="text-[10.5px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5 mt-1.5">
