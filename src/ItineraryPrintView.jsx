@@ -264,6 +264,7 @@ function matchCart(cartRaw, catalog) {
       descriptionEs: item.description_es || "",
       descriptionEn: item.description_en || "",
       image: driveImgUrl(item.image || ""),
+      images: (Array.isArray(item.images) ? item.images : []).map(driveImgUrl).filter(Boolean),
       category: item.category || "",
       location: item.location || "",
       city: item.city || "",
@@ -342,6 +343,16 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       menuUrl      : service.menuUrl    || "",
       mapsUrl      : service.mapsUrl    || "",
       image        : service.image      || "",
+      serviceImages: (() => {
+        const imgs = Array.isArray(service.images) ? service.images : (service.image ? [service.image] : []);
+        return imgs.filter(Boolean);
+      })(),
+      cartImages   : (() => {
+        const arr = Array.isArray(cartItem.images) ? cartItem.images : [];
+        const s = cartItem.image || "";
+        const all = [...arr]; if (s && !all.includes(s)) all.unshift(s);
+        return all.filter(Boolean);
+      })(),
       qbCode       : service.quickbooksCode || service.quickbooks_code || "",
       category     : service.category   || "",
       familyFriendly: !!(service.family_friendly),
@@ -1420,20 +1431,33 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
           }}
         >×</button>
       )}
-      {/* ── Left: image ── */}
-      {it.image ? (
-        <div className="ev-img-col">
-          <img
-            src={it.image}
-            alt={it.title}
-            onError={e => { e.target.parentNode.className = "ev-img-none"; e.target.remove(); }}
-          />
-        </div>
-      ) : (
-        <div className="ev-img-none">
-          <span className="ev-img-none-icon">✦</span>
-        </div>
-      )}
+      {/* ── Left: image grid (Travisify style) ── */}
+      {(() => {
+        // Merge catalog images + cart-level images
+        const catalogImages = Array.isArray(it.serviceImages) ? it.serviceImages : (it.image ? [it.image] : []);
+        const cartImages = Array.isArray(it.cartImages) ? it.cartImages : [];
+        const allImgs = [...new Set([...catalogImages, ...cartImages])].filter(Boolean);
+        if (!allImgs.length) return <div className="ev-img-none"><span className="ev-img-none-icon">✦</span></div>;
+        if (allImgs.length === 1) return (
+          <div className="ev-img-col">
+            <img src={allImgs[0]} alt={it.title} onError={e => { e.target.parentNode.className = "ev-img-none"; e.target.remove(); }}/>
+          </div>
+        );
+        // Multi-image grid: first big, rest in 2-col grid
+        const [first, ...rest] = allImgs;
+        return (
+          <div style={{width:"40%",flexShrink:0,display:"grid",gridTemplateColumns:"60% 40%",gap:2,overflow:"hidden",background:"#f0f0f0",minHeight:200}}>
+            <img src={first} alt="" style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center",display:"block"}}
+              onError={e=>e.target.style.display="none"}/>
+            <div style={{display:"grid",gridTemplateRows:`repeat(${Math.min(rest.length,4)},1fr)`,gap:2}}>
+              {rest.slice(0,4).map((img,i) => (
+                <img key={i} src={img} alt="" style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center",display:"block"}}
+                  onError={e=>e.target.style.display="none"}/>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Right: content ── */}
       <div className="ev-content">
