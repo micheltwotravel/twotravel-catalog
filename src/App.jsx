@@ -5545,6 +5545,223 @@ const ROLE_ACCESS = {
 
 const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos"]);
 
+// ─── ITINERARY CATALOG (client-facing viewer) ─────────────────────
+const GAS_URL_IC = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+
+function ItineraryCatalog() {
+  const params    = new URLSearchParams(window.location.search);
+  const kickoffId = params.get("kickoffId") || "";
+  const [lang, setLang]   = React.useState(params.get("lang") === "es" ? "es" : "en");
+  const [kickoff, setKickoff] = React.useState(null);
+  const [loading, setLoading] = React.useState(!!kickoffId);
+  const [currentDay, setCurrentDay] = React.useState(0);
+  const en = lang === "en";
+
+  React.useEffect(() => {
+    if (!kickoffId) { setLoading(false); return; }
+    fetch(GAS_URL_IC, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "getKickoffById", id: kickoffId }),
+    })
+      .then(r => r.json())
+      .then(res => { if (res.data) setKickoff(res.data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [kickoffId]);
+
+  // Build ordered days from cart + dayMeta
+  const buildDays = (k) => {
+    const parseArr = (v) => { try { return Array.isArray(v) ? v : JSON.parse(v || "[]"); } catch { return []; } };
+    const cart    = parseArr(k.cart);
+    const dayMeta = parseArr(k.dayMeta);
+    const metaLabels = dayMeta.map(dm => dm.label);
+    const orphans = [...new Set(cart.map(i => i.dayLabel || "").filter(l => l && !metaLabels.includes(l)))];
+    return [...metaLabels, ...orphans].map(label => {
+      const meta  = dayMeta.find(dm => dm.label === label) || { label, title: "", date: "" };
+      const items = cart
+        .filter(i => (i.dayLabel || "") === label)
+        .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
+      return { label, title: meta.title || "", date: meta.date || "", items };
+    });
+  };
+
+  if (loading) return (
+    <div style={{minHeight:"100vh",background:"#1a1814",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <p style={{color:"rgba(255,255,255,.4)",fontSize:13,fontFamily:"'Jost',sans-serif"}}>Cargando…</p>
+    </div>
+  );
+
+  if (!kickoffId || !kickoff) return (
+    <div style={{minHeight:"100vh",background:"#f7f4ef",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Jost',sans-serif"}}>
+      <p style={{color:"#9a7d52",fontSize:14}}>Itinerario no encontrado.</p>
+    </div>
+  );
+
+  const days = buildDays(kickoff);
+  const day  = days[currentDay];
+  const guestName = kickoff.guestName || "";
+  const coverPhotoId = kickoff.coverPhotoId || "";
+  const concierge = kickoff.concierge || kickoff.assignedConciergeName || "";
+
+  return (
+    <div style={{minHeight:"100vh",background:"#f7f4ef",fontFamily:"'Jost',sans-serif",color:"#1a1814"}}>
+
+      {/* ── Hero ── */}
+      <div style={{background:"#1a1814",position:"relative"}}>
+        {coverPhotoId && (
+          <div style={{position:"relative",height:220,overflow:"hidden"}}>
+            <img src={`https://lh3.googleusercontent.com/d/${coverPhotoId}`} alt=""
+              style={{width:"100%",height:"100%",objectFit:"cover",opacity:.5}}
+              onError={e=>e.target.style.display="none"}/>
+            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.75) 0%,transparent 55%)"}}/>
+          </div>
+        )}
+        <div style={{padding: coverPhotoId ? "0 20px 22px" : "28px 20px 22px",
+          position: coverPhotoId ? "absolute" : "static",
+          bottom: coverPhotoId ? 0 : "auto", left:0, right:0,
+          textAlign:"center"}}>
+          <img src="/logo.png" alt="Two Travel"
+            style={{height:18,filter:"brightness(0) invert(1)",opacity:.85,marginBottom:10,display:"block",margin:"0 auto 10px"}}/>
+          <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:500,color:"#f7f4ef",margin:"0 0 4px"}}>
+            {en ? "Your Itinerary" : "Tu Itinerario"}
+          </h1>
+          {guestName && (
+            <p style={{fontSize:12,color:"rgba(255,255,255,.55)",margin:0}}>{guestName}</p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Concierge strip ── */}
+      {concierge && (
+        <div style={{background:"#fff",borderBottom:"1px solid #e5ddd3",padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:30,height:30,borderRadius:"50%",background:"#e8e2d9",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#9a7d52",fontWeight:600,flexShrink:0}}>
+              {concierge.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}
+            </div>
+            <div>
+              <div style={{fontSize:10,color:"#9a9080",textTransform:"uppercase",letterSpacing:".06em"}}>{en?"Your Concierge":"Tu Concierge"}</div>
+              <div style={{fontSize:12,fontWeight:600,color:"#1a1814"}}>{concierge}</div>
+            </div>
+          </div>
+          <button onClick={()=>setLang(l=>l==="en"?"es":"en")}
+            style={{padding:"4px 12px",fontSize:11,background:"#f5f0e8",border:"1px solid #e5ddd3",borderRadius:20,cursor:"pointer",color:"#9a7d52",fontWeight:500}}>
+            {en?"ES":"EN"}
+          </button>
+        </div>
+      )}
+
+      {/* ── Day tabs ── */}
+      {days.length > 1 && (
+        <div style={{background:"#fff",borderBottom:"1px solid #e5ddd3",overflowX:"auto",flexShrink:0}}>
+          <div style={{display:"flex",gap:4,padding:"10px 16px",whiteSpace:"nowrap"}}>
+            {days.map((d,i) => (
+              <button key={i} onClick={()=>setCurrentDay(i)} style={{
+                padding:"5px 14px",borderRadius:20,border:"none",cursor:"pointer",fontSize:11,fontWeight:500,flexShrink:0,
+                background: currentDay===i ? "#1a1814" : "#f5f0e8",
+                color:      currentDay===i ? "#fff"    : "#7a7570",
+              }}>
+                {en?"Day":"Día"} {i+1}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Day content ── */}
+      {day ? (
+        <div style={{maxWidth:680,margin:"0 auto",padding:"20px 16px 80px"}}>
+          {/* Day header */}
+          <div style={{marginBottom:20}}>
+            <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:24,fontWeight:500,margin:"0 0 2px"}}>
+              {day.label}
+            </h2>
+            {day.title && <p style={{fontSize:13,color:"#9a7d52",margin:0}}>{day.title}</p>}
+            {day.date && (
+              <p style={{fontSize:11,color:"#b0a090",margin:"4px 0 0"}}>
+                {new Date(day.date+"T12:00:00").toLocaleDateString(en?"en-US":"es-CO",{weekday:"long",month:"long",day:"numeric"})}
+              </p>
+            )}
+          </div>
+
+          {day.items.length === 0 && (
+            <p style={{color:"#b0a090",fontSize:13,textAlign:"center",padding:"40px 0"}}>
+              {en?"No events planned for this day.":"No hay eventos para este día."}
+            </p>
+          )}
+
+          {/* Events */}
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {day.items.map((it, i) => {
+              const imgs = (() => {
+                const arr = Array.isArray(it.images) ? it.images : [];
+                const s   = it.image || "";
+                const all = [...arr]; if (s && !all.includes(s)) all.unshift(s);
+                return all.filter(Boolean);
+              })();
+              return (
+                <div key={i} style={{background:"#fff",borderRadius:14,border:"1px solid #e5ddd3",overflow:"hidden",display:"flex"}}>
+                  {/* Photo */}
+                  {imgs.length > 0 && (
+                    <div style={{width:"38%",flexShrink:0,overflow:"hidden",position:"relative",minHeight:120}}>
+                      <img src={imgs[0]} alt="" style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0}}
+                        onError={e=>e.target.parentElement.style.display="none"}/>
+                      {imgs.length > 1 && (
+                        <div style={{position:"absolute",bottom:6,right:6,background:"rgba(0,0,0,.55)",color:"#fff",fontSize:9,borderRadius:10,padding:"2px 6px"}}>
+                          +{imgs.length-1}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* Content */}
+                  <div style={{flex:1,padding:"14px 16px",display:"flex",flexDirection:"column",gap:4,minWidth:0}}>
+                    {it.time && (
+                      <span style={{fontSize:10,color:"#9a7d52",fontWeight:600,letterSpacing:".05em"}}>
+                        {it.time}
+                      </span>
+                    )}
+                    <p style={{fontSize:14,fontWeight:600,color:"#1a1814",margin:0,lineHeight:1.35}}>
+                      {it.title || (en?"Untitled event":"Evento")}
+                    </p>
+                    {it.notes && (
+                      <p style={{fontSize:12,color:"#7a7570",margin:0,lineHeight:1.55}}>
+                        {it.notes}
+                      </p>
+                    )}
+                    {it.location && (
+                      <p style={{fontSize:11,color:"#9a9080",margin:0}}>📍 {it.location}</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Day nav */}
+          {days.length > 1 && (
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:24,gap:8}}>
+              {currentDay > 0 ? (
+                <button onClick={()=>setCurrentDay(d=>d-1)} style={{flex:1,padding:"10px",background:"#fff",border:"1px solid #e5ddd3",borderRadius:12,fontSize:12,cursor:"pointer",color:"#7a7570"}}>
+                  ← {days[currentDay-1].label}
+                </button>
+              ) : <div/>}
+              {currentDay < days.length-1 && (
+                <button onClick={()=>setCurrentDay(d=>d+1)} style={{flex:1,padding:"10px",background:"#1a1814",border:"none",borderRadius:12,fontSize:12,cursor:"pointer",color:"#fff",fontWeight:500}}>
+                  {days[currentDay+1].label} →
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{textAlign:"center",padding:"60px 20px",color:"#b0a090",fontSize:14}}>
+          {en?"No itinerary days found.":"No hay días en el itinerario."}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── AUTH ─────────────────────────────────────────────────────────
 function useAuth() {
   const [user, setUser] = useState(() => {
@@ -5960,6 +6177,7 @@ function App() {
   if (mode === "breakfast") return <BreakfastCatalog />;
   if (mode === "checkin")   return <CheckinForm />;
   if (mode === "itinerary") return <ItineraryPrintView />;
+  if (mode === "trip")      return <ItineraryCatalog />;
   if (mode === "book") {
     const params = new URLSearchParams(window.location.search);
     return <BookingPage

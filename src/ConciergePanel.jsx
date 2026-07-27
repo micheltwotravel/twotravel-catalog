@@ -6867,6 +6867,57 @@ export function ReunionesPage({ currentUser, initialKickoffId }) {
                 </div>
               </div>
 
+              {/* Trip Summary — day-by-day itinerary at a glance */}
+              {(() => {
+                const cart    = Array.isArray(selectedKickoff.cart)    ? selectedKickoff.cart    : [];
+                const dayMeta = Array.isArray(selectedKickoff.dayMeta) ? selectedKickoff.dayMeta : [];
+                if (!cart.length && !dayMeta.length) return null;
+                const metaLabels = dayMeta.map(dm => dm.label);
+                const orphans = [...new Set(cart.map(i => i.dayLabel || "").filter(l => l && !metaLabels.includes(l)))];
+                const allLabels = [...metaLabels, ...orphans];
+                const days = allLabels.map(label => {
+                  const meta = dayMeta.find(dm => dm.label === label) || { label, title: "" };
+                  const items = cart
+                    .filter(i => (i.dayLabel || "") === label)
+                    .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
+                  return { label, title: meta.title || "", date: meta.date || "", items };
+                }).filter(d => d.items.length > 0 || dayMeta.find(dm => dm.label === d.label));
+                if (!days.length) return null;
+                return (
+                  <div style={{ padding:"10px 20px 12px", borderBottom:"1px solid #eee8df", background:"#fdfaf5", flexShrink:0 }}>
+                    <div style={{ fontSize:9, color:"#9a7d52", fontWeight:600, letterSpacing:".07em", textTransform:"uppercase", marginBottom:8 }}>
+                      Itinerario · {days.length} día{days.length !== 1 ? "s" : ""}
+                    </div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                      {days.map((day, di) => (
+                        <div key={day.label} style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
+                          <div style={{ flexShrink:0, width:28, height:28, borderRadius:"50%", background:"#1a1814", display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, color:"#f5f0e8", fontWeight:700, marginTop:1 }}>
+                            {di + 1}
+                          </div>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ display:"flex", gap:6, alignItems:"baseline", flexWrap:"wrap" }}>
+                              <span style={{ fontSize:11, fontWeight:600, color:"#1a1814" }}>{day.label}</span>
+                              {day.title && <span style={{ fontSize:10, color:"#9a7d52" }}>{day.title}</span>}
+                            </div>
+                            {day.items.length > 0 && (
+                              <div style={{ display:"flex", flexWrap:"wrap", gap:"2px 10px", marginTop:2 }}>
+                                {day.items.slice(0, 4).map((it, i) => (
+                                  <span key={i} style={{ fontSize:10, color:"#7a7570" }}>
+                                    {it.time ? <span style={{ color:"#b0a090" }}>{it.time} </span> : null}
+                                    {it.title}
+                                  </span>
+                                ))}
+                                {day.items.length > 4 && <span style={{ fontSize:10, color:"#b0a090" }}>+{day.items.length - 4}…</span>}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* timeline */}
               <div style={{ flex:1, overflowY:"auto", padding:"16px 20px" }}>
                 {/* inline add form */}
