@@ -1480,6 +1480,16 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
           </div>
         )}
 
+        {/* Informative badge for logistical items */}
+        {isConfirmed && (() => {
+          const n = (it.title || "").toLowerCase();
+          const cat = (it.category || "").toLowerCase();
+          if (/check.?in/.test(n) || /check.?in/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Llegada":"Arrival info"}</div>;
+          if (/check.?out/.test(n) || /check.?out/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Salida":"Departure info"}</div>;
+          if (/breakfast|desayuno/.test(n)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>☕ {isEs?"Desayuno en la villa":"Breakfast at the villa"}</div>;
+          return null;
+        })()}
+
         {/* Title + price */}
         <div className="ev-title-row">
           <Editable value={it.title} tag="div" className="ev-title" editMode={editMode} onChange={v => patchItem?.("title", v)} />

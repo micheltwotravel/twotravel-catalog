@@ -1145,6 +1145,8 @@ function mapServiceToCartItem(service, clientType = 1, groupSizeNum = 1) {
   priceOverride_cop: null,
   quickbooksCode: service?.quickbooksCode || "",
   priceUsd: service?.priceUsd ?? null,
+  image: service?.image || "",
+  images: Array.isArray(service?.images) ? service.images : (service?.image ? [service.image] : []),
   dayLabel: "",
   timeLabel: "",
   notes: "",
@@ -1668,7 +1670,7 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
   onUpdateMeta, onRenameLabel, onRemoveDay,
   onUpdateItem, onRemoveItem, onResyncItem, onAddManual, onAddPreset, onAddFromCatalog,
   onAddBlock, onReorderItems, dragHandleProps,
-  groupSize = 1, lang = "en" }) {
+  groupSize = 1, lang = "en", onToggleBreakfast }) {
 
   const [editingLabel, setEditingLabel] = useState(false);
   const [localLabel,   setLocalLabel]   = useState(label);
@@ -1729,6 +1731,16 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
           placeholder="Descripción del día: ARRIVALS + CHECK IN + DINNER AT LA VITROLA…"
           className="mt-1.5 w-full bg-transparent text-[11px] text-neutral-400 placeholder-neutral-700 focus:outline-none focus:text-white transition-colors"
         />
+        {/* Breakfast toggle */}
+        {onToggleBreakfast && (() => {
+          const hasBf = items.some(i => /breakfast/i.test(i.name_en) || /desayuno/i.test(i.name) || /desayuno/i.test(i.name_en));
+          return (
+            <button type="button" onClick={onToggleBreakfast}
+              className={`mt-1.5 text-[10px] px-2 py-0.5 rounded border transition-colors ${hasBf ? "text-amber-400 border-amber-700 hover:bg-amber-900/30" : "text-neutral-600 border-neutral-700 hover:text-amber-300 hover:border-amber-700"}`}>
+              {hasBf ? "☕ Sin desayuno este día" : "☕ Agregar desayuno"}
+            </button>
+          );
+        })()}
       </div>
 
       {/* ── Activities list ── */}
@@ -1878,7 +1890,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
       const lang = kickoff?.lang || "en";
       const loc = lang === "es" ? "es-CO" : "en-US";
       const totalDays = Math.max(
-        Math.round((new Date(depDate + "T12:00:00") - new Date(arrDate + "T12:00:00")) / 86400000),
+        Math.round((new Date(depDate + "T12:00:00") - new Date(arrDate + "T12:00:00")) / 86400000) + 1,
         1
       );
       const autoMeta = Array.from({ length: totalDays }, (_, idx) => {
@@ -1991,7 +2003,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
       const diff = Math.round(
         (new Date(depDate + "T12:00:00") - new Date(arrDate + "T12:00:00")) / 86400000
       );
-      return Math.max(diff, 1);
+      return Math.max(diff + 1, 1);
     })();
 
     // Build date labels for each day slot
@@ -2058,8 +2070,8 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
                 description_es: `El check-out es a las ${checkoutTime}.`, description_en: `Check-out is at ${checkoutTime}.`,
                 ...(accom ? { location: accom } : {}), dayLabel: lastLabel, sortOrder: 0 });
             }
-            // Breakfasts: day 2 through second-to-last (they don't breakfast on arrival day or checkout day)
-            const bfDays = currentMeta.slice(1, currentMeta.length - 1);
+            // Breakfasts: day 2 through last day (not on arrival day)
+            const bfDays = currentMeta.slice(1);
             bfDays.forEach((dm, idx) => {
               const alreadyHasBf = prev.some(i => i.dayLabel === dm.label && (/breakfast/i.test(i.name_en) || /desayuno/i.test(i.name)));
               const addedBf = toAdd.some(i => i.dayLabel === dm.label && (/breakfast/i.test(i.name_en) || /desayuno/i.test(i.name)));
@@ -2161,12 +2173,21 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
           description_en: s?.description    || "A mix of local and international breakfast dishes will be served in your dining room. Cook service is included with the villa rental.",
         };
       })(),
-      boatday: {
-        name: "Día de Bote", name_en: "Boat Day", category: "actividades",
-        timeLabel: "8:30 AM",
-        description_es: "¡Día de bote! Salida desde el muelle a las 8:30 AM. Recuerden traer protector solar, traje de baño y cámara. Su concierge estará presente para coordinar todo el día.",
-        description_en: "Boat day! Departure from the dock at 8:30 AM. Please bring sunscreen, swimwear and a camera. Your concierge will be there to coordinate the full day.",
-      },
+      boatday: (() => {
+        const s = itineraryItems.find(i =>
+          /boat.*day/i.test(i.name_en) || /día.*bote/i.test(i.name_es) ||
+          /bote\b/i.test(i.name_es) || /boating/i.test(i.category)
+        );
+        return {
+          name:    s?.name_es || "Día de Bote",
+          name_en: s?.name_en || "Boat Day",
+          category: "actividades",
+          timeLabel: "8:30 AM",
+          ...(s?.image ? { image: s.image } : {}),
+          description_es: s?.description_es || "¡Día de bote! Salida desde el muelle a las 8:30 AM. Recuerden traer protector solar, traje de baño y cámara. Su concierge estará presente para coordinar todo el día.",
+          description_en: s?.description || s?.description_en || "Boat day! Departure from the dock at 8:30 AM. Please bring sunscreen, swimwear and a camera. Your concierge will be there to coordinate the full day.",
+        };
+      })(),
       pickup: (() => {
         const guestName = kickoff?.guestName || "";
         const accom = kickoff?.accommodationName || "the accommodation";
@@ -2388,6 +2409,14 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
                 onAddPreset={(preset) => addPresetToDay(label, preset)}
                 onAddBlock={() => addBlockToDay(label)}
                 onAddFromCatalog={() => setCatalogTargetDay(label)}
+                onToggleBreakfast={() => {
+                  const hasBf = items.some(i => /breakfast/i.test(i.name_en) || /desayuno/i.test(i.name) || /desayuno/i.test(i.name_en));
+                  if (hasBf) {
+                    setCart(prev => prev.filter(i => !(i.dayLabel === label && (/breakfast/i.test(i.name_en) || /desayuno/i.test(i.name) || /desayuno/i.test(i.name_en)))));
+                  } else {
+                    addPresetToDay(label, "breakfast");
+                  }
+                }}
               />
             ))}
           </div>

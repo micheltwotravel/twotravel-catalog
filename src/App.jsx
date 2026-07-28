@@ -1225,10 +1225,20 @@ function orderStatus(k) {
     if (!k.breakfastOrderJson && !k.breakfastOrder) return null;
     try {
       const b = JSON.parse(k.breakfastOrderJson || "{}");
-      const days = b.dayOrders || {};
-      const items = Object.values(days).flatMap(d => Object.entries(d).filter(([,v])=>v).map(([name])=>name));
-      const uniq = [...new Set(items)].slice(0,3);
-      return uniq.length ? uniq.join(", ") : "✅ Pedido";
+      const dayOrders = Array.isArray(b.dayOrders) ? b.dayOrders : [];
+      if (!dayOrders.length) return "✅ Pedido";
+      const MENU_LABELS = { traditional: "Menú Típico", american: "Menú Americano", healthy: "Saludable" };
+      const selected = new Set();
+      dayOrders.forEach(order => {
+        ["traditional","american","healthy"].forEach(id => {
+          const cat = order[id];
+          if (!cat) return;
+          if (cat.full) selected.add(MENU_LABELS[id]);
+          else Object.entries(cat.checked || {}).filter(([,v])=>v).forEach(([name])=>selected.add(name));
+        });
+      });
+      const arr = [...selected].slice(0,3);
+      return arr.length ? arr.join(", ") : "✅ Pedido";
     } catch { return k.breakfastOrder ? k.breakfastOrder.slice(0,60) : "✅"; }
   })();
   const breakfastAt = k.breakfastOrderAt || null;
@@ -1331,7 +1341,8 @@ function ClientesTable({ kickoffs, loading }) {
     if (period !== "all" && r._rowArrival) {
       const arr = new Date(r._rowArrival + "T12:00:00");
       if (period === "week") {
-        const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0,0,0,0);
+        const day = now.getDay() || 7; // Sunday=7, Monday=1 … Saturday=6 → week starts Monday
+        const weekStart = new Date(now); weekStart.setDate(now.getDate() - day + 1); weekStart.setHours(0,0,0,0);
         const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6); weekEnd.setHours(23,59,59,999);
         if (arr < weekStart || arr > weekEnd) return false;
       }
@@ -1421,7 +1432,8 @@ function ClientesTable({ kickoffs, loading }) {
                 <th style={thStyle}>Pax</th>
                 <th style={thStyle}>Concierge</th>
                 <th style={thStyle}>Junior</th>
-                <th style={thStyle}>🛂 Info</th>
+                <th style={thStyle}>🛂 Pasaporte</th>
+                <th style={thStyle}>🥗 Dieta</th>
                 <th style={thStyle}>Itinerario</th>
                 <th style={thStyle}>Reuniones</th>
                 <th style={thStyle}>Último pedido</th>
@@ -1436,7 +1448,7 @@ function ClientesTable({ kickoffs, loading }) {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={17} style={{ ...tdStyle, textAlign:"center", color:"#9ca3af", padding:32 }}>Sin clientes para este filtro.</td></tr>
+                <tr><td colSpan={18} style={{ ...tdStyle, textAlign:"center", color:"#9ca3af", padding:32 }}>Sin clientes para este filtro.</td></tr>
               )}
               {filtered.map((r, i) => {
                 const { drinkSummary, grocerySummary, breakfastSummary, breakfastAt } = orderStatus(r);
@@ -1491,10 +1503,15 @@ function ClientesTable({ kickoffs, loading }) {
                         </>;
                       })()}
                     </td>
-                    <td style={{ ...tdStyle, textAlign:"center" }}>
-                      {(r.passportInfo || r.dietInfo) ? (
-                        <PassportPopup passportInfo={r.passportInfo} dietInfo={r.dietInfo} guestName={r.guestName} />
-                      ) : <span style={{ color:"#d1d5db", fontSize:12 }}>—</span>}
+                    <td style={{ ...tdStyle, maxWidth:160, verticalAlign:"top" }}>
+                      {r.passportInfo
+                        ? <div style={{ fontSize:10, color:"#374151", whiteSpace:"pre-wrap", lineHeight:1.5, maxHeight:56, overflow:"hidden", cursor:"default" }} title={r.passportInfo}>{r.passportInfo.slice(0,120)}{r.passportInfo.length > 120 ? "…" : ""}</div>
+                        : <span style={{ color:"#d1d5db" }}>—</span>}
+                    </td>
+                    <td style={{ ...tdStyle, maxWidth:160, verticalAlign:"top" }}>
+                      {r.dietInfo
+                        ? <div style={{ fontSize:10, color:"#374151", whiteSpace:"pre-wrap", lineHeight:1.5, maxHeight:56, overflow:"hidden", cursor:"default" }} title={r.dietInfo}>{r.dietInfo.slice(0,120)}{r.dietInfo.length > 120 ? "…" : ""}</div>
+                        : <span style={{ color:"#d1d5db" }}>—</span>}
                     </td>
                     <td style={tdStyle}>
                       <a href={itinLink} target="_blank" rel="noreferrer"

@@ -457,24 +457,14 @@ export async function fetchItineraryItems() {
 }
 
 export async function uploadImageToDrive(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const base64 = e.target.result.split(",")[1];
-        const res = await fetch(KICKOFF_API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "uploadImage", filename: file.name, mimeType: file.type, base64 }),
-        });
-        const json = await res.json();
-        if (json.ok) resolve(json.url);
-        else reject(new Error(json.error || "Upload failed"));
-      } catch (err) { reject(err); }
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+  const res = await fetch("/api/upload-image", {
+    method: "POST",
+    headers: { "Content-Type": file.type },
+    body: file,
   });
+  const json = await res.json();
+  if (json.ok) return json.url;
+  throw new Error(json.error || "Upload failed");
 }
 
 /**
