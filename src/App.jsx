@@ -5553,7 +5553,7 @@ const ROLE_META = {
 
 // Modes each role can access
 const ROLE_ACCESS = {
-  admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas"],
+  admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates"],
   concierge: ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones"],
   junior:    ["concierge"],   // concierge panel but restricted to Operaciones drawer
   finance:   ["pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates"],
