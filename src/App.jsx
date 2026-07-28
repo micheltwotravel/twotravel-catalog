@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, Component } from "react";
+import { FinanceCashFlow, FinanceMovimientos, FinanceCierre, FinanceTemplates, FinanceReservaciones } from "./FinancePanel";
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -5555,12 +5556,12 @@ const ROLE_ACCESS = {
   admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas"],
   concierge: ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones"],
   junior:    ["concierge"],   // concierge panel but restricted to Operaciones drawer
-  finance:   ["pagos"],       // billing-only landing with links to pagos + comisiones
+  finance:   ["pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates"],
   marketing: ["dashboard"],
   bodas:     ["bodas","tareas-bodas","dashboard"],
 };
 
-const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos"]);
+const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates"]);
 
 // ─── ITINERARY CATALOG (client-facing viewer) ─────────────────────
 const GAS_URL_IC = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
@@ -5993,35 +5994,83 @@ function ChangePinScreen({ user, onDone }) {
 
 // ─── FINANCE LANDING ──────────────────────────────────────────────
 function FinanceLanding({ user, onLogout }) {
-  return (
-    <div style={{ minHeight:"100vh", background:"#f7f4ef", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:32 }}>
-      <div style={{ maxWidth:480, width:"100%" }}>
-        <div style={{ marginBottom:8, fontSize:10, letterSpacing:".15em", textTransform:"uppercase", color:"#9a7d52" }}>Two Travel · Finanzas</div>
-        <h1 style={{ fontFamily:"Georgia,serif", fontSize:28, fontWeight:500, color:"#1a1814", marginBottom:4 }}>Bienvenida, {user?.name?.split(" ")[0] || "Génesis"}</h1>
-        <p style={{ fontSize:13, color:"#7a7570", marginBottom:36 }}>Acceso al área de pagos y comisiones.</p>
+  const sections = [
+    {
+      group: "Pagos & Cobros",
+      items: [
+        { icon:"💳", label:"Pagos Colombia", desc:"Facturas, comprobantes y solicitudes CO", href:"/pagos.html", live:true },
+        { icon:"🇲🇽", label:"Pagos México",   desc:"Solicitudes y seguimiento de pagos MX", href:"/pagos.html?country=mx", live:true },
+        { icon:"🤝", label:"Comisiones proveedores", desc:"Cobros pendientes, vencidos y pagados", href:"/comisiones.html", live:true },
+      ],
+    },
+    {
+      group: "Control Financiero",
+      items: [
+        { icon:"📊", label:"Cash Flow",            desc:"Tablero semanal y mensual de flujo de caja", href:"/?mode=f-cashflow",    live:true },
+        { icon:"🏦", label:"Movimientos Bancarios", desc:"Entradas y salidas Colombia · México",       href:"/?mode=f-movimientos", live:true },
+        { icon:"🔍", label:"Conciliaciones",        desc:"Control de conciliaciones bancarias",        href:null,                   live:false },
+      ],
+    },
+    {
+      group: "Operaciones",
+      items: [
+        { icon:"📈", label:"Reservaciones & Ventas", desc:"Ingresos esperados y comisiones de ventas", href:"/?mode=f-reservaciones", live:true },
+        { icon:"✅", label:"Cierre Mensual",          desc:"Checklist de cierre por mes",               href:"/?mode=f-cierre",        live:true },
+        { icon:"📅", label:"Calendario de Trabajo",   desc:"Agenda financiera del equipo",              href:null,                     live:false },
+        { icon:"📥", label:"Templates",               desc:"Payana · QuickBooks Bills · Estimates",     href:"/?mode=f-templates",     live:true },
+      ],
+    },
+  ];
 
-        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-          <a href="/pagos.html" style={{ display:"flex", alignItems:"center", gap:16, padding:"20px 24px", background:"#fff", border:"1px solid rgba(26,24,20,.09)", borderRadius:8, textDecoration:"none", color:"#1a1814", transition:"box-shadow .15s" }}
-            onMouseEnter={e => e.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,.08)"}
-            onMouseLeave={e => e.currentTarget.style.boxShadow="none"}>
-            <span style={{ fontSize:24 }}>💳</span>
-            <div>
-              <div style={{ fontWeight:600, fontSize:14, marginBottom:2 }}>Pagos de clientes</div>
-              <div style={{ fontSize:12, color:"#7a7570" }}>Facturas, comprobantes y pre-bills por cliente</div>
+  const card = (item) => {
+    const base = {
+      display:"flex", alignItems:"flex-start", gap:14,
+      padding:"14px 16px", borderRadius:10, textDecoration:"none", color:"#1a1814",
+    };
+    if (!item.live) {
+      return (
+        <div key={item.label} style={{ ...base, background:"#f0ece4", border:"1px solid rgba(26,24,20,.06)", opacity:.6 }}>
+          <span style={{ fontSize:20, flexShrink:0 }}>{item.icon}</span>
+          <div>
+            <div style={{ fontWeight:600, fontSize:13, marginBottom:2 }}>{item.label}</div>
+            <div style={{ fontSize:11, color:"#7a7570", marginBottom:6, lineHeight:1.4 }}>{item.desc}</div>
+            <span style={{ fontSize:9, background:"#d1c4b0", color:"#6b5d45", padding:"2px 7px", borderRadius:8, letterSpacing:".05em" }}>PRÓXIMAMENTE</span>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <a key={item.label} href={item.href} style={{ ...base, background:"#fff", border:"1px solid rgba(26,24,20,.09)", transition:"box-shadow .15s" }}
+        onMouseEnter={e => e.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,.08)"}
+        onMouseLeave={e => e.currentTarget.style.boxShadow="none"}>
+        <span style={{ fontSize:20, flexShrink:0 }}>{item.icon}</span>
+        <div>
+          <div style={{ fontWeight:600, fontSize:13, marginBottom:2 }}>{item.label}</div>
+          <div style={{ fontSize:11, color:"#7a7570", lineHeight:1.4 }}>{item.desc}</div>
+        </div>
+      </a>
+    );
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#f7f4ef", padding:"40px 24px" }}>
+      <div style={{ maxWidth:680, margin:"0 auto" }}>
+        <div style={{ fontSize:10, letterSpacing:".15em", textTransform:"uppercase", color:"#9a7d52", marginBottom:6 }}>Two Travel · Finanzas</div>
+        <h1 style={{ fontFamily:"Georgia,serif", fontSize:26, fontWeight:500, color:"#1a1814", marginBottom:4 }}>Bienvenida, {user?.name?.split(" ")[0] || "Claudia"}</h1>
+        <p style={{ fontSize:13, color:"#7a7570", marginBottom:36 }}>Panel de control financiero y operaciones.</p>
+
+        <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
+          {sections.map(s => (
+            <div key={s.group}>
+              <div style={{ fontSize:10, fontWeight:700, color:"#9a7d52", letterSpacing:".12em", textTransform:"uppercase", marginBottom:10 }}>{s.group}</div>
+              <div style={{ display:"grid", gridTemplateColumns: s.items.length >= 3 ? "repeat(3,1fr)" : `repeat(${s.items.length},1fr)`, gap:10 }}>
+                {s.items.map(card)}
+              </div>
             </div>
-          </a>
-          <a href="/comisiones.html" style={{ display:"flex", alignItems:"center", gap:16, padding:"20px 24px", background:"#fff", border:"1px solid rgba(26,24,20,.09)", borderRadius:8, textDecoration:"none", color:"#1a1814", transition:"box-shadow .15s" }}
-            onMouseEnter={e => e.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,.08)"}
-            onMouseLeave={e => e.currentTarget.style.boxShadow="none"}>
-            <span style={{ fontSize:24 }}>🤝</span>
-            <div>
-              <div style={{ fontWeight:600, fontSize:14, marginBottom:2 }}>Comisiones a proveedores</div>
-              <div style={{ fontSize:12, color:"#7a7570" }}>Cobros pendientes, vencidos y pagados por proveedor</div>
-            </div>
-          </a>
+          ))}
         </div>
 
-        <button onClick={onLogout} style={{ marginTop:32, fontSize:11, color:"#aaa9a5", background:"none", border:"none", cursor:"pointer", letterSpacing:".04em" }}>
+        <button onClick={onLogout} style={{ marginTop:40, fontSize:11, color:"#aaa9a5", background:"none", border:"none", cursor:"pointer", letterSpacing:".04em" }}>
           Cerrar sesión
         </button>
       </div>
@@ -6227,7 +6276,12 @@ function App() {
       if (!isSuperAdmin(user)) return <div style={{padding:40,textAlign:"center",color:"#6b7280"}}>Sin acceso.</div>;
       return <UserManagement currentUser={user} onBack={() => window.history.back()} />;
     }
-    if (mode === "pagos") return <FinanceLanding user={user} onLogout={logout} />;
+    if (mode === "pagos")           return <FinanceLanding user={user} onLogout={logout} />;
+    if (mode === "f-cashflow")      return <ErrorBoundary><FinanceCashFlow /></ErrorBoundary>;
+    if (mode === "f-movimientos")   return <ErrorBoundary><FinanceMovimientos /></ErrorBoundary>;
+    if (mode === "f-reservaciones") return <ErrorBoundary><FinanceReservaciones /></ErrorBoundary>;
+    if (mode === "f-cierre")        return <ErrorBoundary><FinanceCierre /></ErrorBoundary>;
+    if (mode === "f-templates")     return <ErrorBoundary><FinanceTemplates /></ErrorBoundary>;
     if (mode === "concierge") return <ErrorBoundary><ConciergePanel onLogout={logout} currentUser={user} /></ErrorBoundary>;
     if (mode === "bodas")        return <ErrorBoundary><BodaPanel currentUser={user} onLogout={logout} /></ErrorBoundary>;
     if (mode === "tareas-bodas") return <ErrorBoundary><TareasPanel currentUser={user} onLogout={logout} /></ErrorBoundary>;
