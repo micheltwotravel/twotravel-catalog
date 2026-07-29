@@ -1,5 +1,17 @@
 // Creates a Google Calendar event + saves meeting to Sheets kickoff
 
+const DEFAULT_SCHEDULE = {
+  mon: { active: true,  start: "09:00", end: "18:00" },
+  tue: { active: true,  start: "09:00", end: "18:00" },
+  wed: { active: true,  start: "09:00", end: "18:00" },
+  thu: { active: true,  start: "09:00", end: "18:00" },
+  fri: { active: true,  start: "09:00", end: "18:00" },
+  sat: { active: false, start: "09:00", end: "14:00" },
+  sun: { active: false, start: "09:00", end: "13:00" },
+};
+const DAY_KEYS = ["sun","mon","tue","wed","thu","fri","sat"];
+function toMin(t) { const [h,m] = (t||"00:00").split(":").map(Number); return h*60+(m||0); }
+
 async function getAccessToken(refreshToken) {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -15,10 +27,26 @@ async function getAccessToken(refreshToken) {
   return data.access_token;
 }
 
+async function getCalendarBusy(accessToken, date) {
+  const res = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      timeMin: `${date}T00:00:00-05:00`, timeMax: `${date}T23:59:59-05:00`,
+      timeZone: "America/Bogota", items: [{ id: "primary" }],
+    }),
+  });
+  const data = await res.json();
+  return (data?.calendars?.primary?.busy || []).map(p => {
+    const toColMin = iso => { const d = new Date(iso); const h = (d.getUTCHours()-5+24)%24; return h*60+d.getUTCMinutes(); };
+    return { s: toColMin(p.start), e: toColMin(p.end) };
+  });
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { concierge, date, startTime, endTime, clientName, clientEmail, clientPhone, kickoffId, meetingType, lang } = req.body;
+  const { concierge, date, startTime, endTime, clientName, clientEmail, clientPhone, kickoffId, meetingType, lang, duration: durParam } = req.body;
   if (!concierge || !date || !startTime || !clientName || !clientEmail) {
     return res.status(400).json({ error: "Missing required fields" });
   }
@@ -26,16 +54,72 @@ export default async function handler(req, res) {
   const GAS = process.env.VITE_TASK_API_URL || process.env.GAS_URL
     || "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
-  // Get refresh token
-  const tokenRes = await fetch(GAS, {
-    method: "POST",
-    body: JSON.stringify({ action: "getCalendarToken", payload: { concierge } }),
-  });
-  const tokenData = await tokenRes.json();
-  const refreshToken = tokenData?.refreshToken;
-  if (!refreshToken) return res.status(404).json({ error: "Calendar not connected" });
+  const SLUG_TO_EMAIL = {
+    caro:"caro@two.travel", alia:"alia@two.travel", daniela:"daniela@two.travel",
+    nataly:"nataly@two.travel", giulia:"giulia@two.travel", natalia:"natalia@two.travel", michel:"michel@two.travel",
+  };
+  const email = SLUG_TO_EMAIL[concierge] || (concierge.includes("@") ? concierge : `${concierge}@two.travel`);
+  const slotMinutes = parseInt(durParam) === 45 ? 45 : 30;
 
-  const accessToken = await getAccessToken(refreshToken);
+  // ── Server-side availability re-validation ────────────────────────────────
+  // Fetch schedule + blocks + bookings from GAS and calendar token in parallel
+  let schedule = DEFAULT_SCHEDULE, blocked = [], bookings = [], calRefreshToken = null;
+  try {
+    const [availRes, tokenRes] = await Promise.all([
+      fetch(`${GAS}?action=getAvailability&email=${encodeURIComponent(email)}`),
+      fetch(GAS, { method:"POST", body: JSON.stringify({ action:"getCalendarToken", payload:{ concierge } }) }),
+    ]);
+    const [availData, tokenData] = await Promise.all([availRes.json(), tokenRes.json()]);
+    if (availData.ok) {
+      schedule = { ...DEFAULT_SCHEDULE, ...(availData.schedule || {}) };
+      blocked  = availData.blocked  || [];
+      bookings = availData.bookings || [];
+    }
+    calRefreshToken = tokenData?.refreshToken || null;
+  } catch(e) { console.error("GAS fetch:", e.message); }
+
+  // Check day-of-week is active
+  const dayKey = DAY_KEYS[new Date(date + "T12:00:00").getDay()];
+  const daySch = schedule[dayKey] || { active: false };
+  if (!daySch.active) {
+    return res.status(409).json({ error: "Este día no está disponible. Por favor elige otra fecha." });
+  }
+
+  // Build busy intervals
+  const slotStart = toMin(startTime);
+  const slotEnd   = slotStart + slotMinutes;
+  const busy = [];
+  blocked.filter(b => b.date === date).forEach(b => busy.push({ s: toMin(b.start), e: toMin(b.end) }));
+  bookings.filter(b => b.date === date).forEach(b => {
+    const s = toMin(b.time);
+    busy.push({ s: s - 30, e: s + (b.duration || slotMinutes) + 30 });
+  });
+
+  // Overlay Google Calendar freebusy
+  if (calRefreshToken && process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    try {
+      const at = await getAccessToken(calRefreshToken);
+      if (at) (await getCalendarBusy(at, date)).forEach(b => busy.push(b));
+    } catch(e) { console.error("Calendar busy:", e.message); }
+  }
+
+  // Reject if slot overlaps any busy interval
+  const isBlocked = busy.some(b => slotStart < b.e && slotEnd > b.s);
+  if (isBlocked) {
+    return res.status(409).json({ error: "Esta hora ya no está disponible. Por favor elige otro horario." });
+  }
+
+  // Reject if slot is outside schedule window
+  const windows = daySch.windows?.length ? daySch.windows : [{ start: daySch.start||"09:00", end: daySch.end||"18:00" }];
+  const withinWindow = windows.some(w => slotStart >= toMin(w.start) && slotEnd <= toMin(w.end));
+  if (!withinWindow) {
+    return res.status(409).json({ error: "Esta hora está fuera del horario disponible." });
+  }
+  // ── End re-validation ─────────────────────────────────────────────────────
+
+  if (!calRefreshToken) return res.status(404).json({ error: "Calendar not connected" });
+
+  const accessToken = await getAccessToken(calRefreshToken);
 
   const startISO = `${date}T${startTime}:00-05:00`;
   const endISO   = `${date}T${endTime}:00-05:00`;
