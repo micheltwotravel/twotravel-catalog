@@ -1040,14 +1040,7 @@ function MarketingCell({ kickoffId, value, onSave, saving }) {
         placeholder="Notas de marketing…"
         style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"6px 8px", width:"100%", background:"#fff", boxSizing:"border-box", resize:"vertical", lineHeight:1.5, minHeight:90 }}
       />
-      <div style={{ display:"flex", gap:4, marginTop:3, alignItems:"center" }}>
-        {saving && <span style={{ fontSize:9, color:"#9ca3af" }}>guardando…</span>}
-        <button onClick={organizeWithAI} disabled={aiLoading}
-          title="Generar ideas de marketing con IA"
-          style={{ fontSize:10, padding:"2px 7px", borderRadius:5, border:"1px solid #fbcfe8", background: aiLoading ? "#fdf2f8" : "#fce7f3", color:"#be185d", cursor: aiLoading ? "default" : "pointer", fontWeight:600 }}>
-          {aiLoading ? "…" : "✨ IA"}
-        </button>
-      </div>
+      {saving && <div style={{ fontSize:9, color:"#9ca3af", marginTop:2 }}>guardando…</div>}
     </div>
   );
 }
@@ -1230,7 +1223,9 @@ function orderStatus(k) {
       if (!dayOrders.length) return "✅ Pedido";
       const MENU_LABELS = { traditional: "Menú Típico", american: "Menú Americano", healthy: "Saludable" };
       const selected = new Set();
+      let noBfDays = 0;
       dayOrders.forEach(order => {
+        if (order.status === "no-breakfast") { noBfDays++; return; }
         ["traditional","american","healthy"].forEach(id => {
           const cat = order[id];
           if (!cat) return;
@@ -1239,7 +1234,9 @@ function orderStatus(k) {
         });
       });
       const arr = [...selected].slice(0,3);
-      return arr.length ? arr.join(", ") : "✅ Pedido";
+      const noBfLabel = noBfDays > 0 ? `Sin desayuno ${noBfDays}d` : null;
+      const parts = [...arr, ...(noBfLabel ? [noBfLabel] : [])];
+      return parts.length ? parts.join(", ") : "✅ Pedido";
     } catch { return k.breakfastOrder ? k.breakfastOrder.slice(0,60) : "✅"; }
   })();
   const breakfastAt = k.breakfastOrderAt || null;
@@ -1341,7 +1338,8 @@ function ClientesTable({ kickoffs, loading }) {
     }
     if (period !== "all") {
       if (!r._rowArrival) return false;
-      const arr = new Date(r._rowArrival + "T12:00:00");
+      const arr = new Date(String(r._rowArrival).slice(0,10) + "T12:00:00");
+      if (isNaN(arr)) return false;
       if (period === "week") {
         const day = now.getDay() || 7; // Sunday=7, Monday=1 … Saturday=6 → week starts Monday
         const weekStart = new Date(now); weekStart.setDate(now.getDate() - day + 1); weekStart.setHours(0,0,0,0);
@@ -1546,7 +1544,7 @@ function ClientesTable({ kickoffs, loading }) {
                         </div>
                       );
                     })()}</td>
-                    <td style={tdStyle}><OrderCell summary={drinkSummary} at={r.drinkOrderAt} /></td>
+                    <td style={tdStyle}><OrderCell summary={drinkSummary} at={r.drinkOrderAt} fullText={r.drinkOrder} /></td>
                     <td style={tdStyle}><OrderCell summary={grocerySummary} at={r.groceryOrderAt} /></td>
                     <td style={tdStyle}><OrderCell summary={breakfastSummary} at={breakfastAt} /></td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>
@@ -5144,6 +5142,7 @@ function BreakfastCatalog() {
   };
 
   const dayHasAny = (order) =>
+    order?.status === "no-breakfast" ||
     BREAKFAST_MENUS.some(m => order[m.id]?.full || Object.values(order[m.id]?.checked || {}).some(Boolean));
 
   const hasAnyOrder = dayOrders.some(dayHasAny);
@@ -5155,6 +5154,10 @@ function BreakfastCatalog() {
     dayOrders.forEach((order, i) => {
       const dp = dayPrice(order);
       if (!dayHasAny(order)) return;
+      if (order.status === "no-breakfast") {
+        if (stayNights > 1) lines.push(`*${getDayLabel(i)} — ${en ? "No breakfast" : "Sin desayuno"}*`);
+        return;
+      }
       if (stayNights > 1) {
         const statusLabel = order.status === "confirmed" ? (en ? "Confirmed" : "Confirmado") : (en ? "Deciding" : "Aún decidiendo");
         lines.push(`*${getDayLabel(i)} — ${statusLabel}*`);
@@ -5309,20 +5312,23 @@ function BreakfastCatalog() {
         <div style={{background:"#f0ebe3",borderBottom:"1px solid #e5ddd3",padding:"10px 20px",overflowX:"auto"}}>
           <div style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap"}}>
             {Array.from({ length: stayNights }, (_, i) => {
-              const hasItems = dayHasAny(dayOrders[i] || EMPTY_DAY());
-              const confirmed = dayOrders[i]?.status === "confirmed";
-              const isActive = currentDay === i;
+              const dayStatus = dayOrders[i]?.status;
+              const noBreakfast = dayStatus === "no-breakfast";
+              const confirmed   = dayStatus === "confirmed";
+              const hasItems    = dayHasAny(dayOrders[i] || EMPTY_DAY());
+              const isActive    = currentDay === i;
               return (
                 <button key={i} onClick={() => setCurrentDay(i)} style={{
                   padding:"6px 16px", fontSize:11, fontWeight:500, letterSpacing:".06em",
-                  border:`1.5px solid ${isActive ? "#9a7d52" : "#d5ccc0"}`,
+                  border:`1.5px solid ${isActive ? (noBreakfast ? "#6b7280" : "#9a7d52") : "#d5ccc0"}`,
                   borderRadius:20, cursor:"pointer", transition:"all .15s", whiteSpace:"nowrap",
-                  background: isActive ? "#9a7d52" : "#fff",
-                  color: isActive ? "#fff" : hasItems ? "#9a7d52" : "#7a7570",
+                  background: isActive ? (noBreakfast ? "#6b7280" : "#9a7d52") : "#fff",
+                  color: isActive ? "#fff" : noBreakfast ? "#6b7280" : hasItems ? "#9a7d52" : "#7a7570",
                 }}>
                   {getDayLabel(i)}
-                  {confirmed && !isActive && <span style={{marginLeft:4,fontSize:9}}>✓</span>}
-                  {hasItems && !confirmed && !isActive && <span style={{marginLeft:5,opacity:.7}}>·</span>}
+                  {noBreakfast && !isActive && <span style={{marginLeft:4,fontSize:9}}>✕</span>}
+                  {confirmed && !noBreakfast && !isActive && <span style={{marginLeft:4,fontSize:9}}>✓</span>}
+                  {hasItems && !confirmed && !noBreakfast && !isActive && <span style={{marginLeft:5,opacity:.7}}>·</span>}
                 </button>
               );
             })}
@@ -5336,17 +5342,18 @@ function BreakfastCatalog() {
         <div style={{display:"flex",gap:8,marginBottom:24,alignItems:"center"}}>
             <span style={{fontSize:11,color:"#7a7570",marginRight:4}}>{en ? "Status:" : "Estado:"}</span>
             {[
-              { key:"pending",   label: en ? "Still deciding" : "Aún decidiendo" },
-              { key:"confirmed", label: en ? "Confirmed"      : "Confirmado" },
+              { key:"pending",      label: en ? "Still deciding" : "Aún decidiendo", activeColor:"#9a7d52", activeBg:"#fdf8f2" },
+              { key:"confirmed",    label: en ? "Confirmed"      : "Confirmado",      activeColor:"#16a34a", activeBg:"#dcfce7" },
+              { key:"no-breakfast", label: en ? "No breakfast"   : "Sin desayuno",    activeColor:"#6b7280", activeBg:"#f3f4f6" },
             ].map(opt => {
               const active = curOrder.status === opt.key;
               return (
                 <button key={opt.key} onClick={() => setDayStatus(currentDay, opt.key)} style={{
                   padding:"5px 14px", fontSize:11, fontWeight: active ? 600 : 400,
-                  border:`1.5px solid ${active ? (opt.key === "confirmed" ? "#16a34a" : "#9a7d52") : "#d5ccc0"}`,
+                  border:`1.5px solid ${active ? opt.activeColor : "#d5ccc0"}`,
                   borderRadius:20, cursor:"pointer", transition:"all .15s",
-                  background: active ? (opt.key === "confirmed" ? "#dcfce7" : "#fdf8f2") : "#fff",
-                  color: active ? (opt.key === "confirmed" ? "#16a34a" : "#9a7d52") : "#7a7570",
+                  background: active ? opt.activeBg : "#fff",
+                  color: active ? opt.activeColor : "#7a7570",
                 }}>
                   {opt.label}
                 </button>
@@ -5354,8 +5361,13 @@ function BreakfastCatalog() {
             })}
           </div>
 
-        {/* Per-category selection */}
-        {BREAKFAST_MENUS.map(menu => {
+        {/* Per-category selection — hidden when day is marked no-breakfast */}
+        {curOrder.status === "no-breakfast" && (
+          <div style={{textAlign:"center",padding:"32px 20px",color:"#9ca3af",fontSize:13}}>
+            {en ? "No breakfast ordered for this day." : "Sin desayuno para este día."}
+          </div>
+        )}
+        {curOrder.status !== "no-breakfast" && BREAKFAST_MENUS.map(menu => {
           const cat = curOrder[menu.id] || EMPTY_CAT();
           const cp = catPrice(cat, menu);
           const catLabel = en ? menu.label : menu.label_es;
