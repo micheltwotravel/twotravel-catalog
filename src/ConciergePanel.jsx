@@ -3728,6 +3728,25 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
   const [beachClub,     setBeachClub]     = useState(kickoff?.beachClub     || "");
   const [beachClubDay, setBeachClubDay] = useState(kickoff?.beachClubDay || "");
   const [saving, setSaving] = useState(false);
+  const [boatList, setBoatList] = useState([]);
+  useEffect(() => {
+    const GAS = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+    fetch(GAS, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "property_get", data: { id: "all", limit: 600 } }) })
+      .then(r => r.json()).then(d => {
+        const raw = kickoff?.city || "";
+        const codeToCity = { CTG:"CARTAGENA", MDE:"MEDELLÍN", MEDELLIN:"MEDELLÍN", CDMX:"MEXICO CITY", TUL:"TULUM", BOG:"BOGOTÁ" };
+        const cityFull = (codeToCity[raw.toUpperCase()] || raw).toUpperCase();
+        const boats = (d.data || d.properties || []).filter(p => {
+          const pType = (p["Item Type"] || p["item type"] || p.Type || p.type || "").toUpperCase();
+          const pCity = (p.City || p.city || "").toUpperCase();
+          const isBoat = pType.includes("BOAT") || pType.includes("YACHT") || pType.includes("CATAMARAN");
+          const cityMatch = !cityFull || pCity.includes(cityFull) || cityFull.includes(pCity);
+          return isBoat && cityMatch;
+        });
+        setBoatList(boats);
+      }).catch(() => {});
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -3805,8 +3824,19 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[10px] text-neutral-500">Bote</label>
-                <input value={boatName} onChange={e => setBoatName(e.target.value)} placeholder="Nombre…"
+                <input value={boatName} onChange={e => {
+                  const val = e.target.value;
+                  setBoatName(val);
+                  const match = boatList.find(p => p.Name === val);
+                  if (match) {
+                    const dockVal = match["Dock Location"] || match.dockLocation || match.Location || match.location || "";
+                    if (dockVal) setDock(dockVal);
+                  }
+                }} placeholder="Nombre…" list="boat-datalist"
                   className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs" />
+                <datalist id="boat-datalist">
+                  {boatList.map(p => <option key={p.id || p.Name} value={p.Name}>{p.Name}{p["Dock Location"] ? ` — ${p["Dock Location"]}` : ""}</option>)}
+                </datalist>
               </div>
               <div>
                 <label className="text-[10px] text-neutral-500">Día bote</label>
@@ -4899,9 +4929,29 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             <div className="grid grid-cols-2 gap-2 pt-1">
               <div>
                 <label className="text-[10px] text-neutral-500">Nombre del bote</label>
-                <input value={boatName} onChange={e => setBoatName(e.target.value)}
+                <input value={boatName} onChange={e => {
+                  const val = e.target.value;
+                  setBoatName(val);
+                  const match = propertyList.find(p => p.Name === val);
+                  if (match) {
+                    const dockVal = match["Dock Location"] || match.dockLocation || match.Location || match.location || "";
+                    if (dockVal) setDock(dockVal);
+                  }
+                }} list="boat-datalist-ed"
                   className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white"
                   placeholder="Sea Star…" />
+                <datalist id="boat-datalist-ed">
+                  {propertyList.filter(p => {
+                    const pType = (p["Item Type"] || p["item type"] || p.Type || p.type || "").toUpperCase();
+                    const pCity = (p.City || p.city || "").toUpperCase();
+                    const isBoat = pType.includes("BOAT") || pType.includes("YACHT") || pType.includes("CATAMARAN");
+                    const codeToCity = { CTG:"CARTAGENA", MDE:"MEDELLÍN", MEDELLIN:"MEDELLÍN", CDMX:"MEXICO CITY", TUL:"TULUM", BOG:"BOGOTÁ" };
+                    const c = (city || "").toUpperCase();
+                    const cityFull = (codeToCity[c] || c).toUpperCase();
+                    const cityMatch = !cityFull || pCity.includes(cityFull) || cityFull.includes(pCity);
+                    return isBoat && cityMatch;
+                  }).map(p => <option key={p.id || p.Name} value={p.Name}>{p.Name}{p["Dock Location"] ? ` — ${p["Dock Location"]}` : ""}</option>)}
+                </datalist>
               </div>
               <div>
                 <label className="text-[10px] text-neutral-500">Día del bote</label>
