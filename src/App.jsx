@@ -1341,10 +1341,14 @@ function ClientesTable({ kickoffs, loading }) {
       const arr = new Date(String(r._rowArrival).slice(0,10) + "T12:00:00");
       if (isNaN(arr)) return false;
       if (period === "week") {
-        const day = now.getDay() || 7; // Sunday=7, Monday=1 … Saturday=6 → week starts Monday
+        const day = now.getDay() || 7;
         const weekStart = new Date(now); weekStart.setDate(now.getDate() - day + 1); weekStart.setHours(0,0,0,0);
         const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6); weekEnd.setHours(23,59,59,999);
-        if (arr < weekStart || arr > weekEnd) return false;
+        if (arr > weekEnd) return false; // arrives after this week
+        if (r._rowDeparture) {
+          const dep = new Date(String(r._rowDeparture).slice(0,10) + "T12:00:00");
+          if (!isNaN(dep) && dep < weekStart) return false; // already left before this week
+        }
       }
       if (period === "month") {
         if (arr.getMonth() !== now.getMonth() || arr.getFullYear() !== now.getFullYear()) return false;
