@@ -94,7 +94,11 @@ export default async function handler(req, res) {
   try {
     const [availRes, tokenRes] = await Promise.all([
       fetch(`${GAS_URL}?action=getAvailability&email=${encodeURIComponent(email)}`),
-      fetch(`${GAS_URL}?action=getCalendarToken&concierge=${concierge}`),
+      fetch(GAS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "getCalendarToken", payload: { concierge } }),
+      }),
     ]);
     const [availData, tokenData] = await Promise.all([availRes.json(), tokenRes.json()]);
     if (availData.ok) {
@@ -102,7 +106,8 @@ export default async function handler(req, res) {
       blocked  = availData.blocked  || [];
       bookings = availData.bookings || [];
     }
-    refreshToken = tokenData?.refreshToken || null;
+    refreshToken = tokenData?.refreshToken || tokenData?.token || null;
+    if (!refreshToken) console.warn("getCalendarToken returned no token for", concierge, JSON.stringify(tokenData));
   } catch (e) {
     console.error("GAS fetch error:", e.message);
   }
