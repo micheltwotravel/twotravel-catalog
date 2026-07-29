@@ -2071,24 +2071,26 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
                 ...(accom ? { location: accom } : {}), dayLabel: lastLabel, sortOrder: 0 });
             }
             // Breakfasts: day 2 through last day (not on arrival day)
+            // Remove any previously auto-filled breakfasts and any breakfast on day 1 before re-adding
+            const isBfItem = i => /breakfast/i.test(i.name_en) || /desayuno/i.test(i.name);
+            const prevNoBf = prev.filter(i =>
+              !(i._uid?.startsWith("preset_bf_")) &&
+              !(i.dayLabel === firstLabel && isBfItem(i))
+            );
             const bfDays = currentMeta.slice(1);
             bfDays.forEach((dm, idx) => {
-              const alreadyHasBf = prev.some(i => i.dayLabel === dm.label && (/breakfast/i.test(i.name_en) || /desayuno/i.test(i.name)));
-              const addedBf = toAdd.some(i => i.dayLabel === dm.label && (/breakfast/i.test(i.name_en) || /desayuno/i.test(i.name)));
-              if (!alreadyHasBf && !addedBf) {
-                toAdd.push({ ...mapManualToCartItem(),
-                  _uid: `preset_bf_${dm.label}_${Date.now() + idx}`, id: `preset_bf_${dm.label}_${Date.now() + idx}`,
-                  name:    bfService?.name_es || "Desayuno en la Villa",
-                  name_en: bfService?.name_en || "Breakfast at the Villa",
-                  category: "services", timeLabel: "9:00 AM",
-                  ...(bfService?.image ? { image: bfService.image } : {}),
-                  description_es: bfService?.description_es || "Una mezcla de desayunos locales e internacionales será servida en su comedor.",
-                  description_en: bfService?.description    || "A mix of local and international breakfast dishes will be served in your dining room.",
-                  dayLabel: dm.label, sortOrder: 1,
-                });
-              }
+              toAdd.push({ ...mapManualToCartItem(),
+                _uid: `preset_bf_${dm.label}_${Date.now() + idx}`, id: `preset_bf_${dm.label}_${Date.now() + idx}`,
+                name:    bfService?.name_es || "Desayuno en la Villa",
+                name_en: bfService?.name_en || "Breakfast at the Villa",
+                category: "services", timeLabel: "9:00 AM",
+                ...(bfService?.image ? { image: bfService.image } : {}),
+                description_es: bfService?.description_es || "Una mezcla de desayunos locales e internacionales será servida en su comedor.",
+                description_en: bfService?.description    || "A mix of local and international breakfast dishes will be served in your dining room.",
+                dayLabel: dm.label, sortOrder: 1,
+              });
             });
-            return toAdd.length ? [...prev, ...toAdd] : prev;
+            return [...prevNoBf, ...toAdd];
           });
         }
         return currentMeta;
@@ -2174,18 +2176,18 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         };
       })(),
       boatday: (() => {
-        const s = itineraryItems.find(i =>
-          /boat.*day/i.test(i.name_en) || /día.*bote/i.test(i.name_es) ||
-          /bote\b/i.test(i.name_es) || /boating/i.test(i.category)
-        );
+        const isBd = x => /boat.*day/i.test(x?.name_en) || /día.*bote/i.test(x?.name_es) || /bote\b/i.test(x?.name_es);
+        const s = itineraryItems.find(isBd);
+        // itineraryItems may not have the description; fall back to services catalog (nested description object)
+        const svc = !s ? services.find(isBd) : null;
         return {
-          name:    s?.name_es || "Día de Bote",
-          name_en: s?.name_en || "Boat Day",
+          name:    s?.name_es || svc?.name_es || "Día de Bote",
+          name_en: s?.name_en || svc?.name_en || "Boat Day",
           category: "actividades",
           timeLabel: "8:30 AM",
-          ...(s?.image ? { image: s.image } : {}),
-          description_es: s?.description_es || "¡Día de bote! Salida desde el muelle a las 8:30 AM. Recuerden traer protector solar, traje de baño y cámara. Su concierge estará presente para coordinar todo el día.",
-          description_en: s?.description || s?.description_en || "Boat day! Departure from the dock at 8:30 AM. Please bring sunscreen, swimwear and a camera. Your concierge will be there to coordinate the full day.",
+          ...(s?.image ? { image: s.image } : svc?.image ? { image: svc.image } : {}),
+          description_es: s?.description_es || svc?.description?.es || "¡Día de bote! Salida desde el muelle a las 8:30 AM. Recuerden traer protector solar, traje de baño y cámara. Su concierge estará presente para coordinar todo el día.",
+          description_en: s?.description || s?.description_en || svc?.description?.en || "Boat day! Departure from the dock at 8:30 AM. Please bring sunscreen, swimwear and a camera. Your concierge will be there to coordinate the full day.",
         };
       })(),
       pickup: (() => {

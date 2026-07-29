@@ -1058,8 +1058,8 @@ function PassportPopup({ passportInfo, dietInfo, guestName }) {
   const copy = () => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); };
   return (
     <div style={{ position:"relative", display:"inline-block" }}>
-      <button onClick={() => setOpen(o => !o)} title="Ver info de pasaporte y dieta"
-        style={{ fontSize:16, background:"none", border:"none", cursor:"pointer", padding:"2px 4px" }}>🛂</button>
+      <button onClick={() => setOpen(o => !o)} title={passportInfo ? "Ver pasaporte y dieta" : "Ver dieta y alergias"}
+        style={{ fontSize:16, background:"none", border:"none", cursor:"pointer", padding:"2px 4px" }}>{passportInfo ? "🛂" : "🥗"}</button>
       {open && (
         <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:9999, background:"#fff", border:"1px solid #e5e7eb", borderRadius:12, boxShadow:"0 8px 32px rgba(0,0,0,0.18)", padding:20, minWidth:280, maxWidth:400 }}>
           <div style={{ fontWeight:700, fontSize:13, color:"#111", marginBottom:12 }}>{guestName || "Cliente"}</div>
@@ -1339,7 +1339,8 @@ function ClientesTable({ kickoffs, loading }) {
     if (cityFilter !== "all") {
       if (normCity(r._rowCity) !== cityFilter) return false;
     }
-    if (period !== "all" && r._rowArrival) {
+    if (period !== "all") {
+      if (!r._rowArrival) return false;
       const arr = new Date(r._rowArrival + "T12:00:00");
       if (period === "week") {
         const day = now.getDay() || 7; // Sunday=7, Monday=1 … Saturday=6 → week starts Monday
@@ -1504,15 +1505,20 @@ function ClientesTable({ kickoffs, loading }) {
                         </>;
                       })()}
                     </td>
-                    <td style={{ ...tdStyle, maxWidth:160, verticalAlign:"top" }}>
+                    <td style={{ ...tdStyle, verticalAlign:"top" }}>
                       {r.passportInfo
-                        ? <div style={{ fontSize:10, color:"#374151", whiteSpace:"pre-wrap", lineHeight:1.5, maxHeight:56, overflow:"hidden", cursor:"default" }} title={r.passportInfo}>{r.passportInfo.slice(0,120)}{r.passportInfo.length > 120 ? "…" : ""}</div>
+                        ? <PassportPopup passportInfo={r.passportInfo} dietInfo="" guestName={r.guestName || r.tripName} />
                         : <span style={{ color:"#d1d5db" }}>—</span>}
                     </td>
-                    <td style={{ ...tdStyle, maxWidth:160, verticalAlign:"top" }}>
-                      {r.dietInfo
-                        ? <div style={{ fontSize:10, color:"#374151", whiteSpace:"pre-wrap", lineHeight:1.5, maxHeight:56, overflow:"hidden", cursor:"default" }} title={r.dietInfo}>{r.dietInfo.slice(0,120)}{r.dietInfo.length > 120 ? "…" : ""}</div>
-                        : <span style={{ color:"#d1d5db" }}>—</span>}
+                    <td style={{ ...tdStyle, verticalAlign:"top" }}>
+                      {(() => {
+                        const food = r.foodRestrictions || r["Food Restrictions"] || "";
+                        const allergy = r.allergies || r["Allergies and/or Medical Conditions"] || "";
+                        const combined = r.dietInfo || [food, allergy].filter(Boolean).join(" / ");
+                        return combined
+                          ? <PassportPopup passportInfo="" dietInfo={combined} guestName={r.guestName || r.tripName} />
+                          : <span style={{ color:"#d1d5db" }}>—</span>;
+                      })()}
                     </td>
                     <td style={tdStyle}>
                       <a href={itinLink} target="_blank" rel="noreferrer"
