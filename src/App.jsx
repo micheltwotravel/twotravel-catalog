@@ -4703,8 +4703,33 @@ function CheckinForm() {
         body: JSON.stringify({ action: "saveCheckinResponse", kickoffId, response: { ...form, submittedAt: new Date().toISOString() } }),
       });
       const data = await res.json();
-      if (data.ok) setDone(true);
-      else setError(en ? "Something went wrong. Try again." : "Algo salió mal. Intenta de nuevo.");
+      if (data.ok) {
+        setDone(true);
+        // Write passport + diet back to kickoff row so dashboard columns populate
+        if (kickoffId) {
+          const passportParts = [
+            form.idType && form.idNumber ? `${form.idType}: ${form.idNumber}` : "",
+            form.dob        ? `DOB: ${form.dob}` : "",
+            form.nationality ? `Nat: ${form.nationality}` : "",
+          ].filter(Boolean);
+          const passportInfo = [
+            form.firstName || form.lastName ? `${form.firstName} ${form.lastName}`.trim() : "",
+            ...passportParts,
+          ].filter(Boolean).join(" · ");
+          const updates = {};
+          if (passportInfo)         updates.passportInfo     = passportInfo;
+          if (form.foodRestrictions) updates.foodRestrictions = form.foodRestrictions;
+          if (form.allergies)        updates.allergies        = form.allergies;
+          const diet = [form.foodRestrictions, form.allergies].filter(Boolean).join(" / ");
+          if (diet) updates.dietInfo = diet;
+          if (Object.keys(updates).length) {
+            fetch(GAS_URL, {
+              method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+              body: JSON.stringify({ action: "updateKickoff", id: kickoffId, updates }),
+            }).catch(() => {});
+          }
+        }
+      } else setError(en ? "Something went wrong. Try again." : "Algo salió mal. Intenta de nuevo.");
     } catch { setError(en ? "Connection error. Try again." : "Error de conexión. Intenta de nuevo."); }
     finally { setSending(false); }
   };
