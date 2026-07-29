@@ -5090,7 +5090,7 @@ function BreakfastCatalog() {
   const getDayLabel = (i) => {
     if (arrivalDate) {
       const d = new Date(arrivalDate + "T12:00:00");
-      d.setDate(d.getDate() + i);
+      d.setDate(d.getDate() + i + 1); // breakfast starts day 2 (day 1 = check-in, no breakfast)
       const wd = d.toLocaleDateString(en ? "en-US" : "es-CO", { weekday: "short" });
       return `${wd} ${d.getDate()}`;
     }
