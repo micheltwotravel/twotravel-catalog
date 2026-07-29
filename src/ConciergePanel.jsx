@@ -2178,17 +2178,33 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
       boatday: (() => {
         const isBd = x => /boat.*day/i.test(x?.name_en) || /día.*bote/i.test(x?.name_es) || /bote\b/i.test(x?.name_es);
         const s = itineraryItems.find(isBd);
-        // itineraryItems may not have the description; fall back to services catalog (nested description object)
         const svc = !s ? services.find(isBd) : null;
-        return {
-          name:    s?.name_es || svc?.name_es || "Día de Bote",
-          name_en: s?.name_en || svc?.name_en || "Boat Day",
-          category: "actividades",
-          timeLabel: "8:30 AM",
-          ...(s?.image ? { image: s.image } : svc?.image ? { image: svc.image } : {}),
-          description_es: s?.description_es || svc?.description?.es || "¡Día de bote! Salida desde el muelle a las 8:30 AM. Recuerden traer protector solar, traje de baño y cámara. Su concierge estará presente para coordinar todo el día.",
-          description_en: s?.description || s?.description_en || svc?.description?.en || "Boat day! Departure from the dock at 8:30 AM. Please bring sunscreen, swimwear and a camera. Your concierge will be there to coordinate the full day.",
-        };
+        const boatNameVal = kickoff?.boatName || s?.name_es || svc?.name_es || "";
+        const dockName    = kickoff?.dock || "";
+        const boatImg     = s?.image || svc?.image || "";
+        return [
+          // 1 — Boat Details info card (like the villa info on check-in day)
+          {
+            name:    "Detalles del Bote",
+            name_en: "Boat Details",
+            category: "services",
+            timeLabel: "10:00 AM",
+            ...(boatNameVal ? { location: boatNameVal } : {}),
+            ...(boatImg ? { image: boatImg } : {}),
+            description_es: `Nombre del bote: **${boatNameVal || "—"}**${dockName ? `\nMuelle de salida: ${dockName}` : ""}`,
+            description_en: `Boat name: **${boatNameVal || "—"}**${dockName ? `\nDeparture dock: ${dockName}` : ""}`,
+          },
+          // 2 — Boat Day activity
+          {
+            name:    s?.name_es || svc?.name_es || "Día de Bote",
+            name_en: s?.name_en || svc?.name_en || "Boat Day",
+            category: "actividades",
+            timeLabel: "10:00 AM",
+            ...(boatImg ? { image: boatImg } : {}),
+            description_es: s?.description_es || svc?.description?.es || `¡Día de bote! Salida desde ${dockName || "el muelle"} a las 10:00 AM. Recuerden traer protector solar, traje de baño y cámara. Su concierge estará presente para coordinar todo el día.`,
+            description_en: s?.description || s?.description_en || svc?.description?.en || `Boat day! Departure from ${dockName || "the dock"} at 10:00 AM. Please bring sunscreen, swimwear and a camera. Your concierge will be there to coordinate the full day.`,
+          },
+        ];
       })(),
       pickup: (() => {
         const guestName = kickoff?.guestName || "";
