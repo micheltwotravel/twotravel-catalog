@@ -2201,8 +2201,8 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
             category: "actividades",
             timeLabel: "10:00 AM",
             ...(boatImg ? { image: boatImg } : {}),
-            description_es: s?.description_es || svc?.description?.es || `¡Día de bote! Salida desde ${dockName || "el muelle"} a las 10:00 AM. Recuerden traer protector solar, traje de baño y cámara. Su concierge estará presente para coordinar todo el día.`,
-            description_en: s?.description || s?.description_en || svc?.description?.en || `Boat day! Departure from ${dockName || "the dock"} at 10:00 AM. Please bring sunscreen, swimwear and a camera. Your concierge will be there to coordinate the full day.`,
+            description_es: s?.description_es || svc?.description?.es || `¡Día de bote! Salida desde ${dockName || "el muelle"} a las 10:00 AM. Recuerden traer protector solar y traje de baño. Su concierge estará presente para coordinar todo el día.`,
+            description_en: s?.description || s?.description_en || svc?.description?.en || `Boat day! Departure from ${dockName || "the dock"} at 10:00 AM. Please bring sunscreen and swimwear. Your concierge will be there to coordinate the full day.`,
           },
         ];
       })(),

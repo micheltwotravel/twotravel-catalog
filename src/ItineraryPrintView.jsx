@@ -234,10 +234,21 @@ function parseJsonField(v) {
   return [];
 }
 
-function matchCart(cartRaw, catalog) {
+function matchCart(cartRaw, catalog, kickoff) {
   const cart = parseJsonField(cartRaw);
   const out = [];
-  for (const item of cart) {
+  for (let item of cart) {
+    // Keep boat details description in sync with kickoff.boatName / kickoff.dock
+    if (/detalles del bote/i.test(item.name) || /boat details/i.test(item.name_en)) {
+      const bn = kickoff?.boatName || "—";
+      const dk = kickoff?.dock || "";
+      item = {
+        ...item,
+        description_es: `Nombre del bote: **${bn}**${dk ? `\nMuelle de salida: ${dk}` : ""}`,
+        description_en: `Boat name: **${bn}**${dk ? `\nDeparture dock: ${dk}` : ""}`,
+        ...(bn !== "—" ? { location: bn } : {}),
+      };
+    }
     if (item.ghost) continue;
     if (item.type === "block") {
       if (item.html) out.push({ cartItem: item, service: null, isBlock: true });
@@ -2398,7 +2409,7 @@ export default function ItineraryPrintView() {
   const days = useMemo(() => {
     if (!kickoff) return [];
     const cartRaw = kickoff.cart;
-    const matched = matchCart(cartRaw, catalog);
+    const matched = matchCart(cartRaw, catalog, kickoff);
     const result = buildDays(matched, lang, parseJsonField(kickoff.dayMeta), kickoff.city);
     return result;
   }, [kickoff, catalog, lang]);
