@@ -7457,6 +7457,14 @@ const loadKickoffs = async () => {
   }, [kickoffs, search, statusFilter, conciergeFilter]);
 
   // Updates kickoff locally + in sheet but does NOT close the drawer
+  const broadcastKickoffUpdate = (id, updates) => {
+    try {
+      const bc = new BroadcastChannel("tt_kickoffs");
+      bc.postMessage({ type: "updated", id, updates });
+      bc.close();
+    } catch {}
+  };
+
   const handleSilentUpdate = async (id, updates) => {
     const stamped = { ...updates, lastModified: new Date().toISOString() };
     // Update local state immediately (optimistic); bubble to front so it sorts first
@@ -7473,6 +7481,7 @@ const loadKickoffs = async () => {
       });
       return updated ? [updated, ...rest] : prev;
     });
+    broadcastKickoffUpdate(id, stamped);
     try {
       await updateKickoffInSheet(id, stamped);
     } catch (err) {
@@ -7547,6 +7556,7 @@ const loadKickoffs = async () => {
         return next;
       })
     );
+    broadcastKickoffUpdate(id, updates);
 
   } catch (err) {
     console.error("handleSaveEdit error:", err);

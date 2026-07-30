@@ -1657,6 +1657,20 @@ function UnifiedDashboard({ currentUser, onLogout }) {
       .finally(() => setKLoading(false));
   }, []);
 
+  // Sync when another tab/component saves a kickoff
+  useEffect(() => {
+    let bc;
+    try {
+      bc = new BroadcastChannel("tt_kickoffs");
+      bc.onmessage = (e) => {
+        if (e.data?.type === "updated" && e.data.id) {
+          setKickoffs(prev => prev.map(k => k.id === e.data.id ? { ...k, ...e.data.updates } : k));
+        }
+      };
+    } catch {}
+    return () => { try { bc?.close(); } catch {} };
+  }, []);
+
   const uniqueValues = (key) => {
     return [
       "all",
@@ -3084,6 +3098,15 @@ function TaskTracker() {
           .filter(k => k.status !== "done" && k.status !== "cerrado")
           .sort((a,b) => (a.guestName||"").localeCompare(b.guestName||""))
       )).catch(()=>{});
+    let bc;
+    try {
+      bc = new BroadcastChannel("tt_kickoffs");
+      bc.onmessage = (e) => {
+        if (e.data?.type === "updated" && e.data.id)
+          setKickoffs(prev => prev.map(k => k.id === e.data.id ? { ...k, ...e.data.updates } : k));
+      };
+    } catch {}
+    return () => { try { bc?.close(); } catch {} };
   }, []);
 
   const saveTask = async () => {
