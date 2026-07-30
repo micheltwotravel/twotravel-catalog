@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Two Travel · Precios</title>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;font-family:'Jost',sans-serif;font-weight:300;background:#f7f4ef;color:#1a1814}
+.topbar{background:#1a1814;padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
+.topbar img{height:32px;object-fit:contain;filter:brightness(0) invert(1);opacity:.9}
+.topbar a{font-size:11px;color:rgba(255,255,255,.5);text-decoration:none;letter-spacing:.08em;text-transform:uppercase}
+.topbar a:hover{color:#f7f4ef}
+.hero{background:#1a1814;padding:40px 32px 48px;text-align:center}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:500;color:#f7f4ef;margin-bottom:8px;letter-spacing:.04em}
+.hero p{font-size:12px;color:#9a7d52;letter-spacing:.12em;text-transform:uppercase}
+.wrap{max-width:1000px;margin:0 auto;padding:40px 24px 80px}
+.section-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;color:#1a1814;margin-bottom:6px}
+.section-sub{font-size:11px;color:#9a7d52;letter-spacing:.10em;text-transform:uppercase;margin-bottom:20px}
+.divider{width:36px;height:2px;background:#9a7d52;margin-bottom:28px}
+.section{margin-bottom:52px}
+
+/* Breakfast */
+.bf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:24px}
+.bf-card{background:#fff;border:1px solid #e5ddd3;border-radius:10px;overflow:hidden}
+.bf-card-head{background:#1a1814;padding:18px 20px}
+.bf-card-label{font-size:12px;color:#9a7d52;letter-spacing:.10em;text-transform:uppercase;margin-bottom:6px}
+.bf-card-name{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:500;color:#f7f4ef}
+.bf-tiers{display:grid;grid-template-columns:repeat(3,1fr);padding:0}
+.bf-tier{padding:12px 16px;text-align:center;border-right:1px solid #f0ebe3}
+.bf-tier:last-child{border-right:none}
+.bf-tier-label{font-size:9px;color:#9a7d52;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.bf-tier-price{font-size:15px;font-weight:600;color:#1a1814}
+.bf-tier-usd{font-size:10px;color:#9a7d52;margin-top:2px}
+.bf-items-head{background:#f7f4ef;padding:10px 16px;border-top:1px solid #e5ddd3}
+.bf-items-head span{font-size:10px;color:#7a7570;letter-spacing:.06em;text-transform:uppercase}
+table.bf-items{width:100%;border-collapse:collapse}
+table.bf-items td{padding:7px 16px;font-size:12px;border-bottom:1px solid #f0ebe3;color:#3d3832;vertical-align:top}
+table.bf-items td.name{font-weight:500;color:#1a1814;width:55%}
+table.bf-items td.price{text-align:right;color:#7a7570;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.bf-items tr:last-child td{border-bottom:none}
+.bf-section-head{background:#fdf8f2;padding:6px 16px;border-top:1px solid #e5ddd3}
+.bf-section-head span{font-size:9px;font-weight:600;color:#9a7d52;letter-spacing:.08em;text-transform:uppercase}
+
+/* Drinks */
+.drinks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.drink-cat{background:#fff;border:1px solid #e5ddd3;border-radius:10px;overflow:hidden}
+.drink-cat-head{background:#f7f4ef;border-bottom:1px solid #e5ddd3;padding:10px 14px}
+.drink-cat-head span{font-size:12px;font-weight:500;color:#1a1814}
+table.drink-items{width:100%;border-collapse:collapse}
+table.drink-items td{padding:6px 14px;font-size:12px;border-bottom:1px solid #f9f7f4;color:#3d3832}
+table.drink-items td.drink-name{color:#1a1814;font-weight:400}
+table.drink-items td.drink-price{text-align:right;color:#7a7570;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.drink-items tr:last-child td{border-bottom:none}
+
+/* Grocery */
+.grocery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.grocery-cat{background:#fff;border:1px solid #e5ddd3;border-radius:10px;padding:14px 16px}
+.grocery-cat-head{font-size:12px;font-weight:500;color:#1a1814;margin-bottom:8px}
+.grocery-items{display:flex;flex-wrap:wrap;gap:4px}
+.grocery-item{font-size:11px;background:#f7f4ef;color:#7a7570;border-radius:4px;padding:3px 8px;white-space:nowrap}
+
+.note{font-size:11px;color:#9a7d52;font-style:italic;margin-top:8px;padding:10px 14px;background:#fff;border:1px solid #e5ddd3;border-radius:6px;border-left:3px solid #9a7d52}
+
+@media(max-width:600px){
+  .bf-grid,.drinks-grid,.grocery-grid{grid-template-columns:1fr}
+  .hero{padding:28px 20px 36px}
+  .wrap{padding:28px 16px 60px}
+}
+@media print{
+  .topbar a{display:none}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="/logo.png" alt="Two Travel">
+  <a href="/menu.html">← Menú</a>
+</div>
+
+<div class="hero">
+  <h1>Portafolio de Precios</h1>
+  <p>Desayuno · Bebidas · Mercado</p>
+</div>
+
+<div class="wrap">
+
+  <!-- ═══ DESAYUNO ═══ -->
+  <div class="section">
+    <div class="divider"></div>
+    <div class="section-title">☕ Desayuno en la Villa</div>
+    <div class="section-sub">Precios por día · Para todo el grupo · COP</div>
+
+    <div class="bf-grid">
+
+      <!-- Traditional -->
+      <div class="bf-card">
+        <div class="bf-card-head">
+          <div class="bf-card-label">Menú Típico</div>
+          <div class="bf-card-name">Traditional</div>
+        </div>
+        <div class="bf-tiers">
+          <div class="bf-tier">
+            <div class="bf-tier-label">1–5 pax</div>
+            <div class="bf-tier-price">$197,000</div>
+            <div class="bf-tier-usd">≈ $49 USD</div>
+          </div>
+          <div class="bf-tier">
+            <div class="bf-tier-label">6–10 pax</div>
+            <div class="bf-tier-price">$316,000</div>
+            <div class="bf-tier-usd">≈ $79 USD</div>
+          </div>
+          <div class="bf-tier">
+            <div class="bf-tier-label">11–20 pax</div>
+            <div class="bf-tier-price">$422,000</div>
+            <div class="bf-tier-usd">≈ $106 USD</div>
+          </div>
+        </div>
+        <div class="bf-items-head"><span>Platos Principales (precio por ítem)</span></div>
+        <table class="bf-items">
+          <tr><td class="name">Arepa de Huevo</td><td class="price">$24k · $60k · $72k</td></tr>
+          <tr><td class="name">Arepa de Queso</td><td class="price">$40k · $52k · $80k</td></tr>
+          <tr><td class="name">Huevos Pericos</td><td class="price">$24k · $40k · $40k</td></tr>
+          <tr><td class="name">Empanadas</td><td class="price">$40k · $40k · $40k</td></tr>
+          <tr><td class="name">Deditos de Queso</td><td class="price">$40k · $40k · $40k</td></tr>
+          <tr><td class="name">Patacones</td><td class="price">$12k · $12k · $20k</td></tr>
+        </table>
+        <div class="bf-section-head"><span>Acompañamientos</span></div>
+        <table class="bf-items">
+          <tr><td class="name">Frutas Exóticas</td><td class="price">$80k · $80k · $140k</td></tr>
+          <tr><td class="name">Salchicha y Chorizo</td><td class="price">$36k · $52k · $104k</td></tr>
+          <tr><td class="name">Hogao</td><td class="price">$28k · $28k · $36k</td></tr>
+          <tr><td class="name">Queso Costeño</td><td class="price">$16k · $16k · $28k</td></tr>
+          <tr><td class="name">Suero Costeño</td><td class="price">$12k · $12k · $24k</td></tr>
+          <tr><td class="name">Pan de Bono</td><td class="price">$5k / unidad</td></tr>
+        </table>
+        <div class="bf-section-head"><span>Bebidas</span></div>
+        <table class="bf-items">
+          <tr><td class="name">Café</td><td class="price">$44k (all)</td></tr>
+          <tr><td class="name">Jugo Natural</td><td class="price">$40k (all)</td></tr>
+        </table>
+      </div>
+
+      <!-- American -->
+      <div class="bf-card">
+        <div class="bf-card-head">
+          <div class="bf-card-label">Menú Americano</div>
+          <div class="bf-card-name">American</div>
+        </div>
+        <div class="bf-tiers">
+          <div class="bf-tier">
+            <div class="bf-tier-label">1–5 pax</div>
+            <div class="bf-tier-price">$215,000</div>
+            <div class="bf-tier-usd">≈ $54 USD</div>
+          </div>
+          <div class="bf-tier">
+            <div class="bf-tier-label">6–10 pax</div>
+            <div class="bf-tier-price">$337,500</div>
+            <div class="bf-tier-usd">≈ $84 USD</div>
+          </div>
+          <div class="bf-tier">
+            <div class="bf-tier-label">11–20 pax</div>
+            <div class="bf-tier-price">$445,000</div>
+            <div class="bf-tier-usd">≈ $111 USD</div>
+          </div>
+        </div>
+        <div class="bf-items-head"><span>Platos Principales</span></div>
+        <table class="bf-items">
+          <tr><td class="name">Huevos Revueltos</td><td class="price">$14k · $28k · $28k</td></tr>
+          <tr><td class="name">Hotcakes Clásicos</td><td class="price">$24k · $48k · $72k</td></tr>
+          <tr><td class="name">Bowl Frutas + Yogurt</td><td class="price">$100k · $140k · $200k</td></tr>
+        </table>
+        <div class="bf-section-head"><span>Proteínas</span></div>
+        <table class="bf-items">
+          <tr><td class="name">Tocino</td><td class="price">$24k · $44k · $88k</td></tr>
+          <tr><td class="name">Salchichas</td><td class="price">$12k · $32k · $64k</td></tr>
+          <tr><td class="name">Chorizo</td><td class="price">$24k · $28k · $56k</td></tr>
+          <tr><td class="name">Jamón</td><td class="price">$16k · $32k · $64k</td></tr>
+        </table>
+        <div class="bf-section-head"><span>Acompañamientos</span></div>
+        <table class="bf-items">
+          <tr><td class="name">Yogur Griego</td><td class="price">$28k · $56k · $96k</td></tr>
+          <tr><td class="name">Granola</td><td class="price">$32k · $32k · $64k</td></tr>
+          <tr><td class="name">Pan (blanco + integral)</td><td class="price">$12k · $12k · $24k</td></tr>
+          <tr><td class="name">Estación de Untables</td><td class="price">$40k · $40k · $68k</td></tr>
+          <tr><td class="name">Frutas Frescas</td><td class="price">$52k · $52k · $100k</td></tr>
+        </table>
+        <div class="bf-section-head"><span>Bebidas</span></div>
+        <table class="bf-items">
+          <tr><td class="name">Café Americano</td><td class="price">$44k (all)</td></tr>
+          <tr><td class="name">Jugo de Naranja</td><td class="price">$32k · $32k · $40k</td></tr>
+          <tr><td class="name">Leche</td><td class="price">$24k · $24k · $80k</td></tr>
+          <tr><td class="name">Leche de Almendras</td><td class="price">$40k · $40k · $80k</td></tr>
+        </table>
+      </div>
+
+      <!-- Healthy -->
+      <div class="bf-card">
+        <div class="bf-card-head">
+          <div class="bf-card-label">Saludable · Vegano · Vegetariano</div>
+          <div class="bf-card-name">Healthy</div>
+        </div>
+        <div class="bf-tiers">
+          <div class="bf-tier">
+            <div class="bf-tier-label">1–5 pax</div>
+            <div class="bf-tier-price">$400,000</div>
+            <div class="bf-tier-usd">≈ $100 USD</div>
+          </div>
+          <div class="bf-tier">
+            <div class="bf-tier-label">6–10 pax</div>
+            <div class="bf-tier-price">$550,000</div>
+            <div class="bf-tier-usd">≈ $138 USD</div>
+          </div>
+          <div class="bf-tier">
+            <div class="bf-tier-label">11–20 pax</div>
+            <div class="bf-tier-price">$870,000</div>
+            <div class="bf-tier-usd">≈ $218 USD</div>
+          </div>
+        </div>
+        <div class="bf-items-head"><span>Platos (precio por ítem)</span></div>
+        <table class="bf-items">
+          <tr><td class="name">Tostadas + Aguacate</td><td class="price">$34k · $50k · $76k</td></tr>
+          <tr><td class="name">Arepa + Guacamole</td><td class="price">$50k · $61k · $94k</td></tr>
+          <tr><td class="name">Omelette de Claras</td><td class="price">$36k · $50k · $80k</td></tr>
+          <tr><td class="name">Falafel con Tortilla</td><td class="price">$65k · $120k · $180k</td></tr>
+          <tr><td class="name">Pancakes Avena y Banana</td><td class="price">$42k · $50k · $59k</td></tr>
+          <tr><td class="name">Smoothie Bowl</td><td class="price">$89k · $109k · $240k</td></tr>
+          <tr><td class="name">Granola + Leche Almendra</td><td class="price">$61k · $122k · $160k</td></tr>
+          <tr><td class="name">Ensalada de Garbanzos</td><td class="price">$25k · $35k · $50k</td></tr>
+          <tr><td class="name">Barras de Proteína</td><td class="price">$12k / u</td></tr>
+          <tr><td class="name">Barras de Granola</td><td class="price">$15k / 6u</td></tr>
+        </table>
+      </div>
+
+    </div>
+    <p class="note">💡 Los precios son por día para todo el grupo. El menú completo incluye todos los ítems de esa categoría. La tasa de conversión USD es aproximada (TRM del día).</p>
+  </div>
+
+  <!-- ═══ BEBIDAS ═══ -->
+  <div class="section">
+    <div class="divider"></div>
+    <div class="section-title">🍹 Lista de Bebidas</div>
+    <div class="section-sub">Precios por botella · COP · Aproximados</div>
+
+    <div class="drinks-grid">
+
+      <div class="drink-cat">
+        <div class="drink-cat-head"><span>🥃 Ron</span></div>
+        <table class="drink-items">
+          <tr><td class="drink-name">Ron Medellín 8 años</td><td class="drink-price">$110,000</td></tr>
+          <tr><td class="drink-name">Ron Dictador 12</td><td class="drink-price">$295,000</td></tr>
+          <tr><td class="drink-name">Aguardiente Antioqueño</td><td class="drink-price">$55,000</td></tr>
+        </table>
+      </div>
+
+      <div class="drink-cat">
+        <div class="drink-cat-head"><span>🌵 Tequila</span></div>
+        <table class="drink-items">
+          <tr><td class="drink-name">Patrón Silver</td><td class="drink-price">$258,000</td></tr>
+          <tr><td class="drink-name">Don Julio Blanco</td><td class="drink-price">$320,000</td></tr>
+        </table>
+      </div>
+
+      <div class="drink-cat">
+        <div class="drink-cat-head"><span>🍸 Vodka</span></div>
+        <table class="drink-items">
+          <tr><td class="drink-name">Grey Goose</td><td class="drink-price">$240,000</td></tr>
+          <tr><td class="drink-name">Absolut</td><td class="drink-price">$98,000</td></tr>
+        </table>
+      </div>
+
+      <div class="drink-cat">
+        <div class="drink-cat-head"><span>🥃 Whisky</span></div>
+        <table class="drink-items">
+          <tr><td class="drink-name">Johnnie Walker Black</td><td class="drink-price">$158,000</td></tr>
+          <tr><td class="drink-name">Chivas 12</td><td class="drink-price">$185,000</td></tr>
+        </table>
+      </div>
+
+      <div class="drink-cat">
+        <div class="drink-cat-head"><span>🌿 Gin</span></div>
+        <table class="drink-items">
+          <tr><td class="drink-name">Hendricks</td><td class="drink-price">$276,000</td></tr>
+          <tr><td class="drink-name">Tanqueray</td><td class="drink-price">$184,000</td></tr>
+        </table>
+      </div>
+
+      <div class="drink-cat">
+        <div class="drink-cat-head"><span>🥂 Champagne</span></div>
+        <table class="drink-items">
+          <tr><td class="drink-name">Moët & Chandon</td><td class="drink-price">$485,000</td></tr>
+          <tr><td class="drink-name">Espumante / Prosecco</td><td class="drink-price">$85,000</td></tr>
+        </table>
+      </div>
+
+      <div class="drink-cat">
+        <div class="drink-cat-head"><span>🍺 Cervezas</span></div>
+        <table class="drink-items">
+          <tr><td class="drink-name">Águila</td><td class="drink-price">$4,500</td></tr>
+          <tr><td class="drink-name">Club Colombia</td><td class="drink-price">$4,500</td></tr>
+          <tr><td class="drink-name">Corona</td><td class="drink-price">$7,000</td></tr>
+          <tr><td class="drink-name">Heineken</td><td class="drink-price">$6,000</td></tr>
+          <tr><td class="drink-name">Poker</td><td class="drink-price">$4,500</td></tr>
+        </table>
+      </div>
+
+      <div class="drink-cat">
+        <div class="drink-cat-head"><span>🍷 Vinos</span></div>
+        <table class="drink-items">
+          <tr><td class="drink-name">Vino tinto (botella)</td><td class="drink-price">Variable</td></tr>
+          <tr><td class="drink-name">Vino blanco (botella)</td><td class="drink-price">Variable</td></tr>
+          <tr><td class="drink-name">Vino rosado (botella)</td><td class="drink-price">Variable</td></tr>
+        </table>
+      </div>
+
+    </div>
+    <p class="note">💡 Los precios de bebidas son aproximados y pueden variar según disponibilidad y tasa de cambio del día. El servicio incluye los dos pedidos separados: casa y bote.</p>
+  </div>
+
+  <!-- ═══ MERCADO ═══ -->
+  <div class="section">
+    <div class="divider"></div>
+    <div class="section-title">🛒 Lista de Mercado</div>
+    <div class="section-sub">Productos sin precio fijo · Se cotiza según lista del cliente</div>
+
+    <div class="grocery-grid">
+      <div class="grocery-cat">
+        <div class="grocery-cat-head">🧂 Básicos</div>
+        <div class="grocery-items">
+          <span class="grocery-item">Mantequilla</span>
+          <span class="grocery-item">Aceite</span>
+          <span class="grocery-item">Sal</span>
+          <span class="grocery-item">Pimienta</span>
+          <span class="grocery-item">Azúcar blanca</span>
+          <span class="grocery-item">Azúcar morena</span>
+        </div>
+      </div>
+      <div class="grocery-cat">
+        <div class="grocery-cat-head">🥛 Lácteos</div>
+        <div class="grocery-items">
+          <span class="grocery-item">Mozzarella</span>
+          <span class="grocery-item">Cheddar</span>
+          <span class="grocery-item">Yogurt griego</span>
+          <span class="grocery-item">Yogurt vainilla</span>
+        </div>
+      </div>
+      <div class="grocery-cat">
+        <div class="grocery-cat-head">🍞 Harinas & Panes</div>
+        <div class="grocery-items">
+          <span class="grocery-item">Arepas</span>
+          <span class="grocery-item">Pan tajado</span>
+          <span class="grocery-item">Mezcla de pancakes</span>
+        </div>
+      </div>
+      <div class="grocery-cat">
+        <div class="grocery-cat-head">🥫 Condimentos</div>
+        <div class="grocery-items">
+          <span class="grocery-item">Cereal</span>
+          <span class="grocery-item">Granola</span>
+          <span class="grocery-item">Salsa picante</span>
+          <span class="grocery-item">Sirope</span>
+          <span class="grocery-item">Chips de chocolate</span>
+          <span class="grocery-item">Ketchup</span>
+          <span class="grocery-item">Miel</span>
+        </div>
+      </div>
+      <div class="grocery-cat">
+        <div class="grocery-cat-head">🍚 Granos & Huevos</div>
+        <div class="grocery-items">
+          <span class="grocery-item">Huevos</span>
+          <span class="grocery-item">Frijoles</span>
+          <span class="grocery-item">Arroz</span>
+          <span class="grocery-item">Sazón Maggi</span>
+          <span class="grocery-item">Chicharrón</span>
+        </div>
+      </div>
+      <div class="grocery-cat">
+        <div class="grocery-cat-head">🥤 Bebidas</div>
+        <div class="grocery-items">
+          <span class="grocery-item">Jugo naranja</span>
+          <span class="grocery-item">Jugo manzana</span>
+          <span class="grocery-item">Jugo arándano</span>
+          <span class="grocery-item">Agua (paquete)</span>
+          <span class="grocery-item">Litros de agua</span>
+          <span class="grocery-item">Gaseosas litro</span>
+          <span class="grocery-item">Limonada</span>
+          <span class="grocery-item">Ginger beer</span>
+          <span class="grocery-item">Electrolit</span>
+          <span class="grocery-item">Agua de coco</span>
+        </div>
+      </div>
+      <div class="grocery-cat">
+        <div class="grocery-cat-head">🥩 Carnes & Proteínas</div>
+        <div class="grocery-items">
+          <span class="grocery-item">Pollo</span>
+          <span class="grocery-item">Res</span>
+          <span class="grocery-item">Cerdo</span>
+          <span class="grocery-item">Tocineta</span>
+          <span class="grocery-item">Salchichas</span>
+          <span class="grocery-item">Jamón</span>
+          <span class="grocery-item">Salmón</span>
+          <span class="grocery-item">Atún en lata</span>
+        </div>
+      </div>
+      <div class="grocery-cat">
+        <div class="grocery-cat-head">🥦 Frutas & Verduras</div>
+        <div class="grocery-items">
+          <span class="grocery-item">Tomate</span>
+          <span class="grocery-item">Cebolla</span>
+          <span class="grocery-item">Aguacate</span>
+          <span class="grocery-item">Limón</span>
+          <span class="grocery-item">Lechuga</span>
+          <span class="grocery-item">Pepino</span>
+          <span class="grocery-item">Papa</span>
+          <span class="grocery-item">Ajo</span>
+          <span class="grocery-item">Banano</span>
+          <span class="grocery-item">Mango</span>
+          <span class="grocery-item">Maracuyá</span>
+        </div>
+      </div>
+    </div>
+    <p class="note">💡 El mercado se cotiza según la lista del cliente y los precios del supermercado del día. Se agrega un % por servicio de compras.</p>
+  </div>
+
+</div>
+</body>
+</html>
