@@ -1099,8 +1099,20 @@ function OrderCell({ summary, at, empty = "—", fullText, icon = "✅" }) {
               <span style={{ fontSize:14, fontWeight:700, color:"#111" }}>🛒 Pedido completo</span>
               <button onClick={() => setOpen(false)} style={{ border:"none", background:"none", cursor:"pointer", color:"#9ca3af", fontSize:20, lineHeight:1, padding:"0 4px" }}>✕</button>
             </div>
-            <div style={{ fontSize:13, color:"#374151", whiteSpace:"pre-wrap", lineHeight:1.8, padding:"20px 24px", overflowY:"auto", flex:1 }}>
-              {fullText || summary}
+            <div style={{ padding:"16px 24px", overflowY:"auto", flex:1, display:"flex", flexDirection:"column", gap:12 }}>
+              {(fullText || summary).split(/\n{2,}/).map((block, i) => {
+                const lines = block.trim().split("\n");
+                const isHeader = lines[0] && /^(☕|🍹|🛒|[A-Z]|[A-ZÁÉÍÓÚ]|\*|Vie|Lun|Mar|Mié|Jue|Vie|Sáb|Dom|Mon|Tue|Wed|Thu|Fri|Sat|Sun)/.test(lines[0].trim());
+                return (
+                  <div key={i} style={{ background: isHeader ? "#f9fafb" : "#fff", borderRadius:10, padding:"12px 14px", border:"1px solid #f0f0f0" }}>
+                    {lines.map((line, j) => (
+                      <div key={j} style={{ fontSize:13, color: j===0 && isHeader ? "#111" : "#374151", fontWeight: j===0 && isHeader ? 600 : 400, lineHeight:1.7 }}>
+                        {line || " "}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
             </div>
             {at && (
               <div style={{ fontSize:11, color:"#9ca3af", padding:"10px 24px", borderTop:"1px solid #f3f4f6", flexShrink:0 }}>
