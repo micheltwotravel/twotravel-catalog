@@ -8244,7 +8244,8 @@ const loadKickoffs = async () => {
                       })()}
                     </td>
 
-                    <td style={{maxWidth:180,overflow:"hidden"}}>
+                    <td style={{maxWidth:180,overflow:"hidden",cursor:k.internalNotes?"pointer":"default"}}
+                      onClick={k.internalNotes ? (e => { e.stopPropagation(); setInfoPopup({ title:"📝 Notas internas", text: k.internalNotes }); }) : undefined}>
                       {k.internalNotes ? (
                         <span style={{display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",fontSize:11,color:"var(--text-2)",whiteSpace:"pre-wrap",lineHeight:1.4}}>
                           {k.internalNotes}
@@ -8441,18 +8442,26 @@ const loadKickoffs = async () => {
 
       {/* ── Info popup (diet / passport) ── */}
       {infoPopup && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}}
+        <div style={{position:"fixed",inset:0,background:"rgba(10,8,6,.6)",zIndex:9999,display:"flex",alignItems:"flex-end",justifyContent:"center",backdropFilter:"blur(3px)",WebkitBackdropFilter:"blur(3px)"}}
           onClick={() => setInfoPopup(null)}>
-          <div style={{background:"#fff",borderRadius:12,padding:24,maxWidth:420,width:"90%",boxShadow:"0 8px 40px rgba(0,0,0,.18)"}}
+          <div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:0,maxWidth:480,width:"100%",boxShadow:"0 -8px 48px rgba(0,0,0,.22)",overflow:"hidden",maxHeight:"80vh",display:"flex",flexDirection:"column"}}
             onClick={e => e.stopPropagation()}>
-            <p style={{fontSize:13,fontWeight:700,color:"#1a1814",marginBottom:12}}>{infoPopup.title}</p>
-            <pre style={{fontSize:12,color:"#444",whiteSpace:"pre-wrap",fontFamily:"inherit",lineHeight:1.7,margin:0,wordBreak:"break-word"}}>
-              {infoPopup.text}
-            </pre>
-            <button onClick={() => setInfoPopup(null)}
-              style={{marginTop:16,padding:"6px 18px",borderRadius:8,border:"1px solid #e5e5e5",background:"#f5f5f4",fontSize:12,cursor:"pointer",color:"#555"}}>
-              Cerrar
-            </button>
+            {/* Header */}
+            <div style={{background:"#1a1814",padding:"20px 24px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+              <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:19,fontWeight:500,color:"#f7f4ef",letterSpacing:".02em"}}>{infoPopup.title}</span>
+              <button onClick={() => setInfoPopup(null)}
+                style={{background:"rgba(255,255,255,.12)",border:"none",borderRadius:"50%",width:28,height:28,cursor:"pointer",color:"#f7f4ef",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                ✕
+              </button>
+            </div>
+            {/* Gold divider */}
+            <div style={{height:2,background:"linear-gradient(90deg,#9a7d52,#c9a96e,#9a7d52)",flexShrink:0}} />
+            {/* Body */}
+            <div style={{padding:"20px 24px 28px",overflowY:"auto"}}>
+              <pre style={{fontSize:13,color:"#2d2926",whiteSpace:"pre-wrap",fontFamily:"'Jost',sans-serif",lineHeight:1.75,margin:0,wordBreak:"break-word"}}>
+                {infoPopup.text}
+              </pre>
+            </div>
           </div>
         </div>
       )}
