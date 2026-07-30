@@ -393,6 +393,8 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       priceTiers      : cartItem.priceTiers || (lang === "en" ? (service.priceTiers_en || service.priceTiers) : (service.priceTiers || service.priceTiers_en)) || service.price_tiers || "",
       tierQuantities  : cartItem.tierQuantities || [],
       tierTotal       : cartItem.tierTotal || 0,
+      _boatBadge      : !!cartItem._boatBadge,
+      _boatData       : cartItem._boatData || null,
     });
   });
   // Respect dayMeta order if provided
