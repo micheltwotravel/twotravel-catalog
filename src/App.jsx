@@ -1076,34 +1076,19 @@ function PassportPopup({ passportInfo, dietInfo, guestName }) {
     </div>
   );
 }
-function OrderCell({ summary, at, empty = "—", fullText }) {
+function OrderCell({ summary, at, empty = "—", fullText, icon = "✅" }) {
   const [open, setOpen] = React.useState(false);
   if (!summary) return (
     <span style={{ color:"#d1d5db", fontSize:16, cursor:"default" }} title="Pendiente">⏰</span>
   );
-  const items = summary.split(/[,·]/).map(s => s.trim()).filter(Boolean).slice(0, 4);
   const copyText = fullText || summary;
   return (
     <div style={{ position:"relative" }}>
-      <div
+      <button
         onClick={() => setOpen(v => !v)}
-        style={{ cursor:"pointer" }}
-        title="Ver detalle"
-      >
-        <div style={{ display:"flex", flexWrap:"wrap", gap:3, marginBottom: at ? 4 : 0 }}>
-          {items.map((l, i) => (
-            <span key={i} style={{
-              fontSize:10, background:"#f3f4f6", color:"#374151",
-              borderRadius:4, padding:"1px 5px", whiteSpace:"nowrap",
-            }}>{l}</span>
-          ))}
-        </div>
-        {at && (
-          <div style={{ fontSize:9.5, color:"#6b7280", fontWeight:500 }}>
-            {fmtOrderAt(at)}
-          </div>
-        )}
-      </div>
+        title="Ver pedido completo"
+        style={{ fontSize:18, background:"none", border:"none", cursor:"pointer", padding:"2px 4px", lineHeight:1 }}
+      >{icon}</button>
       {open && (
         <div style={{ position:"fixed", inset:0, zIndex:9998, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", padding:16 }} onClick={() => setOpen(false)}>
           <div onClick={e => e.stopPropagation()} style={{
@@ -1548,9 +1533,9 @@ function ClientesTable({ kickoffs, loading }) {
                         </div>
                       );
                     })()}</td>
-                    <td style={tdStyle}><OrderCell summary={drinkSummary} at={r.drinkOrderAt} fullText={r.drinkOrder} /></td>
-                    <td style={tdStyle}><OrderCell summary={grocerySummary} at={r.groceryOrderAt} fullText={r.groceryOrder} /></td>
-                    <td style={tdStyle}><OrderCell summary={breakfastSummary} at={breakfastAt} fullText={r.breakfastOrder} /></td>
+                    <td style={tdStyle}><OrderCell summary={drinkSummary} at={r.drinkOrderAt} fullText={r.drinkOrder} icon="🍹" /></td>
+                    <td style={tdStyle}><OrderCell summary={grocerySummary} at={r.groceryOrderAt} fullText={r.groceryOrder} icon="🛒" /></td>
+                    <td style={tdStyle}><OrderCell summary={breakfastSummary} at={breakfastAt} fullText={r.breakfastOrder} icon="☕" /></td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>
                       <button
                         onClick={() => generateTasksFromKickoff(r)}
