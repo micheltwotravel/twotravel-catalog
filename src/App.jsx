@@ -1127,7 +1127,7 @@ function OrderCell({ summary, at, empty = "—", fullText, icon = "✅" }) {
             </div>
           </div>
         </div>
-      )}}
+      )}
     </div>
   );
 }
