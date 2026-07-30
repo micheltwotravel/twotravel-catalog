@@ -242,6 +242,9 @@ function matchCart(cartRaw, catalog, kickoff) {
     if (/detalles del bote/i.test(item.name) || /boat details/i.test(item.name_en)) {
       const bn = kickoff?.boatName || "";
       const dk = kickoff?.dock || "";
+      const city = String(kickoff?.city || kickoff?._rowCity || "").toUpperCase();
+      const isCtg = /CTG|CARTAGENA/.test(city);
+      const isEs  = (kickoff?.lang || "en") === "es";
       const parseArr = (v) => {
         if (!v) return [];
         try { return JSON.parse(v); } catch {}
@@ -252,6 +255,28 @@ function matchCart(cartRaw, catalog, kickoff) {
         try { return JSON.parse(v); } catch {}
         return String(v).split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
       };
+
+      // Default templates for Cartagena (Islas del Rosario) when fields are empty
+      const CTG_TITLE_EN = "Boat trip to the Rosario Islands";
+      const CTG_TITLE_ES = "Paseo en Bote — Islas del Rosario";
+      const CTG_DESC_EN  = "The Rosario Islands is an archipelago located off the coast of Colombia, approximately 100 kilometres (62 miles) from Cartagena. It is one of the 46 Natural National Parks of Colombia.";
+      const CTG_DESC_ES  = "Las Islas del Rosario es un archipiélago ubicado frente a las costas de Colombia, a aproximadamente 100 km de Cartagena. Es uno de los 46 Parques Nacionales Naturales de Colombia.";
+      const CTG_BULLETS_EN = [
+        "It takes about an hour to get there.",
+        "Please note there's very little regulation at the islands — locals tend to overcharge tourists, that's why we try to stock the boat with everything you may need.",
+        "We can stock the boat with essentials like ice, water, sunscreen, cups and napkins. Let us know at least 24 hours before the trip if you'd like extras like beer, snacks, etc.",
+        "Boats return around 3:30 PM because the water gets choppy in the afternoon. All boats must be at the dock by 5:00 PM.",
+      ];
+      const CTG_BULLETS_ES = [
+        "El viaje en bote dura aproximadamente una hora.",
+        "En las islas hay poca regulación — los locales suelen cobrar de más a turistas, por eso intentamos surtir el bote con todo lo que puedan necesitar.",
+        "Podemos surtir el bote con hielo, agua, protector solar, vasos y servilletas. Avísanos con al menos 24 horas de anticipación si quieren adicionales como cervezas, snacks, etc.",
+        "Los botes regresan alrededor de las 3:30 PM porque el mar se agita en la tarde. Todos los botes deben estar en el muelle a las 5:00 PM.",
+      ];
+      const CTG_NOTE_EN = "Below you'll find all the options for your boat day — food, beach clubs, water activities and places to visit. Once you've chosen, we'll coordinate the full itinerary. Keep in mind that some water activities (fliteboard, flitescooter) can only be done in Barú, not in the Rosario Islands, so we'll coordinate times accordingly.";
+      const CTG_NOTE_ES = "A continuación encontrarás todas las opciones para el día de bote: comida, clubes de playa, actividades acuáticas y lugares para visitar. Cuando elijas, coordinamos el itinerario completo. Ten en cuenta que algunas actividades acuáticas (fliteboard, flitescooter) solo se pueden hacer en Barú, no en las Islas del Rosario.";
+
+      const userBullets = parseArr(kickoff?.boatBullets);
       item = {
         ...item,
         description_es: dk || "",
@@ -259,11 +284,11 @@ function matchCart(cartRaw, catalog, kickoff) {
         location: bn || "",
         _boatBadge: true,
         _boatData: {
-          title:         kickoff?.boatTitle         || "",
+          title:         kickoff?.boatTitle         || (isCtg ? (isEs ? CTG_TITLE_ES : CTG_TITLE_EN) : ""),
           departureTime: kickoff?.boatDepartureTime || "",
-          description:   kickoff?.boatDescription   || "",
-          bullets:       parseArr(kickoff?.boatBullets),
-          note:          kickoff?.boatNote           || "",
+          description:   kickoff?.boatDescription   || (isCtg ? (isEs ? CTG_DESC_ES  : CTG_DESC_EN)  : ""),
+          bullets:       userBullets.length ? userBullets : (isCtg ? (isEs ? CTG_BULLETS_ES : CTG_BULLETS_EN) : []),
+          note:          kickoff?.boatNote           || (isCtg ? (isEs ? CTG_NOTE_ES  : CTG_NOTE_EN)  : ""),
           photos:        parsePhotos(kickoff?.boatPhotos).map(driveImgUrl).filter(Boolean),
         },
       };
@@ -1453,64 +1478,83 @@ function BoatDetailCard({ it, lang, editMode, onRemove }) {
         }}>×</button>
       )}
 
-      {/* Photo gallery */}
-      {photos?.length > 0 && (
+      {/* ── Hero photo gallery ── */}
+      {photos?.length > 0 ? (
         <div style={{
-          display: "grid",
-          gridTemplateColumns: photos.length === 1 ? "1fr" : photos.length === 2 ? "1fr 1fr" : "2fr 1fr",
-          gap: 3, height: photos.length === 1 ? 240 : 200,
-          overflow: "hidden", background: "#f0f0f0", flexShrink: 0,
+          display:"grid",
+          gridTemplateColumns: photos.length === 1 ? "1fr" : "2fr 1fr",
+          gridTemplateRows: photos.length >= 3 ? "1fr 1fr" : "1fr",
+          gap:3, height:260, overflow:"hidden", background:"#e8e8e8", flexShrink:0,
         }}>
-          {photos.length >= 3 ? (
-            <>
-              <img src={photos[0]} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center", display:"block" }}
-                onError={e => e.target.style.display = "none"} />
-              <div style={{ display:"grid", gridTemplateRows:"1fr 1fr", gap: 3 }}>
-                {photos.slice(1, 3).map((url, i) => (
-                  <img key={i} src={url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center", display:"block" }}
-                    onError={e => e.target.style.display = "none"} />
-                ))}
-              </div>
-            </>
-          ) : (
-            photos.map((url, i) => (
-              <img key={i} src={url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center", display:"block" }}
-                onError={e => e.target.style.display = "none"} />
-            ))
-          )}
+          <img src={photos[0]} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center", display:"block",
+            gridRow: photos.length >= 3 ? "1 / 3" : "1", gridColumn:"1" }}
+            onError={e => e.target.style.display="none"} />
+          {photos.slice(1, 3).map((url, i) => (
+            <img key={i} src={url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center", display:"block" }}
+              onError={e => e.target.style.display="none"} />
+          ))}
         </div>
+      ) : (
+        /* Ocean-teal gradient header when no photos available */
+        <div style={{
+          height:12, flexShrink:0,
+          background:"linear-gradient(90deg,#0c7c84 0%,#1a9ba8 50%,#4db8c4 100%)",
+        }} />
       )}
 
-      {/* Content */}
-      <div style={{ padding: "22px 28px 20px" }}>
-        {/* Badges */}
-        <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:14, alignItems:"center" }}>
-          {departureTime && (
-            <span className="ev-time-badge">🕐 {departureTime}</span>
-          )}
-          {boatName && <span style={amber}>🛥 {boatName}</span>}
-          {dock && <span style={amber}>⚓ {dock}</span>}
-        </div>
+      {/* ── Content ── */}
+      <div style={{ padding:"24px 32px 24px" }}>
 
         {/* Title */}
-        <div style={{ fontSize:17, fontWeight:700, color:"#111", letterSpacing:"-.2px", marginBottom:12, lineHeight:1.2 }}>
+        <div style={{ fontSize:20, fontWeight:700, color:"#111", letterSpacing:"-.3px", lineHeight:1.2, marginBottom:18 }}>
           {displayTitle}
         </div>
 
+        {/* Info cards: Boat · Dock · Time */}
+        {(boatName || dock || departureTime) && (
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:20 }}>
+            {boatName && (
+              <div style={{ border:"1.5px solid #fcd34d", borderRadius:8, padding:"8px 14px", background:"#fef9ec", minWidth:90 }}>
+                <div style={{ fontSize:8, letterSpacing:"2px", textTransform:"uppercase", color:"#92400e", fontWeight:700, marginBottom:3 }}>🛥 Boat</div>
+                <div style={{ fontSize:12.5, fontWeight:600, color:"#111" }}>{boatName}</div>
+              </div>
+            )}
+            {dock && (
+              <div style={{ border:"1.5px solid #fcd34d", borderRadius:8, padding:"8px 14px", background:"#fef9ec", minWidth:90 }}>
+                <div style={{ fontSize:8, letterSpacing:"2px", textTransform:"uppercase", color:"#92400e", fontWeight:700, marginBottom:3 }}>⚓ Dock</div>
+                <div style={{ fontSize:12.5, fontWeight:600, color:"#111" }}>{dock}</div>
+              </div>
+            )}
+            {departureTime && (
+              <div style={{ border:"1.5px solid #fcd34d", borderRadius:8, padding:"8px 14px", background:"#fef9ec", minWidth:90 }}>
+                <div style={{ fontSize:8, letterSpacing:"2px", textTransform:"uppercase", color:"#92400e", fontWeight:700, marginBottom:3 }}>🕐 Departure</div>
+                <div style={{ fontSize:12.5, fontWeight:600, color:"#111" }}>{departureTime}</div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Description */}
         {description && (
-          <p style={{ fontSize:12.5, color:"#444", lineHeight:1.75, marginBottom:16, whiteSpace:"pre-line" }}>
+          <p style={{ fontSize:12.5, color:"#444", lineHeight:1.8, marginBottom:20, whiteSpace:"pre-line" }}>
             {description}
           </p>
         )}
 
-        {/* Bullets */}
+        {/* Important Information */}
         {bullets?.length > 0 && (
-          <div style={{ marginBottom:16 }}>
+          <div style={{ marginBottom:20 }}>
+            <div style={{
+              fontSize:8.5, letterSpacing:"2.5px", textTransform:"uppercase",
+              color:"#999", fontWeight:700, marginBottom:10,
+              paddingBottom:6, borderBottom:"1px solid #e8e8e8",
+            }}>
+              {isEs ? "Información Importante" : "Important Information"}
+            </div>
             {bullets.map((b, i) => (
-              <div key={i} style={{ display:"flex", gap:8, alignItems:"flex-start", marginBottom:6 }}>
-                <span style={{ color:"#b45309", flexShrink:0, fontSize:14, lineHeight:1.4, fontWeight:700 }}>›</span>
-                <span style={{ fontSize:12, color:"#333", lineHeight:1.55 }}>{b}</span>
+              <div key={i} style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:8 }}>
+                <span style={{ color:"#0c7c84", flexShrink:0, fontSize:14, lineHeight:1.4, fontWeight:700 }}>›</span>
+                <span style={{ fontSize:12, color:"#333", lineHeight:1.6 }}>{b}</span>
               </div>
             ))}
           </div>
@@ -1519,21 +1563,21 @@ function BoatDetailCard({ it, lang, editMode, onRemove }) {
         {/* Note callout */}
         {note && (
           <div style={{
-            background:"#fef3c7", border:"1.5px solid #fcd34d",
-            borderRadius:10, padding:"13px 16px", marginBottom:6,
+            background:"#fffbeb", border:"1.5px solid #fcd34d",
+            borderRadius:10, padding:"14px 18px",
           }}>
-            <div style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
-              <span style={{ fontSize:13, flexShrink:0, lineHeight:1.4 }}>⭐</span>
-              <p style={{ fontSize:11.5, color:"#78350f", lineHeight:1.65, margin:0, whiteSpace:"pre-line" }}>
-                {note}
-              </p>
+            <div style={{ fontSize:8, letterSpacing:"2.5px", textTransform:"uppercase", color:"#b45309", fontWeight:700, marginBottom:7 }}>
+              {isEs ? "📌 Nota" : "📌 Note"}
             </div>
+            <p style={{ fontSize:12, color:"#78350f", lineHeight:1.7, margin:0, whiteSpace:"pre-line" }}>
+              {note}
+            </p>
           </div>
         )}
 
         {/* QB footer */}
         {it.qbCode && (
-          <div className="ev-qb" style={{ marginTop:10 }}>
+          <div className="ev-qb" style={{ marginTop:14 }}>
             [{it.qbCode}][{cleanBrackets(it.title)}][{it.priceUsd || num(it.price) || "0"}]
           </div>
         )}
