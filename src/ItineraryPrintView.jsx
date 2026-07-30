@@ -238,15 +238,16 @@ function matchCart(cartRaw, catalog, kickoff) {
   const cart = parseJsonField(cartRaw);
   const out = [];
   for (let item of cart) {
-    // Keep boat details description in sync with kickoff.boatName / kickoff.dock
+    // Keep boat details in sync with kickoff.boatName / kickoff.dock
     if (/detalles del bote/i.test(item.name) || /boat details/i.test(item.name_en)) {
-      const bn = kickoff?.boatName || "—";
+      const bn = kickoff?.boatName || "";
       const dk = kickoff?.dock || "";
       item = {
         ...item,
-        description_es: `Nombre del bote: **${bn}**${dk ? `\nMuelle de salida: ${dk}` : ""}`,
-        description_en: `Boat name: **${bn}**${dk ? `\nDeparture dock: ${dk}` : ""}`,
-        ...(bn !== "—" ? { location: bn } : {}),
+        description_es: dk ? dk : "",
+        description_en: dk ? dk : "",
+        location: bn || "",
+        _boatBadge: true,
       };
     }
     if (item.ghost) continue;
@@ -1617,10 +1618,25 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
           </div>
         )}
 
-        {/* Description */}
-        {it.description && (
+        {/* Boat Details — styled badges instead of plain description */}
+        {(/boat details/i.test(it.title) || /detalles del bote/i.test(it.title)) ? (
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:10 }}>
+            {it.location && (
+              <span style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:11.5, fontWeight:700, color:"#92400e", background:"#fef3c7", border:"1.5px solid #fcd34d", borderRadius:8, padding:"5px 12px", letterSpacing:".1px" }}>
+                🛥 {it.location}
+              </span>
+            )}
+            {it.description && (
+              <span style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:11.5, fontWeight:700, color:"#92400e", background:"#fef3c7", border:"1.5px solid #fcd34d", borderRadius:8, padding:"5px 12px", letterSpacing:".1px" }}>
+                ⚓ {it.description}
+              </span>
+            )}
+          </div>
+        ) : (
+        /* Description */
+        it.description && (
           <Editable value={it.description} tag="p" className="ev-desc" editMode={editMode} onChange={v => patchItem?.("description", v)} />
-        )}
+        ))}
 
         {/* Highlights */}
         {hiList.length > 0 && (
