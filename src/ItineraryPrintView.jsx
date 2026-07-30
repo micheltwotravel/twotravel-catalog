@@ -397,7 +397,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       cancellation : service.cancellation || "",
       menuUrl      : service.menuUrl    || "",
       mapsUrl      : service.mapsUrl    || "",
-      image        : service.image      || "",
+      image        : service.image || driveImgUrl(cartItem.image || "") || "",
       serviceImages: (() => {
         const imgs = Array.isArray(service.images) ? service.images : (service.image ? [service.image] : []);
         return imgs.filter(Boolean);
@@ -406,7 +406,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
         const arr = Array.isArray(cartItem.images) ? cartItem.images : [];
         const s = cartItem.image || "";
         const all = [...arr]; if (s && !all.includes(s)) all.unshift(s);
-        return all.filter(Boolean);
+        return all.map(driveImgUrl).filter(Boolean);
       })(),
       qbCode       : service.quickbooksCode || service.quickbooks_code || "",
       category     : service.category   || "",

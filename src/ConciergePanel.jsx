@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import ttLogoPng from "./assets/logo.png";
 import { AvailabilityManager } from "./BookingPage";
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
@@ -209,9 +210,13 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     doc.setLineWidth(0.5);
     doc.line(ML, 30, MR, 30);
     doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(180,180,180);
-    dt("TWO TRAVEL", ML, 22);
     dt(cl(kickoff.guestName), PW / 2, 22, { align:"center" });
     dt(`${pageNum}`, MR, 22, { align:"right" });
+    if (logoB64) {
+      try { doc.addImage(logoB64, "PNG", ML, 8, 40, 16, undefined, "FAST"); } catch(e) {}
+    } else {
+      dt("TWO TRAVEL", ML, 22);
+    }
   };
   const newPage = () => {
     doc.addPage(); pageNum++; y = 52; addMiniHeader();
@@ -221,11 +226,14 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   const checkInUrl = cl(kickoff.checkInFormUrl || "");
 
   // Pre-fetch photos (async, before rendering)
-  const coverPhotoB64  = kickoff.coverPhotoId
-    ? await fetchImgB64(`https://lh3.googleusercontent.com/d/${kickoff.coverPhotoId}`).catch(() => null)
-    : null;
-  const accomPhotoB64  = await fetchImgB64(driveImgUrl(cl(kickoff.accommodationPhoto  || ""))).catch(() => null);
-  const accomPhotoB64_2 = await fetchImgB64(driveImgUrl(cl(kickoff.accommodationPhoto2 || ""))).catch(() => null);
+  const [coverPhotoB64, accomPhotoB64, accomPhotoB64_2, logoB64] = await Promise.all([
+    kickoff.coverPhotoId
+      ? fetchImgB64(`https://lh3.googleusercontent.com/d/${kickoff.coverPhotoId}`).catch(() => null)
+      : Promise.resolve(null),
+    fetchImgB64(driveImgUrl(cl(kickoff.accommodationPhoto  || ""))).catch(() => null),
+    fetchImgB64(driveImgUrl(cl(kickoff.accommodationPhoto2 || ""))).catch(() => null),
+    fetchImgB64(ttLogoPng).catch(() => null),
+  ]);
 
   // ── COVER ───────────────────────────────────────────────────
   // Header band
@@ -321,22 +329,22 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   ].filter(r => r.val);
 
   infoRows.forEach(({ label, val, url, sub }) => {
-    doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(100,100,100);
+    doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
     dt(se(label).toUpperCase(), ML, y);
-    doc.setFontSize(10.5); doc.setFont("helvetica","normal");
+    doc.setFontSize(12); doc.setFont("helvetica","normal");
     if (url) {
       doc.setTextColor(30, 100, 200);
       dtLink(val, ML + 100, y, url);
     } else {
-      doc.setTextColor(20, 20, 20);
+      doc.setTextColor(15, 15, 15);
       dt(se(val), ML + 100, y);
     }
     if (sub) {
-      doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(130,130,130);
-      dt(se(sub), ML + 100, y + 8);
-      y += 8;
+      doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(100,100,100);
+      dt(se(sub), ML + 100, y + 9);
+      y += 9;
     }
-    y += 18;
+    y += 20;
   });
 
   // Property photo (city 1)
@@ -401,6 +409,19 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   const ad   = encodeURIComponent(cl(kickoff.arrivalDate));
   const dd   = encodeURIComponent(cl(kickoff.departureDate));
 
+  // Check-in Form — shown first if set
+  if (checkInUrl) {
+    doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(30,30,30);
+    dt(lang === "es" ? "Formulario de Pre Check-in" : "Pre Check-in Form", ML, y); y += 13;
+    doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(70,70,70);
+    dt(lang === "es"
+      ? "Completa tu formulario de pre-llegada antes de tu viaje."
+      : "Complete your pre-arrival check-in form before your trip.", ML, y); y += 12;
+    doc.setTextColor(30,100,200);
+    const shortCheckIn = checkInUrl.replace(/^https?:\/\//, "").slice(0, 60);
+    dtLink(shortCheckIn, ML, y, checkInUrl); y += 16;
+  }
+
   // Drinks
   const drinksUrl     = `${BASE}/d/${kid}`;
   const drinksDisplay = `twotravelvip.com/d/${kid}`;
@@ -441,19 +462,6 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       : "Choose your breakfast menu for your entire stay.", ML, y); y += 10;
     doc.setTextColor(30,100,200);
     dtLink(bfDisplay, ML, y, bfUrl); y += 14;
-  }
-
-  // Check-in Form (if concierge set a HubSpot link)
-  if (checkInUrl) {
-    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
-    dt(lang === "es" ? "Formulario de Check-in" : "Check-in Form", ML, y); y += 11;
-    doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
-    dt(lang === "es"
-      ? "Completa tu formulario de pre-llegada antes de tu viaje."
-      : "Complete your pre-arrival check-in form before your trip.", ML, y); y += 10;
-    doc.setTextColor(30,100,200);
-    const shortCheckIn = checkInUrl.replace(/^https?:\/\//, "").slice(0, 60);
-    dtLink(shortCheckIn, ML, y, checkInUrl); y += 14;
   }
 
   // Welcome guide
@@ -557,10 +565,10 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     const bandH = title ? 36 : 26;
     doc.setFillColor(30,30,30);
     doc.rect(ML - 12, y - 14, TW + 24, bandH, "F");
-    doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
+    doc.setFontSize(13); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
     dt(label, ML, y);
     if (title) {
-      doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(200,200,200);
+      doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(200,200,200);
       const titleLines = sts(cl(title), TW);
       dt(titleLines[0], ML, y + 14);
       y += 14;
@@ -578,8 +586,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
 
       // Time + Name
       const timePart = item.time ? `${item.time}   ` : "";
-      doc.setFontSize(10.5); doc.setFont("helvetica","bold"); doc.setTextColor(15,15,15);
-      dt(se(timePart + item.name), ML, y); y += 15;
+      doc.setFontSize(12.5); doc.setFont("helvetica","bold"); doc.setTextColor(10,10,10);
+      dt(se(timePart + item.name), ML, y); y += 17;
 
       // Price (deposit amount) — show COP price when set
       const itemPriceCop = Number(item.price_cop ?? 0);
@@ -608,15 +616,15 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
 
       // Location
       if (item.location) {
-        doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(120,120,120);
-        dt(se(item.location), ML + 2, y); y += 13;
+        doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(90,90,90);
+        dt(se(item.location), ML + 2, y); y += 14;
       }
 
       // Description (max 3 lines)
       descLines.forEach(line => {
-        checkY(13);
-        doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(65,65,65);
-        dt(line, ML + 4, y); y += 12;
+        checkY(14);
+        doc.setFontSize(10.5); doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40);
+        dt(line, ML + 4, y); y += 14;
       });
 
 
@@ -5240,7 +5248,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       if (addr)  setAccommodationAddr(addr);
                       if (url)   setAccommodationUrl(url);
                       if (nbhd)  setBarrio(nbhd);
-                      const photo = match.photoUrl || match.PhotoUrl || match.photo || match.Photo || match.coverPhoto || match.CoverPhoto || "";
+                      const photo = match.photoUrl || match.PhotoUrl || match.photo || match.Photo || match.coverPhoto || match.CoverPhoto || match["Photo URL"] || match.photo_url || match.image || match.Image || match.imageUrl || match.ImageUrl || match["Cover Photo"] || match["Image URL"] || "";
                       if (photo) setAccommodationPhoto(photo);
                     }
                   }}
@@ -5406,7 +5414,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                         if (addr)  setAccommodationAddr2(addr);
                         if (url)   setAccommodationUrl2(url);
                         if (nbhd)  setBarrio2(nbhd);
-                        const photo = match.photoUrl || match.PhotoUrl || match.photo || match.Photo || match.coverPhoto || match.CoverPhoto || "";
+                        const photo = match.photoUrl || match.PhotoUrl || match.photo || match.Photo || match.coverPhoto || match.CoverPhoto || match["Photo URL"] || match.photo_url || match.image || match.Image || match.imageUrl || match.ImageUrl || match["Cover Photo"] || match["Image URL"] || "";
                         if (photo) setAccommodationPhoto2(photo);
                       }
                     }}
