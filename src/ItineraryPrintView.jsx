@@ -259,6 +259,7 @@ function matchCart(cartRaw, catalog, kickoff) {
         location: bn || "",
         _boatBadge: true,
         _boatData: {
+          title:         kickoff?.boatTitle         || "",
           departureTime: kickoff?.boatDepartureTime || "",
           description:   kickoff?.boatDescription   || "",
           bullets:       parseArr(kickoff?.boatBullets),
@@ -1429,9 +1430,10 @@ function WelcomePage({ kickoff, lang, page, total, editMode, localPreTrip, setLo
 function BoatDetailCard({ it, lang, editMode, onRemove }) {
   const isEs = lang === "es";
   const bd = it._boatData || {};
-  const { departureTime, description, bullets, note, photos } = bd;
+  const { title: boatTitle, departureTime, description, bullets, note, photos } = bd;
   const boatName = it.location || "";
   const dock = it.description || "";
+  const displayTitle = boatTitle || it.title || (isEs ? "Día de Bote" : "Boat Day");
 
   const amber = {
     display: "inline-flex", alignItems: "center", gap: 5,
@@ -1492,7 +1494,7 @@ function BoatDetailCard({ it, lang, editMode, onRemove }) {
 
         {/* Title */}
         <div style={{ fontSize:17, fontWeight:700, color:"#111", letterSpacing:"-.2px", marginBottom:12, lineHeight:1.2 }}>
-          {it.title}
+          {displayTitle}
         </div>
 
         {/* Description */}

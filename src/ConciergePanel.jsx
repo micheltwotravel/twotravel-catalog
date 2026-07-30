@@ -4164,6 +4164,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [boatDay,                setBoatDay]                 = useState(kickoff?.boatDay                || "");
   const [boatDayType,            setBoatDayType]             = useState(kickoff?.boatDayType            || "");
   const [dock,                   setDock]                    = useState(kickoff?.dock                   || "");
+  const [boatTitle,              setBoatTitle]               = useState(kickoff?.boatTitle              || "");
   const [boatDepartureTime,      setBoatDepartureTime]       = useState(kickoff?.boatDepartureTime      || "");
   const [boatDescription,        setBoatDescription]         = useState(kickoff?.boatDescription        || "");
   const [boatBulletsRaw,         setBoatBulletsRaw]          = useState(() => {
@@ -4460,6 +4461,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   updates.boatDay                = boatDay.trim();
   updates.boatDayType            = boatDayType;
   updates.dock                   = dock.trim();
+  updates.boatTitle              = boatTitle.trim();
   updates.boatDepartureTime      = boatDepartureTime.trim();
   updates.boatDescription        = boatDescription.trim();
   updates.boatBullets            = JSON.stringify(boatBulletsRaw.split('\n').map(s => s.trim()).filter(Boolean));
@@ -4988,6 +4990,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             <div className="border-t pt-3">
               <p className="text-[10px] font-semibold text-sky-700 uppercase tracking-wider mb-2">Contenido del itinerario — Bote</p>
               <div className="space-y-2">
+                <div>
+                  <label className="text-[10px] text-neutral-500">Título del itinerario</label>
+                  <input value={boatTitle} onChange={e => setBoatTitle(e.target.value)}
+                    className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white"
+                    placeholder="Boat trip to the Rosario Islands" />
+                </div>
                 <div>
                   <label className="text-[10px] text-neutral-500">Hora de salida</label>
                   <input value={boatDepartureTime} onChange={e => setBoatDepartureTime(e.target.value)}
