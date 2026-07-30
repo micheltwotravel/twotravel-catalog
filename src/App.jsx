@@ -1516,7 +1516,7 @@ function ClientesTable({ kickoffs, loading }) {
                       {(() => {
                         const food = r.foodRestrictions || r["Food Restrictions"] || "";
                         const allergy = r.allergies || r["Allergies and/or Medical Conditions"] || "";
-                        const combined = r.dietInfo || [food, allergy].filter(Boolean).join(" / ");
+                        const combined = r.dietInfo || r.briefDietary || [food, allergy].filter(Boolean).join(" / ");
                         return combined
                           ? <PassportPopup passportInfo="" dietInfo={combined} guestName={r.guestName || r.tripName} />
                           : <span style={{ color:"#d1d5db" }}>—</span>;
