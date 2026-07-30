@@ -1115,7 +1115,7 @@ function OrderCell({ summary, at, empty = "—", fullText }) {
               <button onClick={() => setOpen(false)} style={{ border:"none", background:"none", cursor:"pointer", color:"#9ca3af", fontSize:20, lineHeight:1, padding:"0 4px" }}>✕</button>
             </div>
             <div style={{ fontSize:13, color:"#374151", whiteSpace:"pre-wrap", lineHeight:1.8, padding:"20px 24px", overflowY:"auto", flex:1 }}>
-              {summary}
+              {fullText || summary}
             </div>
             {at && (
               <div style={{ fontSize:11, color:"#9ca3af", padding:"10px 24px", borderTop:"1px solid #f3f4f6", flexShrink:0 }}>
@@ -1549,8 +1549,8 @@ function ClientesTable({ kickoffs, loading }) {
                       );
                     })()}</td>
                     <td style={tdStyle}><OrderCell summary={drinkSummary} at={r.drinkOrderAt} fullText={r.drinkOrder} /></td>
-                    <td style={tdStyle}><OrderCell summary={grocerySummary} at={r.groceryOrderAt} /></td>
-                    <td style={tdStyle}><OrderCell summary={breakfastSummary} at={breakfastAt} /></td>
+                    <td style={tdStyle}><OrderCell summary={grocerySummary} at={r.groceryOrderAt} fullText={r.groceryOrder} /></td>
+                    <td style={tdStyle}><OrderCell summary={breakfastSummary} at={breakfastAt} fullText={r.breakfastOrder} /></td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>
                       <button
                         onClick={() => generateTasksFromKickoff(r)}
