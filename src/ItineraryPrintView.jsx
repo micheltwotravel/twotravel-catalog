@@ -238,16 +238,33 @@ function matchCart(cartRaw, catalog, kickoff) {
   const cart = parseJsonField(cartRaw);
   const out = [];
   for (let item of cart) {
-    // Keep boat details in sync with kickoff.boatName / kickoff.dock
+    // Keep boat details in sync with kickoff fields — build rich _boatData
     if (/detalles del bote/i.test(item.name) || /boat details/i.test(item.name_en)) {
       const bn = kickoff?.boatName || "";
       const dk = kickoff?.dock || "";
+      const parseArr = (v) => {
+        if (!v) return [];
+        try { return JSON.parse(v); } catch {}
+        return String(v).split('\n').map(s => s.trim()).filter(Boolean);
+      };
+      const parsePhotos = (v) => {
+        if (!v) return [];
+        try { return JSON.parse(v); } catch {}
+        return String(v).split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      };
       item = {
         ...item,
-        description_es: dk ? dk : "",
-        description_en: dk ? dk : "",
+        description_es: dk || "",
+        description_en: dk || "",
         location: bn || "",
         _boatBadge: true,
+        _boatData: {
+          departureTime: kickoff?.boatDepartureTime || "",
+          description:   kickoff?.boatDescription   || "",
+          bullets:       parseArr(kickoff?.boatBullets),
+          note:          kickoff?.boatNote           || "",
+          photos:        parsePhotos(kickoff?.boatPhotos).map(driveImgUrl).filter(Boolean),
+        },
       };
     }
     if (item.ghost) continue;
@@ -1405,6 +1422,123 @@ function WelcomePage({ kickoff, lang, page, total, editMode, localPreTrip, setLo
 }
 
 /* ═══════════════════════════════════════════════════════════
+   BOAT DETAIL CARD — rich full-width layout for boat day
+═══════════════════════════════════════════════════════════ */
+function BoatDetailCard({ it, lang, editMode, onRemove }) {
+  const isEs = lang === "es";
+  const bd = it._boatData || {};
+  const { departureTime, description, bullets, note, photos } = bd;
+  const boatName = it.location || "";
+  const dock = it.description || "";
+
+  const amber = {
+    display: "inline-flex", alignItems: "center", gap: 5,
+    fontSize: 11, fontWeight: 700, color: "#92400e",
+    background: "#fef3c7", border: "1.5px solid #fcd34d",
+    borderRadius: 20, padding: "4px 12px", letterSpacing: ".1px", flexShrink: 0,
+  };
+
+  return (
+    <div className="ev" style={{ flexDirection: "column", position: "relative" }}>
+      {editMode && onRemove && (
+        <button onClick={onRemove} className="no-print" style={{
+          position:"absolute", top:8, right:8, zIndex:10,
+          background:"#ef4444", color:"#fff", border:"none",
+          borderRadius:"50%", width:22, height:22, fontSize:13, fontWeight:700,
+          cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+        }}>×</button>
+      )}
+
+      {/* Photo gallery */}
+      {photos?.length > 0 && (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: photos.length === 1 ? "1fr" : photos.length === 2 ? "1fr 1fr" : "2fr 1fr",
+          gap: 3, height: photos.length === 1 ? 240 : 200,
+          overflow: "hidden", background: "#f0f0f0", flexShrink: 0,
+        }}>
+          {photos.length >= 3 ? (
+            <>
+              <img src={photos[0]} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center", display:"block" }}
+                onError={e => e.target.style.display = "none"} />
+              <div style={{ display:"grid", gridTemplateRows:"1fr 1fr", gap: 3 }}>
+                {photos.slice(1, 3).map((url, i) => (
+                  <img key={i} src={url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center", display:"block" }}
+                    onError={e => e.target.style.display = "none"} />
+                ))}
+              </div>
+            </>
+          ) : (
+            photos.map((url, i) => (
+              <img key={i} src={url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center", display:"block" }}
+                onError={e => e.target.style.display = "none"} />
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Content */}
+      <div style={{ padding: "22px 28px 20px" }}>
+        {/* Badges */}
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:14, alignItems:"center" }}>
+          {departureTime && (
+            <span className="ev-time-badge">🕐 {departureTime}</span>
+          )}
+          {boatName && <span style={amber}>🛥 {boatName}</span>}
+          {dock && <span style={amber}>⚓ {dock}</span>}
+        </div>
+
+        {/* Title */}
+        <div style={{ fontSize:17, fontWeight:700, color:"#111", letterSpacing:"-.2px", marginBottom:12, lineHeight:1.2 }}>
+          {it.title}
+        </div>
+
+        {/* Description */}
+        {description && (
+          <p style={{ fontSize:12.5, color:"#444", lineHeight:1.75, marginBottom:16, whiteSpace:"pre-line" }}>
+            {description}
+          </p>
+        )}
+
+        {/* Bullets */}
+        {bullets?.length > 0 && (
+          <div style={{ marginBottom:16 }}>
+            {bullets.map((b, i) => (
+              <div key={i} style={{ display:"flex", gap:8, alignItems:"flex-start", marginBottom:6 }}>
+                <span style={{ color:"#b45309", flexShrink:0, fontSize:14, lineHeight:1.4, fontWeight:700 }}>›</span>
+                <span style={{ fontSize:12, color:"#333", lineHeight:1.55 }}>{b}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Note callout */}
+        {note && (
+          <div style={{
+            background:"#fef3c7", border:"1.5px solid #fcd34d",
+            borderRadius:10, padding:"13px 16px", marginBottom:6,
+          }}>
+            <div style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
+              <span style={{ fontSize:13, flexShrink:0, lineHeight:1.4 }}>⭐</span>
+              <p style={{ fontSize:11.5, color:"#78350f", lineHeight:1.65, margin:0, whiteSpace:"pre-line" }}>
+                {note}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* QB footer */}
+        {it.qbCode && (
+          <div className="ev-qb" style={{ marginTop:10 }}>
+            [{it.qbCode}][{cleanBrackets(it.title)}][{it.priceUsd || num(it.price) || "0"}]
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
    EVENT BLOCK — horizontal card
    Left: landscape image  |  Right: all content
 ═══════════════════════════════════════════════════════════ */
@@ -1412,6 +1546,11 @@ function WelcomePage({ kickoff, lang, page, total, editMode, localPreTrip, setLo
 const HIDE_PRICE_CATS = new Set(["restaurants","bars","nightlife","beach-clubs","beach clubs","beachclubs"]);
 
 function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
+  // Boat Details gets its own rich card layout
+  if (it._boatBadge) {
+    return <BoatDetailCard it={it} lang={lang} editMode={editMode} onRemove={onRemove} />;
+  }
+
   const isConfirmed = it.confirmed !== false;
   const showPrice = isConfirmed && (it.priceIsOverride || !HIDE_PRICE_CATS.has(String(it.category || "").trim().toLowerCase()));
   const price    = showPrice ? fmtPrice(it.price) : "";
@@ -1618,25 +1757,10 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
           </div>
         )}
 
-        {/* Boat Details — styled badges instead of plain description */}
-        {(/boat details/i.test(it.title) || /detalles del bote/i.test(it.title)) ? (
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:10 }}>
-            {it.location && (
-              <span style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:11.5, fontWeight:700, color:"#92400e", background:"#fef3c7", border:"1.5px solid #fcd34d", borderRadius:8, padding:"5px 12px", letterSpacing:".1px" }}>
-                🛥 {it.location}
-              </span>
-            )}
-            {it.description && (
-              <span style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:11.5, fontWeight:700, color:"#92400e", background:"#fef3c7", border:"1.5px solid #fcd34d", borderRadius:8, padding:"5px 12px", letterSpacing:".1px" }}>
-                ⚓ {it.description}
-              </span>
-            )}
-          </div>
-        ) : (
-        /* Description */
-        it.description && (
+        {/* Description */}
+        {it.description && (
           <Editable value={it.description} tag="p" className="ev-desc" editMode={editMode} onChange={v => patchItem?.("description", v)} />
-        ))}
+        )}
 
         {/* Highlights */}
         {hiList.length > 0 && (

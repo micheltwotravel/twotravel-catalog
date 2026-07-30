@@ -4164,6 +4164,19 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [boatDay,                setBoatDay]                 = useState(kickoff?.boatDay                || "");
   const [boatDayType,            setBoatDayType]             = useState(kickoff?.boatDayType            || "");
   const [dock,                   setDock]                    = useState(kickoff?.dock                   || "");
+  const [boatDepartureTime,      setBoatDepartureTime]       = useState(kickoff?.boatDepartureTime      || "");
+  const [boatDescription,        setBoatDescription]         = useState(kickoff?.boatDescription        || "");
+  const [boatBulletsRaw,         setBoatBulletsRaw]          = useState(() => {
+    const raw = kickoff?.boatBullets || "";
+    if (!raw) return "";
+    try { return JSON.parse(raw).join('\n'); } catch { return raw; }
+  });
+  const [boatNote,               setBoatNote]               = useState(kickoff?.boatNote               || "");
+  const [boatPhotosRaw,          setBoatPhotosRaw]           = useState(() => {
+    const raw = kickoff?.boatPhotos || "";
+    if (!raw) return "";
+    try { return JSON.parse(raw).join('\n'); } catch { return raw; }
+  });
   const [beachClub,              setBeachClub]               = useState(kickoff?.beachClub              || "");
   const [beachClubDay,           setBeachClubDay]            = useState(kickoff?.beachClubDay           || "");
   const [juniorConcierge,        setJuniorConcierge]         = useState(kickoff?.juniorConcierge        || "");
@@ -4447,6 +4460,11 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   updates.boatDay                = boatDay.trim();
   updates.boatDayType            = boatDayType;
   updates.dock                   = dock.trim();
+  updates.boatDepartureTime      = boatDepartureTime.trim();
+  updates.boatDescription        = boatDescription.trim();
+  updates.boatBullets            = JSON.stringify(boatBulletsRaw.split('\n').map(s => s.trim()).filter(Boolean));
+  updates.boatNote               = boatNote.trim();
+  updates.boatPhotos             = JSON.stringify(boatPhotosRaw.split('\n').map(s => s.trim()).filter(Boolean));
   updates.beachClub              = beachClub.trim();
   updates.beachClubDay           = beachClubDay.trim();
   updates.juniorConcierge        = juniorConcierge.trim();
@@ -4963,6 +4981,43 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 <input value={dock} onChange={e => setDock(e.target.value)}
                   className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white"
                   placeholder="Club Náutico…" />
+              </div>
+            </div>
+
+            {/* Boat itinerary content */}
+            <div className="border-t pt-3">
+              <p className="text-[10px] font-semibold text-sky-700 uppercase tracking-wider mb-2">Contenido del itinerario — Bote</p>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[10px] text-neutral-500">Hora de salida</label>
+                  <input value={boatDepartureTime} onChange={e => setBoatDepartureTime(e.target.value)}
+                    className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white"
+                    placeholder="9:00 AM" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-neutral-500">Descripción general</label>
+                  <textarea value={boatDescription} onChange={e => setBoatDescription(e.target.value)} rows={3}
+                    className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white resize-none"
+                    placeholder="Las Islas del Rosario son un archipiélago de 27 islas…" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-neutral-500">Información importante <span className="text-neutral-400">(una viñeta por línea)</span></label>
+                  <textarea value={boatBulletsRaw} onChange={e => setBoatBulletsRaw(e.target.value)} rows={5}
+                    className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white resize-y font-mono"
+                    placeholder={"Duración aprox: 8-10 horas\nRuta: Islas del Rosario\nIncluye: nevera con bebidas\nHora estimada de regreso: 5:00 PM"} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-neutral-500">Nota destacada <span className="text-neutral-400">(opciones adicionales, etc.)</span></label>
+                  <textarea value={boatNote} onChange={e => setBoatNote(e.target.value)} rows={3}
+                    className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white resize-none"
+                    placeholder="Existen opciones adicionales como comida, clubes de playa y actividades acuáticas. El itinerario se coordina según las opciones elegidas." />
+                </div>
+                <div>
+                  <label className="text-[10px] text-neutral-500">Fotos del bote <span className="text-neutral-400">(una URL por línea — Drive o Google Photos)</span></label>
+                  <textarea value={boatPhotosRaw} onChange={e => setBoatPhotosRaw(e.target.value)} rows={4}
+                    className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white resize-y font-mono"
+                    placeholder={"https://drive.google.com/file/d/…\nhttps://lh3.googleusercontent.com/…"} />
+                </div>
               </div>
             </div>
 
