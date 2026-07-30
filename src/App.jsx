@@ -3970,13 +3970,13 @@ function DrinksCatalog() {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center" style={{background:"#1a1814"}}>
       <p className="text-neutral-400 text-sm">Loading…</p>
     </div>
   );
 
   if (sent) return (
-    <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center text-center px-6 gap-6">
+    <div className="min-h-screen flex flex-col items-center justify-center text-center px-6 gap-6" style={{background:"#1a1814"}}>
       <div className="text-5xl">🥂</div>
       <h1 className="text-2xl font-semibold text-white">{T.successTitle}</h1>
       <p className="text-neutral-400 text-sm max-w-xs">{T.successBody}</p>
@@ -3988,52 +3988,38 @@ function DrinksCatalog() {
   );
 
   return (
-    <div className="min-h-screen bg-neutral-50 pb-28">
+    <div className="min-h-screen pb-28" style={{background:"#f7f4ef"}}>
       {/* Header */}
-      <div className="bg-neutral-950 text-white">
+      <div className="text-white" style={{background:"#1a1814"}}>
         {/* Cover photo hero */}
-        {coverPhotoId && (
-          <div style={{position:"relative",height:200,overflow:"hidden"}}>
-            <img src={`https://lh3.googleusercontent.com/d/${coverPhotoId}`} alt=""
-              style={{width:"100%",height:"100%",objectFit:"cover",opacity:.55}}
-              onError={e=>e.target.style.display="none"}/>
-            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 60%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:24,gap:6}}>
-              <img src="/logo.png" alt="Two Travel" style={{height:18,filter:"brightness(0) invert(1)",opacity:.85}}/>
-              <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:500,color:"#f7f4ef",margin:0,textAlign:"center"}}>
-                {lang==="en" ? "Drink List" : "Lista de Bebidas"}
-              </h1>
-            </div>
+        <div style={{position:"relative",height:200,overflow:"hidden"}}>
+          <img
+            src={coverPhotoId ? `https://lh3.googleusercontent.com/d/${coverPhotoId}` : "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=800&q=80&fit=crop"}
+            alt=""
+            style={{width:"100%",height:"100%",objectFit:"cover",opacity:.55}}
+            onError={e=>e.target.style.display="none"}/>
+          <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 60%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:24,gap:6}}>
+            <img src="/logo.png" alt="Two Travel" style={{height:18,filter:"brightness(0) invert(1)",opacity:.85}}/>
+            <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:500,color:"#f7f4ef",margin:0,textAlign:"center"}}>
+              {lang==="en" ? "Drink List" : "Lista de Bebidas"}
+            </h1>
           </div>
-        )}
+        </div>
         <div className="px-6 pt-5 pb-5">
-          {!coverPhotoId && (
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <img src="/logo.png" alt="Two Travel" className="h-7 mb-2 opacity-90" style={{filter:"brightness(0) invert(1)"}} />
-                <h1 className="text-xl font-semibold">{T.heading}</h1>
-              </div>
-              <button onClick={() => setLang(l => l === "en" ? "es" : "en")}
-                className="flex-shrink-0 mt-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition">
-                {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
-              </button>
-            </div>
-          )}
-          {coverPhotoId && (
-            <div className="flex items-center justify-between mb-3">
-              {kickoffConcierge ? (
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"rgba(255,255,255,.8)",fontWeight:600,flexShrink:0}}>
-                    {kickoffConcierge.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}
-                  </div>
-                  <span style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>{kickoffConcierge}</span>
+          <div className="flex items-center justify-between mb-3">
+            {kickoffConcierge ? (
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"rgba(255,255,255,.8)",fontWeight:600,flexShrink:0}}>
+                  {kickoffConcierge.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}
                 </div>
-              ) : <div/>}
-              <button onClick={() => setLang(l => l === "en" ? "es" : "en")}
-                className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition">
-                {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
-              </button>
-            </div>
-          )}
+                <span style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>{kickoffConcierge}</span>
+              </div>
+            ) : <div/>}
+            <button onClick={() => setLang(l => l === "en" ? "es" : "en")}
+              className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition">
+              {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
+            </button>
+          </div>
           {/* Instructions */}
           <div className="bg-white/10 rounded-xl px-4 py-3 space-y-1.5 text-sm text-neutral-300">
             <p>{T.instr1}</p>
@@ -4105,7 +4091,8 @@ function DrinksCatalog() {
           {["house","boat"].map(tab => (
             <button key={tab} type="button"
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition ${activeTab===tab?"bg-neutral-950 text-white":"bg-white border border-neutral-200 text-neutral-600 hover:border-neutral-400"}`}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition ${activeTab===tab?"text-white":"bg-white border border-neutral-200 text-neutral-600 hover:border-neutral-400"}`}
+              style={activeTab===tab ? {background:"#1a1814"} : {}}
             >
               {tab==="house" ? T.houseTab : T.boatTab}
               {tab==="house" && houseCOP>0 && <span className="ml-2 text-xs opacity-70">COP {fmtCOP(houseCOP)}</span>}
@@ -4143,7 +4130,8 @@ function DrinksCatalog() {
       {/* Fixed footer */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-3 flex justify-center">
         <button type="button" onClick={handleSend} disabled={sending||!hasSelection}
-          className="w-full max-w-xl py-3 rounded-xl bg-neutral-950 text-white font-semibold text-sm disabled:opacity-40 hover:bg-neutral-800">
+          className="w-full max-w-xl py-3 rounded-xl text-white font-semibold text-sm disabled:opacity-40"
+          style={{background:"#1a1814"}}>
           {sending ? T.sending : isUpdate ? (lang==="en" ? "✅ Update my order" : "✅ Actualizar pedido") : T.sendBtn}
         </button>
       </div>
@@ -4465,13 +4453,13 @@ function GroceryCatalog() {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center" style={{background:"#1a1814"}}>
       <p className="text-neutral-400 text-sm">Loading…</p>
     </div>
   );
 
   if (sent) return (
-    <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center text-center px-6 gap-6">
+    <div className="min-h-screen flex flex-col items-center justify-center text-center px-6 gap-6" style={{background:"#1a1814"}}>
       <div className="text-5xl">🛒</div>
       <h1 className="text-2xl font-semibold text-white">{lang==="en" ? "Got it!" : "¡Recibido!"}</h1>
       <p className="text-neutral-400 text-sm max-w-xs">{lang==="en" ? "Your grocery list has been sent to your concierge." : "Tu lista de mercado fue enviada al concierge."}</p>
@@ -4483,52 +4471,38 @@ function GroceryCatalog() {
   );
 
   return (
-    <div className="min-h-screen bg-neutral-50 pb-28">
+    <div className="min-h-screen pb-28" style={{background:"#f7f4ef"}}>
       {/* Header */}
-      <div className="bg-neutral-950 text-white">
+      <div className="text-white" style={{background:"#1a1814"}}>
         {/* Cover photo hero */}
-        {coverPhotoId && (
-          <div style={{position:"relative",height:200,overflow:"hidden"}}>
-            <img src={`https://lh3.googleusercontent.com/d/${coverPhotoId}`} alt=""
-              style={{width:"100%",height:"100%",objectFit:"cover",opacity:.55}}
-              onError={e=>e.target.style.display="none"}/>
-            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 60%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:24,gap:6}}>
-              <img src="/logo.png" alt="Two Travel" style={{height:18,filter:"brightness(0) invert(1)",opacity:.85}}/>
-              <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:500,color:"#f7f4ef",margin:0,textAlign:"center"}}>
-                {lang==="en" ? "Grocery List" : "Lista de Mercado"}
-              </h1>
-            </div>
+        <div style={{position:"relative",height:200,overflow:"hidden"}}>
+          <img
+            src={coverPhotoId ? `https://lh3.googleusercontent.com/d/${coverPhotoId}` : "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80&fit=crop"}
+            alt=""
+            style={{width:"100%",height:"100%",objectFit:"cover",opacity:.55}}
+            onError={e=>e.target.style.display="none"}/>
+          <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 60%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:24,gap:6}}>
+            <img src="/logo.png" alt="Two Travel" style={{height:18,filter:"brightness(0) invert(1)",opacity:.85}}/>
+            <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:500,color:"#f7f4ef",margin:0,textAlign:"center"}}>
+              {lang==="en" ? "Grocery List" : "Lista de Mercado"}
+            </h1>
           </div>
-        )}
+        </div>
         <div className="px-6 pt-5 pb-5">
-          {!coverPhotoId && (
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <img src="/logo.png" alt="Two Travel" className="h-7 mb-2 opacity-90" style={{filter:"brightness(0) invert(1)"}} />
-                <h1 className="text-xl font-semibold">{lang==="en" ? "🛒 Grocery List" : "🛒 Lista de Mercado"}</h1>
-              </div>
-              <button onClick={() => setLang(l => l === "en" ? "es" : "en")}
-                className="flex-shrink-0 mt-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition">
-                {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
-              </button>
-            </div>
-          )}
-          {coverPhotoId && (
-            <div className="flex items-center justify-between mb-2">
-              {kickoffConcierge ? (
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"rgba(255,255,255,.8)",fontWeight:600,flexShrink:0}}>
-                    {kickoffConcierge.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}
-                  </div>
-                  <span style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>{kickoffConcierge}</span>
+          <div className="flex items-center justify-between mb-2">
+            {kickoffConcierge ? (
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"rgba(255,255,255,.8)",fontWeight:600,flexShrink:0}}>
+                  {kickoffConcierge.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}
                 </div>
-              ) : <div/>}
-              <button onClick={() => setLang(l => l === "en" ? "es" : "en")}
-                className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition">
-                {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
-              </button>
-            </div>
-          )}
+                <span style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>{kickoffConcierge}</span>
+              </div>
+            ) : <div/>}
+            <button onClick={() => setLang(l => l === "en" ? "es" : "en")}
+              className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition">
+              {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
+            </button>
+          </div>
           <p className="text-sm text-neutral-400">{lang==="en" ? "Check the items you'd like us to have ready at the villa." : "Marca los productos que quieres que tengamos listos en la villa."}</p>
         </div>
       </div>
@@ -4568,7 +4542,8 @@ function GroceryCatalog() {
                 const isChecked = !!checked[item.name];
                 const displayName = lang==="es" ? (item.name_es||item.name) : item.name;
                 return (
-                  <label key={item.name} className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isChecked ? "bg-neutral-950" : "hover:bg-neutral-50"}`}>
+                  <label key={item.name} className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isChecked ? "" : "hover:bg-neutral-50"}`}
+                    style={isChecked ? {background:"#1a1814"} : {}}>
                     {/* Image / emoji */}
                     <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden relative bg-neutral-100 flex items-center justify-center">
                       <span className="text-2xl leading-none select-none">{item.emoji||"🛒"}</span>
@@ -4604,7 +4579,8 @@ function GroceryCatalog() {
       {/* Fixed footer */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-3 flex justify-center">
         <button type="button" onClick={handleSend} disabled={sending||!hasSelection}
-          className="w-full max-w-xl py-3 rounded-xl bg-neutral-950 text-white font-semibold text-sm disabled:opacity-40 hover:bg-neutral-800">
+          className="w-full max-w-xl py-3 rounded-xl text-white font-semibold text-sm disabled:opacity-40"
+          style={{background:"#1a1814"}}>
           {sending ? (lang==="en"?"Sending…":"Enviando…") : isUpdate ? (lang==="en"?"✅ Update grocery list":"✅ Actualizar lista") : (lang==="en"?"✅ Send list to concierge":"✅ Enviar lista al concierge")}
         </button>
       </div>
@@ -5291,29 +5267,21 @@ function BreakfastCatalog() {
       {/* Header */}
       <div style={{background:"#1a1814"}}>
         {/* Cover photo hero */}
-        {coverPhotoId && (
-          <div style={{position:"relative",height:200,overflow:"hidden"}}>
-            <img src={`https://lh3.googleusercontent.com/d/${coverPhotoId}`} alt=""
-              style={{width:"100%",height:"100%",objectFit:"cover",opacity:.55}}
-              onError={e=>e.target.style.display="none"}/>
-            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 60%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:24,gap:6}}>
-              <img src="/logo.png" alt="Two Travel" style={{height:18,filter:"brightness(0) invert(1)",opacity:.85}}/>
-              <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:500,color:"#f7f4ef",margin:0,textAlign:"center"}}>
-                {en ? "Breakfast Menu" : "Menú de Desayuno"}
-              </h1>
-            </div>
+        <div style={{position:"relative",height:200,overflow:"hidden"}}>
+          <img
+            src={coverPhotoId ? `https://lh3.googleusercontent.com/d/${coverPhotoId}` : "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&q=80&fit=crop"}
+            alt=""
+            style={{width:"100%",height:"100%",objectFit:"cover",opacity:.55}}
+            onError={e=>e.target.style.display="none"}/>
+          <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 60%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:24,gap:6}}>
+            <img src="/logo.png" alt="Two Travel" style={{height:18,filter:"brightness(0) invert(1)",opacity:.85}}/>
+            <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:500,color:"#f7f4ef",margin:0,textAlign:"center"}}>
+              {en ? "Breakfast Menu" : "Menú de Desayuno"}
+            </h1>
           </div>
-        )}
+        </div>
         <div style={{padding:"24px 24px 20px",textAlign:"center"}}>
-          {!coverPhotoId && (
-            <>
-              <img src="/logo.png" alt="Two Travel" style={{height:28,opacity:.85,marginBottom:16,filter:"brightness(0) invert(1)"}} />
-              <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:30,fontWeight:500,color:"#f7f4ef",marginBottom:6}}>
-                {en ? "Breakfast Menu" : "Menú de Desayuno"}
-              </h1>
-            </>
-          )}
-          {coverPhotoId && kickoffConcierge && (
+          {kickoffConcierge && (
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:12}}>
               <div style={{width:26,height:26,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"rgba(255,255,255,.8)",fontWeight:600,flexShrink:0}}>
                 {kickoffConcierge.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}

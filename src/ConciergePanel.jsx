@@ -1248,10 +1248,10 @@ function ImagesField({ item, onUpdate }) {
         {images.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {images.map((url, i) => (
-              <div key={i} className="relative group" style={{width:72,height:56}}>
+              <div key={i} className="relative" style={{width:72,height:56}}>
                 <img src={url} alt="" className="w-full h-full object-cover rounded border border-neutral-200"/>
                 <button type="button" onClick={() => removeImage(url)}
-                  className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-white/90 rounded text-[9px] text-red-500 px-1 leading-4 transition-opacity">✕</button>
+                  className="absolute top-0.5 right-0.5 bg-white/90 rounded text-[9px] text-red-500 px-1 leading-4">✕</button>
               </div>
             ))}
           </div>
@@ -1284,6 +1284,57 @@ function ImagesField({ item, onUpdate }) {
           />
           {urlInput && (
             <button type="button" onClick={() => { addImage(urlInput.trim()); setUrlInput(""); }}
+              className="text-[10px] text-violet-600 hover:text-violet-800">+ Añadir</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VideosField({ item, onUpdate }) {
+  const [urlInput, setUrlInput] = React.useState("");
+  const getVideos = () => Array.isArray(item.videos) ? item.videos.filter(Boolean) : [];
+  const addVideo = (url) => {
+    if (!url) return;
+    const current = getVideos();
+    if (!current.includes(url)) onUpdate(item._uid, { videos: [...current, url] });
+  };
+  const removeVideo = (url) => onUpdate(item._uid, { videos: getVideos().filter(u => u !== url) });
+
+  const videoIcon = (url) => {
+    if (/youtube\.com|youtu\.be/.test(url)) return "▶ YouTube";
+    if (/vimeo\.com/.test(url)) return "▶ Vimeo";
+    if (/drive\.google\.com|lh3\.google/.test(url)) return "▶ Drive";
+    return "▶ Video";
+  };
+
+  const videos = getVideos();
+  return (
+    <div className="flex items-start gap-2">
+      <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0 pt-1">Videos</span>
+      <div className="flex-1 flex flex-col gap-1.5">
+        {videos.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {videos.map((url, i) => (
+              <div key={i} className="relative flex items-center gap-1 bg-neutral-100 rounded px-2 py-1 text-[10px] text-neutral-600 border border-neutral-200">
+                <span>{videoIcon(url)}</span>
+                <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap">{url.replace(/^https?:\/\//, "").slice(0, 30)}…</a>
+                <button type="button" onClick={() => removeVideo(url)} className="text-red-400 hover:text-red-600 ml-0.5 leading-none">✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-1">
+          <input
+            value={urlInput}
+            onChange={e => setUrlInput(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") { addVideo(urlInput.trim()); setUrlInput(""); } }}
+            placeholder="YouTube, Vimeo, Drive… (Enter)"
+            className="flex-1 text-[10px] text-neutral-400 border-b border-dashed border-neutral-100 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
+          />
+          {urlInput && (
+            <button type="button" onClick={() => { addVideo(urlInput.trim()); setUrlInput(""); }}
               className="text-[10px] text-violet-600 hover:text-violet-800">+ Añadir</button>
           )}
         </div>
@@ -1529,6 +1580,7 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
             />
           </div>
           <ImagesField item={item} onUpdate={onUpdate} />
+          <VideosField item={item} onUpdate={onUpdate} />
         </div>
       )}
     </div>
