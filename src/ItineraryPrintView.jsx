@@ -599,19 +599,19 @@ const CSS = `
     font-size:8px;letter-spacing:2px;text-transform:uppercase;
     color:#bbb;font-weight:600;flex-shrink:0;
   }
-  .sum-day-label{font-size:12.5px;font-weight:700;color:#111;}
-  .sum-day-sub{font-size:10px;color:#555;margin-left:6px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;}
+  .sum-day-label{font-size:13px;font-weight:700;color:#111;background:#f5f5f4;border-radius:4px;padding:1px 7px;}
+  .sum-day-sub{font-size:10px;color:#888;margin-left:6px;font-weight:500;text-transform:uppercase;letter-spacing:.8px;}
   .sum-svc-row{
     display:flex;gap:12px;
     font-size:11px;color:#666;
-    padding:3.5px 0 3.5px 0;
+    padding:3px 0 3px 0;
     align-items:baseline;
   }
   .sum-svc-time{
-    min-width:48px;color:#555;flex-shrink:0;
-    font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;
+    min-width:48px;color:#888;flex-shrink:0;
+    font-variant-numeric:tabular-nums;font-size:10px;font-weight:500;
   }
-  .sum-svc-name{flex:1;color:#111;font-weight:700;}
+  .sum-svc-name{flex:1;color:#444;font-weight:400;}
   .sum-svc-loc{color:#ccc;font-size:10px;flex-shrink:0;}
 
   /* ══════════════════════════════════════

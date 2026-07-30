@@ -2367,15 +2367,10 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
           </button>
           {days.length > 0 && (
             <span className="flex gap-1">
-              <button type="button" onClick={autoFillDayTitles}
-                title="Renombrar días con fecha"
-                className="px-3 py-1.5 rounded-l-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs hover:bg-amber-100">
-                🗓️ Fechas
-              </button>
               <button type="button" onClick={autoFillWithDefaults}
-                title="Fechas + agrega check-in y check-out automáticamente"
-                className="px-3 py-1.5 rounded-r-lg border-t border-b border-r border-amber-200 bg-amber-50 text-amber-700 text-xs hover:bg-amber-100">
-                + defaults
+                title="Renombrar días con fecha + agrega check-in, check-out y desayunos automáticamente"
+                className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs hover:bg-amber-100">
+                🗓️ Fechas + defaults
               </button>
             </span>
           )}
@@ -7304,6 +7299,7 @@ export default function ConciergePanel({ onLogout, currentUser }) {
   const [conciergeFilter, setConciergeFilter] = useState("all");
 
   const [selectedForSummary, setSelectedForSummary] = useState(null);
+  const [infoPopup, setInfoPopup] = useState(null); // { title, text } for diet/passport popups
   const [selectedForEdit, setSelectedForEdit] = useState(null);
   const [selectedForDelete, setSelectedForDelete] = useState(null);
   const [rowLoadingId, setRowLoadingId] = useState(null);
@@ -7667,7 +7663,7 @@ const loadKickoffs = async () => {
       all: "Todos",
       colGuest: "Huésped", colTrip: "Viaje", colType: "Tipo",
       colContact: "Contacto", colCreated: "Creado",
-      colConcierge: "Concierge", colCity: "Ciudad", colStatus: "Estado", colMeetings: "Reuniones", colActions: "Acciones",
+      colConcierge: "Concierge", colCity: "Ciudad", colStatus: "Estado", colMeetings: "Reuniones", colNotes: "Notas", colActions: "Acciones",
       loading: "Cargando kick-offs...",
       empty: "No hay kick-offs que coincidan con el filtro.",
       linkCatalog: "Link catálogo", linkFeedback: "Link feedback",
@@ -7680,7 +7676,7 @@ const loadKickoffs = async () => {
       all: "All",
       colGuest: "Guest", colTrip: "Trip", colType: "Type",
       colContact: "Contact", colCreated: "Created",
-      colConcierge: "Concierge", colCity: "City", colStatus: "Status", colMeetings: "Meetings", colActions: "Actions",
+      colConcierge: "Concierge", colCity: "City", colStatus: "Status", colMeetings: "Meetings", colNotes: "Notes", colActions: "Actions",
       loading: "Loading kick-offs...",
       empty: "No kick-offs match the current filter.",
       linkCatalog: "Catalog link", linkFeedback: "Feedback link",
@@ -7983,7 +7979,7 @@ const loadKickoffs = async () => {
                       style={{width:13,height:13,cursor:"pointer"}}
                     />
                   </th>
-                  {["ID", cp.colGuest, cp.colTrip, cp.colType, cp.colContact, cp.colCreated, cp.colConcierge, cp.colCity, cp.colStatus, cp.colMeetings].map(h => (
+                  {["ID", cp.colGuest, cp.colTrip, cp.colType, cp.colContact, cp.colCreated, cp.colConcierge, cp.colCity, cp.colStatus, cp.colMeetings, cp.colNotes].map(h => (
                     <th key={h} style={{textAlign:"left"}}>{h}</th>
                   ))}
                   <th style={{textAlign:"right"}}>{cp.colActions}</th>
@@ -7992,7 +7988,7 @@ const loadKickoffs = async () => {
               <tbody>
                 {loading && filteredKickoffs.length === 0 && (
                   <tr>
-                    <td colSpan={11} style={{textAlign:"center",padding:"32px 16px",color:"var(--text-3)"}}>
+                    <td colSpan={12} style={{textAlign:"center",padding:"32px 16px",color:"var(--text-3)"}}>
                       {cp.loading}
                     </td>
                   </tr>
@@ -8036,12 +8032,12 @@ const loadKickoffs = async () => {
                           </span>
                         )}
                         {k.briefDietary && (
-                          <span title={k.briefDietary} style={{fontSize:9,background:"#FFF7ED",color:"#C2410C",border:"1px solid #FED7AA",borderRadius:3,padding:"0px 5px",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"inline-block",verticalAlign:"middle"}}>
+                          <span onClick={e => { e.stopPropagation(); setInfoPopup({ title:"🥗 Dieta / Restricciones", text: k.briefDietary }); }} style={{fontSize:9,background:"#FFF7ED",color:"#C2410C",border:"1px solid #FED7AA",borderRadius:3,padding:"0px 5px",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"inline-block",verticalAlign:"middle",cursor:"pointer"}}>
                             🥗 {k.briefDietary}
                           </span>
                         )}
                         {k.passportInfo && (
-                          <span title={k.passportInfo} style={{fontSize:9,background:"#F0FDF4",color:"#15803D",border:"1px solid #BBF7D0",borderRadius:3,padding:"0px 5px",maxWidth:130,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"inline-block",verticalAlign:"middle"}}>
+                          <span onClick={e => { e.stopPropagation(); setInfoPopup({ title:"🪪 Pasaportes", text: k.passportInfo }); }} style={{fontSize:9,background:"#F0FDF4",color:"#15803D",border:"1px solid #BBF7D0",borderRadius:3,padding:"0px 5px",maxWidth:130,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"inline-block",verticalAlign:"middle",cursor:"pointer"}}>
                             🪪 {k.passportInfo.split("\n")[0]}
                           </span>
                         )}
@@ -8182,6 +8178,14 @@ const loadKickoffs = async () => {
                           </div>
                         );
                       })()}
+                    </td>
+
+                    <td style={{maxWidth:180,overflow:"hidden"}}>
+                      {k.internalNotes ? (
+                        <span style={{display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",fontSize:11,color:"var(--text-2)",whiteSpace:"pre-wrap",lineHeight:1.4}}>
+                          {k.internalNotes}
+                        </span>
+                      ) : <span style={{color:"var(--text-3)",fontStyle:"italic",fontSize:11}}>—</span>}
                     </td>
 
                     <td style={{textAlign:"right"}} onClick={e => e.stopPropagation()}>
@@ -8369,6 +8373,24 @@ const loadKickoffs = async () => {
             window.open(link, "_blank", "noopener,noreferrer");
           }}
         />
+      )}
+
+      {/* ── Info popup (diet / passport) ── */}
+      {infoPopup && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}}
+          onClick={() => setInfoPopup(null)}>
+          <div style={{background:"#fff",borderRadius:12,padding:24,maxWidth:420,width:"90%",boxShadow:"0 8px 40px rgba(0,0,0,.18)"}}
+            onClick={e => e.stopPropagation()}>
+            <p style={{fontSize:13,fontWeight:700,color:"#1a1814",marginBottom:12}}>{infoPopup.title}</p>
+            <pre style={{fontSize:12,color:"#444",whiteSpace:"pre-wrap",fontFamily:"inherit",lineHeight:1.7,margin:0,wordBreak:"break-word"}}>
+              {infoPopup.text}
+            </pre>
+            <button onClick={() => setInfoPopup(null)}
+              style={{marginTop:16,padding:"6px 18px",borderRadius:8,border:"1px solid #e5e5e5",background:"#f5f5f4",fontSize:12,cursor:"pointer",color:"#555"}}>
+              Cerrar
+            </button>
+          </div>
+        </div>
       )}
 
     </div>
