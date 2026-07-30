@@ -5,13 +5,26 @@ export default async function handler(req, res) {
   const { flight, date } = req.query;
   if (!flight) return res.status(400).json({ ok: false, error: "Missing flight" });
 
-  const key = process.env.AVIATIONSTACK_KEY || "be3dea887f48438d6a3b0f75fc0c942c";
+  const key = process.env.AVIATIONSTACK_KEY;
+  if (!key) {
+    return res.json({ ok: false, limitReached: true, error: "No API key configured — set AVIATIONSTACK_KEY env var" });
+  }
 
   try {
-    const params = new URLSearchParams({ access_key: key, flight_iata: flight.toUpperCase() });
-    if (date) params.set("flight_date", date); // YYYY-MM-DD
+    // Note: flight_date requires paid plan; only send it if key is present and plan allows
+    const params = new URLSearchParams({ access_key: key, flight_iata: flight.toUpperCase(), limit: "1" });
+    if (date) params.set("flight_date", date);
     const r = await fetch(`http://api.aviationstack.com/v1/flights?${params}`);
     const d = await r.json();
+
+    // Detect quota / access errors
+    if (d.error) {
+      const code = d.error?.code || "";
+      if (code === "usage_limit_reached" || code === "function_access_restricted") {
+        return res.json({ ok: false, limitReached: true, error: d.error.message });
+      }
+      return res.json({ ok: false, error: d.error.message || "API error" });
+    }
 
     if (!d.data || d.data.length === 0) return res.json({ ok: true, data: null });
 
@@ -20,10 +33,10 @@ export default async function handler(req, res) {
       ok: true,
       data: {
         flightIata:   f.flight?.iata || flight,
-        status:       f.flight_status,          // "scheduled" | "active" | "landed" | "cancelled" | "diverted" | "unknown"
+        status:       f.flight_status,
         depScheduled: f.departure?.scheduled,
         depActual:    f.departure?.actual,
-        depDelay:     f.departure?.delay,        // minutes
+        depDelay:     f.departure?.delay,
         depAirport:   f.departure?.airport,
         depIata:      f.departure?.iata,
         arrScheduled: f.arrival?.scheduled,

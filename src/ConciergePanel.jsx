@@ -4080,28 +4080,32 @@ function HubSpotImport({ onImport }) {
 function FlightRouteHint({ flightNumber, date }) {
   const [info, setInfo] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
+  const [apiErr, setApiErr] = React.useState(null);
   const timerRef = React.useRef();
 
   React.useEffect(() => {
-    if (!flightNumber || flightNumber.length < 2) { setInfo(null); return; }
+    if (!flightNumber || flightNumber.length < 2) { setInfo(null); setApiErr(null); return; }
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      setLoading(true);
+      setLoading(true); setApiErr(null);
       const params = new URLSearchParams({ flight: flightNumber });
       if (date) params.set("date", date);
       fetch(`/api/flight-status?${params}`)
         .then(r => r.json())
         .then(d => {
-          setInfo(d.data || null);
+          if (d.limitReached) { setApiErr("⚠️ API limit"); setInfo(null); }
+          else if (!d.ok) { setApiErr(null); setInfo(null); }
+          else setInfo(d.data || null);
           setLoading(false);
         })
-        .catch(() => { setInfo(null); setLoading(false); });
+        .catch(() => { setInfo(null); setApiErr(null); setLoading(false); });
     }, 900);
     return () => clearTimeout(timerRef.current);
   }, [flightNumber, date]);
 
   if (!flightNumber) return null;
   if (loading) return <span className="text-[9px] text-neutral-300 ml-1">buscando…</span>;
+  if (apiErr) return <span className="text-[9px] text-amber-400 ml-1">{apiErr} — renovar key AviationStack</span>;
   if (!info) return null;
 
   const STATUS_LABEL = { scheduled:"En horario", active:"En vuelo ✈", landed:"Aterrizó ✅", cancelled:"Cancelado ❌", diverted:"Desviado ⚠️" };
