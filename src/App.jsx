@@ -1435,6 +1435,7 @@ function ClientesTable({ kickoffs, loading }) {
                 <th style={thStyle}>Junior</th>
                 <th style={thStyle}>🛂 Pasaporte</th>
                 <th style={thStyle}>🥗 Dieta</th>
+                <th style={{ ...thStyle, minWidth:160 }}>📝 Notas</th>
                 <th style={thStyle}>Itinerario</th>
                 <th style={thStyle}>Reuniones</th>
                 <th style={thStyle}>Último pedido</th>
@@ -1504,12 +1505,21 @@ function ClientesTable({ kickoffs, loading }) {
                         </>;
                       })()}
                     </td>
-                    <td style={{ ...tdStyle, verticalAlign:"top" }}>
+                    <td style={{ ...tdStyle, textAlign:"center" }}>
                       {r.passportInfo
                         ? <PassportPopup passportInfo={r.passportInfo} dietInfo="" guestName={r.guestName || r.tripName} />
                         : <span style={{ color:"#d1d5db" }}>—</span>}
                     </td>
-                    <td style={{ ...tdStyle, verticalAlign:"top" }}>
+                    <td style={tdStyle}>
+                      <textarea
+                        defaultValue={r.internalNotes || ""}
+                        onBlur={e => { const v = e.target.value.trim(); if (v !== (r.internalNotes||"").trim()) saveField(r.id, "internalNotes", v); }}
+                        placeholder="Notas…"
+                        rows={2}
+                        style={{ width:"100%", fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 6px", resize:"vertical", background:"#fafafa", color:"#374151", lineHeight:1.4, boxSizing:"border-box" }}
+                      />
+                    </td>
+                    <td style={{ ...tdStyle, textAlign:"center" }}>
                       {(() => {
                         const food = r.foodRestrictions || r["Food Restrictions"] || "";
                         const allergy = r.allergies || r["Allergies and/or Medical Conditions"] || "";
