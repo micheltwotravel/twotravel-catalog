@@ -3992,6 +3992,7 @@ function DrinksCatalog() {
     <div className="min-h-screen pb-28" style={{background:"#f7f4ef"}}>
       {/* Header */}
       <div className="text-white" style={{background:"#1a1814"}}>
+        <div style={{height:3,background:"linear-gradient(90deg,#9a7d52,#c9a96e,#9a7d52)"}}/>
         {/* Cover photo hero */}
         <div style={{position:"relative",height:200,overflow:"hidden"}}>
           <img
@@ -4475,6 +4476,7 @@ function GroceryCatalog() {
     <div className="min-h-screen pb-28" style={{background:"#f7f4ef"}}>
       {/* Header */}
       <div className="text-white" style={{background:"#1a1814"}}>
+        <div style={{height:3,background:"linear-gradient(90deg,#9a7d52,#c9a96e,#9a7d52)"}}/>
         {/* Cover photo hero */}
         <div style={{position:"relative",height:200,overflow:"hidden"}}>
           <img
@@ -5023,9 +5025,12 @@ function BreakfastCatalog() {
   const [guestName,   setGuestName]   = React.useState(params.get("guestName") || "");
   const [currentDay,  setCurrentDay]  = React.useState(0);
   const [loading,     setLoading]     = React.useState(!!kickoffId);
-  const [dayOrders,   setDayOrders]   = React.useState(() =>
-    Array.from({ length: urlNights || 1 }, EMPTY_DAY)
-  );
+  const [dayOrders,   setDayOrders]   = React.useState(() => {
+    const days = Array.from({ length: urlNights || 1 }, EMPTY_DAY);
+    // Arrival day (day 1) never has villa breakfast
+    if (days.length > 0) days[0] = { ...days[0], status: "no-breakfast" };
+    return days;
+  });
   const [notes,           setNotes]           = React.useState("");
   const [sent,            setSent]            = React.useState(false);
   const [sending,         setSending]         = React.useState(false);
@@ -5087,6 +5092,9 @@ function BreakfastCatalog() {
               const adjusted = nights > orders.length
                 ? [...orders, ...Array.from({ length: nights - orders.length }, EMPTY_DAY)]
                 : orders.slice(0, nights);
+              // Arrival day never has villa breakfast — enforce even on loaded data
+              if (adjusted.length > 0 && adjusted[0].status === "pending")
+                adjusted[0] = { ...adjusted[0], status: "no-breakfast" };
               setDayOrders(adjusted);
             }
             if (saved.notes) setNotes(saved.notes);
@@ -5267,6 +5275,7 @@ function BreakfastCatalog() {
     <div style={{minHeight:"100vh",background:"#f7f4ef",fontFamily:"'Jost',sans-serif",color:"#1a1814"}}>
       {/* Header */}
       <div style={{background:"#1a1814"}}>
+        <div style={{height:3,background:"linear-gradient(90deg,#9a7d52,#c9a96e,#9a7d52)"}}/>
         {/* Cover photo hero */}
         <div style={{position:"relative",height:200,overflow:"hidden"}}>
           <img

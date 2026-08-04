@@ -5793,25 +5793,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           >
             Guardar
           </button>
-          {/* Itinerary: PDF download + shareable link */}
+          {/* Itinerary: shareable link (PDF button removed — use the visual panel) */}
           {kickoff?.cart?.length > 0 && (() => {
-            const clientUrl    = `${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff.lang || "en"}`;
-            const conciergeUrl = clientUrl + "&edit=1";
-            return (
-              <div className="flex items-center gap-1">
-                {/* PDF: concierge opens with edit=1 → can edit then Ctrl+P */}
-                <a
-                  href={conciergeUrl}
-                  target="_blank" rel="noreferrer"
-                  className="px-3 py-2 rounded-l-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-1"
-                  title="Abrir itinerario (modo edición) — Ctrl+P para guardar como PDF"
-                >
-                  📄 PDF
-                </a>
-                {/* Copy link — client link, read-only, no edit button */}
-                <CopyLinkButton url={clientUrl} />
-              </div>
-            );
+            const clientUrl = `${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff.lang || "en"}`;
+            return <CopyLinkButton url={clientUrl} />;
           })()}
           {/* WhatsApp — enviar PDF al cliente */}
           {(() => {
@@ -8202,15 +8187,25 @@ const loadKickoffs = async () => {
                     </td>
 
                     <td>
-                      {k.city ? (
-                        <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
-                          {String(k.city).split(",").map(c => c.trim()).filter(Boolean).map(code => (
-                            <span key={code} style={{padding:"2px 7px",borderRadius:3,background:"var(--border-soft)",color:"var(--text-2)",fontSize:10.5,fontWeight:600}}>
-                              {CITY_NAMES[code.toUpperCase()] || code}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
+                      {k.city ? (() => {
+                        // Normalize: full names → code, then deduplicate, then display full name
+                        const FULL_TO_CODE = { CARTAGENA:"CTG", MEDELLÍN:"MDE", MEDELLIN:"MDE", "CIUDAD DE MÉXICO":"CDMX", "CIUDAD DE MEXICO":"CDMX", TULUM:"TUL", BOGOTÁ:"BOG", BOGOTA:"BOG", CALI:"CLO" };
+                        const raw = String(k.city).split(",").map(c => c.trim()).filter(Boolean);
+                        const seen = new Set();
+                        const codes = raw.map(c => {
+                          const up = c.toUpperCase();
+                          return FULL_TO_CODE[up] || (CITY_NAMES[up] ? up : up);
+                        }).filter(code => { if (seen.has(code)) return false; seen.add(code); return true; });
+                        return (
+                          <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
+                            {codes.map(code => (
+                              <span key={code} style={{padding:"2px 7px",borderRadius:3,background:"var(--border-soft)",color:"var(--text-2)",fontSize:10.5,fontWeight:600}}>
+                                {CITY_NAMES[code] || code}
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })() : (
                         <span style={{color:"var(--text-3)",fontStyle:"italic"}}>—</span>
                       )}
                     </td>
@@ -8218,20 +8213,26 @@ const loadKickoffs = async () => {
                     <td>
                       <StatusBadge status={k.status} lang={portalLang} />
                       {k.drinkOrder && (
-                        <span title={`Drinks received${k.drinkOrderAt ? ": " + new Date(k.drinkOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""}`}
-                          style={{marginLeft:4,fontSize:10.5,background:"#F0FDF4",color:"#065F46",border:"1px solid #BBF7D0",borderRadius:3,padding:"1px 5px",cursor:"default"}}>
+                        <span
+                          onClick={e => { e.stopPropagation(); setInfoPopup({ title:"🍹 Drink Order", text: k.drinkOrder }); }}
+                          title={`Drinks${k.drinkOrderAt ? " · " + new Date(k.drinkOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""} — click para ver pedido`}
+                          style={{marginLeft:4,fontSize:10.5,background:"#F0FDF4",color:"#065F46",border:"1px solid #BBF7D0",borderRadius:3,padding:"1px 5px",cursor:"pointer"}}>
                           🍹 drinks
                         </span>
                       )}
                       {k.groceryOrder && (
-                        <span title={`Groceries received${k.groceryOrderAt ? ": " + new Date(k.groceryOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""}`}
-                          style={{marginLeft:4,fontSize:10.5,background:"#FFF7ED",color:"#9A3412",border:"1px solid #FED7AA",borderRadius:3,padding:"1px 5px",cursor:"default"}}>
+                        <span
+                          onClick={e => { e.stopPropagation(); setInfoPopup({ title:"🛒 Grocery Order", text: k.groceryOrder }); }}
+                          title={`Groceries${k.groceryOrderAt ? " · " + new Date(k.groceryOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""} — click para ver pedido`}
+                          style={{marginLeft:4,fontSize:10.5,background:"#FFF7ED",color:"#9A3412",border:"1px solid #FED7AA",borderRadius:3,padding:"1px 5px",cursor:"pointer"}}>
                           🛒 grocery
                         </span>
                       )}
                       {k.breakfastOrder && (
-                        <span title={`Breakfast received${k.breakfastOrderAt ? ": " + new Date(k.breakfastOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""}`}
-                          style={{marginLeft:4,fontSize:10.5,background:"#FFF9F0",color:"#92400E",border:"1px solid #FDE68A",borderRadius:3,padding:"1px 5px",cursor:"default"}}>
+                        <span
+                          onClick={e => { e.stopPropagation(); setInfoPopup({ title:"☕ Breakfast Order", text: k.breakfastOrder }); }}
+                          title={`Breakfast${k.breakfastOrderAt ? " · " + new Date(k.breakfastOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""} — click para ver pedido`}
+                          style={{marginLeft:4,fontSize:10.5,background:"#FFF9F0",color:"#92400E",border:"1px solid #FDE68A",borderRadius:3,padding:"1px 5px",cursor:"pointer"}}>
                           ☕ breakfast
                         </span>
                       )}
@@ -8273,7 +8274,7 @@ const loadKickoffs = async () => {
                           const created = k.createdAt ? new Date(k.createdAt) : null;
                           const daysSince = created ? Math.floor((Date.now() - created) / 86400000) : null;
                           const color = daysSince === null ? "#9a9a9a" : daysSince > 10 ? "#dc2626" : daysSince > 5 ? "#d97706" : "#9a9a9a";
-                          return <span style={{fontSize:11,color}}>{daysSince !== null ? `${daysSince}d sin reunión` : "—"}</span>;
+                          return <span style={{fontSize:11,color,cursor:"pointer"}} onClick={e => { e.stopPropagation(); window.location.href = `/?mode=reuniones&kickoffId=${k.id}`; }}>{daysSince !== null ? `${daysSince}d sin reunión` : "—"}</span>;
                         }
                         const doneMtgs = mtgs.filter(m => m.status === "done" && m.date);
                         const lastDone = doneMtgs.sort((a,b) => b.date.localeCompare(a.date))[0];
@@ -8281,8 +8282,9 @@ const loadKickoffs = async () => {
                         const daysSinceLast = lastDone ? Math.floor((Date.now() - new Date(lastDone.date)) / 86400000) : null;
                         const color = daysSinceLast === null ? "#9a9a9a" : daysSinceLast > 14 ? "#dc2626" : daysSinceLast > 7 ? "#d97706" : "#16a34a";
                         return (
-                          <div style={{fontSize:11,lineHeight:1.4}}>
-                            <span style={{color:"#1a1814",fontWeight:600}}>{mtgs.length} mtg{mtgs.length!==1?"s":""}</span>
+                          <div style={{fontSize:11,lineHeight:1.4,cursor:"pointer"}}
+                            onClick={e => { e.stopPropagation(); window.location.href = `/?mode=reuniones&kickoffId=${k.id}`; }}>
+                            <span style={{color:"#7c3aed",fontWeight:600,textDecoration:"underline dotted"}}>{mtgs.length} mtg{mtgs.length!==1?"s":""}</span>
                             {lastDone && <div style={{color}}>{daysSinceLast === 0 ? "hoy" : `hace ${daysSinceLast}d`}</div>}
                             {nextSched && <div style={{color:"#9a7d52"}}>📅 {nextSched.date}</div>}
                           </div>
@@ -8332,6 +8334,10 @@ const loadKickoffs = async () => {
                               <button onClick={() => { setOpenMenuId(null); setSelectedForSummary(k); }}
                                 style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"var(--text-1)",background:"none",border:"none",cursor:"pointer"}}>
                                 Ver resumen
+                              </button>
+                              <button onClick={() => { setOpenMenuId(null); window.location.href = `/?mode=reuniones&kickoffId=${k.id}`; }}
+                                style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"#7c3aed",background:"none",border:"none",cursor:"pointer"}}>
+                                📅 Ir a reuniones
                               </button>
                               {(() => {
                                 const conciergeNames = String(k.assignedConcierge || "").split(",").map(s => s.trim()).filter(Boolean);
@@ -8490,11 +8496,11 @@ const loadKickoffs = async () => {
       {infoPopup && (
         <div style={{position:"fixed",inset:0,background:"rgba(10,8,6,.6)",zIndex:9999,display:"flex",alignItems:"flex-end",justifyContent:"center",backdropFilter:"blur(3px)",WebkitBackdropFilter:"blur(3px)"}}
           onClick={() => setInfoPopup(null)}>
-          <div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:0,maxWidth:480,width:"100%",boxShadow:"0 -8px 48px rgba(0,0,0,.22)",overflow:"hidden",maxHeight:"80vh",display:"flex",flexDirection:"column"}}
+          <div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:0,maxWidth:600,width:"100%",boxShadow:"0 -8px 48px rgba(0,0,0,.22)",overflow:"hidden",maxHeight:"85vh",display:"flex",flexDirection:"column"}}
             onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div style={{background:"#1a1814",padding:"20px 24px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-              <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:19,fontWeight:500,color:"#f7f4ef",letterSpacing:".02em"}}>{infoPopup.title}</span>
+              <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:500,color:"#f7f4ef",letterSpacing:".02em"}}>{infoPopup.title}</span>
               <button onClick={() => setInfoPopup(null)}
                 style={{background:"rgba(255,255,255,.12)",border:"none",borderRadius:"50%",width:28,height:28,cursor:"pointer",color:"#f7f4ef",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                 ✕
@@ -8503,8 +8509,8 @@ const loadKickoffs = async () => {
             {/* Gold divider */}
             <div style={{height:2,background:"linear-gradient(90deg,#9a7d52,#c9a96e,#9a7d52)",flexShrink:0}} />
             {/* Body */}
-            <div style={{padding:"20px 24px 28px",overflowY:"auto"}}>
-              <pre style={{fontSize:13,color:"#2d2926",whiteSpace:"pre-wrap",fontFamily:"'Jost',sans-serif",lineHeight:1.75,margin:0,wordBreak:"break-word"}}>
+            <div style={{padding:"20px 24px 32px",overflowY:"auto"}}>
+              <pre style={{fontSize:14,color:"#2d2926",whiteSpace:"pre-wrap",fontFamily:"'Jost',sans-serif",lineHeight:1.8,margin:0,wordBreak:"break-word"}}>
                 {infoPopup.text}
               </pre>
             </div>
