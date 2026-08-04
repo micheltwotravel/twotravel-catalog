@@ -6333,6 +6333,8 @@ const WA_SVG = <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColo
 function PresetMessages({ kickoff }) {
   const [open, setOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(null);
+  const [calendlyUrl, setCalendlyUrl] = React.useState(kickoff?.kickoffCallUrl || "");
+  const [savingCalendly, setSavingCalendly] = React.useState(false);
   const first = (kickoff.guestName || "").split(" ")[0] || "";
   const isEs = (kickoff.lang || "en") === "es";
   const phone = (kickoff.guestContact || "").replace(/\D/g, "");
@@ -6343,7 +6345,20 @@ function PresetMessages({ kickoff }) {
     navigator.clipboard.writeText(text).catch(()=>{});
     setCopied(key); setTimeout(() => setCopied(null), 1500);
   };
+  const saveCalendly = async () => {
+    if (!id) return;
+    setSavingCalendly(true);
+    try { await updateKickoffInSheet(id, { kickoffCallUrl: calendlyUrl.trim() }); }
+    finally { setSavingCalendly(false); }
+  };
   const msgs = [
+    {
+      key: "pre", icon: "📋", label: isEs ? "Pre Check-in" : "Pre Check-in",
+      url: `${base}/ci/${id}`,
+      text: isEs
+        ? `Hola ${first}! 📋 Para preparar todo antes de tu llegada, completa este formulario de pre check-in. ¡Solo toma unos minutos!\n${base}/ci/${id}`
+        : `Hi ${first}! 📋 To get everything ready before your arrival, please fill out this pre check-in form. It only takes a few minutes!\n${base}/ci/${id}`,
+    },
     {
       key: "catalogo", icon: "📖", label: isEs ? "Catálogo" : "Catalog",
       url: `${base}/c/${id}`,
@@ -6380,6 +6395,9 @@ function PresetMessages({ kickoff }) {
         : `Hi ${first}! ⭐ We hope you had an amazing experience! Would you mind leaving us some feedback? It really helps us keep improving:\n${base}/f/${id}`,
     },
   ];
+  const calendlyMsg = calendlyUrl ? (isEs
+    ? `Hola ${first}! 📅 Me gustaría agendar una reunión contigo para coordinar los detalles de tu estadía. Elige el horario que mejor te funcione:\n${calendlyUrl}`
+    : `Hi ${first}! 📅 I'd love to schedule a meeting with you to coordinate the details of your stay. Pick the time that works best for you:\n${calendlyUrl}`) : "";
   return (
     <div>
       <button type="button" onClick={() => setOpen(v => !v)}
@@ -6388,6 +6406,37 @@ function PresetMessages({ kickoff }) {
       </button>
       {open && (
         <div className="mt-2 flex flex-col gap-2">
+          {/* Calendly / Agendar reunión */}
+          <div className="border border-purple-200 rounded-lg overflow-hidden">
+            <div className="px-3 py-1.5 bg-purple-50 border-b border-purple-100 flex items-center justify-between">
+              <span className="text-xs font-semibold text-purple-700">📅 Agendar reunión</span>
+              {calendlyUrl && (
+                <div className="flex gap-1">
+                  <a href={calendlyUrl} target="_blank" rel="noreferrer"
+                    className="text-[10px] px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-blue-700">🔗 Ver</a>
+                  <button type="button" onClick={() => copy("calendly_url", calendlyUrl)}
+                    className="text-[10px] px-2 py-0.5 rounded border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800">
+                    {copied === "calendly_url" ? "✓" : "📋 URL"}
+                  </button>
+                  <button type="button" onClick={() => copy("calendly_msg", calendlyMsg)}
+                    className="text-[10px] px-2 py-0.5 rounded border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800">
+                    {copied === "calendly_msg" ? "✓" : "💬 Msg"}
+                  </button>
+                  <a href={waBase + encodeURIComponent(calendlyMsg)} target="_blank" rel="noreferrer"
+                    className="text-[10px] px-2 py-0.5 rounded border border-green-200 bg-green-50 text-green-700 flex items-center gap-0.5">{WA_SVG} WA</a>
+                </div>
+              )}
+            </div>
+            <div className="px-3 py-2 flex gap-2">
+              <input value={calendlyUrl} onChange={e => setCalendlyUrl(e.target.value)}
+                placeholder="https://calendly.com/..."
+                className="flex-1 text-[11px] border border-neutral-200 rounded px-2 py-1 font-mono text-blue-700 focus:outline-none focus:border-purple-400" />
+              <button type="button" onClick={saveCalendly} disabled={savingCalendly}
+                className="text-[10px] px-3 py-1 rounded border border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 font-medium">
+                {savingCalendly ? "..." : "Guardar"}
+              </button>
+            </div>
+          </div>
           {msgs.map(m => (
             <div key={m.key} className="border border-neutral-200 rounded-lg overflow-hidden">
               <div className="px-3 py-1.5 bg-neutral-50 border-b border-neutral-100 flex items-center justify-between">

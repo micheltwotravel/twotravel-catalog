@@ -315,16 +315,21 @@ async function postToKickoffAPI(bodyObj) {
 
   const text = await res.text();
 
-
+  // HTML response = GAS returned an error page (404, permission error, etc.)
+  if (text.trimStart().startsWith("<")) {
+    const hint = !res.ok ? ` (HTTP ${res.status})` : "";
+    throw new Error(`Error de conexión con el servidor${hint}. Intenta refrescar la página.`);
+  }
 
   let json = null;
   try {
     json = JSON.parse(text);
   } catch (parseErr) {
     console.warn("Could not parse API response as JSON:", parseErr.message, "| Raw:", text?.slice(0, 200));
+    throw new Error("Respuesta inesperada del servidor. Intenta refrescar.");
   }
 
-  if (!res.ok) throw new Error(json?.error || text || "Error en API kickoffs");
+  if (!res.ok) throw new Error(json?.error || "Error en API kickoffs");
   if (json?.ok === false) throw new Error(json?.error || "Error en API kickoffs");
 
   return json;
