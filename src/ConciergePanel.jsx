@@ -2121,7 +2121,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
                 ...(accom ? { location: accom } : {}), dayLabel: lastLabel, sortOrder: 0 });
             }
             // Breakfasts: day 2 through last day (not on arrival day)
-            // Remove any previously auto-filled breakfasts and any breakfast on day 1 before re-adding
+            // Remove auto-filled breakfasts and any breakfast on day 1 before re-adding
             const isBfItem = i => /breakfast/i.test(i.name_en) || /desayuno/i.test(i.name);
             const prevNoBf = prev.filter(i =>
               !(i._uid?.startsWith("preset_bf_")) &&
@@ -2129,6 +2129,8 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
             );
             const bfDays = currentMeta.slice(1);
             bfDays.forEach((dm, idx) => {
+              // Skip if a manually-added breakfast already exists on this day
+              if (prevNoBf.some(i => i.dayLabel === dm.label && isBfItem(i))) return;
               toAdd.push({ ...mapManualToCartItem(),
                 _uid: `preset_bf_${dm.label}_${Date.now() + idx}`, id: `preset_bf_${dm.label}_${Date.now() + idx}`,
                 name:    bfService?.name_es || "Desayuno en la Villa",
@@ -6567,13 +6569,27 @@ function MeetingFormInline({ kickoffId, initial, defaultEmail, onSave, onCancel 
         </select>
       </div>
       <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Correo del cliente" style={{ ...inp, marginBottom:8 }} />
-      <div style={{ position:"relative", marginBottom:8 }}>
-        <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3} placeholder="Notas de la llamada…" style={{ ...inp, resize:"vertical", paddingRight:110 }} />
+      <div style={{ position:"relative", marginBottom:4 }}>
+        <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={4} placeholder="Notas de la llamada…" style={{ ...inp, resize:"vertical", paddingRight:110 }} />
         <button type="button" onClick={fixWithAI} disabled={aiFixing || !notes.trim()}
           style={{ position:"absolute", top:7, right:7, background: aiFixing ? "#e5ddd3" : "#f0ebff", color: aiFixing ? "#aaa" : "#7c3aed", border:"1px solid #d8b4fe", borderRadius:6, padding:"3px 9px", fontSize:11, fontWeight:600, cursor: aiFixing || !notes.trim() ? "default" : "pointer", fontFamily:"'Jost',sans-serif", whiteSpace:"nowrap" }}>
           {aiFixing ? "…" : "✨ Corregir"}
         </button>
       </div>
+      {!notes.trim() && (
+        <div style={{ display:"flex", gap:4, marginBottom:8, flexWrap:"wrap" }}>
+          {[
+            { label:"Kickoff", tpl:`Resumen:\n\nPendientes:\n- \n\nPróximo paso:` },
+            { label:"Pre check-in", tpl:`Confirmado:\n- Llegada:\n- Alojamiento:\n\nPendientes:\n- \n\nNotas:` },
+            { label:"Follow-up", tpl:`Estado general:\n\nActualizaciones:\n- \n\nSiguiente reunión:` },
+          ].map(({ label, tpl }) => (
+            <button key={label} type="button" onClick={() => setNotes(tpl)}
+              style={{ fontSize:10, padding:"2px 8px", borderRadius:5, border:"1px solid #e5ddd3", background:"#f5f0e8", color:"#9a7d52", cursor:"pointer", fontFamily:"'Jost',sans-serif" }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
       {tasks.map((t,i)=>(
         <div key={i} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
           <input type="checkbox" checked={t.done} onChange={()=>setTasks(ts=>ts.map((x,j)=>j===i?{...x,done:!x.done}:x))} />
@@ -7987,6 +8003,18 @@ const loadKickoffs = async () => {
                             🪪 {k.passportInfo.split("\n")[0]}
                           </span>
                         )}
+                        {(() => {
+                          let ciResps = [];
+                          try { ciResps = JSON.parse(k.checkInResponses || "[]"); } catch {}
+                          if (!ciResps.length) return null;
+                          const dietary = ciResps.filter(r => r.foodRestrictions || r.allergies);
+                          return (
+                            <span onClick={e => { e.stopPropagation(); setInfoPopup({ title:"📋 Pre Check-in", text: ciResps.map(r => [r.name, r.foodRestrictions && `Dieta: ${r.foodRestrictions}`, r.allergies && `Alergias: ${r.allergies}`].filter(Boolean).join(" · ")).join("\n") }); }}
+                              style={{fontSize:9,background:"#F5F3FF",color:"#5B21B6",border:"1px solid #DDD6FE",borderRadius:3,padding:"0px 5px",cursor:"pointer",fontWeight:600}}>
+                              📋 PRE ✓ {dietary.length > 0 ? `· 🥗×${dietary.length}` : ""}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </td>
                     <td style={{color:"var(--text-2)"}}>
@@ -8062,13 +8090,19 @@ const loadKickoffs = async () => {
                       {k.drinkOrder && (
                         <span title={`Drinks received${k.drinkOrderAt ? ": " + new Date(k.drinkOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""}`}
                           style={{marginLeft:4,fontSize:10.5,background:"#F0FDF4",color:"#065F46",border:"1px solid #BBF7D0",borderRadius:3,padding:"1px 5px",cursor:"default"}}>
-                          drinks
+                          🍹 drinks
                         </span>
                       )}
                       {k.groceryOrder && (
                         <span title={`Groceries received${k.groceryOrderAt ? ": " + new Date(k.groceryOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""}`}
                           style={{marginLeft:4,fontSize:10.5,background:"#FFF7ED",color:"#9A3412",border:"1px solid #FED7AA",borderRadius:3,padding:"1px 5px",cursor:"default"}}>
-                          grocery
+                          🛒 grocery
+                        </span>
+                      )}
+                      {k.breakfastOrder && (
+                        <span title={`Breakfast received${k.breakfastOrderAt ? ": " + new Date(k.breakfastOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""}`}
+                          style={{marginLeft:4,fontSize:10.5,background:"#FFF9F0",color:"#92400E",border:"1px solid #FDE68A",borderRadius:3,padding:"1px 5px",cursor:"default"}}>
+                          ☕ breakfast
                         </span>
                       )}
   {(() => {
