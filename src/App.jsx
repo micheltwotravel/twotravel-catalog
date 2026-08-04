@@ -25,6 +25,7 @@ import TwoTravelCatalog from "./TwoTravelCatalog";
 import ItineraryPrintView from "./ItineraryPrintView";
 import { BookingPage } from "./BookingPage";
 import BodaPanel from "./BodaPanel";
+import BodaPublicView from "./BodaPublicView";
 import TareasPanel from "./TareasPanel";
 import { updateKickoffInSheet, fetchKickoffsFromSheet, saveKickoffToSheet } from "./sheetServices";
 
@@ -6289,6 +6290,7 @@ function App() {
   if (mode === "checkin")   return <CheckinForm />;
   if (mode === "itinerary") return <ItineraryPrintView />;
   if (mode === "trip")      return <ItineraryCatalog />;
+  if (mode === "bodas-cliente") return <BodaPublicView />;
   if (mode === "book") {
     const params = new URLSearchParams(window.location.search);
     return <BookingPage

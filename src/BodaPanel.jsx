@@ -528,6 +528,11 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
   const [tab,setTab]=useState("resumen");
   const [editing,setEditing]=useState(false);
   const [saving,setSaving]=useState(false);
+  const [copied,setCopied]=useState(false);
+  function shareLink() {
+    const url=`${window.location.origin}/?mode=bodas-cliente&id=${boda.id}`;
+    navigator.clipboard.writeText(url).then(()=>{ setCopied(true); setTimeout(()=>setCopied(false),2200); });
+  }
   const days=daysUntil(boda.weddingDate);
   const ph=FASE_COLORS[boda.phase]||{bg:"#f5f5f4",color:"#57534e"};
   const activeTasks=(boda.tasks||[]).filter(t=>!["Terminado","Cancelado"].includes(t.status));
@@ -559,8 +564,9 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
             <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:500,color:R.white,margin:0,letterSpacing:".02em"}}>{boda.clienteName}</p>
             {boda.weddingDate&&<p style={{fontSize:12,color:"rgba(255,255,255,.65)",margin:"4px 0 0"}}>💍 {fmtDate(boda.weddingDate)}{days!==null&&<span style={{marginLeft:8,fontWeight:600,color:days<0?"rgba(255,255,255,.4)":days<=30?"#fca5a5":"rgba(255,255,255,.75)"}}>{days<0?`(hace ${Math.abs(days)} días)`:days===0?"(¡hoy!)":`(en ${days} días)`}</span>}</p>}
           </div>
-          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
             <span style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:99,background:ph.bg,color:ph.color}}>{boda.phase}</span>
+            <button onClick={shareLink} style={{background:"rgba(255,255,255,.12)",color:copied?"#86efac":R.white,border:"1px solid rgba(255,255,255,.2)",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",transition:"color .2s"}}>{copied?"✓ Link copiado":"🔗 Compartir"}</button>
             <button onClick={()=>setEditing(v=>!v)} style={{background:"rgba(255,255,255,.12)",color:R.white,border:"1px solid rgba(255,255,255,.2)",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>{editing?"Cancelar":"✏️ Editar"}</button>
           </div>
         </div>
