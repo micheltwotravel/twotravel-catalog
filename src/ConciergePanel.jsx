@@ -1791,16 +1791,6 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
           placeholder="Descripción del día: ARRIVALS + CHECK IN + DINNER AT LA VITROLA…"
           className="mt-1.5 w-full bg-transparent text-[11px] text-neutral-400 placeholder-neutral-700 focus:outline-none focus:text-white transition-colors"
         />
-        {/* Breakfast toggle */}
-        {onToggleBreakfast && (() => {
-          const hasBf = items.some(i => /breakfast/i.test(i.name_en) || /desayuno/i.test(i.name) || /desayuno/i.test(i.name_en));
-          return (
-            <button type="button" onClick={onToggleBreakfast}
-              className={`mt-1.5 text-[10px] px-2 py-0.5 rounded border transition-colors ${hasBf ? "text-amber-400 border-amber-700 hover:bg-amber-900/30" : "text-neutral-600 border-neutral-700 hover:text-amber-300 hover:border-amber-700"}`}>
-              {hasBf ? "☕ Sin desayuno este día" : "☕ Agregar desayuno"}
-            </button>
-          );
-        })()}
       </div>
 
       {/* ── Activities list ── */}
@@ -4692,18 +4682,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               <p className="text-[10px] text-neutral-400 mt-1">Pega el link del formulario de HubSpot — aparece como botón en el PDF y en la página pre-viaje.</p>
             </div>
 
-            {/* Kickoff Call scheduling link */}
-            <div className="col-span-2">
-              <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1 block">📅 Link Agendar Kickoff Call</label>
-              <input
-                type="url"
-                value={kickoffCallUrl}
-                onChange={e => setKickoffCallUrl(e.target.value)}
-                className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/30"
-                placeholder="https://calendly.com/two-travel/..."
-              />
-              <p className="text-[10px] text-neutral-400 mt-1">Link de Calendly o Cal.com — aparece como botón azul en el PDF para que el cliente agende su kickoff call.</p>
-            </div>
 
             {false && kickoff?.id && (() => {
               const ciLink = `https://twotravelvip.com/ci/${kickoff.id}`;
@@ -5140,48 +5118,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
           {/* Check-in Responses hidden */}
 
-          {/* ── Notas de reuniones ── */}
-          <DrawerSection title="📋 Notas de reuniones" accent="amber" defaultOpen={true}>
-            <div className="flex items-center justify-between">
-              <span />
-              <button
-                type="button"
-                onClick={() => setMeetings(prev => [{ date: new Date().toISOString().slice(0,10), notes: "" }, ...prev])}
-                className="text-[11px] text-amber-700 border border-amber-300 rounded-lg px-2 py-1 hover:bg-amber-100"
-              >
-                + Nueva reunión
-              </button>
-            </div>
-            {meetings.length === 0 && (
-              <p className="text-xs text-amber-500 italic">No hay reuniones registradas. Presiona "+ Nueva reunión" para agregar.</p>
-            )}
-            {meetings.map((m, i) => (
-              <div key={i} className="bg-white border border-amber-200 rounded-lg p-2.5 space-y-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="date"
-                    value={m.date || ""}
-                    onChange={e => setMeetings(prev => prev.map((r, ri) => ri === i ? { ...r, date: e.target.value } : r))}
-                    className="border border-amber-200 rounded px-2 py-1 text-xs bg-amber-50"
-                  />
-                  <span className="text-xs text-amber-600 font-medium">
-                    {m.date ? new Date(m.date + "T12:00:00").toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" }) : "Fecha de reunión"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setMeetings(prev => prev.filter((_, ri) => ri !== i))}
-                    className="ml-auto text-[10px] text-red-400 hover:text-red-600"
-                  >✕</button>
-                </div>
-                <textarea
-                  value={m.notes || ""}
-                  onChange={e => setMeetings(prev => prev.map((r, ri) => ri === i ? { ...r, notes: e.target.value } : r))}
-                  className="w-full border border-amber-100 rounded px-2 py-1.5 text-xs min-h-[70px] bg-white resize-none"
-                  placeholder="Notas de esta reunión con el cliente…"
-                />
-              </div>
-            ))}
-          </DrawerSection>
 
           {/* ── Feedback del cliente (respuestas del formulario) ── */}
           {(kickoff.status === "feedback_submitted" || kickoff.feedbackAt) && (
@@ -5193,31 +5129,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             </div>
           )}
 
-          {/* ── Drink Order ── */}
-          {drinkOrder && (
-            <div className="border border-teal-200 rounded-xl bg-teal-50 p-3">
-              <p className="text-[11px] font-semibold text-teal-700 mb-1.5">🍹 Drink order (from client)</p>
-              <pre className="text-xs text-teal-900 whitespace-pre-wrap font-sans leading-relaxed">{drinkOrder}</pre>
-              {kickoff?.drinkOrderAt && (
-                <p className="text-[10px] text-teal-500 mt-1.5">
-                  Received: {new Date(kickoff.drinkOrderAt).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" })}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* ── Grocery Order ── */}
-          {kickoff?.groceryOrder && (
-            <div className="border border-orange-200 rounded-xl bg-orange-50 p-3">
-              <p className="text-[11px] font-semibold text-orange-700 mb-1.5">🛒 Grocery list (from client)</p>
-              <pre className="text-xs text-orange-900 whitespace-pre-wrap font-sans leading-relaxed">{kickoff.groceryOrder}</pre>
-              {kickoff?.groceryOrderAt && (
-                <p className="text-[10px] text-orange-500 mt-1.5">
-                  Received: {new Date(kickoff.groceryOrderAt).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" })}
-                </p>
-              )}
-            </div>
-          )}
 
           {/* ── Group Submissions (catalog selections per person) ── */}
           {(() => {
@@ -5770,34 +5681,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               </div>
             );
           })()}
-          {/* Drinks catalog link + copy short link */}
-          <div className="flex items-center gap-0.5">
-            <a
-              href={`https://www.twotravelvip.com/d/${kickoff.id}`}
-              target="_blank" rel="noreferrer"
-              className="px-3 py-2 rounded-l-lg border border-teal-300 text-sm text-teal-700 bg-teal-50 hover:bg-teal-100 flex items-center gap-1.5"
-              title="Abrir catálogo de bebidas del cliente"
-            >
-              🍹 Bebidas
-            </a>
-            <CopyIconButton url={`https://www.twotravelvip.com/d/${kickoff.id}`} borderClass="border-teal-300 text-teal-600 bg-teal-50 hover:bg-teal-100" />
-          </div>
-          {/* Groceries catalog link + copy short link */}
-          <div className="flex items-center gap-0.5">
-            <a
-              href={`https://www.twotravelvip.com/g/${kickoff.id}`}
-              target="_blank" rel="noreferrer"
-              className="px-3 py-2 rounded-l-lg border border-orange-300 text-sm text-orange-700 bg-orange-50 hover:bg-orange-100 flex items-center gap-1.5"
-              title="Abrir lista de mercado del cliente"
-            >
-              🛒 Mercado
-            </a>
-            <CopyIconButton url={`https://www.twotravelvip.com/g/${kickoff.id}`} borderClass="border-orange-300 text-orange-600 bg-orange-50 hover:bg-orange-100" />
-          </div>
-          {/* Breakfast link — CTG only */}
-          {toCityCodeModule(kickoff.city || kickoff.destination || "") === "CTG" && (
-            <BreakfastLink kickoff={kickoff} />
-          )}
           {/* WhatsApp — enviar PDF al cliente */}
           {(() => {
             const isEs   = (kickoff.lang || "en") === "es";
@@ -7086,56 +6969,6 @@ export function ReunionesPage({ currentUser, initialKickoffId }) {
                 </div>
               </div>
 
-              {/* Trip Summary — day-by-day itinerary at a glance */}
-              {(() => {
-                const cart    = Array.isArray(selectedKickoff.cart)    ? selectedKickoff.cart    : [];
-                const dayMeta = Array.isArray(selectedKickoff.dayMeta) ? selectedKickoff.dayMeta : [];
-                if (!cart.length && !dayMeta.length) return null;
-                const metaLabels = dayMeta.map(dm => dm.label);
-                const orphans = [...new Set(cart.map(i => i.dayLabel || "").filter(l => l && !metaLabels.includes(l)))];
-                const allLabels = [...metaLabels, ...orphans];
-                const days = allLabels.map(label => {
-                  const meta = dayMeta.find(dm => dm.label === label) || { label, title: "" };
-                  const items = cart
-                    .filter(i => (i.dayLabel || "") === label)
-                    .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
-                  return { label, title: meta.title || "", date: meta.date || "", items };
-                }).filter(d => d.items.length > 0 || dayMeta.find(dm => dm.label === d.label));
-                if (!days.length) return null;
-                return (
-                  <div style={{ padding:"10px 20px 12px", borderBottom:"1px solid #eee8df", background:"#fdfaf5", flexShrink:0 }}>
-                    <div style={{ fontSize:9, color:"#9a7d52", fontWeight:600, letterSpacing:".07em", textTransform:"uppercase", marginBottom:8 }}>
-                      Itinerario · {days.length} día{days.length !== 1 ? "s" : ""}
-                    </div>
-                    <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-                      {days.map((day, di) => (
-                        <div key={day.label} style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
-                          <div style={{ flexShrink:0, width:28, height:28, borderRadius:"50%", background:"#1a1814", display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, color:"#f5f0e8", fontWeight:700, marginTop:1 }}>
-                            {di + 1}
-                          </div>
-                          <div style={{ flex:1, minWidth:0 }}>
-                            <div style={{ display:"flex", gap:6, alignItems:"baseline", flexWrap:"wrap" }}>
-                              <span style={{ fontSize:11, fontWeight:600, color:"#1a1814" }}>{day.label}</span>
-                              {day.title && <span style={{ fontSize:10, color:"#9a7d52" }}>{day.title}</span>}
-                            </div>
-                            {day.items.length > 0 && (
-                              <div style={{ display:"flex", flexWrap:"wrap", gap:"2px 10px", marginTop:2 }}>
-                                {day.items.slice(0, 4).map((it, i) => (
-                                  <span key={i} style={{ fontSize:10, color:"#7a7570" }}>
-                                    {it.time ? <span style={{ color:"#b0a090" }}>{it.time} </span> : null}
-                                    {it.title}
-                                  </span>
-                                ))}
-                                {day.items.length > 4 && <span style={{ fontSize:10, color:"#b0a090" }}>+{day.items.length - 4}…</span>}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
 
               {/* timeline */}
               <div style={{ flex:1, overflowY:"auto", padding:"16px 20px" }}>

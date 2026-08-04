@@ -3,10 +3,12 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "redirects": [
-    { "source": "/b/:id", "destination": "/?mode=breakfast&kickoffId=:id", "permanent": false },
-    { "source": "/d/:id", "destination": "/?mode=drinks&kickoffId=:id",    "permanent": false },
-    { "source": "/g/:id",  "destination": "/?mode=groceries&kickoffId=:id", "permanent": false },
-    { "source": "/ci/:id", "destination": "/?mode=checkin&kickoffId=:id",  "permanent": false }
+    { "source": "/b/:id",  "destination": "/?mode=breakfast&kickoffId=:id",    "permanent": false },
+    { "source": "/d/:id",  "destination": "/?mode=drinks&kickoffId=:id",       "permanent": false },
+    { "source": "/g/:id",  "destination": "/?mode=groceries&kickoffId=:id",    "permanent": false },
+    { "source": "/ci/:id", "destination": "/?mode=checkin&kickoffId=:id",      "permanent": false },
+    { "source": "/c/:id",  "destination": "/?mode=questionnaire&kickoffId=:id","permanent": false },
+    { "source": "/f/:id",  "destination": "/?kickoffId=:id",                   "permanent": false }
   ],
   "rewrites": [
     { "source": "/((?!api/)(?!.*\\.html$).*)", "destination": "/index.html" }
