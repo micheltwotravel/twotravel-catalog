@@ -264,12 +264,16 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   doc.setFontSize(28); doc.setFont("helvetica","bold"); doc.setTextColor(12,12,12);
   dt(cl(kickoff.guestName) || "Guest", ML, y); y += 12;
 
-  // Trip name
-  if (kickoff.tripName) {
-    doc.setFontSize(15); doc.setFont("helvetica","bold"); doc.setTextColor(30,30,30);
-    dt(cl(kickoff.tripName), ML, y + 8); y += 26;
+  // Subtitle: City Concierge Itinerary (replaces raw tripName to avoid date duplication)
+  {
+    const subtitleCity = cityFullName(kickoff.city || "").split(",")[0].trim();
+    const subtitleLabel = subtitleCity
+      ? `${se(subtitleCity)} \xB0 Concierge Itinerary`
+      : lang === "es" ? "Itinerario de Concierge" : "Concierge Itinerary";
+    doc.setFontSize(13); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
+    dt(subtitleLabel, ML, y + 10); y += 28;
   }
-  y += 14;
+  y += 6;
 
   // Thin rule
   doc.setDrawColor(12,12,12); doc.setLineWidth(1.5);
@@ -661,6 +665,132 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       }
     });
   }
+
+  // ── STATIC PAGE: REVIEWS & SOCIAL MEDIA ────────────────────────
+  newPage();
+  // Dark header band
+  doc.setFillColor(10,10,10);
+  doc.rect(0, 36, PW, 3, "F");
+  y = 100;
+  doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(154,125,82);
+  dt("THANK YOU", ML, y); y += 20;
+  doc.setFontSize(28); doc.setFont("helvetica","bold"); doc.setTextColor(12,12,12);
+  dt("Share your", ML, y); y += 36;
+  dt("experience.", ML, y); y += 50;
+  doc.setDrawColor(12,12,12); doc.setLineWidth(1.5);
+  doc.line(ML, y, ML + 60, y); doc.setLineWidth(0.5); y += 28;
+  doc.setFontSize(11); doc.setFont("helvetica","normal"); doc.setTextColor(60,60,60);
+  const thankLines = sts(
+    se(lang === "es"
+      ? "Fue un placer acompa\xF1arte en este viaje. Si disfrutaste la experiencia, nos encantaria que la compartieras con el mundo."
+      : "It was our pleasure to accompany you on this trip. If you enjoyed the experience, we would love for you to share it with the world."),
+    TW
+  );
+  thankLines.forEach(l => { dt(l, ML, y); y += 16; });
+  y += 24;
+  // Social
+  doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(120,120,120);
+  dt("INSTAGRAM", ML, y); y += 14;
+  doc.setFontSize(14); doc.setFont("helvetica","bold"); doc.setTextColor(12,12,12);
+  dt("@twotravelvip", ML, y); y += 32;
+  doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(120,120,120);
+  dt("WEBSITE", ML, y); y += 14;
+  doc.setFontSize(14); doc.setFont("helvetica","bold"); doc.setTextColor(12,12,12);
+  dtLink("twotravelvip.com", ML, y, "https://twotravelvip.com"); y += 32;
+  // Review CTA
+  doc.setFillColor(247,244,239);
+  const boxY = y; y += 8;
+  doc.setFontSize(8.5); doc.setFont("helvetica","bold"); doc.setTextColor(80,80,80);
+  dt(lang === "es" ? "DEJANOS UNA RESENA" : "LEAVE US A REVIEW", ML + 16, y); y += 14;
+  doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(60,60,60);
+  const ctaLines = sts(
+    se(lang === "es"
+      ? "Tu opini\xF3n nos ayuda a seguir mejorando y a llegar a m\xE1s viajeros. \xA1Gracias por confiar en nosotros!"
+      : "Your feedback helps us improve and reach more travelers. Thank you for trusting us!"),
+    TW - 32
+  );
+  ctaLines.forEach(l => { dt(l, ML + 16, y); y += 14; });
+  y += 16;
+  doc.setFillColor(247,244,239);
+  doc.roundedRect(ML, boxY, TW, y - boxY, 4, 4, "F");
+  // Re-draw text on top of fill (jsPDF fills cover text; redraw needed)
+  doc.setFontSize(8.5); doc.setFont("helvetica","bold"); doc.setTextColor(80,80,80);
+  dt(lang === "es" ? "DEJANOS UNA RESENA" : "LEAVE US A REVIEW", ML + 16, boxY + 8);
+  doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(60,60,60);
+  let ry2 = boxY + 22;
+  ctaLines.forEach(l => { dt(l, ML + 16, ry2); ry2 += 14; });
+
+  // ── STATIC PAGE: CITY GUIDE ──────────────────────────────────
+  newPage();
+  const guideCity = cityFullName(kickoff.city || "").split(",")[0].trim();
+  const guideCityCode = cl(kickoff.city || "").split(",")[0].trim().toUpperCase();
+  y = 100;
+  doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(154,125,82);
+  dt(lang === "es" ? "GUIA DE VIAJE" : "CITY GUIDE", ML, y); y += 20;
+  doc.setFontSize(26); doc.setFont("helvetica","bold"); doc.setTextColor(12,12,12);
+  dt(se(guideCity || guideCityCode), ML, y); y += 40;
+  doc.setDrawColor(12,12,12); doc.setLineWidth(1.5);
+  doc.line(ML, y, ML + 60, y); doc.setLineWidth(0.5); y += 28;
+
+  const cityGuideData = {
+    CTG: {
+      sections: [
+        { title: lang === "es" ? "Barrios a explorar" : "Neighborhoods to explore",
+          body: lang === "es"
+            ? "El Centro Hist\xF3rico es el coraz\xF3n de la ciudad, con plazas coloniales y calles empedradas. Getseman\xED es el barrio bohemio lleno de arte urbano, caf\xE9s y vida nocturna. Bocagrande ofrece playas y restaurantes frente al mar."
+            : "The Historic Center is the heart of the city with colonial squares and cobblestone streets. Getsemani is the bohemian neighborhood full of street art, cafes and nightlife. Bocagrande offers beaches and seaside restaurants." },
+        { title: lang === "es" ? "Clima y qu\xE9 llevar" : "Weather & what to pack",
+          body: lang === "es"
+            ? "Cartagena es tropical con temperatura promedio de 30\xB0C. Lleva ropa ligera, protector solar, repelente de insectos y c\xF3modo calzado para caminar."
+            : "Cartagena is tropical with an average temperature of 30\xB0C. Pack light clothing, sunscreen, insect repellent and comfortable walking shoes." },
+        { title: lang === "es" ? "Transporte local" : "Local transport",
+          body: lang === "es"
+            ? "Los tuk-tuks y taxis son la forma m\xE1s c\xF3moda de moverse. Para las islas, los botes salen del muelle de La Bodeguita o Muelle de Los Pegasos."
+            : "Tuk-tuks and taxis are the most convenient way to get around. For the islands, boats depart from La Bodeguita or Muelle de Los Pegasos docks." },
+      ],
+    },
+    MDE: {
+      sections: [
+        { title: lang === "es" ? "Barrios a explorar" : "Neighborhoods to explore",
+          body: lang === "es"
+            ? "El Poblado es el centro de la vida nocturna y restaurantes. Laureles tiene un ambiente m\xE1s local y tranquilo. Envigado ofrece excelente gastronom\xEDa a precios accesibles."
+            : "El Poblado is the hub of nightlife and restaurants. Laureles has a more local, laid-back feel. Envigado offers excellent cuisine at accessible prices." },
+        { title: lang === "es" ? "Clima y qu\xE9 llevar" : "Weather & what to pack",
+          body: lang === "es"
+            ? "Medell\xEDn tiene clima primaveral todo el a\xF1o (~22\xB0C). Lleva una chaqueta ligera para las noches y en caso de lluvia."
+            : "Medellin enjoys spring-like weather year-round (~22\xB0C). Bring a light jacket for evenings and occasional rain." },
+        { title: lang === "es" ? "Transporte local" : "Local transport",
+          body: lang === "es"
+            ? "El Metro y el Metrocable son seguros y eficientes. InDriver y Uber funcionan bien en toda la ciudad."
+            : "The Metro and Metrocable are safe and efficient. InDriver and Uber work well throughout the city." },
+      ],
+    },
+  };
+  const guideSections = (cityGuideData[guideCityCode] || {}).sections || [
+    { title: lang === "es" ? "Explora la ciudad" : "Explore the city",
+      body: lang === "es"
+        ? "Tu concierge est\xE1 disponible para recomendarte los mejores lugares, restaurantes y actividades adaptados a tus intereses."
+        : "Your concierge is available to recommend the best places, restaurants and activities tailored to your interests." },
+    { title: lang === "es" ? "Consejos generales" : "General tips",
+      body: lang === "es"
+        ? "Lleva siempre efectivo local para mercados y lugares peque\xF1os. Mant\xE9n tu pasaporte y documentos en un lugar seguro."
+        : "Always carry local cash for markets and small venues. Keep your passport and documents in a safe place." },
+  ];
+  guideSections.forEach(({ title, body }) => {
+    checkY(80);
+    doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(30,30,30);
+    dt(se(title), ML, y); y += 16;
+    const bodyLines = sts(se(body), TW);
+    doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(60,60,60);
+    bodyLines.forEach(l => { checkY(14); dt(l, ML, y); y += 14; });
+    y += 20;
+  });
+  // Footer contact
+  checkY(40);
+  doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(140,100,50);
+  dt(lang === "es" ? "Cualquier consulta, escr\xEDbenos:" : "For any questions, reach out to us:", ML, y); y += 14;
+  doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(12,12,12);
+  dt("twotravelvip.com  ·  @twotravelvip", ML, y);
 
   // Page footers
   const totalPages = doc.getNumberOfPages();
