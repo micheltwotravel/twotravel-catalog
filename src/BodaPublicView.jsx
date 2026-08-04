@@ -74,7 +74,7 @@ export default function BodaPublicView() {
     if (!id) { setError("Link inválido — falta el ID de la boda."); setLoading(false); return; }
     fetchKickoffsFromSheet({ forceRefresh: false })
       .then(all => {
-        const k = all.find(x => x.id === id);
+        const k = all.find(x => String(x.id) === String(id));
         if (!k) { setError("No encontramos esta boda. Verifica el link."); return; }
         const b = parseBoda(k);
         if (!b) { setError("Este link no corresponde a una boda."); return; }
