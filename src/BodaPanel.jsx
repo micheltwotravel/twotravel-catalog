@@ -1,49 +1,79 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { fetchKickoffsFromSheet, saveKickoffToSheet, updateKickoffInSheet, deleteKickoff } from "./sheetServices";
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
+// ─── BRAND ───────────────────────────────────────────────────────────────────
+const R = {
+  dark:    "#1a0812",
+  mid:     "#7f1d3a",
+  accent:  "#be123c",
+  light:   "#fff0f3",
+  cream:   "#fdf6f8",
+  gold:    "#c9a96e",
+  muted:   "#8b4a62",
+  text:    "#1a0812",
+  text2:   "#6b3550",
+  border:  "#f0c0ce",
+  white:   "#ffffff",
+};
 
+const HDR = {
+  background: R.dark,
+  padding: "18px 24px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  flexShrink: 0,
+};
+const GOLD_BAR = {
+  height: 2,
+  background: `linear-gradient(90deg,${R.mid},${R.gold},${R.mid})`,
+  flexShrink: 0,
+};
+const CARD = {
+  background: R.white,
+  border: `1px solid ${R.border}`,
+  borderRadius: 16,
+  overflow: "hidden",
+};
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
 function parseDate(d) {
   if (!d) return null;
   const dt = typeof d === "string" ? new Date(d.length === 10 ? d + "T12:00:00" : d) : new Date(d);
   return isNaN(dt) ? null : dt;
 }
-function toDateInput(d) {
-  const dt = parseDate(d);
-  return dt ? dt.toISOString().slice(0, 10) : "";
-}
+function toDateInput(d) { const dt = parseDate(d); return dt ? dt.toISOString().slice(0, 10) : ""; }
 function fmtDate(d) {
   const dt = parseDate(d);
   if (!dt) return d ? String(d) : "";
   return dt.toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" });
 }
 function daysUntil(d) {
-  const dt = parseDate(d);
-  if (!dt) return null;
-  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const dt = parseDate(d); if (!dt) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
   return Math.ceil((dt - today) / 86400000);
 }
-function uid() { return "t_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+function uid() { return "t_" + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
 
-const FASES = ["Onboarding", "Planning", "Pre-Wedding", "Wedding Day", "Post-Wedding"];
-const ESTADOS_BODA = ["Activa", "En pausa", "Terminada", "Cancelada"];
-const ESTADOS_TASK = ["Pendiente", "En curso", "Terminado", "Cancelado"];
-const PHASE_COLORS = {
-  "Onboarding":   "bg-blue-100 text-blue-700",
-  "Planning":     "bg-violet-100 text-violet-700",
-  "Pre-Wedding":  "bg-amber-100 text-amber-700",
-  "Wedding Day":  "bg-rose-100 text-rose-700",
-  "Post-Wedding": "bg-green-100 text-green-700",
+const FASES        = ["Onboarding","Planning","Pre-Wedding","Wedding Day","Post-Wedding"];
+const ESTADOS_BODA = ["Activa","En pausa","Terminada","Cancelada"];
+const ESTADOS_TASK = ["Pendiente","En curso","Terminado","Cancelado"];
+
+const PHASE_BG = {
+  "Onboarding":   { bg:"#eff6ff", color:"#1e40af" },
+  "Planning":     { bg:"#f5f3ff", color:"#6d28d9" },
+  "Pre-Wedding":  { bg:"#fffbeb", color:"#b45309" },
+  "Wedding Day":  { bg:"#fff0f3", color:"#be123c" },
+  "Post-Wedding": { bg:"#f0fdf4", color:"#166534" },
 };
 
-// ─── DATA LAYER (kickoff API as storage) ────────────────────────────────────
+// ─── DATA LAYER ──────────────────────────────────────────────────────────────
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
 function parseBoda(k) {
   try {
     const meta = JSON.parse(k.conciergeSummary || "{}");
     if (meta.type !== "boda") return null;
-    const tasks    = (JSON.parse(k.internalNotes || "{}").tasks || []);
-    const schedule = JSON.parse(k.travifyText   || "[]");
     return {
       id: k.id,
       clienteName: String(k.guestName || "").replace(/^Boda:\s*/i, ""),
@@ -56,257 +86,224 @@ function parseBoda(k) {
       guestCount:  meta.guestCount  || "",
       budget:      meta.budget      || "",
       notes:       meta.notes       || "",
-      tasks,
-      schedule,
+      tasks:    JSON.parse(k.internalNotes || "{}").tasks    || [],
+      schedule: JSON.parse(k.travifyText   || "[]"),
     };
   } catch { return null; }
 }
-
+function metaPayload(f) {
+  return JSON.stringify({ type:"boda", weddingDate:f.weddingDate, venue:f.venue, responsable:f.responsable, contact:f.contact, phase:f.phase, status:f.status, guestCount:f.guestCount, budget:f.budget, notes:f.notes });
+}
 async function apiBodas() {
   const all = await fetchKickoffsFromSheet({ forceRefresh: true });
   return all.map(parseBoda).filter(Boolean);
 }
-
-function metaPayload(form) {
-  return JSON.stringify({
-    type: "boda",
-    weddingDate: form.weddingDate,
-    venue:       form.venue,
-    responsable: form.responsable,
-    contact:     form.contact,
-    phase:       form.phase,
-    status:      form.status,
-    guestCount:  form.guestCount,
-    budget:      form.budget,
-    notes:       form.notes,
-  });
-}
-
-async function apiSaveBoda(form) {
-  const res = await saveKickoffToSheet({
-    guestName:         "Boda: " + form.clienteName,
-    conciergeSummary:  metaPayload(form),
-    internalNotes:     JSON.stringify({ tasks: [] }),
-    travifyText:       JSON.stringify([]),
-    status:            "active",
-  });
+async function apiSaveBoda(f) {
+  const res = await saveKickoffToSheet({ guestName:"Boda: "+f.clienteName, conciergeSummary:metaPayload(f), internalNotes:JSON.stringify({tasks:[]}), travifyText:JSON.stringify([]), status:"active" });
   return res.id;
 }
+async function apiUpdateBoda(id, f) { await updateKickoffInSheet(id, { guestName:"Boda: "+f.clienteName, conciergeSummary:metaPayload(f) }); }
+async function apiUpdateTasks(id, tasks) { await updateKickoffInSheet(id, { internalNotes: JSON.stringify({tasks}) }); }
+async function apiUpdateSchedule(id, schedule) { await updateKickoffInSheet(id, { travifyText: JSON.stringify(schedule) }); }
 
-async function apiUpdateBoda(id, form) {
-  await updateKickoffInSheet(id, {
-    guestName:        "Boda: " + form.clienteName,
-    conciergeSummary: metaPayload(form),
-  });
-}
-async function apiUpdateTasks(id, tasks) {
-  await updateKickoffInSheet(id, { internalNotes: JSON.stringify({ tasks }) });
-}
-async function apiUpdateSchedule(id, schedule) {
-  await updateKickoffInSheet(id, { travifyText: JSON.stringify(schedule) });
-}
-async function apiDeleteBoda(id) {
-  await deleteKickoff(id);
-}
+// ─── INPUT STYLE ─────────────────────────────────────────────────────────────
+const INP = { width:"100%", border:`1px solid ${R.border}`, borderRadius:10, padding:"8px 12px", fontSize:13, fontFamily:"'Jost',sans-serif", outline:"none", color:R.text, background:R.white, boxSizing:"border-box" };
+const INP_SM = { ...INP, padding:"6px 10px", fontSize:12 };
 
 // ─── BODA FORM ───────────────────────────────────────────────────────────────
-
-function BodaForm({ boda, onSave, onCancel, saving, users = [] }) {
-  const [form, setForm] = useState({
-    clienteName: boda?.clienteName || "",
-    weddingDate: toDateInput(boda?.weddingDate),
-    venue:       boda?.venue       || "",
-    responsable: boda?.responsable || "",
-    phase:       boda?.phase       || "Onboarding",
-    status:      boda?.status      || "Activa",
-    guestCount:  boda?.guestCount  || "",
-    budget:      boda?.budget      || "",
-    notes:       boda?.notes       || "",
-    contact:     boda?.contact     || "",
+function BodaForm({ boda, onSave, onCancel, saving, users=[] }) {
+  const [f, setF] = useState({
+    clienteName: boda?.clienteName||"", weddingDate: toDateInput(boda?.weddingDate),
+    venue: boda?.venue||"", responsable: boda?.responsable||"", phase: boda?.phase||"Onboarding",
+    status: boda?.status||"Activa", guestCount: boda?.guestCount||"", budget: boda?.budget||"",
+    notes: boda?.notes||"", contact: boda?.contact||"",
   });
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const inp = "w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300/40";
+  const set = (k,v) => setF(p => ({...p,[k]:v}));
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2">
-          <label className="block text-[11px] text-neutral-500 mb-1">Nombre del cliente *</label>
-          <input className={inp} value={form.clienteName} onChange={e => set("clienteName", e.target.value)} placeholder="Ej: Ana & Carlos" />
-        </div>
-        <div>
-          <label className="block text-[11px] text-neutral-500 mb-1">Fecha de boda</label>
-          <input type="date" className={inp} value={form.weddingDate} onChange={e => set("weddingDate", e.target.value)} />
-        </div>
-        <div>
-          <label className="block text-[11px] text-neutral-500 mb-1">Responsable</label>
-          {users.length > 0 ? (
-            <select className={inp} value={form.responsable} onChange={e => set("responsable", e.target.value)}>
-              <option value="">— seleccionar —</option>
-              {users.map(u => <option key={u.email} value={u.name || u.email}>{u.name || u.email}</option>)}
-            </select>
-          ) : (
-            <input className={inp} value={form.responsable} onChange={e => set("responsable", e.target.value)} placeholder="Nombre o email" />
-          )}
-        </div>
-        <div>
-          <label className="block text-[11px] text-neutral-500 mb-1">Venue</label>
-          <input className={inp} value={form.venue} onChange={e => set("venue", e.target.value)} placeholder="Nombre del lugar" />
-        </div>
-        <div>
-          <label className="block text-[11px] text-neutral-500 mb-1">Contacto cliente</label>
-          <input className={inp} value={form.contact} onChange={e => set("contact", e.target.value)} placeholder="WhatsApp o email" />
-        </div>
-        <div>
-          <label className="block text-[11px] text-neutral-500 mb-1">Fase</label>
-          <select className={inp} value={form.phase} onChange={e => set("phase", e.target.value)}>
-            {FASES.map(f => <option key={f}>{f}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-[11px] text-neutral-500 mb-1">Estado</label>
-          <select className={inp} value={form.status} onChange={e => set("status", e.target.value)}>
-            {ESTADOS_BODA.map(s => <option key={s}>{s}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-[11px] text-neutral-500 mb-1">N° invitados</label>
-          <input type="number" className={inp} value={form.guestCount} onChange={e => set("guestCount", e.target.value)} placeholder="150" />
-        </div>
-        <div>
-          <label className="block text-[11px] text-neutral-500 mb-1">Presupuesto (USD)</label>
-          <input type="number" className={inp} value={form.budget} onChange={e => set("budget", e.target.value)} placeholder="25000" />
-        </div>
-        <div className="col-span-2">
-          <label className="block text-[11px] text-neutral-500 mb-1">Notas internas</label>
-          <textarea className={inp} rows={3} value={form.notes} onChange={e => set("notes", e.target.value)} placeholder="Detalles, preferencias, pendientes..." />
-        </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+      <div style={{gridColumn:"span 2"}}>
+        <label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Nombre del cliente *</label>
+        <input style={INP} value={f.clienteName} onChange={e=>set("clienteName",e.target.value)} placeholder="Ej: Ana & Carlos" />
       </div>
-      <div className="flex gap-2 pt-1">
-        <button onClick={() => onSave(form)} disabled={saving || !form.clienteName.trim()}
-          className="px-4 py-2 rounded-lg bg-rose-600 text-white text-sm font-medium hover:bg-rose-700 disabled:opacity-40">
+      <div>
+        <label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Fecha de boda</label>
+        <input type="date" style={INP} value={f.weddingDate} onChange={e=>set("weddingDate",e.target.value)} />
+      </div>
+      <div>
+        <label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Responsable</label>
+        {users.length > 0 ? (
+          <select style={INP} value={f.responsable} onChange={e=>set("responsable",e.target.value)}>
+            <option value="">— seleccionar —</option>
+            {users.map(u => <option key={u.email} value={u.name||u.email}>{u.name||u.email}</option>)}
+          </select>
+        ) : <input style={INP} value={f.responsable} onChange={e=>set("responsable",e.target.value)} placeholder="Nombre o email" />}
+      </div>
+      <div>
+        <label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Venue</label>
+        <input style={INP} value={f.venue} onChange={e=>set("venue",e.target.value)} placeholder="Nombre del lugar" />
+      </div>
+      <div>
+        <label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Contacto cliente</label>
+        <input style={INP} value={f.contact} onChange={e=>set("contact",e.target.value)} placeholder="WhatsApp o email" />
+      </div>
+      <div>
+        <label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Fase</label>
+        <select style={INP} value={f.phase} onChange={e=>set("phase",e.target.value)}>
+          {FASES.map(p=><option key={p}>{p}</option>)}
+        </select>
+      </div>
+      <div>
+        <label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Estado</label>
+        <select style={INP} value={f.status} onChange={e=>set("status",e.target.value)}>
+          {ESTADOS_BODA.map(s=><option key={s}>{s}</option>)}
+        </select>
+      </div>
+      <div>
+        <label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>N° invitados</label>
+        <input type="number" style={INP} value={f.guestCount} onChange={e=>set("guestCount",e.target.value)} placeholder="150" />
+      </div>
+      <div>
+        <label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Presupuesto (USD)</label>
+        <input type="number" style={INP} value={f.budget} onChange={e=>set("budget",e.target.value)} placeholder="25000" />
+      </div>
+      <div style={{gridColumn:"span 2"}}>
+        <label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Notas internas</label>
+        <textarea style={{...INP,resize:"vertical"}} rows={3} value={f.notes} onChange={e=>set("notes",e.target.value)} placeholder="Detalles, preferencias, pendientes..." />
+      </div>
+      <div style={{gridColumn:"span 2",display:"flex",gap:8,paddingTop:4}}>
+        <button onClick={()=>onSave(f)} disabled={saving||!f.clienteName.trim()}
+          style={{background:R.accent,color:"#fff",border:"none",borderRadius:10,padding:"9px 20px",fontSize:13,fontWeight:600,cursor:"pointer",opacity:(saving||!f.clienteName.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>
           {saving ? "Guardando..." : boda ? "Guardar cambios" : "Crear boda"}
         </button>
-        <button onClick={onCancel} className="px-4 py-2 rounded-lg border border-neutral-200 text-sm hover:bg-neutral-50">Cancelar</button>
+        <button onClick={onCancel}
+          style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:10,padding:"9px 20px",fontSize:13,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+          Cancelar
+        </button>
       </div>
     </div>
   );
 }
 
 // ─── TASKS TAB ───────────────────────────────────────────────────────────────
-
 function TasksTab({ boda, users, onTasksChange }) {
-  const [tasks, setTasks] = useState(boda.tasks || []);
-  const [showForm, setShowForm] = useState(false);
+  const [tasks, setTasks] = useState(boda.tasks||[]);
+  const [show, setShow] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [blank, setBlank] = useState({ taskName: "", assignedTo: "", dueDate: "", status: "Pendiente", phase: "General", notes: "" });
-  const inp = "border border-neutral-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300/40";
-  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const [blank, setBlank] = useState({taskName:"",assignedTo:"",dueDate:"",status:"Pendiente",phase:"General",notes:""});
+  const today = new Date(); today.setHours(0,0,0,0);
 
   function cat(t) {
-    if (!t.dueDate) return "upcoming";
-    const d = new Date(t.dueDate + "T12:00:00"); d.setHours(0, 0, 0, 0);
-    if (d < today) return "overdue";
-    if (d.getTime() === today.getTime()) return "today";
-    return "upcoming";
+    if (!t.dueDate) return "up";
+    const d = new Date(t.dueDate+"T12:00:00"); d.setHours(0,0,0,0);
+    if (d < today) return "late";
+    if (d.getTime()===today.getTime()) return "today";
+    return "up";
   }
 
   async function persist(updated) {
-    setTasks(updated);
-    onTasksChange(updated);
+    setTasks(updated); onTasksChange(updated);
     await apiUpdateTasks(boda.id, updated);
   }
 
-  async function addTask() {
+  async function add() {
     if (!blank.taskName.trim()) return;
     setSaving(true);
-    try { await persist([...tasks, { ...blank, id: uid(), createdAt: new Date().toISOString() }]); setBlank({ taskName: "", assignedTo: "", dueDate: "", status: "Pendiente", phase: "General", notes: "" }); setShowForm(false); }
-    catch(e) { alert("Error: " + e.message); }
+    try { await persist([...tasks,{...blank,id:uid(),createdAt:new Date().toISOString()}]); setBlank({taskName:"",assignedTo:"",dueDate:"",status:"Pendiente",phase:"General",notes:""}); setShow(false); }
+    catch(e){alert("Error: "+e.message);}
     setSaving(false);
   }
-
   async function toggle(id) {
-    const updated = tasks.map(t => t.id === id ? { ...t, status: t.status === "Terminado" ? "Pendiente" : "Terminado" } : t);
-    try { await persist(updated); } catch { setTasks(tasks); }
+    const u = tasks.map(t=>t.id===id?{...t,status:t.status==="Terminado"?"Pendiente":"Terminado"}:t);
+    try{await persist(u);}catch{setTasks(tasks);}
   }
-
   async function remove(id) {
-    try { await persist(tasks.filter(t => t.id !== id)); } catch { setTasks(tasks); }
+    try{await persist(tasks.filter(t=>t.id!==id));}catch{setTasks(tasks);}
   }
 
-  const active = tasks.filter(t => !["Terminado","Cancelado"].includes(t.status));
-  const done   = tasks.filter(t =>  ["Terminado","Cancelado"].includes(t.status));
-  const catStyle = { overdue: "border-red-300 bg-red-50", today: "border-amber-300 bg-amber-50", upcoming: "border-neutral-200 bg-white" };
-  const catBadge = { overdue: "⚠️ Atrasada", today: "🔥 Hoy", upcoming: "" };
+  const active = tasks.filter(t=>!["Terminado","Cancelado"].includes(t.status));
+  const done   = tasks.filter(t=> ["Terminado","Cancelado"].includes(t.status));
+
+  const rowStyle = (t) => {
+    const c = cat(t);
+    return { border:`1px solid ${c==="late"?"#fca5a5":c==="today"?"#fcd34d":R.border}`, borderRadius:12, padding:"10px 14px", display:"flex", alignItems:"flex-start", gap:10, background: c==="late"?"#fff5f5":c==="today"?"#fffbeb":R.white, marginBottom:6 };
+  };
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">{active.length} activa{active.length !== 1 ? "s" : ""}</p>
-        <button onClick={() => setShowForm(v => !v)} className="text-[11px] text-rose-600 border border-rose-200 rounded-lg px-3 py-1.5 hover:bg-rose-50">+ Nueva tarea</button>
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+        <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{active.length} activa{active.length!==1?"s":""}</span>
+        <button onClick={()=>setShow(v=>!v)}
+          style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+          + Nueva tarea
+        </button>
       </div>
 
-      {showForm && (
-        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 space-y-2">
-          <input className={inp + " w-full"} value={blank.taskName} onChange={e => setBlank(f => ({...f, taskName: e.target.value}))} placeholder="Descripción *" />
-          <div className="grid grid-cols-2 gap-2">
-            {users.length > 0 ? (
-              <select className={inp} value={blank.assignedTo} onChange={e => setBlank(f => ({...f, assignedTo: e.target.value}))}>
+      {show && (
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+            <div style={{gridColumn:"span 2"}}>
+              <input style={INP_SM} value={blank.taskName} onChange={e=>setBlank(p=>({...p,taskName:e.target.value}))} placeholder="Descripción de la tarea *" />
+            </div>
+            {users.length>0 ? (
+              <select style={INP_SM} value={blank.assignedTo} onChange={e=>setBlank(p=>({...p,assignedTo:e.target.value}))}>
                 <option value="">— responsable —</option>
-                {users.map(u => <option key={u.email} value={u.name||u.email}>{u.name||u.email}</option>)}
+                {users.map(u=><option key={u.email} value={u.name||u.email}>{u.name||u.email}</option>)}
               </select>
-            ) : (
-              <input className={inp} value={blank.assignedTo} onChange={e => setBlank(f => ({...f, assignedTo: e.target.value}))} placeholder="Responsable" />
-            )}
-            <input type="date" className={inp} value={blank.dueDate} onChange={e => setBlank(f => ({...f, dueDate: e.target.value}))} />
-            <select className={inp} value={blank.phase} onChange={e => setBlank(f => ({...f, phase: e.target.value}))}>
-              {["General", ...FASES].map(f => <option key={f}>{f}</option>)}
+            ) : <input style={INP_SM} value={blank.assignedTo} onChange={e=>setBlank(p=>({...p,assignedTo:e.target.value}))} placeholder="Responsable" />}
+            <input type="date" style={INP_SM} value={blank.dueDate} onChange={e=>setBlank(p=>({...p,dueDate:e.target.value}))} />
+            <select style={INP_SM} value={blank.phase} onChange={e=>setBlank(p=>({...p,phase:e.target.value}))}>
+              {["General",...FASES].map(ph=><option key={ph}>{ph}</option>)}
             </select>
-            <select className={inp} value={blank.status} onChange={e => setBlank(f => ({...f, status: e.target.value}))}>
-              {ESTADOS_TASK.map(s => <option key={s}>{s}</option>)}
+            <select style={INP_SM} value={blank.status} onChange={e=>setBlank(p=>({...p,status:e.target.value}))}>
+              {ESTADOS_TASK.map(s=><option key={s}>{s}</option>)}
             </select>
+            <div style={{gridColumn:"span 2"}}>
+              <input style={INP_SM} value={blank.notes} onChange={e=>setBlank(p=>({...p,notes:e.target.value}))} placeholder="Notas (opcional)" />
+            </div>
           </div>
-          <input className={inp + " w-full"} value={blank.notes} onChange={e => setBlank(f => ({...f, notes: e.target.value}))} placeholder="Notas (opcional)" />
-          <div className="flex gap-2">
-            <button onClick={addTask} disabled={saving || !blank.taskName.trim()}
-              className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-medium hover:bg-rose-700 disabled:opacity-40">
-              {saving ? "..." : "Agregar"}
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={add} disabled={saving||!blank.taskName.trim()}
+              style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.taskName.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>
+              {saving?"...":"Agregar"}
             </button>
-            <button onClick={() => setShowForm(false)} className="px-3 py-1.5 border border-neutral-200 rounded-lg text-xs hover:bg-neutral-50">Cancelar</button>
+            <button onClick={()=>setShow(false)}
+              style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+              Cancelar
+            </button>
           </div>
         </div>
       )}
 
-      {active.length === 0 && !showForm && <p className="text-[11px] text-neutral-400 italic py-4">Sin tareas activas.</p>}
+      {active.length===0&&!show && <p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin tareas activas.</p>}
 
-      <div className="space-y-2">
-        {active.map(t => (
-          <div key={t.id} className={`flex items-start gap-2 border rounded-xl px-3 py-2.5 ${catStyle[cat(t)]}`}>
-            <button onClick={() => toggle(t.id)} className="mt-0.5 w-4 h-4 rounded border border-neutral-300 bg-white flex-shrink-0 hover:border-rose-400" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-neutral-800">{t.taskName}</p>
-              <div className="flex flex-wrap gap-x-2 mt-0.5 text-[10px] text-neutral-500">
-                {t.assignedTo && <span>👤 {t.assignedTo}</span>}
-                {t.dueDate    && <span>📅 {fmtDate(t.dueDate)}</span>}
-                {t.phase && t.phase !== "General" && <span className="text-rose-500">{t.phase}</span>}
-                {catBadge[cat(t)] && <span className="font-medium text-red-600">{catBadge[cat(t)]}</span>}
-              </div>
-              {t.notes && <p className="text-[10px] text-neutral-400 mt-0.5 truncate">{t.notes}</p>}
+      {active.map(t => (
+        <div key={t.id} style={rowStyle(t)}>
+          <button onClick={()=>toggle(t.id)}
+            style={{width:16,height:16,borderRadius:4,border:`1.5px solid ${R.border}`,background:R.white,cursor:"pointer",flexShrink:0,marginTop:2}} />
+          <div style={{flex:1,minWidth:0}}>
+            <p style={{fontSize:13,fontWeight:500,color:R.text,margin:0}}>{t.taskName}</p>
+            <div style={{display:"flex",flexWrap:"wrap",gap:"4px 10px",marginTop:3,fontSize:11,color:R.muted}}>
+              {t.assignedTo && <span>👤 {t.assignedTo}</span>}
+              {t.dueDate    && <span>📅 {fmtDate(t.dueDate)}</span>}
+              {t.phase&&t.phase!=="General" && <span style={{color:R.accent}}>{t.phase}</span>}
+              {cat(t)==="late"  && <span style={{fontWeight:600,color:"#dc2626"}}>⚠️ Atrasada</span>}
+              {cat(t)==="today" && <span style={{fontWeight:600,color:"#d97706"}}>🔥 Hoy</span>}
             </div>
-            <button onClick={() => remove(t.id)} className="text-neutral-300 hover:text-red-400 text-sm flex-shrink-0">✕</button>
           </div>
-        ))}
-      </div>
+          <button onClick={()=>remove(t.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:14,padding:"0 2px"}}>✕</button>
+        </div>
+      ))}
 
-      {done.length > 0 && (
-        <details className="mt-1">
-          <summary className="text-[10px] text-neutral-400 cursor-pointer select-none">Ver {done.length} terminadas/canceladas</summary>
-          <div className="space-y-1 mt-2">
-            {done.map(t => (
-              <div key={t.id} className="flex items-center gap-2 border border-neutral-100 rounded-xl px-3 py-2 bg-neutral-50">
-                <button onClick={() => toggle(t.id)} className="w-4 h-4 rounded border border-green-400 bg-green-100 flex-shrink-0" />
-                <p className="text-[11px] text-neutral-400 line-through flex-1">{t.taskName}</p>
-                <button onClick={() => remove(t.id)} className="text-neutral-300 hover:text-red-400 text-xs">✕</button>
+      {done.length>0 && (
+        <details style={{marginTop:8}}>
+          <summary style={{fontSize:11,color:R.muted,cursor:"pointer",userSelect:"none"}}>Ver {done.length} terminadas/canceladas</summary>
+          <div style={{marginTop:8}}>
+            {done.map(t=>(
+              <div key={t.id} style={{display:"flex",alignItems:"center",gap:10,border:`1px solid ${R.border}`,borderRadius:10,padding:"8px 12px",marginBottom:4,background:R.cream}}>
+                <button onClick={()=>toggle(t.id)} style={{width:16,height:16,borderRadius:4,border:"1.5px solid #86efac",background:"#dcfce7",cursor:"pointer",flexShrink:0}} />
+                <span style={{fontSize:12,color:R.muted,textDecoration:"line-through",flex:1}}>{t.taskName}</span>
+                <button onClick={()=>remove(t.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:12}}>✕</button>
               </div>
             ))}
           </div>
@@ -316,412 +313,401 @@ function TasksTab({ boda, users, onTasksChange }) {
   );
 }
 
-// ─── MINUTO A MINUTO TAB ─────────────────────────────────────────────────────
-
-const M_CATEGORIES = ["General","Novios","Proveedores","Coordinación","Música","Fotos/Video","Protocolo"];
-const M_CAT_COLORS = {
-  "General":      "bg-neutral-100 text-neutral-600",
-  "Novios":       "bg-rose-100 text-rose-700",
-  "Proveedores":  "bg-amber-100 text-amber-700",
-  "Coordinación": "bg-blue-100 text-blue-700",
-  "Música":       "bg-violet-100 text-violet-700",
-  "Fotos/Video":  "bg-teal-100 text-teal-700",
-  "Protocolo":    "bg-orange-100 text-orange-700",
+// ─── MINUTO A MINUTO ─────────────────────────────────────────────────────────
+const M_CATS = ["General","Novios","Proveedores","Coordinación","Música","Fotos/Video","Protocolo"];
+const M_COLORS = {
+  "General":      {bg:"#f5f5f4",color:"#57534e"},
+  "Novios":       {bg:"#fff0f3",color:"#be123c"},
+  "Proveedores":  {bg:"#fffbeb",color:"#b45309"},
+  "Coordinación": {bg:"#eff6ff",color:"#1d4ed8"},
+  "Música":       {bg:"#f5f3ff",color:"#7c3aed"},
+  "Fotos/Video":  {bg:"#f0fdfa",color:"#0f766e"},
+  "Protocolo":    {bg:"#fff7ed",color:"#c2410c"},
 };
 
 function MinutoTab({ boda, onScheduleChange }) {
-  const [schedule, setSchedule] = useState(boda.schedule || []);
+  const [schedule, setSchedule] = useState(boda.schedule||[]);
+  const [show, setShow]   = useState(false);
   const [saving, setSaving] = useState(false);
-  const [showAdd, setShowAdd] = useState(false);
-  const [blank, setBlank] = useState({ time: "", description: "", assignedTo: "", notes: "", category: "General" });
-  const inp = "border border-neutral-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300/40";
+  const [blank, setBlank]   = useState({time:"",description:"",assignedTo:"",notes:"",category:"General"});
 
-  const sorted = [...schedule].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+  const sorted = [...schedule].sort((a,b)=>(a.time||"").localeCompare(b.time||""));
 
   async function persist(updated) {
-    setSchedule(updated);
-    onScheduleChange(updated);
+    setSchedule(updated); onScheduleChange(updated);
     await apiUpdateSchedule(boda.id, updated);
   }
-
   async function add() {
-    if (!blank.time || !blank.description.trim()) return;
+    if (!blank.time||!blank.description.trim()) return;
     setSaving(true);
-    try { await persist([...schedule, { ...blank, id: uid() }]); setBlank({ time: "", description: "", assignedTo: "", notes: "", category: "General" }); setShowAdd(false); }
-    catch(e) { alert("Error: " + e.message); }
+    try{ await persist([...schedule,{...blank,id:uid()}]); setBlank({time:"",description:"",assignedTo:"",notes:"",category:"General"}); setShow(false); }
+    catch(e){alert("Error: "+e.message);}
     setSaving(false);
   }
-
   async function del(id) {
-    try { await persist(schedule.filter(e => e.id !== id)); }
-    catch { setSchedule(schedule); }
+    try{await persist(schedule.filter(e=>e.id!==id));}catch{setSchedule(schedule);}
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">{sorted.length} evento{sorted.length !== 1 ? "s" : ""}</p>
-        <div className="flex gap-2">
-          {sorted.length > 0 && (
-            <button onClick={() => window.print()} className="text-[11px] text-neutral-500 border border-neutral-200 rounded-lg px-3 py-1.5 hover:bg-neutral-50 print:hidden">🖨 Imprimir</button>
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+        <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{sorted.length} evento{sorted.length!==1?"s":""}</span>
+        <div style={{display:"flex",gap:8}}>
+          {sorted.length>0 && (
+            <button onClick={()=>window.print()}
+              style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+              🖨 Imprimir
+            </button>
           )}
-          <button onClick={() => setShowAdd(v => !v)} className="text-[11px] text-rose-600 border border-rose-200 rounded-lg px-3 py-1.5 hover:bg-rose-50 print:hidden">+ Agregar</button>
+          <button onClick={()=>setShow(v=>!v)}
+            style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+            + Agregar
+          </button>
         </div>
       </div>
 
-      {showAdd && (
-        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 space-y-2 print:hidden">
-          <div className="grid grid-cols-2 gap-2">
-            <input type="time" className={inp} value={blank.time} onChange={e => setBlank(f => ({...f, time: e.target.value}))} />
-            <select className={inp} value={blank.category} onChange={e => setBlank(f => ({...f, category: e.target.value}))}>
-              {M_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+      {show && (
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+            <input type="time" style={INP_SM} value={blank.time} onChange={e=>setBlank(p=>({...p,time:e.target.value}))} />
+            <select style={INP_SM} value={blank.category} onChange={e=>setBlank(p=>({...p,category:e.target.value}))}>
+              {M_CATS.map(c=><option key={c}>{c}</option>)}
             </select>
+            <div style={{gridColumn:"span 2"}}>
+              <input style={INP_SM} value={blank.description} onChange={e=>setBlank(p=>({...p,description:e.target.value}))} placeholder="Descripción del evento *" />
+            </div>
+            <input style={INP_SM} value={blank.assignedTo} onChange={e=>setBlank(p=>({...p,assignedTo:e.target.value}))} placeholder="Responsable" />
+            <input style={INP_SM} value={blank.notes}      onChange={e=>setBlank(p=>({...p,notes:e.target.value}))}      placeholder="Notas" />
           </div>
-          <input className={inp + " w-full"} value={blank.description} onChange={e => setBlank(f => ({...f, description: e.target.value}))} placeholder="Descripción del evento *" />
-          <div className="grid grid-cols-2 gap-2">
-            <input className={inp} value={blank.assignedTo} onChange={e => setBlank(f => ({...f, assignedTo: e.target.value}))} placeholder="Responsable" />
-            <input className={inp} value={blank.notes} onChange={e => setBlank(f => ({...f, notes: e.target.value}))} placeholder="Notas" />
-          </div>
-          <div className="flex gap-2">
-            <button onClick={add} disabled={saving || !blank.time || !blank.description.trim()}
-              className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-medium hover:bg-rose-700 disabled:opacity-40">
-              {saving ? "..." : "Agregar"}
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={add} disabled={saving||!blank.time||!blank.description.trim()}
+              style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.time||!blank.description.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>
+              {saving?"...":"Agregar"}
             </button>
-            <button onClick={() => setShowAdd(false)} className="px-3 py-1.5 border border-neutral-200 rounded-lg text-xs hover:bg-neutral-50">Cancelar</button>
+            <button onClick={()=>setShow(false)}
+              style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+              Cancelar
+            </button>
           </div>
         </div>
       )}
 
-      {sorted.length === 0 && !showAdd && (
-        <p className="text-[11px] text-neutral-400 italic py-4">Sin eventos. Agrega el primero arriba.</p>
-      )}
+      {sorted.length===0&&!show && <p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin eventos. Agrega el primero arriba.</p>}
 
       {/* Timeline */}
-      <div className="relative">
-        {sorted.length > 0 && <div className="absolute left-[54px] top-2 bottom-2 w-px bg-neutral-200" />}
-        <div className="space-y-2">
-          {sorted.map(ev => (
-            <div key={ev.id} className="flex gap-3 items-start">
-              <div className="w-[52px] text-right flex-shrink-0 pt-2.5">
-                <span className="text-xs font-mono font-semibold text-neutral-600 tabular-nums">{ev.time}</span>
+      <div style={{position:"relative"}}>
+        {sorted.length>0 && <div style={{position:"absolute",left:55,top:8,bottom:8,width:1,background:R.border}} />}
+        {sorted.map(ev => {
+          const cs = M_COLORS[ev.category]||M_COLORS["General"];
+          return (
+            <div key={ev.id} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:10}}>
+              <div style={{width:54,textAlign:"right",flexShrink:0,paddingTop:10}}>
+                <span style={{fontSize:12,fontFamily:"'Jost',sans-serif",fontWeight:600,color:R.text,letterSpacing:".02em",fontVariantNumeric:"tabular-nums"}}>{ev.time}</span>
               </div>
-              <div className="flex items-start gap-2 flex-1 min-w-0">
-                <div className="w-2.5 h-2.5 rounded-full bg-rose-400 flex-shrink-0 mt-3 z-10" />
-                <div className="flex-1 bg-white border border-neutral-200 rounded-xl px-3 py-2.5 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium text-neutral-800">{ev.description}</p>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${M_CAT_COLORS[ev.category] || M_CAT_COLORS["General"]}`}>
-                          {ev.category}
-                        </span>
+              <div style={{display:"flex",alignItems:"flex-start",gap:10,flex:1,minWidth:0}}>
+                <div style={{width:10,height:10,borderRadius:"50%",background:R.accent,flexShrink:0,marginTop:12,zIndex:1,boxShadow:`0 0 0 3px ${R.light}`}} />
+                <div style={{flex:1,background:R.white,border:`1px solid ${R.border}`,borderRadius:12,padding:"10px 14px",minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                        <span style={{fontSize:13,fontWeight:500,color:R.text}}>{ev.description}</span>
+                        <span style={{fontSize:10,padding:"2px 8px",borderRadius:99,fontWeight:500,background:cs.bg,color:cs.color}}>{ev.category}</span>
                       </div>
-                      {ev.assignedTo && <p className="text-[11px] text-neutral-500 mt-0.5">👤 {ev.assignedTo}</p>}
-                      {ev.notes      && <p className="text-[10px] text-neutral-400 mt-0.5">{ev.notes}</p>}
+                      {ev.assignedTo && <p style={{fontSize:11,color:R.muted,margin:"3px 0 0"}}>👤 {ev.assignedTo}</p>}
+                      {ev.notes      && <p style={{fontSize:11,color:R.muted,margin:"2px 0 0"}}>{ev.notes}</p>}
                     </div>
-                    <button onClick={() => del(ev.id)} className="text-neutral-300 hover:text-red-400 text-sm flex-shrink-0 print:hidden">✕</button>
+                    <button onClick={()=>del(ev.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:14,flexShrink:0,marginTop:2}}>✕</button>
                   </div>
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
 // ─── BODA DETAIL ─────────────────────────────────────────────────────────────
-
 function BodaDetail({ boda: init, users, onBack, onRefresh }) {
   const [boda, setBoda] = useState(init);
-  const [tab, setTab] = useState("resumen");
+  const [tab,  setTab]  = useState("resumen");
   const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [saving,  setSaving]  = useState(false);
   const days = daysUntil(boda.weddingDate);
+  const ph   = PHASE_BG[boda.phase]||{bg:"#f5f5f4",color:"#57534e"};
+  const activeTasks = (boda.tasks||[]).filter(t=>!["Terminado","Cancelado"].includes(t.status));
 
   const handleSave = async (form) => {
     setSaving(true);
-    try { await apiUpdateBoda(boda.id, form); setBoda(b => ({ ...b, ...form })); setEditing(false); onRefresh(); }
-    catch(e) { alert("Error: " + e.message); }
+    try{ await apiUpdateBoda(boda.id, form); setBoda(b=>({...b,...form})); setEditing(false); onRefresh(); }
+    catch(e){alert("Error: "+e.message);}
     setSaving(false);
   };
 
-  const activeTasks = (boda.tasks || []).filter(t => !["Terminado","Cancelado"].includes(t.status));
-
   const TABS = [
-    { id: "resumen", label: "Resumen" },
-    { id: "tareas",  label: `Tareas (${activeTasks.length})` },
-    { id: "minuto",  label: "Minuto a Minuto" },
+    {id:"resumen", label:"Resumen"},
+    {id:"tareas",  label:`Tareas (${activeTasks.length})`},
+    {id:"minuto",  label:"Minuto a Minuto"},
   ];
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-4">
-        <button onClick={onBack} className="text-[11px] text-neutral-500 hover:text-neutral-800">← Bodas</button>
-        <span className="text-neutral-300">/</span>
-        <span className="text-sm font-medium text-neutral-800">{boda.clienteName}</span>
+    <div style={{maxWidth:660,margin:"0 auto"}}>
+      {/* Breadcrumb */}
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
+        <button onClick={onBack} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:13,padding:0,fontFamily:"'Jost',sans-serif"}}>← Bodas</button>
+        <span style={{color:R.border}}>/</span>
+        <span style={{fontSize:14,fontWeight:500,color:R.text}}>{boda.clienteName}</span>
       </div>
 
       {/* Header card */}
-      <div className="bg-white border border-neutral-200 rounded-xl p-5 mb-4">
-        <div className="flex items-start justify-between gap-3">
+      <div style={{...CARD,marginBottom:16}}>
+        <div style={HDR}>
           <div>
-            <h2 className="text-lg font-semibold text-neutral-900">{boda.clienteName}</h2>
+            <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:500,color:R.white,margin:0,letterSpacing:".02em"}}>{boda.clienteName}</p>
             {boda.weddingDate && (
-              <p className="text-sm text-neutral-500 mt-0.5">
+              <p style={{fontSize:12,color:"rgba(255,255,255,.65)",margin:"4px 0 0"}}>
                 💍 {fmtDate(boda.weddingDate)}
-                {days !== null && (
-                  <span className={`ml-2 font-medium ${days < 0 ? "text-neutral-400" : days <= 30 ? "text-rose-600" : "text-neutral-600"}`}>
-                    {days < 0 ? `(hace ${Math.abs(days)} días)` : days === 0 ? "(¡hoy!)" : `(en ${days} días)`}
+                {days!==null && (
+                  <span style={{marginLeft:8,fontWeight:600,color:days<0?"rgba(255,255,255,.4)":days<=30?"#fca5a5":"rgba(255,255,255,.75)"}}>
+                    {days<0?`(hace ${Math.abs(days)} días)`:days===0?"(¡hoy!)": `(en ${days} días)`}
                   </span>
                 )}
               </p>
             )}
           </div>
-          <div className="flex gap-2 items-center flex-shrink-0">
-            <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${PHASE_COLORS[boda.phase] || "bg-neutral-100 text-neutral-600"}`}>
-              {boda.phase}
-            </span>
-            <button onClick={() => setEditing(v => !v)}
-              className="text-[11px] border border-neutral-200 rounded-lg px-3 py-1.5 hover:bg-neutral-50">
-              {editing ? "Cancelar" : "✏️ Editar"}
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <span style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:99,background:ph.bg,color:ph.color}}>{boda.phase}</span>
+            <button onClick={()=>setEditing(v=>!v)}
+              style={{background:"rgba(255,255,255,.12)",color:R.white,border:"1px solid rgba(255,255,255,.2)",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+              {editing?"Cancelar":"✏️ Editar"}
             </button>
           </div>
         </div>
+        <div style={GOLD_BAR} />
         {editing && (
-          <div className="mt-4 border-t border-neutral-100 pt-4">
-            <BodaForm boda={boda} onSave={handleSave} onCancel={() => setEditing(false)} saving={saving} users={users} />
+          <div style={{padding:20}}>
+            <BodaForm boda={boda} onSave={handleSave} onCancel={()=>setEditing(false)} saving={saving} users={users} />
           </div>
         )}
       </div>
 
-      {/* Tabbed content */}
-      <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-        <div className="flex border-b border-neutral-100">
+      {/* Tabs */}
+      <div style={CARD}>
+        <div style={{display:"flex",borderBottom:`1px solid ${R.border}`}}>
           {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={`px-4 py-3 text-sm font-medium transition-colors flex-1 ${tab === t.id ? "text-rose-700 border-b-2 border-rose-600 bg-rose-50/50" : "text-neutral-500 hover:text-neutral-800"}`}>
+            <button key={t.id} onClick={()=>setTab(t.id)}
+              style={{flex:1,padding:"12px 16px",border:"none",borderBottom:tab===t.id?`2px solid ${R.accent}`:"2px solid transparent",background:"transparent",fontSize:13,fontWeight:tab===t.id?600:400,color:tab===t.id?R.accent:R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif",transition:"color .15s"}}>
               {t.label}
             </button>
           ))}
         </div>
-        <div className="p-5">
-          {tab === "resumen" && (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              {boda.venue      && <Cell label="Venue"        val={boda.venue} />}
-              {boda.responsable && <Cell label="Responsable" val={boda.responsable} />}
-              {boda.contact    && <Cell label="Contacto"     val={boda.contact} />}
-              {boda.guestCount && <Cell label="Invitados"    val={boda.guestCount} />}
-              {boda.budget     && <Cell label="Presupuesto"  val={`$${Number(boda.budget).toLocaleString("en-US")} USD`} />}
-              {boda.status     && <Cell label="Estado"       val={boda.status} />}
-              {boda.notes      && <div className="col-span-2"><Cell label="Notas" val={boda.notes} multi /></div>}
-              {!boda.venue && !boda.responsable && !boda.notes && (
-                <p className="col-span-2 text-[11px] text-neutral-400 italic">Sin información adicional. Edita para agregar.</p>
-              )}
+        <div style={{padding:20}}>
+          {tab==="resumen" && (
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px 24px"}}>
+              {boda.venue      && <C label="Venue"        v={boda.venue} />}
+              {boda.responsable && <C label="Responsable" v={boda.responsable} />}
+              {boda.contact    && <C label="Contacto"     v={boda.contact} />}
+              {boda.guestCount && <C label="Invitados"    v={boda.guestCount} />}
+              {boda.budget     && <C label="Presupuesto"  v={`$${Number(boda.budget).toLocaleString("en-US")} USD`} />}
+              {boda.status     && <C label="Estado"       v={boda.status} />}
+              {boda.notes && <div style={{gridColumn:"span 2"}}><C label="Notas" v={boda.notes} multi /></div>}
+              {!boda.venue&&!boda.responsable&&!boda.notes && <p style={{gridColumn:"span 2",fontSize:12,color:R.muted,fontStyle:"italic"}}>Sin información adicional. Edita para agregar.</p>}
             </div>
           )}
-          {tab === "tareas" && (
-            <TasksTab boda={boda} users={users}
-              onTasksChange={tasks => setBoda(b => ({ ...b, tasks }))} />
-          )}
-          {tab === "minuto" && (
-            <MinutoTab boda={boda}
-              onScheduleChange={schedule => setBoda(b => ({ ...b, schedule }))} />
-          )}
+          {tab==="tareas" && <TasksTab boda={boda} users={users} onTasksChange={tasks=>setBoda(b=>({...b,tasks}))} />}
+          {tab==="minuto" && <MinutoTab boda={boda} onScheduleChange={schedule=>setBoda(b=>({...b,schedule}))} />}
         </div>
       </div>
     </div>
   );
 }
 
-function Cell({ label, val, multi }) {
+function C({label,v,multi}) {
   return (
     <div>
-      <span className="block text-[11px] text-neutral-400 mb-0.5">{label}</span>
-      <p className={`text-neutral-800 ${multi ? "whitespace-pre-line" : ""}`}>{val}</p>
+      <span style={{display:"block",fontSize:11,color:R.muted,marginBottom:2}}>{label}</span>
+      <p style={{fontSize:13,color:R.text,margin:0,whiteSpace:multi?"pre-line":"normal"}}>{v}</p>
     </div>
   );
 }
 
 // ─── TASK TEMPLATE ────────────────────────────────────────────────────────────
-
-const WEDDING_TEMPLATE = [
-  { phase:"Onboarding",   taskName:"Crear chat con cliente y equipo",  mode:"kickoff",       offset:0  },
-  { phase:"Onboarding",   taskName:"Enviar mensaje de bienvenida",      mode:"kickoff",       offset:0  },
-  { phase:"Onboarding",   taskName:"Recopilar documentos",              mode:"kickoff",       offset:1  },
-  { phase:"Onboarding",   taskName:"Solicitar venues",                  mode:"kickoff",       offset:1  },
-  { phase:"Onboarding",   taskName:"Enviar budget sheets",              mode:"kickoff",       offset:2  },
-  { phase:"Onboarding",   taskName:"Schedule concierge call",           mode:"kickoff",       offset:7  },
-  { phase:"Planning",     taskName:"Seleccionar proveedores",           mode:"wedding_minus", offset:90 },
-  { phase:"Planning",     taskName:"Programar degustaciones",           mode:"wedding_minus", offset:60 },
-  { phase:"Pre-Wedding",  taskName:"Minuto a minuto listo",             mode:"wedding_minus", offset:30 },
-  { phase:"Wedding Day",  taskName:"Coordinación general",              mode:"wedding",       offset:0  },
-  { phase:"Post-Wedding", taskName:"Factura final",                     mode:"wedding_plus",  offset:2  },
+const TMPL = [
+  {phase:"Onboarding",  taskName:"Crear chat con cliente y equipo",  mode:"kickoff",       offset:0 },
+  {phase:"Onboarding",  taskName:"Enviar mensaje de bienvenida",      mode:"kickoff",       offset:0 },
+  {phase:"Onboarding",  taskName:"Recopilar documentos",              mode:"kickoff",       offset:1 },
+  {phase:"Onboarding",  taskName:"Solicitar venues",                  mode:"kickoff",       offset:1 },
+  {phase:"Onboarding",  taskName:"Enviar budget sheets",              mode:"kickoff",       offset:2 },
+  {phase:"Onboarding",  taskName:"Schedule concierge call",           mode:"kickoff",       offset:7 },
+  {phase:"Planning",    taskName:"Seleccionar proveedores",           mode:"wedding_minus", offset:90},
+  {phase:"Planning",    taskName:"Programar degustaciones",           mode:"wedding_minus", offset:60},
+  {phase:"Pre-Wedding", taskName:"Minuto a minuto listo",             mode:"wedding_minus", offset:30},
+  {phase:"Wedding Day", taskName:"Coordinación general",              mode:"wedding",       offset:0 },
+  {phase:"Post-Wedding",taskName:"Factura final",                     mode:"wedding_plus",  offset:2 },
 ];
-
-function calcDate(mode, offset, weddingDate) {
-  const now     = new Date(); now.setHours(9, 0, 0, 0);
-  const wedding = weddingDate ? new Date(weddingDate + "T12:00:00") : null;
-  const D = 86400000;
-  if (mode === "kickoff")       return new Date(now.getTime() + offset * D).toISOString().slice(0, 10);
-  if (mode === "wedding_minus") return (wedding ? new Date(wedding.getTime() - offset * D) : new Date(now.getTime() + offset * D)).toISOString().slice(0, 10);
-  if (mode === "wedding")       return (wedding || new Date(now.getTime() + 120 * D)).toISOString().slice(0, 10);
-  if (mode === "wedding_plus")  return (wedding ? new Date(wedding.getTime() + offset * D) : new Date(now.getTime() + (120 + offset) * D)).toISOString().slice(0, 10);
+function calcDate(mode,offset,wd) {
+  const now=new Date(); now.setHours(9,0,0,0);
+  const w=wd?new Date(wd+"T12:00:00"):null; const D=86400000;
+  if(mode==="kickoff")       return new Date(now.getTime()+offset*D).toISOString().slice(0,10);
+  if(mode==="wedding_minus") return (w?new Date(w.getTime()-offset*D):new Date(now.getTime()+offset*D)).toISOString().slice(0,10);
+  if(mode==="wedding")       return (w||new Date(now.getTime()+120*D)).toISOString().slice(0,10);
+  if(mode==="wedding_plus")  return (w?new Date(w.getTime()+offset*D):new Date(now.getTime()+(120+offset)*D)).toISOString().slice(0,10);
   return "";
 }
 
 // ─── MAIN PANEL ───────────────────────────────────────────────────────────────
-
 export default function BodaPanel({ currentUser, onLogout }) {
-  const [bodas,       setBodas]       = useState([]);
-  const [users,       setUsers]       = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [err,         setErr]         = useState("");
-  const [selected,    setSelected]    = useState(null);
-  const [showNew,     setShowNew]     = useState(false);
-  const [saving,      setSaving]      = useState(false);
-  const [search,      setSearch]      = useState("");
-  const [filterStatus,setFilterStatus]= useState("all");
-
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+  const [bodas,        setBodas]        = useState([]);
+  const [users,        setUsers]        = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [err,          setErr]          = useState("");
+  const [selected,     setSelected]     = useState(null);
+  const [showNew,      setShowNew]      = useState(false);
+  const [saving,       setSaving]       = useState(false);
+  const [search,       setSearch]       = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
 
   const load = useCallback(async () => {
     setLoading(true); setErr("");
     try {
-      const [bodaList, uRes] = await Promise.all([
+      const [list, uRes] = await Promise.all([
         apiBodas(),
-        fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({action:"listUsers"}) })
-          .then(r => r.json()).catch(() => ({})),
+        fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"listUsers"})})
+          .then(r=>r.json()).catch(()=>({})),
       ]);
-      setBodas(bodaList);
-      setUsers(Array.isArray(uRes?.data) ? uRes.data.filter(u => u.active !== "false") : []);
+      setBodas(list);
+      setUsers(Array.isArray(uRes?.data)?uRes.data.filter(u=>u.active!=="false"):[]);
     } catch(e) {
-      const msg = e.message || "";
-      setErr(msg.includes("<") ? "Error de conexión con el servidor. Verifica tu sesión de Google." : "Error cargando datos: " + msg);
+      const m=e.message||"";
+      setErr(m.includes("<")?"Error de conexión con el servidor.":"Error cargando datos: "+m);
     }
     setLoading(false);
-  }, []);
+  },[]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(()=>{load();},[load]);
 
-  const handleRefresh = useCallback(async () => {
-    try {
-      const list = await apiBodas();
-      setBodas(list);
-      if (selected) setSelected(list.find(b => b.id === selected.id) || null);
-    } catch {}
-  }, [selected]);
+  const handleRefresh = useCallback(async()=>{
+    try{ const list=await apiBodas(); setBodas(list); if(selected)setSelected(list.find(b=>b.id===selected.id)||null); }catch{}
+  },[selected]);
 
-  const handleCreate = async (form) => {
+  const handleCreate = async(form) => {
     setSaving(true);
-    try {
-      const tasks = WEDDING_TEMPLATE.map(t => ({
-        id: uid(), taskName: t.taskName, phase: t.phase,
-        assignedTo: form.responsable || "", dueDate: calcDate(t.mode, t.offset, form.weddingDate),
-        status: "Pendiente", notes: "",
-      }));
+    try{
+      const tasks = TMPL.map(t=>({id:uid(),taskName:t.taskName,phase:t.phase,assignedTo:form.responsable||"",dueDate:calcDate(t.mode,t.offset,form.weddingDate),status:"Pendiente",notes:""}));
       const id = await apiSaveBoda(form);
-      await apiUpdateTasks(id, tasks);
-      setShowNew(false);
-      await load();
-    } catch(e) { alert("Error al crear: " + e.message); }
+      await apiUpdateTasks(id,tasks);
+      setShowNew(false); await load();
+    }catch(e){alert("Error al crear: "+e.message);}
     setSaving(false);
   };
 
-  const handleDelete = async (e, boda) => {
+  const handleDelete = async(e,boda) => {
     e.stopPropagation();
-    if (!window.confirm(`¿Eliminar "${boda.clienteName}"? Esta acción no se puede deshacer.`)) return;
-    try { await apiDeleteBoda(boda.id); setBodas(prev => prev.filter(b => b.id !== boda.id)); }
-    catch(e) { alert("Error al eliminar: " + e.message); }
+    if(!window.confirm(`¿Eliminar "${boda.clienteName}"?`)) return;
+    try{ await deleteKickoff(boda.id); setBodas(p=>p.filter(b=>b.id!==boda.id)); }
+    catch(e){alert("Error: "+e.message);}
   };
 
-  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0,0,0,0);
 
   const filtered = bodas
-    .filter(b => {
-      const q = search.toLowerCase();
-      return (!search || b.clienteName?.toLowerCase().includes(q) || b.venue?.toLowerCase().includes(q) || b.responsable?.toLowerCase().includes(q))
-          && (filterStatus === "all" || b.status === filterStatus);
+    .filter(b=>{
+      const q=search.toLowerCase();
+      return (!search||b.clienteName?.toLowerCase().includes(q)||b.venue?.toLowerCase().includes(q)||b.responsable?.toLowerCase().includes(q))
+          &&(filterStatus==="all"||b.status===filterStatus);
     })
-    .sort((a, b) => {
-      if (a.weddingDate && b.weddingDate) return new Date(a.weddingDate) - new Date(b.weddingDate);
-      return a.weddingDate ? -1 : 1;
+    .sort((a,b)=>{
+      if(a.weddingDate&&b.weddingDate) return new Date(a.weddingDate)-new Date(b.weddingDate);
+      return a.weddingDate?-1:1;
     });
 
   if (selected) {
     return (
-      <div className="min-h-screen bg-neutral-50">
-        <div className="max-w-3xl mx-auto px-4 py-6">
-          <BodaDetail boda={selected} users={users} onBack={() => setSelected(null)} onRefresh={handleRefresh} currentUser={currentUser} />
+      <div style={{minHeight:"100vh",background:R.cream,fontFamily:"'Jost',sans-serif"}}>
+        <div style={{maxWidth:720,margin:"0 auto",padding:"24px 16px 60px"}}>
+          <BodaDetail boda={selected} users={users} onBack={()=>setSelected(null)} onRefresh={handleRefresh} currentUser={currentUser} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div style={{minHeight:"100vh",background:R.cream,fontFamily:"'Jost',sans-serif"}}>
       {/* Header */}
-      <div className="bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">💍</span>
-          <div>
-            <h1 className="text-base font-semibold text-neutral-900">Two Lovers — Bodas</h1>
-            <p className="text-[11px] text-neutral-500">{bodas.filter(b => b.status === "Activa").length} bodas activas</p>
+      <div style={{background:R.dark,padding:"0 24px"}}>
+        <div style={{...GOLD_BAR,height:3,marginBottom:0}} />
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 0"}}>
+          <div style={{display:"flex",alignItems:"center",gap:14}}>
+            <span style={{fontSize:28}}>💍</span>
+            <div>
+              <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:500,color:R.white,margin:0,letterSpacing:".04em"}}>Two Lovers — Bodas</p>
+              <p style={{fontSize:11,color:"rgba(255,255,255,.45)",margin:"2px 0 0",letterSpacing:".06em",textTransform:"uppercase"}}>
+                {bodas.filter(b=>b.status==="Activa").length} bodas activas
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-neutral-500">{currentUser?.name || currentUser?.email}</span>
-          <button onClick={onLogout} className="text-[11px] text-neutral-400 hover:text-neutral-700 border border-neutral-200 rounded-lg px-2 py-1">Salir</button>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:12,color:"rgba(255,255,255,.45)"}}>{currentUser?.name||currentUser?.email}</span>
+            <button onClick={onLogout}
+              style={{background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"5px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+              Salir
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+      <div style={{maxWidth:900,margin:"0 auto",padding:"24px 16px 60px"}}>
 
         {/* Search + filter + new */}
-        <div className="flex flex-wrap gap-2 items-center">
-          <input value={search} onChange={e => setSearch(e.target.value)}
+        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:20}}>
+          <input value={search} onChange={e=>setSearch(e.target.value)}
             placeholder="Buscar boda, venue, responsable..."
-            className="flex-1 min-w-[200px] border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300/40" />
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            className="border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+            style={{...INP,flex:1,minWidth:200,borderRadius:10}} />
+          <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}
+            style={{...INP,width:"auto",flex:"0 0 auto"}}>
             <option value="all">Todos los estados</option>
-            {ESTADOS_BODA.map(s => <option key={s}>{s}</option>)}
+            {ESTADOS_BODA.map(s=><option key={s}>{s}</option>)}
           </select>
-          <button onClick={() => setShowNew(v => !v)}
-            className="px-4 py-2 rounded-lg bg-rose-600 text-white text-sm font-medium hover:bg-rose-700">
+          <button onClick={()=>setShowNew(v=>!v)}
+            style={{background:R.accent,color:"#fff",border:"none",borderRadius:10,padding:"9px 20px",fontSize:13,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"'Jost',sans-serif"}}>
             + Nueva boda
           </button>
         </div>
 
         {/* New boda form */}
         {showNew && (
-          <div className="bg-white border border-rose-200 rounded-xl p-5">
-            <p className="text-sm font-semibold text-rose-700 mb-4">💍 Nueva boda</p>
-            <BodaForm onSave={handleCreate} onCancel={() => setShowNew(false)} saving={saving} users={users} />
+          <div style={{...CARD,marginBottom:16}}>
+            <div style={HDR}>
+              <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,color:R.white,fontWeight:500}}>💍 Nueva boda</span>
+            </div>
+            <div style={GOLD_BAR} />
+            <div style={{padding:20}}>
+              <BodaForm onSave={handleCreate} onCancel={()=>setShowNew(false)} saving={saving} users={users} />
+            </div>
           </div>
         )}
 
         {/* Error */}
         {err && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 flex items-center justify-between">
-            <span>{err}</span>
-            <button onClick={load} className="underline ml-4">Reintentar</button>
+          <div style={{background:"#fff5f5",border:"1px solid #fca5a5",borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:13,color:"#b91c1c"}}>{err}</span>
+            <button onClick={load} style={{background:"none",border:"none",color:R.accent,cursor:"pointer",fontSize:13,textDecoration:"underline",fontFamily:"'Jost',sans-serif"}}>Reintentar</button>
           </div>
         )}
 
         {/* Stats */}
-        {!loading && bodas.length > 0 && (
-          <div className="grid grid-cols-4 gap-3">
+        {!loading && bodas.length>0 && (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
             {[
-              { label: "Activas",       count: bodas.filter(b => b.status === "Activa").length,      color: "text-rose-600" },
-              { label: "En pausa",      count: bodas.filter(b => b.status === "En pausa").length,    color: "text-amber-600" },
-              { label: "Terminadas",    count: bodas.filter(b => b.status === "Terminada").length,   color: "text-green-600" },
-              { label: "Tareas activas",count: bodas.flatMap(b => b.tasks||[]).filter(t => !["Terminado","Cancelado"].includes(t.status)).length, color: "text-violet-600" },
-            ].map(s => (
-              <div key={s.label} className="bg-white border border-neutral-200 rounded-xl p-4 text-center">
-                <p className={`text-2xl font-semibold ${s.color}`}>{s.count}</p>
-                <p className="text-[11px] text-neutral-500 mt-0.5">{s.label}</p>
+              {label:"Activas",      count:bodas.filter(b=>b.status==="Activa").length,      color:R.accent},
+              {label:"En pausa",     count:bodas.filter(b=>b.status==="En pausa").length,    color:"#d97706"},
+              {label:"Terminadas",   count:bodas.filter(b=>b.status==="Terminada").length,   color:"#16a34a"},
+              {label:"Tareas activas",count:bodas.flatMap(b=>b.tasks||[]).filter(t=>!["Terminado","Cancelado"].includes(t.status)).length,color:"#7c3aed"},
+            ].map(s=>(
+              <div key={s.label} style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:14,padding:"16px 12px",textAlign:"center"}}>
+                <p style={{fontSize:26,fontWeight:700,color:s.color,margin:0,fontFamily:"'Jost',sans-serif"}}>{s.count}</p>
+                <p style={{fontSize:11,color:R.muted,margin:"4px 0 0",letterSpacing:".04em"}}>{s.label}</p>
               </div>
             ))}
           </div>
@@ -729,51 +715,70 @@ export default function BodaPanel({ currentUser, onLogout }) {
 
         {/* List */}
         {loading ? (
-          <div className="text-center py-12">
-            <div className="w-5 h-5 border-2 border-rose-200 border-t-rose-500 rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm text-neutral-400">Cargando bodas...</p>
+          <div style={{textAlign:"center",padding:"60px 0"}}>
+            <div style={{width:28,height:28,border:`2px solid ${R.border}`,borderTop:`2px solid ${R.accent}`,borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 12px"}} />
+            <p style={{fontSize:13,color:R.muted}}>Cargando bodas...</p>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-4xl mb-3">💍</p>
-            <p className="text-neutral-500 text-sm">
-              {bodas.length === 0 ? "Aún no hay bodas. Crea la primera arriba." : "Sin resultados para esa búsqueda."}
+        ) : filtered.length===0 ? (
+          <div style={{textAlign:"center",padding:"60px 0"}}>
+            <p style={{fontSize:40,margin:"0 0 12px"}}>💍</p>
+            <p style={{fontSize:14,color:R.muted}}>
+              {bodas.length===0?"Aún no hay bodas. Crea la primera arriba.":"Sin resultados para esa búsqueda."}
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {filtered.map(boda => {
-              const days        = daysUntil(boda.weddingDate);
-              const activeTasks = (boda.tasks||[]).filter(t => !["Terminado","Cancelado"].includes(t.status));
-              const overdue     = activeTasks.filter(t => {
-                if (!t.dueDate) return false;
-                const d = new Date(t.dueDate + "T12:00:00"); d.setHours(0,0,0,0);
-                return d < today;
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {filtered.map(boda=>{
+              const days=daysUntil(boda.weddingDate);
+              const ph=PHASE_BG[boda.phase]||{bg:"#f5f5f4",color:"#57534e"};
+              const active=(boda.tasks||[]).filter(t=>!["Terminado","Cancelado"].includes(t.status));
+              const late=active.filter(t=>{
+                if(!t.dueDate) return false;
+                const d=new Date(t.dueDate+"T12:00:00"); d.setHours(0,0,0,0);
+                return d<today;
               });
               return (
-                <div key={boda.id} onClick={() => setSelected(boda)}
-                  className="bg-white border border-neutral-200 rounded-xl px-5 py-4 flex items-center gap-4 cursor-pointer hover:border-rose-300 hover:shadow-sm transition-all">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-neutral-900">{boda.clienteName}</p>
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${PHASE_COLORS[boda.phase] || "bg-neutral-100 text-neutral-600"}`}>{boda.phase}</span>
-                      {overdue.length > 0 && (
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-600">⚠️ {overdue.length} atrasada{overdue.length > 1 ? "s" : ""}</span>
-                      )}
+                <div key={boda.id} onClick={()=>setSelected(boda)}
+                  style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:14,padding:"16px 18px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",transition:"border-color .15s, box-shadow .15s"}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor=R.mid;e.currentTarget.style.boxShadow="0 2px 16px rgba(190,18,60,.08)";}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor=R.border;e.currentTarget.style.boxShadow="none";}}>
+                  {/* Rose date pill */}
+                  <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:"8px 12px",textAlign:"center",flexShrink:0,minWidth:56}}>
+                    {boda.weddingDate ? (
+                      <>
+                        <p style={{fontSize:11,color:R.muted,margin:0,lineHeight:1}}>{fmtDate(boda.weddingDate).split(" ")[1]?.toUpperCase()||""}</p>
+                        <p style={{fontSize:20,fontWeight:700,color:R.accent,margin:"2px 0 0",fontFamily:"'Cormorant Garamond',serif",lineHeight:1}}>{fmtDate(boda.weddingDate).split(" ")[0]}</p>
+                      </>
+                    ) : <p style={{fontSize:20}}>💍</p>}
+                  </div>
+
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}}>
+                      <p style={{fontSize:15,fontWeight:600,color:R.text,margin:0}}>{boda.clienteName}</p>
+                      <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:ph.bg,color:ph.color}}>{boda.phase}</span>
+                      {late.length>0 && <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:"#fff1f2",color:"#be123c"}}>⚠️ {late.length} atrasada{late.length>1?"s":""}</span>}
                     </div>
-                    <div className="flex flex-wrap gap-x-3 mt-1 text-[11px] text-neutral-500">
-                      {boda.weddingDate && <span>💍 {fmtDate(boda.weddingDate)}{days !== null && days >= 0 && <span className="ml-1 text-neutral-400">({days}d)</span>}</span>}
+                    <div style={{display:"flex",flexWrap:"wrap",gap:"2px 12px",fontSize:12,color:R.muted}}>
+                      {days!==null&&days>=0 && <span>⏳ en {days} días</span>}
+                      {days!==null&&days<0  && <span>hace {Math.abs(days)} días</span>}
                       {boda.venue       && <span>📍 {boda.venue}</span>}
                       {boda.responsable && <span>👤 {boda.responsable}</span>}
                       {boda.guestCount  && <span>👥 {boda.guestCount} invitados</span>}
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    {activeTasks.length > 0 && <p className="text-[11px] text-neutral-500">{activeTasks.length} tarea{activeTasks.length > 1 ? "s" : ""}</p>}
-                    <span className={`text-[10px] ${boda.status === "Activa" ? "text-green-600" : boda.status === "En pausa" ? "text-amber-600" : "text-neutral-400"}`}>{boda.status}</span>
+
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    {active.length>0 && <p style={{fontSize:12,color:R.muted,margin:"0 0 2px"}}>{active.length} tarea{active.length>1?"s":""}</p>}
+                    <span style={{fontSize:11,fontWeight:600,color:boda.status==="Activa"?"#16a34a":boda.status==="En pausa"?"#d97706":R.muted}}>{boda.status}</span>
                   </div>
-                  <button onClick={e => handleDelete(e, boda)}
-                    className="flex-shrink-0 text-neutral-300 hover:text-red-500 transition-colors text-lg px-1">🗑</button>
+
+                  <button onClick={e=>handleDelete(e,boda)}
+                    style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:16,padding:"0 4px",flexShrink:0}}
+                    onMouseEnter={e=>e.currentTarget.style.color="#dc2626"}
+                    onMouseLeave={e=>e.currentTarget.style.color=R.border}>
+                    🗑
+                  </button>
                 </div>
               );
             })}
