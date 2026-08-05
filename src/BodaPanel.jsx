@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { fetchKickoffsFromSheet, saveKickoffToSheet, updateKickoffInSheet, deleteKickoff } from "./sheetServices";
+import { fetchKickoffsFromSheet, saveKickoffToSheet, updateKickoffInSheet, deleteKickoff, invalidateKickoffsCache } from "./sheetServices";
 
 // ─── BRAND ───────────────────────────────────────────────────────────────────
 const R = {
@@ -70,7 +70,7 @@ function metaPayload(f) {
 function notesOf(boda) {
   return {tasks:boda.tasks||[],suppliers:boda.suppliers||[],songs:boda.songs||[],photos:boda.photos||[],calls:boda.calls||[],guests:boda.guests||[],palette:boda.palette||[]};
 }
-async function apiBodas() { const all=await fetchKickoffsFromSheet(); return all.map(parseBoda).filter(Boolean); }
+async function apiBodas(forceRefresh=false) { if(forceRefresh) invalidateKickoffsCache(); const all=await fetchKickoffsFromSheet(); return all.map(parseBoda).filter(Boolean); }
 async function apiSaveBoda(f) {
   const res=await saveKickoffToSheet({guestName:"Boda: "+f.clienteName,conciergeSummary:metaPayload(f),internalNotes:JSON.stringify({tasks:[],suppliers:[],songs:[],photos:[],calls:[]}),travifyText:JSON.stringify([]),status:"active"});
   return res.id;
@@ -808,6 +808,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
   const [bodas,        setBodas]        = useState([]);
   const [users,        setUsers]        = useState([]);
   const [loading,      setLoading]      = useState(true);
+  const [refreshing,   setRefreshing]   = useState(false);
   const [err,          setErr]          = useState("");
   const [selected,     setSelected]     = useState(null);
   const [showNew,      setShowNew]      = useState(false);
@@ -815,11 +816,11 @@ export default function BodaPanel({ currentUser, onLogout }) {
   const [search,       setSearch]       = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  const load=useCallback(async()=>{
+  const load=useCallback(async(force=false)=>{
     setLoading(true); setErr("");
     try{
       const [list,uRes]=await Promise.all([
-        apiBodas(),
+        apiBodas(force),
         fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"listUsers"})}).then(r=>r.json()).catch(()=>({})),
       ]);
       setBodas(list);
@@ -831,6 +832,12 @@ export default function BodaPanel({ currentUser, onLogout }) {
     setLoading(false);
   },[]);
   useEffect(()=>{load();},[load]);
+
+  const forceRefresh=useCallback(async()=>{
+    setRefreshing(true);
+    try{ const list=await apiBodas(true); setBodas(list); if(selected)setSelected(list.find(b=>b.id===selected.id)||null); }catch{}
+    setRefreshing(false);
+  },[selected]);
 
   const handleRefresh=useCallback(async()=>{
     try{ const list=await apiBodas(); setBodas(list); if(selected)setSelected(list.find(b=>b.id===selected.id)||null); }catch{}
@@ -884,6 +891,10 @@ export default function BodaPanel({ currentUser, onLogout }) {
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:12,color:"rgba(255,255,255,.45)"}}>{currentUser?.name||currentUser?.email}</span>
+            <button onClick={forceRefresh} disabled={refreshing} title="Forzar recarga desde la hoja"
+              style={{background:"rgba(255,255,255,.08)",color:refreshing?"rgba(255,255,255,.3)":"rgba(255,255,255,.6)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"5px 10px",fontSize:14,cursor:"pointer",transition:"opacity .15s",lineHeight:1}}>
+              {refreshing?"⏳":"🔄"}
+            </button>
             <button onClick={onLogout} style={{background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"5px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Salir</button>
           </div>
         </div>
