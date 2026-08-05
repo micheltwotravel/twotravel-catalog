@@ -362,7 +362,13 @@ export async function fetchKickoffsFromSheet({ forceRefresh = false } = {}) {
     } catch {}
   }
 
-  const json = await postToKickoffAPI({ action: "listKickoffs" });
+  // listKickoffs uses GET (GAS doGet handles this action)
+  const _res = await fetch(`${KICKOFF_API_URL}?action=listKickoffs`);
+  const _text = await _res.text();
+  if (_text.trimStart().startsWith("<")) throw new Error("Error de conexión con el servidor. Intenta refrescar la página.");
+  let json;
+  try { json = JSON.parse(_text); } catch { throw new Error("Respuesta inesperada del servidor. Intenta refrescar."); }
+  if (json?.ok === false) throw new Error(json?.error || "Error en API kickoffs");
 
   let data = [];
 
