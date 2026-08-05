@@ -148,7 +148,18 @@ export function AvailabilityManager({ conciergeEmail, conciergeName }) {
   const save = async () => {
     setSaving(true);
     try {
-      await gasPost({ action: "saveAvailability", email: conciergeEmail, schedule, settings, blocked, manualSlots });
+      const qs = new URLSearchParams({
+        action: "saveAvailability",
+        email: conciergeEmail,
+        schedule: JSON.stringify(schedule),
+        settings: JSON.stringify(settings),
+        blocked: JSON.stringify(blocked),
+        manualSlots: JSON.stringify(manualSlots),
+      }).toString();
+      const r = await fetch(`${GAS}?${qs}`);
+      const text = await r.text();
+      const json = text.trimStart().startsWith("<") ? null : JSON.parse(text);
+      if (!json?.ok) throw new Error(json?.error || "Error guardando disponibilidad");
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e) { alert("Error guardando: " + (e?.message || e)); }

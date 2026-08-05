@@ -871,6 +871,7 @@ function PH({ kickoff }) {
         {email && <span>{email}</span>}
         {!name && <span>Two Travel Concierge</span>}
       </div>
+      <img src={ttLogo} alt="Two Travel" style={{ height:26, objectFit:"contain", opacity:0.8, flexShrink:0 }} />
     </div>
   );
 }
@@ -1063,17 +1064,23 @@ function CoverPage({ kickoff, total, lang, editMode }) {
           </a>
         )}
 
-        {/* Project Inform / Pre-check-in form link */}
+        {/* PRE Check-in form link */}
         {a.checkInFormUrl && (
           <a href={a.checkInFormUrl} target="_blank" rel="noreferrer" style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            textDecoration: "none", background: "#faf5ff", border: "1px solid #d8b4fe",
-            borderRadius: 10, padding: "11px 16px", marginBottom: 10,
+            display: "block", textDecoration: "none", background: "#faf5ff",
+            border: "1px solid #d8b4fe", borderRadius: 10, padding: "12px 16px", marginBottom: 10,
           }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#7c3aed" }}>
-              📋 {isEs ? "Formulario de Check-in" : "Check-in Form"}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#7c3aed" }}>
+                📋 {isEs ? "PRE Check-in Form" : "PRE Check-in Form"}
+              </div>
+              <span style={{ fontSize: 16, color: "#7c3aed" }}>→</span>
             </div>
-            <span style={{ fontSize: 16, color: "#7c3aed" }}>→</span>
+            <p style={{ fontSize: 11, color: "#7c3aed", opacity: 0.75, margin: 0, lineHeight: 1.5 }}>
+              {isEs
+                ? "Completa este formulario antes de tu llegada para que tu concierge tenga todo listo."
+                : "Complete this form before arrival so your concierge has everything ready for you."}
+            </p>
           </a>
         )}
 
@@ -1685,7 +1692,7 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
           const cat = (it.category || "").toLowerCase();
           if (/check.?in/.test(n) || /check.?in/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Llegada":"Arrival info"}</div>;
           if (/check.?out/.test(n) || /check.?out/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Salida":"Departure info"}</div>;
-          if (/breakfast|desayuno/.test(n)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>☕ {isEs?"Desayuno en la villa":"Breakfast at the villa"}</div>;
+          if (/breakfast|desayuno/.test(n)) return null;
           return null;
         })()}
 
@@ -2240,7 +2247,7 @@ function KeepInTouchPage({ kickoff, page, total }) {
     {
       label: "Google Review",
       sub: "Share your experience on Google",
-      url: "https://g.page/r/your-google-review-link/review",
+      url: "https://share.google/UvyICj95CeOsw7VgN",
       color: "#4285f4",
       icon: (
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2298,6 +2305,24 @@ function KeepInTouchPage({ kickoff, page, total }) {
         </div>
 
         {/* Divider */}
+        <div style={{ borderTop: "1.5px solid #f3e8d8", maxWidth: 360, margin: "0 auto 28px" }} />
+
+        {/* Destinations */}
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "#92400e", marginBottom: 16 }}>
+          Explore Our Destinations
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 20, marginBottom: 36, flexWrap: "wrap" }}>
+          {[
+            { city: "Cartagena", emoji: "🏖️" },
+            { city: "Medellín",  emoji: "🌿" },
+            { city: "Mexico City", emoji: "🌮" },
+          ].map(d => (
+            <div key={d.city} style={{ textAlign: "center", background: "#fdf8f2", border: "1.5px solid #f3e8d8", borderRadius: 12, padding: "14px 20px", minWidth: 90 }}>
+              <div style={{ fontSize: 24, marginBottom: 4 }}>{d.emoji}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#1a1814" }}>{d.city}</div>
+            </div>
+          ))}
+        </div>
         <div style={{ borderTop: "1.5px solid #f3e8d8", maxWidth: 360, margin: "0 auto 28px" }} />
 
         {/* Leave a review */}

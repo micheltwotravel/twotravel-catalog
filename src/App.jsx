@@ -1,5 +1,28 @@
-import React, { useMemo, useState, useEffect, Component } from "react";
-import { FinanceCashFlow, FinanceMovimientos, FinanceCierre, FinanceTemplates, FinanceReservaciones } from "./FinancePanel";
+import React, { useMemo, useState, useEffect, Component, Suspense } from "react";
+
+// Heavy admin components — loaded only when actually navigated to
+const ConciergePanel   = React.lazy(() => import("./ConciergePanel"));
+const ReunionesPage    = React.lazy(() => import("./ConciergePanel").then(m => ({ default: m.ReunionesPage })));
+const ItineraryPrintView = React.lazy(() => import("./ItineraryPrintView"));
+const TwoTravelCatalog = React.lazy(() => import("./TwoTravelCatalog"));
+const BookingPageLazy  = React.lazy(() => import("./BookingPage").then(m => ({ default: m.BookingPage })));
+const BodaPanel        = React.lazy(() => import("./BodaPanel"));
+const BodaPublicView   = React.lazy(() => import("./BodaPublicView"));
+const TareasPanel      = React.lazy(() => import("./TareasPanel"));
+const FinanceCashFlow      = React.lazy(() => import("./FinancePanel").then(m => ({ default: m.FinanceCashFlow })));
+const FinanceMovimientos   = React.lazy(() => import("./FinancePanel").then(m => ({ default: m.FinanceMovimientos })));
+const FinanceCierre        = React.lazy(() => import("./FinancePanel").then(m => ({ default: m.FinanceCierre })));
+const FinanceTemplates     = React.lazy(() => import("./FinancePanel").then(m => ({ default: m.FinanceTemplates })));
+const FinanceReservaciones = React.lazy(() => import("./FinancePanel").then(m => ({ default: m.FinanceReservaciones })));
+
+function PageLoader() {
+  return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f7f4ef"}}>
+      <div style={{width:32,height:2,background:"#9a7d52",animation:"pulse 1.2s ease-in-out infinite"}}/>
+      <style>{`@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}`}</style>
+    </div>
+  );
+}
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -20,13 +43,7 @@ class ErrorBoundary extends Component {
     return this.props.children;
   }
 }
-import ConciergePanel, { ReunionesPage } from "./ConciergePanel";
-import TwoTravelCatalog from "./TwoTravelCatalog";
-import ItineraryPrintView from "./ItineraryPrintView";
-import { BookingPage } from "./BookingPage";
-import BodaPanel from "./BodaPanel";
-import BodaPublicView from "./BodaPublicView";
-import TareasPanel from "./TareasPanel";
+
 import { updateKickoffInSheet, fetchKickoffsFromSheet, saveKickoffToSheet } from "./sheetServices";
 
 const translations = {
@@ -1041,7 +1058,13 @@ function MarketingCell({ kickoffId, value, onSave, saving }) {
         placeholder="Notas de marketing…"
         style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"6px 8px", width:"100%", background:"#fff", boxSizing:"border-box", resize:"vertical", lineHeight:1.5, minHeight:90 }}
       />
-      {saving && <div style={{ fontSize:9, color:"#9ca3af", marginTop:2 }}>guardando…</div>}
+      <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:4 }}>
+        <button onClick={organizeWithAI} disabled={aiLoading}
+          style={{ fontSize:10, padding:"3px 8px", borderRadius:5, border:"1px solid #a78bfa", background:"#f5f3ff", color:"#7c3aed", cursor:"pointer", fontWeight:500, opacity: aiLoading ? 0.6 : 1 }}>
+          {aiLoading ? "…" : "✨ Ideas IA"}
+        </button>
+        {saving && <span style={{ fontSize:9, color:"#9ca3af" }}>guardando…</span>}
+      </div>
     </div>
   );
 }
@@ -1349,7 +1372,15 @@ function ClientesTable({ kickoffs, loading }) {
         }
       }
       if (period === "month") {
-        if (arr.getMonth() !== now.getMonth() || arr.getFullYear() !== now.getFullYear()) return false;
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        if (arr > monthEnd) return false;
+        if (r._rowDeparture) {
+          const dep = new Date(String(r._rowDeparture).slice(0,10) + "T12:00:00");
+          if (!isNaN(dep) && dep < monthStart) return false;
+        } else {
+          if (arr < monthStart) return false;
+        }
       }
     }
     if (search.trim()) {
@@ -4022,10 +4053,19 @@ function DrinksCatalog() {
               {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
             </button>
           </div>
-          {/* Instructions */}
-          <div className="bg-white/10 rounded-xl px-4 py-3 space-y-1.5 text-sm text-neutral-300">
-            <p>{T.instr1}</p>
-            <p className="text-neutral-400 text-xs italic">{T.instr2}</p>
+        </div>
+      </div>
+
+      {/* How it works — white card below dark header */}
+      <div style={{background:"#fdf8f2",borderBottom:"1px solid #e5ddd3",padding:"14px 20px"}}>
+        <div style={{maxWidth:560,margin:"0 auto",display:"flex",gap:10,alignItems:"flex-start"}}>
+          <span style={{fontSize:18,flexShrink:0}}>🍹</span>
+          <div>
+            <p style={{fontSize:12,fontWeight:600,color:"#1a1814",marginBottom:3}}>
+              {lang==="en" ? "How it works" : "Cómo funciona"}
+            </p>
+            <p style={{fontSize:11,color:"#7a7570",lineHeight:1.6,margin:0}}>{T.instr1}</p>
+            <p style={{fontSize:10,color:"#9a918a",lineHeight:1.5,margin:"4px 0 0",fontStyle:"italic"}}>{T.instr2}</p>
           </div>
         </div>
       </div>
@@ -4506,7 +4546,23 @@ function GroceryCatalog() {
               {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
             </button>
           </div>
-          <p className="text-sm text-neutral-400">{lang==="en" ? "Check the items you'd like us to have ready at the villa." : "Marca los productos que quieres que tengamos listos en la villa."}</p>
+        </div>
+      </div>
+
+      {/* How it works */}
+      <div style={{background:"#fdf8f2",borderBottom:"1px solid #e5ddd3",padding:"14px 20px"}}>
+        <div style={{maxWidth:560,margin:"0 auto",display:"flex",gap:10,alignItems:"flex-start"}}>
+          <span style={{fontSize:18,flexShrink:0}}>🛒</span>
+          <div>
+            <p style={{fontSize:12,fontWeight:600,color:"#1a1814",marginBottom:3}}>
+              {lang==="en" ? "How it works" : "Cómo funciona"}
+            </p>
+            <p style={{fontSize:11,color:"#7a7570",lineHeight:1.6,margin:0}}>
+              {lang==="en"
+                ? "Check the items you'd like us to have ready at the villa. Your concierge will take care of the rest."
+                : "Marca los productos que quieres que tengamos listos en la villa. Tu concierge se encarga del resto."}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -4546,9 +4602,9 @@ function GroceryCatalog() {
                 const displayName = lang==="es" ? (item.name_es||item.name) : item.name;
                 return (
                   <label key={item.name} className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isChecked ? "" : "hover:bg-neutral-50"}`}
-                    style={isChecked ? {background:"#1a1814"} : {}}>
-                    {/* Image / emoji */}
-                    <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden relative bg-neutral-100 flex items-center justify-center">
+                    style={isChecked ? {background:"#f0fdf4"} : {}}>
+                    {/* Emoji icon */}
+                    <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden relative bg-amber-50 flex items-center justify-center" style={{border:"1px solid #f3e8d8"}}>
                       <span className="text-2xl leading-none select-none">{item.emoji||"🛒"}</span>
                       {item.img ? (
                         <img src={item.img} alt={displayName}
@@ -4558,10 +4614,10 @@ function GroceryCatalog() {
                     </div>
                     {/* Checkbox */}
                     <input type="checkbox" className="sr-only" checked={isChecked} onChange={()=>toggle(item.name)}/>
-                    <span className={`flex-1 text-sm ${isChecked ? "text-white font-medium" : "text-neutral-700"}`}>{displayName}</span>
+                    <span className={`flex-1 text-sm ${isChecked ? "text-green-800 font-medium" : "text-neutral-700"}`}>{displayName}</span>
                     {/* Check indicator */}
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${isChecked ? "bg-white" : "border-2 border-neutral-200"}`}>
-                      {isChecked && <span className="text-neutral-950 text-xs font-bold">✓</span>}
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${isChecked ? "bg-green-600" : "border-2 border-neutral-200"}`}>
+                      {isChecked && <span className="text-white text-xs font-bold">✓</span>}
                     </div>
                   </label>
                 );
@@ -6288,27 +6344,29 @@ function App() {
   const kickoffId = params.get("kickoffId") || "";
   const { user, login, logout } = useAuth();
 
+  const S = ({ children }) => <Suspense fallback={<PageLoader />}>{children}</Suspense>;
+
   // Public routes — no auth needed
   if (mode === "catalog" || mode === "questionnaire") {
     if (!kickoffId) return <WelcomeCatalogPage mode={mode} />;
-    return <TwoTravelCatalog />;
+    return <S><TwoTravelCatalog /></S>;
   }
   if (mode === "drinks")    return <DrinksCatalog />;
   if (mode === "groceries") return <GroceryCatalog />;
   if (mode === "breakfast") return <BreakfastCatalog />;
   if (mode === "checkin")   return <CheckinForm />;
-  if (mode === "itinerary") return <ItineraryPrintView />;
+  if (mode === "itinerary") return <S><ItineraryPrintView /></S>;
   if (mode === "trip")      return <ItineraryCatalog />;
-  if (mode === "bodas-cliente") return <BodaPublicView />;
+  if (mode === "bodas-cliente") return <S><BodaPublicView /></S>;
   if (mode === "book") {
     const params = new URLSearchParams(window.location.search);
-    return <BookingPage
+    return <S><BookingPageLazy
       conciergeEmail={params.get("c") || ""}
       conciergeName={params.get("cn") || "Your Concierge"}
       kickoffId={params.get("k") || ""}
       guestName={params.get("g") || ""}
       lang={params.get("lang") || "en"}
-    />;
+    /></S>;
   }
   if (mode === "register")  return <RegisterScreen />;
   if (mode === "pin") {
@@ -6333,18 +6391,18 @@ function App() {
       return <UserManagement currentUser={user} onBack={() => window.history.back()} />;
     }
     if (mode === "pagos")           return <FinanceLanding user={user} onLogout={logout} />;
-    if (mode === "f-cashflow")      return <ErrorBoundary><FinanceCashFlow /></ErrorBoundary>;
-    if (mode === "f-movimientos")   return <ErrorBoundary><FinanceMovimientos /></ErrorBoundary>;
-    if (mode === "f-reservaciones") return <ErrorBoundary><FinanceReservaciones /></ErrorBoundary>;
-    if (mode === "f-cierre")        return <ErrorBoundary><FinanceCierre /></ErrorBoundary>;
-    if (mode === "f-templates")     return <ErrorBoundary><FinanceTemplates /></ErrorBoundary>;
-    if (mode === "concierge") return <ErrorBoundary><ConciergePanel onLogout={logout} currentUser={user} /></ErrorBoundary>;
-    if (mode === "bodas")        return <ErrorBoundary><BodaPanel currentUser={user} onLogout={logout} /></ErrorBoundary>;
-    if (mode === "tareas-bodas") return <ErrorBoundary><TareasPanel currentUser={user} onLogout={logout} /></ErrorBoundary>;
+    if (mode === "f-cashflow")      return <S><ErrorBoundary><FinanceCashFlow /></ErrorBoundary></S>;
+    if (mode === "f-movimientos")   return <S><ErrorBoundary><FinanceMovimientos /></ErrorBoundary></S>;
+    if (mode === "f-reservaciones") return <S><ErrorBoundary><FinanceReservaciones /></ErrorBoundary></S>;
+    if (mode === "f-cierre")        return <S><ErrorBoundary><FinanceCierre /></ErrorBoundary></S>;
+    if (mode === "f-templates")     return <S><ErrorBoundary><FinanceTemplates /></ErrorBoundary></S>;
+    if (mode === "concierge") return <S><ErrorBoundary><ConciergePanel onLogout={logout} currentUser={user} /></ErrorBoundary></S>;
+    if (mode === "bodas")        return <S><ErrorBoundary><BodaPanel currentUser={user} onLogout={logout} /></ErrorBoundary></S>;
+    if (mode === "tareas-bodas") return <S><ErrorBoundary><TareasPanel currentUser={user} onLogout={logout} /></ErrorBoundary></S>;
     if (mode === "soporte")   return <ErrorBoundary><SoportePage /></ErrorBoundary>;
     if (mode === "soporte-dashboard") return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
     if (mode === "tasks")     return <ErrorBoundary><TaskTracker /></ErrorBoundary>;
-    if (mode === "reuniones") return <ErrorBoundary><ReunionesPage currentUser={user} initialKickoffId={params.get("kickoffId") || ""} /></ErrorBoundary>;
+    if (mode === "reuniones") return <S><ErrorBoundary><ReunionesPage currentUser={user} initialKickoffId={params.get("kickoffId") || ""} /></ErrorBoundary></S>;
     if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard currentUser={user} onLogout={logout} /></ErrorBoundary>;
   }
 
