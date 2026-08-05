@@ -38,7 +38,7 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS
 function parseBoda(k) {
   try {
     const meta  = JSON.parse(k.conciergeSummary || "{}");
-    if (meta.type !== "boda") return null;
+    if (meta.type !== "boda" && !String(k.guestName||"").match(/^Boda:/i)) return null;
     const notes = JSON.parse(k.internalNotes || "{}");
     return {
       id: k.id,
@@ -57,17 +57,20 @@ function parseBoda(k) {
       songs:     notes.songs     ||[],
       photos:    notes.photos    ||[],
       calls:     notes.calls     ||[],
+      guests:    notes.guests    ||[],
+      palette:   notes.palette   ||[],
+      coverPhoto: meta.coverPhoto||"",
       schedule: JSON.parse(k.travifyText||"[]"),
     };
   } catch { return null; }
 }
 function metaPayload(f) {
-  return JSON.stringify({type:"boda",weddingDate:f.weddingDate,venue:f.venue,responsable:f.responsable,contact:f.contact,phase:f.phase,status:f.status,guestCount:f.guestCount,budget:f.budget,notes:f.notes});
+  return JSON.stringify({type:"boda",weddingDate:f.weddingDate,venue:f.venue,responsable:f.responsable,contact:f.contact,phase:f.phase,status:f.status,guestCount:f.guestCount,budget:f.budget,notes:f.notes,coverPhoto:f.coverPhoto||""});
 }
 function notesOf(boda) {
-  return {tasks:boda.tasks||[],suppliers:boda.suppliers||[],songs:boda.songs||[],photos:boda.photos||[],calls:boda.calls||[]};
+  return {tasks:boda.tasks||[],suppliers:boda.suppliers||[],songs:boda.songs||[],photos:boda.photos||[],calls:boda.calls||[],guests:boda.guests||[],palette:boda.palette||[]};
 }
-async function apiBodas() { const all=await fetchKickoffsFromSheet({forceRefresh:true}); return all.map(parseBoda).filter(Boolean); }
+async function apiBodas() { const all=await fetchKickoffsFromSheet(); return all.map(parseBoda).filter(Boolean); }
 async function apiSaveBoda(f) {
   const res=await saveKickoffToSheet({guestName:"Boda: "+f.clienteName,conciergeSummary:metaPayload(f),internalNotes:JSON.stringify({tasks:[],suppliers:[],songs:[],photos:[],calls:[]}),travifyText:JSON.stringify([]),status:"active"});
   return res.id;
@@ -453,25 +456,33 @@ function LlamadasTab({ boda, onPatch }) {
   );
 }
 
-// ─── MINUTO A MINUTO ─────────────────────────────────────────────────────────
+// ─── TIMELINE ────────────────────────────────────────────────────────────────
 const M_CATS=["General","Novios","Proveedores","Coordinación","Música","Fotos/Video","Protocolo"];
 const M_COLORS={"General":{bg:"#f5f5f4",color:"#57534e"},"Novios":{bg:"#fff0f3",color:"#be123c"},"Proveedores":{bg:"#fffbeb",color:"#b45309"},"Coordinación":{bg:"#eff6ff",color:"#1d4ed8"},"Música":{bg:"#f5f3ff",color:"#7c3aed"},"Fotos/Video":{bg:"#f0fdfa",color:"#0f766e"},"Protocolo":{bg:"#fff7ed",color:"#c2410c"}};
 
-function MinutoTab({ boda, onScheduleChange }) {
+function TimelineTab({ boda, onScheduleChange }) {
   const [schedule,setSchedule]=useState(boda.schedule||[]);
   const [show,setShow]=useState(false);
   const [saving,setSaving]=useState(false);
-  const [blank,setBlank]=useState({time:"",description:"",assignedTo:"",notes:"",category:"General"});
+  const [view,setView]=useState("interno");
+  const [blank,setBlank]=useState({time:"",description:"",assignedTo:"",notes:"",category:"General",isInternal:false,isHighlight:false});
   const sorted=[...schedule].sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+  const visible=view==="cliente"?sorted.filter(e=>!e.isInternal):sorted;
   async function persist(u){ setSchedule(u); onScheduleChange(u); await apiUpdateSchedule(boda.id,u); }
-  async function add(){ if(!blank.time||!blank.description.trim()) return; setSaving(true); try{await persist([...schedule,{...blank,id:uid()}]); setBlank({time:"",description:"",assignedTo:"",notes:"",category:"General"}); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
+  async function add(){ if(!blank.time||!blank.description.trim()) return; setSaving(true); try{await persist([...schedule,{...blank,id:uid()}]); setBlank({time:"",description:"",assignedTo:"",notes:"",category:"General",isInternal:false,isHighlight:false}); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
   async function del(id){ try{await persist(schedule.filter(e=>e.id!==id));}catch{setSchedule(schedule);} }
   return (
     <div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-        <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{sorted.length} evento{sorted.length!==1?"s":""}</span>
+        <div style={{display:"flex",gap:6}}>
+          {[["interno","🔐 Interno"],["cliente","👤 Cliente"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setView(v)} style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${view===v?R.accent:R.border}`,background:view===v?R.accent:"transparent",color:view===v?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600}}>
+              {l}
+            </button>
+          ))}
+        </div>
         <div style={{display:"flex",gap:8}}>
-          {sorted.length>0&&<button onClick={()=>window.print()} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>🖨 Imprimir</button>}
+          {sorted.length>0&&<button onClick={()=>window.print()} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>🖨</button>}
           <button onClick={()=>setShow(v=>!v)} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Agregar</button>
         </div>
       </div>
@@ -483,6 +494,10 @@ function MinutoTab({ boda, onScheduleChange }) {
             <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.description} onChange={e=>setBlank(p=>({...p,description:e.target.value}))} placeholder="Descripción del evento *" /></div>
             <input style={INP_SM} value={blank.assignedTo} onChange={e=>setBlank(p=>({...p,assignedTo:e.target.value}))} placeholder="Responsable" />
             <input style={INP_SM} value={blank.notes}      onChange={e=>setBlank(p=>({...p,notes:e.target.value}))}      placeholder="Notas" />
+            <div style={{gridColumn:"span 2",display:"flex",gap:16}}>
+              <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={blank.isInternal} onChange={e=>setBlank(p=>({...p,isInternal:e.target.checked}))} /> Solo interno (no aparece en vista cliente)</label>
+              <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={blank.isHighlight} onChange={e=>setBlank(p=>({...p,isHighlight:e.target.checked}))} /> ⭐ Destacado</label>
+            </div>
           </div>
           <div style={{display:"flex",gap:8}}>
             <button onClick={add} disabled={saving||!blank.time||!blank.description.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.time||!blank.description.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Agregar"}</button>
@@ -490,22 +505,25 @@ function MinutoTab({ boda, onScheduleChange }) {
           </div>
         </div>
       )}
-      {sorted.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin eventos. Agrega el primero arriba.</p>}
+      {visible.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>{sorted.length===0?"Sin eventos. Agrega el primero arriba.":"No hay eventos para la vista cliente."}</p>}
       <div style={{position:"relative"}}>
-        {sorted.length>0&&<div style={{position:"absolute",left:55,top:8,bottom:8,width:1,background:R.border}} />}
-        {sorted.map(ev=>{
+        {visible.length>0&&<div style={{position:"absolute",left:55,top:8,bottom:8,width:1,background:R.border}} />}
+        {visible.map(ev=>{
           const cs=M_COLORS[ev.category]||M_COLORS["General"];
+          const hl=!!ev.isHighlight;
           return (
             <div key={ev.id} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:10}}>
               <div style={{width:54,textAlign:"right",flexShrink:0,paddingTop:10}}><span style={{fontSize:12,fontFamily:"'Jost',sans-serif",fontWeight:600,color:R.text,letterSpacing:".02em",fontVariantNumeric:"tabular-nums"}}>{ev.time}</span></div>
               <div style={{display:"flex",alignItems:"flex-start",gap:10,flex:1,minWidth:0}}>
-                <div style={{width:10,height:10,borderRadius:"50%",background:R.accent,flexShrink:0,marginTop:12,zIndex:1,boxShadow:`0 0 0 3px ${R.light}`}} />
-                <div style={{flex:1,background:R.white,border:`1px solid ${R.border}`,borderRadius:12,padding:"10px 14px",minWidth:0}}>
+                <div style={{width:10,height:10,borderRadius:"50%",background:hl?R.gold:R.accent,flexShrink:0,marginTop:12,zIndex:1,boxShadow:`0 0 0 3px ${hl?"rgba(201,169,110,.2)":R.light}`}} />
+                <div style={{flex:1,background:hl?"#fffbf0":ev.isInternal?"#fafafa":R.white,border:`1px solid ${hl?R.gold:ev.isInternal?"#e5e7eb":R.border}`,borderRadius:12,padding:"10px 14px",minWidth:0}}>
                   <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                        <span style={{fontSize:13,fontWeight:500,color:R.text}}>{ev.description}</span>
+                        {hl&&<span style={{fontSize:12}}>⭐</span>}
+                        <span style={{fontSize:13,fontWeight:hl?600:500,color:R.text}}>{ev.description}</span>
                         <span style={{fontSize:10,padding:"2px 8px",borderRadius:99,fontWeight:500,background:cs.bg,color:cs.color}}>{ev.category}</span>
+                        {ev.isInternal&&<span style={{fontSize:9,padding:"2px 6px",borderRadius:99,background:"#f3f4f6",color:"#6b7280"}}>🔐</span>}
                       </div>
                       {ev.assignedTo&&<p style={{fontSize:11,color:R.muted,margin:"3px 0 0"}}>👤 {ev.assignedTo}</p>}
                       {ev.notes     &&<p style={{fontSize:11,color:R.muted,margin:"2px 0 0"}}>{ev.notes}</p>}
@@ -514,6 +532,133 @@ function MinutoTab({ boda, onScheduleChange }) {
                   </div>
                 </div>
               </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── PALETA ───────────────────────────────────────────────────────────────────
+function PaletteTab({ boda, onPatch }) {
+  const [palette,setPalette]=useState(boda.palette||[]);
+  const [show,setShow]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [blank,setBlank]=useState({color:"#c9a96e",name:"",notes:""});
+  async function persist(u){ setPalette(u); onPatch({palette:u}); await apiSaveNotes(boda.id,{...boda,palette:u}); }
+  async function add(){ setSaving(true); try{await persist([...palette,{...blank,id:uid()}]); setBlank({color:"#c9a96e",name:"",notes:""}); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
+  async function del(id){ try{await persist(palette.filter(p=>p.id!==id));}catch{setPalette(palette);} }
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+        <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{palette.length} color{palette.length!==1?"es":""}</span>
+        <button onClick={()=>setShow(v=>!v)} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Color</button>
+      </div>
+      {show&&(
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
+          <div style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr",gap:8,marginBottom:8,alignItems:"center"}}>
+            <input type="color" value={blank.color} onChange={e=>setBlank(p=>({...p,color:e.target.value}))} style={{width:40,height:36,border:"none",borderRadius:8,cursor:"pointer",padding:2}} />
+            <input style={INP_SM} value={blank.name}  onChange={e=>setBlank(p=>({...p,name:e.target.value}))}  placeholder="Nombre (ej: Burdeos)" />
+            <input style={INP_SM} value={blank.notes} onChange={e=>setBlank(p=>({...p,notes:e.target.value}))} placeholder="Uso (ej: Flores principales)" />
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={add} disabled={saving} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:saving?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Agregar"}</button>
+            <button onClick={()=>setShow(false)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+          </div>
+        </div>
+      )}
+      {palette.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin colores. Agrega la paleta de la boda.</p>}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:10}}>
+        {palette.map(p=>(
+          <div key={p.id} style={{borderRadius:12,overflow:"hidden",border:`1px solid ${R.border}`,background:R.white,position:"relative"}}>
+            <div style={{height:68,background:p.color}} />
+            <div style={{padding:"8px 10px 10px"}}>
+              <p style={{fontSize:12,fontWeight:600,color:R.text,margin:0}}>{p.name||p.color}</p>
+              <p style={{fontSize:10,color:R.muted,margin:"2px 0 0",fontFamily:"monospace"}}>{p.color}</p>
+              {p.notes&&<p style={{fontSize:10,color:R.muted,margin:"2px 0 0"}}>{p.notes}</p>}
+            </div>
+            <button onClick={()=>del(p.id)} style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,.4)",color:"#fff",border:"none",borderRadius:"50%",width:18,height:18,fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── INVITADOS TAB ───────────────────────────────────────────────────────────
+const RSVP_STATES=["Pendiente","Confirmado","No asiste"];
+const RSVP_STYLE={"Pendiente":{bg:"#fff7ed",color:"#c2410c"},"Confirmado":{bg:"#f0fdf4",color:"#15803d"},"No asiste":{bg:"#f1f5f9",color:"#64748b"}};
+
+function GuestTab({ boda, onPatch }) {
+  const [guests,setGuests]=useState(boda.guests||[]);
+  const [show,setShow]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [filter,setFilter]=useState("todos");
+  const [blank,setBlank]=useState({name:"",table:"",rsvp:"Pendiente",ceremony:true,cocktail:true,reception:true,notes:""});
+  async function persist(u){ setGuests(u); onPatch({guests:u}); await apiSaveNotes(boda.id,{...boda,guests:u}); }
+  async function add(){ if(!blank.name.trim()) return; setSaving(true); try{await persist([...guests,{...blank,id:uid()}]); setBlank({name:"",table:"",rsvp:"Pendiente",ceremony:true,cocktail:true,reception:true,notes:""}); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
+  async function del(id){ try{await persist(guests.filter(g=>g.id!==id));}catch{setGuests(guests);} }
+  async function cycleRsvp(id){ const u=guests.map(g=>{if(g.id!==id)return g; const idx=(RSVP_STATES.indexOf(g.rsvp||"Pendiente")+1)%RSVP_STATES.length; return {...g,rsvp:RSVP_STATES[idx]};}); try{await persist(u);}catch{setGuests(guests);} }
+  const confirmed=guests.filter(g=>g.rsvp==="Confirmado").length;
+  const pending=guests.filter(g=>g.rsvp==="Pendiente"||!g.rsvp).length;
+  const visible=filter==="todos"?guests:guests.filter(g=>(g.rsvp||"Pendiente")===filter);
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+        <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+          <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{guests.length} invitado{guests.length!==1?"s":""}</span>
+          {confirmed>0&&<span style={{fontSize:11,color:"#15803d",fontWeight:600}}>✅ {confirmed}</span>}
+          {pending>0&&<span style={{fontSize:11,color:"#c2410c",fontWeight:600}}>⏳ {pending}</span>}
+        </div>
+        <button onClick={()=>setShow(v=>!v)} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Agregar</button>
+      </div>
+      <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
+        {["todos","Confirmado","Pendiente","No asiste"].map(f=>(
+          <button key={f} onClick={()=>setFilter(f)} style={{padding:"3px 10px",borderRadius:20,border:`1px solid ${filter===f?R.accent:R.border}`,background:filter===f?R.accent:"transparent",color:filter===f?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+            {f==="todos"?"Todos":f}
+          </button>
+        ))}
+      </div>
+      {show&&(
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+            <input style={INP_SM} value={blank.name}  onChange={e=>setBlank(p=>({...p,name:e.target.value}))}  placeholder="Nombre del invitado *" />
+            <input style={INP_SM} value={blank.table} onChange={e=>setBlank(p=>({...p,table:e.target.value}))} placeholder="Mesa / Tabla" />
+            <select style={INP_SM} value={blank.rsvp} onChange={e=>setBlank(p=>({...p,rsvp:e.target.value}))}>{RSVP_STATES.map(s=><option key={s}>{s}</option>)}</select>
+            <input style={INP_SM} value={blank.notes} onChange={e=>setBlank(p=>({...p,notes:e.target.value}))} placeholder="Notas (dieta, restricciones...)" />
+            <div style={{gridColumn:"span 2",display:"flex",gap:16}}>
+              {[["ceremony","⛪ Ceremonia"],["cocktail","🥂 Cóctel"],["reception","🎊 Recepción"]].map(([k,l])=>(
+                <label key={k} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={blank[k]} onChange={e=>setBlank(p=>({...p,[k]:e.target.checked}))} /> {l}</label>
+              ))}
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={add} disabled={saving||!blank.name.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.name.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Agregar"}</button>
+            <button onClick={()=>setShow(false)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+          </div>
+        </div>
+      )}
+      {visible.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>{guests.length===0?"Sin invitados. Agrega el primero arriba.":"Sin invitados con ese estado."}</p>}
+      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {visible.map(g=>{
+          const rs=RSVP_STYLE[g.rsvp||"Pendiente"]||RSVP_STYLE["Pendiente"];
+          return (
+            <div key={g.id} style={{border:`1px solid ${R.border}`,borderRadius:10,padding:"10px 14px",background:R.white,display:"flex",alignItems:"center",gap:10}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                  <span style={{fontSize:13,fontWeight:500,color:R.text}}>{g.name}</span>
+                  {g.table&&<span style={{fontSize:11,color:R.muted}}>Mesa {g.table}</span>}
+                  <div style={{display:"flex",gap:3}}>
+                    {g.ceremony&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:99,background:"#eff6ff",color:"#1d4ed8"}}>⛪</span>}
+                    {g.cocktail&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:99,background:"#f5f3ff",color:"#7c3aed"}}>🥂</span>}
+                    {g.reception&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:99,background:"#fff0f3",color:"#be123c"}}>🎊</span>}
+                  </div>
+                </div>
+                {g.notes&&<p style={{fontSize:11,color:R.muted,margin:"2px 0 0"}}>{g.notes}</p>}
+              </div>
+              <button onClick={()=>cycleRsvp(g.id)} style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:rs.bg,color:rs.color,border:"none",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,fontFamily:"'Jost',sans-serif"}}>{g.rsvp||"Pendiente"}</button>
+              <button onClick={()=>del(g.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:13,flexShrink:0}}>✕</button>
             </div>
           );
         })}
@@ -543,7 +688,9 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
   const TABS=[
     {id:"resumen",    label:"Resumen"},
     {id:"tareas",     label:`Tareas (${activeTasks.length})`},
-    {id:"minuto",     label:"Minuto a Minuto"},
+    {id:"timeline",   label:"Timeline"},
+    {id:"invitados",  label:`Invitados (${(boda.guests||[]).length})`},
+    {id:"palette",    label:"Paleta"},
     {id:"proveedores",label:`Proveedores (${(boda.suppliers||[]).length})`},
     {id:"musica",     label:`Música (${(boda.songs||[]).length})`},
     {id:"fotos",      label:`Fotos (${(boda.photos||[]).length})`},
@@ -597,10 +744,10 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
               {boda.notes&&<div style={{gridColumn:"span 2"}}><C label="Notas" v={boda.notes} multi /></div>}
               <div style={{gridColumn:"span 2",borderTop:`1px solid ${R.border}`,paddingTop:12,marginTop:4,display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
                 {[
-                  {label:"Tareas activas", n:activeTasks.length,         color:R.accent},
-                  {label:"Proveedores",    n:(boda.suppliers||[]).length, color:"#1d4ed8"},
-                  {label:"Canciones",      n:(boda.songs||[]).length,     color:"#7c3aed"},
-                  {label:"Fotos ref.",     n:(boda.photos||[]).length,    color:"#0f766e"},
+                  {label:"Tareas activas", n:activeTasks.length,                                                          color:R.accent},
+                  {label:"Invitados",      n:(boda.guests||[]).filter(g=>g.rsvp==="Confirmado").length+"/"+(boda.guests||[]).length, color:"#15803d"},
+                  {label:"Proveedores",    n:(boda.suppliers||[]).length,                                                 color:"#1d4ed8"},
+                  {label:"Timeline",       n:(boda.schedule||[]).length,                                                  color:"#7c3aed"},
                 ].map(s=>(
                   <div key={s.label} style={{textAlign:"center",background:R.cream,borderRadius:10,padding:"10px 8px",border:`1px solid ${R.border}`}}>
                     <p style={{fontSize:20,fontWeight:700,color:s.color,margin:0}}>{s.n}</p>
@@ -611,7 +758,9 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
             </div>
           )}
           {tab==="tareas"     &&<TasksTab       boda={boda} users={users} onPatch={handlePatch} />}
-          {tab==="minuto"     &&<MinutoTab      boda={boda} onScheduleChange={sc=>setBoda(b=>({...b,schedule:sc}))} />}
+          {tab==="timeline"   &&<TimelineTab    boda={boda} onScheduleChange={sc=>setBoda(b=>({...b,schedule:sc}))} />}
+          {tab==="invitados"  &&<GuestTab       boda={boda} onPatch={handlePatch} />}
+          {tab==="palette"    &&<PaletteTab     boda={boda} onPatch={handlePatch} />}
           {tab==="proveedores"&&<ProveedoresTab boda={boda} onPatch={handlePatch} />}
           {tab==="musica"     &&<MusicTab       boda={boda} onPatch={handlePatch} />}
           {tab==="fotos"      &&<FotosTab       boda={boda} onPatch={handlePatch} />}

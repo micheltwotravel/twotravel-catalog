@@ -4194,11 +4194,12 @@ const CITY_OPTIONS = [
 ];
 
 function WelcomeCatalogPage({ mode }) {
-  const [name,    setName]    = useState("");
-  const [city,    setCity]    = useState("");
-  const [contact, setContact] = useState("");
-  const [saving,  setSaving]  = useState(false);
-  const [error,   setError]   = useState("");
+  const [name,            setName]            = useState("");
+  const [city,            setCity]            = useState("");
+  const [customCityInput, setCustomCityInput] = useState("");
+  const [contact,         setContact]         = useState("");
+  const [saving,          setSaving]          = useState(false);
+  const [error,           setError]           = useState("");
 
   // Detect language: ?lang=en/es, or browser language
   const urlLang = new URLSearchParams(window.location.search).get("lang") || "";
@@ -4271,17 +4272,31 @@ function WelcomeCatalogPage({ mode }) {
             <label className="block text-xs font-semibold text-neutral-600 mb-1 uppercase tracking-wide">
               {wt.destLabel}
             </label>
-            <select
-              value={city}
-              onChange={e => setCity(e.target.value)}
-              className="w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 bg-white"
-              required
-            >
-              <option value="">{wt.destPh}</option>
+            <div className="flex flex-wrap gap-2 mb-2">
               {CITY_OPTIONS.map(c => (
-                <option key={c.code} value={c.code}>{c.label}</option>
+                <button key={c.code} type="button"
+                  onClick={() => { setCity(v => v === c.code ? "" : c.code); setCustomCityInput(""); }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                    city === c.code
+                      ? "bg-neutral-900 text-white border-neutral-900"
+                      : "bg-white text-neutral-600 border-neutral-300 hover:border-neutral-500"
+                  }`}>
+                  {c.label}
+                </button>
               ))}
-            </select>
+            </div>
+            <input
+              type="text"
+              value={customCityInput}
+              onChange={e => {
+                const val = e.target.value.toUpperCase();
+                setCustomCityInput(val);
+                setCity(val || "");
+              }}
+              onFocus={() => { if (CITY_OPTIONS.some(c => c.code === city)) { setCity(""); } }}
+              placeholder={isEn ? "Other city… (e.g. BOG, Bogotá)" : "Otra ciudad… (ej: BOG, Bogotá)"}
+              className="w-full border border-dashed border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-400 text-neutral-500 placeholder:text-neutral-300"
+            />
           </div>
 
           <div>

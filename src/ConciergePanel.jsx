@@ -588,10 +588,20 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       const need = 18 + (item.location ? 14 : 0) + descLines.length * 12 + hlCount * 12 + 16;
       checkY(need);
 
-      // Time + Name
-      const timePart = item.time ? `${item.time}   ` : "";
+      // Time badge (amber pill) + Name
+      if (item.time) {
+        const timeLabel = lang === "es" ? "Hora de Colombia" : "Colombia Standard Time";
+        const tStr = se(`${item.time}  ·  ${timeLabel}`);
+        const scaleFactor = doc.internal.scaleFactor;
+        const tw = doc.getStringUnitWidth(tStr) * 8 / scaleFactor;
+        doc.setFillColor(254, 243, 199);
+        doc.roundedRect(ML - 3, y - 7, tw + 6, 10, 2, 2, "F");
+        doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(146, 64, 14);
+        dt(tStr, ML, y);
+        y += 13;
+      }
       doc.setFontSize(12.5); doc.setFont("helvetica","bold"); doc.setTextColor(10,10,10);
-      dt(se(timePart + item.name), ML, y); y += 17;
+      dt(se(item.name), ML, y); y += 17;
 
       // Price (deposit amount) — show COP price when set
       const itemPriceCop = Number(item.price_cop ?? 0);
@@ -2392,6 +2402,26 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         const guestName = kickoff?.guestName || "";
         const accom = kickoff?.accommodationName || "the accommodation";
         const accomEs = kickoff?.accommodationName || "el alojamiento";
+        const pax = parseInt(kickoff?.groupSize || kickoff?.pax || "1", 10) || 1;
+        const tier = parseInt(kickoff?.clientType || kickoff?.tier || "1", 10) || 1;
+        // Vehicle options by pax count
+        const vehicleOptions = (() => {
+          if (pax <= 3) return {
+            en: `**Option A — SUV** (1–3 pax) · $130,000 COP\n**Option B — Minivan** (3–6 pax) · $195,000 COP`,
+            es: `**Opción A — SUV** (1–3 pax) · $130,000 COP\n**Opción B — Minivan** (3–6 pax) · $195,000 COP`,
+            note: tier === 1 ? "SUV / Minivan" : "Minivan",
+          };
+          if (pax <= 6) return {
+            en: `**Option A — Minivan** (3–6 pax) · $195,000 COP\n**Option B — Master Van** (6–8 pax) · $255,000 COP`,
+            es: `**Opción A — Minivan** (3–6 pax) · $195,000 COP\n**Opción B — Master Van** (6–8 pax) · $255,000 COP`,
+            note: "Minivan",
+          };
+          return {
+            en: `**Master Van** (6–8 pax) · $255,000 COP`,
+            es: `**Master Van** (6–8 pax) · $255,000 COP`,
+            note: "Master Van",
+          };
+        })();
         // Airport name by city
         const cityRaw = (kickoff?._rowCity || kickoff?.city || "").toLowerCase();
         const AIRPORTS = {
@@ -2412,25 +2442,38 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         try { const arr = JSON.parse(kickoff?.arrivals || "[]"); arrFlight = arr.find(a => a.flightNumber) || null; } catch {}
         const flightNum = arrFlight?.flightNumber || "";
         const arrTime = arrFlight?.time || "";
-        return [
-          {
-            name: `Pick up at ${airport.en}`, name_en: `Pick up at ${airport.en}`,
-            name_es: `Pick up en ${airport.es}`,
+        const items = [];
+        // 1. Flight info (if available)
+        if (flightNum) {
+          items.push({
+            name: `Flight ${flightNum}`, name_en: `Flight ${flightNum}`,
+            name_es: `Vuelo ${flightNum}`,
             category: "transportation",
             timeLabel: arrTime,
-            description_en: `When you come out, make sure you turn to the **right** where you will find our representative waiting to direct you to the van. Even if you arrive in separate groups, your reservations will always be under the group leader's name: **${guestName || "group leader"}**${flightNum ? `\n\nFlight: ${flightNum}` : ""}`,
-            description_es: `Al salir, gira a la **derecha** donde encontrarás a nuestro representante esperando para dirigirte a la van. Aunque lleguen en grupos separados, su reserva siempre estará a nombre de: **${guestName || "líder del grupo"}**${flightNum ? `\n\nVuelo: ${flightNum}` : ""}`,
-            notes: "Minivan",
-          },
-          {
-            name: `Transfer to ${accom}`, name_en: `Transfer to ${accom}`,
-            name_es: `Traslado a ${accomEs}`,
-            category: "transportation", timeLabel: "",
-            description_en: `Private transfer ${airport.code ? airport.code + " →" : "airport →"} ${accom}. Vehicle: Minivan / SUV with air conditioning. All luggage included.\n\n* Services between 19:00 - 6:00 will generate a 10% night fee`,
-            description_es: `Traslado privado ${airport.code ? airport.code + " →" : "aeropuerto →"} ${accomEs}. Vehículo: Minivan / SUV con aire acondicionado. Todas las maletas incluidas.\n\n* Servicios entre 19:00 - 6:00 generan un recargo nocturno del 10%`,
-            notes: `${guestName} — verificar vuelo y # de maletas`,
-          }
-        ];
+            description_en: `Flight: **${flightNum}**${arrTime ? `\nArrival: ${arrTime}` : ""}`,
+            description_es: `Vuelo: **${flightNum}**${arrTime ? `\nLlegada: ${arrTime}` : ""}`,
+          });
+        }
+        // 2. Arrive at airport
+        items.push({
+          name: `Arrive at ${airport.en}`, name_en: `Arrive at ${airport.en}`,
+          name_es: `Llegada al ${airport.es}`,
+          category: "transportation",
+          timeLabel: flightNum ? "" : arrTime,
+          description_en: `You will arrive at **${airport.en}**${airport.code ? ` (${airport.code})` : ""}.`,
+          description_es: `Llegada al **${airport.es}**${airport.code ? ` (${airport.code})` : ""}.`,
+        });
+        // 3. Pickup message
+        items.push({
+          name: `Pick up — ${airport.code || "Airport"}`, name_en: `Pick up — ${airport.code || "Airport"}`,
+          name_es: `Pick up — ${airport.code || "Aeropuerto"}`,
+          category: "transportation",
+          timeLabel: "",
+          description_en: `When you come out, make sure you turn to the **right** where you will find our representative waiting to direct you to the vehicle. Even if you arrive in separate groups, your reservation will always be under the group leader's name: **${guestName || "group leader"}**\n\n**Transport options:**\n${vehicleOptions.en}\n\n_All vehicles include A/C and luggage. Services between 19:00–6:00 generate a 10% night fee._`,
+          description_es: `Al salir, gira a la **derecha** donde encontrarás a nuestro representante esperando para dirigirte al vehículo. Aunque lleguen en grupos separados, su reserva siempre estará a nombre de: **${guestName || "líder del grupo"}**\n\n**Opciones de transporte:**\n${vehicleOptions.es}\n\n_Todos los vehículos incluyen A/C y equipaje. Servicios entre 19:00–6:00 generan un recargo nocturno del 10%._`,
+          notes: vehicleOptions.note,
+        });
+        return items;
       })(),
       checkout: {
         name: "Check-out", name_en: "Check-out", category: "services",
@@ -2547,15 +2590,11 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
             className="px-3 py-1.5 rounded-lg border border-neutral-200 text-xs hover:bg-neutral-50 text-neutral-600">
             + Agregar día
           </button>
-          {days.length > 0 && (
-            <span className="flex gap-1">
-              <button type="button" onClick={autoFillWithDefaults}
-                title="Renombrar días con fecha + agrega check-in, check-out y desayunos automáticamente"
-                className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs hover:bg-amber-100">
-                🗓️ Fechas + defaults
-              </button>
-            </span>
-          )}
+          <button type="button" onClick={autoFillWithDefaults}
+            title="Generar días desde fechas de llegada/salida + agrega check-in, check-out y desayunos"
+            className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs hover:bg-amber-100">
+            🗓️ Fechas + defaults
+          </button>
           <button type="button" onClick={handleGenerateTasks} disabled={generating || !cart.length}
             title="Crea una tarea de confirmación por cada servicio del itinerario"
             className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs hover:bg-blue-100 disabled:opacity-40 transition">
@@ -2572,10 +2611,18 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
       {days.length === 0 && (
         <div className="text-center py-10 border-2 border-dashed border-neutral-200 rounded-2xl">
           <p className="text-sm text-neutral-400 mb-3">No hay días aún.</p>
-          <button type="button" onClick={addDay}
-            className="px-4 py-2 rounded-lg bg-neutral-900 text-white text-xs">
-            + Crear primer día
-          </button>
+          <div className="flex gap-2 justify-center">
+            {kickoff?.arrivalDate && kickoff?.departureDate && (
+              <button type="button" onClick={autoFillWithDefaults}
+                className="px-4 py-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs hover:bg-amber-100">
+                🗓️ Generar días desde fechas
+              </button>
+            )}
+            <button type="button" onClick={addDay}
+              className="px-4 py-2 rounded-lg bg-neutral-900 text-white text-xs">
+              + Crear primer día
+            </button>
+          </div>
         </div>
       )}
 
@@ -8494,9 +8541,9 @@ const loadKickoffs = async () => {
 
       {/* ── Info popup (diet / passport) ── */}
       {infoPopup && (
-        <div style={{position:"fixed",inset:0,background:"rgba(10,8,6,.6)",zIndex:9999,display:"flex",alignItems:"flex-end",justifyContent:"center",backdropFilter:"blur(3px)",WebkitBackdropFilter:"blur(3px)"}}
+        <div style={{position:"fixed",inset:0,background:"rgba(10,8,6,.6)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px",backdropFilter:"blur(3px)",WebkitBackdropFilter:"blur(3px)"}}
           onClick={() => setInfoPopup(null)}>
-          <div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:0,maxWidth:600,width:"100%",boxShadow:"0 -8px 48px rgba(0,0,0,.22)",overflow:"hidden",maxHeight:"85vh",display:"flex",flexDirection:"column"}}
+          <div style={{background:"#fff",borderRadius:16,padding:0,width:"min(720px,96vw)",boxShadow:"0 24px 64px rgba(0,0,0,.28)",overflow:"hidden",maxHeight:"88vh",display:"flex",flexDirection:"column"}}
             onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div style={{background:"#1a1814",padding:"20px 24px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
