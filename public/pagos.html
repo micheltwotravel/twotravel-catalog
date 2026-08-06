@@ -195,7 +195,8 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Cliente *</label>
-          <input class="form-input" id="n-client" placeholder="Ej. Jerome V., Ana & Luis" oninput="regenerateWaMsg()">
+          <input class="form-input" id="n-client" list="client-datalist" placeholder="Buscar cliente activo..." autocomplete="off" oninput="regenerateWaMsg()" onchange="onClientSelect(this.value)">
+          <datalist id="client-datalist"></datalist>
         </div>
         <div class="form-group">
           <label class="form-label">Monto *</label>
@@ -220,11 +221,31 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Categoría <span style="font-size:9px;color:var(--ink3)">(opcional)</span></label>
-          <input class="form-input" id="n-category" placeholder="Ej. Chef, Tour, Casa...">
+          <select class="form-select" id="n-category">
+            <option value="">— Seleccionar —</option>
+            <option>Casa / Villa</option>
+            <option>Yate / Boat</option>
+            <option>Chef Privado</option>
+            <option>Tour / Excursión</option>
+            <option>Spa & Wellness</option>
+            <option>Transporte</option>
+            <option>Restaurante</option>
+            <option>Decoración</option>
+            <option>Fotografía & Video</option>
+            <option>Flores</option>
+            <option>Música / DJ</option>
+            <option>Catering</option>
+            <option>Bar / Bebidas</option>
+            <option>Entretenimiento</option>
+            <option>Maquillaje & Hair</option>
+            <option>Bodas — General</option>
+            <option>Otro</option>
+          </select>
         </div>
         <div class="form-group">
           <label class="form-label">Proveedor <span style="font-size:9px;color:var(--ink3)">(opcional)</span></label>
-          <input class="form-input" id="n-vendor" placeholder="Ej. Dennis, Mar y Miel">
+          <input class="form-input" id="n-vendor" list="vendor-datalist" placeholder="Buscar proveedor..." autocomplete="off">
+          <datalist id="vendor-datalist"></datalist>
         </div>
       </div>
 
@@ -256,7 +277,14 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
           <label class="form-label">Recordatorio <span style="font-size:9px;color:var(--ink3)">(fecha)</span></label>
           <input class="form-input" id="n-reminder" type="date">
         </div>
-        <div class="form-group" style="grid-column:span 2">
+        <div class="form-group">
+          <label class="form-label">Idioma del mensaje</label>
+          <div style="display:flex;gap:0;height:34px">
+            <button type="button" id="lang-es" onclick="setLang('es')" style="flex:1;font-size:11px;font-family:inherit;border:1px solid var(--gold);background:var(--gold);color:#fff;cursor:pointer">🇨🇴 ES</button>
+            <button type="button" id="lang-en" onclick="setLang('en')" style="flex:1;font-size:11px;font-family:inherit;border:1px solid var(--border2);background:transparent;color:var(--ink2);cursor:pointer;border-left:none">🇺🇸 EN</button>
+          </div>
+        </div>
+        <div class="form-group">
           <label class="form-label">Plantilla de mensaje</label>
           <select class="form-select" id="n-template" onchange="applyTemplate(this.value)">
             <option value="cobro_inicial_concierge">💬 Cobro inicial — Concierge</option>
@@ -292,15 +320,49 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
       </div>
 
     </div>
-    <div class="modal-foot">
+    <div class="modal-foot" style="flex-wrap:wrap;gap:8px">
       <button class="tbtn" onclick="closeNewModal()">Cancelar</button>
-      <button class="tbtn primary" onclick="createPago()">Guardar cobro</button>
+      <button class="tbtn" onclick="createPago(false,true)" style="margin-left:auto">+ Guardar y agregar otro</button>
+      <button class="tbtn" onclick="createPago(false,false)">Guardar sin enviar</button>
+      <button class="tbtn primary" onclick="createPago(true,false)">Guardar y enviar WhatsApp</button>
     </div>
   </div>
 </div>
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec';
+
+const VENDORS=[{name:"23 Hotel",cat:"Hotels"},{name:"3 cuerdas",cat:"Live Music"},{name:"51 Sky",cat:"Welcome cocktail venues"},{name:"7 Cielos",cat:"Welcome cocktail venues"},{name:"A&E Frias",cat:"Transport"},{name:"Abraham Guerrero",cat:"Protocol Team"},{name:"Adrian Duarte",cat:"Live Music"},{name:"Adriana Santos",cat:"Catering"},{name:"Afrobatata",cat:"Crazy Hour Shows"},{name:"Aguas Claras",cat:"Haciendas"},{name:"Al Alma",cat:"Restaurants"},{name:"Alba Reyes",cat:"Protocol Team"},{name:"Alcira Guevara",cat:"Furnature Rentals"},{name:"Alejandro Manotas",cat:"Officiants"},{name:"Alexandra Rey",cat:"Protocol Team"},{name:"Alquimico",cat:"Welcome cocktail venues"},{name:"Amare",cat:"Beach Venues"},{name:"Amarla",cat:"City Center Villas"},{name:"Ambientes & Espacios",cat:"Decoration"},{name:"Ana Carolina Valencia",cat:"Protocol Team"},{name:"Ana Cecilia Arroyo",cat:"Makeup & Hair Style"},{name:"Andrés Dj Pipo",cat:"DJ"},{name:"Anem Bodas Simbolicas",cat:"Officiants"},{name:"Angelica Cruz",cat:"Protocol Team"},{name:"Apogeo",cat:"Welcome cocktail venues"},{name:"Aristy Makeup",cat:"Makeup & Hair Style"},{name:"Arqtic",cat:"Stage and Scenography"},{name:"Atolon",cat:"Beach Venues"},{name:"Awa Coco",cat:"Experiences"},{name:"Baluarte San Francisco Javier",cat:"Cultural and Historic Venues"},{name:"Baroca Rooftop",cat:"Welcome cocktail venues"},{name:"Bartending Show",cat:"Experiences"},{name:"Bartending show",cat:"Bar movil"},{name:"Bellas Artes",cat:"Cultural and Historic Venues"},{name:"Beth Greenfield",cat:"Protocol Team"},{name:"Bevgo",cat:"Liquors / Drinks"},{name:"Binn Hotel",cat:""},{name:"Blanco Studios",cat:"Photography & Video"},{name:"Blue Apple",cat:"Beach Venues"},{name:"Bora Bora",cat:"Tours"},{name:"Camila Zapata",cat:"Protocol Team"},{name:"Camilo Hernández",cat:"DJ"},{name:"Candé",cat:"Restaurants"},{name:"Captacabina",cat:"Entretenimiento"},{name:"Carlos Torres Autograph",cat:"Makeup & Hair Style"},{name:"Carnavalihe",cat:"Mulatas and Dancers"},{name:"Cartagena Magica",cat:"Furnature Rentals"},{name:"Cartagena Mágica",cat:"Decoration"},{name:"Cartagena Nanny",cat:"Childcare service"},{name:"Cartagena4U Travel Agency",cat:"Chivas"},{name:"Casa 1537",cat:"City Center Villas"},{name:"Casa Arzobispado",cat:"City Center Villas"},{name:"Casa Conde de Pestagua",cat:"City Center Villas"},{name:"Casa Cordoba Cabal",cat:"City Center Villas"},{name:"Casa Del Marques (SENA)",cat:"Cultural and Historic Venues"},{name:"Casa Despecho",cat:"Clubs"},{name:"Casa Estrella",cat:"City Center Villas"},{name:"Casa Fals",cat:"Furnature Rentals"},{name:"Casa Las Marias",cat:"Cultural and Historic Venues"},{name:"Casa Pura",cat:"Welcome cocktail venues"},{name:"Casa Real Getsemaní",cat:"City Center Villas"},{name:"Casa Santiago Botero",cat:"City Center Villas"},{name:"Casa Santos de Piedra",cat:"City Center Villas"},{name:"Casa Trujillo",cat:"City Center Villas"},{name:"Casona Vida",cat:"Restaurants"},{name:"Catamaran Cartagena",cat:"Boat + Cats & Yatchs"},{name:"Catedral Santa Catalina",cat:"Churches"},{name:"Centro de Convenciones",cat:"Convention Centers"},{name:"Charleston Santa Teresa",cat:"Hotels"},{name:"Chentani",cat:"Furnature Rentals"},{name:"Chivas Medellin",cat:"Chivas"},{name:"Chocolate Sabor y Baile",cat:"Crazy Hour Shows"},{name:"Cigar Roller by Kary Hernández",cat:"Experiences"},{name:"Cinco Quintas",cat:"Hotels"},{name:"Circo Caribe",cat:"Crazy Hour Shows"},{name:"Cirly Herazo",cat:"Portable A/C"},{name:"Clara Mendoza",cat:"Photography & Video"},{name:"Clave de Dos",cat:"Live Music"},{name:"Club Naval",cat:"Clubs"},{name:"Collection 1537",cat:"Transport"},{name:"Colombia Experiences",cat:"Antique & Luxury Cars"},{name:"Compañia Audiovisual",cat:"Photography & Video"},{name:"Corona Tours",cat:"Transport"},{name:"Crazy Hour",cat:"Crazy Hour Shows"},{name:"Creativo",cat:"Decoration"},{name:"Creativos",cat:"Furnature Rentals"},{name:"DJ Cost",cat:"DJ"},{name:"DMX Producciones",cat:"Production"},{name:"Daniela Uzcategui",cat:"Protocol Team"},{name:"De Luxe",cat:"Liquors / Drinks"},{name:"Delafiut Photographer",cat:"Photography & Video"},{name:"Diana Melo",cat:"Stationery"},{name:"Dislicores",cat:"Liquors / Drinks"},{name:"Dulce Avellana",cat:"Cakes & Desserts"},{name:"Ekobios",cat:"Mulatas and Dancers"},{name:"El Arsenal",cat:"Hotels"},{name:"El Mirador",cat:"Welcome cocktail venues"},{name:"El Vaquero Pirotecnia",cat:"Fireworks"},{name:"Elsy",cat:"Cakes & Desserts"},{name:"Ely",cat:"Cakes & Desserts"},{name:"Enfermera MariLuz",cat:"Medical Services"},{name:"Enigma Producciones",cat:"Production"},{name:"Enrique López",cat:"Catering"},{name:"Entarimados",cat:"Stage and Scenography"},{name:"Ermita",cat:"Hotels"},{name:"Escuela Taller",cat:"Cultural and Historic Venues"},{name:"Esteban Nieto",cat:"Live Music"},{name:"Eteka",cat:"Beach Venues"},{name:"Etel",cat:"Makeup & Hair Style"},{name:"Fabian Alvarez",cat:"Photography & Video"},{name:"Fabian Gómez",cat:"Catering"},{name:"Fama Group",cat:"Production"},{name:"Fenix",cat:"Beach Venues"},{name:"Florarte",cat:"Decoration"},{name:"Fotocabina",cat:"Entretenimiento"},{name:"Frank Morales",cat:"DJ"},{name:"Gabo & Mafe",cat:"Photography & Video"},{name:"Geco",cat:"Crazy Hour Shows"},{name:"Gelato Artesanal Cartagena",cat:"Catering"},{name:"Gema tours",cat:"Transport"},{name:"Gerardo Nieto",cat:"Officiants"},{name:"Gerwin",cat:"DJ"},{name:"Gorilla",cat:"Stage and Scenography"},{name:"Grupo Ekobios",cat:"Crazy Hour Shows"},{name:"Happy Gospel",cat:"Crazy Hour Shows"},{name:"Health cars",cat:"Medical Services"},{name:"Hippie Beach",cat:"Beach Venues"},{name:"Hotel Amarla",cat:"Hotels"},{name:"Hotel Casa del Gobernador",cat:"City Center Villas"},{name:"Hotel El Marques",cat:"Hotels"},{name:"Hotel Estelar Square",cat:"Hotels"},{name:"Hotel Las Islas",cat:"Beach Venues"},{name:"Hotel Movich",cat:"Hotels"},{name:"Hotel Namaste",cat:"Beach Venues"},{name:"Hotel Quadrifolio",cat:"Hotels"},{name:"IVC Producciones",cat:"Production"},{name:"Iglesia San Pedro Claver",cat:"Churches"},{name:"Iglesia Santo Domingo",cat:"Churches"},{name:"Iglesia Santo Toribio",cat:"Churches"},{name:"Iglesia dela Tercera Orden",cat:"Churches"},{name:"Isla Capri",cat:"Beach Venues"},{name:"Isla Coralina",cat:"Tours"},{name:"Isla del encanto",cat:"Beach Venues"},{name:"Janeth Sanjuan",cat:"Makeup & Hair Style"},{name:"Javier Barrera",cat:"Live Music"},{name:"Jessica Ospino",cat:"Protocol Team"},{name:"Jesus Díaz",cat:"Makeup & Hair Style"},{name:"Jesús González",cat:"Protocol Team"},{name:"John Martínez",cat:"Makeup & Hair Style"},{name:"Juan Camilo Donado",cat:"DJ"},{name:"Juan Crismatt - Grupo Avalon",cat:"DJ"},{name:"Juan Pablo Espinosa",cat:"Protocol Team"},{name:"Juan Ramos",cat:"Protocol Team"},{name:"Karina Bello",cat:"Protocol Team"},{name:"Karina Tejada",cat:"Protocol Team"},{name:"Karla Brigitte López",cat:"Makeup & Hair Style"},{name:"Kike Serrano",cat:"DJ"},{name:"Kymbala Corporación Cultural",cat:"Crazy Hour Shows"},{name:"La Cabrera",cat:"Welcome cocktail venues"},{name:"Lagus Media",cat:"Photography & Video"},{name:"Las Fotos de Vale",cat:"Photography & Video"},{name:"Laura Nuñez",cat:"Makeup & Hair Style"},{name:"Lery Key",cat:"Live Music"},{name:"Licopolis",cat:"Liquors / Drinks"},{name:"Lucena",cat:"Welcome cocktail venues"},{name:"Luckier productions",cat:"DJ"},{name:"Luis Mora Arenas",cat:"Makeup & Hair Style"},{name:"Luis Salgado",cat:"Decoration"},{name:"Luxury Rentals",cat:"Transport"},{name:"MAT",cat:"Photography & Video"},{name:"MGS Producciones",cat:"Production"},{name:"MM Bakery",cat:"Cakes & Desserts"},{name:"Mabel Torres",cat:"Protocol Team"},{name:"Mangatta",cat:"Tours"},{name:"Mar y Miel",cat:"Catering"},{name:"Marea",cat:"Restaurants"},{name:"Mari Palencia",cat:"Officiants"},{name:"Mariachis Cartagena",cat:"Live Music"},{name:"Mariana Bedoya",cat:"Protocol Team"},{name:"María Jose Pereira",cat:"Makeup & Hair Style"},{name:"Meraki",cat:"Makeup & Hair Style"},{name:"Mila",cat:"Cakes & Desserts"},{name:"Montecarlo",cat:"Live Music"},{name:"Morris Films",cat:"Photography & Video"},{name:"Museo Naval",cat:"Cultural and Historic Venues"},{name:"Musique Producciones",cat:"Production"},{name:"Nacar Hotel",cat:"Hotels"},{name:"Naosco",cat:"Experiences"},{name:"Natalia Martinez",cat:"Cakes & Desserts"},{name:"Natalia Sánchez",cat:"Protocol Team"},{name:"Nauty 360",cat:"Boat + Cats & Yatchs"},{name:"Navega Colombia",cat:"Boat + Cats & Yatchs"},{name:"Nelson Gomez",cat:"Live Music"},{name:"Neon Party - HS Producciones",cat:"Crazy Hour Shows"},{name:"Nicolas Herrera",cat:"Souvenirs"},{name:"Niku",cat:"Restaurants"},{name:"Nova Producciones",cat:"Production"},{name:"OAT",cat:"Transport"},{name:"Octava Potencia",cat:"Live Music"},{name:"Omar López",cat:"Catering"},{name:"Open Bar Two Lovers",cat:"Liquors / Drinks"},{name:"Orlando Hernández",cat:"Officiants"},{name:"Palacio de la Inquisición",cat:"Cultural and Historic Venues"},{name:"Palmarito",cat:"Beach Venues"},{name:"Pargo Project",cat:"Crazy Hour Shows"},{name:"Pascal",cat:"Catering"},{name:"Pasquin de Joaco",cat:"Bar movil"},{name:"Paue",cat:"Tours"},{name:"Petalos",cat:"Decoration"},{name:"Pirotecnia Lusan",cat:"Fireworks"},{name:"Playa Producciones",cat:"Production"},{name:"Portada Peluqueria",cat:"Makeup & Hair Style"},{name:"Premier Weddings & Events",cat:"Furnature Rentals"},{name:"Protokol",cat:"Services Beverages & Staff"},{name:"Raúl de la Peña",cat:"Photography & Video"},{name:"Ready Logistica",cat:"Production"},{name:"Resmont Car",cat:"Transport"},{name:"Restaurante Fuerte del Pastelillo",cat:"Cultural and Historic Venues"},{name:"Rhitmo Producciones",cat:"Production"},{name:"Rosa Barrios",cat:"Protocol Team"},{name:"Rosita de Benedetti",cat:"Cakes & Desserts"},{name:"Ruben & la Cartagena Stars",cat:"Live Music"},{name:"Sailing Land",cat:"Boat + Cats & Yatchs"},{name:"Salón tropical",cat:"Welcome cocktail venues"},{name:"Santa Catalina",cat:"Hotels"},{name:"Santa Clara",cat:"Hotels"},{name:"Santamaria Films",cat:"Photography & Video"},{name:"Santuario San Pedro Claver",cat:"Cultural and Historic Venues"},{name:"Scarleth Rivera",cat:"Makeup & Hair Style"},{name:"Sebastian Bolivar",cat:"Photography & Video"},{name:"Sebastian Schotborgh",cat:"Protocol Team"},{name:"Serrezuela",cat:"Convention Centers"},{name:"Shaboo",cat:"Beach Venues"},{name:"Siena Colombia",cat:"Souvenirs"},{name:"Simah",cat:"Restaurants"},{name:"Sofia Millan",cat:"Protocol Team"},{name:"Somya",cat:"Photography & Video"},{name:"Sophia Hotel",cat:"Hotels"},{name:"Stefany Carillo",cat:"Live Music"},{name:"Sweet & Sour",cat:"Services Beverages & Staff"},{name:"Tarra",cat:"Security"},{name:"Teatro Adolfo Mejia",cat:"Cultural and Historic Venues"},{name:"Townhouse",cat:"Bar movil"},{name:"Two Lovers",cat:"Protocol Team"},{name:"Un Tercio Bodas",cat:"Photography & Video"},{name:"Urania Rooftop",cat:"Welcome cocktail venues"},{name:"Vanessa Figueroa",cat:"Catering"},{name:"Vicente Ledesma",cat:"Photography & Video"},{name:"Vicky Speedboat",cat:"Boat + Cats & Yatchs"},{name:"Vintage Car Experiences",cat:"Transport"},{name:"Vistamare",cat:"Beach Venues"},{name:"Viva Flor",cat:"Decoration"},{name:"Viva la vida",cat:"Welcome cocktail venues"},{name:"Yosayro Moncaris",cat:"Protocol Team"},{name:"Zamaz",cat:"Cultural and Historic Venues"}];
+
+let msgLang = 'es';
+function setLang(lang) {
+  msgLang = lang;
+  document.getElementById('lang-es').style.background = lang==='es' ? 'var(--gold)' : 'transparent';
+  document.getElementById('lang-es').style.color      = lang==='es' ? '#fff' : 'var(--ink2)';
+  document.getElementById('lang-es').style.borderColor= lang==='es' ? 'var(--gold)' : 'var(--border2)';
+  document.getElementById('lang-en').style.background = lang==='en' ? 'var(--gold)' : 'transparent';
+  document.getElementById('lang-en').style.color      = lang==='en' ? '#fff' : 'var(--ink2)';
+  document.getElementById('lang-en').style.borderColor= lang==='en' ? 'var(--gold)' : 'var(--border2)';
+  regenerateWaMsg();
+}
+
+let kickoffCache = [];
+async function loadKickoffsForModal() {
+  try {
+    const r = await fetch(GAS_URL + '?action=listKickoffs');
+    const d = await r.json();
+    kickoffCache = d.data || d || [];
+    const dl = document.getElementById('client-datalist');
+    if (dl) dl.innerHTML = kickoffCache.map(k => `<option value="${(k.guestName||'').replace(/"/g,'&quot;')}">`).join('');
+  } catch {}
+}
+function onClientSelect(val) {
+  const k = kickoffCache.find(k => (k.guestName||'') === val);
+  if (!k) return;
+  const phoneEl = document.getElementById('n-phone');
+  if (phoneEl && !phoneEl.value) phoneEl.value = k.whatsapp || k.phone || '';
+  regenerateWaMsg();
+}
 
 const STATUSES = {
   pend:  {label:'Pendiente',  color:'#aaaaaa'},
@@ -328,6 +390,14 @@ const DEPT_LABELS = {
 const BASE_URL = 'https://www.twotravelvip.com';
 const PDF_GENERAL  = BASE_URL + '/payment-options.pdf';
 const PDF_WEDDINGS = BASE_URL + '/payment-options-weddings.pdf';
+
+const TEMPLATES_EN = {
+  cobro_inicial_concierge: { build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [`Hi ${firstName}! 🌟`,``,`We hope you're excited for your upcoming Two Travel experience.`,``,desc?`Here's a summary of your pending payment:\n\n${desc}`:`Here's a summary of your pending payment:`,montoStr?`\n💰 Total: *${montoStr}*`:``,facturaLink?`\n🧾 Invoice: ${facturaLink}`:``,``,`You can complete the payment using any of the methods available here:`,pdfLink,``,`Any questions, we're happy to help. See you soon!`,`— Two Travel ✨`].filter(l=>l!==undefined).join('\n') },
+  cobro_inicial_wedding:   { build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [`Hi ${firstName}! 💍`,``,`We're so excited to be part of your special day.`,``,desc?`Here's a summary of your pending payment:\n\n${desc}`:`Here's a summary of your pending payment:`,montoStr?`\n💰 Total: *${montoStr}*`:``,facturaLink?`\n🧾 Invoice: ${facturaLink}`:``,``,`You can complete the payment using any of the methods available here:`,pdfLink,``,`With love,`,`— Two Lovers ✨`].filter(l=>l!==undefined).join('\n') },
+  recordatorio_suave:      { build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [`Hi ${firstName}! 😊`,``,`Just a gentle reminder that you have a pending payment with us.`,desc?`\n${desc}`:``,montoStr?`\n💰 Total: *${montoStr}*`:``,facturaLink?`\n🧾 Invoice: ${facturaLink}`:``,``,`Payment methods available here:`,pdfLink,``,`Any questions, just let us know! — Two Travel ✨`].filter(l=>l!==undefined).join('\n') },
+  recordatorio_urgente:    { build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [`Hi ${firstName},`,``,`We'd like to let you know that your payment is still pending and we need confirmation to proceed with your reservation.`,desc?`\n${desc}`:``,montoStr?`\n💰 Total pending: *${montoStr}*`:``,facturaLink?`\n🧾 Invoice: ${facturaLink}`:``,``,`Please complete the payment through one of our methods:`,pdfLink,``,`If you've already paid, please send us your receipt. Thank you!`,`— Two Travel`].filter(l=>l!==undefined).join('\n') },
+  confirmacion_pago:       { build: ({firstName, desc, montoStr}) => [`Hi ${firstName}! 🎉`,``,`We've successfully received your payment!`,desc?`\n${desc}`:``,montoStr?`\n💰 Amount: *${montoStr}*`:``,``,`Your reservation is confirmed. We'll send you all the details shortly.`,``,`See you soon! — Two Travel ✨`].filter(l=>l!==undefined).join('\n') },
+};
 
 const TEMPLATES = {
   cobro_inicial_concierge: {
@@ -432,14 +502,13 @@ function buildWaMsg() {
   const dept = document.getElementById('n-dept').value;
   const tplKey = document.getElementById('n-template')?.value ||
     (dept === 'wedding' ? 'cobro_inicial_wedding' : 'cobro_inicial_concierge');
-  const tpl = TEMPLATES[tplKey] || TEMPLATES['cobro_inicial_concierge'];
+  const tplSet = msgLang === 'en' ? TEMPLATES_EN : TEMPLATES;
+  const tpl = (tplSet[tplKey] || tplSet['cobro_inicial_concierge'] || TEMPLATES['cobro_inicial_concierge']);
   return tpl.build(getTemplateVars());
 }
 
 function applyTemplate(key) {
-  const tpl = TEMPLATES[key];
-  if (!tpl) return;
-  document.getElementById('n-wamsg').value = tpl.build(getTemplateVars());
+  document.getElementById('n-wamsg').value = buildWaMsg();
 }
 
 function regenerateWaMsg() {
@@ -479,8 +548,7 @@ async function syncToGAS(){
 async function loadFromGAS(){
   setSyncInfo('Sincronizando...');
   try{
-    const r = await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({action:'getPagos'})});
+    const r = await fetch(GAS_URL + '?action=getPagos');
     const d = await r.json();
     if(d.ok && d.data?.length){
       pagos = d.data;
@@ -747,9 +815,7 @@ function openLightbox(id){
 }
 
 /* ── NEW PAGO MODAL ── */
-function openNewModal(){
-  editingId = null;
-  document.getElementById('modal-title-text').textContent = 'Nuevo Cobro a Cliente';
+function resetModalForm(){
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('n-date').value = today;
   document.getElementById('n-dept').value = 'concierge';
@@ -762,17 +828,28 @@ function openNewModal(){
   document.getElementById('n-phone').value = '';
   document.getElementById('n-person').value = '';
   document.getElementById('n-factura').value = '';
+  document.getElementById('n-reminder').value = '';
   document.getElementById('n-notes').value = '';
   document.getElementById('n-wamsg').value = '';
-  document.getElementById('new-modal').style.display = 'flex';
+  msgLang = 'es'; setLang('es');
+  setTimeout(()=>{ document.getElementById('n-wamsg').value = buildWaMsg(); }, 50);
   setTimeout(()=>{ document.getElementById('n-client').focus(); }, 50);
-  setTimeout(()=>{ document.getElementById('n-wamsg').value = buildWaMsg(); }, 100);
+}
+function openNewModal(){
+  editingId = null;
+  document.getElementById('modal-title-text').textContent = 'Nuevo Cobro a Cliente';
+  // Populate vendor datalist
+  const vdl = document.getElementById('vendor-datalist');
+  if (vdl && !vdl.children.length) vdl.innerHTML = VENDORS.map(v=>`<option value="${v.name}" label="${v.cat}">`).join('');
+  resetModalForm();
+  document.getElementById('new-modal').style.display = 'flex';
+  loadKickoffsForModal();
 }
 function closeNewModal(){
   document.getElementById('new-modal').style.display = 'none';
   editingId = null;
 }
-function createPago(){
+async function createPago(sendWa=false, addAnother=false){
   const client = document.getElementById('n-client').value.trim();
   const desc   = document.getElementById('n-desc').value.trim();
   const amount = document.getElementById('n-amount').value;
@@ -780,15 +857,16 @@ function createPago(){
   if(!desc)  { showToast('Agrega una descripción de servicios'); return; }
   if(!amount){ showToast('Ingresa el monto'); return; }
 
+  const dept = document.getElementById('n-dept').value;
   const p = {
     id:           'pg' + Date.now(),
-    dept:         document.getElementById('n-dept').value,
+    dept,
     date:         document.getElementById('n-date').value,
-    category:     document.getElementById('n-category').value.trim(),
-    client:       client,
+    category:     document.getElementById('n-category').value,
+    client,
     vendor:       document.getElementById('n-vendor').value.trim(),
-    desc:         desc,
-    amount:       amount,
+    desc,
+    amount,
     currency:     document.getElementById('n-currency').value,
     method:       '',
     person:       document.getElementById('n-person').value,
@@ -803,9 +881,35 @@ function createPago(){
   pagos.unshift(p);
   save();
   notifyNewPago(p);
-  closeNewModal();
   render();
-  showToast('Solicitud creada ✓');
+
+  if(sendWa && p.phone){
+    const msg = document.getElementById('n-wamsg').value || buildWaMsg();
+    const pdfLink = dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
+    showToast('Enviando WhatsApp...', 6000);
+    try{
+      const body = { to: p.phone, message: msg };
+      if(pdfLink) body.mediaUrl = pdfLink;
+      if(p.factura) body.facturaUrl = p.factura;
+      const r = await fetch('/api/whatsapp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const d = await r.json();
+      if(d.ok){
+        p.cobroAt = new Date().toISOString();
+        save();
+        showToast('✅ WhatsApp enviado a ' + p.client);
+      } else {
+        showToast('❌ Error WA: ' + (d.error||'revisa la configuración'), 6000);
+      }
+    }catch(err){ showToast('❌ Error de red: ' + err.message, 6000); }
+  } else if(!sendWa){
+    showToast('Solicitud creada ✓');
+  }
+
+  if(addAnother){
+    resetModalForm();
+  } else {
+    closeNewModal();
+  }
 }
 
 /* ── COBRAR VIA WHATSAPP ── */
