@@ -46,6 +46,11 @@ class ErrorBoundary extends Component {
 
 import { updateKickoffInSheet, fetchKickoffsFromSheet, saveKickoffToSheet } from "./sheetServices";
 
+async function getKickoffByIdFromSheet(id) {
+  const all = await fetchKickoffsFromSheet();
+  return (Array.isArray(all) ? all : []).find(k => String(k.id).trim() === String(id).trim()) ?? null;
+}
+
 const translations = {
   en: {
     title: "How was your trip?",
@@ -3899,14 +3904,8 @@ function DrinksCatalog() {
 
   React.useEffect(() => {
     if (!kickoffId) { setLoading(false); return; }
-    fetch(GAS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "getKickoffById", id: kickoffId }),
-    })
-      .then(r => r.json())
-      .then(res => {
-        const k = res.data;
+    getKickoffByIdFromSheet(kickoffId)
+      .then(k => {
         if (!k) return;
         if (k.arrivalDate)   setKickoffArrival(k.arrivalDate);
         if (k.departureDate) setKickoffDepart(k.departureDate);
@@ -4450,13 +4449,8 @@ function GroceryCatalog() {
   // Load existing order
   React.useEffect(() => {
     if (!kickoffId) { setLoading(false); return; }
-    fetch(GAS_URL, {
-      method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body: JSON.stringify({ action:"getKickoffById", id:kickoffId }),
-    })
-      .then(r=>r.json())
-      .then(res => {
-        const k = res.data;
+    getKickoffByIdFromSheet(kickoffId)
+      .then(k => {
         if (!k) return;
         if (k.guestName && !prefillName) setGuestName(k.guestName);
         if (k.groceryOrderJson) {
@@ -4763,12 +4757,9 @@ function CheckinForm() {
 
   React.useEffect(() => {
     if (!kickoffId) { setLoading(false); return; }
-    fetch(GAS_URL, {
-      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "getKickoffById", id: kickoffId }),
-    }).then(r => r.json()).then(res => {
-      if (res.data) setKickoff(res.data);
-    }).catch(() => {}).finally(() => setLoading(false));
+    getKickoffByIdFromSheet(kickoffId)
+      .then(k => { if (k) setKickoff(k); })
+      .catch(() => {}).finally(() => setLoading(false));
   }, [kickoffId]);
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
@@ -5121,13 +5112,8 @@ function BreakfastCatalog() {
 
   React.useEffect(() => {
     if (!kickoffId) { setLoading(false); return; }
-    fetch(GAS_URL, {
-      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "getKickoffById", id: kickoffId }),
-    })
-      .then(r => r.json())
-      .then(res => {
-        const k = res.data;
+    getKickoffByIdFromSheet(kickoffId)
+      .then(k => {
         if (!k) return;
         // nights from dates always wins — computed first, used to clamp saved orders
         let dateNights = 0;
@@ -5703,13 +5689,8 @@ function ItineraryCatalog() {
 
   React.useEffect(() => {
     if (!kickoffId) { setLoading(false); return; }
-    fetch(GAS_URL_IC, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "getKickoffById", id: kickoffId }),
-    })
-      .then(r => r.json())
-      .then(res => { if (res.data) setKickoff(res.data); })
+    getKickoffByIdFromSheet(kickoffId)
+      .then(k => { if (k) setKickoff(k); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [kickoffId]);
