@@ -11,9 +11,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Note: flight_date requires paid plan; only send it if key is present and plan allows
     const params = new URLSearchParams({ access_key: key, flight_iata: flight.toUpperCase(), limit: "1" });
-    if (date) params.set("flight_date", date);
     const r = await fetch(`http://api.aviationstack.com/v1/flights?${params}`);
     const d = await r.json();
 
