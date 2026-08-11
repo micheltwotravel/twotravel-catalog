@@ -5,48 +5,62 @@ export default async function handler(req, res) {
   const { flight, date } = req.query;
   if (!flight) return res.status(400).json({ ok: false, error: "Missing flight" });
 
-  const key = process.env.AVIATIONSTACK_KEY;
+  const key = process.env.AERODATABOX_KEY;
   if (!key) {
-    return res.json({ ok: false, limitReached: true, error: "No API key configured — set AVIATIONSTACK_KEY env var" });
+    return res.json({ ok: false, limitReached: true, error: "No API key — set AERODATABOX_KEY in Vercel" });
   }
 
   try {
-    const params = new URLSearchParams({ access_key: key, flight_iata: flight.toUpperCase(), limit: "1" });
-    const r = await fetch(`http://api.aviationstack.com/v1/flights?${params}`);
-    const d = await r.json();
+    const flightNum = flight.toUpperCase().replace(/\s/g, "");
+    const dateParam = date || new Date().toISOString().split("T")[0];
 
-    // Detect quota / access errors
-    if (d.error) {
-      const code = d.error?.code || "";
-      if (code === "usage_limit_reached" || code === "function_access_restricted") {
-        return res.json({ ok: false, limitReached: true, error: d.error.message });
-      }
-      return res.json({ ok: false, error: d.error.message || "API error" });
+    const url = `https://aerodatabox.p.rapidapi.com/flights/number/${flightNum}/${dateParam}`;
+    const r = await fetch(url, {
+      headers: {
+        "X-RapidAPI-Key": key,
+        "X-RapidAPI-Host": "aerodatabox.p.rapidapi.com",
+      },
+    });
+
+    if (r.status === 404) return res.json({ ok: true, data: null });
+    if (r.status === 429) return res.json({ ok: false, limitReached: true, error: "API rate limit reached" });
+    if (!r.ok) {
+      const txt = await r.text();
+      return res.json({ ok: false, error: `Aerodatabox ${r.status}: ${txt.slice(0, 200)}` });
     }
 
-    if (!d.data || d.data.length === 0) return res.json({ ok: true, data: null });
+    const d = await r.json();
+    if (!d || (Array.isArray(d) && !d.length)) return res.json({ ok: true, data: null });
 
-    const f = d.data[0];
+    const f = Array.isArray(d) ? d[0] : d;
+
+    // Convert "YYYY-MM-DD HH:mm" → ISO string
+    const toISO = (local, utc) => {
+      if (utc)   return utc.replace(" ", "T") + ":00Z";
+      if (local) return local.replace(" ", "T") + ":00";
+      return null;
+    };
+
     return res.json({
       ok: true,
       data: {
-        flightIata:   f.flight?.iata || flight,
-        status:       f.flight_status,
-        depScheduled: f.departure?.scheduled,
-        depActual:    f.departure?.actual,
-        depDelay:     f.departure?.delay,
-        depAirport:   f.departure?.airport,
-        depIata:      f.departure?.iata,
-        arrScheduled: f.arrival?.scheduled,
-        arrEstimated: f.arrival?.estimated,
-        arrActual:    f.arrival?.actual,
-        arrDelay:     f.arrival?.delay,
-        arrAirport:   f.arrival?.airport,
-        arrIata:      f.arrival?.iata,
-        gate:         f.departure?.gate,
-        terminal:     f.departure?.terminal,
-        airline:      f.airline?.name,
-      }
+        flightIata:   f.number || flight,
+        status:       (f.status || "scheduled").toLowerCase(),
+        depScheduled: toISO(f.departure?.scheduledTime?.local, f.departure?.scheduledTime?.utc),
+        depActual:    toISO(f.departure?.actualTime?.local,    f.departure?.actualTime?.utc),
+        depDelay:     f.departure?.delay ?? null,
+        depAirport:   f.departure?.airport?.name || "",
+        depIata:      f.departure?.airport?.iata || "",
+        arrScheduled: toISO(f.arrival?.scheduledTime?.local,   f.arrival?.scheduledTime?.utc),
+        arrEstimated: toISO(f.arrival?.estimatedTime?.local,   f.arrival?.estimatedTime?.utc),
+        arrActual:    toISO(f.arrival?.actualTime?.local,      f.arrival?.actualTime?.utc),
+        arrDelay:     f.arrival?.delay ?? null,
+        arrAirport:   f.arrival?.airport?.name || "",
+        arrIata:      f.arrival?.airport?.iata || "",
+        gate:         f.departure?.gate || null,
+        terminal:     f.departure?.terminal || null,
+        airline:      f.airline?.name || "",
+      },
     });
   } catch (err) {
     return res.status(500).json({ ok: false, error: err.message });
