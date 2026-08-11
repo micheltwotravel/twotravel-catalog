@@ -1,6 +1,6 @@
 // ================================================================
 // TWO TRAVEL CONCIERGE — Google Apps Script
-// Maneja: Kickoffs (Sheet1) · Tasks · Soporte · Slack Billing · Properties
+// Maneja: Kickoffs (Sheet1) · Tasks · Soporte · Slack Billing · Properties · Handoffs · Bodas
 // ================================================================
 const SS = SpreadsheetApp.getActiveSpreadsheet();
 
@@ -19,10 +19,19 @@ const KICKOFF_HEADERS = [
   "tripDates2","arrivalDate2","departureDate2",
   "accommodationName2","accommodationAddr2","accommodationUrl2",
   "drinkOrderJson","groceryOrder","groceryOrderAt","groceryOrderJson",
-  "sentToTravifyAt","doneAt",
+  "sentToTravifyAt","doneAt","lastModified",
 ];
 
-const TASK_HEADERS = ["id","taskName","assignedTo","assignedEmail","dueDate","status","notes","kickoffId","kickoffName","handoffId","priority","createdAt","completedAt"];
+function testApprovalEmail() {
+  MailApp.sendEmail({
+    to: "alia@two.travel",
+    subject: "✅ Ya tienes acceso al portal Two Travel",
+    body: "Hola!\n\nYa tienes acceso al portal interno de Two Travel.\n\nEntra aquí:\nhttps://twotravelvip.com/?mode=dashboard\n\nUsa tu email y el PIN que elegiste al registrarte.\n\n— Michel & Caro"
+  });
+  Logger.log("Email enviado");
+}
+
+const TASK_HEADERS = ["id","taskName","assignedTo","assignedEmail","dueDate","status","notes","kickoffId","kickoffName","handoffId","priority","createdAt","completedAt","fase","tipo","source"];
 const SOPORTE_HEADERS = [
   "id","nombre","tipo","prioridad","titulo","descripcion","createdAt","status",
 ];
@@ -31,6 +40,10 @@ const SOPORTE_HEADERS = [
 function jsonResponse(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+function jsonOut(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
 function uid() {
@@ -94,13 +107,77 @@ function doPost(e) {
       case "saveKickoff":        return jsonResponse(saveKickoff_(payload));
       case "updateKickoff":      return jsonResponse(updateKickoff_(id, updates));
       case "deleteKickoff":      return jsonResponse(deleteKickoff_(id));
+      case "saveAvailability":   return saveAvailability(body);
+      case "bookSlot":           return bookSlot(body);
       case "getKickoffById":     return jsonResponse({ ok: true, data: getKickoffById_(id) });
       case "listTasks":          return jsonResponse({ ok: true, data: listTasks_() });
       case "saveTask":           return jsonResponse(saveTask_(payload));
       case "updateTask":         return jsonResponse(updateTask_(payload.id || id, payload));
       case "listSoporte":        return jsonResponse({ ok: true, data: listSoporte_() });
+      case "listBodas":          return jsonResponse({ ok: true, data: listBodas_() });
+
+      case "uploadImage": {
+        const folder = DriveApp.getFolderById("1rCaYgQTpS3CJc-qawtmT2-SbYZCjiCkj");
+        const blob = Utilities.newBlob(
+          Utilities.base64Decode(payload.base64),
+          payload.mimeType,
+          payload.filename || "imagen.jpg"
+        );
+        const file = folder.createFile(blob);
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        const fileId = file.getId();
+        return jsonResponse({ ok: true, url: `https://lh3.googleusercontent.com/d/${fileId}` });
+      }
+
+      case "saveBoda":    return jsonResponse(saveBoda_(payload));
+      case "updateBoda":  return jsonResponse(updateBoda_(id, updates));
+      case "deleteBoda":  return jsonResponse(deleteBoda_(payload.id || id));
+
       case "soporte":            return jsonResponse(saveSoporte_(payload));
+      case "saveCalendarToken":  return jsonResponse(saveCalendarToken(payload));
+      case "getCalendarToken":   return jsonResponse(getCalendarToken(payload));
+      case "getCalendarTokens":  return jsonResponse(getCalendarTokens());
+      case "addMeetingToKickoff": return jsonResponse(addMeetingToKickoff(payload));
       case "saveSoporte":        return jsonResponse(saveSoporte_(payload));
+      case "createMondayItems":  return jsonResponse(createMondayItems_(payload));
+      case "saveComisiones":     return jsonResponse(saveComisiones_(payload));
+      case "getComisiones":      return jsonResponse({ ok: true, data: getComisiones_() });
+
+      // ── Pagos ──
+      case "getPagos":          return jsonResponse({ ok: true, data: getPagos_() });
+      case "savePagos":         return jsonResponse(savePagos_(payload));
+      case "updatePago":        return jsonResponse(updatePago_(payload.id || id, payload));
+      case "deletePago":        return jsonResponse(deletePago_(payload.id || id));
+      case "notifyNewPago":     return jsonResponse(notifyNewPago_(payload));
+      case "notifyPagoStatus":  return jsonResponse(notifyPagoStatus_(payload));
+
+      case "registerUser": {
+        let sh = SS.getSheetByName("Usuarios");
+        if (!sh) {
+          sh = SS.insertSheet("Usuarios");
+          sh.appendRow(["email","name","role","pin","active"]);
+        }
+        const rows = sh.getDataRange().getValues();
+        const hdrs = rows[0];
+        const eIdx = hdrs.indexOf("email");
+        const exists = rows.slice(1).find(r =>
+          String(r[eIdx]).toLowerCase() === String(payload.email).toLowerCase()
+        );
+        if (exists) return jsonResponse({ ok: false, error: "Este email ya tiene una cuenta" });
+        if (!payload.email.endsWith("@two.travel"))
+          return jsonResponse({ ok: false, error: "Solo emails @two.travel" });
+        sh.appendRow([payload.email, "", "pending", payload.pin, "false"]);
+        SpreadsheetApp.flush();
+        try {
+          MailApp.sendEmail({
+            to: "michel@two.travel,caro@two.travel",
+            subject: "🔔 Nueva solicitud de acceso — " + payload.email,
+            body: payload.email + " solicitó acceso al portal interno.\n\nApruébalo aquí:\nhttps://twotravelvip.com/?mode=users"
+          });
+        } catch(mailErr) {}
+        return jsonResponse({ ok: true });
+      }
+
       case "updateSoporte": {
         const updId      = body.id;
         const updUpdates = body.updates || {};
@@ -120,6 +197,7 @@ function doPost(e) {
         }
         return jsonResponse({ ok: false, error: "ID no encontrado: " + updId });
       }
+
       case "sendBillingToSlack": return jsonResponse(sendBillingToSlack_(payload));
       case "sendSlackMessage":   return jsonResponse(sendSlackMessage_(payload));
       case "property_bulk":      return jsonResponse(handlePropertyBulk(body.data || []));
@@ -130,14 +208,6 @@ function doPost(e) {
       case "updateHandoff":  return jsonResponse(updateHandoff_(payload.id || id, payload));
       case "deleteHandoff":  return jsonResponse(deleteHandoff_(payload.id || id));
 
-      // ── Pagos / Solicitudes de pago ──
-      case "getPagos":          return jsonResponse({ ok: true, data: getPagos_() });
-      case "savePagos":         return jsonResponse(savePagos_(payload));
-      case "updatePago":        return jsonResponse(updatePago_(payload.id || id, payload));
-      case "deletePago":        return jsonResponse(deletePago_(payload.id || id));
-      case "notifyNewPago":     return jsonResponse(notifyNewPago_(payload));
-      case "notifyPagoStatus":  return jsonResponse(notifyPagoStatus_(payload));
-
       // ── Properties ──
       case "property_list":   return jsonResponse(handlePropertyList());
       case "property_get":    return jsonResponse(handlePropertyGet(body.data || {}));
@@ -145,11 +215,116 @@ function doPost(e) {
       case "property_update": return jsonResponse(handlePropertyUpdate(body.data || {}));
       case "property_delete": return jsonResponse(handlePropertyDelete(body.data || {}));
 
-      // ── Bodas ──
-      case "listBodas":   return jsonResponse({ ok: true, data: listBodas_() });
-      case "saveBoda":    return jsonResponse(saveBoda_(payload));
-      case "updateBoda":  return jsonResponse(updateBoda_(id, updates));
-      case "deleteBoda":  return jsonResponse(deleteBoda_(id));
+      case "getCheckinResponses": {
+        const ciSh = SS.getSheetByName("CheckinResponses");
+        if (!ciSh) return jsonResponse({ ok: true, data: [] });
+        const rows = ciSh.getDataRange().getValues();
+        const hdrs = rows[0];
+        const kidIdx = hdrs.indexOf("kickoffId");
+        const data = rows.slice(1)
+          .filter(r => String(r[kidIdx]) === String(payload.kickoffId))
+          .map(r => {
+            const obj = {};
+            hdrs.forEach((h, i) => { obj[h] = r[i]; });
+            return obj;
+          });
+        return jsonResponse({ ok: true, data });
+      }
+
+      case "loginUser": {
+        const sh = SS.getSheetByName("Usuarios");
+        if (!sh) return jsonResponse({ ok: false, error: "Hoja Usuarios no existe" });
+        const rows = sh.getDataRange().getValues();
+        const hdrs = rows[0];
+        const eIdx = hdrs.indexOf("email"), pIdx = hdrs.indexOf("pin"),
+              nIdx = hdrs.indexOf("name"),  rIdx = hdrs.indexOf("role"),
+              aIdx = hdrs.indexOf("active");
+        const match = rows.slice(1).find(r =>
+          String(r[eIdx]).toLowerCase() === String(payload.email).toLowerCase() &&
+          String(r[pIdx]) === String(payload.pin) &&
+          String(r[aIdx]) !== "false"
+        );
+        if (!match) return jsonResponse({ ok: false, error: "Email o PIN incorrecto" });
+        return jsonResponse({ ok: true, user: { email: match[eIdx], name: match[nIdx], role: match[rIdx] } });
+      }
+
+      case "listUsers": {
+        const sh = SS.getSheetByName("Usuarios");
+        if (!sh) return jsonResponse({ ok: true, data: [] });
+        const rows = sh.getDataRange().getValues();
+        const hdrs = rows[0];
+        const data = rows.slice(1).map(r => {
+          const o = {}; hdrs.forEach((h,i) => { o[h] = r[i]; }); return o;
+        }).filter(r => r.email);
+        return jsonResponse({ ok: true, data });
+      }
+
+      case "updateUser": {
+        const sh = SS.getSheetByName("Usuarios");
+        if (!sh) return jsonResponse({ ok: false, error: "No existe hoja Usuarios" });
+        const rows = sh.getDataRange().getValues();
+        const hdrs = rows[0];
+        const eIdx = hdrs.indexOf("email");
+        const rIdx = hdrs.indexOf("role");
+        for (let r = 1; r < rows.length; r++) {
+          if (String(rows[r][eIdx]).toLowerCase() === String(payload.email).toLowerCase()) {
+            const wasApproved = String(rows[r][rIdx]) === "pending" && payload.role && payload.role !== "pending";
+            Object.entries(payload).forEach(([k,v]) => {
+              if (k === "adminEmail" || k === "email") return;
+              const ci = hdrs.indexOf(k);
+              if (ci >= 0) sh.getRange(r+1, ci+1).setValue(v);
+            });
+            SpreadsheetApp.flush();
+            if (wasApproved) {
+              try {
+                MailApp.sendEmail({
+                  to: payload.email,
+                  subject: "✅ Ya tienes acceso al portal Two Travel",
+                  body: "Hola!\n\nYa tienes acceso al portal interno de Two Travel.\n\nEntra aquí:\nhttps://twotravelvip.com/?mode=dashboard\n\nUsa tu email y el PIN que elegiste al registrarte.\n\n— Michel & Caro"
+                });
+              } catch(e) {}
+            }
+            return jsonResponse({ ok: true });
+          }
+        }
+        return jsonResponse({ ok: false, error: "Usuario no encontrado" });
+      }
+
+      case "upsertUser": {
+        let sh = SS.getSheetByName("Usuarios");
+        if (!sh) {
+          sh = SS.insertSheet("Usuarios");
+          sh.appendRow(["email","name","role","pin","active"]);
+        }
+        const rows = sh.getDataRange().getValues();
+        const hdrs = rows[0];
+        const eIdx = hdrs.indexOf("email");
+        const exists = rows.slice(1).findIndex(r => String(r[eIdx]).toLowerCase() === String(payload.email).toLowerCase());
+        if (exists >= 0) {
+          ["name","role","pin","active"].forEach(k => {
+            if (payload[k] !== undefined) sh.getRange(exists+2, hdrs.indexOf(k)+1).setValue(payload[k]);
+          });
+        } else {
+          sh.appendRow([payload.email, payload.name, payload.role||"concierge", payload.pin, "true"]);
+        }
+        SpreadsheetApp.flush();
+        return jsonResponse({ ok: true });
+      }
+
+      case "saveCheckinResponse": {
+        const { kickoffId, response } = payload;
+        const ss2 = SpreadsheetApp.getActiveSpreadsheet();
+        const ciSheet = ss2.getSheetByName("CheckinResponses") || ss2.insertSheet("CheckinResponses");
+        const headers = ["kickoffId","submittedAt","firstName","lastName","email","phone",
+          "idType","idNumber","dob","nationality","gender",
+          "arrivalAirline","arrivalDate","arrivalFlight",
+          "departureAirline","departureDate","departureFlight",
+          "foodRestrictions","allergies","occasion","photoPermission","isGroupContact"];
+        if (ciSheet.getLastRow() === 0) ciSheet.appendRow(headers);
+        ciSheet.appendRow(headers.map(h => h === "kickoffId" ? kickoffId : (response[h] || "")));
+        SpreadsheetApp.flush();
+        return jsonResponse({ ok: true });
+      }
 
       default:
         return jsonResponse({ ok: false, error: "Unknown action: " + action });
@@ -164,23 +339,46 @@ function doGet(e) {
   try {
     const action = (e.parameter && e.parameter.action) || "";
     switch (action) {
-      case "listKickoffs":    return jsonResponse({ ok: true, data: listKickoffs_() });
-      case "listTasks":       return jsonResponse({ ok: true, data: listTasks_() });
-      case "listSoporte":     return jsonResponse({ ok: true, data: listSoporte_() });
-      case "listProperties":  return jsonResponse(handlePropertyList());
-      case "listBodas":       return jsonResponse({ ok: true, data: listBodas_() });
+      case "listKickoffs":   return jsonResponse({ ok: true, data: listKickoffs_() });
+      case "getAvailability": return getAvailability(e);
+      case "listTasks":      return jsonResponse({ ok: true, data: listTasks_() });
+      case "listSoporte":    return jsonResponse({ ok: true, data: listSoporte_() });
+      case "listBodas":      return jsonResponse({ ok: true, data: listBodas_() });
+      case "listProperties": return jsonResponse(handlePropertyList());
       case "getProperty": {
         const name = (e.parameter && e.parameter.name) || "";
         const id   = (e.parameter && e.parameter.id)   || "";
         if (id) return jsonResponse(handlePropertyGet({ id }));
-        // search by name
-        const result = handlePropertyList();
-        const match  = (result.properties || []).find(p =>
-          (p.Name || p.name || "").toLowerCase() === name.toLowerCase()
+        const list = handlePropertyList();
+        const nl = name.toLowerCase();
+        const match = (list.properties || []).find(p =>
+          (p.Name || p.name || "").toLowerCase().includes(nl) || nl.includes((p.Name || p.name || "").toLowerCase())
         );
         return jsonResponse({ ok: true, data: match || null });
       }
-      default:                return jsonResponse({ ok: true, status: "Two Travel GAS v3 ready" });
+      case "listItineraryItems": {
+        const sh = SS.getSheetByName("Itinerary (no catalog)");
+        if (!sh) return jsonResponse({ ok: true, data: [] });
+        const vals = sh.getDataRange().getValues();
+        if (vals.length < 2) return jsonResponse({ ok: true, data: [] });
+        const headers = vals[0].map(String);
+        const nameEnIdx = headers.indexOf("Item NAME");
+        const nameEsIdx = headers.indexOf("Item NOMBRE");
+        const descEnIdx = headers.indexOf("Description");
+        const descEsIdx = headers.indexOf("Descripcion ESP");
+        const imgIdx    = headers.indexOf("Image");
+        const data = vals.slice(1)
+          .filter(r => r[nameEnIdx] || r[nameEsIdx])
+          .map(r => ({
+            name_en:        String(r[nameEnIdx] || ""),
+            name_es:        String(r[nameEsIdx] || ""),
+            description:    String(r[descEnIdx] || ""),
+            description_es: String(r[descEsIdx] || ""),
+            image:          String(imgIdx >= 0 ? r[imgIdx] : ""),
+          }));
+        return jsonResponse({ ok: true, data });
+      }
+      default: return jsonResponse({ ok: true, status: "Two Travel GAS v3 ready" });
     }
   } catch (err) {
     return jsonResponse({ ok: false, error: err.message });
@@ -217,8 +415,6 @@ function saveKickoff_(payload) {
 function updateKickoff_(id, updates) {
   if (!id) throw new Error("updateKickoff: id vacío");
   const sh = getSheet_("Sheet1");
-
-  // Añadir columnas faltantes dinámicamente
   const lastCol  = sh.getLastColumn();
   const existing = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
   Object.keys(updates).forEach(key => {
@@ -227,21 +423,14 @@ function updateKickoff_(id, updates) {
       existing.push(key);
     }
   });
-
   const data    = sh.getDataRange().getValues();
   const headers = data[0].map(h => String(h || "").trim().toLowerCase());
-
-  // Buscar columna "id" — acepta "id", "Id", "ID"
   const idCol = headers.indexOf("id");
   if (idCol === -1) throw new Error("No existe columna 'id' en Sheet1");
-
   const idStr = String(id).trim();
-
   for (let r = 1; r < data.length; r++) {
     const rowId = String(data[r][idCol] ?? "").trim();
     if (rowId !== idStr) continue;
-
-    // ✅ Fila encontrada — actualizar campos
     Object.entries(updates).forEach(([key, val]) => {
       const col = headers.indexOf(key.trim().toLowerCase());
       if (col === -1) return;
@@ -253,8 +442,6 @@ function updateKickoff_(id, updates) {
     SpreadsheetApp.flush();
     return { ok: true };
   }
-
-  // ── Diagnóstico
   const foundIds = data.slice(1).map(row => String(row[idCol] ?? "").trim()).filter(Boolean);
   throw new Error(
     "Kickoff not found: '" + idStr + "'. " +
@@ -292,17 +479,20 @@ function saveTask_(payload) {
   const colMap = getColMap_(sh);
   const newId = uid();
   const row = new Array(sh.getLastColumn()).fill("");
-  row[colMap["id"]-1]           = newId;
-  row[colMap["taskName"]-1]     = payload.taskName     || "";
-  row[colMap["assignedTo"]-1]   = payload.assignedTo   || "";
-  row[colMap["assignedEmail"]-1]= payload.assignedEmail|| "";
-  row[colMap["dueDate"]-1]      = payload.dueDate      || "";
-  row[colMap["status"]-1]       = payload.status       || "pending";
-  row[colMap["notes"]-1]        = payload.notes        || "";
+  row[colMap["id"]-1]            = newId;
+  row[colMap["taskName"]-1]      = payload.taskName     || "";
+  row[colMap["assignedTo"]-1]    = payload.assignedTo   || "";
+  row[colMap["assignedEmail"]-1] = payload.assignedEmail|| "";
+  row[colMap["dueDate"]-1]       = payload.dueDate      || "";
+  row[colMap["status"]-1]        = payload.status       || "pending";
+  row[colMap["notes"]-1]         = payload.notes        || "";
   if (colMap["kickoffId"])   row[colMap["kickoffId"]-1]   = payload.kickoffId   || "";
   if (colMap["kickoffName"]) row[colMap["kickoffName"]-1] = payload.kickoffName || "";
   if (colMap["handoffId"])   row[colMap["handoffId"]-1]   = payload.handoffId   || "";
-  row[colMap["createdAt"]-1]    = payload.createdAt    || new Date().toISOString();
+  row[colMap["createdAt"]-1]     = payload.createdAt    || new Date().toISOString();
+  if (colMap["fase"])   row[colMap["fase"]-1]   = payload.fase   || "";
+  if (colMap["tipo"])   row[colMap["tipo"]-1]   = payload.tipo   || "Task";
+  if (colMap["source"]) row[colMap["source"]-1] = payload.source || "";
   sh.appendRow(row);
   SpreadsheetApp.flush();
   return { ok: true, id: newId };
@@ -353,17 +543,12 @@ function saveSoporte_(payload) {
 function sendBillingToSlack_(payload) {
   try {
     const props      = PropertiesService.getScriptProperties();
-    const slackToken = payload.slackToken
-                    || props.getProperty("SLACK_BOT_TOKEN") || "";
-    const channelId  = payload.channelId
-                    || props.getProperty("SLACK_CHANNEL_ID") || "C094NE421NV";
-
+    const slackToken = payload.slackToken || props.getProperty("SLACK_BOT_TOKEN") || "";
+    const channelId  = payload.channelId  || props.getProperty("SLACK_CHANNEL_ID") || "C094NE421NV";
     if (!slackToken) return { ok: false, error: "No Slack token — agrega SLACK_BOT_TOKEN en Script Properties" };
-
     const { pdfBase64, pdfSize, filename, comment } = payload;
     const pdfBytes = Utilities.base64Decode(pdfBase64);
     const byteLen  = pdfSize || pdfBytes.length;
-
     const urlRes = UrlFetchApp.fetch("https://slack.com/api/files.getUploadURLExternal", {
       method: "post",
       contentType: "application/x-www-form-urlencoded",
@@ -372,17 +557,14 @@ function sendBillingToSlack_(payload) {
     });
     const urlData = JSON.parse(urlRes.getContentText());
     if (!urlData.ok) return { ok: false, error: "getUploadURL: " + urlData.error };
-
     UrlFetchApp.fetch(urlData.upload_url, {
       method: "post",
       contentType: "application/octet-stream",
       payload: pdfBytes,
       muteHttpExceptions: true,
     });
-
     const completePayload = { files: [{ id: urlData.file_id }], channel_id: channelId };
     if (comment) completePayload.initial_comment = comment;
-
     const completeRes = UrlFetchApp.fetch("https://slack.com/api/files.completeUploadExternal", {
       method: "post",
       contentType: "application/json",
@@ -392,7 +574,6 @@ function sendBillingToSlack_(payload) {
     });
     const completeData = JSON.parse(completeRes.getContentText());
     if (!completeData.ok) return { ok: false, error: "complete: " + completeData.error };
-
     return { ok: true };
   } catch(err) {
     return { ok: false, error: err.message };
@@ -403,11 +584,10 @@ function sendBillingToSlack_(payload) {
 function sendSlackMessage_(payload) {
   try {
     const { text, slackToken, channelId } = payload;
-    const token   = slackToken   || PropertiesService.getScriptProperties().getProperty("SLACK_BOT_TOKEN");
-    const channel = channelId    || PropertiesService.getScriptProperties().getProperty("SLACK_CHANNEL_ID") || "C094NE421NV";
-    if (!token)   return { ok: false, error: "No Slack token" };
-    if (!text)    return { ok: false, error: "No text" };
-
+    const token   = slackToken || PropertiesService.getScriptProperties().getProperty("SLACK_BOT_TOKEN");
+    const channel = channelId  || PropertiesService.getScriptProperties().getProperty("SLACK_CHANNEL_ID") || "C094NE421NV";
+    if (!token) return { ok: false, error: "No Slack token" };
+    if (!text)  return { ok: false, error: "No text" };
     const res = UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
       method: "post",
       contentType: "application/json",
@@ -464,6 +644,10 @@ function testBillingToken() {
   });
   Logger.log(res.getContentText());
 }
+function testMondayConnection() {
+  const data = mondayApi_(`{ me { name email } }`);
+  Logger.log(JSON.stringify(data));
+}
 
 // ═══════════════ PROPERTIES ══════════════════════════════════════
 const PROP_SHEET = "Properties";
@@ -476,9 +660,8 @@ const PROP_COLS = [
   "Airbnb Link","Photos Link","Twp Travel Webpage","Website Link","PDF Link",
   "Description","Notes","Internal Notes","Availability Notes",
   "Venue Type","Amenities","Bachelor / Party Friendly","Payment Methods","Rating",
-  "Cover Photo","createdAt","updatedAt",
+  "Cover Photo","priceTiers","createdAt","updatedAt",
 ];
-
 function getPropSheet_() {
   let sh = SS.getSheetByName(PROP_SHEET);
   if (!sh) {
@@ -490,7 +673,6 @@ function getPropSheet_() {
     hdr.setBackground("#1a1814");
     hdr.setFontColor("#ffffff");
   } else {
-    // Ensure new columns are added if missing
     const existing = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
     PROP_COLS.forEach(col => {
       if (!existing.includes(col)) {
@@ -501,47 +683,45 @@ function getPropSheet_() {
   }
   return sh;
 }
-
 function rowToObj_(row, headers) {
   const obj = {};
   headers.forEach((h, i) => { obj[h] = row[i] ?? ""; });
-  // Lowercase aliases for frontend compatibility
-  obj["name"]                    = obj["Name"]                    || "";
-  obj["city"]                    = obj["City"]                    || "";
-  obj["address"]                 = obj["Address"]                 || "";
-  obj["location"]                = obj["Location"]                || "";
-  obj["item type"]               = obj["Item Type"]               || "";
-  obj["neighborhood"]            = obj["Neighborhood"]            || "";
-  obj["max pax"]                 = obj["Max Pax"]                 || "";
-  obj["bedrooms"]                = obj["Bedrooms"]                || "";
-  obj["bathrooms"]               = obj["Bathrooms"]               || "";
-  obj["beds"]                    = obj["Beds"]                    || "";
-  obj["capacity"]                = obj["Capacity"]                || "";
-  obj["feet"]                    = obj["Feet"]                    || "";
-  obj["client price"]            = obj["Client Price"]            || "";
-  obj["price range"]             = obj["Price Range"]             || "";
-  obj["our price"]               = obj["Our Price"]               || "";
-  obj["cancellation policy"]     = obj["Cancellation Policy"]     || "";
-  obj["check-in time"]           = obj["Check-in Time"]           || "";
-  obj["check-out time"]          = obj["Check-out Time"]          || "";
-  obj["contact name"]            = obj["Contact Name"]            || "";
-  obj["contact"]                 = obj["Contact"]                 || "";
-  obj["contact phone"]           = obj["Contact Phone"]           || "";
-  obj["airbnb link"]             = obj["Airbnb Link"]             || "";
-  obj["photos link"]             = obj["Photos Link"]             || "";
-  obj["twp travel webpage"]      = obj["Twp Travel Webpage"]      || "";
-  obj["description"]             = obj["Description"]             || "";
-  obj["notes"]                   = obj["Notes"]                   || "";
-  obj["venue type"]              = obj["Venue Type"]              || "";
-  obj["amenities"]               = obj["Amenities"]               || "";
-  obj["status"]                  = obj["Status"]                  || "";
-  obj["rating"]                  = obj["Rating"]                  || "";
+  obj["name"]                      = obj["Name"]                      || "";
+  obj["city"]                      = obj["City"]                      || "";
+  obj["address"]                   = obj["Address"]                   || "";
+  obj["location"]                  = obj["Location"]                  || "";
+  obj["item type"]                 = obj["Item Type"]                 || "";
+  obj["neighborhood"]              = obj["Neighborhood"]              || "";
+  obj["max pax"]                   = obj["Max Pax"]                   || "";
+  obj["bedrooms"]                  = obj["Bedrooms"]                  || "";
+  obj["bathrooms"]                 = obj["Bathrooms"]                 || "";
+  obj["beds"]                      = obj["Beds"]                      || "";
+  obj["capacity"]                  = obj["Capacity"]                  || "";
+  obj["feet"]                      = obj["Feet"]                      || "";
+  obj["client price"]              = obj["Client Price"]              || "";
+  obj["price range"]               = obj["Price Range"]               || "";
+  obj["our price"]                 = obj["Our Price"]                 || "";
+  obj["cancellation policy"]       = obj["Cancellation Policy"]       || "";
+  obj["check-in time"]             = obj["Check-in Time"]             || "";
+  obj["check-out time"]            = obj["Check-out Time"]            || "";
+  obj["contact name"]              = obj["Contact Name"]              || "";
+  obj["contact"]                   = obj["Contact"]                   || "";
+  obj["contact phone"]             = obj["Contact Phone"]             || "";
+  obj["airbnb link"]               = obj["Airbnb Link"]               || "";
+  obj["photos link"]               = obj["Photos Link"]               || "";
+  obj["twp travel webpage"]        = obj["Twp Travel Webpage"]        || "";
+  obj["description"]               = obj["Description"]               || "";
+  obj["notes"]                     = obj["Notes"]                     || "";
+  obj["venue type"]                = obj["Venue Type"]                || "";
+  obj["amenities"]                 = obj["Amenities"]                 || "";
+  obj["status"]                    = obj["Status"]                    || "";
+  obj["rating"]                    = obj["Rating"]                    || "";
   obj["bachelor / party friendly"] = obj["Bachelor / Party Friendly"] || "";
-  obj["payment methods"]         = obj["Payment Methods"]         || "";
-  obj["cover photo"]             = obj["Cover Photo"]             || "";
+  obj["payment methods"]           = obj["Payment Methods"]           || "";
+  obj["cover photo"]               = obj["Cover Photo"]               || "";
+  obj["priceTiers"]                = obj["priceTiers"]                || "";
   return obj;
 }
-
 function handlePropertyList() {
   const sh = getPropSheet_();
   const data = sh.getDataRange().getValues();
@@ -549,14 +729,11 @@ function handlePropertyList() {
   const headers = data[0];
   return { properties: data.slice(1).map(r => rowToObj_(r, headers)).filter(o => o.Name) };
 }
-
 function handlePropertyGet(data) {
   const sh = getPropSheet_();
   const vals = sh.getDataRange().getValues();
   const headers = vals[0];
   const idIdx = headers.indexOf("id");
-
-  // Single property by id
   if (data.id && data.id !== "all") {
     for (let i = 1; i < vals.length; i++) {
       if (String(vals[i][idIdx]) === String(data.id)) {
@@ -565,16 +742,10 @@ function handlePropertyGet(data) {
     }
     return { ok: false, error: "Not found: " + data.id };
   }
-
-  // All properties (with optional limit)
   const limit = data.limit ? Number(data.limit) : 9999;
-  const all = vals.slice(1)
-    .map(r => rowToObj_(r, headers))
-    .filter(o => o.Name)
-    .slice(0, limit);
+  const all = vals.slice(1).map(r => rowToObj_(r, headers)).filter(o => o.Name).slice(0, limit);
   return { ok: true, data: all };
 }
-
 function handlePropertyCreate(data) {
   const sh = getPropSheet_();
   const id = data.id || ("prop_" + Date.now());
@@ -592,7 +763,6 @@ function handlePropertyCreate(data) {
   SpreadsheetApp.flush();
   return { ok: true, id };
 }
-
 function handlePropertyUpdate(data) {
   const sh = getPropSheet_();
   const vals = sh.getDataRange().getValues();
@@ -617,7 +787,6 @@ function handlePropertyUpdate(data) {
   }
   return { ok: false, error: "Not found: " + data.id };
 }
-
 function handlePropertyDelete(data) {
   const sh = getPropSheet_();
   const vals = sh.getDataRange().getValues();
@@ -631,7 +800,6 @@ function handlePropertyDelete(data) {
   }
   return { ok: false, error: "Not found: " + data.id };
 }
-
 function handlePropertyBulk(rows) {
   const sh = getPropSheet_();
   const now = new Date().toISOString();
@@ -651,7 +819,6 @@ function handlePropertyBulk(rows) {
 function clearAndKeepNew() {
   const sh = SS.getSheetByName("Properties");
   if (!sh) return;
-  const lastRow = sh.getLastRow();
   sh.deleteRows(2, 456);
   SpreadsheetApp.flush();
   Logger.log("Listo. Filas ahora: " + sh.getLastRow());
@@ -666,17 +833,13 @@ function clearDuplicateProperties() {
   }
   Logger.log("Done. Rows now: " + sh.getLastRow());
 }
-
-// ─── Reparar #ERROR! en Sheet1 (correr una vez manualmente) ─────
 function repairContactErrors() {
   const sh = SS.getSheetByName("Sheet1");
   if (!sh) { Logger.log("Sheet1 no encontrada"); return; }
   const lastRow = sh.getLastRow();
   const lastCol = sh.getLastColumn();
   if (lastRow < 2) { Logger.log("Sin datos"); return; }
-  // Formatea todas las celdas de datos como texto plano
   sh.getRange(2, 1, lastRow - 1, lastCol).setNumberFormat("@");
-  // Reescribe las celdas que tienen error
   const data = sh.getDataRange().getValues();
   let fixed = 0;
   for (let r = 1; r < data.length; r++) {
@@ -694,7 +857,7 @@ function repairContactErrors() {
 
 // ═══════════════ HANDOFFS OPERACIONES ════════════════════════════
 const HANDOFFS_SHEET = "Handoffs";
-const HANDOFFS_COLS  = ["id","client","date","activity","pax","operator","bookingWhere","travefy","confirmation","person","personLive","notes","status","createdAt","updatedAt"];
+const HANDOFFS_COLS  = ["id","client","date","activity","pax","operator","bookingWhere","travefy","confirmation","confirmPhoto","person","personLive","notes","status","createdAt","updatedAt"];
 
 function getHandoffsSheet_() {
   let sh = SS.getSheetByName(HANDOFFS_SHEET);
@@ -702,10 +865,17 @@ function getHandoffsSheet_() {
     sh = SS.insertSheet(HANDOFFS_SHEET);
     sh.getRange(1, 1, 1, HANDOFFS_COLS.length).setValues([HANDOFFS_COLS]);
     sh.setFrozenRows(1);
+  } else {
+    const existing = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
+    HANDOFFS_COLS.forEach(col => {
+      if (!existing.includes(col)) {
+        sh.getRange(1, sh.getLastColumn() + 1).setValue(col);
+        existing.push(col);
+      }
+    });
   }
   return sh;
 }
-
 function getHandoffs_() {
   const sh = getHandoffsSheet_();
   const vals = sh.getDataRange().getValues();
@@ -717,9 +887,7 @@ function getHandoffs_() {
     return obj;
   }).filter(r => r.id);
 }
-
 function saveHandoffs_(payload) {
-  // payload = { handoffs: [...] }  — full replace
   const items = Array.isArray(payload) ? payload : (payload.handoffs || []);
   const sh = getHandoffsSheet_();
   const lastRow = sh.getLastRow();
@@ -736,7 +904,6 @@ function saveHandoffs_(payload) {
   SpreadsheetApp.flush();
   return { ok: true, count: rows.length };
 }
-
 function updateHandoff_(id, updates) {
   if (!id) return { ok: false, error: "Falta id" };
   const sh = getHandoffsSheet_();
@@ -757,7 +924,6 @@ function updateHandoff_(id, updates) {
   }
   return { ok: false, error: "Handoff no encontrado: " + id };
 }
-
 function deleteHandoff_(id) {
   if (!id) return { ok: false, error: "Falta id" };
   const sh = getHandoffsSheet_();
@@ -775,7 +941,7 @@ function deleteHandoff_(id) {
 
 // ═══════════════ PAGOS / SOLICITUDES DE PAGO ═════════════════════
 const PAGOS_SHEET = "Pagos";
-const PAGOS_COLS  = ["id","dept","date","category","client","vendor","desc","amount","currency","method","person","factura","receipt","status","notes","createdAt","updatedAt"];
+const PAGOS_COLS = ["id","dept","date","category","client","vendor","desc","amount","currency","method","person","receipt","factura","reminderDate","status","notes","phone","cobroAt","reminderAt","createdAt","updatedAt"];
 
 function getPagosSheet_() {
   let sh = SS.getSheetByName(PAGOS_SHEET);
@@ -816,7 +982,6 @@ function savePagos_(payload) {
     if (col === "createdAt") return p.createdAt || now;
     if (col === "updatedAt") return now;
     if (col === "id")        return p.id || ("pg_" + Date.now() + Math.random());
-    // Don't store large base64 receipt images in sheet — store URL or skip
     if (col === "receipt")   return p.receipt && p.receipt.length < 500 ? p.receipt : (p.receipt ? "[foto]" : "");
     return p[col] !== undefined ? p[col] : "";
   }));
@@ -858,31 +1023,14 @@ function deletePago_(id) {
   }
   return { ok: false, error: "No encontrado: " + id };
 }
-
-// ─── Notificaciones Pagos ─────────────────────────────────────────
 function notifyNewPago_(p) {
   try {
     const props = PropertiesService.getScriptProperties();
     const token   = props.getProperty("SLACK_BOT_TOKEN");
-    const channel = props.getProperty("SLACK_FINANCE_CHANNEL") || props.getProperty("SLACK_CHANNEL_ID") || "C094NE421NV";
+    const channel = props.getProperty("SLACK_CHANNEL_ID") || "C094NE421NV";
     if (!token) return { ok: false, error: "No Slack token" };
-
-    const dept  = p.dept === 'wedding' ? '💍 Bodas' : '🌴 Concierge';
     const monto = p.amount ? `${p.currency || 'COP'} ${parseFloat(p.amount).toLocaleString('es-CO')}` : '—';
-    const cat   = (p.category || '').replace(/^(Service:|Tour:|Wedding:|Business Expenses:|Cartagena: Chef Services:)\s*/, '');
-    const factura = p.factura ? `\n📄 Factura: ${p.factura}` : '';
-    const notas   = p.notes   ? `\n📝 ${p.notes}` : '';
-
-    const text = `💳 *Nueva solicitud de pago* — ${dept}\n` +
-      `• *Categoría:* ${cat}\n` +
-      `• *Cliente:* ${p.client || '—'}\n` +
-      `• *Proveedor:* ${p.vendor || '—'}\n` +
-      `• *Monto:* ${monto}\n` +
-      `• *Método:* ${p.method || '—'}\n` +
-      `• *Solicitado por:* ${p.person || '—'}\n` +
-      `• *Fecha:* ${p.date || '—'}` +
-      factura + notas;
-
+    const text = `💸 *Nueva solicitud de pago*\n• *De:* ${p.person || '—'}\n• *Categoría:* ${p.category || '—'}\n• *Cliente:* ${p.client || '—'}\n• *Monto:* ${monto}\n• *Método:* ${p.method || '—'}`;
     const res = UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
       method: "post", contentType: "application/json",
       headers: { "Authorization": "Bearer " + token },
@@ -895,24 +1043,16 @@ function notifyNewPago_(p) {
     return { ok: false, error: e.message };
   }
 }
-
 function notifyPagoStatus_(p) {
   try {
     const props = PropertiesService.getScriptProperties();
     const token   = props.getProperty("SLACK_BOT_TOKEN");
     const channel = props.getProperty("SLACK_CHANNEL_ID") || "C094NE421NV";
     if (!token) return { ok: false, error: "No Slack token" };
-
     const statusLabel = p.status === 'aprov' ? '✅ *APROBADO*' : '❌ *RECHAZADO*';
     const monto = p.amount ? `${p.currency || 'COP'} ${parseFloat(p.amount).toLocaleString('es-CO')}` : '—';
     const cat   = (p.category || '').replace(/^(Service:|Tour:|Wedding:|Business Expenses:|Cartagena: Chef Services:)\s*/, '');
-
-    const text = `${statusLabel} — Solicitud de pago\n` +
-      `• *Solicitado por:* ${p.person || '—'}\n` +
-      `• *Categoría:* ${cat}\n` +
-      `• *Cliente:* ${p.client || '—'}\n` +
-      `• *Monto:* ${monto}`;
-
+    const text = `${statusLabel} — Solicitud de pago\n• *Solicitado por:* ${p.person || '—'}\n• *Categoría:* ${cat}\n• *Cliente:* ${p.client || '—'}\n• *Monto:* ${monto}`;
     const res = UrlFetchApp.fetch("https://slack.com/api/chat.postMessage", {
       method: "post", contentType: "application/json",
       headers: { "Authorization": "Bearer " + token },
@@ -926,8 +1066,339 @@ function notifyPagoStatus_(p) {
   }
 }
 
+// ═══════════════ RECORDATORIOS AUTOMÁTICOS ═══════════════════════
+function sendDailyReminders_() {
+  const cobros = getPagos_();
+  const ayer = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+  cobros.forEach(p => {
+    if (!p.phone || p.status === 'pago') return;
+    if (!p.cobroAt) return;
+    if (p.cobroAt.slice(0,10) !== ayer) return;
+    if (p.reminderAt) return;
+    UrlFetchApp.fetch('https://www.twotravelvip.com/api/whatsapp', {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({ to: p.phone, message: buildReminderMsg_(p), type: 'reminder' }),
+      muteHttpExceptions: true,
+    });
+    updatePago_(p.id, { reminderAt: new Date().toISOString() });
+  });
+}
+function buildReminderMsg_(p) {
+  const name = (p.client||'').split(/[\s,&]/)[0];
+  const monto = p.amount ? `${p.currency} $${parseFloat(p.amount).toLocaleString('es',{minimumFractionDigits:2})}` : '';
+  const pdf = p.dept === 'wedding' ? 'https://www.twotravelvip.com/payment-options-weddings.pdf' : 'https://www.twotravelvip.com/payment-options.pdf';
+  return p.dept === 'wedding'
+    ? `Hola ${name}! 💍 Te recordamos que tienes un pago pendiente con Two Lovers.\n\n${p.desc||''}${monto?'\n\n💰 Total: *'+monto+'*':''}\n\nMétodos de pago:\n${pdf}\n\n— Two Lovers ✨`
+    : `Hola ${name}! 🌟 Te recordamos que tienes un pago pendiente con Two Travel.\n\n${p.desc||''}${monto?'\n\n💰 Total: *'+monto+'*':''}\n\nMétodos de pago:\n${pdf}\n\n— Two Travel ✨`;
+}
+function addPriceTiersCol() {
+  getPropSheet_();
+  Logger.log("Listo");
+}
+
+// ═══════════════ CALENDAR TOKENS ═════════════════════════════════
+function saveCalendarToken(payload) {
+  const { concierge, refreshToken } = payload;
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Properties")
+    || SpreadsheetApp.getActiveSpreadsheet().insertSheet("Properties");
+  const data = sheet.getDataRange().getValues();
+  const key = `calendar_token_${concierge}`;
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === key) {
+      sheet.getRange(i + 1, 2).setValue(refreshToken);
+      return { ok: true };
+    }
+  }
+  sheet.appendRow([key, refreshToken]);
+  return { ok: true };
+}
+function getCalendarToken(payload) {
+  const { concierge } = payload;
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Properties");
+  if (!sheet) return { refreshToken: null };
+  const data = sheet.getDataRange().getValues();
+  const key = `calendar_token_${concierge}`;
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === key) return { refreshToken: data[i][1] };
+  }
+  return { refreshToken: null };
+}
+function getCalendarTokens() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Properties");
+  if (!sheet) return { tokens: [] };
+  const data = sheet.getDataRange().getValues();
+  const tokens = data
+    .filter(row => String(row[0]).startsWith("calendar_token_") && row[1])
+    .map(row => ({ concierge: row[0].replace("calendar_token_", ""), hasToken: true }));
+  return { tokens };
+}
+function addMeetingToKickoff(payload) {
+  const { kickoffId, meeting } = payload;
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet1");
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idCol = headers.indexOf("id");
+  const meetCol = headers.indexOf("meetingNotes");
+  if (idCol < 0 || meetCol < 0) return { ok: false };
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][idCol] === kickoffId) {
+      let meetings = [];
+      try { meetings = JSON.parse(data[i][meetCol] || "[]"); } catch {}
+      meetings.push(meeting);
+      sheet.getRange(i + 1, meetCol + 1).setValue(JSON.stringify(meetings));
+      return { ok: true };
+    }
+  }
+  return { ok: false, error: "Kickoff not found" };
+}
+
+// ═══════════════ AVAILABILITY ════════════════════════════════════
+function getAvailability(e) {
+  const email = e.parameter.email;
+  if (!email) return ContentService.createTextOutput(JSON.stringify({ ok: false, error: "Missing email" }))
+    .setMimeType(ContentService.MimeType.JSON);
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 3, 1);
+  let blocked = [];
+  try {
+    const cal = CalendarApp.getCalendarById(email) || CalendarApp.getDefaultCalendar();
+    if (cal) {
+      const events = cal.getEvents(start, end);
+      events.forEach(ev => {
+        const title = (ev.getTitle() || "").toLowerCase();
+        const isOOO = ev.isAllDayEvent() ||
+                      title.includes("out of office") ||
+                      title.includes("ooo") ||
+                      title.includes("fuera") ||
+                      title.includes("vacacion") ||
+                      title.includes("libre") ||
+                      title.includes("no disponible");
+        if (isOOO || !ev.isAllDayEvent()) {
+          const evStart = ev.getStartTime();
+          const evEnd = ev.getEndTime();
+          const dateStr = Utilities.formatDate(evStart, "America/Bogota", "yyyy-MM-dd");
+          if (ev.isAllDayEvent()) {
+            blocked.push({ date: dateStr, start: "00:00", end: "23:59", fromCalendar: true, title: ev.getTitle() });
+          } else {
+            blocked.push({
+              date: dateStr,
+              start: Utilities.formatDate(evStart, "America/Bogota", "HH:mm"),
+              end:   Utilities.formatDate(evEnd,   "America/Bogota", "HH:mm"),
+              fromCalendar: true,
+              title: ev.getTitle(),
+            });
+          }
+        }
+      });
+    }
+  } catch(err) {
+    Logger.log("Calendar error for " + email + ": " + err);
+  }
+  const result = { ok: true, blocked: blocked, schedule: null, bookings: [] };
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+function saveAvailability(body) {
+  const email = (body.email || "").trim().toLowerCase();
+  if (!email) return jsonOut({ ok: false, error: "no email" });
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Availability") || ss.insertSheet("Availability");
+  const data  = sheet.getDataRange().getValues();
+  const COLS = ["email","schedule","settings","blocked","bookings","manualSlots"];
+  if (!data[0].length || (data[0].length === 1 && !data[0][0])) {
+    sheet.getRange(1, 1, 1, COLS.length).setValues([COLS]);
+    data[0] = COLS.slice();
+  }
+  const colIdx = (name) => {
+    let idx = data[0].indexOf(name);
+    if (idx === -1) {
+      sheet.getRange(1, data[0].length + 1).setValue(name);
+      data[0].push(name);
+      idx = data[0].length - 1;
+    }
+    return idx;
+  };
+  const str = (v) => JSON.stringify(v ?? null);
+  for (let i = 1; i < data.length; i++) {
+    if ((data[i][colIdx("email")] || "").toLowerCase() === email) {
+      const row = i + 1;
+      sheet.getRange(row, colIdx("schedule")    + 1).setValue(str(body.schedule));
+      sheet.getRange(row, colIdx("settings")    + 1).setValue(str(body.settings));
+      sheet.getRange(row, colIdx("blocked")     + 1).setValue(str(body.blocked));
+      sheet.getRange(row, colIdx("manualSlots") + 1).setValue(str(body.manualSlots || []));
+      SpreadsheetApp.flush();
+      return jsonOut({ ok: true });
+    }
+  }
+  const newRow = new Array(data[0].length).fill("");
+  newRow[colIdx("email")]       = email;
+  newRow[colIdx("schedule")]    = str(body.schedule);
+  newRow[colIdx("settings")]    = str(body.settings);
+  newRow[colIdx("blocked")]     = str(body.blocked);
+  newRow[colIdx("manualSlots")] = str(body.manualSlots || []);
+  newRow[colIdx("bookings")]    = "[]";
+  sheet.appendRow(newRow);
+  SpreadsheetApp.flush();
+  return jsonOut({ ok: true });
+}
+function bookSlot(body) {
+  const email = (body.conciergeEmail || "").trim().toLowerCase();
+  if (!email) return jsonOut({ ok: false, error: "no email" });
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Availability") || ss.insertSheet("Availability");
+  const data  = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const colIdx  = (name) => headers.indexOf(name);
+  for (let i = 1; i < data.length; i++) {
+    if ((data[i][colIdx("email")] || "").toLowerCase() === email) {
+      let bookings = [];
+      try { bookings = JSON.parse(data[i][colIdx("bookings")] || "[]"); } catch {}
+      bookings.push({
+        date:       body.date,
+        time:       body.time,
+        duration:   body.duration || 30,
+        clientName: body.guestName || "",
+        kickoffId:  body.kickoffId || "",
+        topic:      body.topic || "",
+        lang:       body.lang || "en",
+        bookedAt:   new Date().toISOString(),
+      });
+      sheet.getRange(i + 1, colIdx("bookings") + 1).setValue(JSON.stringify(bookings));
+      try {
+        MailApp.sendEmail({
+          to: email,
+          subject: `Nueva reunión: ${body.guestName} — ${body.date} ${body.time}`,
+          body: `Cliente: ${body.guestName}\nFecha: ${body.date} a las ${body.time}\nTema: ${body.topic || "—"}\nKickoff: ${body.kickoffId || "—"}`,
+        });
+      } catch(e) {}
+      return jsonOut({ ok: true });
+    }
+  }
+  return jsonOut({ ok: false, error: "concierge not found" });
+}
+
+// ═══════════════ ORDENAR TAREAS POR FECHA ════════════════════════
+function reorderTasksByDueDate_() {
+  const sh = SS.getSheetByName("Tasks");
+  if (!sh || sh.getLastRow() < 3) return;
+  sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn())
+    .sort({ column: 5, ascending: true });
+}
+
+// ═══════════════ MONDAY.COM INTEGRATION ══════════════════════════
+const MONDAY_CONCIERGE_BOARD = 18411433982;
+const MONDAY_LOGISTICA_BOARD = 18410882462;
+
+function mondayApi_(query) {
+  const token = PropertiesService.getScriptProperties().getProperty("MONDAY_API_TOKEN");
+  if (!token) throw new Error("MONDAY_API_TOKEN no configurado en Script Properties");
+  const res = UrlFetchApp.fetch("https://api.monday.com/v2", {
+    method: "post",
+    contentType: "application/json",
+    headers: { "Authorization": token, "API-Version": "2024-01" },
+    payload: JSON.stringify({ query }),
+    muteHttpExceptions: true,
+  });
+  return JSON.parse(res.getContentText());
+}
+function getMondayGroups_(boardId) {
+  const data = mondayApi_(`{ boards(ids:[${boardId}]) { groups { id title } } }`);
+  return data?.data?.boards?.[0]?.groups || [];
+}
+function findMonthGroup_(groups, dateStr) {
+  if (!dateStr || !groups.length) return groups[0]?.id;
+  const d = new Date(dateStr);
+  const monthsEn = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const monthsEs = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const mEn = monthsEn[d.getMonth()];
+  const mEs = monthsEs[d.getMonth()];
+  const match = groups.find(g =>
+    g.title.includes(mEn) || g.title.toLowerCase().includes(mEs.toLowerCase())
+  );
+  return match?.id || groups[0]?.id;
+}
+function createMondayItems_(payload) {
+  try {
+    const { items, clientName, date, pax } = payload;
+    const groupsLogistica = getMondayGroups_(MONDAY_LOGISTICA_BOARD);
+    const groupLogistica = findMonthGroup_(groupsLogistica, date);
+    const results = [];
+    for (const item of (items || [])) {
+      const activity = item.name || "Servicio";
+      const itemName = clientName + " — " + activity;
+      const colLogistica = {};
+      if (date) colLogistica["date"] = { date: date };
+      colLogistica["text_mm2wdpjy"] = activity;
+      if (pax) colLogistica["numeric_mm2wr3ak"] = String(pax);
+      const qL = "mutation { create_item(board_id: " + MONDAY_LOGISTICA_BOARD +
+        ", group_id: \"" + groupLogistica + "\"" +
+        ", item_name: " + JSON.stringify(itemName) +
+        ", column_values: " + JSON.stringify(JSON.stringify(colLogistica)) +
+        ") { id } }";
+      const rL = mondayApi_(qL);
+      results.push({ item: activity, logisticaId: rL?.data?.create_item?.id || null });
+    }
+    return { ok: true, count: results.length, results };
+  } catch(err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+// ═══════════════ COMISIONES A PROVEEDORES ════════════════════════
+const COMISIONES_SHEET = "Comisiones";
+const COMISIONES_COLS  = ["id","proveedor","concepto","monto","moneda","estado","fechaVencimiento","phone","cobroAt","reminderAt","notes","createdAt","updatedAt"];
+
+function getComisionesSheet_() {
+  let sh = SS.getSheetByName(COMISIONES_SHEET);
+  if (!sh) {
+    sh = SS.insertSheet(COMISIONES_SHEET);
+    sh.getRange(1, 1, 1, COMISIONES_COLS.length).setValues([COMISIONES_COLS]);
+    sh.setFrozenRows(1);
+  } else {
+    const existing = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
+    COMISIONES_COLS.forEach(col => {
+      if (!existing.includes(col)) {
+        sh.getRange(1, sh.getLastColumn() + 1).setValue(col);
+        existing.push(col);
+      }
+    });
+  }
+  return sh;
+}
+function saveComisiones_(payload) {
+  const items = Array.isArray(payload) ? payload : (payload.comisiones || []);
+  const sh = getComisionesSheet_();
+  const lastRow = sh.getLastRow();
+  if (lastRow > 1) sh.deleteRows(2, lastRow - 1);
+  if (!items.length) return { ok: true };
+  const now = new Date().toISOString();
+  const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
+  const rows = items.map(c => headers.map(col => {
+    if (col === "createdAt") return c.createdAt || now;
+    if (col === "updatedAt") return now;
+    if (col === "id")        return c.id || ("cm_" + Date.now() + Math.random());
+    return c[col] !== undefined ? c[col] : "";
+  }));
+  sh.getRange(2, 1, rows.length, headers.length).setValues(rows);
+  SpreadsheetApp.flush();
+  return { ok: true, count: rows.length };
+}
+function getComisiones_() {
+  const sh = getComisionesSheet_();
+  const vals = sh.getDataRange().getValues();
+  if (vals.length < 2) return [];
+  const headers = vals[0].map(String);
+  return vals.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = row[i] ?? ""; });
+    return obj;
+  }).filter(r => r.id);
+}
+
 // ═══════════════════════════════════════════════════════════════════
-// BODAS
+// BODAS (TWO LOVERS)
 // ═══════════════════════════════════════════════════════════════════
 const BODAS_SHEET = "Bodas";
 const BODAS_COLS  = [
@@ -945,7 +1416,7 @@ function getBodaSheet_() {
     sh.setFrozenRows(1);
     return sh;
   }
-  // Ensure any new columns are appended
+  // Agrega columnas nuevas si faltan (para migraciones)
   const existing = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
   BODAS_COLS.forEach(col => {
     if (!existing.includes(col)) {
@@ -955,7 +1426,6 @@ function getBodaSheet_() {
   });
   return sh;
 }
-
 function listBodas_() {
   const sh = getBodaSheet_();
   if (sh.getLastRow() < 2) return [];
@@ -970,7 +1440,6 @@ function listBodas_() {
     return obj;
   }).filter(r => r.id);
 }
-
 function saveBoda_(payload) {
   const sh = getBodaSheet_();
   const now = new Date().toISOString();
@@ -986,7 +1455,6 @@ function saveBoda_(payload) {
   SpreadsheetApp.flush();
   return { ok: true, id };
 }
-
 function updateBoda_(id, updates) {
   if (!id) return { ok: false, error: "Falta id" };
   const sh = getBodaSheet_();
@@ -1006,7 +1474,6 @@ function updateBoda_(id, updates) {
   }
   return { ok: false, error: "Boda no encontrada: " + id };
 }
-
 function deleteBoda_(id) {
   if (!id) return { ok: false, error: "Falta id" };
   const sh = getBodaSheet_();
@@ -1021,8 +1488,9 @@ function deleteBoda_(id) {
   return { ok: false, error: "Boda no encontrada: " + id };
 }
 
-// ── Migración única: Sheet1 → hoja Bodas ─────────────────────────
-// Ejecutar una sola vez desde el editor de GAS: seleccionar migrateBodas y presionar ▶
+// ── Migración única: bodas de Sheet1 → hoja Bodas ─────────────────
+// Ejecutar UNA SOLA VEZ desde el editor de GAS:
+// seleccionar "migrateBodas" en el dropdown y presionar ▶
 function migrateBodas() {
   const sh1 = SS.getSheetByName("Sheet1");
   if (!sh1) { Logger.log("Sheet1 no encontrada"); return; }
@@ -1031,7 +1499,7 @@ function migrateBodas() {
   const h    = data[0].map(String);
   const col  = name => h.indexOf(name);
 
-  const toMigrate  = [];
+  const toMigrate   = [];
   const rowsToDelete = [];
 
   for (let i = 1; i < data.length; i++) {
