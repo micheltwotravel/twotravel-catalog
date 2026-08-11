@@ -224,8 +224,9 @@ async function gas(body) {
 
 async function load() {
   try {
-    const d = await gas({ action:"property_list" });
-    allProps = (d.properties||[]).filter(p=>p.name);
+    const r = await fetch(GAS + "?action=listProperties");
+    const d = await r.json();
+    allProps = (d.properties||[]).filter(p=>p.Name||p.name).map(p=>({...p, name:p.Name||p.name}));
     document.getElementById("count-badge").textContent = allProps.length+" properties";
     buildFilterPills();
     renderList();

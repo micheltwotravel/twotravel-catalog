@@ -2605,14 +2605,27 @@ export default function ItineraryPrintView() {
 
   useEffect(() => {
     if (!kickoffId) { setError("No kickoffId in URL"); setLoading(false); return; }
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
     Promise.all([
       fetchKickoffsFromSheet({ forceRefresh: true }).then(list =>
         list.find(k => String(k.id) === String(kickoffId))
       ),
       fetchServicesFromSheet(),
     ])
-      .then(([k, cats]) => {
+      .then(async ([k, cats]) => {
         if (!k) throw new Error("Kickoff not found");
+        // Auto-fill address from Properties portfolio if missing
+        if (!k.accommodationAddr && k.accommodationName) {
+          try {
+            const name = encodeURIComponent(k.accommodationName.trim());
+            const r = await fetch(`${GAS_URL}?action=getProperty&name=${name}`);
+            const d = await r.json();
+            const addr = d?.data?.Address || d?.data?.address || "";
+            const mapsUrl = d?.data?.["Maps URL"] || d?.data?.mapsUrl || d?.data?.["Google Maps"] || "";
+            if (addr) k = { ...k, accommodationAddr: addr };
+            if (mapsUrl && !k.accommodationMapsUrl) k = { ...k, accommodationMapsUrl: mapsUrl };
+          } catch {}
+        }
         setKickoff(k);
         setCatalog(cats);
       })

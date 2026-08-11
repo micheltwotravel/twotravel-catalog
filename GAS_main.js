@@ -158,10 +158,22 @@ function doGet(e) {
   try {
     const action = (e.parameter && e.parameter.action) || "";
     switch (action) {
-      case "listKickoffs": return jsonResponse({ ok: true, data: listKickoffs_() });
-      case "listTasks":    return jsonResponse({ ok: true, data: listTasks_() });
-      case "listSoporte":  return jsonResponse({ ok: true, data: listSoporte_() });
-      default:             return jsonResponse({ ok: true, status: "Two Travel GAS v3 ready" });
+      case "listKickoffs":    return jsonResponse({ ok: true, data: listKickoffs_() });
+      case "listTasks":       return jsonResponse({ ok: true, data: listTasks_() });
+      case "listSoporte":     return jsonResponse({ ok: true, data: listSoporte_() });
+      case "listProperties":  return jsonResponse(handlePropertyList());
+      case "getProperty": {
+        const name = (e.parameter && e.parameter.name) || "";
+        const id   = (e.parameter && e.parameter.id)   || "";
+        if (id) return jsonResponse(handlePropertyGet({ id }));
+        // search by name
+        const result = handlePropertyList();
+        const match  = (result.properties || []).find(p =>
+          (p.Name || p.name || "").toLowerCase() === name.toLowerCase()
+        );
+        return jsonResponse({ ok: true, data: match || null });
+      }
+      default:                return jsonResponse({ ok: true, status: "Two Travel GAS v3 ready" });
     }
   } catch (err) {
     return jsonResponse({ ok: false, error: err.message });
