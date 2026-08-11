@@ -70,13 +70,35 @@ function metaPayload(f) {
 function notesOf(boda) {
   return {tasks:boda.tasks||[],suppliers:boda.suppliers||[],songs:boda.songs||[],photos:boda.photos||[],calls:boda.calls||[],guests:boda.guests||[],palette:boda.palette||[]};
 }
-async function apiBodas(forceRefresh=false) { if(forceRefresh) invalidateKickoffsCache(); const all=await fetchKickoffsFromSheet(); return all.map(parseBoda).filter(Boolean); }
-async function apiSaveBoda(f) {
+const BODAS_CACHE_KEY = "tt_bodas_cache";
+const BODAS_CACHE_TTL = 5 * 60 * 1000; // 5 min
+function getBodasCache() {
+  try { const { ts, data } = JSON.parse(sessionStorage.getItem(BODAS_CACHE_KEY)||"null")||{}; if (!data) return null; return { data, stale: Date.now()-ts > BODAS_CACHE_TTL }; } catch { return null; }
+}
+function setBodasCache(data) {
+  try { sessionStorage.setItem(BODAS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
+}
+function clearBodasCache() {
+  try { sessionStorage.removeItem(BODAS_CACHE_KEY); } catch {}
+}
+async function fetchFreshBodas() {
+  const all = await fetchKickoffsFromSheet({ forceRefresh: true });
+  const bodas = all.map(parseBoda).filter(Boolean);
+  setBodasCache(bodas);
+  return bodas;
+}
+async function apiBodas(forceRefresh=false) {
+  if (forceRefresh) { clearBodasCache(); return fetchFreshBodas(); }
+  const cached = getBodasCache();
+  if (cached && !cached.stale) return cached.data;
+  return fetchFreshBodas();
+}
+async function apiSaveBoda(f) { clearBodasCache();
   const res=await saveKickoffToSheet({guestName:"Boda: "+f.clienteName,conciergeSummary:metaPayload(f),internalNotes:JSON.stringify({tasks:[],suppliers:[],songs:[],photos:[],calls:[]}),travifyText:JSON.stringify([]),status:"active"});
   return res.id;
 }
-async function apiUpdateBoda(id,f)       { await updateKickoffInSheet(id,{guestName:"Boda: "+f.clienteName,conciergeSummary:metaPayload(f)}); }
-async function apiSaveNotes(id,boda)     { await updateKickoffInSheet(id,{internalNotes:JSON.stringify(notesOf(boda))}); }
+async function apiUpdateBoda(id,f)       { clearBodasCache(); await updateKickoffInSheet(id,{guestName:"Boda: "+f.clienteName,conciergeSummary:metaPayload(f)}); }
+async function apiSaveNotes(id,boda)     { clearBodasCache(); await updateKickoffInSheet(id,{internalNotes:JSON.stringify(notesOf(boda))}); }
 async function apiUpdateSchedule(id,sc)  { await updateKickoffInSheet(id,{travifyText:JSON.stringify(sc)}); }
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
@@ -817,6 +839,22 @@ export default function BodaPanel({ currentUser, onLogout }) {
   const [filterStatus, setFilterStatus] = useState("all");
 
   const load=useCallback(async(force=false)=>{
+    // Show cached bodas immediately — no loading spinner if we have data
+    if (!force) {
+      const cached = getBodasCache();
+      if (cached) {
+        setBodas(cached.data);
+        setLoading(false);
+        // Refresh users in background always; bodas only if stale
+        fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"listUsers"})}).then(r=>r.json()).then(uRes=>{
+          setUsers(Array.isArray(uRes?.data)?uRes.data.filter(u=>u.active!=="false"):[]);
+        }).catch(()=>{});
+        if (cached.stale) {
+          fetchFreshBodas().then(fresh => setBodas(fresh)).catch(()=>{});
+        }
+        return;
+      }
+    }
     setLoading(true); setErr("");
     try{
       const [list,uRes]=await Promise.all([
