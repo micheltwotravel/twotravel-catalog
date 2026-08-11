@@ -11,8 +11,12 @@ async function fetchFlight(flightNum, dateParam, key) {
   });
   if (r.status === 429) throw { limitReached: true };
   if (!r.ok) return null;
-  const d = await r.json();
-  return Array.isArray(d) ? (d[0] || null) : (d || null);
+  const text = await r.text();
+  if (!text || !text.trim()) return null;
+  try {
+    const d = JSON.parse(text);
+    return Array.isArray(d) ? (d[0] || null) : (d || null);
+  } catch { return null; }
 }
 
 export default async function handler(req, res) {
