@@ -1800,6 +1800,13 @@ const nightlifeTypes = [
   { id: "nightclubs", label: { es: "Nightclubs · Discoteca",  en: "Nightclubs" } },
 ];
 
+// Sub-tipos de beach-clubs (se filtran por el campo "subcategory" del sheet)
+const beachTypes = [
+  { id: "private-boat", label: { es: "Bote Privado",  en: "Private Boat" } },
+  { id: "beach-club",   label: { es: "Beach Club",    en: "Beach Club" } },
+  { id: "island",       label: { es: "Islas & Tours", en: "Islands & Tours" } },
+];
+
 // Estilos de restaurantes — IDs must match normalizeSubcategory() output
 const restaurantStyles = [
   { id: "brunch",      label: { es: "Brunch & Café",      en: "Brunch & Café" } },
@@ -2428,6 +2435,8 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
     cuisines: [],    // array of cuisine ids (multi-select)
     interests: [],   // array strings
     groupNotes: "",  // open text: "What else should we know?"
+    boatPreference: [],   // informative only — rosario islands boat type
+    boatOther: "",
   });
 
   
@@ -2548,6 +2557,14 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
             return /lounge/.test(sub);
           if (selectedStyle === "nightclubs")
             return /night|disco|club/.test(sub);
+        }
+        if (selectedCategory === "beach-clubs" && selectedStyle) {
+          const sub = (s.subcategory || "").toString().trim().toLowerCase();
+          const name = (s.name || s.name_en || "").toLowerCase();
+          const isPrivateBoat = /private.?boat|lancha|bote|catamaran|catamarán|yacht|yate|speedboat|speed.?boat/.test(sub + " " + name);
+          if (selectedStyle === "private-boat") return isPrivateBoat;
+          if (selectedStyle === "beach-club")   return !isPrivateBoat && !/island|isla|rosario|tierrabomba|barú|baru/.test(sub);
+          if (selectedStyle === "island")       return /island|isla|rosario|tierrabomba|barú|baru/.test(sub);
         }
         return true;
       })();
@@ -3392,6 +3409,60 @@ setCart([]);
               </div>
             </div>
 
+            {(kickoffCity === "cartagena" || !kickoffCity) && (
+              <div className="space-y-2">
+                <p className="text-[11px] text-neutral-600">
+                  {lang === "es"
+                    ? "¿Te gustaría hacer un día de bote a las Islas del Rosario? (opcional)"
+                    : "Would you want to have a boat day to the Rosario Islands? (optional)"}
+                </p>
+                <div className="flex flex-col gap-2 text-sm">
+                  {[
+                    { id: "speedboat",   es: "Lancha privada · 600–1,200 USD",   en: "Speedboat · 600–1,200 USD" },
+                    { id: "catamaran",   es: "Catamarán · 1,800–3,500 USD",      en: "Catamaran · 1,800–3,500 USD" },
+                    { id: "yacht",       es: "Yate · 2,000–6,000 USD",           en: "Yacht · 2,000–6,000 USD" },
+                    { id: "day-pass",    es: "No privado – day pass",            en: "Non private – day pass options" },
+                  ].map((opt) => {
+                    const active = (quiz.boatPreference || []).includes(opt.id);
+                    return (
+                      <label key={opt.id} className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={active}
+                          onChange={() => setQuiz((q) => {
+                            const cur = q.boatPreference || [];
+                            return { ...q, boatPreference: active ? cur.filter((x) => x !== opt.id) : [...cur, opt.id] };
+                          })}
+                          className="rounded border-neutral-300 accent-neutral-900"
+                        />
+                        <span className="text-neutral-700">{lang === "es" ? opt.es : opt.en}</span>
+                      </label>
+                    );
+                  })}
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={(quiz.boatPreference || []).includes("other")}
+                      onChange={() => setQuiz((q) => {
+                        const cur = q.boatPreference || [];
+                        const active = cur.includes("other");
+                        return { ...q, boatPreference: active ? cur.filter((x) => x !== "other") : [...cur, "other"] };
+                      })}
+                      className="rounded border-neutral-300 accent-neutral-900"
+                    />
+                    <span className="text-neutral-700">{lang === "es" ? "Otro:" : "Other:"}</span>
+                    <input
+                      type="text"
+                      className="border-b border-neutral-300 bg-transparent text-sm outline-none flex-1 min-w-0"
+                      value={quiz.boatOther || ""}
+                      onChange={(e) => setQuiz((q) => ({ ...q, boatOther: e.target.value }))}
+                      placeholder={lang === "es" ? "Especifica…" : "Specify…"}
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <p className="text-[11px] text-neutral-600">
                 {lang === "es"
@@ -3603,6 +3674,22 @@ setCart([]);
               >
                 <option value="">{lang === "es" ? "Todos" : "All"}</option>
                 {nightlifeTypes.map((t) => (
+                  <option key={t.id} value={t.id}>{t.label[lang]}</option>
+                ))}
+              </select>
+            </>
+          )}
+
+          {selectedCategory === "beach-clubs" && (
+            <>
+              <span className="text-xs text-gray-400">|</span>
+              <select
+                value={selectedStyle}
+                onChange={(e) => setSelectedStyle(e.target.value)}
+                className="border rounded-lg px-3 py-1.5 text-xs bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-900/30"
+              >
+                <option value="">{lang === "es" ? "Todos" : "All"}</option>
+                {beachTypes.map((t) => (
                   <option key={t.id} value={t.id}>{t.label[lang]}</option>
                 ))}
               </select>
