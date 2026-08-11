@@ -55,8 +55,14 @@ export default async function handler(req, res) {
     if (!f) return res.json({ ok: true, data: null });
 
     const toISO = (local, utc) => {
-      if (utc)   return utc.replace(" ", "T") + ":00Z";
-      if (local) return local.replace(" ", "T") + ":00";
+      if (utc) {
+        const t = utc.replace(" ", "T");
+        return /T\d{2}:\d{2}:\d{2}/.test(t) ? t + "Z" : t + ":00Z";
+      }
+      if (local) {
+        const t = local.replace(" ", "T");
+        return /T\d{2}:\d{2}:\d{2}/.test(t) ? t : t + ":00";
+      }
       return null;
     };
 
