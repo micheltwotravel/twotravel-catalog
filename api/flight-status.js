@@ -1,5 +1,6 @@
 // Common airline prefixes to try when flight number has no letters (e.g. "2173" → tries AV2173, AA2173…)
-const AIRLINE_PREFIXES = ["AV","AA","CM","NK","LA","IB","B6","UA","DL","AM","VB","Y4","4O","WN","AC"];
+// Only most common airlines to/from Colombia — minimizes API calls on bare numbers
+const AIRLINE_PREFIXES = ["AV","AA","CM","LA","IB","NK","B6","AM","VB"];
 
 async function fetchFlight(flightNum, dateParam, key) {
   const url = `https://aerodatabox.p.rapidapi.com/flights/number/${flightNum}/${dateParam}`;
