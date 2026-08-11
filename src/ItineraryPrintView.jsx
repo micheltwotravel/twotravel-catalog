@@ -967,12 +967,12 @@ function CoverPage({ kickoff, total, lang, editMode }) {
                 ) : (
                   <Editable tag="div" className="cover-info-value" editMode={editMode} value={a.accommodationName}/>
                 )}
-                {a.accommodationAddr && (
+                {(a.accommodationAddr || a.accommodationMapsUrl) && (
                   a.accommodationMapsUrl ? (
                     <a href={a.accommodationMapsUrl} target="_blank" rel="noreferrer"
                       className="cover-info-sub"
                       style={{ color: "#1d4ed8", textDecoration: "underline", display: "block", fontSize: 11, marginTop: 3 }}>
-                      📍 {a.accommodationAddr}
+                      📍 {a.accommodationAddr || (isEs ? "Ver dirección →" : "View address →")}
                     </a>
                   ) : (
                     <Editable tag="div" className="cover-info-sub" editMode={editMode} value={a.accommodationAddr}/>
