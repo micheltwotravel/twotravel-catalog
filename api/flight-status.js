@@ -43,9 +43,10 @@ export default async function handler(req, res) {
       f = await fetchFlight(flightNum, dateParam, key);
     }
 
-    // If all digits or direct lookup failed, try common prefixes
+    // If all digits or direct lookup failed, try common prefixes (with small delay to avoid rate limit)
     if (!f) {
       for (const prefix of AIRLINE_PREFIXES) {
+        await new Promise(r => setTimeout(r, 300));
         f = await fetchFlight(prefix + flightNum, dateParam, key);
         if (f) break;
       }
