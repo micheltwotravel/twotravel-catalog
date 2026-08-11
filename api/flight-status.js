@@ -1,3 +1,20 @@
+// Common airline prefixes to try when flight number has no letters (e.g. "2173" → tries AV2173, AA2173…)
+const AIRLINE_PREFIXES = ["AV","AA","CM","NK","LA","IB","B6","UA","DL","AM","VB","Y4","4O","WN","AC"];
+
+async function fetchFlight(flightNum, dateParam, key) {
+  const url = `https://aerodatabox.p.rapidapi.com/flights/number/${flightNum}/${dateParam}`;
+  const r = await fetch(url, {
+    headers: {
+      "X-RapidAPI-Key": key,
+      "X-RapidAPI-Host": "aerodatabox.p.rapidapi.com",
+    },
+  });
+  if (r.status === 429) throw { limitReached: true };
+  if (!r.ok) return null;
+  const d = await r.json();
+  return Array.isArray(d) ? (d[0] || null) : (d || null);
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -14,27 +31,23 @@ export default async function handler(req, res) {
     const flightNum = flight.toUpperCase().replace(/\s/g, "");
     const dateParam = date || new Date().toISOString().split("T")[0];
 
-    const url = `https://aerodatabox.p.rapidapi.com/flights/number/${flightNum}/${dateParam}`;
-    const r = await fetch(url, {
-      headers: {
-        "X-RapidAPI-Key": key,
-        "X-RapidAPI-Host": "aerodatabox.p.rapidapi.com",
-      },
-    });
+    let f = null;
 
-    if (r.status === 404) return res.json({ ok: true, data: null });
-    if (r.status === 429) return res.json({ ok: false, limitReached: true, error: "API rate limit reached" });
-    if (!r.ok) {
-      const txt = await r.text();
-      return res.json({ ok: false, error: `Aerodatabox ${r.status}: ${txt.slice(0, 200)}` });
+    // If number has letters already (e.g. AV2173), try directly
+    if (/[A-Z]/.test(flightNum)) {
+      f = await fetchFlight(flightNum, dateParam, key);
     }
 
-    const d = await r.json();
-    if (!d || (Array.isArray(d) && !d.length)) return res.json({ ok: true, data: null });
+    // If all digits or direct lookup failed, try common prefixes
+    if (!f) {
+      for (const prefix of AIRLINE_PREFIXES) {
+        f = await fetchFlight(prefix + flightNum, dateParam, key);
+        if (f) break;
+      }
+    }
 
-    const f = Array.isArray(d) ? d[0] : d;
+    if (!f) return res.json({ ok: true, data: null });
 
-    // Convert "YYYY-MM-DD HH:mm" → ISO string
     const toISO = (local, utc) => {
       if (utc)   return utc.replace(" ", "T") + ":00Z";
       if (local) return local.replace(" ", "T") + ":00";
@@ -63,6 +76,7 @@ export default async function handler(req, res) {
       },
     });
   } catch (err) {
+    if (err.limitReached) return res.json({ ok: false, limitReached: true, error: "API rate limit reached" });
     return res.status(500).json({ ok: false, error: err.message });
   }
 }
