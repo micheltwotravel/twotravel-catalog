@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { fetchKickoffsFromSheet, saveKickoffToSheet, updateKickoffInSheet, deleteKickoff, invalidateKickoffsCache } from "./sheetServices";
 
 // ─── BRAND ───────────────────────────────────────────────────────────────────
 const R = {
@@ -35,43 +34,36 @@ const FASE_COLORS  = { "Onboarding":{"bg":"#eff6ff","color":"#1e40af"}, "Plannin
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
 // ─── DATA LAYER ──────────────────────────────────────────────────────────────
-function parseBoda(k) {
-  try {
-    const meta  = JSON.parse(k.conciergeSummary || "{}");
-    if (meta.type !== "boda" && !String(k.guestName||"").match(/^Boda:/i)) return null;
-    const notes = JSON.parse(k.internalNotes || "{}");
-    return {
-      id: k.id,
-      clienteName: String(k.guestName||"").replace(/^Boda:\s*/i,""),
-      weddingDate: meta.weddingDate||"",
-      venue:       meta.venue      ||"",
-      responsable: meta.responsable||"",
-      contact:     meta.contact    ||"",
-      phase:       meta.phase      ||"Onboarding",
-      status:      meta.status     ||"Activa",
-      guestCount:  meta.guestCount ||"",
-      budget:      meta.budget     ||"",
-      notes:       meta.notes      ||"",
-      tasks:     notes.tasks     ||[],
-      suppliers: notes.suppliers ||[],
-      songs:     notes.songs     ||[],
-      photos:    notes.photos    ||[],
-      calls:     notes.calls     ||[],
-      guests:    notes.guests    ||[],
-      palette:   notes.palette   ||[],
-      coverPhoto: meta.coverPhoto||"",
-      schedule: JSON.parse(k.travifyText||"[]"),
-    };
-  } catch { return null; }
-}
-function metaPayload(f) {
-  return JSON.stringify({type:"boda",weddingDate:f.weddingDate,venue:f.venue,responsable:f.responsable,contact:f.contact,phase:f.phase,status:f.status,guestCount:f.guestCount,budget:f.budget,notes:f.notes,coverPhoto:f.coverPhoto||""});
-}
-function notesOf(boda) {
-  return {tasks:boda.tasks||[],suppliers:boda.suppliers||[],songs:boda.songs||[],photos:boda.photos||[],calls:boda.calls||[],guests:boda.guests||[],palette:boda.palette||[]};
-}
 const BODAS_CACHE_KEY = "tt_bodas_cache";
 const BODAS_CACHE_TTL = 5 * 60 * 1000; // 5 min
+
+function parseJ(v, fallback) { try { return v ? JSON.parse(v) : fallback; } catch { return fallback; } }
+
+function rowToBoda(row) {
+  return {
+    id:          row.id          || "",
+    clienteName: row.clienteName || "",
+    weddingDate: row.weddingDate || "",
+    venue:       row.venue       || "",
+    responsable: row.responsable || "",
+    contact:     row.contact     || "",
+    phase:       row.phase       || "Onboarding",
+    status:      row.status      || "Activa",
+    guestCount:  row.guestCount  || "",
+    budget:      row.budget      || "",
+    notes:       row.notes       || "",
+    coverPhoto:  row.coverPhoto  || "",
+    tasks:     parseJ(row.tasks,     []),
+    suppliers: parseJ(row.suppliers, []),
+    songs:     parseJ(row.songs,     []),
+    photos:    parseJ(row.photos,    []),
+    calls:     parseJ(row.calls,     []),
+    guests:    parseJ(row.guests,    []),
+    palette:   parseJ(row.palette,   []),
+    schedule:  parseJ(row.schedule,  []),
+  };
+}
+
 function getBodasCache() {
   try { const { ts, data } = JSON.parse(sessionStorage.getItem(BODAS_CACHE_KEY)||"null")||{}; if (!data) return null; return { data, stale: Date.now()-ts > BODAS_CACHE_TTL }; } catch { return null; }
 }
@@ -81,25 +73,70 @@ function setBodasCache(data) {
 function clearBodasCache() {
   try { sessionStorage.removeItem(BODAS_CACHE_KEY); } catch {}
 }
+
+async function gasGet(action, params = {}) {
+  const qs = new URLSearchParams({ action, ...params }).toString();
+  const r = await fetch(`${GAS_URL}?${qs}`);
+  const text = await r.text();
+  if (text.trimStart().startsWith("<")) throw new Error("Error de conexión con el servidor.");
+  return JSON.parse(text);
+}
+async function gasPost(body) {
+  const r = await fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) });
+  const text = await r.text();
+  if (text.trimStart().startsWith("<")) throw new Error("Error de conexión con el servidor.");
+  return JSON.parse(text);
+}
+
 async function fetchFreshBodas() {
-  const all = await fetchKickoffsFromSheet({ forceRefresh: true });
-  const bodas = all.map(parseBoda).filter(Boolean);
+  const d = await gasGet("listBodas");
+  const bodas = (Array.isArray(d.data) ? d.data : []).map(rowToBoda);
   setBodasCache(bodas);
   return bodas;
 }
-async function apiBodas(forceRefresh=false) {
+async function apiBodas(forceRefresh = false) {
   if (forceRefresh) { clearBodasCache(); return fetchFreshBodas(); }
   const cached = getBodasCache();
   if (cached && !cached.stale) return cached.data;
   return fetchFreshBodas();
 }
-async function apiSaveBoda(f) { clearBodasCache();
-  const res=await saveKickoffToSheet({guestName:"Boda: "+f.clienteName,conciergeSummary:metaPayload(f),internalNotes:JSON.stringify({tasks:[],suppliers:[],songs:[],photos:[],calls:[]}),travifyText:JSON.stringify([]),status:"active"});
-  return res.id;
+async function apiSaveBoda(f) {
+  clearBodasCache();
+  const d = await gasPost({ action: "saveBoda", payload: {
+    clienteName: f.clienteName, weddingDate: f.weddingDate, venue: f.venue,
+    responsable: f.responsable, contact: f.contact, phase: f.phase,
+    status: f.status, guestCount: f.guestCount, budget: f.budget,
+    notes: f.notes, coverPhoto: f.coverPhoto || "",
+    tasks: "[]", suppliers: "[]", songs: "[]",
+    photos: "[]", calls: "[]", guests: "[]", palette: "[]", schedule: "[]",
+  }});
+  return d.id;
 }
-async function apiUpdateBoda(id,f)       { clearBodasCache(); await updateKickoffInSheet(id,{guestName:"Boda: "+f.clienteName,conciergeSummary:metaPayload(f)}); }
-async function apiSaveNotes(id,boda)     { clearBodasCache(); await updateKickoffInSheet(id,{internalNotes:JSON.stringify(notesOf(boda))}); }
-async function apiUpdateSchedule(id,sc)  { await updateKickoffInSheet(id,{travifyText:JSON.stringify(sc)}); }
+async function apiUpdateBoda(id, f) {
+  clearBodasCache();
+  await gasPost({ action: "updateBoda", id, updates: {
+    clienteName: f.clienteName, weddingDate: f.weddingDate, venue: f.venue,
+    responsable: f.responsable, contact: f.contact, phase: f.phase,
+    status: f.status, guestCount: f.guestCount, budget: f.budget,
+    notes: f.notes, coverPhoto: f.coverPhoto || "",
+  }});
+}
+async function apiSaveNotes(id, boda) {
+  clearBodasCache();
+  await gasPost({ action: "updateBoda", id, updates: {
+    tasks:     JSON.stringify(boda.tasks     || []),
+    suppliers: JSON.stringify(boda.suppliers || []),
+    songs:     JSON.stringify(boda.songs     || []),
+    photos:    JSON.stringify(boda.photos    || []),
+    calls:     JSON.stringify(boda.calls     || []),
+    guests:    JSON.stringify(boda.guests    || []),
+    palette:   JSON.stringify(boda.palette   || []),
+  }});
+}
+async function apiUpdateSchedule(id, sc) {
+  clearBodasCache();
+  await gasPost({ action: "updateBoda", id, updates: { schedule: JSON.stringify(sc) } });
+}
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const INP    = { width:"100%",border:`1px solid ${R.border}`,borderRadius:10,padding:"8px 12px",  fontSize:13,fontFamily:"'Jost',sans-serif",outline:"none",color:R.text,background:R.white,boxSizing:"border-box" };
@@ -895,7 +932,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
   const handleDelete=async(e,boda)=>{
     e.stopPropagation();
     if(!window.confirm(`¿Eliminar "${boda.clienteName}"?`)) return;
-    try{await deleteKickoff(boda.id); setBodas(p=>p.filter(b=>b.id!==boda.id));}catch(e){alert("Error: "+e.message);}
+    try{clearBodasCache(); await gasPost({action:"deleteBoda",id:boda.id}); setBodas(p=>p.filter(b=>b.id!==boda.id));}catch(e){alert("Error: "+e.message);}
   };
 
   const today=new Date(); today.setHours(0,0,0,0);

@@ -145,6 +145,12 @@ function doPost(e) {
       case "property_update": return jsonResponse(handlePropertyUpdate(body.data || {}));
       case "property_delete": return jsonResponse(handlePropertyDelete(body.data || {}));
 
+      // ── Bodas ──
+      case "listBodas":   return jsonResponse({ ok: true, data: listBodas_() });
+      case "saveBoda":    return jsonResponse(saveBoda_(payload));
+      case "updateBoda":  return jsonResponse(updateBoda_(id, updates));
+      case "deleteBoda":  return jsonResponse(deleteBoda_(id));
+
       default:
         return jsonResponse({ ok: false, error: "Unknown action: " + action });
     }
@@ -162,6 +168,7 @@ function doGet(e) {
       case "listTasks":       return jsonResponse({ ok: true, data: listTasks_() });
       case "listSoporte":     return jsonResponse({ ok: true, data: listSoporte_() });
       case "listProperties":  return jsonResponse(handlePropertyList());
+      case "listBodas":       return jsonResponse({ ok: true, data: listBodas_() });
       case "getProperty": {
         const name = (e.parameter && e.parameter.name) || "";
         const id   = (e.parameter && e.parameter.id)   || "";
@@ -917,4 +924,160 @@ function notifyPagoStatus_(p) {
   } catch(e) {
     return { ok: false, error: e.message };
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BODAS
+// ═══════════════════════════════════════════════════════════════════
+const BODAS_SHEET = "Bodas";
+const BODAS_COLS  = [
+  "id","clienteName","weddingDate","venue","responsable","phase","status",
+  "guestCount","budget","notes","contact","coverPhoto",
+  "tasks","suppliers","songs","photos","calls","guests","palette","schedule",
+  "createdAt","updatedAt",
+];
+
+function getBodaSheet_() {
+  let sh = SS.getSheetByName(BODAS_SHEET);
+  if (!sh) {
+    sh = SS.insertSheet(BODAS_SHEET);
+    sh.getRange(1, 1, 1, BODAS_COLS.length).setValues([BODAS_COLS]);
+    sh.setFrozenRows(1);
+    return sh;
+  }
+  // Ensure any new columns are appended
+  const existing = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
+  BODAS_COLS.forEach(col => {
+    if (!existing.includes(col)) {
+      sh.getRange(1, sh.getLastColumn() + 1).setValue(col);
+      existing.push(col);
+    }
+  });
+  return sh;
+}
+
+function listBodas_() {
+  const sh = getBodaSheet_();
+  if (sh.getLastRow() < 2) return [];
+  const all = sh.getDataRange().getValues();
+  const headers = all[0].map(String);
+  return all.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => {
+      const v = row[i];
+      obj[h] = (v instanceof Date) ? v.toISOString() : (v ?? "");
+    });
+    return obj;
+  }).filter(r => r.id);
+}
+
+function saveBoda_(payload) {
+  const sh = getBodaSheet_();
+  const now = new Date().toISOString();
+  const id  = payload.id || ("boda_" + Date.now());
+  const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
+  const row = headers.map(col => {
+    if (col === "id")        return id;
+    if (col === "createdAt") return now;
+    if (col === "updatedAt") return now;
+    return payload[col] !== undefined ? payload[col] : "";
+  });
+  sh.appendRow(row);
+  SpreadsheetApp.flush();
+  return { ok: true, id };
+}
+
+function updateBoda_(id, updates) {
+  if (!id) return { ok: false, error: "Falta id" };
+  const sh = getBodaSheet_();
+  const data = sh.getDataRange().getValues();
+  const headers = data[0].map(String);
+  const idIdx = headers.indexOf("id");
+  for (let r = 1; r < data.length; r++) {
+    if (String(data[r][idIdx]) !== String(id)) continue;
+    Object.entries(updates).forEach(([k, v]) => {
+      const ci = headers.indexOf(k);
+      if (ci >= 0) sh.getRange(r + 1, ci + 1).setValue(v ?? "");
+    });
+    const updIdx = headers.indexOf("updatedAt");
+    if (updIdx >= 0) sh.getRange(r + 1, updIdx + 1).setValue(new Date().toISOString());
+    SpreadsheetApp.flush();
+    return { ok: true };
+  }
+  return { ok: false, error: "Boda no encontrada: " + id };
+}
+
+function deleteBoda_(id) {
+  if (!id) return { ok: false, error: "Falta id" };
+  const sh = getBodaSheet_();
+  const data = sh.getDataRange().getValues();
+  const idIdx = data[0].map(String).indexOf("id");
+  for (let r = 1; r < data.length; r++) {
+    if (String(data[r][idIdx]) !== String(id)) continue;
+    sh.deleteRow(r + 1);
+    SpreadsheetApp.flush();
+    return { ok: true };
+  }
+  return { ok: false, error: "Boda no encontrada: " + id };
+}
+
+// ── Migración única: Sheet1 → hoja Bodas ─────────────────────────
+// Ejecutar una sola vez desde el editor de GAS: seleccionar migrateBodas y presionar ▶
+function migrateBodas() {
+  const sh1 = SS.getSheetByName("Sheet1");
+  if (!sh1) { Logger.log("Sheet1 no encontrada"); return; }
+
+  const data = sh1.getDataRange().getValues();
+  const h    = data[0].map(String);
+  const col  = name => h.indexOf(name);
+
+  const toMigrate  = [];
+  const rowsToDelete = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const guestName = String(data[i][col("guestName")] || "");
+    let meta = {};
+    try { meta = JSON.parse(data[i][col("conciergeSummary")] || "{}"); } catch {}
+    if (meta.type !== "boda" && !guestName.match(/^Boda:/i)) continue;
+
+    let notes = {};
+    try { notes = JSON.parse(data[i][col("internalNotes")] || "{}"); } catch {}
+    let schedule = [];
+    try { schedule = JSON.parse(data[i][col("travifyText")] || "[]"); } catch {}
+
+    toMigrate.push({
+      id:          String(data[i][col("id")] || ("boda_" + Date.now() + "_" + i)),
+      clienteName: guestName.replace(/^Boda:\s*/i, ""),
+      weddingDate: meta.weddingDate  || "",
+      venue:       meta.venue        || "",
+      responsable: meta.responsable  || "",
+      phase:       meta.phase        || "Onboarding",
+      status:      meta.status       || "Activa",
+      guestCount:  meta.guestCount   || "",
+      budget:      meta.budget       || "",
+      notes:       meta.notes        || "",
+      contact:     meta.contact      || "",
+      coverPhoto:  meta.coverPhoto   || "",
+      tasks:       JSON.stringify(notes.tasks     || []),
+      suppliers:   JSON.stringify(notes.suppliers || []),
+      songs:       JSON.stringify(notes.songs     || []),
+      photos:      JSON.stringify(notes.photos    || []),
+      calls:       JSON.stringify(notes.calls     || []),
+      guests:      JSON.stringify(notes.guests    || []),
+      palette:     JSON.stringify(notes.palette   || []),
+      schedule:    JSON.stringify(schedule),
+    });
+    rowsToDelete.push(i + 1);
+  }
+
+  Logger.log("Bodas encontradas en Sheet1: " + toMigrate.length);
+  if (!toMigrate.length) { Logger.log("Nada para migrar."); return; }
+
+  toMigrate.forEach(b => saveBoda_(b));
+
+  // Eliminar de Sheet1 en orden inverso para no desplazar índices
+  rowsToDelete.slice().reverse().forEach(r => sh1.deleteRow(r));
+  SpreadsheetApp.flush();
+
+  Logger.log("✅ Migración completa: " + toMigrate.length + " bodas → hoja Bodas.");
 }
