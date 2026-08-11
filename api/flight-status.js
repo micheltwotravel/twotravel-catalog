@@ -57,6 +57,7 @@ export default async function handler(req, res) {
     const toISO = (local, utc) => {
       if (utc) {
         const t = utc.replace(" ", "T");
+        if (t.endsWith("Z")) return t;
         return /T\d{2}:\d{2}:\d{2}/.test(t) ? t + "Z" : t + ":00Z";
       }
       if (local) {
