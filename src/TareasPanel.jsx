@@ -383,32 +383,44 @@ export default function TareasPanel({ currentUser, onLogout }) {
   const myName  = currentUser?.name  || "";
   const myEmail = currentUser?.email || "";
 
-  const load = useCallback(async (retry = 0) => {
-    setLoading(true); setError("");
+  const CACHE_KEY   = "tareas_cache";
+  const CACHE_TTL   = 5 * 60 * 1000; // 5 min
+
+  const load = useCallback(async (background = false) => {
+    // Load from cache instantly on first open
+    if (!background) {
+      try {
+        const raw = sessionStorage.getItem(CACHE_KEY);
+        if (raw) {
+          const { tasks: ct, users: cu, ts } = JSON.parse(raw);
+          if (Date.now() - ts < CACHE_TTL) {
+            setTasks(ct); setUsers(cu); setLoading(false);
+            // Still refresh in background
+            load(true);
+            return;
+          }
+        }
+      } catch {}
+      setLoading(true);
+    }
+    setError("");
     try {
       const [tasksRes, usersRes] = await Promise.all([
         gas("listTasks"),
         gas("listUsers"),
       ]);
-      if (tasksRes.ok) {
-        setTasks((tasksRes.data||[]).filter(isBoda));
-        setError("");
-      } else if (!tasksRes.ok && retry < 2) {
-        // GAS cold start — retry up to 2 times with a short delay
-        setTimeout(() => load(retry + 1), 3000);
-        return;
-      } else {
-        setError(tasksRes.error || "Error al cargar");
+      const newTasks = tasksRes.ok ? (tasksRes.data||[]).filter(isBoda) : null;
+      const newUsers = usersRes.ok ? (usersRes.data||[]).filter(u => u.active !== "false" && u.name) : null;
+      if (newTasks) { setTasks(newTasks); setError(""); }
+      else setError(tasksRes.error || "Error al cargar");
+      if (newUsers) setUsers(newUsers);
+      if (newTasks && newUsers) {
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify({ tasks: newTasks, users: newUsers, ts: Date.now() }));
       }
-      if (usersRes.ok) setUsers((usersRes.data||[]).filter(u => u.active !== "false" && u.name));
-    } catch (e) {
-      if (retry < 2) {
-        setTimeout(() => load(retry + 1), 3000);
-        return;
-      }
-      setError("No se pudo conectar. Intenta de nuevo.");
+    } catch {
+      if (!background) setError("No se pudo conectar. Intenta de nuevo.");
     }
-    setLoading(false);
+    if (!background) setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
