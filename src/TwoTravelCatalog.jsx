@@ -1802,9 +1802,10 @@ const nightlifeTypes = [
 
 // Sub-tipos de beach-clubs (se filtran por el campo "subcategory" del sheet)
 const beachTypes = [
-  { id: "private-boat", label: { es: "Bote Privado",  en: "Private Boat" } },
-  { id: "beach-club",   label: { es: "Beach Club",    en: "Beach Club" } },
-  { id: "island",       label: { es: "Islas & Tours", en: "Islands & Tours" } },
+  { id: "private-boat", label: { es: "⛵ Bote Privado",  en: "⛵ Private Boat" } },
+  { id: "day-pass",     label: { es: "🏖️ Day Pass",      en: "🏖️ Day Pass" } },
+  { id: "beach-club",   label: { es: "🌴 Beach Club",    en: "🌴 Beach Club" } },
+  { id: "island",       label: { es: "🏝️ Islas & Tours", en: "🏝️ Islands & Tours" } },
 ];
 
 // Estilos de restaurantes — IDs must match normalizeSubcategory() output
@@ -2569,9 +2570,12 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
           const sub = (s.subcategory || "").toString().trim().toLowerCase();
           const name = (s.name || s.name_en || "").toLowerCase();
           const isPrivateBoat = /private.?boat|lancha|bote|catamaran|catamarán|yacht|yate|speedboat|speed.?boat/.test(sub + " " + name);
+          const isDayPass     = s.priceUnit === "day pass" || /day.?pass/.test(sub + " " + name);
+          const isIsland      = /island|isla|rosario|tierrabomba|barú|baru/.test(sub);
           if (selectedStyle === "private-boat") return isPrivateBoat;
-          if (selectedStyle === "beach-club")   return !isPrivateBoat && !/island|isla|rosario|tierrabomba|barú|baru/.test(sub);
-          if (selectedStyle === "island")       return /island|isla|rosario|tierrabomba|barú|baru/.test(sub);
+          if (selectedStyle === "day-pass")     return isDayPass && !isPrivateBoat;
+          if (selectedStyle === "beach-club")   return !isPrivateBoat && !isDayPass && !isIsland;
+          if (selectedStyle === "island")       return isIsland;
         }
         return true;
       })();
@@ -3690,16 +3694,19 @@ setCart([]);
           {selectedCategory === "beach-clubs" && (
             <>
               <span className="text-xs text-gray-400">|</span>
-              <select
-                value={selectedStyle}
-                onChange={(e) => setSelectedStyle(e.target.value)}
-                className="border rounded-lg px-3 py-1.5 text-xs bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-900/30"
-              >
-                <option value="">{lang === "es" ? "Todos" : "All"}</option>
-                {beachTypes.map((t) => (
-                  <option key={t.id} value={t.id}>{t.label[lang]}</option>
-                ))}
-              </select>
+              {beachTypes.map((bt) => (
+                <button
+                  key={bt.id}
+                  onClick={() => setSelectedStyle(prev => prev === bt.id ? "" : bt.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                    selectedStyle === bt.id
+                      ? "bg-neutral-900 text-white border-neutral-900"
+                      : "bg-white text-neutral-700 border-neutral-300 hover:border-neutral-500"
+                  }`}
+                >
+                  {bt.label[lang]}
+                </button>
+              ))}
             </>
           )}
         </div>
