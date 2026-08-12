@@ -2401,6 +2401,13 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
 
+  // Auto-apply family filter when quiz selects "family" vibe
+  useEffect(() => {
+    if (step === "catalog" && quiz.vibes.includes("family")) {
+      setActiveTags(prev => prev.includes("family") ? prev : [...prev, "family"]);
+    }
+  }, [step]);
+
   const [imgIndex, setImgIndex] = useState(0);
   const [selectedService, setSelectedService] = useState(null);
   // For "options" pricing model — tracks which option pill is selected
@@ -3409,7 +3416,7 @@ setCart([]);
               </div>
             </div>
 
-            {(kickoffCity === "cartagena" || !kickoffCity) && (
+            {(kickoffCity.split(",").includes("CTG") || !kickoffCity) && (
               <div className="space-y-2">
                 <p className="text-[11px] text-neutral-600">
                   {lang === "es"
