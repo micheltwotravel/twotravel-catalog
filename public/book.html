@@ -337,6 +337,15 @@
         <label id="lblPhone">WhatsApp (opcional)</label>
         <input type="tel" id="clientPhone" placeholder="+57 300 000 0000" />
       </div>
+      <div class="field">
+        <label id="lblGuests">Invitados (opcional)</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="email" id="guestInput" placeholder="correo@ejemplo.com" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addGuest();}" />
+          <button type="button" id="addGuestBtn" onclick="addGuest()" style="white-space:nowrap;padding:10px 14px;background:#1a1814;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit">Añadir</button>
+        </div>
+        <div id="guestList" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px"></div>
+        <p id="guestNote" style="font-size:11px;color:#999;margin-top:4px"></p>
+      </div>
       <p class="error-msg" id="bookError" style="display:none"></p>
       <button class="btn-primary" id="bookBtn" onclick="confirmBook()">Confirmar reunión</button>
     </div>
@@ -387,6 +396,9 @@ const T = {
     errEmail:      "Email inválido.",
     errNoSlots:    "No hay disponibilidad para este día. Elige otra fecha.",
     errLoad:       "Error al cargar disponibilidad.",
+    guestsLabel:   "Invitados (opcional)",
+    guestsAdd:     "Añadir",
+    guestsNote:    (n) => `${n} de 10 invitados agregados`,
     confirmText:   (name, date, time, dur, email) =>
       `Tu reunión con <strong>${name}</strong> está confirmada<br>para el <strong>${date}</strong> a las <strong>${time}</strong> (${dur} min)<br><br>Recibirás un correo de confirmación en <strong>${email}</strong>`,
   },
@@ -416,6 +428,9 @@ const T = {
     errEmail:      "Invalid email.",
     errNoSlots:    "No availability for this day. Please choose another date.",
     errLoad:       "Error loading availability.",
+    guestsLabel:   "Guests (optional)",
+    guestsAdd:     "Add",
+    guestsNote:    (n) => `${n} of 10 guests added`,
     confirmText:   (name, date, time, dur, email) =>
       `Your meeting with <strong>${name}</strong> is confirmed<br>for <strong>${date}</strong> at <strong>${time}</strong> (${dur} min)<br><br>You'll receive a confirmation email at <strong>${email}</strong>`,
   },
@@ -576,6 +591,34 @@ function pickSlot(el, slot) {
   }, 300);
 }
 
+// ── Guest management ────────────────────────────────────────────────────────
+const guests = [];
+function addGuest() {
+  const input = document.getElementById("guestInput");
+  const email = input.value.trim();
+  if (!email || !/\S+@\S+\.\S+/.test(email)) return;
+  if (guests.includes(email) || guests.length >= 10) return;
+  guests.push(email);
+  input.value = "";
+  renderGuests();
+}
+function removeGuest(email) {
+  const i = guests.indexOf(email);
+  if (i > -1) guests.splice(i, 1);
+  renderGuests();
+}
+function renderGuests() {
+  const list = document.getElementById("guestList");
+  const note = document.getElementById("guestNote");
+  list.innerHTML = guests.map(e =>
+    `<span style="display:inline-flex;align-items:center;gap:5px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:20px;padding:3px 10px;font-size:12px">
+      ${e}
+      <button type="button" onclick="removeGuest('${e}')" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:14px;line-height:1;padding:0">×</button>
+    </span>`
+  ).join("");
+  note.textContent = guests.length > 0 ? t.guestsNote(guests.length) : "";
+}
+
 async function confirmBook() {
   const name  = document.getElementById("clientName").value.trim();
   const email = document.getElementById("clientEmail").value.trim();
@@ -590,7 +633,7 @@ async function confirmBook() {
     const res  = await fetch("/api/calendar/book", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ concierge: slug, date: selDate, startTime: selSlot.start, endTime: selSlot.end, clientName: name, clientEmail: email, clientPhone: phone, kickoffId, duration, lang }),
+      body: JSON.stringify({ concierge: slug, date: selDate, startTime: selSlot.start, endTime: selSlot.end, clientName: name, clientEmail: email, clientPhone: phone, guestEmails: guests, kickoffId, duration, lang }),
     });
     const data = await res.json();
     if (!data.ok) {
@@ -641,6 +684,8 @@ function applyTranslations() {
   document.getElementById("lblName").textContent      = t.nameLabel;
   document.getElementById("lblEmail").textContent     = t.emailLabel;
   document.getElementById("lblPhone").textContent     = t.phoneLabel;
+  document.getElementById("lblGuests").textContent    = t.guestsLabel;
+  document.getElementById("addGuestBtn").textContent  = t.guestsAdd;
   document.getElementById("bookBtn").textContent      = t.bookBtn;
   document.getElementById("s4title").textContent      = t.confirmTitle;
   document.getElementById("meetLinkBtn").textContent  = t.meetBtn;

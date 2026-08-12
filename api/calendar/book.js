@@ -46,7 +46,7 @@ async function getCalendarBusy(accessToken, date) {
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { concierge, date, startTime, endTime, clientName, clientEmail, clientPhone, kickoffId, meetingType, lang, duration: durParam } = req.body;
+  const { concierge, date, startTime, endTime, clientName, clientEmail, clientPhone, guestEmails, kickoffId, meetingType, lang, duration: durParam } = req.body;
   if (!concierge || !date || !startTime || !clientName || !clientEmail) {
     return res.status(400).json({ error: "Missing required fields" });
   }
@@ -117,63 +117,71 @@ export default async function handler(req, res) {
   }
   // ── End re-validation ─────────────────────────────────────────────────────
 
-  if (!calRefreshToken) return res.status(404).json({ error: "Calendar not connected" });
-
-  const accessToken = await getAccessToken(calRefreshToken);
-
+  const type = meetingType || "Kickoff Call";
+  const title = `Two Travel — ${type} with ${clientName}`;
   const startISO = `${date}T${startTime}:00-05:00`;
   const endISO   = `${date}T${endTime}:00-05:00`;
 
-  const type = meetingType || "Kickoff Call";
-  const title = `Two Travel — ${type} with ${clientName}`;
+  let eventId = null, meetLink = "", htmlLink = "";
 
-  // Create Google Calendar event with Meet link
-  const eventRes = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1&sendUpdates=all", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      summary: title,
-      start:   { dateTime: startISO, timeZone: "America/Bogota" },
-      end:     { dateTime: endISO,   timeZone: "America/Bogota" },
-      attendees: [{ email: clientEmail }],
-      conferenceData: {
-        createRequest: {
-          requestId: `tt-${Date.now()}`,
-          conferenceSolutionKey: { type: "hangoutsMeet" },
-        },
-      },
-      description: lang === "es"
-        ? `Hola ${clientName},\n\nTu reunión con Two Travel está confirmada. Estamos muy emocionados de conectar contigo y comenzar a planear tu experiencia.\n\nNos vemos pronto — cualquier pregunta antes de la llamada, escríbenos directamente.\n\nEl equipo de Two Travel\n\n—\n📧 ${clientEmail}${clientPhone ? `\n📱 ${clientPhone}` : ""}`
-        : `Hi ${clientName},\n\nYour call with Two Travel is confirmed — we're looking forward to connecting with you and starting to plan your experience.\n\nSee you soon! Feel free to reach out before the call if you have any questions.\n\nThe Two Travel Team\n\n—\n📧 ${clientEmail}${clientPhone ? `\n📱 ${clientPhone}` : ""}`,
-    }),
-  });
-
-  const event = await eventRes.json();
-  if (!event.id) return res.status(500).json({ error: "Failed to create calendar event", detail: event });
-
-  const meetLink = event.conferenceData?.entryPoints?.find(e => e.entryPointType === "video")?.uri || "";
-
-  // Save meeting to kickoff in Sheets if kickoffId provided
-  if (kickoffId) {
-    await fetch(GAS, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "addMeetingToKickoff",
-        payload: {
-          kickoffId,
-          meeting: {
-            id:     `mtg_${Date.now()}`,
-            date,
-            time:   startTime,
-            type,
-            status: "scheduled",
-            notes:  `Meet: ${meetLink}\nCliente: ${clientName} · ${clientEmail}${clientPhone ? ` · ${clientPhone}` : ""}`,
-            tasks:  [],
-          },
-        },
-      }),
-    });
+  // Create Google Calendar event only if token exists and OAuth vars are set
+  if (calRefreshToken && process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    try {
+      const accessToken = await getAccessToken(calRefreshToken);
+      if (accessToken) {
+        const eventRes = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1&sendUpdates=all", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            summary: title,
+            start:   { dateTime: startISO, timeZone: "America/Bogota" },
+            end:     { dateTime: endISO,   timeZone: "America/Bogota" },
+            attendees: [
+              { email: clientEmail },
+              ...((Array.isArray(guestEmails) ? guestEmails : []).filter(e => e && e !== clientEmail).map(e => ({ email: e }))),
+            ],
+            conferenceData: {
+              createRequest: {
+                requestId: `tt-${Date.now()}`,
+                conferenceSolutionKey: { type: "hangoutsMeet" },
+              },
+            },
+            description: lang === "es"
+              ? `Hola ${clientName},\n\nTu reunión con Two Travel está confirmada. Estamos muy emocionados de conectar contigo y comenzar a planear tu experiencia.\n\nNos vemos pronto — cualquier pregunta antes de la llamada, escríbenos directamente.\n\nEl equipo de Two Travel\n\n—\n📧 ${clientEmail}${clientPhone ? `\n📱 ${clientPhone}` : ""}`
+              : `Hi ${clientName},\n\nYour call with Two Travel is confirmed — we're looking forward to connecting with you and starting to plan your experience.\n\nSee you soon! Feel free to reach out before the call if you have any questions.\n\nThe Two Travel Team\n\n—\n📧 ${clientEmail}${clientPhone ? `\n📱 ${clientPhone}` : ""}`,
+          }),
+        });
+        const event = await eventRes.json();
+        eventId  = event.id  || null;
+        meetLink = event.conferenceData?.entryPoints?.find(e => e.entryPointType === "video")?.uri || "";
+        htmlLink = event.htmlLink || "";
+      }
+    } catch(e) { console.error("Calendar event creation failed:", e.message); }
   }
 
-  res.json({ ok: true, eventId: event.id, meetLink, htmlLink: event.htmlLink });
+  // Save meeting to GAS (always, with or without calendar event)
+  const mtgId = `mtg_${Date.now()}`;
+  await fetch(GAS, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "addMeetingToKickoff",
+      payload: {
+        kickoffId: kickoffId || "",
+        meeting: {
+          id:     mtgId,
+          date,
+          time:   startTime,
+          type,
+          status: "scheduled",
+          notes:  `${meetLink ? `Meet: ${meetLink}\n` : ""}Cliente: ${clientName} · ${clientEmail}${clientPhone ? ` · ${clientPhone}` : ""}`,
+          tasks:  [],
+          clientName,
+          clientEmail,
+          concierge,
+        },
+      },
+    }),
+  }).catch(e => console.error("GAS addMeeting error:", e.message));
+
+  res.json({ ok: true, eventId, meetLink, htmlLink });
 }

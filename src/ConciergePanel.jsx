@@ -6945,7 +6945,9 @@ function MeetingFormModal({ kickoffs, initial, onSave, onClose }) {
 
 /* ── Meeting card ── */
 export function ReunionesPage({ currentUser, initialKickoffId }) {
-  const [pageTab, setPageTab] = useState("meetings"); // "meetings" | "availability"
+  const [pageTab, setPageTab] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get("tab") || "meetings"; } catch { return "meetings"; }
+  }); // "meetings" | "availability"
   const [kickoffs,      setKickoffs]      = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [error,         setError]         = useState("");
@@ -7890,7 +7892,7 @@ const loadKickoffs = async () => {
 </div>
       </header>
 
-      <main style={{flex:1,maxWidth:1280,width:"100%",margin:"0 auto",padding:"16px 24px",display:"flex",flexDirection:"column",gap:12}}>
+      <main style={{flex:1,maxWidth:1680,width:"100%",margin:"0 auto",padding:"16px 24px",display:"flex",flexDirection:"column",gap:12}}>
         <div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",justifyContent:"space-between"}}>
           <div style={{position:"relative",width:260}}>
             <Search style={{width:14,height:14,color:"var(--text-3)",position:"absolute",left:9,top:"50%",transform:"translateY(-50%)"}} />
