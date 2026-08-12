@@ -4399,18 +4399,27 @@ setCart([]);
 
     // Default: standard per-person / per-group price
     const selectedEffectivePriceCop = getEffectivePriceCop(selectedService, currentClientType);
-    return categoryHasVisiblePrice(selectedServiceCategory) && hasPrice(selectedEffectivePriceCop) ? (
-      <>
-        <span className="text-2xl font-bold text-tt.ink">
-          {formatPrice(convertPrice(selectedEffectivePriceCop))}
+    if (categoryHasVisiblePrice(selectedServiceCategory) && hasPrice(selectedEffectivePriceCop)) {
+      return (
+        <>
+          <span className="text-2xl font-bold text-tt.ink">
+            {formatPrice(convertPrice(selectedEffectivePriceCop))}
+          </span>
+          <span className="text-sm text-gray-500 ml-2">
+            · {t.approxPrice} • {unitLabel(selectedService.priceUnit, selectedService.category, selectedService.name)}
+          </span>
+        </>
+      );
+    }
+    // No price: if item has a menu link, point to it; otherwise generic quote message
+    if (selectedService.menuUrl) {
+      return (
+        <span className="text-sm text-gray-500 italic">
+          {lang === "es" ? "Revisa el menú de arriba para precios" : "See menu above for pricing"}
         </span>
-        <span className="text-sm text-gray-500 ml-2">
-          · {t.approxPrice} • {unitLabel(selectedService.priceUnit, selectedService.category, selectedService.name)}
-        </span>
-      </>
-    ) : (
-      <span className="text-sm text-gray-500">{t.requestQuote}</span>
-    );
+      );
+    }
+    return <span className="text-sm text-gray-500">{t.requestQuote}</span>;
   })()}
 </div>
 
