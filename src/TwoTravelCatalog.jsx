@@ -2229,7 +2229,7 @@ useEffect(() => {
   .catch((err) => {
     console.error("Error leyendo Sheet:", err);
     setServicesError("No se pudo leer el catálogo. Mostrando versión offline.");
-    setServices(servicesData);
+    setServices(servicesData.map(s => ({ ...s, city: s.city || "ctg" })));
   })
   .finally(() => setIsLoadingServices(false));
 }, []);
@@ -2553,10 +2553,13 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
         ));
 
       // Brunch is a sub-category of restaurants — no longer a top-level tab
+      // Private boat items can live in any Sheet category (services, chef, beach-clubs, etc.)
+      const isPrivateBoatItem = /private.?boat/i.test(s.subcategory || "");
       const catOK =
         selectedCategory === "all" ||
         serviceCategory === selectedCategory ||
-        (selectedCategory === "restaurants" && isBrunchItem);
+        (selectedCategory === "restaurants" && isBrunchItem) ||
+        (selectedCategory === "beach-clubs" && selectedStyle === "private-boat" && isPrivateBoatItem);
 
       // Sub-filter: restaurants use style dropdown (includes "brunch"), nightlife uses subcategory field
       const stylesOK = (() => {
@@ -2632,8 +2635,8 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
           kickoffCodes.flatMap(code => CITY_CONFIG[code]?.aliases || [code.toLowerCase()])
         );
         const sCity = String(s.city || "").trim();
-        // Untagged services → legacy Cartagena content, only show for pure-CTG kickoffs
-        if (!sCity) return kickoffCodes.length === 1 && kickoffCodes[0] === "CTG";
+        // Untagged items → hide when kickoff has a specific city (needs city tag in Sheet)
+        if (!sCity) return false;
         // Service may also be tagged with multiple cities
         const sCodes = sCity.split(",").map(c => toCityCode(c.trim())).filter(Boolean);
         return sCodes.some(code => kickoffCodes.includes(code))
