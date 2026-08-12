@@ -2061,6 +2061,7 @@ const categoriesWithPriceLevel = [
   "bars",
   "beach-clubs",
   "nightlife",
+  "chef",
 ];
 // Devuelve $, $$ o $$$ para cualquier servicio
 const getServicePriceLevel = (s, clientType = 1) => {
@@ -2373,8 +2374,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   const categoryHasVisiblePrice = (category) =>
   category === "tours" ||
   category === "services" ||
-  category === "transportation" ||
-  category === "chef";
+  category === "transportation";
 
 
   const hasPrice = (cop) => !!cop && cop > 0; // must return boolean — React renders 0 literally
@@ -4366,6 +4366,25 @@ setCart([]);
         <span className="text-sm text-gray-500">
           {lang === "es" ? "Precio según selección ↑" : "Price varies · see above ↑"}
         </span>
+      );
+    }
+
+    // Chef: show price level chip + "Check the menu" for $ and $$
+    if (selectedServiceCategory === "chef") {
+      const level = getServicePriceLevel(selectedService, currentClientType);
+      return (
+        <div className="flex flex-col gap-1">
+          {level && (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border border-neutral-300 text-neutral-800 bg-white w-fit">
+              {level}
+            </span>
+          )}
+          {(!level || level === "$" || level === "$$") && (
+            <span className="text-xs text-gray-500 italic">
+              {lang === "es" ? "Revisa el menú para más detalles" : "Check the menu for details"}
+            </span>
+          )}
+        </div>
       );
     }
 
