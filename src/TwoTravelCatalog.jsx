@@ -1804,8 +1804,6 @@ const nightlifeTypes = [
 const beachTypes = [
   { id: "private-boat", label: { es: "⛵ Bote Privado",  en: "⛵ Private Boat" } },
   { id: "day-pass",     label: { es: "🏖️ Day Pass",      en: "🏖️ Day Pass" } },
-  { id: "beach-club",   label: { es: "🌴 Beach Club",    en: "🌴 Beach Club" } },
-  { id: "island",       label: { es: "🏝️ Islas & Tours", en: "🏝️ Islands & Tours" } },
 ];
 // Sub-chips que aparecen dentro de cada tipo de beach-club
 const beachSubChips = {
