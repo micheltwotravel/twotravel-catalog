@@ -2589,7 +2589,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
           else if (selectedStyle === "island") passes = isIsland;
           if (!passes) return false;
           // Apply destination sub-chip filter
-          if (selectedDestination === "beach-clubs-dest") return /beach.?club/.test(sub + " " + loc);
+          if (selectedDestination === "beach-clubs-dest") return normalizeCategory(s.category) === "beach-clubs";
           if (selectedDestination === "tierra-bomba")     return /tierra.?bomba/.test(sub + " " + loc);
           if (selectedDestination === "islas-rosario")    return /rosario/.test(sub + " " + loc + " " + name);
           return true;
