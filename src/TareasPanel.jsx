@@ -9,8 +9,23 @@ const TIPOS       = ["Task","Meeting"];
 const COLORS      = { overdue:"#f4c7c3", today:"#ffe599", upcoming:"#c9daf8", done:"#d9ead3" };
 
 async function gas(action, payload = {}) {
-  const r = await fetch(GAS, { method:"POST", body: JSON.stringify({ action, payload }) });
-  return r.json();
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 25000); // 25s timeout
+  try {
+    const r = await fetch(GAS, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action, payload }),
+      signal: ctrl.signal,
+    });
+    const text = await r.text();
+    return text.trimStart().startsWith("<") ? { ok: false, error: "Error de conexión" } : JSON.parse(text);
+  } catch (e) {
+    if (e.name === "AbortError") throw new Error("Tiempo de espera agotado. El servidor tardó demasiado, intenta de nuevo.");
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function isBoda(t) {
@@ -420,14 +435,18 @@ export default function TareasPanel({ currentUser, onLogout }) {
   }
 
   async function handleSave(form) {
-    if (form.id) {
-      await gas("updateTask", form);
-      setTasks(prev => prev.map(t => t.id===form.id ? {...t,...form} : t));
-    } else {
-      await gas("saveTask", { ...form, source:"bodas" });
-      await load();
+    try {
+      if (form.id) {
+        await gas("updateTask", form);
+        setTasks(prev => prev.map(t => t.id===form.id ? {...t,...form} : t));
+      } else {
+        await gas("saveTask", { ...form, source:"bodas" });
+        await load();
+      }
+      setModal(null);
+    } catch(e) {
+      alert("Error al guardar: " + e.message);
     }
-    setModal(null);
   }
 
   async function handleDelete(id) {
