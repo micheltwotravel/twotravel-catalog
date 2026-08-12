@@ -1807,6 +1807,16 @@ const beachTypes = [
   { id: "beach-club",   label: { es: "🌴 Beach Club",    en: "🌴 Beach Club" } },
   { id: "island",       label: { es: "🏝️ Islas & Tours", en: "🏝️ Islands & Tours" } },
 ];
+// Sub-chips que aparecen dentro de cada tipo de beach-club
+const beachSubChips = {
+  "private-boat": [
+    { id: "beach-clubs-dest", label: { es: "🌴 Beach Clubs", en: "🌴 Beach Clubs" } },
+  ],
+  "day-pass": [
+    { id: "tierra-bomba",  label: { es: "🏝️ Tierra Bomba",      en: "🏝️ Tierra Bomba" } },
+    { id: "islas-rosario", label: { es: "🌴 Islas del Rosario", en: "🌴 Islas del Rosario" } },
+  ],
+};
 
 // Estilos de restaurantes — IDs must match normalizeSubcategory() output
 const restaurantStyles = [
@@ -2393,6 +2403,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   /* ---------- estados de filtros ---------- */
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStyle, setSelectedStyle] = useState("");
+  const [selectedDestination, setSelectedDestination] = useState(""); // sub-chip dentro de private-boat/day-pass
   const [searchTerm, setSearchTerm] = useState("");
   const [priceRange, setPriceRange] = useState("all");
   // Tags: "family" | "vegetarian" | "accessibility" — puede haber más de uno activo
@@ -2567,15 +2578,23 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
             return /night|disco|club/.test(sub);
         }
         if (selectedCategory === "beach-clubs" && selectedStyle) {
-          const sub = (s.subcategory || "").toString().trim().toLowerCase();
+          const sub  = (s.subcategory || "").toString().trim().toLowerCase();
+          const loc  = (s.location    || "").toString().trim().toLowerCase();
           const name = (s.name || s.name_en || "").toLowerCase();
-          const isPrivateBoat = /private.?boat|lancha|bote|catamaran|catamarán|yacht|yate|speedboat|speed.?boat/.test(sub + " " + name);
-          const isDayPass     = s.priceUnit === "day pass" || /day.?pass/.test(sub + " " + name);
-          const isIsland      = /island|isla|rosario|tierrabomba|barú|baru/.test(sub);
-          if (selectedStyle === "private-boat") return isPrivateBoat;
-          if (selectedStyle === "day-pass")     return isDayPass && !isPrivateBoat;
-          if (selectedStyle === "beach-club")   return !isPrivateBoat && !isDayPass && !isIsland;
-          if (selectedStyle === "island")       return isIsland;
+          const isPrivateBoat  = /private.?boat|lancha|bote|catamaran|catamarán|yacht|yate|speedboat|speed.?boat/.test(sub + " " + name);
+          const isDayPass      = s.priceUnit === "day pass" || /day.?pass/.test(sub + " " + name);
+          const isIsland       = /island|isla|rosario|tierrabomba|barú|baru/.test(sub);
+          let passes = false;
+          if (selectedStyle === "private-boat") passes = isPrivateBoat;
+          else if (selectedStyle === "day-pass") passes = isDayPass && !isPrivateBoat;
+          else if (selectedStyle === "beach-club") passes = !isPrivateBoat && !isDayPass && !isIsland;
+          else if (selectedStyle === "island") passes = isIsland;
+          if (!passes) return false;
+          // Apply destination sub-chip filter
+          if (selectedDestination === "beach-clubs-dest") return /beach.?club/.test(sub + " " + loc);
+          if (selectedDestination === "tierra-bomba")     return /tierra.?bomba/.test(sub + " " + loc);
+          if (selectedDestination === "islas-rosario")    return /rosario/.test(sub + " " + loc + " " + name);
+          return true;
         }
         return true;
       })();
@@ -2625,7 +2644,7 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
 
       return catOK && stylesOK && searchOK && priceOK && tagsOK && cityOK;
     });
-  }, [services, selectedCategory, selectedStyle, searchTerm, priceRange, currentClientType, activeTags, kickoffCity]);
+  }, [services, selectedCategory, selectedStyle, selectedDestination, searchTerm, priceRange, currentClientType, activeTags, kickoffCity]);
 
 const vibeLabel = useMemo(() => {
   const map = {
@@ -3697,7 +3716,7 @@ setCart([]);
               {beachTypes.map((bt) => (
                 <button
                   key={bt.id}
-                  onClick={() => setSelectedStyle(prev => prev === bt.id ? "" : bt.id)}
+                  onClick={() => { setSelectedStyle(prev => prev === bt.id ? "" : bt.id); setSelectedDestination(""); }}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                     selectedStyle === bt.id
                       ? "bg-neutral-900 text-white border-neutral-900"
@@ -3707,6 +3726,24 @@ setCart([]);
                   {bt.label[lang]}
                 </button>
               ))}
+              {beachSubChips[selectedStyle]?.length > 0 && (
+                <>
+                  <span className="text-xs text-gray-300 mx-1">›</span>
+                  {beachSubChips[selectedStyle].map((d) => (
+                    <button
+                      key={d.id}
+                      onClick={() => setSelectedDestination(prev => prev === d.id ? "" : d.id)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                        selectedDestination === d.id
+                          ? "bg-[#9a7d52] text-white border-[#9a7d52]"
+                          : "bg-white text-neutral-500 border-neutral-200 hover:border-neutral-400"
+                      }`}
+                    >
+                      {d.label[lang]}
+                    </button>
+                  ))}
+                </>
+              )}
             </>
           )}
         </div>
