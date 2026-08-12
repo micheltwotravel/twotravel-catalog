@@ -383,17 +383,31 @@ export default function TareasPanel({ currentUser, onLogout }) {
   const myName  = currentUser?.name  || "";
   const myEmail = currentUser?.email || "";
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (retry = 0) => {
     setLoading(true); setError("");
     try {
       const [tasksRes, usersRes] = await Promise.all([
         gas("listTasks"),
         gas("listUsers"),
       ]);
-      if (tasksRes.ok) setTasks((tasksRes.data||[]).filter(isBoda));
-      else setError(tasksRes.error || "Error al cargar");
+      if (tasksRes.ok) {
+        setTasks((tasksRes.data||[]).filter(isBoda));
+        setError("");
+      } else if (!tasksRes.ok && retry < 2) {
+        // GAS cold start — retry up to 2 times with a short delay
+        setTimeout(() => load(retry + 1), 3000);
+        return;
+      } else {
+        setError(tasksRes.error || "Error al cargar");
+      }
       if (usersRes.ok) setUsers((usersRes.data||[]).filter(u => u.active !== "false" && u.name));
-    } catch { setError("No se pudo conectar"); }
+    } catch (e) {
+      if (retry < 2) {
+        setTimeout(() => load(retry + 1), 3000);
+        return;
+      }
+      setError("No se pudo conectar. Intenta de nuevo.");
+    }
     setLoading(false);
   }, []);
 
