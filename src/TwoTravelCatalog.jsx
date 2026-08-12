@@ -4011,11 +4011,18 @@ setCart([]);
           )}
 
           {!categoryHasVisiblePrice(serviceCategory) && (
-            <PriceLevelChip
-              service={{ ...s, category: serviceCategory }}
-              lang={lang}
-              clientType={currentClientType}
-            />
+            <div className="flex items-center justify-between">
+              <PriceLevelChip
+                service={{ ...s, category: serviceCategory }}
+                lang={lang}
+                clientType={currentClientType}
+              />
+              {serviceCategory === "chef" && (
+                <span className="text-[10px] text-neutral-400 italic">
+                  {lang === "es" ? "Toca para más detalles" : "Click for more details"}
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>
