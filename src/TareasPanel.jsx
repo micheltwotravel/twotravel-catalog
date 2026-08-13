@@ -412,11 +412,17 @@ export default function TareasPanel({ currentUser, onLogout }) {
       const newTasks = tasksRes.ok ? (tasksRes.data||[]).filter(isBoda) : null;
       const newUsers = usersRes.ok ? (usersRes.data||[]).filter(u => u.active !== "false" && u.name) : null;
       if (newTasks) { setTasks(newTasks); setError(""); }
-      else setError(tasksRes.error || "Error al cargar");
+      else if (!background) setError(tasksRes.error || "Error al cargar");
       if (newUsers) setUsers(newUsers);
-      if (newTasks && newUsers) {
-        sessionStorage.setItem(CACHE_KEY, JSON.stringify({ tasks: newTasks, users: newUsers, ts: Date.now() }));
-      }
+      // Cache whatever succeeded — tasks and users independently
+      try {
+        const prev = JSON.parse(sessionStorage.getItem(CACHE_KEY) || "{}");
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+          tasks: newTasks ?? prev.tasks ?? [],
+          users: newUsers ?? prev.users ?? [],
+          ts: Date.now(),
+        }));
+      } catch {}
     } catch {
       if (!background) setError("No se pudo conectar. Intenta de nuevo.");
     }
