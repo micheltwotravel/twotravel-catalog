@@ -1155,13 +1155,39 @@ function addMeetingToKickoff(payload) {
 
 // ═══════════════ AVAILABILITY ════════════════════════════════════
 function getAvailability(e) {
-  const email = e.parameter.email;
+  const email = (e.parameter.email || "").trim().toLowerCase();
   if (!email) return ContentService.createTextOutput(JSON.stringify({ ok: false, error: "Missing email" }))
     .setMimeType(ContentService.MimeType.JSON);
+
+  // Load saved schedule/settings/manualSlots from the Availability sheet
+  let savedSchedule = null, savedSettings = null, savedManualSlots = null, savedBookings = [];
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("Availability");
+    if (sheet) {
+      const data    = sheet.getDataRange().getValues();
+      const headers = data[0].map(h => String(h).toLowerCase().trim());
+      const col     = (name) => headers.indexOf(name);
+      for (let i = 1; i < data.length; i++) {
+        if ((data[i][col("email")] || "").toLowerCase().trim() === email) {
+          const parse = (v) => { try { return v ? JSON.parse(v) : null; } catch { return null; } };
+          savedSchedule   = parse(data[i][col("schedule")]);
+          savedSettings   = parse(data[i][col("settings")]);
+          savedManualSlots = parse(data[i][col("manualslots")]);
+          savedBookings   = parse(data[i][col("bookings")]) || [];
+          break;
+        }
+      }
+    }
+  } catch(err) {
+    Logger.log("Sheet read error in getAvailability: " + err);
+  }
+
+  // Merge calendar-blocked times (all-day and existing events)
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 3, 1);
-  let blocked = [];
+  let calBlocked = [];
   try {
     const cal = CalendarApp.getCalendarById(email) || CalendarApp.getDefaultCalendar();
     if (cal) {
@@ -1180,9 +1206,9 @@ function getAvailability(e) {
           const evEnd = ev.getEndTime();
           const dateStr = Utilities.formatDate(evStart, "America/Bogota", "yyyy-MM-dd");
           if (ev.isAllDayEvent()) {
-            blocked.push({ date: dateStr, start: "00:00", end: "23:59", fromCalendar: true, title: ev.getTitle() });
+            calBlocked.push({ date: dateStr, start: "00:00", end: "23:59", fromCalendar: true, title: ev.getTitle() });
           } else {
-            blocked.push({
+            calBlocked.push({
               date: dateStr,
               start: Utilities.formatDate(evStart, "America/Bogota", "HH:mm"),
               end:   Utilities.formatDate(evEnd,   "America/Bogota", "HH:mm"),
@@ -1196,7 +1222,15 @@ function getAvailability(e) {
   } catch(err) {
     Logger.log("Calendar error for " + email + ": " + err);
   }
-  const result = { ok: true, blocked: blocked, schedule: null, bookings: [] };
+
+  const result = {
+    ok:          true,
+    schedule:    savedSchedule,
+    settings:    savedSettings,
+    manualSlots: savedManualSlots,
+    bookings:    savedBookings,
+    blocked:     calBlocked,
+  };
   return ContentService.createTextOutput(JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
 }
