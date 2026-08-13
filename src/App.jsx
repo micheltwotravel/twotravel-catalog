@@ -2068,7 +2068,7 @@ function UnifiedDashboard({ currentUser, onLogout }) {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-6 py-6">
+      <div style={{maxWidth:1680,width:"100%",margin:"0 auto",padding:"0 24px 24px"}}>
         {/* ── Tabs ── */}
         <div style={{display:"flex",gap:6,marginBottom:24,borderBottom:"1px solid var(--border)",paddingBottom:0}}>
           {[

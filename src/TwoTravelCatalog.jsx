@@ -3068,6 +3068,24 @@ const autoTaskLabel = (item) => {
 const dueDate = arrivalDate.trim() || new Date(Date.now()+7*86400000).toISOString().slice(0,10);
 const conciergeEmail = currentKickoff?.assignedConciergeEmail || "";
 const conciergeName  = currentKickoff?.assignedConcierge || currentKickoff?.assignedConciergeName || "";
+
+// Notify concierge (and Caro cc) that client submitted their catalog picks
+if (conciergeEmail) {
+  fetch(TASK_API_URL, {
+    method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body: JSON.stringify({
+      action:"notifyCatalogSubmit",
+      payload:{
+        conciergeEmail,
+        conciergeName,
+        guestName:  currentKickoff?.guestName || "",
+        kickoffId:  idToUse,
+        tripName:   currentKickoff?.tripName  || "",
+      },
+    }),
+  }).catch(() => {});
+}
+
 // Fire auto-tasks without blocking UI
 Promise.all(cart.map(item => fetch(TASK_API_URL, {
   method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},

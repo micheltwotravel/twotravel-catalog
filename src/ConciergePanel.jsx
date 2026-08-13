@@ -1183,10 +1183,9 @@ function buildFeedbackLink(kickoff, clientType = 1, lang = "en") {
 
   // Map full concierge name → dropdown short name (e.g. "Alia Jadad" → "Alia")
   // Supports comma-separated "Carolina Lopez, Daniela B" in assignedConcierge
+  // Filter out numeric-only tokens (phone numbers that may be stored before the name)
   const rawConciergeField = kickoff?.assignedConcierge || "";
-  const conciergeParts = rawConciergeField.includes(",")
-    ? rawConciergeField.split(",").map(s => s.trim())
-    : [rawConciergeField.trim()];
+  const conciergeParts = rawConciergeField.split(",").map(s => s.trim()).filter(s => s && !/^\d+$/.test(s));
   const rawConcierge = conciergeParts[0] || "";
   const concierge = CONCIERGE_TO_SHORT[rawConcierge] || rawConcierge.split(" ")[0] || "";
   if (concierge) url.searchParams.set("concierge", concierge);
@@ -4359,9 +4358,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     return (kickoff?.city || "").split(",")[0].trim().toUpperCase() || "";
   });
   // Multi-concierge: stored as comma-separated names; edit as array of names
+  // Filter out purely numeric entries (e.g. phone numbers accidentally stored in the field)
   const parseMultiConcierge = (raw) => {
     if (!raw) return [];
-    return String(raw).split(",").map(s => s.trim()).filter(Boolean);
+    return String(raw).split(",").map(s => s.trim()).filter(s => s && !/^\d+$/.test(s));
   };
   const [assignedConcierges, setAssignedConcierges] = useState(
     parseMultiConcierge(kickoff?.assignedConcierge || kickoff?.assignedConciergeName || "")

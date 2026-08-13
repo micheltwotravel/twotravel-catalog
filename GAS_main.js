@@ -107,8 +107,10 @@ function doPost(e) {
       case "saveKickoff":        return jsonResponse(saveKickoff_(payload));
       case "updateKickoff":      return jsonResponse(updateKickoff_(id, updates));
       case "deleteKickoff":      return jsonResponse(deleteKickoff_(id));
-      case "saveAvailability":   return saveAvailability(body);
-      case "bookSlot":           return bookSlot(body);
+      case "saveAvailability":       return saveAvailability(body);
+      case "bookSlot":               return bookSlot(body);
+      case "notifyMeetingBooked":    return jsonResponse(notifyMeetingBooked_(payload));
+      case "notifyCatalogSubmit":    return jsonResponse(notifyCatalogSubmit_(payload));
       case "getKickoffById":     return jsonResponse({ ok: true, data: getKickoffById_(id) });
       case "listTasks":          return jsonResponse({ ok: true, data: listTasks_() });
       case "saveTask":           return jsonResponse(saveTask_(payload));
@@ -1311,6 +1313,43 @@ function bookSlot(body) {
     }
   }
   return jsonOut({ ok: false, error: "concierge not found" });
+}
+
+// ═══════════════ EMAIL NOTIFICATIONS ════════════════════════════
+function notifyMeetingBooked_(p) {
+  // p: { conciergeEmail, conciergeName, clientName, clientEmail, date, time, kickoffId, type }
+  const to = (p.conciergeEmail || "").trim();
+  if (!to) return { ok: false, error: "no conciergeEmail" };
+  const date = p.date || "—";
+  const time = p.time || "—";
+  const client = p.clientName || "—";
+  const type = p.type || "Reunión";
+  const kick = p.kickoffId ? `\nKickoff: ${p.kickoffId}` : "";
+  try {
+    MailApp.sendEmail({
+      to,
+      subject: `📅 Nueva reunión agendada: ${client} — ${date} ${time}`,
+      body: `Hola ${p.conciergeName || ""},\n\nUn cliente acaba de agendar una reunión contigo.\n\nCliente: ${client}\nEmail: ${p.clientEmail || "—"}\nFecha: ${date} a las ${time}\nTipo: ${type}${kick}\n\n— Two Travel`,
+    });
+    return { ok: true };
+  } catch(e) { return { ok: false, error: e.message }; }
+}
+
+function notifyCatalogSubmit_(p) {
+  // p: { conciergeEmail, conciergeName, guestName, kickoffId, tripName }
+  const to = (p.conciergeEmail || "").trim();
+  if (!to) return { ok: false, error: "no conciergeEmail" };
+  const guest = p.guestName || "—";
+  const trip  = p.tripName  || p.kickoffId || "—";
+  try {
+    MailApp.sendEmail({
+      to,
+      cc: "caro@two.travel",
+      subject: `🛍️ Cliente llenó el catálogo: ${guest}`,
+      body: `Hola ${p.conciergeName || ""},\n\n${guest} acaba de completar su selección en el catálogo.\n\nTrip / Deal: ${trip}\nKickoff ID: ${p.kickoffId || "—"}\n\nEntra al panel para ver sus picks:\nhttps://twotravelvip.com/?mode=concierge\n\n— Two Travel`,
+    });
+    return { ok: true };
+  } catch(e) { return { ok: false, error: e.message }; }
 }
 
 // ═══════════════ ORDENAR TAREAS POR FECHA ════════════════════════

@@ -860,7 +860,9 @@ const CONCIERGE_TITLE_MAP = {
 };
 
 function PH({ kickoff }) {
-  const name  = kickoff.assignedConciergeName || kickoff.assignedConcierge || "";
+  const rawName = kickoff.assignedConciergeName || kickoff.assignedConcierge || "";
+  // Strip purely numeric tokens (e.g. phone numbers stored before the name)
+  const name  = rawName.split(",").map(s => s.trim()).filter(s => s && !/^\d+$/.test(s)).join(", ");
   const email = kickoff.assignedConciergeEmail || "";
   const title = kickoff.conciergeTitle || CONCIERGE_TITLE_MAP[name] || "";
   return (

@@ -138,7 +138,8 @@ export default async function handler(req, res) {
             end:     { dateTime: endISO,   timeZone: "America/Bogota" },
             attendees: [
               { email: clientEmail },
-              ...((Array.isArray(guestEmails) ? guestEmails : []).filter(e => e && e !== clientEmail).map(e => ({ email: e }))),
+              { email: email },   // concierge gets calendar invite
+              ...((Array.isArray(guestEmails) ? guestEmails : []).filter(e => e && e !== clientEmail && e !== email).map(e => ({ email: e }))),
             ],
             conferenceData: {
               createRequest: {
@@ -183,5 +184,28 @@ export default async function handler(req, res) {
     }),
   }).catch(e => console.error("GAS addMeeting error:", e.message));
 
+  // Notify concierge by email via GAS (in addition to the calendar invite)
+  fetch(GAS, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "notifyMeetingBooked",
+      payload: {
+        conciergeEmail: email,
+        conciergeName:  SLUG_TO_NAME[concierge] || concierge,
+        clientName,
+        clientEmail,
+        date,
+        time:      startTime,
+        kickoffId: kickoffId || "",
+        type,
+      },
+    }),
+  }).catch(e => console.error("GAS notify error:", e.message));
+
   res.json({ ok: true, eventId, meetLink, htmlLink });
 }
+
+const SLUG_TO_NAME = {
+  caro: "Carolina", alia: "Alia", daniela: "Daniela",
+  nataly: "Nataly", giulia: "Giulia", natalia: "Natalia", michel: "Michel",
+};
