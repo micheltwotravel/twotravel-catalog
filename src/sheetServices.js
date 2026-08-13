@@ -297,15 +297,18 @@ export function getHighlights(service, lang = "en") {
 // Por ahora concierges se asignan manualmente con campos de texto libre.
 
 export async function fetchKickoffById(kickoffId) {
-  // Try direct lookup first (POST getKickoffById)
-  try {
-    const json = await postToKickoffAPI({ action: "getKickoffById", id: kickoffId });
-    if (json?.data) return json.data;
-  } catch {}
+  // Run direct lookup and list-all in parallel — whichever is faster wins.
+  // Direct lookup (POST) is fast once GAS is redeployed with getKickoffById.
+  // List fallback (GET listKickoffs) works with older deployments.
+  const directPromise = postToKickoffAPI({ action: "getKickoffById", id: kickoffId })
+    .then(j => j?.data ?? null).catch(() => null);
 
-  // Fallback: load all kickoffs and filter (works with older GAS deployments)
-  const all = await fetchKickoffsFromSheet();
-  return (Array.isArray(all) ? all : []).find(k => String(k.id).trim() === String(kickoffId).trim()) ?? null;
+  const listPromise = fetchKickoffsFromSheet()
+    .then(all => (Array.isArray(all) ? all : []).find(k => String(k.id).trim() === String(kickoffId).trim()) ?? null)
+    .catch(() => null);
+
+  const [direct, fromList] = await Promise.all([directPromise, listPromise]);
+  return direct ?? fromList ?? null;
 }
 /* ============================================================
    2) KICKOFFS – REAL (Apps Script Web App)

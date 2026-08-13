@@ -2664,7 +2664,7 @@ export default function ItineraryPrintView() {
 
     withTimeout(
       Promise.all([fetchKickoffById(kickoffId), fetchServicesFromSheet()]),
-      20000
+      35000
     )
       .then(async ([k, cats]) => {
         if (!k) throw new Error("Kickoff no encontrado. Verifica el link.");
