@@ -297,12 +297,15 @@ export function getHighlights(service, lang = "en") {
 // Por ahora concierges se asignan manualmente con campos de texto libre.
 
 export async function fetchKickoffById(kickoffId) {
-  const json = await postToKickoffAPI({
-    action: "getKickoffById",
-    id: kickoffId,
-  });
+  // Try direct lookup first (POST getKickoffById)
+  try {
+    const json = await postToKickoffAPI({ action: "getKickoffById", id: kickoffId });
+    if (json?.data) return json.data;
+  } catch {}
 
-  return json?.data ?? null;
+  // Fallback: load all kickoffs and filter (works with older GAS deployments)
+  const all = await fetchKickoffsFromSheet();
+  return (Array.isArray(all) ? all : []).find(k => String(k.id).trim() === String(kickoffId).trim()) ?? null;
 }
 /* ============================================================
    2) KICKOFFS – REAL (Apps Script Web App)
