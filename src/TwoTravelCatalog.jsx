@@ -3449,50 +3449,27 @@ setCart([]);
                     ? "¿Te gustaría hacer un día de bote a las Islas del Rosario? (opcional)"
                     : "Would you want to have a boat day to the Rosario Islands? (optional)"}
                 </p>
-                <div className="flex flex-col gap-2 text-sm">
-                  {[
-                    { id: "speedboat",   es: "Lancha privada · 600–1,200 USD",   en: "Speedboat · 600–1,200 USD" },
-                    { id: "catamaran",   es: "Catamarán · 1,800–3,500 USD",      en: "Catamaran · 1,800–3,500 USD" },
-                    { id: "yacht",       es: "Yate · 2,000–6,000 USD",           en: "Yacht · 2,000–6,000 USD" },
-                    { id: "day-pass",    es: "No privado – day pass",            en: "Non private – day pass options" },
-                  ].map((opt) => {
-                    const active = (quiz.boatPreference || []).includes(opt.id);
-                    return (
-                      <label key={opt.id} className="flex items-center gap-2 cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={active}
-                          onChange={() => setQuiz((q) => {
-                            const cur = q.boatPreference || [];
-                            return { ...q, boatPreference: active ? cur.filter((x) => x !== opt.id) : [...cur, opt.id] };
-                          })}
-                          className="rounded border-neutral-300 accent-neutral-900"
-                        />
-                        <span className="text-neutral-700">{lang === "es" ? opt.es : opt.en}</span>
-                      </label>
-                    );
-                  })}
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={(quiz.boatPreference || []).includes("other")}
-                      onChange={() => setQuiz((q) => {
-                        const cur = q.boatPreference || [];
-                        const active = cur.includes("other");
-                        return { ...q, boatPreference: active ? cur.filter((x) => x !== "other") : [...cur, "other"] };
-                      })}
-                      className="rounded border-neutral-300 accent-neutral-900"
-                    />
-                    <span className="text-neutral-700">{lang === "es" ? "Otro:" : "Other:"}</span>
-                    <input
-                      type="text"
-                      className="border-b border-neutral-300 bg-transparent text-sm outline-none flex-1 min-w-0"
-                      value={quiz.boatOther || ""}
-                      onChange={(e) => setQuiz((q) => ({ ...q, boatOther: e.target.value }))}
-                      placeholder={lang === "es" ? "Especifica…" : "Specify…"}
-                    />
-                  </label>
-                </div>
+                <select
+                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white text-neutral-700 focus:outline-none focus:border-neutral-400"
+                  value={(quiz.boatPreference || [])[0] || ""}
+                  onChange={(e) => setQuiz((q) => ({ ...q, boatPreference: e.target.value ? [e.target.value] : [], boatOther: "" }))}
+                >
+                  <option value="">{lang === "es" ? "Seleccionar…" : "Select…"}</option>
+                  <option value="speedboat">{lang === "es" ? "Lancha privada · 600–1,200 USD" : "Speedboat · 600–1,200 USD"}</option>
+                  <option value="catamaran">{lang === "es" ? "Catamarán · 1,800–3,500 USD" : "Catamaran · 1,800–3,500 USD"}</option>
+                  <option value="yacht">{lang === "es" ? "Yate · 2,000–6,000 USD" : "Yacht · 2,000–6,000 USD"}</option>
+                  <option value="day-pass">{lang === "es" ? "No privado – day pass" : "Non private – day pass options"}</option>
+                  <option value="other">{lang === "es" ? "Otro" : "Other"}</option>
+                </select>
+                {(quiz.boatPreference || []).includes("other") && (
+                  <input
+                    type="text"
+                    className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-neutral-400"
+                    value={quiz.boatOther || ""}
+                    onChange={(e) => setQuiz((q) => ({ ...q, boatOther: e.target.value }))}
+                    placeholder={lang === "es" ? "Especifica…" : "Specify…"}
+                  />
+                )}
               </div>
             )}
 
