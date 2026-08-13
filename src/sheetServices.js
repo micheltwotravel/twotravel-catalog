@@ -472,17 +472,6 @@ export async function fetchItineraryItems() {
   })) : [];
 }
 
-export async function fetchKickoffById(id) {
-  const res = await fetch(KICKOFF_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action: "getKickoffById", id }),
-  });
-  const json = await res.json();
-  if (!json.ok || !json.data) throw new Error("Kickoff not found");
-  return json.data;
-}
-
 export async function fetchCheckinResponses(kickoffId) {
   const res = await fetch(KICKOFF_API_URL, {
     method: "POST",
