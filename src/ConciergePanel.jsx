@@ -4373,7 +4373,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [tripName, setTripName] = useState(kickoff?.tripName || "");
   const [lang, setLang] = useState(kickoff?.lang || "en");
   const [guestContact, setGuestContact] = useState(kickoff?.guestContact || "");
-  const [checkInFormUrl, setCheckInFormUrl] = useState(kickoff?.checkInFormUrl || "");
   const [kickoffCallUrl, setKickoffCallUrl] = useState(kickoff?.kickoffCallUrl || "");
   const [checkInCity,    setCheckInCity]    = useState(() => {
     if (kickoff?.checkInCity) return kickoff.checkInCity;
@@ -4693,7 +4692,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
   updates.lang = lang;
   updates.guestContact = guestContact.trim();
-  updates.checkInFormUrl = checkInFormUrl.trim();
   updates.kickoffCallUrl = kickoffCallUrl.trim();
   updates.checkInCity    = checkInCity;
   // Briefing de Ventas
@@ -4871,21 +4869,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               />
             </div>
 
-            {/* Check-in Form URL (HubSpot link pasted by concierge) */}
-            <div className="col-span-2">
-              <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1 block">🔗 Link Check-in HubSpot</label>
-              <input
-                type="url"
-                value={checkInFormUrl}
-                onChange={e => setCheckInFormUrl(e.target.value)}
-                className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
-                placeholder="https://share.hsforms.com/..."
-              />
-              <p className="text-[10px] text-neutral-400 mt-1">Pega el link del formulario de HubSpot — aparece como botón en el PDF y en la página pre-viaje.</p>
-            </div>
-
-
-            {false && kickoff?.id && (() => {
+            {kickoff?.id && (() => {
               const ciLink = `https://twotravelvip.com/ci/${kickoff.id}`;
               const cityName = cityFullName(checkInCity) || checkInCity || "";
               const cityLine = cityName ? ` en ${cityName}` : "";

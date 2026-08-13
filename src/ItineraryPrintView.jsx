@@ -2,7 +2,7 @@
 // Premium Two Travel Concierge Itinerary — browser print → PDF
 // Visual direction: luxury editorial, horizontal images, clean hierarchy
 import { useState, useEffect, useMemo, useRef } from "react";
-import { fetchServicesFromSheet, fetchKickoffsFromSheet, updateKickoffInSheet, fetchCheckinResponses } from "./sheetServices";
+import { fetchServicesFromSheet, fetchKickoffsFromSheet, updateKickoffInSheet, fetchCheckinResponses, fetchKickoffById } from "./sheetServices";
 import ttLogo from "./assets/logo.png";
 
 /* ─── contentEditable helper ─────────────────────────────────
@@ -2657,9 +2657,7 @@ export default function ItineraryPrintView() {
     if (!kickoffId) { setError("No kickoffId in URL"); setLoading(false); return; }
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
     Promise.all([
-      fetchKickoffsFromSheet({ forceRefresh: true }).then(list =>
-        list.find(k => String(k.id) === String(kickoffId))
-      ),
+      fetchKickoffById(kickoffId),
       fetchServicesFromSheet(),
     ])
       .then(async ([k, cats]) => {
