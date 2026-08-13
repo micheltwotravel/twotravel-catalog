@@ -362,9 +362,9 @@ function doGet(e) {
       }
       case "listItineraryItems": {
         const sh = SS.getSheetByName("Itinerary (no catalog)");
-        if (!sh) return jsonResponse({ ok: true, data: [] });
+        if (!sh) return jsonResponse({ ok: true, data: [], _debug: "sheet not found" });
         const vals = sh.getDataRange().getValues();
-        if (vals.length < 2) return jsonResponse({ ok: true, data: [] });
+        if (vals.length < 2) return jsonResponse({ ok: true, data: [], _debug: "sheet empty" });
         const headers = vals[0].map(h => String(h).trim());
         // Flexible header search — tolerates accents and case variants
         const findIdx = (...names) => {
@@ -374,13 +374,37 @@ function doGet(e) {
           }
           return -1;
         };
-        const nameEnIdx = findIdx("Item NAME", "Name EN", "Name");
-        const nameEsIdx = findIdx("Item NOMBRE", "Nombre ES", "Nombre");
-        const descEnIdx = findIdx("Description", "Desc EN", "Description EN");
-        const descEsIdx = findIdx("Descripcion ESP", "Descripción ESP", "Descripcion ES", "Descripción ES", "Desc ES", "Description ES");
-        const imgIdx    = findIdx("Image", "Imagen");
+        let nameEnIdx = findIdx("Item NAME", "Name EN", "Name EN", "name_en");
+        let nameEsIdx = findIdx("Item NOMBRE", "Nombre ES", "Name ES", "name_es", "nombre");
+        let descEnIdx = findIdx("Description", "Desc EN", "Description EN", "description");
+        let descEsIdx = findIdx("Descripcion ESP", "Descripción ESP", "Descripcion ES", "Descripción ES", "Desc ES", "Description ES", "description_es");
+        const imgIdx  = findIdx("Image", "Imagen", "image");
+        // Positional fallback: if headers don't match, guess by non-empty column scan
+        if (nameEnIdx < 0 && nameEsIdx < 0) {
+          // Find first two columns with non-empty data in row 2
+          const r2 = vals[1];
+          let firstNonEmpty = -1, secondNonEmpty = -1;
+          for (let i = 0; i < r2.length; i++) {
+            if (String(r2[i]).trim()) {
+              if (firstNonEmpty < 0) firstNonEmpty = i;
+              else if (secondNonEmpty < 0) { secondNonEmpty = i; break; }
+            }
+          }
+          if (firstNonEmpty >= 0)  nameEnIdx = firstNonEmpty;
+          if (secondNonEmpty >= 0) nameEsIdx = secondNonEmpty;
+          // Next two non-empty columns after names = descriptions
+          let thirdNonEmpty = -1, fourthNonEmpty = -1;
+          for (let i = (secondNonEmpty >= 0 ? secondNonEmpty : firstNonEmpty) + 1; i < r2.length; i++) {
+            if (String(r2[i]).trim()) {
+              if (thirdNonEmpty < 0) thirdNonEmpty = i;
+              else if (fourthNonEmpty < 0) { fourthNonEmpty = i; break; }
+            }
+          }
+          if (thirdNonEmpty  >= 0) descEnIdx = thirdNonEmpty;
+          if (fourthNonEmpty >= 0) descEsIdx = fourthNonEmpty;
+        }
         const data = vals.slice(1)
-          .filter(r => (nameEnIdx >= 0 && r[nameEnIdx]) || (nameEsIdx >= 0 && r[nameEsIdx]))
+          .filter(r => (nameEnIdx >= 0 && String(r[nameEnIdx] || "").trim()) || (nameEsIdx >= 0 && String(r[nameEsIdx] || "").trim()))
           .map(r => ({
             name_en:        String(nameEnIdx >= 0 ? r[nameEnIdx] : ""),
             name_es:        String(nameEsIdx >= 0 ? r[nameEsIdx] : ""),
@@ -388,7 +412,8 @@ function doGet(e) {
             description_es: String(descEsIdx >= 0 ? r[descEsIdx] : ""),
             image:          String(imgIdx    >= 0 ? r[imgIdx]    : ""),
           }));
-        return jsonResponse({ ok: true, data, _headers: headers });
+        return jsonResponse({ ok: true, data, _headers: headers,
+          _idx: { nameEn: nameEnIdx, nameEs: nameEsIdx, descEn: descEnIdx, descEs: descEsIdx } });
       }
       default: return jsonResponse({ ok: true, status: "Two Travel GAS v3 ready" });
     }
