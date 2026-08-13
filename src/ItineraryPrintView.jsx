@@ -950,16 +950,18 @@ function CoverPage({ kickoff, total, lang, editMode }) {
         {/* Accommodation / stay block — single unified card */}
         {(a.accommodationName || a.groupSize || a.checkIn || a.checkOut) && (
           <div style={{ marginBottom: 24 }}>
-            <div className="cover-info-card" style={{ padding: 0, overflow: "hidden" }}>
-              {/* Photo banner — full width, proportional height */}
+            <div className="cover-info-card" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "row" }}>
+              {/* Photo — contained box on the left, shows full image without cropping */}
               {a.accommodationPhoto && (
-                <img src={driveImgUrl(a.accommodationPhoto)} alt={a.accommodationName}
-                  style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }}
-                  onError={e => { e.target.style.display = "none"; }}
-                />
+                <div style={{ flexShrink: 0, width: 130, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                  <img src={driveImgUrl(a.accommodationPhoto)} alt={a.accommodationName}
+                    style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                    onError={e => { e.target.parentElement.style.display = "none"; }}
+                  />
+                </div>
               )}
-              {/* Info below photo */}
-              <div style={{ padding: "12px 16px" }}>
+              {/* Info to the right of photo */}
+              <div style={{ padding: "12px 16px", flex: 1 }}>
                 <div className="cover-info-label">{isEs ? "Alojamiento" : "Accommodation"}</div>
                 {a.accommodationUrl ? (
                   <a href={a.accommodationUrl} target="_blank" rel="noreferrer"
