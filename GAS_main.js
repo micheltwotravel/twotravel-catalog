@@ -1661,3 +1661,14 @@ function saveMenuConfig_(payload) {
   SpreadsheetApp.flush();
   return { ok: true };
 }
+
+// ═══════════════ DEBUG UTILITIES ═════════════════════════════════
+function checkItineraryHeaders() {
+  const sh = SS.getSheetByName("Itinerary (no catalog)");
+  if (!sh) { Logger.log("Sheet NOT FOUND: 'Itinerary (no catalog)'"); return; }
+  const row1 = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const row2 = sh.getRange(2, 1, 1, sh.getLastColumn()).getValues()[0];
+  Logger.log("=== Itinerary (no catalog) ===");
+  Logger.log("HEADERS: " + row1.map((h, i) => `[${i}] "${h}"`).join(" | "));
+  Logger.log("ROW 2:   " + row2.map((v, i) => `[${i}] "${String(v).substring(0, 40)}"`).join(" | "));
+}
