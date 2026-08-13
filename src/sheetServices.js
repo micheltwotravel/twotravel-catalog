@@ -466,7 +466,10 @@ const CATALOG_GAS_URL = "https://script.google.com/macros/s/AKfycbxc0Az7hAdTaRp9
 export async function fetchItineraryItems() {
   const res = await fetch(`${CATALOG_GAS_URL}?action=listItineraryItems&t=${Date.now()}`);
   const json = await res.json();
-  return json.ok ? (json.data || []) : [];
+  return json.ok ? (json.data || []).map(item => ({
+    ...item,
+    image: normalizeDriveImage(item.image),
+  })) : [];
 }
 
 export async function uploadImageToDrive(file) {
