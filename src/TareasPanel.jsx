@@ -409,7 +409,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
         gas("listTasks"),
         gas("listUsers"),
       ]);
-      const newTasks = tasksRes.ok ? (tasksRes.data||[]).filter(isBoda) : null;
+      const newTasks = tasksRes.ok ? (tasksRes.data||[]) : null;
       const newUsers = usersRes.ok ? (usersRes.data||[]).filter(u => u.active !== "false" && u.name) : null;
       if (newTasks) { setTasks(newTasks); setError(""); }
       else if (!background) setError(tasksRes.error || "Error al cargar");

@@ -111,6 +111,7 @@ function doPost(e) {
       case "bookSlot":               return bookSlot(body);
       case "notifyMeetingBooked":    return jsonResponse(notifyMeetingBooked_(payload));
       case "notifyCatalogSubmit":    return jsonResponse(notifyCatalogSubmit_(payload));
+      case "saveMenuConfig":         return jsonResponse(saveMenuConfig_(payload));
       case "getKickoffById":     return jsonResponse({ ok: true, data: getKickoffById_(id) });
       case "listTasks":          return jsonResponse({ ok: true, data: listTasks_() });
       case "saveTask":           return jsonResponse(saveTask_(payload));
@@ -343,6 +344,7 @@ function doGet(e) {
     switch (action) {
       case "listKickoffs":   return jsonResponse({ ok: true, data: listKickoffs_() });
       case "getAvailability": return getAvailability(e);
+      case "getMenuConfig":  return jsonResponse(getMenuConfig_());
       case "listTasks":      return jsonResponse({ ok: true, data: listTasks_() });
       case "listSoporte":    return jsonResponse({ ok: true, data: listSoporte_() });
       case "listBodas":      return jsonResponse({ ok: true, data: listBodas_() });
@@ -1621,4 +1623,33 @@ function migrateBodas() {
   SpreadsheetApp.flush();
 
   Logger.log("✅ Migración completa: " + toMigrate.length + " bodas → hoja Bodas.");
+}
+
+// ─── Menu Config ────────────────────────────────────────────────
+function getMenuConfig_() {
+  const sheet = SS.getSheetByName("Config") || SS.insertSheet("Config");
+  const data  = sheet.getDataRange().getValues();
+  for (var i = 0; i < data.length; i++) {
+    if (data[i][0] === "menuConfig") {
+      try { return { ok: true, data: JSON.parse(data[i][1] || "{}") }; }
+      catch(e) { return { ok: true, data: {} }; }
+    }
+  }
+  return { ok: true, data: {} };
+}
+
+function saveMenuConfig_(payload) {
+  const sheet = SS.getSheetByName("Config") || SS.insertSheet("Config");
+  const data  = sheet.getDataRange().getValues();
+  const json  = JSON.stringify(payload.overrides || {});
+  for (var i = 0; i < data.length; i++) {
+    if (data[i][0] === "menuConfig") {
+      sheet.getRange(i + 1, 2).setValue(json);
+      SpreadsheetApp.flush();
+      return { ok: true };
+    }
+  }
+  sheet.appendRow(["menuConfig", json]);
+  SpreadsheetApp.flush();
+  return { ok: true };
 }

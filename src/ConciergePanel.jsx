@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ttLogoPng from "./assets/logo.png";
 import { AvailabilityManager } from "./BookingPage";
+import { DRINK_CATEGORIES as DRINK_CATEGORIES_DEFAULT, GROCERY_CATEGORIES as GROCERY_CATEGORIES_DEFAULT, applyMenuOverrides } from "./menuData";
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
   DragOverlay,
@@ -5286,12 +5287,22 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           </DrawerSection>
 
           <div>
-            <label className="text-[11px] text-neutral-500">Notas internas</label>
+            <label className="text-[11px] text-neutral-500 flex items-center gap-1">
+              🥗 Dieta / Restricciones
+              <span style={{fontSize:9,background:"#f3f4f6",color:"#9ca3af",border:"1px solid #e5e7eb",borderRadius:3,padding:"0px 5px",fontWeight:500}}>del formulario</span>
+            </label>
+            <div className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-neutral-50 text-neutral-600 whitespace-pre-wrap min-h-[40px]">
+              {kickoff.dietInfo || kickoff.briefDietary || <span className="text-neutral-400 italic">Sin restricciones registradas</span>}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[11px] text-neutral-500">📝 Notas internas</label>
             <textarea
               value={internalNotes}
               onChange={(e) => setInternalNotes(e.target.value)}
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm min-h-[90px]"
-              placeholder="Notas internas"
+              placeholder="Notas extra para el equipo…"
             />
           </div>
 
@@ -7410,6 +7421,152 @@ function CheckinResponsesSection({ kickoffId }) {
   );
 }
 
+/* ================================================================
+   MENU ADMIN PANEL — edit photos & prices for drinks/groceries
+================================================================ */
+const MENU_GAS = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+
+function MenuAdminPanel() {
+  const ALL_CATS = [
+    ...DRINK_CATEGORIES_DEFAULT.map(c => ({ ...c, _type: "drink" })),
+    ...GROCERY_CATEGORIES_DEFAULT.map(c => ({ ...c, _type: "grocery" })),
+  ];
+
+  const [overrides, setOverrides] = useState({});
+  const [loading, setLoading]     = useState(true);
+  const [saving, setSaving]       = useState(false);
+  const [saved, setSaved]         = useState(false);
+  const [activeCat, setActiveCat] = useState(ALL_CATS[0]?.id || "");
+
+  useEffect(() => {
+    fetch(`${MENU_GAS}?action=getMenuConfig`)
+      .then(r => r.json())
+      .then(d => { if (d?.ok) setOverrides(d.data || {}); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const patch = (name, field, value) => {
+    setOverrides(prev => ({
+      ...prev,
+      [name]: { ...(prev[name] || {}), [field]: value },
+    }));
+    setSaved(false);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const r = await fetch(MENU_GAS, {
+        method: "POST",
+        body: JSON.stringify({ action: "saveMenuConfig", payload: { overrides } }),
+      });
+      const d = await r.json();
+      if (d.ok) setSaved(true);
+    } catch {}
+    setSaving(false);
+  };
+
+  const cat = ALL_CATS.find(c => c.id === activeCat) || ALL_CATS[0];
+
+  if (loading) return (
+    <div style={{ padding: 40, textAlign: "center", color: "#9ca3af", fontSize: 13 }}>Cargando menú…</div>
+  );
+
+  return (
+    <div style={{ display: "flex", gap: 0, height: "calc(100vh - 130px)", overflow: "hidden", background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb" }}>
+
+      {/* Left sidebar — category list */}
+      <div style={{ width: 200, flexShrink: 0, borderRight: "1px solid #f3f4f6", overflowY: "auto", padding: "8px 0" }}>
+        <div style={{ padding: "10px 14px 6px", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>🍹 Bebidas</div>
+        {DRINK_CATEGORIES_DEFAULT.map(c => (
+          <button key={c.id} onClick={() => setActiveCat(c.id)}
+            style={{ width: "100%", textAlign: "left", padding: "6px 14px", fontSize: 12, background: activeCat === c.id ? "#fef3c7" : "none", color: activeCat === c.id ? "#92400e" : "#374151", border: "none", cursor: "pointer", fontWeight: activeCat === c.id ? 600 : 400 }}>
+            {c.label}
+          </button>
+        ))}
+        <div style={{ padding: "10px 14px 6px", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>🛒 Despensa</div>
+        {GROCERY_CATEGORIES_DEFAULT.map(c => (
+          <button key={c.id} onClick={() => setActiveCat(c.id)}
+            style={{ width: "100%", textAlign: "left", padding: "6px 14px", fontSize: 12, background: activeCat === c.id ? "#fef3c7" : "none", color: activeCat === c.id ? "#92400e" : "#374151", border: "none", cursor: "pointer", fontWeight: activeCat === c.id ? 600 : 400 }}>
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Main area — items in selected category */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ padding: "12px 20px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#111" }}>{cat?.label}</span>
+            <span style={{ fontSize: 11, color: "#9ca3af", marginLeft: 8 }}>{cat?.items?.length} items</span>
+          </div>
+          <button onClick={handleSave} disabled={saving}
+            style={{ background: saved ? "#dcfce7" : "#111827", color: saved ? "#15803d" : "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}>
+            {saving ? "Guardando…" : saved ? "✓ Guardado" : "Guardar cambios"}
+          </button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+          {(cat?.items || []).map(item => {
+            const ov = overrides[item.name] || {};
+            const currentImg = ov.img !== undefined ? ov.img : item.img;
+            const currentPrice = ov.priceCOP !== undefined ? ov.priceCOP : item.priceCOP;
+            const isDrink = DRINK_CATEGORIES_DEFAULT.some(c => c.items.some(i => i.name === item.name));
+
+            return (
+              <div key={item.name} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#fafafa", borderRadius: 10, padding: "12px 14px", border: "1px solid #f0f0f0" }}>
+                {/* Photo preview */}
+                <div style={{ width: 64, height: 64, flexShrink: 0, borderRadius: 8, overflow: "hidden", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>
+                  {currentImg ? (
+                    <img src={currentImg} alt={item.name}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      onError={e => { e.target.style.display = "none"; }}
+                    />
+                  ) : null}
+                  {!currentImg && <span>{item.emoji || "🍽️"}</span>}
+                </div>
+
+                {/* Fields */}
+                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>{item.name}</div>
+                  {item.name_en && item.name_en !== item.name && (
+                    <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_en || item.name_es}</div>
+                  )}
+                  {item.name_es && (
+                    <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_es}</div>
+                  )}
+
+                  <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>URL de foto</label>
+                  <input
+                    value={currentImg}
+                    onChange={e => patch(item.name, "img", e.target.value)}
+                    placeholder="https://…"
+                    style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }}
+                  />
+
+                  {isDrink && (
+                    <>
+                      <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Precio (COP)</label>
+                      <input
+                        type="number"
+                        value={currentPrice || ""}
+                        onChange={e => patch(item.name, "priceCOP", parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                        style={{ width: 160, border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }}
+                      />
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ConciergePanel({ onLogout, currentUser }) {
 
   const [kickoffs, setKickoffs] = useState([]);
@@ -7419,6 +7576,8 @@ export default function ConciergePanel({ onLogout, currentUser }) {
 
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
+
+  const [showMenuAdmin, setShowMenuAdmin] = useState(false);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -7834,6 +7993,18 @@ const loadKickoffs = async () => {
     🗓 Calendarios
   </a>
 
+  {currentUser?.role !== "junior" && (
+    <button
+      type="button"
+      onClick={() => setShowMenuAdmin(m => !m)}
+      className="tt-btn-ghost"
+      title="Editar fotos y precios de bebidas / despensa"
+      style={showMenuAdmin ? { background: "#fef3c7", color: "#92400e" } : {}}
+    >
+      🍹 Menús
+    </button>
+  )}
+
   {currentUser?.email && (() => {
     const slug = currentUser.email.split("@")[0].toLowerCase();
     return (
@@ -7893,7 +8064,8 @@ const loadKickoffs = async () => {
       </header>
 
       <main style={{flex:1,maxWidth:1680,width:"100%",margin:"0 auto",padding:"16px 24px",display:"flex",flexDirection:"column",gap:12}}>
-        <div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",justifyContent:"space-between"}}>
+        {showMenuAdmin && <MenuAdminPanel />}
+        {!showMenuAdmin && <><div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",justifyContent:"space-between"}}>
           <div style={{position:"relative",width:260}}>
             <Search style={{width:14,height:14,color:"var(--text-3)",position:"absolute",left:9,top:"50%",transform:"translateY(-50%)"}} />
             <input
@@ -8439,6 +8611,7 @@ const loadKickoffs = async () => {
             </table>
           </div>
         </div>
+        </>}
       </main>
 
       {selectedForSummary && (
