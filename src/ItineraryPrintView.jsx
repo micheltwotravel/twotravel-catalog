@@ -1071,8 +1071,8 @@ function CoverPage({ kickoff, total, lang, editMode }) {
         )}
 
         {/* PRE Check-in form link */}
-        {a.checkInFormUrl && (
-          <a href={a.checkInFormUrl} target="_blank" rel="noreferrer" style={{
+        {(a.checkInFormUrl || a.id) && (
+          <a href={a.checkInFormUrl || `https://twotravelvip.com/ci/${a.id}`} target="_blank" rel="noreferrer" style={{
             display: "block", textDecoration: "none", background: "#faf5ff",
             border: "1px solid #d8b4fe", borderRadius: 10, padding: "12px 16px", marginBottom: 10,
           }}>
