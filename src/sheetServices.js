@@ -472,6 +472,16 @@ export async function fetchItineraryItems() {
   })) : [];
 }
 
+export async function fetchCheckinResponses(kickoffId) {
+  const res = await fetch(KICKOFF_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "getCheckinResponses", payload: { kickoffId } }),
+  });
+  const json = await res.json();
+  return json.ok ? (json.data || []) : [];
+}
+
 export async function uploadImageToDrive(file) {
   const res = await fetch("/api/upload-image", {
     method: "POST",

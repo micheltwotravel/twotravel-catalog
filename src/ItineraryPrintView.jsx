@@ -2,7 +2,7 @@
 // Premium Two Travel Concierge Itinerary — browser print → PDF
 // Visual direction: luxury editorial, horizontal images, clean hierarchy
 import { useState, useEffect, useMemo, useRef } from "react";
-import { fetchServicesFromSheet, fetchKickoffsFromSheet, updateKickoffInSheet } from "./sheetServices";
+import { fetchServicesFromSheet, fetchKickoffsFromSheet, updateKickoffInSheet, fetchCheckinResponses } from "./sheetServices";
 import ttLogo from "./assets/logo.png";
 
 /* ─── contentEditable helper ─────────────────────────────────
@@ -1072,25 +1072,55 @@ function CoverPage({ kickoff, total, lang, editMode }) {
           </a>
         )}
 
-        {/* PRE Check-in form link */}
-        {(a.checkInFormUrl || a.id) && (
+        {/* PRE Check-in form — shows responses if filled, CTA link if not */}
+        {checkinResponses.length > 0 ? (
+          <div style={{ marginBottom: 10, border: "1px solid #d8b4fe", borderRadius: 10, overflow: "hidden" }}>
+            <div style={{ background: "#faf5ff", padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 13 }}>📋</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed" }}>
+                {isEs ? "Información de huéspedes" : "Guest Information"}
+              </span>
+              <span style={{ marginLeft: "auto", fontSize: 10, color: "#9ca3af" }}>
+                {checkinResponses.length} {isEs ? "respuesta(s)" : "response(s)"}
+              </span>
+            </div>
+            {checkinResponses.map((r, i) => (
+              <div key={i} style={{ padding: "10px 14px", borderTop: i === 0 ? "none" : "1px solid #f3e8ff", fontSize: 10.5, color: "#374151", lineHeight: 1.6 }}>
+                <div style={{ fontWeight: 700, fontSize: 11, marginBottom: 4 }}>
+                  {r.firstName} {r.lastName}
+                  {r.isGroupContact === "true" || r.isGroupContact === true ? <span style={{ marginLeft: 6, fontSize: 9, background: "#7c3aed", color: "#fff", borderRadius: 4, padding: "1px 5px" }}>{isEs ? "Contacto" : "Lead"}</span> : null}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 16px" }}>
+                  {r.nationality && <span>🌍 {r.nationality}</span>}
+                  {r.idType && r.idNumber && <span>🪪 {r.idType}: {r.idNumber}</span>}
+                  {r.dob && <span>🎂 {r.dob}</span>}
+                  {r.arrivalFlight && <span>✈️ {r.arrivalFlight}{r.arrivalDate ? ` · ${r.arrivalDate}` : ""}</span>}
+                  {r.departureFlight && <span>🛫 {r.departureFlight}{r.departureDate ? ` · ${r.departureDate}` : ""}</span>}
+                  {(r.foodRestrictions || r.allergies) && (
+                    <span>🥗 {[r.foodRestrictions, r.allergies].filter(Boolean).join(" · ")}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (a.checkInFormUrl || a.id) ? (
           <a href={a.checkInFormUrl || `https://twotravelvip.com/ci/${a.id}`} target="_blank" rel="noreferrer" style={{
             display: "block", textDecoration: "none", background: "#faf5ff",
             border: "1px solid #d8b4fe", borderRadius: 10, padding: "12px 16px", marginBottom: 10,
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#7c3aed" }}>
-                📋 {isEs ? "PRE Check-in Form" : "PRE Check-in Form"}
+                📋 {isEs ? "Formulario Pre Check-in" : "Pre Check-in Form"}
               </div>
               <span style={{ fontSize: 16, color: "#7c3aed" }}>→</span>
             </div>
             <p style={{ fontSize: 11, color: "#7c3aed", opacity: 0.75, margin: 0, lineHeight: 1.5 }}>
               {isEs
-                ? "Completa este formulario antes de tu llegada para que tu concierge tenga todo listo."
-                : "Complete this form before arrival so your concierge has everything ready for you."}
+                ? "Por favor llena este formulario antes de tu llegada. Necesitamos datos de pasaporte, vuelo y preferencias alimenticias."
+                : "Please fill out this form before arrival. We need your passport details, flight info, and dietary preferences."}
             </p>
           </a>
-        )}
+        ) : null}
 
         {/* Action cards — Drinks, Groceries, Breakfast */}
         {a.id && (() => {
@@ -2508,6 +2538,7 @@ export default function ItineraryPrintView() {
   const [pdfNotes, setPdfNotes] = useState("");
   const [cityGuideHidden, setCityGuideHidden] = useState("");
   const [cityGuideIntro, setCityGuideIntro] = useState("");
+  const [checkinResponses, setCheckinResponses] = useState([]);
 
   // Sync editDays from computed days (or itinerarySnapshot) when editMode is active and data is loaded
   useEffect(() => {
@@ -2650,6 +2681,11 @@ export default function ItineraryPrintView() {
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
+  }, [kickoffId]);
+
+  useEffect(() => {
+    if (!kickoffId) return;
+    fetchCheckinResponses(kickoffId).then(setCheckinResponses).catch(() => {});
   }, [kickoffId]);
 
   const days = useMemo(() => {
