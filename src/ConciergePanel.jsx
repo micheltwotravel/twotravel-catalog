@@ -2251,8 +2251,10 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         const accom = kickoff?.accommodationName || "";
         const checkinTime  = kickoff?.checkIn  || "3:00 PM";
         const checkoutTime = kickoff?.checkOut || "11:00 AM";
-        // Breakfast service from catalog (if available)
+        // Services from itinerary sheet (if available)
         const bfService = itineraryItems.find(i => /breakfast/i.test(i.name_en) || /desayuno/i.test(i.name_es));
+        const ciService = itineraryItems.find(i => /^check.?in$/i.test((i.name_en||"").trim()) || /^check.?in$/i.test((i.name_es||"").trim()));
+        const coService = itineraryItems.find(i => /^check.?out$/i.test((i.name_en||"").trim()) || /^check.?out$/i.test((i.name_es||"").trim()));
         if (firstLabel) {
           setCart(prev => {
             const hasCheckin  = prev.some(i => i.dayLabel === firstLabel && (i.name === "Check-in" || i.name_en === "Check-in"));
@@ -2262,16 +2264,16 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
             if (!hasCheckin && firstLabel) {
               toAdd.push({ ...mapManualToCartItem(), _uid: `preset_checkin_${Date.now()}`, id: `preset_checkin_${Date.now()}`,
                 name: "Check-in", name_en: "Check-in", category: "services", timeLabel: checkinTime,
-                description_es: `Su villa estará disponible a partir de las ${checkinTime}.${accom ? ` Nos encontraremos en ${accom} para acompañarlos durante el proceso de check-in.` : " Estaremos con ustedes para acompañarlos durante el proceso."} Por favor avísennos su hora estimada de llegada.`,
-                description_en: `Your villa will be available from ${checkinTime}.${accom ? ` We will meet you at ${accom} to accompany you through the check-in process.` : " We will be there to accompany you through the process."} Please let us know your estimated arrival time.`,
+                description_es: ciService?.description_es || `Su villa estará disponible a partir de las ${checkinTime}.${accom ? ` Nos encontraremos en ${accom} para acompañarlos durante el proceso de check-in.` : " Estaremos con ustedes para acompañarlos durante el proceso."} Por favor avísennos su hora estimada de llegada.`,
+                description_en: ciService?.description  || `Your villa will be available from ${checkinTime}.${accom ? ` We will meet you at ${accom} to accompany you through the check-in process.` : " We will be there to accompany you through the process."} Please let us know your estimated arrival time.`,
                 ...(accom ? { location: accom } : {}), dayLabel: firstLabel, sortOrder: 0 });
             }
             // Check-out on last day
             if (!hasCheckout && lastLabel && lastLabel !== firstLabel) {
               toAdd.push({ ...mapManualToCartItem(), _uid: `preset_checkout_${Date.now()}`, id: `preset_checkout_${Date.now()}`,
                 name: "Check-out", name_en: "Check-out", category: "services", timeLabel: checkoutTime,
-                description_es: `El check-out es a las ${checkoutTime}.${accom ? ` Si necesitan guardar equipaje en ${accom} o coordinar un late check-out, por favor avísennos con anticipación.` : " Si necesitan guardar equipaje o coordinar un late check-out, avísennos con anticipación."}`,
-                description_en: `Check-out is at ${checkoutTime}.${accom ? ` If you need to store luggage at ${accom} or arrange a late check-out, please let us know in advance.` : " If you need to store luggage or arrange a late check-out, please let us know in advance."}`,
+                description_es: coService?.description_es || `El check-out es a las ${checkoutTime}.${accom ? ` Si necesitan guardar equipaje en ${accom} o coordinar un late check-out, por favor avísennos con anticipación.` : " Si necesitan guardar equipaje o coordinar un late check-out, avísennos con anticipación."}`,
+                description_en: coService?.description  || `Check-out is at ${checkoutTime}.${accom ? ` If you need to store luggage at ${accom} or arrange a late check-out, please let us know in advance.` : " If you need to store luggage or arrange a late check-out, please let us know in advance."}`,
                 ...(accom ? { location: accom } : {}), dayLabel: lastLabel, sortOrder: 0 });
             }
             // Breakfasts: day 2 through last day (not on arrival day)
@@ -2362,13 +2364,16 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
     const checkoutTime = kickoff?.checkOut || "11:00 AM";
     const lang = kickoff?.lang || "en";
     const presets = {
-      checkin: {
-        name: "Check-in", name_en: "Check-in", category: "services",
-        timeLabel: checkinTime,
-        ...(accom ? { location: accom } : {}),
-        description_es: `Su villa estará disponible a partir de las ${checkinTime}.${accom ? ` Nos encontraremos en ${accom} para acompañarlos durante el proceso de check-in.` : " Estaremos con ustedes para acompañarlos durante el proceso."} Por favor avísennos su hora estimada de llegada.`,
-        description_en: `Your villa will be available from ${checkinTime}.${accom ? ` We will meet you at ${accom} to accompany you through the check-in process.` : " We will be there to accompany you through the process."} Please let us know your estimated arrival time.`,
-      },
+      checkin: (() => {
+        const ci = itineraryItems.find(i => /^check.?in$/i.test((i.name_en||"").trim()) || /^check.?in$/i.test((i.name_es||"").trim()));
+        return {
+          name: "Check-in", name_en: "Check-in", category: "services",
+          timeLabel: checkinTime,
+          ...(accom ? { location: accom } : {}),
+          description_es: ci?.description_es || `Su villa estará disponible a partir de las ${checkinTime}.${accom ? ` Nos encontraremos en ${accom} para acompañarlos durante el proceso de check-in.` : " Estaremos con ustedes para acompañarlos durante el proceso."} Por favor avísennos su hora estimada de llegada.`,
+          description_en: ci?.description   || `Your villa will be available from ${checkinTime}.${accom ? ` We will meet you at ${accom} to accompany you through the check-in process.` : " We will be there to accompany you through the process."} Please let us know your estimated arrival time.`,
+        };
+      })(),
       breakfast: (() => {
         const s = itineraryItems.find(i => /breakfast/i.test(i.name_en) || /desayuno/i.test(i.name_es));
         return {
@@ -2382,7 +2387,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         };
       })(),
       boatday: (() => {
-        const isBd = x => /boat.*day/i.test(x?.name_en) || /día.*bote/i.test(x?.name_es) || /bote\b/i.test(x?.name_es);
+        const isBd = x => /boat/i.test(x?.name_en) || /bote/i.test(x?.name_es);
         const s = itineraryItems.find(isBd);
         const svc = !s ? services.find(isBd) : null;
         const boatNameVal = kickoff?.boatName || s?.name_es || svc?.name_es || "";
@@ -2489,13 +2494,16 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         });
         return items;
       })(),
-      checkout: {
-        name: "Check-out", name_en: "Check-out", category: "services",
-        timeLabel: checkoutTime,
-        ...(accom ? { location: accom } : {}),
-        description_es: `El check-out es a las ${checkoutTime}.${accom ? ` Si necesitan guardar equipaje en ${accom} o coordinar un late check-out, por favor avísennos con anticipación.` : " Si necesitan guardar equipaje o coordinar un late check-out, avísennos con anticipación."}`,
-        description_en: `Check-out is at ${checkoutTime}.${accom ? ` If you need to store luggage at ${accom} or arrange a late check-out, please let us know in advance.` : " If you need to store luggage or arrange a late check-out, please let us know in advance."}`,
-      },
+      checkout: (() => {
+        const co = itineraryItems.find(i => /^check.?out$/i.test((i.name_en||"").trim()) || /^check.?out$/i.test((i.name_es||"").trim()));
+        return {
+          name: "Check-out", name_en: "Check-out", category: "services",
+          timeLabel: checkoutTime,
+          ...(accom ? { location: accom } : {}),
+          description_es: co?.description_es || `El check-out es a las ${checkoutTime}.${accom ? ` Si necesitan guardar equipaje en ${accom} o coordinar un late check-out, por favor avísennos con anticipación.` : " Si necesitan guardar equipaje o coordinar un late check-out, avísennos con anticipación."}`,
+          description_en: co?.description   || `Check-out is at ${checkoutTime}.${accom ? ` If you need to store luggage at ${accom} or arrange a late check-out, please let us know in advance.` : " If you need to store luggage or arrange a late check-out, please let us know in advance."}`,
+        };
+      })(),
     };
     const p = presets[preset];
     if (!p) return;
