@@ -2,7 +2,7 @@
 // Premium Two Travel Concierge Itinerary — browser print → PDF
 // Visual direction: luxury editorial, horizontal images, clean hierarchy
 import { useState, useEffect, useMemo, useRef } from "react";
-import { fetchServicesFromSheet, fetchKickoffsFromSheet, updateKickoffInSheet, fetchCheckinResponses, fetchKickoffById } from "./sheetServices";
+import { fetchServicesFromSheet, updateKickoffInSheet, fetchCheckinResponses, fetchKickoffById } from "./sheetServices";
 import ttLogo from "./assets/logo.png";
 
 /* ─── contentEditable helper ─────────────────────────────────
