@@ -365,22 +365,30 @@ function doGet(e) {
         if (!sh) return jsonResponse({ ok: true, data: [] });
         const vals = sh.getDataRange().getValues();
         if (vals.length < 2) return jsonResponse({ ok: true, data: [] });
-        const headers = vals[0].map(String);
-        const nameEnIdx = headers.indexOf("Item NAME");
-        const nameEsIdx = headers.indexOf("Item NOMBRE");
-        const descEnIdx = headers.indexOf("Description");
-        const descEsIdx = headers.indexOf("Descripcion ESP");
-        const imgIdx    = headers.indexOf("Image");
+        const headers = vals[0].map(h => String(h).trim());
+        // Flexible header search — tolerates accents and case variants
+        const findIdx = (...names) => {
+          for (const n of names) {
+            const i = headers.findIndex(h => h.toLowerCase() === n.toLowerCase());
+            if (i >= 0) return i;
+          }
+          return -1;
+        };
+        const nameEnIdx = findIdx("Item NAME", "Name EN", "Name");
+        const nameEsIdx = findIdx("Item NOMBRE", "Nombre ES", "Nombre");
+        const descEnIdx = findIdx("Description", "Desc EN", "Description EN");
+        const descEsIdx = findIdx("Descripcion ESP", "Descripción ESP", "Descripcion ES", "Descripción ES", "Desc ES", "Description ES");
+        const imgIdx    = findIdx("Image", "Imagen");
         const data = vals.slice(1)
-          .filter(r => r[nameEnIdx] || r[nameEsIdx])
+          .filter(r => (nameEnIdx >= 0 && r[nameEnIdx]) || (nameEsIdx >= 0 && r[nameEsIdx]))
           .map(r => ({
-            name_en:        String(r[nameEnIdx] || ""),
-            name_es:        String(r[nameEsIdx] || ""),
-            description:    String(r[descEnIdx] || ""),
-            description_es: String(r[descEsIdx] || ""),
-            image:          String(imgIdx >= 0 ? r[imgIdx] : ""),
+            name_en:        String(nameEnIdx >= 0 ? r[nameEnIdx] : ""),
+            name_es:        String(nameEsIdx >= 0 ? r[nameEsIdx] : ""),
+            description:    String(descEnIdx >= 0 ? r[descEnIdx] : ""),
+            description_es: String(descEsIdx >= 0 ? r[descEsIdx] : ""),
+            image:          String(imgIdx    >= 0 ? r[imgIdx]    : ""),
           }));
-        return jsonResponse({ ok: true, data });
+        return jsonResponse({ ok: true, data, _headers: headers });
       }
       default: return jsonResponse({ ok: true, status: "Two Travel GAS v3 ready" });
     }
