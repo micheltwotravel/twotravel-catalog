@@ -234,30 +234,40 @@ video1: video1,
   };
 }
 
+const CATALOG_CACHE_KEY = "tt_catalog_v1";
+const CATALOG_CACHE_TTL = 10 * 60 * 1000;
+let _catalogPromise = null;
+
 async function fetchCatalogFromSheet() {
-  const sep = SHEET_CSV_URL.includes("?") ? "&" : "?";
-  const response = await fetch(`${SHEET_CSV_URL}${sep}t=${Date.now()}`);
-  if (!response.ok) {
-    throw new Error(`No se pudo cargar el catálogo: ${response.status}`);
-  }
+  if (_catalogPromise) return _catalogPromise;
+  try {
+    const cached = sessionStorage.getItem(CATALOG_CACHE_KEY);
+    if (cached) {
+      const { ts, data } = JSON.parse(cached);
+      if (Date.now() - ts < CATALOG_CACHE_TTL) return data;
+    }
+  } catch {}
 
-  const csvText = await response.text();
+  _catalogPromise = (async () => {
+    const sep = SHEET_CSV_URL.includes("?") ? "&" : "?";
+    const response = await fetch(`${SHEET_CSV_URL}${sep}t=${Date.now()}`);
+    if (!response.ok) throw new Error(`No se pudo cargar el catálogo: ${response.status}`);
+    const csvText = await response.text();
+    // Row 2 is a Spanish display header row \u2014 strip it before parsing
+    const lines = csvText.split("\n");
+    const cleaned = lines.length > 1 ? [lines[0], ...lines.slice(2)].join("\n") : csvText;
+    const parsed = Papa.parse(cleaned, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (h) => String(h || "").trim().toLowerCase().replace(/\ufeff/g, ""),
+    });
+    const result = parsed.data.map(mapRowToService);
+    try { sessionStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}
+    _catalogPromise = null;
+    return result;
+  })().catch(e => { _catalogPromise = null; throw e; });
 
-  // Row 2 is a Spanish display header row \u2014 strip it before parsing
-  const lines = csvText.split("\n");
-  const cleaned = lines.length > 1 ? [lines[0], ...lines.slice(2)].join("\n") : csvText;
-
-  const parsed = Papa.parse(cleaned, {
-    header: true,
-    skipEmptyLines: true,
-    transformHeader: (h) =>
-      String(h || "")
-        .trim()
-        .toLowerCase()
-        .replace(/\ufeff/g, ""), // quita BOM
-  });
-
-  return parsed.data.map(mapRowToService);
+  return _catalogPromise;
 }
 
 export { fetchCatalogFromSheet as fetchServicesFromSheet };
@@ -463,13 +473,32 @@ export async function updateKickoffInSheet(id, updates) {
 
 const CATALOG_GAS_URL = "https://script.google.com/macros/s/AKfycbxc0Az7hAdTaRp9tG8lrUTrpogRobojyicV4LfggHQpTIboceog8uVDAvlz4gqbsG9p/exec";
 
+const ITINERARY_ITEMS_CACHE_KEY = "tt_itinerary_items_v1";
+let _itineraryItemsPromise = null;
+
 export async function fetchItineraryItems() {
-  const res = await fetch(`${CATALOG_GAS_URL}?action=listItineraryItems&t=${Date.now()}`);
-  const json = await res.json();
-  return json.ok ? (json.data || []).map(item => ({
-    ...item,
-    image: normalizeDriveImage(item.image),
-  })) : [];
+  if (_itineraryItemsPromise) return _itineraryItemsPromise;
+  try {
+    const cached = sessionStorage.getItem(ITINERARY_ITEMS_CACHE_KEY);
+    if (cached) {
+      const { ts, data } = JSON.parse(cached);
+      if (Date.now() - ts < CATALOG_CACHE_TTL) return data;
+    }
+  } catch {}
+
+  _itineraryItemsPromise = (async () => {
+    const res = await fetch(`${CATALOG_GAS_URL}?action=listItineraryItems&t=${Date.now()}`);
+    const json = await res.json();
+    const result = json.ok ? (json.data || []).map(item => ({
+      ...item,
+      image: normalizeDriveImage(item.image),
+    })) : [];
+    try { sessionStorage.setItem(ITINERARY_ITEMS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}
+    _itineraryItemsPromise = null;
+    return result;
+  })().catch(e => { _itineraryItemsPromise = null; throw e; });
+
+  return _itineraryItemsPromise;
 }
 
 export async function fetchCheckinResponses(kickoffId) {
