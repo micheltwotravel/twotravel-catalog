@@ -1567,11 +1567,23 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
         <div className="col-span-12 flex items-center justify-end gap-3 pt-0.5">
           <button
             type="button"
-            onClick={() => { onUpdate(item._uid, { confirmed: !(item.confirmed !== false) }); setShowNotes(true); }}
-            title={item.confirmed !== false ? "Marcar como recomendación" : "Marcar como confirmado"}
+            onClick={() => {
+              if (item.confirmed !== false) {
+                // confirmed → TBC
+                onUpdate(item._uid, { confirmed: false, tbc: true });
+              } else if (item.tbc) {
+                // TBC → recommendation
+                onUpdate(item._uid, { confirmed: false, tbc: false });
+              } else {
+                // recommendation → confirmed
+                onUpdate(item._uid, { confirmed: true, tbc: false });
+                setShowNotes(true);
+              }
+            }}
+            title={item.confirmed !== false ? "Click: → Por confirmar" : item.tbc ? "Click: → Recomendación" : "Click: → Confirmado"}
             className="text-lg leading-none opacity-70 hover:opacity-100 transition-opacity"
           >
-            {item.confirmed !== false ? "✅" : "📌"}
+            {item.confirmed !== false ? "✅" : item.tbc ? "⏳" : "📌"}
           </button>
           <button
             type="button"
@@ -2250,14 +2262,16 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
             if (!hasCheckin && firstLabel) {
               toAdd.push({ ...mapManualToCartItem(), _uid: `preset_checkin_${Date.now()}`, id: `preset_checkin_${Date.now()}`,
                 name: "Check-in", name_en: "Check-in", category: "services", timeLabel: checkinTime,
-                description_es: `Su villa estará disponible a partir de las ${checkinTime}.`, description_en: `Your villa will be available from ${checkinTime}.`,
+                description_es: `Su villa estará disponible a partir de las ${checkinTime}.${accom ? ` Nos encontraremos en ${accom} para acompañarlos durante el proceso de check-in.` : " Estaremos con ustedes para acompañarlos durante el proceso."} Por favor avísennos su hora estimada de llegada.`,
+                description_en: `Your villa will be available from ${checkinTime}.${accom ? ` We will meet you at ${accom} to accompany you through the check-in process.` : " We will be there to accompany you through the process."} Please let us know your estimated arrival time.`,
                 ...(accom ? { location: accom } : {}), dayLabel: firstLabel, sortOrder: 0 });
             }
             // Check-out on last day
             if (!hasCheckout && lastLabel && lastLabel !== firstLabel) {
               toAdd.push({ ...mapManualToCartItem(), _uid: `preset_checkout_${Date.now()}`, id: `preset_checkout_${Date.now()}`,
                 name: "Check-out", name_en: "Check-out", category: "services", timeLabel: checkoutTime,
-                description_es: `El check-out es a las ${checkoutTime}.`, description_en: `Check-out is at ${checkoutTime}.`,
+                description_es: `El check-out es a las ${checkoutTime}.${accom ? ` Si necesitan guardar equipaje en ${accom} o coordinar un late check-out, por favor avísennos con anticipación.` : " Si necesitan guardar equipaje o coordinar un late check-out, avísennos con anticipación."}`,
+                description_en: `Check-out is at ${checkoutTime}.${accom ? ` If you need to store luggage at ${accom} or arrange a late check-out, please let us know in advance.` : " If you need to store luggage or arrange a late check-out, please let us know in advance."}`,
                 ...(accom ? { location: accom } : {}), dayLabel: lastLabel, sortOrder: 0 });
             }
             // Breakfasts: day 2 through last day (not on arrival day)
@@ -2277,8 +2291,8 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
                 name_en: bfService?.name_en || "Breakfast at the Villa",
                 category: "services", timeLabel: "9:00 AM",
                 ...(bfService?.image ? { image: bfService.image } : {}),
-                description_es: bfService?.description_es || "Una mezcla de desayunos locales e internacionales será servida en su comedor.",
-                description_en: bfService?.description    || "A mix of local and international breakfast dishes will be served in your dining room.",
+                description_es: bfService?.description?.es || bfService?.description_es || "Una mezcla de desayunos locales e internacionales será servida en su comedor.",
+                description_en: bfService?.description?.en || bfService?.description_en || "A mix of local and international breakfast dishes will be served in your dining room.",
                 dayLabel: dm.label, sortOrder: 1,
               });
             });
@@ -2363,8 +2377,8 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
           category: "services",
           timeLabel: "9:00 AM",
           ...(s?.image ? { image: s.image } : {}),
-          description_es: s?.description_es || "Una mezcla de desayunos locales e internacionales será servida en su comedor. El servicio de cocinero está incluido con el alquiler de la villa.",
-          description_en: s?.description    || "A mix of local and international breakfast dishes will be served in your dining room. Cook service is included with the villa rental.",
+          description_es: s?.description?.es || s?.description_es || "Una mezcla de desayunos locales e internacionales será servida en su comedor. El servicio de cocinero está incluido con el alquiler de la villa.",
+          description_en: s?.description?.en || s?.description_en || "A mix of local and international breakfast dishes will be served in your dining room. Cook service is included with the villa rental.",
         };
       })(),
       boatday: (() => {

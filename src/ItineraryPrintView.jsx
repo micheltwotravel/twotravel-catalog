@@ -415,6 +415,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
         ? (cartItem.dressCode_en || service.dressCode_en || service.dress_code_en || "")
         : (cartItem.dressCode || service.dressCode || service.dress_code || "")),
       confirmed    : cartItem.confirmed !== false,
+      tbc          : cartItem.tbc === true,
       confirmation : cartItem.confirmation || "",
       priceTiers      : cartItem.priceTiers || (lang === "en" ? (service.priceTiers_en || service.priceTiers) : (service.priceTiers || service.priceTiers_en)) || service.price_tiers || "",
       tierQuantities  : cartItem.tierQuantities || [],
@@ -946,70 +947,70 @@ function CoverPage({ kickoff, total, lang, editMode }) {
 
         <div className="cover-rule"/>
 
-        {/* Accommodation / stay block */}
+        {/* Accommodation / stay block — single unified card */}
         {(a.accommodationName || a.groupSize || a.checkIn || a.checkOut) && (
-          <div className="cover-info-grid">
-            {a.accommodationName && (
-              <div className="cover-info-card" style={{ display: "flex", flexDirection: "row", gap: 10, padding: "8px 10px" }}>
-                {a.accommodationPhoto && (
-                  <img src={driveImgUrl(a.accommodationPhoto)} alt={a.accommodationName}
-                    style={{ width: 72, minWidth: 72, height: 72, objectFit: "cover", borderRadius: 6, flexShrink: 0 }}
-                    onError={e => { e.target.style.display = "none"; }}
-                  />
+          <div style={{ marginBottom: 24 }}>
+            <div className="cover-info-card" style={{ padding: 0, overflow: "hidden" }}>
+              {/* Photo banner — full width, proportional height */}
+              {a.accommodationPhoto && (
+                <img src={driveImgUrl(a.accommodationPhoto)} alt={a.accommodationName}
+                  style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }}
+                  onError={e => { e.target.style.display = "none"; }}
+                />
+              )}
+              {/* Info below photo */}
+              <div style={{ padding: "12px 16px" }}>
+                <div className="cover-info-label">{isEs ? "Alojamiento" : "Accommodation"}</div>
+                {a.accommodationUrl ? (
+                  <a href={a.accommodationUrl} target="_blank" rel="noreferrer"
+                    className="cover-info-value"
+                    style={{ color: "#1d4ed8", textDecoration: "underline", display: "block" }}>
+                    {a.accommodationName}
+                  </a>
+                ) : (
+                  <Editable tag="div" className="cover-info-value" editMode={editMode} value={a.accommodationName}/>
                 )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="cover-info-label">
-                    {isEs ? "Alojamiento" : "Accommodation"}
-                  </div>
-                  {a.accommodationUrl ? (
-                    <a href={a.accommodationUrl} target="_blank" rel="noreferrer"
-                      className="cover-info-value"
-                      style={{ color: "#1d4ed8", textDecoration: "underline", display: "block" }}>
-                      {a.accommodationName}
+                {(a.accommodationAddr || a.accommodationMapsUrl) && (
+                  a.accommodationMapsUrl ? (
+                    <a href={a.accommodationMapsUrl} target="_blank" rel="noreferrer"
+                      className="cover-info-sub"
+                      style={{ color: "#1d4ed8", textDecoration: "underline", display: "block", fontSize: 11, marginTop: 3 }}>
+                      📍 {a.accommodationAddr || (isEs ? "Ver dirección →" : "View address →")}
                     </a>
                   ) : (
-                    <Editable tag="div" className="cover-info-value" editMode={editMode} value={a.accommodationName}/>
-                  )}
-                  {(a.accommodationAddr || a.accommodationMapsUrl) && (
-                    a.accommodationMapsUrl ? (
-                      <a href={a.accommodationMapsUrl} target="_blank" rel="noreferrer"
-                        className="cover-info-sub"
-                        style={{ color: "#1d4ed8", textDecoration: "underline", display: "block", fontSize: 11, marginTop: 3 }}>
-                        📍 {a.accommodationAddr || (isEs ? "Ver dirección →" : "View address →")}
-                      </a>
-                    ) : (
-                      <Editable tag="div" className="cover-info-sub" editMode={editMode} value={a.accommodationAddr}/>
-                    )
-                  )}
-                  {a.barrio && (
-                    <div className="cover-info-sub" style={{ color: "#6b7280", fontStyle: "italic" }}>
-                      {isEs ? "Barrio" : "Neighborhood"}: {a.barrio}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            {(a.checkIn || a.checkOut || a.groupSize) && (
-              <div className="cover-info-card">
-                <div className="cover-info-label">
-                  {isEs ? "Detalles de Estadía" : "Stay Details"}
-                </div>
-                {a.groupSize && (
-                  <div className="cover-info-value" style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <span>👥</span>
-                    <span>{(() => { const n = parseInt(a.groupSize) || 0; if (!n) return a.groupSize; return isEs ? `${n} ${n===1?"persona":"personas"}` : `${n} ${n===1?"person":"people"}`; })()}</span>
+                    <Editable tag="div" className="cover-info-sub" editMode={editMode} value={a.accommodationAddr}/>
+                  )
+                )}
+                {a.barrio && (
+                  <div className="cover-info-sub" style={{ color: "#6b7280", fontStyle: "italic" }}>
+                    {isEs ? "Barrio" : "Neighborhood"}: {a.barrio}
                   </div>
                 )}
-                {a.checkIn  && (
-                  <Editable tag="div" className="cover-info-sub" editMode={editMode}
-                    value={`Check-in: ${a.checkIn}`}/>
-                )}
-                {a.checkOut && (
-                  <Editable tag="div" className="cover-info-sub" editMode={editMode}
-                    value={`Check-out: ${a.checkOut}`}/>
+                {/* Stay details inline below address */}
+                {(a.groupSize || a.checkIn || a.checkOut) && (
+                  <div style={{ display: "flex", gap: 16, marginTop: 10, paddingTop: 10, borderTop: "1px solid #f0f0f0", flexWrap: "wrap" }}>
+                    {a.groupSize && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#374151" }}>
+                        <span>👥</span>
+                        <span>{(() => { const n = parseInt(a.groupSize) || 0; if (!n) return a.groupSize; return isEs ? `${n} ${n===1?"persona":"personas"}` : `${n} ${n===1?"person":"people"}`; })()}</span>
+                      </div>
+                    )}
+                    {a.checkIn && (
+                      <div style={{ fontSize: 11, color: "#374151" }}>
+                        <span style={{ color: "#aaa", fontSize: 9, textTransform: "uppercase", letterSpacing: 1 }}>Check-in </span>
+                        {a.checkIn}
+                      </div>
+                    )}
+                    {a.checkOut && (
+                      <div style={{ fontSize: 11, color: "#374151" }}>
+                        <span style={{ color: "#aaa", fontSize: 9, textTransform: "uppercase", letterSpacing: 1 }}>Check-out </span>
+                        {a.checkOut}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -1154,7 +1155,8 @@ function CoverPage({ kickoff, total, lang, editMode }) {
 
         {/* Schedule a meeting */}
         {(() => {
-          const conciergeName  = a.assignedConciergeName || a.assignedConcierge || "";
+          const rawCN = a.assignedConciergeName || a.assignedConcierge || "";
+          const conciergeName = rawCN.split(",").map(s => s.trim()).filter(s => s && !/^\d+$/.test(s)).join(", ");
           if (!conciergeName) return null;
           // Map name → slug for book.html
           const SLUG_MAP = {
@@ -1612,6 +1614,7 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
   }
 
   const isConfirmed = it.confirmed !== false;
+  const isTBC       = !isConfirmed && it.tbc === true;
   const showPrice = isConfirmed && (it.priceIsOverride || !HIDE_PRICE_CATS.has(String(it.category || "").trim().toLowerCase()));
   const price    = showPrice ? fmtPrice(it.price) : "";
   const hiList   = splitList(it.highlights);
@@ -1684,11 +1687,17 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
           </div>
         )}
 
-        {/* Recommendation badge */}
+        {/* State badge: TBC (amber) or Recommendation (grey) */}
         {!isConfirmed && (
-          <div className="ev-rec-badge">
-            📌 {isEs ? "Recomendación" : "Recommendation"}
-          </div>
+          isTBC ? (
+            <div style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:9,fontWeight:700,color:"#92400e",background:"#fef3c7",border:"1px solid #fcd34d",borderRadius:4,padding:"2px 8px",letterSpacing:"0.3px",marginBottom:6}}>
+              ⏳ {isEs ? "Por confirmar" : "To Be Confirmed"}
+            </div>
+          ) : (
+            <div className="ev-rec-badge">
+              📌 {isEs ? "Recomendación" : "Recommendation"}
+            </div>
+          )
         )}
 
         {/* Informative badge for logistical items */}
