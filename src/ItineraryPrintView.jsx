@@ -2656,12 +2656,18 @@ export default function ItineraryPrintView() {
   useEffect(() => {
     if (!kickoffId) { setError("No kickoffId in URL"); setLoading(false); return; }
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
-    Promise.all([
-      fetchKickoffById(kickoffId),
-      fetchServicesFromSheet(),
-    ])
+
+    const withTimeout = (promise, ms) => Promise.race([
+      promise,
+      new Promise((_, rej) => setTimeout(() => rej(new Error("Timeout — el servidor tardó demasiado. Recarga para intentar de nuevo.")), ms)),
+    ]);
+
+    withTimeout(
+      Promise.all([fetchKickoffById(kickoffId), fetchServicesFromSheet()]),
+      20000
+    )
       .then(async ([k, cats]) => {
-        if (!k) throw new Error("Kickoff not found");
+        if (!k) throw new Error("Kickoff no encontrado. Verifica el link.");
         // Auto-fill address from Properties portfolio if missing
         if (!k.accommodationAddr && k.accommodationName) {
           try {
@@ -2739,9 +2745,14 @@ export default function ItineraryPrintView() {
     <div style={{
       minHeight: "100vh", display: "flex", alignItems: "center",
       justifyContent: "center", fontFamily: "sans-serif",
-      color: "#c00", fontSize: 13,
+      flexDirection: "column", gap: 12, padding: 24, textAlign: "center",
     }}>
-      {error}
+      <p style={{ color: "#c00", fontSize: 13, maxWidth: 320 }}>{error}</p>
+      <button onClick={() => window.location.reload()}
+        style={{ fontSize: 12, padding: "6px 16px", borderRadius: 8,
+          border: "1px solid #ccc", background: "#fff", cursor: "pointer" }}>
+        Reintentar
+      </button>
     </div>
   );
 
