@@ -45,11 +45,10 @@ class ErrorBoundary extends Component {
   }
 }
 
-import { updateKickoffInSheet, fetchKickoffsFromSheet, saveKickoffToSheet } from "./sheetServices";
+import { updateKickoffInSheet, fetchKickoffsFromSheet, saveKickoffToSheet, fetchKickoffById } from "./sheetServices";
 
 async function getKickoffByIdFromSheet(id) {
-  const all = await fetchKickoffsFromSheet();
-  return (Array.isArray(all) ? all : []).find(k => String(k.id).trim() === String(id).trim()) ?? null;
+  return fetchKickoffById(id);
 }
 
 const translations = {
