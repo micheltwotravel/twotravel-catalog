@@ -471,6 +471,8 @@ export async function updateKickoffInSheet(id, updates) {
   return true;
 }
 
+const CATALOG_GAS_URL = "https://script.google.com/macros/s/AKfycbxc0Az7hAdTaRp9tG8lrUTrpogRobojyicV4LfggHQpTIboceog8uVDAvlz4gqbsG9p/exec";
+
 const ITINERARY_ITEMS_CACHE_KEY = "tt_itinerary_items_v1";
 let _itineraryItemsPromise = null;
 
@@ -485,7 +487,7 @@ export async function fetchItineraryItems() {
   } catch {}
 
   _itineraryItemsPromise = (async () => {
-    const res = await fetch(`${KICKOFF_API_URL}?action=listItineraryItems&t=${Date.now()}`);
+    const res = await fetch(`${CATALOG_GAS_URL}?action=listItineraryItems&t=${Date.now()}`);
     const json = await res.json();
     const result = json.ok ? (json.data || []).map(item => ({
       ...item,
