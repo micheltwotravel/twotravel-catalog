@@ -4648,7 +4648,7 @@ function CheckinForm() {
     try {
       const res = await fetch(GAS_URL, {
         method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "saveCheckinResponse", kickoffId, response: { ...form, submittedAt: new Date().toISOString() } }),
+        body: JSON.stringify({ action: "saveCheckinResponse", payload: { kickoffId, response: { ...form, submittedAt: new Date().toISOString() } } }),
       });
       const data = await res.json();
       if (data.ok) {
