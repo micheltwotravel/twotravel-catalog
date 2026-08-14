@@ -509,10 +509,12 @@ export async function fetchItineraryItems() {
     const result = parsed.data
       .map(row => ({
         sku: row.sku || "",
-        name_en: row.name_en || row.nombre_en || "",
-        name_es: row.name || row.name_es || row.nombre || "",
-        description_en: row.description_en || "",
-        description_es: row.description_es || "",
+        // Sheet columns: "Item NAME" (en), "Item NombreES" (es)
+        name_en: row["item name"] || row.name_en || row.nombre_en || row.name || "",
+        name_es: row["item nombrees"] || row["item nombre es"] || row["item nombre_es"] || row.name_es || row.nombre || "",
+        // Sheet columns: "Description" (en), "Descripcion ES" (es)
+        description: row.description || row.description_en || "",
+        description_es: row["descripcion es"] || row.descripcion_es || row.description_es || "",
         image: normalizeDriveImage(
           row["image_source"] || row["image source"] || row.image || row.img || ""
         ),
