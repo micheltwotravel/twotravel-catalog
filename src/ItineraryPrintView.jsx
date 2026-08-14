@@ -891,7 +891,7 @@ function PF({ n, total }) {
 /* ═══════════════════════════════════════════════════════════
    PAGE 1: COVER
 ═══════════════════════════════════════════════════════════ */
-function CoverPage({ kickoff, total, lang, editMode }) {
+function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
   const a   = kickoff;
   const isEs = lang === "es";
 
@@ -2861,6 +2861,7 @@ export default function ItineraryPrintView() {
         total={total}
         lang={lang}
         editMode={editMode}
+        checkinResponses={checkinResponses}
       />
 
       <FlightTracker kickoff={kickoff} lang={lang} />
