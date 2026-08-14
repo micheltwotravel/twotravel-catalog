@@ -4803,18 +4803,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
         <div className="flex-1 overflow-auto p-5 space-y-4">
 
-          {/* ── HUBSPOT IMPORT ─────────────────────────────────────── */}
-          <HubSpotImport onImport={({ contactName, contactEmail, contactPhone, city: ct, groupSize: gs, arrivals: arr, departures: dep, passportInfo: pi, dietInfo }) => {
-            if (contactName) setGuestName(contactName);
-            if (contactEmail) setGuestEmailState(contactEmail);
-            if (contactPhone) setGuestContact(contactPhone);
-            if (ct) setCity(ct);
-            if (gs) setGroupSize(String(gs));
-            if (arr && arr.length) setArrivals(arr);
-            if (dep && dep.length) setDepartures(dep);
-            if (pi) setPassportInfo(pi);
-            if (dietInfo) setInternalNotes(prev => (prev ? prev + "\n\n" : "") + "DIETA/ALERGIAS:\n" + dietInfo);
-          }} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
