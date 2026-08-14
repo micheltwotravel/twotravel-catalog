@@ -2754,8 +2754,25 @@ const vibeLabel = useMemo(() => {
       return isNaN(n) ? 0 : n;
     })();
 
-    // Scored picks — max 2 per category, 8 total
-    const scored = services
+    // Filter by city first (same logic as filteredServices cityOK)
+    const kickoffCodes = kickoffCity
+      ? kickoffCity.split(",").map(c => c.trim().toUpperCase()).filter(Boolean)
+      : [];
+    const kickoffAliasSet = new Set(
+      kickoffCodes.flatMap(code => CITY_CONFIG[code]?.aliases || [code.toLowerCase()])
+    );
+    const cityServices = services.filter(s => {
+      if (!kickoffCity) return true;
+      const sCity = String(s.city || "").trim();
+      if (!sCity) return false;
+      const sCodes = sCity.split(",").map(c => toCityCode(c.trim())).filter(Boolean);
+      return sCodes.some(code => kickoffCodes.includes(code))
+        || sCity.split(",").some(c => kickoffAliasSet.has(c.trim().toLowerCase()));
+    });
+
+    // Scored picks — max 2 per category, 8 total, deduped by name
+    const seenNames = new Set();
+    const scored = cityServices
       .map((s) => {
         let pts = score(s);
         // Transport: boost based on group size match
@@ -2771,20 +2788,23 @@ const vibeLabel = useMemo(() => {
       .filter((x) => x.pts > 0)
       .sort((a, b) => b.pts - a.pts)
       .reduce((acc, { s }) => {
-        // Max 2 per category
+        // Dedup by name, max 2 per category
+        const nameKey = (s.name || "").trim().toLowerCase();
+        if (seenNames.has(nameKey)) return acc;
         const catCount = acc.filter(x => x.category === s.category).length;
-        if (catCount < 2) acc.push(s);
+        if (catCount < 2) { acc.push(s); seenNames.add(nameKey); }
         return acc;
       }, [])
       .slice(0, 8);
 
     // Pin transport at end only if none were already scored by group-size logic.
-    // Also filter by capacity so a small car never appears for a large group.
     const scoredIds = new Set(scored.map((s) => s.id));
     const scoredHasTransport = scored.some((x) => x.category === "transportation");
-    const transportPicks = scoredHasTransport ? [] : services
+    const transportPicks = scoredHasTransport ? [] : cityServices
       .filter((s) => {
         if (s.category !== "transportation" || scoredIds.has(s.id)) return false;
+        const nameKey = (s.name || "").trim().toLowerCase();
+        if (seenNames.has(nameKey)) return false;
         if (groupSize > 0) {
           const cap = s.capacity || {};
           return groupSize <= (cap.max || 99);
@@ -2794,7 +2814,7 @@ const vibeLabel = useMemo(() => {
       .slice(0, 1);
 
     return [...scored, ...transportPicks];
-  }, [quiz, services]);
+  }, [quiz, services, kickoffCity]);
 
 
 const selectedServiceCategory = selectedService
@@ -2895,7 +2915,8 @@ if (ko.departureDate) setDepartureDate(String(ko.departureDate).trim());
 setKickoffLoaded(true);
 
       // Store city — support comma-separated multi-city "CTG,MDE"
-      const rawCity = String(ko.city || "").trim();
+      // Also fall back to destination field (HubSpot kickoffs stored city there before the fix)
+      const rawCity = String(ko.city || ko.destination || "").trim();
       const cityCode = rawCity.includes(",")
         ? rawCity.split(",").map(c => toCityCode(c.trim())).filter(Boolean).join(",")
         : toCityCode(rawCity);
