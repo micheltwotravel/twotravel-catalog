@@ -402,12 +402,11 @@ function save(){
 function load(){
   const saved = localStorage.getItem('tt_handoffs');
   if(saved){ try{ handoffs=JSON.parse(saved); }catch{} }
-  if(!handoffs.length) handoffs = sampleData();
 }
 async function syncToGAS(){
   try{
     await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({action:'saveHandoffs',data:{handoffs}})});
+      body:JSON.stringify({action:'saveHandoffs',payload:{handoffs}})});
   }catch{}
 }
 async function loadFromGAS(){
@@ -966,9 +965,10 @@ async function sendToMonday(){
 function checkUrlParams(){
   const p = new URLSearchParams(window.location.search);
   const client = p.get('client');
-  const date   = p.get('date');
-  if(client || date){
-    openNewModal(null, client || '', date || '');
+  if(client){
+    searchQ = client;
+    const inp = document.getElementById('search-input');
+    if(inp) inp.value = client;
   }
 }
 function closeNewModal(){

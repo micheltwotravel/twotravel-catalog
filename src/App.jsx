@@ -1324,7 +1324,7 @@ function ClientesTable({ kickoffs, loading }) {
         person:      r.assignedConciergeName || r.concierge || "",
         personLive:  "",
         notes:       [item.timeLabel||item.time||"", item.location||""].filter(Boolean).join(" · "),
-        status:      "pending",
+        status:      "todo",
         createdAt:   new Date().toISOString(),
         updatedAt:   new Date().toISOString(),
       }));
@@ -1339,7 +1339,10 @@ function ClientesTable({ kickoffs, loading }) {
         concierge: r.assignedConciergeName || r.concierge || "",
       }})}).catch(() => {});
 
-      alert(`✅ ${items.length} servicio(s) agregados al Handoff y enviados a Monday Logística para ${clientName}`);
+      const handoffUrl = "/handoffs.html?client=" + encodeURIComponent(clientName);
+      if (window.confirm(`✅ ${items.length} servicio(s) generados para ${clientName}.\n\n¿Abrir Handoffs para verificar?`)) {
+        window.open(handoffUrl, "_blank");
+      }
     } catch(e) { alert("Error: " + e.message); }
     setGeneratingTasks(g => ({ ...g, [r.id]: false }));
   }
