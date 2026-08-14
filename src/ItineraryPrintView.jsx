@@ -1116,8 +1116,8 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
             </div>
             <p style={{ fontSize: 11, color: "#7c3aed", opacity: 0.75, margin: 0, lineHeight: 1.5 }}>
               {isEs
-                ? "Por favor llena este formulario antes de tu llegada. Necesitamos datos de pasaporte, vuelo y preferencias alimenticias."
-                : "Please fill out this form before arrival. We need your passport details, flight info, and dietary preferences."}
+                ? "Comparte este formulario con todo tu grupo para que podamos preparar cada detalle de tu estadía con anticipación."
+                : "Share this form with your entire group so we can prepare every detail of your stay in advance."}
             </p>
           </a>
         ) : null}

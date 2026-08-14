@@ -60,7 +60,10 @@ function rowToBoda(row) {
     calls:     parseJ(row.calls,     []),
     guests:    parseJ(row.guests,    []),
     palette:   parseJ(row.palette,   []),
-    schedule:  parseJ(row.schedule,  []),
+    schedule:    parseJ(row.schedule,    []),
+    budgetItems: parseJ(row.budgetItems, []),
+    payments:    parseJ(row.payments,    []),
+    contracts:   parseJ(row.contracts,   []),
   };
 }
 
@@ -109,6 +112,7 @@ async function apiSaveBoda(f) {
     notes: f.notes, coverPhoto: f.coverPhoto || "",
     tasks: "[]", suppliers: "[]", songs: "[]",
     photos: "[]", calls: "[]", guests: "[]", palette: "[]", schedule: "[]",
+    budgetItems: "[]", payments: "[]", contracts: "[]",
   }});
   return d.id;
 }
@@ -130,7 +134,10 @@ async function apiSaveNotes(id, boda) {
     photos:    JSON.stringify(boda.photos    || []),
     calls:     JSON.stringify(boda.calls     || []),
     guests:    JSON.stringify(boda.guests    || []),
-    palette:   JSON.stringify(boda.palette   || []),
+    palette:     JSON.stringify(boda.palette     || []),
+    budgetItems: JSON.stringify(boda.budgetItems || []),
+    payments:    JSON.stringify(boda.payments    || []),
+    contracts:   JSON.stringify(boda.contracts   || []),
   }});
 }
 async function apiUpdateSchedule(id, sc) {
@@ -726,6 +733,215 @@ function GuestTab({ boda, onPatch }) {
   );
 }
 
+// ─── PRESUPUESTO + PAGOS ──────────────────────────────────────────────────────
+const BUDGET_CATS = [
+  "Lugar / Venue","Catering / Banquete","Fotografía","Video",
+  "Decoración","Flores","DJ / Música en vivo","Vestido / Vestimenta",
+  "Invitaciones / Papelería","Pastel / Postres","Cabello y Maquillaje",
+  "Transporte","Coordinación","Luna de Miel","Otro",
+];
+const B_STATUS       = ["Pendiente","Anticipo","Parcial","Pagado"];
+const B_STATUS_STYLE = {
+  "Pendiente":{bg:"#fef3c7",color:"#92400e"},
+  "Anticipo": {bg:"#eff6ff",color:"#1d4ed8"},
+  "Parcial":  {bg:"#f5f3ff",color:"#6d28d9"},
+  "Pagado":   {bg:"#dcfce7",color:"#166534"},
+};
+const PAY_TYPES   = ["Anticipo","Abono","Saldo final","Devolución","Otro"];
+const PAY_METHODS = ["Transferencia","Efectivo","Tarjeta","Nequi/Daviplata","PayPal","Otro"];
+
+function PresupuestoTab({ boda, onPatch }) {
+  const [items,  setItems]  = useState(boda.budgetItems || []);
+  const [show,   setShow]   = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [blank,  setBlank]  = useState({ category:BUDGET_CATS[0], budgetAmount:"", actualCost:"", supplier:"", paymentStatus:"Pendiente", notes:"" });
+
+  async function persist(u) { setItems(u); onPatch({ budgetItems:u }); await apiSaveNotes(boda.id,{...boda,budgetItems:u}); }
+  async function add() {
+    setSaving(true);
+    try {
+      if (editId) { await persist(items.map(it=>it.id===editId?{...blank,id:editId}:it)); }
+      else        { await persist([...items,{...blank,id:uid()}]); }
+      setBlank({category:BUDGET_CATS[0],budgetAmount:"",actualCost:"",supplier:"",paymentStatus:"Pendiente",notes:""});
+      setShow(false); setEditId(null);
+    } catch(e){alert("Error: "+e.message);} setSaving(false);
+  }
+  function startEdit(it){ setBlank({...it}); setEditId(it.id); setShow(true); }
+  async function del(id){ try{await persist(items.filter(it=>it.id!==id));}catch{setItems(items);} }
+  async function cycleStatus(id){ const u=items.map(it=>{if(it.id!==id)return it; const idx=(B_STATUS.indexOf(it.paymentStatus||"Pendiente")+1)%B_STATUS.length; return{...it,paymentStatus:B_STATUS[idx]};}); try{await persist(u);}catch{setItems(items);} }
+
+  const num = s=>parseFloat(String(s||"").replace(/,/g,"."))||0;
+  const totalBudget=items.reduce((s,it)=>s+num(it.budgetAmount),0);
+  const totalActual=items.reduce((s,it)=>s+num(it.actualCost),0);
+  const diff=totalBudget-totalActual;
+  const pctUsed=totalBudget>0?Math.min(100,(totalActual/totalBudget)*100):0;
+
+  return (
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:16}}>
+        {[{label:"Presupuesto",n:`$${fmt$(totalBudget)}`,color:R.accent},{label:"Gasto real",n:`$${fmt$(totalActual)}`,color:"#1d4ed8"},{label:diff>=0?"Disponible":"Excedido",n:`$${fmt$(Math.abs(diff))}`,color:diff>=0?"#166534":"#dc2626"}].map(s=>(
+          <div key={s.label} style={{textAlign:"center",background:R.cream,borderRadius:10,padding:"10px 8px",border:`1px solid ${R.border}`}}>
+            <p style={{fontSize:18,fontWeight:700,color:s.color,margin:0,fontVariantNumeric:"tabular-nums"}}>{s.n}</p>
+            <p style={{fontSize:10,color:R.muted,margin:"2px 0 0"}}>{s.label}</p>
+          </div>
+        ))}
+      </div>
+      {totalBudget>0&&(
+        <div style={{marginBottom:16}}>
+          <div style={{height:6,background:R.light,borderRadius:99,overflow:"hidden"}}>
+            <div style={{height:"100%",width:`${pctUsed}%`,background:pctUsed>=100?"#dc2626":pctUsed>=80?"#f59e0b":R.accent,borderRadius:99,transition:"width .3s"}} />
+          </div>
+          <p style={{fontSize:10,color:R.muted,margin:"3px 0 0",textAlign:"right"}}>{pctUsed.toFixed(0)}% del presupuesto</p>
+        </div>
+      )}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{items.length} categoría{items.length!==1?"s":""}</span>
+        <button onClick={()=>{setBlank({category:BUDGET_CATS[0],budgetAmount:"",actualCost:"",supplier:"",paymentStatus:"Pendiente",notes:""});setEditId(null);setShow(v=>!v);}} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Agregar</button>
+      </div>
+      {show&&(
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+            <select style={INP_SM} value={blank.category} onChange={e=>setBlank(p=>({...p,category:e.target.value}))}>{BUDGET_CATS.map(c=><option key={c}>{c}</option>)}</select>
+            <select style={INP_SM} value={blank.paymentStatus} onChange={e=>setBlank(p=>({...p,paymentStatus:e.target.value}))}>{B_STATUS.map(s=><option key={s}>{s}</option>)}</select>
+            <input style={INP_SM} type="number" value={blank.budgetAmount} onChange={e=>setBlank(p=>({...p,budgetAmount:e.target.value}))} placeholder="Presupuesto USD" />
+            <input style={INP_SM} type="number" value={blank.actualCost}   onChange={e=>setBlank(p=>({...p,actualCost:e.target.value}))}   placeholder="Costo real USD" />
+            <input style={INP_SM} value={blank.supplier} onChange={e=>setBlank(p=>({...p,supplier:e.target.value}))} placeholder="Proveedor" />
+            <input style={INP_SM} value={blank.notes}    onChange={e=>setBlank(p=>({...p,notes:e.target.value}))}    placeholder="Notas" />
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={add} disabled={saving} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:saving?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":editId?"Guardar":"Agregar"}</button>
+            <button onClick={()=>{setShow(false);setEditId(null);}} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+          </div>
+        </div>
+      )}
+      {items.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin categorías. Agrega la primera arriba.</p>}
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {items.map(it=>{
+          const st=B_STATUS_STYLE[it.paymentStatus||"Pendiente"]||B_STATUS_STYLE["Pendiente"];
+          const b=num(it.budgetAmount), a=num(it.actualCost);
+          const pct=b>0?Math.min(100,(a/b)*100):0;
+          return (
+            <div key={it.id} style={{border:`1px solid ${R.border}`,borderRadius:12,padding:"12px 14px",background:R.white}}>
+              <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}}>
+                    <span style={{fontSize:13,fontWeight:600,color:R.text}}>{it.category}</span>
+                    {it.supplier&&<span style={{fontSize:11,color:R.muted}}>{it.supplier}</span>}
+                  </div>
+                  <div style={{display:"flex",gap:16,fontSize:12,color:R.text2,marginBottom:b>0?8:0,flexWrap:"wrap"}}>
+                    {b>0&&<span>💰 Ppto: <strong>${fmt$(b)}</strong></span>}
+                    {a>0&&<span>🧾 Real: <strong>${fmt$(a)}</strong></span>}
+                    {b>0&&a>0&&<span style={{color:a<=b?"#166534":"#dc2626"}}>{a<=b?`✅ $${fmt$(b-a)} libre`:`⚠️ $${fmt$(a-b)} extra`}</span>}
+                  </div>
+                  {b>0&&<div style={{height:4,background:R.light,borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:pct>=100?"#dc2626":pct>=80?"#f59e0b":"#22c55e",borderRadius:99}} /></div>}
+                  {it.notes&&<p style={{fontSize:11,color:R.muted,margin:"4px 0 0"}}>{it.notes}</p>}
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end",flexShrink:0}}>
+                  <button onClick={()=>cycleStatus(it.id)} style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:st.bg,color:st.color,border:"none",cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'Jost',sans-serif"}}>{it.paymentStatus||"Pendiente"}</button>
+                  <div style={{display:"flex",gap:4}}>
+                    <button onClick={()=>startEdit(it)} style={{color:R.muted,background:"none",border:"none",cursor:"pointer",fontSize:12}}>✏️</button>
+                    <button onClick={()=>del(it.id)}    style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:12}}>✕</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PagosTab({ boda, onPatch }) {
+  const [payments, setPayments] = useState(boda.payments || []);
+  const [show,   setShow]   = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [blank,  setBlank]  = useState({ concept:"", amount:"", type:"Anticipo", method:"Transferencia", date:"", supplier:"", notes:"", received:true });
+
+  async function persist(u){ setPayments(u); onPatch({payments:u}); await apiSaveNotes(boda.id,{...boda,payments:u}); }
+  async function add(){
+    if(!blank.concept.trim()||!blank.amount) return;
+    setSaving(true);
+    try {
+      if(editId){ await persist(payments.map(p=>p.id===editId?{...blank,id:editId}:p)); }
+      else      { await persist([...payments,{...blank,id:uid()}]); }
+      setBlank({concept:"",amount:"",type:"Anticipo",method:"Transferencia",date:"",supplier:"",notes:"",received:true});
+      setShow(false); setEditId(null);
+    } catch(e){alert("Error: "+e.message);} setSaving(false);
+  }
+  function startEdit(p){ setBlank({...p}); setEditId(p.id); setShow(true); }
+  async function del(id){ try{await persist(payments.filter(p=>p.id!==id));}catch{setPayments(payments);} }
+  async function toggleReceived(id){ const u=payments.map(p=>p.id===id?{...p,received:!p.received}:p); try{await persist(u);}catch{setPayments(payments);} }
+
+  const num = s=>parseFloat(String(s||"").replace(/,/g,"."))||0;
+  const totalIn  = payments.filter(p=>p.received&&p.type!=="Devolución").reduce((s,p)=>s+num(p.amount),0);
+  const totalOut = payments.filter(p=>p.received&&p.type==="Devolución").reduce((s,p)=>s+num(p.amount),0);
+  const pending  = payments.filter(p=>!p.received).reduce((s,p)=>s+num(p.amount),0);
+
+  return (
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:16}}>
+        {[{label:"Recibido",n:`$${fmt$(totalIn)}`,color:"#166534"},{label:"Pendiente",n:`$${fmt$(pending)}`,color:"#92400e"},{label:"Devoluciones",n:`$${fmt$(totalOut)}`,color:"#dc2626"}].map(s=>(
+          <div key={s.label} style={{textAlign:"center",background:R.cream,borderRadius:10,padding:"10px 8px",border:`1px solid ${R.border}`}}>
+            <p style={{fontSize:18,fontWeight:700,color:s.color,margin:0,fontVariantNumeric:"tabular-nums"}}>{s.n}</p>
+            <p style={{fontSize:10,color:R.muted,margin:"2px 0 0"}}>{s.label}</p>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{payments.length} pago{payments.length!==1?"s":""}</span>
+        <button onClick={()=>{setBlank({concept:"",amount:"",type:"Anticipo",method:"Transferencia",date:"",supplier:"",notes:"",received:true});setEditId(null);setShow(v=>!v);}} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Registrar</button>
+      </div>
+      {show&&(
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+            <input style={{...INP_SM,gridColumn:"span 2"}} value={blank.concept} onChange={e=>setBlank(p=>({...p,concept:e.target.value}))} placeholder="Concepto *" />
+            <input style={INP_SM} type="number" value={blank.amount} onChange={e=>setBlank(p=>({...p,amount:e.target.value}))} placeholder="Monto USD *" />
+            <select style={INP_SM} value={blank.type}   onChange={e=>setBlank(p=>({...p,type:e.target.value}))}>{PAY_TYPES.map(t=><option key={t}>{t}</option>)}</select>
+            <select style={INP_SM} value={blank.method} onChange={e=>setBlank(p=>({...p,method:e.target.value}))}>{PAY_METHODS.map(m=><option key={m}>{m}</option>)}</select>
+            <input style={INP_SM} type="date" value={blank.date} onChange={e=>setBlank(p=>({...p,date:e.target.value}))} />
+            <input style={INP_SM} value={blank.supplier} onChange={e=>setBlank(p=>({...p,supplier:e.target.value}))} placeholder="Proveedor / Cliente" />
+            <input style={INP_SM} value={blank.notes}    onChange={e=>setBlank(p=>({...p,notes:e.target.value}))}    placeholder="Notas" />
+            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={blank.received} onChange={e=>setBlank(p=>({...p,received:e.target.checked}))} /> Confirmado / recibido</label>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={add} disabled={saving||!blank.concept.trim()||!blank.amount} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.concept.trim()||!blank.amount)?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":editId?"Guardar":"Registrar"}</button>
+            <button onClick={()=>{setShow(false);setEditId(null);}} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+          </div>
+        </div>
+      )}
+      {payments.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin pagos registrados. Agrega el primero arriba.</p>}
+      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {[...payments].sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(p=>{
+          const amt=num(p.amount);
+          return (
+            <div key={p.id} style={{border:`1px solid ${R.border}`,borderRadius:10,padding:"10px 14px",background:R.white,display:"flex",alignItems:"center",gap:10,opacity:p.received?1:.7}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                  <span style={{fontSize:13,fontWeight:600,color:R.text}}>{p.concept}</span>
+                  <span style={{fontSize:11,padding:"1px 7px",borderRadius:99,background:R.light,color:R.muted}}>{p.type}</span>
+                  {p.supplier&&<span style={{fontSize:11,color:R.muted}}>{p.supplier}</span>}
+                </div>
+                <div style={{display:"flex",gap:12,fontSize:11,color:R.muted,marginTop:2,flexWrap:"wrap"}}>
+                  {p.date&&<span>📅 {fmtDate(p.date)}</span>}
+                  {p.method&&<span>💳 {p.method}</span>}
+                  {p.notes&&<span>{p.notes}</span>}
+                </div>
+              </div>
+              <span style={{fontSize:14,fontWeight:700,color:p.type==="Devolución"?"#dc2626":"#166534",fontVariantNumeric:"tabular-nums",flexShrink:0}}>{p.type==="Devolución"?"-":"+"} ${fmt$(amt)}</span>
+              <button onClick={()=>toggleReceived(p.id)} title={p.received?"Confirmado":"Pendiente"} style={{fontSize:14,background:"none",border:"none",cursor:"pointer",flexShrink:0,opacity:p.received?1:.35}}>✅</button>
+              <button onClick={()=>startEdit(p)}  style={{color:R.muted, background:"none",border:"none",cursor:"pointer",fontSize:12,flexShrink:0}}>✏️</button>
+              <button onClick={()=>del(p.id)}     style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:13,flexShrink:0}}>✕</button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── BODA DETAIL ─────────────────────────────────────────────────────────────
 function BodaDetail({ boda:init, users, onBack, onRefresh }) {
   const [boda,setBoda]=useState(init);
@@ -745,15 +961,18 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
   const handlePatch=useCallback((patch)=>{ setBoda(b=>({...b,...patch})); },[]);
 
   const TABS=[
-    {id:"resumen",    label:"Resumen"},
-    {id:"tareas",     label:`Tareas (${activeTasks.length})`},
-    {id:"timeline",   label:"Timeline"},
-    {id:"invitados",  label:`Invitados (${(boda.guests||[]).length})`},
-    {id:"palette",    label:"Paleta"},
-    {id:"proveedores",label:`Proveedores (${(boda.suppliers||[]).length})`},
-    {id:"musica",     label:`Música (${(boda.songs||[]).length})`},
-    {id:"fotos",      label:`Fotos (${(boda.photos||[]).length})`},
-    {id:"llamadas",   label:`Notas (${(boda.calls||[]).length})`},
+    {id:"resumen",      label:"Resumen"},
+    {id:"tareas",       label:`Tareas (${activeTasks.length})`},
+    {id:"presupuesto",  label:`Presupuesto (${(boda.budgetItems||[]).length})`},
+    {id:"pagos",        label:`Pagos (${(boda.payments||[]).length})`},
+    {id:"contratos",    label:`Contratos (${(boda.contracts||[]).length})`},
+    {id:"timeline",     label:"Timeline"},
+    {id:"invitados",    label:`Invitados (${(boda.guests||[]).length})`},
+    {id:"palette",      label:"Paleta"},
+    {id:"proveedores",  label:`Proveedores (${(boda.suppliers||[]).length})`},
+    {id:"musica",       label:`Música (${(boda.songs||[]).length})`},
+    {id:"fotos",        label:`Fotos (${(boda.photos||[]).length})`},
+    {id:"llamadas",     label:`Notas (${(boda.calls||[]).length})`},
   ];
 
   return (
@@ -801,23 +1020,35 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
               {boda.budget     &&<C label="Presupuesto" v={`$${fmt$(boda.budget)} USD`} />}
               {boda.status     &&<C label="Estado"      v={boda.status} />}
               {boda.notes&&<div style={{gridColumn:"span 2"}}><C label="Notas" v={boda.notes} multi /></div>}
-              <div style={{gridColumn:"span 2",borderTop:`1px solid ${R.border}`,paddingTop:12,marginTop:4,display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
-                {[
-                  {label:"Tareas activas", n:activeTasks.length,                                                          color:R.accent},
-                  {label:"Invitados",      n:(boda.guests||[]).filter(g=>g.rsvp==="Confirmado").length+"/"+(boda.guests||[]).length, color:"#15803d"},
-                  {label:"Proveedores",    n:(boda.suppliers||[]).length,                                                 color:"#1d4ed8"},
-                  {label:"Timeline",       n:(boda.schedule||[]).length,                                                  color:"#7c3aed"},
-                ].map(s=>(
+              <div style={{gridColumn:"span 2",borderTop:`1px solid ${R.border}`,paddingTop:12,marginTop:4,display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+                {(()=>{
+                  const num=s=>parseFloat(String(s||"").replace(/,/g,"."))||0;
+                  const budgetTotal=(boda.budgetItems||[]).reduce((s,it)=>s+num(it.budgetAmount),0);
+                  const actualTotal=(boda.budgetItems||[]).reduce((s,it)=>s+num(it.actualCost),0);
+                  const payReceived=(boda.payments||[]).filter(p=>p.received&&p.type!=="Devolución").reduce((s,p)=>s+num(p.amount),0);
+                  const payPending=(boda.payments||[]).filter(p=>!p.received).reduce((s,p)=>s+num(p.amount),0);
+                  return [
+                    {label:"Tareas activas",  n:activeTasks.length,                                                                           color:R.accent},
+                    {label:"Invitados ✅",     n:(boda.guests||[]).filter(g=>g.rsvp==="Confirmado").length+"/"+(boda.guests||[]).length,        color:"#15803d"},
+                    {label:"Proveedores",      n:(boda.suppliers||[]).length,                                                                   color:"#1d4ed8"},
+                    {label:"Presupuesto",      n:budgetTotal>0?`$${(budgetTotal/1000).toFixed(0)}k`:"—",                                        color:R.accent},
+                    {label:"Gasto real",       n:actualTotal>0?`$${(actualTotal/1000).toFixed(0)}k`:"—",                                        color:"#7c3aed"},
+                    {label:payPending>0?"Pago pendiente":"Recibido",n:payPending>0?`$${(payPending/1000).toFixed(0)}k`:`$${(payReceived/1000).toFixed(0)}k`,color:payPending>0?"#92400e":"#166534"},
+                  ];
+                })().map(s=>(
                   <div key={s.label} style={{textAlign:"center",background:R.cream,borderRadius:10,padding:"10px 8px",border:`1px solid ${R.border}`}}>
-                    <p style={{fontSize:20,fontWeight:700,color:s.color,margin:0}}>{s.n}</p>
+                    <p style={{fontSize:18,fontWeight:700,color:s.color,margin:0,fontVariantNumeric:"tabular-nums"}}>{s.n}</p>
                     <p style={{fontSize:10,color:R.muted,margin:"2px 0 0"}}>{s.label}</p>
                   </div>
                 ))}
               </div>
             </div>
           )}
-          {tab==="tareas"     &&<TasksTab       boda={boda} users={users} onPatch={handlePatch} />}
-          {tab==="timeline"   &&<TimelineTab    boda={boda} onScheduleChange={sc=>setBoda(b=>({...b,schedule:sc}))} />}
+          {tab==="tareas"      &&<TasksTab        boda={boda} users={users} onPatch={handlePatch} />}
+          {tab==="presupuesto" &&<PresupuestoTab  boda={boda} onPatch={handlePatch} />}
+          {tab==="pagos"       &&<PagosTab        boda={boda} onPatch={handlePatch} />}
+          {tab==="contratos"   &&<ContratosTab    boda={boda} onPatch={handlePatch} />}
+          {tab==="timeline"    &&<TimelineTab     boda={boda} onScheduleChange={sc=>setBoda(b=>({...b,schedule:sc}))} />}
           {tab==="invitados"  &&<GuestTab       boda={boda} onPatch={handlePatch} />}
           {tab==="palette"    &&<PaletteTab     boda={boda} onPatch={handlePatch} />}
           {tab==="proveedores"&&<ProveedoresTab boda={boda} onPatch={handlePatch} />}
@@ -835,6 +1066,407 @@ function C({label,v,multi}) {
     <div>
       <span style={{display:"block",fontSize:11,color:R.muted,marginBottom:2}}>{label}</span>
       <p style={{fontSize:13,color:R.text,margin:0,whiteSpace:multi?"pre-line":"normal"}}>{v}</p>
+    </div>
+  );
+}
+
+// ─── CONTRATOS ────────────────────────────────────────────────────────────────
+const CONTRACT_STATUSES = ["Borrador","Enviado al cliente","Firmado","Vencido"];
+const CONTRACT_STATUS_STYLE = {
+  "Borrador":           {bg:"#f3f4f6",color:"#374151"},
+  "Enviado al cliente": {bg:"#eff6ff",color:"#1d4ed8"},
+  "Firmado":            {bg:"#dcfce7",color:"#166534"},
+  "Vencido":            {bg:"#fef3c7",color:"#92400e"},
+};
+
+function makeContractBody(boda) {
+  const half = boda.budget ? (parseFloat(boda.budget)/2).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:0}) : "___";
+  const total = boda.budget ? parseFloat(boda.budget).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:0}) : "___";
+  const today = new Date().toLocaleDateString("es-CO",{day:"numeric",month:"long",year:"numeric"});
+  return `CONTRATO DE SERVICIOS DE COORDINACIÓN DE BODAS
+
+Celebrado en la ciudad de Cartagena, el ${today}.
+
+PARTES:
+• Coordinadora: Two Travel Concierge, en adelante "LA COORDINADORA"
+• Cliente(s): ${boda.clienteName||"___"}, en adelante "EL/LA CLIENTE"
+
+DATOS DEL EVENTO:
+• Fecha de la boda: ${boda.weddingDate ? fmtDate(boda.weddingDate) : "___"}
+• Lugar: ${boda.venue||"___"}
+• Número estimado de invitados: ${boda.guestCount||"___"}
+
+SERVICIOS CONTRATADOS:
+La Coordinadora se compromete a prestar los siguientes servicios:
+1. Coordinación integral del día de la boda
+2. Gestión y supervisión de proveedores
+3. Elaboración de minuto a minuto
+4. Acompañamiento en degustaciones y visitas al venue
+5. Comunicación continua con el equipo de proveedores
+
+HONORARIOS Y FORMA DE PAGO:
+El monto total acordado es de USD $${total} (dólares americanos), pagadero así:
+• Anticipo del 50%: USD $${half} — al firmar este contrato
+• Saldo del 50%:    USD $${half} — 30 días antes de la fecha del evento
+
+En caso de cancelación con más de 90 días de anticipación se devuelve el 50% del anticipo.
+Con menos de 90 días, el anticipo no es reembolsable.
+
+OBLIGACIONES DEL CLIENTE:
+• Proveer información y documentos solicitados en los plazos acordados.
+• Respetar los canales de comunicación y horarios de atención establecidos.
+• Realizar los pagos en las fechas pactadas.
+
+LIMITACIÓN DE RESPONSABILIDAD:
+La Coordinadora no será responsable por eventos de fuerza mayor (desastres naturales,
+pandemias, decisiones gubernamentales) ni por incumplimientos de terceros proveedores.
+
+FIRMAS:
+
+___________________________________        ___________________________________
+Two Travel Concierge                           ${boda.clienteName||"Cliente"}
+Representante Legal                            Fecha: ___________________
+`;
+}
+
+function printContract(contract, boda) {
+  const w = window.open("","_blank","width=800,height=900");
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Contrato — ${boda.clienteName}</title>
+<style>
+  body{font-family:Georgia,serif;font-size:13px;line-height:1.8;color:#111;max-width:700px;margin:40px auto;padding:0 20px;}
+  h1{font-size:15px;letter-spacing:.08em;text-align:center;text-transform:uppercase;border-bottom:1px solid #ccc;padding-bottom:10px;margin-bottom:20px;}
+  pre{white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.9;}
+  @media print{body{margin:0;padding:20px;}button{display:none}}
+</style></head><body>
+<button onclick="window.print()" style="position:fixed;top:12px;right:12px;background:#1a0812;color:#fff;border:none;padding:8px 18px;font-size:13px;cursor:pointer;border-radius:6px;">🖨 Imprimir / PDF</button>
+<pre>${contract.body.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</pre>
+</body></html>`);
+  w.document.close();
+}
+
+function ContratosTab({ boda, onPatch }) {
+  const [contracts, setContracts] = useState(boda.contracts || []);
+  const [editId, setEditId]       = useState(null);
+  const [saving, setSaving]       = useState(false);
+  const editing = contracts.find(c=>c.id===editId)||null;
+
+  async function persist(u) { setContracts(u); onPatch({contracts:u}); await apiSaveNotes(boda.id,{...boda,contracts:u}); }
+
+  function newContract() {
+    const c = { id:uid(), title:`Contrato — ${boda.clienteName}`, status:"Borrador", body:makeContractBody(boda), createdAt:new Date().toISOString().slice(0,10) };
+    const u = [...contracts, c];
+    setContracts(u); onPatch({contracts:u});
+    setEditId(c.id);
+  }
+
+  async function save(patch) {
+    setSaving(true);
+    try { await persist(contracts.map(c=>c.id===editId?{...c,...patch}:c)); }
+    catch(e){alert("Error: "+e.message);}
+    setSaving(false);
+  }
+
+  async function del(id) { try{await persist(contracts.filter(c=>c.id!==id)); if(editId===id)setEditId(null);}catch{setContracts(contracts);} }
+
+  function cycleStatus(id) {
+    const u=contracts.map(c=>{if(c.id!==id)return c; const i=(CONTRACT_STATUSES.indexOf(c.status)+1)%CONTRACT_STATUSES.length; return{...c,status:CONTRACT_STATUSES[i]};});
+    persist(u);
+  }
+
+  if (editing) {
+    const [body,  setBody]  = useState(editing.body);
+    const [title, setTitle] = useState(editing.title);
+    const [status,setStatus]= useState(editing.status);
+    return (
+      <div>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+          <button onClick={()=>setEditId(null)} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:13,padding:0,fontFamily:"'Jost',sans-serif"}}>← Contratos</button>
+          <span style={{color:R.border}}>/</span>
+          <input value={title} onChange={e=>setTitle(e.target.value)} style={{...INP_SM,flex:1}} placeholder="Título del contrato" />
+          <select value={status} onChange={e=>setStatus(e.target.value)} style={{...INP_SM,width:"auto",flexShrink:0}}>
+            {CONTRACT_STATUSES.map(s=><option key={s}>{s}</option>)}
+          </select>
+        </div>
+        <textarea value={body} onChange={e=>setBody(e.target.value)}
+          style={{...INP,height:420,resize:"vertical",fontFamily:"'Courier New',monospace",fontSize:12,lineHeight:1.85}} />
+        <div style={{display:"flex",gap:8,marginTop:10}}>
+          <button onClick={()=>save({body,title,status})} disabled={saving}
+            style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"7px 16px",fontSize:12,cursor:"pointer",opacity:saving?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"Guardando...":"Guardar"}</button>
+          <button onClick={()=>printContract({body},boda)}
+            style={{background:"#1a0812",color:"#fff",border:"none",borderRadius:8,padding:"7px 16px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>🖨 Imprimir / PDF</button>
+          <button onClick={()=>setEditId(null)}
+            style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"7px 16px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{contracts.length} contrato{contracts.length!==1?"s":""}</span>
+        <button onClick={newContract} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Nuevo contrato</button>
+      </div>
+      {contracts.length===0&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin contratos. Crea el primero arriba — se pre-llena con los datos de la boda.</p>}
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {contracts.map(c=>{
+          const st=CONTRACT_STATUS_STYLE[c.status]||CONTRACT_STATUS_STYLE["Borrador"];
+          return (
+            <div key={c.id} style={{border:`1px solid ${R.border}`,borderRadius:12,padding:"12px 16px",background:R.white,display:"flex",alignItems:"center",gap:12}}>
+              <div style={{flex:1,minWidth:0}}>
+                <p style={{fontSize:13,fontWeight:600,color:R.text,margin:"0 0 3px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.title}</p>
+                <p style={{fontSize:11,color:R.muted,margin:0}}>Creado {c.createdAt||"—"}{c.signedAt?` · Firmado ${c.signedAt}`:""}</p>
+              </div>
+              <button onClick={()=>cycleStatus(c.id)} style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:st.bg,color:st.color,border:"none",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,fontFamily:"'Jost',sans-serif"}}>{c.status}</button>
+              <button onClick={()=>printContract(c,boda)} title="Imprimir / PDF" style={{background:"none",border:"none",cursor:"pointer",fontSize:14,flexShrink:0}}>🖨</button>
+              <button onClick={()=>setEditId(c.id)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:R.muted,flexShrink:0}}>✏️</button>
+              <button onClick={()=>del(c.id)}       style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:R.border,flexShrink:0}}>✕</button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── CALENDARIO ───────────────────────────────────────────────────────────────
+const MONTH_NAMES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const DAY_NAMES   = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+
+function CalendarioView({ bodas, onSelectBoda }) {
+  const now = new Date();
+  const [year,  setYear]  = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth()); // 0-based
+
+  function prev() { if(month===0){setMonth(11);setYear(y=>y-1);}else setMonth(m=>m-1); }
+  function next() { if(month===11){setMonth(0);setYear(y=>y+1);}else setMonth(m=>m+1); }
+  function goToday(){ setYear(now.getFullYear()); setMonth(now.getMonth()); }
+
+  // Build calendar grid (Mon-based)
+  const firstDay = new Date(year, month, 1);
+  const lastDay  = new Date(year, month+1, 0);
+  const startDow = (firstDay.getDay()+6)%7; // 0=Mon
+  const totalDays= lastDay.getDate();
+
+  // Map bodas to dates in this month
+  const bodaByDate = {};
+  bodas.forEach(b=>{
+    if(!b.weddingDate) return;
+    const d = parseDate(b.weddingDate);
+    if(!d||d.getFullYear()!==year||d.getMonth()!==month) return;
+    const key = d.getDate();
+    if(!bodaByDate[key]) bodaByDate[key]=[];
+    bodaByDate[key].push(b);
+  });
+
+  // Bodas this month (for sidebar)
+  const thisMonth = bodas.filter(b=>{ const d=parseDate(b.weddingDate); return d&&d.getFullYear()===year&&d.getMonth()===month; }).sort((a,b)=>parseDate(a.weddingDate)-parseDate(b.weddingDate));
+
+  // Grid cells
+  const cells = [];
+  for(let i=0;i<startDow;i++) cells.push(null);
+  for(let d=1;d<=totalDays;d++) cells.push(d);
+  while(cells.length%7!==0) cells.push(null);
+
+  const todayDate = now.getDate(), todayMonth = now.getMonth(), todayYear = now.getFullYear();
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+        <button onClick={prev} style={{background:"none",border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:14,color:R.muted}}>‹</button>
+        <p style={{flex:1,textAlign:"center",margin:0,fontSize:16,fontWeight:700,color:R.text,fontFamily:"'Cormorant Garamond',serif",letterSpacing:".04em"}}>{MONTH_NAMES[month]} {year}</p>
+        <button onClick={next} style={{background:"none",border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:14,color:R.muted}}>›</button>
+        <button onClick={goToday} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Hoy</button>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:20,alignItems:"start"}}>
+        {/* Calendar grid */}
+        <div>
+          {/* Day headers */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
+            {DAY_NAMES.map(d=><p key={d} style={{textAlign:"center",fontSize:10,fontWeight:600,color:R.muted,margin:0,padding:"4px 0",textTransform:"uppercase",letterSpacing:".06em"}}>{d}</p>)}
+          </div>
+          {/* Cells */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+            {cells.map((day,i)=>{
+              if(!day) return <div key={`e${i}`} />;
+              const isToday = day===todayDate&&month===todayMonth&&year===todayYear;
+              const bodaHere = bodaByDate[day]||[];
+              return (
+                <div key={day} style={{minHeight:64,border:`1px solid ${bodaHere.length>0?R.mid:R.border}`,borderRadius:8,padding:"4px 6px",background:isToday?R.light:bodaHere.length>0?"#fff0f3":R.white,position:"relative"}}>
+                  <p style={{fontSize:11,fontWeight:isToday?700:400,color:isToday?R.accent:R.muted,margin:"0 0 4px"}}>{day}</p>
+                  {bodaHere.map(b=>(
+                    <button key={b.id} onClick={()=>onSelectBoda(b)}
+                      style={{display:"block",width:"100%",background:R.accent,color:"#fff",border:"none",borderRadius:4,padding:"2px 5px",fontSize:9,cursor:"pointer",fontFamily:"'Jost',sans-serif",textAlign:"left",marginBottom:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                      💍 {b.clienteName}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Sidebar: this month's bodas */}
+        <div style={{width:200,border:`1px solid ${R.border}`,borderRadius:12,overflow:"hidden",background:R.white,flexShrink:0}}>
+          <div style={{padding:"10px 14px",borderBottom:`1px solid ${R.border}`,background:R.dark}}>
+            <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.7)",margin:0,textTransform:"uppercase",letterSpacing:".06em"}}>💍 Este mes ({thisMonth.length})</p>
+          </div>
+          {thisMonth.length===0
+            ? <p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"12px 14px",margin:0}}>Sin bodas en {MONTH_NAMES[month]}.</p>
+            : thisMonth.map(b=>(
+              <button key={b.id} onClick={()=>onSelectBoda(b)}
+                style={{display:"block",width:"100%",background:"none",border:"none",borderBottom:`1px solid ${R.light}`,padding:"10px 14px",cursor:"pointer",textAlign:"left",fontFamily:"'Jost',sans-serif"}}>
+                <p style={{fontSize:12,fontWeight:600,color:R.text,margin:"0 0 2px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{b.clienteName}</p>
+                <p style={{fontSize:10,color:R.muted,margin:0}}>📅 {fmtDate(b.weddingDate).split(" ").slice(0,2).join(" ")}</p>
+              </button>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── GLOBAL DASHBOARD ────────────────────────────────────────────────────────
+function GlobalDashboard({ bodas, onSelectBoda }) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in30  = new Date(today.getTime() + 30*86400000);
+
+  // KPIs
+  const activas   = bodas.filter(b=>b.status==="Activa");
+  const proximas  = activas.filter(b=>{ const d=parseDate(b.weddingDate); return d&&d>=today&&d<=in30; });
+  const allTasks  = bodas.flatMap(b=>(b.tasks||[]).map(t=>({...t,bodaName:b.clienteName,bodaId:b.id})));
+  const overdue   = allTasks.filter(t=>{ if(["Terminado","Cancelado"].includes(t.status)||!t.dueDate) return false; const d=new Date(t.dueDate+"T12:00:00"); d.setHours(0,0,0,0); return d<today; });
+  const allPays   = bodas.flatMap(b=>(b.payments||[]).map(p=>({...p,bodaName:b.clienteName,bodaId:b.id})));
+  const pendingPays = allPays.filter(p=>!p.received);
+  const num = s=>parseFloat(String(s||"").replace(/,/g,"."))||0;
+  const pendingAmt = pendingPays.reduce((s,p)=>s+num(p.amount),0);
+
+  // Pipeline
+  const pipeline = FASES.map(f=>({ fase:f, bodas:activas.filter(b=>b.phase===f), ...FASE_COLORS[f] }));
+
+  // Upcoming (next 6, future only)
+  const upcoming = [...activas]
+    .filter(b=>{ const d=parseDate(b.weddingDate); return d&&d>=today; })
+    .sort((a,b)=>parseDate(a.weddingDate)-parseDate(b.weddingDate))
+    .slice(0,6);
+
+  const kpis = [
+    { label:"Bodas activas",    n:activas.length,        color:R.accent,   icon:"💍" },
+    { label:"Próximas 30 días", n:proximas.length,       color:"#7c3aed",  icon:"📅" },
+    { label:"Tareas vencidas",  n:overdue.length,        color:overdue.length>0?"#dc2626":"#16a34a", icon:"⚠️" },
+    { label:"Pago pendiente",   n:`$${fmt$(pendingAmt)}`,color:pendingAmt>0?"#92400e":"#16a34a",     icon:"💰" },
+  ];
+
+  return (
+    <div>
+      {/* KPIs */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}}>
+        {kpis.map(k=>(
+          <div key={k.label} style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:14,padding:"16px 14px",textAlign:"center"}}>
+            <p style={{fontSize:22,margin:"0 0 4px"}}>{k.icon}</p>
+            <p style={{fontSize:22,fontWeight:700,color:k.color,margin:0,fontVariantNumeric:"tabular-nums"}}>{k.n}</p>
+            <p style={{fontSize:10,color:R.muted,margin:"4px 0 0",letterSpacing:".04em"}}>{k.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Pipeline */}
+      <div style={{...CARD,marginBottom:20,overflow:"visible"}}>
+        <div style={{padding:"14px 18px 12px",borderBottom:`1px solid ${R.border}`}}>
+          <p style={{fontSize:12,fontWeight:600,color:R.muted,margin:0,textTransform:"uppercase",letterSpacing:".07em"}}>Pipeline por fase</p>
+        </div>
+        <div style={{padding:"14px 18px",display:"flex",gap:8,overflowX:"auto"}}>
+          {pipeline.map(p=>(
+            <div key={p.fase} style={{flex:"1 0 120px",background:p.bg||R.light,borderRadius:10,padding:"10px 12px",border:`1px solid ${R.border}`,minWidth:0}}>
+              <p style={{fontSize:10,fontWeight:700,color:p.color||R.muted,margin:"0 0 6px",textTransform:"uppercase",letterSpacing:".05em"}}>{p.fase}</p>
+              <p style={{fontSize:24,fontWeight:700,color:p.color||R.text,margin:"0 0 6px"}}>{p.bodas.length}</p>
+              <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                {p.bodas.slice(0,3).map(b=>(
+                  <button key={b.id} onClick={()=>onSelectBoda(b)} style={{background:"rgba(255,255,255,.7)",border:`1px solid ${R.border}`,borderRadius:6,padding:"3px 7px",fontSize:10,color:R.text,cursor:"pointer",textAlign:"left",fontFamily:"'Jost',sans-serif",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                    {b.clienteName}
+                  </button>
+                ))}
+                {p.bodas.length>3&&<span style={{fontSize:10,color:R.muted}}>+{p.bodas.length-3} más</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+        {/* Próximas bodas */}
+        <div style={CARD}>
+          <div style={{padding:"12px 16px",borderBottom:`1px solid ${R.border}`}}>
+            <p style={{fontSize:12,fontWeight:600,color:R.muted,margin:0,textTransform:"uppercase",letterSpacing:".07em"}}>📅 Próximas bodas</p>
+          </div>
+          <div style={{padding:"8px 16px 12px"}}>
+            {upcoming.length===0&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin bodas próximas.</p>}
+            {upcoming.map(b=>{
+              const days=daysUntil(b.weddingDate);
+              return (
+                <button key={b.id} onClick={()=>onSelectBoda(b)} style={{display:"flex",alignItems:"center",gap:10,width:"100%",background:"none",border:"none",borderBottom:`1px solid ${R.light}`,padding:"8px 0",cursor:"pointer",textAlign:"left",fontFamily:"'Jost',sans-serif"}}>
+                  <div style={{background:R.light,borderRadius:8,padding:"4px 8px",textAlign:"center",flexShrink:0,minWidth:40}}>
+                    <p style={{fontSize:13,fontWeight:700,color:R.accent,margin:0,fontFamily:"'Cormorant Garamond',serif"}}>{fmtDate(b.weddingDate).split(" ")[0]}</p>
+                    <p style={{fontSize:9,color:R.muted,margin:0}}>{fmtDate(b.weddingDate).split(" ")[1]?.toUpperCase()}</p>
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <p style={{fontSize:13,fontWeight:600,color:R.text,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{b.clienteName}</p>
+                    <p style={{fontSize:11,color:days<=7?"#dc2626":days<=30?"#d97706":R.muted,margin:"1px 0 0"}}>{days===0?"¡Hoy!":days===1?"Mañana":`en ${days} días`}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Tareas vencidas */}
+        <div style={CARD}>
+          <div style={{padding:"12px 16px",borderBottom:`1px solid ${R.border}`}}>
+            <p style={{fontSize:12,fontWeight:600,color:R.muted,margin:0,textTransform:"uppercase",letterSpacing:".07em"}}>⚠️ Tareas vencidas ({overdue.length})</p>
+          </div>
+          <div style={{padding:"8px 16px 12px",maxHeight:240,overflowY:"auto"}}>
+            {overdue.length===0&&<p style={{fontSize:12,color:"#16a34a",fontStyle:"italic",padding:"8px 0"}}>✅ Sin tareas vencidas.</p>}
+            {overdue.slice(0,10).map(t=>{
+              const d=new Date(t.dueDate+"T12:00:00"); d.setHours(0,0,0,0);
+              const late=Math.ceil((today-d)/86400000);
+              return (
+                <button key={t.id} onClick={()=>onSelectBoda(bodas.find(b=>b.id===t.bodaId))} style={{display:"flex",alignItems:"center",gap:8,width:"100%",background:"none",border:"none",borderBottom:`1px solid ${R.light}`,padding:"7px 0",cursor:"pointer",textAlign:"left",fontFamily:"'Jost',sans-serif"}}>
+                  <span style={{fontSize:10,fontWeight:700,padding:"2px 6px",borderRadius:99,background:"#fee2e2",color:"#dc2626",flexShrink:0}}>{late}d</span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <p style={{fontSize:12,fontWeight:500,color:R.text,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.taskName}</p>
+                    <p style={{fontSize:10,color:R.muted,margin:"1px 0 0"}}>{t.bodaName}{t.assignedTo?` · ${t.assignedTo}`:""}</p>
+                  </div>
+                </button>
+              );
+            })}
+            {overdue.length>10&&<p style={{fontSize:11,color:R.muted,padding:"6px 0 0"}}>+{overdue.length-10} más vencidas</p>}
+          </div>
+        </div>
+      </div>
+
+      {/* Pagos pendientes */}
+      {pendingPays.length>0&&(
+        <div style={CARD}>
+          <div style={{padding:"12px 16px",borderBottom:`1px solid ${R.border}`}}>
+            <p style={{fontSize:12,fontWeight:600,color:R.muted,margin:0,textTransform:"uppercase",letterSpacing:".07em"}}>💰 Pagos pendientes — ${fmt$(pendingAmt)} total</p>
+          </div>
+          <div style={{padding:"8px 16px 12px",display:"flex",flexDirection:"column",gap:0}}>
+            {pendingPays.sort((a,b)=>num(b.amount)-num(a.amount)).slice(0,8).map(p=>(
+              <button key={p.id} onClick={()=>onSelectBoda(bodas.find(b=>b.id===p.bodaId))} style={{display:"flex",alignItems:"center",gap:10,width:"100%",background:"none",border:"none",borderBottom:`1px solid ${R.light}`,padding:"8px 0",cursor:"pointer",textAlign:"left",fontFamily:"'Jost',sans-serif"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <p style={{fontSize:12,fontWeight:500,color:R.text,margin:0}}>{p.concept}</p>
+                  <p style={{fontSize:10,color:R.muted,margin:"1px 0 0"}}>{p.bodaName}{p.type?` · ${p.type}`:""}{p.date?` · ${fmtDate(p.date)}`:""}</p>
+                </div>
+                <span style={{fontSize:13,fontWeight:700,color:"#92400e",flexShrink:0,fontVariantNumeric:"tabular-nums"}}>${fmt$(num(p.amount))}</span>
+              </button>
+            ))}
+            {pendingPays.length>8&&<p style={{fontSize:11,color:R.muted,padding:"6px 0 0"}}>+{pendingPays.length-8} más</p>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -874,6 +1506,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
   const [saving,       setSaving]       = useState(false);
   const [search,       setSearch]       = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [mainView,     setMainView]     = useState("dashboard");
 
   const load=useCallback(async(force=false)=>{
     // Show cached bodas immediately — no loading spinner if we have data
@@ -976,11 +1609,25 @@ export default function BodaPanel({ currentUser, onLogout }) {
       </div>
 
       <div style={{maxWidth:900,margin:"0 auto",padding:"24px 16px 60px"}}>
+        {/* Main nav tabs */}
+        <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:20,borderBottom:`1px solid ${R.border}`}}>
+          {[{id:"dashboard",label:"📊 Dashboard"},{id:"calendario",label:"📆 Calendario"},{id:"lista",label:"💍 Lista"}].map(v=>(
+            <button key={v.id} onClick={()=>setMainView(v.id)}
+              style={{padding:"10px 20px",border:"none",borderBottom:mainView===v.id?`2px solid ${R.accent}`:"2px solid transparent",background:"transparent",fontSize:13,fontWeight:mainView===v.id?600:400,color:mainView===v.id?R.accent:R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif",transition:"color .15s"}}>
+              {v.label}
+            </button>
+          ))}
+          <div style={{flex:1}} />
+          <button onClick={()=>setShowNew(v=>!v)} style={{background:R.accent,color:"#fff",border:"none",borderRadius:10,padding:"8px 18px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"'Jost',sans-serif",marginBottom:2}}>+ Nueva boda</button>
+        </div>
+
+        {/* Lista filters — only in lista view */}
+        {mainView==="lista"&&bodas.length>0&&(
         <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:20}}>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar boda, venue, responsable..." style={{...INP,flex:1,minWidth:200,borderRadius:10}} />
           <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={{...INP,width:"auto",flex:"0 0 auto"}}><option value="all">Todos los estados</option>{ESTADOS_BODA.map(s=><option key={s}>{s}</option>)}</select>
-          <button onClick={()=>setShowNew(v=>!v)} style={{background:R.accent,color:"#fff",border:"none",borderRadius:10,padding:"9px 20px",fontSize:13,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"'Jost',sans-serif"}}>+ Nueva boda</button>
         </div>
+        )}
 
         {showNew&&(
           <div style={{...CARD,marginBottom:16}}>
@@ -990,30 +1637,20 @@ export default function BodaPanel({ currentUser, onLogout }) {
           </div>
         )}
 
-        {err&&(
-          <div style={{background:"#fff5f5",border:"1px solid #fca5a5",borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span style={{fontSize:13,color:"#b91c1c"}}>{err}</span>
-            <button onClick={load} style={{background:"none",border:"none",color:R.accent,cursor:"pointer",fontSize:13,textDecoration:"underline",fontFamily:"'Jost',sans-serif"}}>Reintentar</button>
+        {err&&<div style={{background:"#fff5f5",border:"1px solid #fca5a5",borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:13,color:"#b91c1c"}}>{err}</span><button onClick={load} style={{background:"none",border:"none",color:R.accent,cursor:"pointer",fontSize:13,textDecoration:"underline",fontFamily:"'Jost',sans-serif"}}>Reintentar</button></div>}
+
+        {/* Dashboard view */}
+        {mainView==="dashboard"&&!loading&&<GlobalDashboard bodas={bodas} onSelectBoda={b=>{setSelected(b);}} />}
+        {mainView==="calendario"&&!loading&&<CalendarioView bodas={bodas} onSelectBoda={b=>{setSelected(b);}} />}
+
+        {(mainView==="dashboard"||mainView==="calendario")&&loading&&(
+          <div style={{textAlign:"center",padding:"60px 0"}}>
+            <div style={{width:28,height:28,border:`2px solid ${R.border}`,borderTop:`2px solid ${R.accent}`,borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 12px"}} />
+            <p style={{fontSize:13,color:R.muted}}>Cargando dashboard...</p>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           </div>
         )}
-
-        {!loading&&bodas.length>0&&(
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
-            {[
-              {label:"Activas",       count:bodas.filter(b=>b.status==="Activa").length,      color:R.accent},
-              {label:"En pausa",      count:bodas.filter(b=>b.status==="En pausa").length,    color:"#d97706"},
-              {label:"Terminadas",    count:bodas.filter(b=>b.status==="Terminada").length,   color:"#16a34a"},
-              {label:"Tareas activas",count:bodas.flatMap(b=>b.tasks||[]).filter(t=>!["Terminado","Cancelado"].includes(t.status)).length,color:"#7c3aed"},
-            ].map(s=>(
-              <div key={s.label} style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:14,padding:"16px 12px",textAlign:"center"}}>
-                <p style={{fontSize:26,fontWeight:700,color:s.color,margin:0}}>{s.count}</p>
-                <p style={{fontSize:11,color:R.muted,margin:"4px 0 0",letterSpacing:".04em"}}>{s.label}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {loading?(
+        {mainView==="lista"&&(loading?(
           <div style={{textAlign:"center",padding:"60px 0"}}>
             <div style={{width:28,height:28,border:`2px solid ${R.border}`,borderTop:`2px solid ${R.accent}`,borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 12px"}} />
             <p style={{fontSize:13,color:R.muted}}>Cargando bodas...</p>
@@ -1072,7 +1709,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
               );
             })}
           </div>
-        )}
+        ))}
       </div>
     </div>
   );

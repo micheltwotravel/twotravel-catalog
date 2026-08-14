@@ -4713,7 +4713,8 @@ function CheckinForm() {
     if (!kickoff) return "";
     const city = String(kickoff.city || "").split(",")[0]?.trim();
     const MAP = { CTG:"Cartagena", MDE:"Medellín", BOG:"Bogotá", CDMX:"Ciudad de México", TUL:"Tulum" };
-    return [kickoff.guestName, MAP[city?.toUpperCase()] || city, kickoff.tripDates].filter(Boolean).join(" · ");
+    const name = kickoff.tripName || kickoff.guestName || "";
+    return [name, MAP[city?.toUpperCase()] || city, kickoff.tripDates].filter(Boolean).join(" · ");
   })();
 
   const inp = "w-full border border-neutral-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-neutral-400 bg-white";
@@ -4750,8 +4751,8 @@ function CheckinForm() {
         <div className="max-w-lg mx-auto">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <p className="text-white/50 text-[10px] uppercase tracking-widest mb-1">Two Travel</p>
-              <h1 className="text-white text-2xl font-bold">Pre-Check-in</h1>
+              <img src="/logo.png" alt="Two Travel" style={{height:22,filter:"brightness(0) invert(1)",marginBottom:10,opacity:.85}} />
+              <h1 className="text-white text-2xl font-bold">Pre Check-in Form</h1>
               {tripLabel && <p className="text-white/60 text-xs mt-1">{tripLabel}</p>}
             </div>
             <button onClick={() => setLang(en?"es":"en")}
@@ -4760,7 +4761,9 @@ function CheckinForm() {
             </button>
           </div>
           <p className="text-white/70 text-sm leading-relaxed">
-            {en ? "One form per person." : "Un formulario por persona."}
+            {en
+              ? "Share this form with your entire group so we can prepare every detail of your stay in advance."
+              : "Comparte este formulario con todo tu grupo para que podamos preparar cada detalle de tu estadía con anticipación."}
           </p>
         </div>
       </div>
@@ -4934,21 +4937,6 @@ function CheckinForm() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
           <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">✨ {en?"A few more things":"Últimas preguntas"}</h3>
           <div className="space-y-4">
-            <div>
-              <label className={lbl}>{en?"What are you celebrating?":"¿Qué están celebrando?"}</label>
-              <select value={form.occasion} onChange={set("occasion")} className={sel}>
-                <option value="">{en?"Select…":"Seleccionar…"}</option>
-                <option value="Birthday">{en?"Birthday":"Cumpleaños"}</option>
-                <option value="Bachelorette">{en?"Bachelorette":"Despedida de soltera"}</option>
-                <option value="Bachelor">{en?"Bachelor":"Despedida de soltero"}</option>
-                <option value="Anniversary">{en?"Anniversary":"Aniversario"}</option>
-                <option value="Honeymoon">{en?"Honeymoon":"Luna de miel"}</option>
-                <option value="Family trip">{en?"Family trip":"Viaje familiar"}</option>
-                <option value="Friends trip">{en?"Friends trip":"Viaje de amigos"}</option>
-                <option value="Corporate">{en?"Corporate":"Corporativo"}</option>
-                <option value="Nothing special">{en?"Nothing special":"Nada en especial"}</option>
-              </select>
-            </div>
             <label className="flex items-start gap-3 cursor-pointer">
               <input type="checkbox" checked={form.photoPermission === "yes"} onChange={setCheck("photoPermission")}
                 className="mt-0.5 w-4 h-4 accent-neutral-800 shrink-0" />

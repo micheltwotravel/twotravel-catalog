@@ -561,15 +561,28 @@ async function pickDate(iso) {
       document.getElementById("slotsError").textContent = t.errNoSlots;
       document.getElementById("slotsError").style.display = "block";
     } else {
-      data.slots.forEach(s => {
-        const el  = document.createElement("div");
-        el.className  = "slot";
-        el.textContent = s.start;
-        const end = addMinutes(s.start, duration);
-        el.onclick = () => pickSlot(el, { start: s.start, end });
-        grid.appendChild(el);
-      });
-      grid.style.display = "grid";
+      // Filter out past slots when the selected date is today (slots are in America/Bogota time)
+      const todayBogota = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date());
+      const nowBogota   = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(new Date());
+      const visibleSlots = (iso === todayBogota)
+        ? data.slots.filter(s => s.start > nowBogota)
+        : data.slots;
+
+      if (!visibleSlots.length) {
+        noSlotDates.add(iso);
+        document.getElementById("slotsError").textContent = t.errNoSlots;
+        document.getElementById("slotsError").style.display = "block";
+      } else {
+        visibleSlots.forEach(s => {
+          const el  = document.createElement("div");
+          el.className  = "slot";
+          el.textContent = s.start;
+          const end = addMinutes(s.start, duration);
+          el.onclick = () => pickSlot(el, { start: s.start, end });
+          grid.appendChild(el);
+        });
+        grid.style.display = "grid";
+      }
     }
   } catch {
     document.getElementById("slotsError").textContent = t.errLoad;

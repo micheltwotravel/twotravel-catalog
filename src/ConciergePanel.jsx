@@ -905,7 +905,7 @@ const CONCIERGE_LIST = [
   { name: "Nataly Cruz",          email: "nataly@two.travel",   phone: "+52 1 55 2337 7241",city: "CDMX", calendarUrl: "" },
   { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   phone: "+52 1 55 4344 1382",city: "CDMX", calendarUrl: "" },
   { name: "Natalia Peniche",       email: "natalia@two.travel",  phone: "",                  city: "CDMX", calendarUrl: "" },
-  { name: "Michel Sanchez",       email: "michel@two.travel",   phone: "+57 300 0000000",    city: "CTG", title: "Admin", calendarUrl: "" },
+  { name: "Michel Sanchez",       email: "michel@two.travel",   phone: "+57 300 0000000",    city: "CTG", title: "Admin", calendarUrl: "", hidden: true },
 ];
 
 /* =========================================
@@ -5035,7 +5035,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 const multiCity = kickoffCityList.length > 1;
                 return (
                   <div className="border rounded-lg divide-y bg-white">
-                    {CONCIERGE_LIST.map(c => {
+                    {CONCIERGE_LIST.filter(c=>!c.hidden).map(c => {
                       const checked = assignedConcierges.includes(c.name);
                       return (
                         <div key={c.email} className="px-3 py-2 hover:bg-neutral-50">
@@ -5051,6 +5051,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                                   // Auto-assign default city when checking
                                   const defaultCity = kickoffCityList.find(code => code === c.city) || kickoffCityList[0] || c.city;
                                   setConciergesCities(prev => ({ ...prev, [c.name]: defaultCity }));
+                                  // If kickoff has no city yet, inherit from concierge
+                                  if (!city) setCity(c.city);
                                 } else {
                                   setConciergesCities(prev => { const { [c.name]: _, ...rest } = prev; return rest; });
                                 }
@@ -5374,12 +5376,19 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               )}
               <div>
                 <label className="text-[11px] text-neutral-500">Ciudad / Destino</label>
-                <input
-                  value={city.split(",").map(c => cityFullName(c.trim()) || c.trim()).join(" & ")}
-                  readOnly
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-neutral-50 text-neutral-600 cursor-default"
-                  placeholder="Se llena automático según ciudades seleccionadas"
-                />
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {[{code:"CTG",label:"Cartagena"},{code:"MDE",label:"Medellín"},{code:"CDMX",label:"CDMX"},{code:"TUL",label:"Tulum"}].map(({code,label}) => {
+                    const cities = city ? city.split(",").map(s=>s.trim().toUpperCase()) : [];
+                    const active = cities.includes(code) || cities.includes(label.toUpperCase()) || city.toUpperCase()===code || city.toUpperCase()===label.toUpperCase();
+                    return (
+                      <button key={code} type="button"
+                        onClick={() => setCity(code)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${active?"bg-neutral-900 text-white border-neutral-900":"bg-white text-neutral-600 border-neutral-300 hover:border-neutral-500"}`}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <div>
                 <label className="text-[11px] text-neutral-500">Personas en el grupo</label>
@@ -6399,7 +6408,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
                 Concierge
               </label>
               <div className="border border-neutral-200 rounded-lg bg-white max-h-28 overflow-y-auto divide-y divide-neutral-100">
-                {CONCIERGE_LIST.map(c => {
+                {CONCIERGE_LIST.filter(c=>!c.hidden).map(c => {
                   const checked = selectedConcierges.includes(c.name);
                   return (
                     <label key={c.name}
@@ -7152,7 +7161,7 @@ export function ReunionesPage({ currentUser, initialKickoffId }) {
             <select value={filterConcierge} onChange={e=>setFilterConcierge(e.target.value)}
               style={{ width:"100%", border:"1px solid #e5ddd3", borderRadius:7, padding:"6px 8px", fontSize:11, fontFamily:"'Jost',sans-serif", outline:"none", background:"#fff", cursor:"pointer" }}>
               <option value="all">Todos los concierges</option>
-              {CONCIERGE_LIST.map(c=><option key={c.name} value={c.name}>{c.name.split(" ")[0]}</option>)}
+              {CONCIERGE_LIST.filter(c=>!c.hidden).map(c=><option key={c.name} value={c.name}>{c.name.split(" ")[0]}</option>)}
             </select>
           </div>
           {/* list */}
@@ -7725,7 +7734,7 @@ const loadKickoffs = async () => {
 
   // Use fixed concierge list for the filter dropdown
   const conciergeOptions = useMemo(() => {
-    return ["all", ...CONCIERGE_LIST.map((c) => c.name)];
+    return ["all", ...CONCIERGE_LIST.filter(c=>!c.hidden).map((c) => c.name)];
   }, []);
 
   const toggleSelect = (id) => {
@@ -8559,18 +8568,25 @@ const loadKickoffs = async () => {
                               {(() => {
                                 const conciergeNames = String(k.assignedConcierge || "").split(",").map(s => s.trim()).filter(Boolean);
                                 const concierge = conciergeNames.map(n => CONCIERGE_LIST.find(c => c.name === n)).find(Boolean);
-                                if (!concierge) return null;
-                                const slug = concierge.email.split("@")[0].toLowerCase();
+                                // Fallback to current user's slug when no concierge assigned yet (e.g. new/active leads)
+                                const slug = concierge
+                                  ? concierge.email.split("@")[0].toLowerCase()
+                                  : (currentUser?.email || "").split("@")[0].toLowerCase();
+                                if (!slug) return null;
                                 const bookLink = `https://www.twotravelvip.com/book.html?c=${slug}&kickoffId=${k.id}&lang=${k.lang || "en"}`;
-                                return (
+                                return (<>
+                                  <button onClick={() => { setOpenMenuId(null); window.open(bookLink, "_blank"); }}
+                                    style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"#7c3aed",background:"none",border:"none",cursor:"pointer"}}>
+                                    🗓 Abrir link de reunión
+                                  </button>
                                   <button onClick={async () => {
                                     setOpenMenuId(null);
-                                    try { await navigator.clipboard.writeText(bookLink); alert("Link de booking copiado — pásaselo al cliente por WhatsApp"); }
-                                    catch { prompt("Copia este link y mándalo al cliente:", bookLink); }
-                                  }} style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"#7c3aed",background:"none",border:"none",cursor:"pointer"}}>
-                                    📅 Copiar link de reunión
+                                    try { await navigator.clipboard.writeText(bookLink); alert("Link copiado — pásaselo al cliente por WhatsApp"); }
+                                    catch { prompt("Copia este link:", bookLink); }
+                                  }} style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"var(--text-2)",background:"none",border:"none",cursor:"pointer"}}>
+                                    📋 Copiar link de reunión
                                   </button>
-                                );
+                                </>);
                               })()}
                               <button onClick={async () => {
                                 setOpenMenuId(null);
