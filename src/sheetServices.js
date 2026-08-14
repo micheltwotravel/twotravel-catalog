@@ -477,7 +477,9 @@ export async function updateKickoffInSheet(id, updates) {
   return true;
 }
 
-const CATALOG_GAS_URL = "https://script.google.com/macros/s/AKfycbxc0Az7hAdTaRp9tG8lrUTrpogRobojyicV4LfggHQpTIboceog8uVDAvlz4gqbsG9p/exec";
+// "Itinerary (no catalog)" sheet — same catalog spreadsheet, gid 1985577388
+const ITINERARY_ITEMS_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/1r_QvYqNLBybjL1iZYuW4mp3D3vde5rqSDBqTnEbDePk/export?format=csv&gid=1985577388";
 
 const ITINERARY_ITEMS_CACHE_KEY = "tt_itinerary_items_v1";
 let _itineraryItemsPromise = null;
@@ -493,12 +495,31 @@ export async function fetchItineraryItems() {
   } catch {}
 
   _itineraryItemsPromise = (async () => {
-    const res = await fetch(`${CATALOG_GAS_URL}?action=listItineraryItems&t=${Date.now()}`);
-    const json = await res.json();
-    const result = json.ok ? (json.data || []).map(item => ({
-      ...item,
-      image: normalizeDriveImage(item.image),
-    })) : [];
+    const response = await fetch(`${ITINERARY_ITEMS_CSV_URL}&t=${Date.now()}`);
+    if (!response.ok) throw new Error(`Itinerary items HTTP ${response.status}`);
+    const csvText = await response.text();
+    // Row 0 = real headers, row 1 = display labels (NAME/NOMBRE) — skip row 1
+    const lines = csvText.split("\n");
+    const cleaned = lines.length > 1 ? [lines[0], ...lines.slice(2)].join("\n") : csvText;
+    const parsed = Papa.parse(cleaned, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (h) => String(h || "").trim().toLowerCase().replace(/﻿/g, ""),
+    });
+    const result = parsed.data
+      .map(row => ({
+        sku: row.sku || "",
+        name_en: row.name_en || row.nombre_en || "",
+        name_es: row.name || row.name_es || row.nombre || "",
+        description_en: row.description_en || "",
+        description_es: row.description_es || "",
+        image: normalizeDriveImage(
+          row["image_source"] || row["image source"] || row.image || row.img || ""
+        ),
+        images: [row["image 5"], row["image_5"], row["image 6"], row["image_6"]]
+          .map(x => normalizeDriveImage(x || "")).filter(Boolean),
+      }))
+      .filter(row => row.name_en || row.name_es);
     try { sessionStorage.setItem(ITINERARY_ITEMS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}
     _itineraryItemsPromise = null;
     return result;
