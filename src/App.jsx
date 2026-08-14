@@ -6297,7 +6297,7 @@ function App() {
   if (mode === "groceries") return <GroceryCatalog />;
   if (mode === "breakfast") return <BreakfastCatalog />;
   if (mode === "checkin")   return <CheckinForm />;
-  if (mode === "itinerary") return <S><ItineraryPrintView /></S>;
+  if (mode === "itinerary") return <S><ErrorBoundary><ItineraryPrintView /></ErrorBoundary></S>;
   if (mode === "trip")      return <ItineraryCatalog />;
   if (mode === "bodas-cliente") return <S><BodaPublicView /></S>;
   if (mode === "book") {
