@@ -498,10 +498,8 @@ export async function fetchItineraryItems() {
     const response = await fetch(`${ITINERARY_ITEMS_CSV_URL}&t=${Date.now()}`);
     if (!response.ok) throw new Error(`Itinerary items HTTP ${response.status}`);
     const csvText = await response.text();
-    // Row 0 = real headers, row 1 = display labels (NAME/NOMBRE) — skip row 1
-    const lines = csvText.split("\n");
-    const cleaned = lines.length > 1 ? [lines[0], ...lines.slice(2)].join("\n") : csvText;
-    const parsed = Papa.parse(cleaned, {
+    // No display-label row in this sheet — parse directly
+    const parsed = Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
       transformHeader: (h) => String(h || "").trim().toLowerCase().replace(/﻿/g, ""),
@@ -509,17 +507,11 @@ export async function fetchItineraryItems() {
     const result = parsed.data
       .map(row => ({
         sku: row.sku || "",
-        // Sheet columns: "Item NAME" (en), "Item NombreES" (es)
-        name_en: row["item name"] || row.name_en || row.nombre_en || row.name || "",
-        name_es: row["item nombrees"] || row["item nombre es"] || row["item nombre_es"] || row.name_es || row.nombre || "",
-        // Sheet columns: "Description" (en), "Descripcion ES" (es)
-        description: row.description || row.description_en || "",
-        description_es: row["descripcion es"] || row.descripcion_es || row.description_es || "",
-        image: normalizeDriveImage(
-          row["image_source"] || row["image source"] || row.image || row.img || ""
-        ),
-        images: [row["image 5"], row["image_5"], row["image 6"], row["image_6"]]
-          .map(x => normalizeDriveImage(x || "")).filter(Boolean),
+        name_en: row["item name"] || "",
+        name_es: row["item nombre$"] || "",
+        description: row.description || "",
+        description_es: row["descripcion esp"] || "",
+        image: normalizeDriveImage(row.image || ""),
       }))
       .filter(row => row.name_en || row.name_es);
     try { sessionStorage.setItem(ITINERARY_ITEMS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}
