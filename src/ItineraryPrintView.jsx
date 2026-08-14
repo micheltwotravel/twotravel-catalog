@@ -2657,6 +2657,23 @@ export default function ItineraryPrintView() {
     if (!kickoffId) { setError("No kickoffId in URL"); setLoading(false); return; }
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
+    // Fast path: ConciergePanel pre-caches the kickoff in localStorage before opening the iframe.
+    // This makes the preview load instantly without a GAS round-trip.
+    try {
+      const raw = localStorage.getItem(`tt_kp_${kickoffId}`);
+      if (raw) {
+        const { ts, data } = JSON.parse(raw);
+        if (data && Date.now() - ts < 5 * 60 * 1000) {
+          fetchServicesFromSheet()
+            .then(cats => { setKickoff(data); setCatalog(cats); })
+            .catch(e => setError(e.message))
+            .finally(() => setLoading(false));
+          return;
+        }
+      }
+    } catch {}
+
+    // Slow path: direct client link — fetch from GAS with timeout
     const withTimeout = (promise, ms) => Promise.race([
       promise,
       new Promise((_, rej) => setTimeout(() => rej(new Error("Timeout — el servidor tardó demasiado. Recarga para intentar de nuevo.")), ms)),

@@ -4461,6 +4461,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // Auto-open client web itinerary in side panel when drawer mounts
   const iframeRef = useRef(null);
   useEffect(() => {
+    try { localStorage.setItem(`tt_kp_${kickoff.id}`, JSON.stringify({ ts: Date.now(), data: kickoff })); } catch {}
     setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}&edit=1`);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -4758,6 +4759,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
   await onSave(kickoff.id, updates);
   setStatus(autoStatus);
+  try { localStorage.setItem(`tt_kp_${kickoff.id}`, JSON.stringify({ ts: Date.now(), data: { ...kickoff, ...updates } })); } catch {}
   // Refresh client itinerary view after save
   setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${lang || kickoff?.lang || "en"}&_t=${Date.now()}`);
 };
