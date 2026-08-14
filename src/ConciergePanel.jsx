@@ -7579,7 +7579,7 @@ export default function ConciergePanel({ onLogout, currentUser }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
   const [showMenuAdmin, setShowMenuAdmin] = useState(false);

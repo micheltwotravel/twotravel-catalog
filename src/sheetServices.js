@@ -379,7 +379,16 @@ export async function fetchKickoffsFromSheet({ forceRefresh = false } = {}) {
   }
 
   // listKickoffs uses GET (GAS doGet handles this action)
-  const _res = await fetch(`${KICKOFF_API_URL}?action=listKickoffs`);
+  const _ctrl = new AbortController();
+  const _timeout = setTimeout(() => _ctrl.abort(), 30000); // 30s timeout
+  let _res;
+  try {
+    _res = await fetch(`${KICKOFF_API_URL}?action=listKickoffs`, { signal: _ctrl.signal });
+  } catch (e) {
+    clearTimeout(_timeout);
+    throw new Error(e.name === "AbortError" ? "El servidor tardó demasiado. Intenta refrescar." : "Error de red. Intenta refrescar.");
+  }
+  clearTimeout(_timeout);
   const _text = await _res.text();
   if (_text.trimStart().startsWith("<")) throw new Error("Error de conexión con el servidor. Intenta refrescar la página.");
   let json;
