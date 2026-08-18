@@ -334,7 +334,7 @@ async function postToKickoffAPI(bodyObj) {
   // HTML response = GAS returned an error page (404, permission error, etc.)
   if (text.trimStart().startsWith("<")) {
     const hint = !res.ok ? ` (HTTP ${res.status})` : "";
-    throw new Error(`Error de conexión con el servidor${hint}. Intenta refrescar la página.`);
+    throw new Error(`Error de conexión con el servidor${hint}. Intenta guardar de nuevo.`);
   }
 
   let json = null;
@@ -342,7 +342,7 @@ async function postToKickoffAPI(bodyObj) {
     json = JSON.parse(text);
   } catch (parseErr) {
     console.warn("Could not parse API response as JSON:", parseErr.message, "| Raw:", text?.slice(0, 200));
-    throw new Error("Respuesta inesperada del servidor. Intenta refrescar.");
+    throw new Error("Respuesta inesperada del servidor. Intenta guardar de nuevo.");
   }
 
   if (!res.ok) throw new Error(json?.error || "Error en API kickoffs");
@@ -386,13 +386,13 @@ export async function fetchKickoffsFromSheet({ forceRefresh = false } = {}) {
     _res = await fetch(`${KICKOFF_API_URL}?action=listKickoffs`, { signal: _ctrl.signal });
   } catch (e) {
     clearTimeout(_timeout);
-    throw new Error(e.name === "AbortError" ? "El servidor tardó demasiado. Intenta refrescar." : "Error de red. Intenta refrescar.");
+    throw new Error(e.name === "AbortError" ? "El servidor tardó demasiado. Intenta guardar de nuevo." : "Error de red. Intenta guardar de nuevo.");
   }
   clearTimeout(_timeout);
   const _text = await _res.text();
-  if (_text.trimStart().startsWith("<")) throw new Error("Error de conexión con el servidor. Intenta refrescar la página.");
+  if (_text.trimStart().startsWith("<")) throw new Error("Error de conexión con el servidor. Intenta guardar de nuevo.");
   let json;
-  try { json = JSON.parse(_text); } catch { throw new Error("Respuesta inesperada del servidor. Intenta refrescar."); }
+  try { json = JSON.parse(_text); } catch { throw new Error("Respuesta inesperada del servidor. Intenta guardar de nuevo."); }
   if (json?.ok === false) throw new Error(json?.error || "Error en API kickoffs");
 
   let data = [];

@@ -5085,7 +5085,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                           )}
                           {checked && !multiCity && (
                             <div className="ml-6 mt-0.5">
-                              <span className="text-[10px] text-indigo-600 font-medium">{cityFullName(conciergesCities[c.name] || c.city) || c.city}</span>
+                              <span className="text-[10px] text-indigo-600 font-medium">{cityFullName(c.city) || c.city}</span>
                             </div>
                           )}
                         </div>
@@ -5402,10 +5402,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 </div>
               </div>
               <div>
-                <label className="text-[11px] text-neutral-500">Personas en el grupo</label>
+                <label className="text-[11px] text-neutral-500">Personas en el grupo <span className="text-neutral-400">(aparece en PDF)</span></label>
                 <input value={groupSize} onChange={(e) => setGroupSize(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="5 people" />
+                  placeholder="15 pax (11 adults, 4 kids ages 13, 10, 6, 3)" />
               </div>
               <div className="col-span-2">
                 <label className="text-[11px] text-neutral-500">Nombre del alojamiento {city.includes(",") ? `— ${cityFullName(city.split(",")[0]?.trim())}` : ""}</label>
