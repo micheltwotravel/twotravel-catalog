@@ -369,6 +369,7 @@ function CalendarView({ tasks, onEdit }) {
 export default function TareasPanel({ currentUser, onLogout }) {
   const [tasks, setTasks]         = useState([]);
   const [users, setUsers]         = useState([]); // {name, email, role}
+  const [bodas, setBodas]         = useState([]); // {clienteName, ...}
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState("");
   const [modal, setModal]         = useState(null);
@@ -392,9 +393,9 @@ export default function TareasPanel({ currentUser, onLogout }) {
       try {
         const raw = sessionStorage.getItem(CACHE_KEY);
         if (raw) {
-          const { tasks: ct, users: cu, ts } = JSON.parse(raw);
+          const { tasks: ct, users: cu, bodas: cb, ts } = JSON.parse(raw);
           if (Date.now() - ts < CACHE_TTL) {
-            setTasks(ct); setUsers(cu); setLoading(false);
+            setTasks(ct); setUsers(cu); if (cb) setBodas(cb); setLoading(false);
             // Still refresh in background
             load(true);
             return;
@@ -405,21 +406,25 @@ export default function TareasPanel({ currentUser, onLogout }) {
     }
     setError("");
     try {
-      const [tasksRes, usersRes] = await Promise.all([
+      const [tasksRes, usersRes, bodasRes] = await Promise.all([
         gas("listTasks"),
         gas("listUsers"),
+        gas("listBodas"),
       ]);
       const newTasks = tasksRes.ok ? (tasksRes.data||[]) : null;
       const newUsers = usersRes.ok ? (usersRes.data||[]).filter(u => u.active !== "false" && u.name) : null;
+      const newBodas = bodasRes.ok ? (bodasRes.data||[]) : null;
       if (newTasks) { setTasks(newTasks); setError(""); }
       else if (!background) setError(tasksRes.error || "Error al cargar");
       if (newUsers) setUsers(newUsers);
+      if (newBodas) setBodas(newBodas);
       // Cache whatever succeeded — tasks and users independently
       try {
         const prev = JSON.parse(sessionStorage.getItem(CACHE_KEY) || "{}");
         sessionStorage.setItem(CACHE_KEY, JSON.stringify({
           tasks: newTasks ?? prev.tasks ?? [],
           users: newUsers ?? prev.users ?? [],
+          bodas: newBodas ?? prev.bodas ?? [],
           ts: Date.now(),
         }));
       } catch {}
@@ -431,19 +436,25 @@ export default function TareasPanel({ currentUser, onLogout }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // Filtrado
+  function nameMatches(assignedTo, filterName) {
+    if (!filterName) return true;
+    const a = (assignedTo||"").toLowerCase().trim();
+    const f = filterName.toLowerCase().trim();
+    return a.includes(f) || f.includes(a);
+  }
+
+  // Filtrado — solo tareas de bodas
   const filtered = tasks.filter(t => {
+    if (!isBoda(t)) return false;
     if (scope === "mine") {
-      const resp = (t.assignedTo||"").toLowerCase();
-      const email = (t.assignedEmail||"").toLowerCase();
-      if (!resp.includes(myName.toLowerCase()) && !resp.includes(myEmail.toLowerCase()) && !email.includes(myEmail.toLowerCase())) return false;
+      const resp = (t.assignedTo||"").toLowerCase().trim();
+      const myLower = myName.toLowerCase().trim();
+      const emailMatch = myEmail && ((t.assignedEmail||"").toLowerCase().includes(myEmail.toLowerCase()) || resp.includes(myEmail.toLowerCase()));
+      const nameMatch = resp && (resp.includes(myLower) || myLower.includes(resp));
+      if (!nameMatch && !emailMatch) return false;
     }
     if (filterCliente && clienteLabel(t) !== filterCliente) return false;
-    if (filterResp) {
-      const rv = filterResp.toLowerCase();
-      const match = (t.assignedTo||"").toLowerCase().includes(rv) || (t.assignedEmail||"").toLowerCase().includes(rv);
-      if (!match) return false;
-    }
+    if (filterResp && !nameMatches(t.assignedTo, filterResp)) return false;
     if (filterQ) {
       const q = filterQ.toLowerCase();
       if (!((t.taskName||"").toLowerCase().includes(q) || clienteLabel(t).toLowerCase().includes(q) || (t.notes||"").toLowerCase().includes(q))) return false;
@@ -455,7 +466,9 @@ export default function TareasPanel({ currentUser, onLogout }) {
   const cats = categorizarTareas(filtered);
   const allActive = cats.overdue.length + cats.today.length + cats.upcoming.length;
 
-  const clientes    = [...new Set(tasks.map(t=>clienteLabel(t)).filter(Boolean))].sort();
+  const bodasNames  = bodas.map(b => b.clienteName).filter(Boolean);
+  const taskNames   = tasks.filter(isBoda).map(t => clienteLabel(t)).filter(Boolean);
+  const clientes    = [...new Set([...bodasNames, ...taskNames])].sort();
   // Responsables: usuarios reales del equipo (con fallback a los de las tareas)
   const responsables = users.length > 0
     ? users.map(u => ({ name: u.name, email: u.email }))
@@ -555,7 +568,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
           </select>
           <select style={{...inp, flex:1, minWidth:120}} value={filterResp} onChange={e=>setFilterResp(e.target.value)}>
             <option value="">👤 Todos</option>
-            {responsables.map(r=><option key={r.email||r.name} value={r.email||r.name}>{r.name}</option>)}
+            {responsables.map(r=><option key={r.email||r.name} value={r.name}>{r.name}</option>)}
           </select>
           <div style={{ display:"flex", gap:4, flex:2, minWidth:160 }}>
             <input ref={searchRef} style={{...inp, flex:1}} placeholder="🔍 Buscar..." onChange={e=>setFilterQ(e.target.value)} />
