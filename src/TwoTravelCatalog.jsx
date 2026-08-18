@@ -3555,11 +3555,11 @@ setCart([]);
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <img src={logo} alt="Two Travel" className="h-10 w-auto" />
 
-          <div className="flex items-center gap-3 text-sm">
+          <div className="flex items-center gap-2 sm:gap-3 text-sm">
             {/* Idioma */}
             <div className="flex items-center gap-1">
               <Globe className="w-4 h-4 text-tt.teal" />
-              <span>{t.language}:</span>
+              <span className="hidden sm:inline">{t.language}:</span>
               <select
                 className="border rounded px-2 py-1"
                 value={lang}
@@ -3573,7 +3573,7 @@ setCart([]);
             {/* Moneda */}
             <div className="flex items-center gap-1">
               <DollarSign className="w-4 h-4 text-tt.gold" />
-              <span>{t.currency}:</span>
+              <span className="hidden sm:inline">{t.currency}:</span>
               <select
                 className="border rounded px-2 py-1"
                 value={currency}
@@ -4061,13 +4061,13 @@ setCart([]);
       {/* Modal detalle servicio */}
       {selectedService && (
         <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center sm:p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedService(null); }}
           onKeyDown={(e) => { if (e.key === "Escape") setSelectedService(null); }}
           tabIndex={-1}
           ref={el => el?.focus()}
         >
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl max-w-2xl w-full max-h-[92vh] overflow-y-auto">
             <div className="relative">
               <div className="relative">
                 <img
@@ -4473,7 +4473,7 @@ setCart([]);
       {/* Panel favoritos */}
       {showCart && (
         <div className="fixed inset-0 bg-black/50 z-50">
-          <div className="absolute right-0 top-0 h-full w-96 bg-white shadow-xl flex flex-col">
+          <div className="absolute right-0 top-0 h-full w-full sm:w-96 bg-white shadow-xl flex flex-col">
             <div className="p-4 border-b flex items-center justify-between">
               <h2 className="text-xl font-bold">{t.yourSelection}</h2>
               <button
@@ -4602,8 +4602,8 @@ setCart([]);
 
             {/* Modal resumen para el cliente (Kick-off) */}
       {showKickoff && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl max-w-3xl w-full max-h-[92vh] flex flex-col">
             <div className="p-4 border-b flex items-center justify-between">
               <h2 className="text-lg sm:text-xl font-bold">
                 {t.kickoffTitle}
