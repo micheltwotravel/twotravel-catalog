@@ -1188,29 +1188,34 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
         {/* Schedule a meeting */}
         {(() => {
           const rawCN = a.assignedConciergeName || a.assignedConcierge || "";
-          const conciergeName = rawCN.split(",").map(s => s.trim()).filter(s => s && !/^\d+$/.test(s)).join(", ");
-          if (!conciergeName) return null;
-          // Map name → slug for book.html
+          const conciergeNames = rawCN.split(",").map(s => s.trim()).filter(s => s && !/^\d+$/.test(s));
+          if (!conciergeNames.length) return null;
           const SLUG_MAP = {
-            "carolina": "caro", "caro": "caro",
-            "alia": "alia",
-            "daniela": "daniela",
-            "nataly": "nataly",
-            "giulia": "giulia",
-            "natalia": "natalia",
-            "michel": "michel",
+            "carolina": { slug:"caro",    city:"Cartagena" },
+            "caro":     { slug:"caro",    city:"Cartagena" },
+            "alia":     { slug:"alia",    city:"Cartagena" },
+            "daniela":  { slug:"daniela", city:"Medellín"  },
+            "nataly":   { slug:"nataly",  city:"CDMX"      },
+            "giulia":   { slug:"giulia",  city:"CDMX"      },
+            "natalia":  { slug:"natalia", city:"CDMX"      },
+            "michel":   { slug:"michel",  city:"Cartagena" },
           };
-          const slug = SLUG_MAP[conciergeName.toLowerCase().split(" ")[0]] || conciergeName.toLowerCase().split(" ")[0];
-          const bookUrl = `https://www.twotravelvip.com/book.html?c=${slug}`;
-          return (
-            <a href={bookUrl} style={{
+          const entries = conciergeNames.map(name => {
+            const key = name.toLowerCase().split(" ")[0];
+            const info = SLUG_MAP[key] || { slug: key, city: "" };
+            return { name, ...info };
+          });
+          const multiCity = entries.length > 1 && new Set(entries.map(e => e.city)).size > 1;
+          return entries.map((e, idx) => (
+            <a key={idx} href={`https://www.twotravelvip.com/book.html?c=${e.slug}`} style={{
               display:"flex", alignItems:"center", justifyContent:"space-between",
               textDecoration:"none", background:"#f0fdf4", border:"1px solid #bbf7d0",
-              borderRadius:10, padding:"11px 16px", marginBottom:10,
+              borderRadius:10, padding:"11px 16px", marginBottom:6,
             }}>
               <div>
                 <div style={{ fontSize:11, fontWeight:700, color:"#15803d" }}>
-                  📅 {isEs ? `Agendar reunión con ${conciergeName}` : `Schedule a meeting with ${conciergeName}`}
+                  📅 {isEs ? `Agendar con ${e.name}` : `Schedule a meeting with ${e.name}`}
+                  {multiCity && e.city ? <span style={{ fontWeight:400, color:"#16a34a" }}> · {e.city}</span> : null}
                 </div>
                 <div style={{ fontSize:9.5, color:"#6b7280", marginTop:2 }}>
                   {isEs ? "30 minutos · Elige el día y hora que mejor te convenga." : "30 minutes · Pick the day and time that works best for you."}
@@ -1218,7 +1223,7 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
               </div>
               <span style={{ fontSize:14, color:"#15803d" }}>→</span>
             </a>
-          );
+          ));
         })()}
 
         {/* Cancellation / reservation note */}
