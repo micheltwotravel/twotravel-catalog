@@ -5049,7 +5049,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                                 );
                                 if (!checked) {
                                   // Auto-assign default city when checking
-                                  const defaultCity = kickoffCityList.find(code => code === c.city) || kickoffCityList[0] || c.city;
+                                  const defaultCity = kickoffCityList.find(code => code === c.city) || c.city;
                                   setConciergesCities(prev => ({ ...prev, [c.name]: defaultCity }));
                                   // If kickoff has no city yet, inherit from concierge
                                   if (!city) setCity(c.city);
