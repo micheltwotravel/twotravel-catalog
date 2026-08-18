@@ -304,7 +304,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   const city2Name = cityFullName(city2Code);
 
   // Info rows — each: { label, val, url?, sub? }
-  const guestsVal = (() => { const n = parseInt(cl(kickoff.groupSize||"")) || 0; if (!n) return cl(kickoff.groupSize||""); return lang === "es" ? `${n} ${n===1?"persona":"personas"}` : `${n} ${n===1?"person":"people"}`; })();
+  const guestsVal = (() => { const raw = cl(kickoff.groupSize||""); if (!raw) return ""; if (/[a-zA-Z\(\)]/.test(raw)) return raw; const n = parseInt(raw)||0; if (!n) return raw; return lang === "es" ? `${n} ${n===1?"persona":"personas"}` : `${n} ${n===1?"person":"people"}`; })();
   const infoRows = [
     // Destination
     { label: lang === "es" ? "Destino" : "Destination", val: cityFullName(kickoff.city) || "" },
@@ -4607,8 +4607,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [propertyList, setPropertyList] = useState([]);
   useEffect(() => {
     const GAS = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
-    fetch(GAS, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "property_get", data: { id: "all", limit: 600 } }) })
+    fetch(`${GAS}?action=listProperties`)
       .then(r => r.json()).then(d => {
         const list = (d.data || d.properties || []).filter(p => p.Name);
         setPropertyList(list);
@@ -4622,6 +4621,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   if (!kickoff) return null;
 
   const handleSave = async () => {
+  try {
   // Auto-advance status when concierge saves from "new" or "client_submitted"
   const autoStatus =
     status === "new" || status === "client_submitted"
@@ -4762,6 +4762,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   try { localStorage.setItem(`tt_kp_${kickoff.id}`, JSON.stringify({ ts: Date.now(), data: { ...kickoff, ...updates } })); } catch {}
   // Refresh client itinerary view after save
   setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${lang || kickoff?.lang || "en"}&_t=${Date.now()}`);
+  } catch(e) {
+    alert("Error al guardar: " + (e?.message || String(e)));
+  }
 };
 
 
@@ -5382,7 +5385,15 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     const active = cities.includes(code) || cities.includes(label.toUpperCase()) || city.toUpperCase()===code || city.toUpperCase()===label.toUpperCase();
                     return (
                       <button key={code} type="button"
-                        onClick={() => setCity(code)}
+                        onClick={() => {
+                          const current = city ? city.split(",").map(s => s.trim()).filter(Boolean) : [];
+                          const isActive = current.some(c => c.toUpperCase() === code || c.toUpperCase() === label.toUpperCase());
+                          if (isActive) {
+                            setCity(current.filter(c => c.toUpperCase() !== code && c.toUpperCase() !== label.toUpperCase()).join(", "));
+                          } else {
+                            setCity([...current, code].join(", "));
+                          }
+                        }}
                         className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${active?"bg-neutral-900 text-white border-neutral-900":"bg-white text-neutral-600 border-neutral-300 hover:border-neutral-500"}`}>
                         {label}
                       </button>
