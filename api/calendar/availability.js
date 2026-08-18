@@ -145,8 +145,9 @@ export default async function handler(req, res) {
   }
 
   // 5. Generate slots within schedule window, skipping all busy intervals
+  // Base window (start/end) is always Ventana 1; secondary windows[] are additional
   const windows = daySch.windows?.length
-    ? daySch.windows
+    ? [{ start: daySch.start || "09:00", end: daySch.end || "18:00" }, ...daySch.windows]
     : [{ start: daySch.start || "09:00", end: daySch.end || "18:00" }];
 
   const slots = [];

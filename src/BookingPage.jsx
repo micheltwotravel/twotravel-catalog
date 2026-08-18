@@ -75,9 +75,9 @@ function getAvailableSlots(dateStr, schedule, blockedSlots, bookings, minGap, sl
       busy.push({ s: bs - minGap, e: be + minGap });
     });
 
-  // Each day can have multiple windows: windows array or single start/end
+  // Base window (start/end) is always Ventana 1; windows[] are additional
   const windows = daySch.windows?.length
-    ? daySch.windows
+    ? [{ start: daySch.start || "09:00", end: daySch.end || "18:00" }, ...daySch.windows]
     : [{ start: daySch.start || "09:00", end: daySch.end || "18:00" }];
 
   const slots = [];
