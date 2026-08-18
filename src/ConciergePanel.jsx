@@ -4503,13 +4503,13 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [arrivals, setArrivals] = useState(() => {
     try { return JSON.parse(kickoff?.arrivals || "[]"); } catch { return []; }
   });
-  const addArrival  = () => setArrivals(a => [...a, { name:"", date:"", time:"", flight:"", flightNumber:"", origin:"", destination:"" }]);
+  const addArrival  = () => setArrivals(a => [...a, { name:"", date:"", time:"", flight:"", flightNumber:"", origin:"", destination:"", city:"" }]);
   const removeArrival = (i) => setArrivals(a => a.filter((_,idx) => idx !== i));
   const patchArrival = (i, patch) => setArrivals(a => a.map((row,idx) => idx === i ? {...row,...patch} : row));
   const [departures, setDepartures] = useState(() => {
     try { return JSON.parse(kickoff?.departures || "[]"); } catch { return []; }
   });
-  const addDeparture  = () => setDepartures(d => [...d, { name:"", date:"", time:"", flightNumber:"", origin:"", destination:"", notes:"" }]);
+  const addDeparture  = () => setDepartures(d => [...d, { name:"", date:"", time:"", flightNumber:"", origin:"", destination:"", notes:"", city:"" }]);
   const removeDeparture = (i) => setDepartures(d => d.filter((_,idx) => idx !== i));
   const patchDeparture = (i, patch) => setDepartures(d => d.map((row,idx) => idx === i ? {...row,...patch} : row));
   const [guestEmailState,    setGuestEmailState]    = useState(kickoff?.email || kickoff?.guestEmail || "");
@@ -5774,6 +5774,18 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       className="text-neutral-300 hover:text-red-500 text-xs">✕</button>
                   </div>
                 </div>
+                {(() => { const cl = city.split(",").map(c=>c.trim().toUpperCase()).filter(Boolean); return cl.length > 0 ? (
+                  <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                    <p className="text-[9px] text-neutral-400">Ciudad:</p>
+                    {cl.map(code => (
+                      <button key={code} type="button"
+                        onClick={() => patchArrival(i, {city: a.city === code ? "" : code})}
+                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${a.city === code ? "bg-neutral-900 text-white border-neutral-900" : "border-neutral-300 text-neutral-500 hover:border-neutral-500"}`}>
+                        {CITY_NAMES[code] || code}
+                      </button>
+                    ))}
+                  </div>
+                ) : null; })()}
               </div>
             ))}
 
@@ -5821,6 +5833,18 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       className="text-neutral-300 hover:text-red-500 text-xs">✕</button>
                   </div>
                 </div>
+                {(() => { const cl = city.split(",").map(c=>c.trim().toUpperCase()).filter(Boolean); return cl.length > 0 ? (
+                  <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                    <p className="text-[9px] text-neutral-400">Ciudad:</p>
+                    {cl.map(code => (
+                      <button key={code} type="button"
+                        onClick={() => patchDeparture(i, {city: d.city === code ? "" : code})}
+                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${d.city === code ? "bg-neutral-900 text-white border-neutral-900" : "border-neutral-300 text-neutral-500 hover:border-neutral-500"}`}>
+                        {CITY_NAMES[code] || code}
+                      </button>
+                    ))}
+                  </div>
+                ) : null; })()}
               </div>
             ))}
           </DrawerSection>
