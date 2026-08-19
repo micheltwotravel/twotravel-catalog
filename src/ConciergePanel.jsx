@@ -4862,66 +4862,100 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               />
             </div>
 
-            {kickoff?.id && (() => {
-              const ciLink = `https://twotravelvip.com/ci/${kickoff.id}`;
-              const cityName = cityFullName(checkInCity) || checkInCity || "";
-              const cityLine = cityName ? ` en ${cityName}` : "";
-              const cityLineEn = cityName ? ` in ${cityName}` : "";
-              const waMsgEs = `Comparte este formulario con todo tu grupo para que podamos preparar cada detalle de tu estadía${cityLine} con anticipación. Esta información nos ayuda con:\n\n• Datos de pasaporte: requeridos por la mayoría de las villas como parte de su proceso oficial de check-in, y a veces para acceso al muelle o seguro de actividades.\n• Necesidades alimenticias y alergias: nos permite elegir restaurantes adecuados, avisar a los lugares con anticipación, y preparar al personal de la villa para desayunos y comidas en casa.\n• Información de vuelo: nos permite coordinar el transporte del aeropuerto y el número correcto de vehículos para la llegada y salida de tu grupo.\n\nPor favor asegúrate de que todos en tu grupo lo completen antes de llegar. Esto nos ayuda a evitar retrasos y tener todo listo para ustedes.\n\n${ciLink}`;
-              const waMsgEn = `Share this form with your entire group so we can prepare every detail of your stay${cityLineEn} in advance. This information helps us with:\n\n• Passport details: required by most villas as part of their official check-in process, and sometimes for dock access or activity insurance.\n• Dietary needs & allergies: this allows us to select suitable restaurants, notify venues in advance, and brief the villa staff for breakfasts and any meals at the house.\n• Flight information: this allows us to coordinate airport transportation and arrange the right number of vehicles for your group's arrival and departure.\n\nPlease make sure everyone in your group completes this before arrival. It helps us avoid delays and have everything ready for you.\n\n${ciLink}`;
-
-              // Cities from this kickoff
-              const kickoffCities = city.split(",").map(c => c.trim().toUpperCase()).filter(Boolean);
-
-              return (
-                <div className="col-span-2 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
-                  <p className="text-[11px] font-semibold text-indigo-700 mb-2">📋 Check-in Form</p>
-
-                  {/* City selector — only if kickoff has multiple cities */}
-                  {kickoffCities.length > 1 && (
-                    <div className="mb-3">
-                      <label className="text-[10px] text-indigo-600 font-semibold uppercase tracking-wide mb-1 block">📍 Ciudad del formulario</label>
-                      <div className="flex gap-2 flex-wrap">
-                        {kickoffCities.map(code => (
-                          <button
-                            key={code}
-                            type="button"
-                            onClick={() => setCheckInCity(code)}
-                            className={`text-[11px] px-3 py-1.5 rounded-lg border font-medium transition-colors ${
-                              checkInCity === code
-                                ? "bg-indigo-600 text-white border-indigo-600"
-                                : "bg-white text-indigo-700 border-indigo-300 hover:bg-indigo-100"
-                            }`}
-                          >
-                            {cityFullName(code) || code}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex gap-2 mb-2">
-                    <span className="flex-1 border border-indigo-200 rounded-lg px-2 py-1.5 text-[11px] font-mono bg-white text-indigo-600 truncate">{ciLink}</span>
-                    <button type="button" onClick={() => navigator.clipboard.writeText(ciLink)}
-                      className="text-[11px] text-indigo-700 border border-indigo-300 bg-white rounded-lg px-3 py-1.5 hover:bg-indigo-100 whitespace-nowrap">
-                      Copiar link
-                    </button>
+            <div className="sm:col-span-2">
+              <label className="text-[11px] text-neutral-500 mb-1 block">
+                Concierge(s) asignado(s)
+                {assignedConcierges.length > 0 && (
+                  <span className="ml-1 text-neutral-400">({assignedConcierges.join(", ")})</span>
+                )}
+              </label>
+              {(() => {
+                const kickoffCityList = city.split(",").map(c => c.trim().toUpperCase()).filter(Boolean);
+                const multiCity = kickoffCityList.length > 1;
+                return (
+                  <div className="border rounded-lg divide-y bg-white">
+                    {CONCIERGE_LIST.filter(c=>!c.hidden).map(c => {
+                      const checked = assignedConcierges.includes(c.name);
+                      return (
+                        <div key={c.email} className="px-3 py-2 hover:bg-neutral-50">
+                          <label className="flex items-center gap-2 cursor-pointer text-sm">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setAssignedConcierges(prev =>
+                                  checked ? prev.filter(n => n !== c.name) : [...prev, c.name]
+                                );
+                                if (!checked) {
+                                  const defaultCity = kickoffCityList.find(code => code === c.city) || c.city;
+                                  setConciergesCities(prev => ({ ...prev, [c.name]: defaultCity }));
+                                  if (!city) setCity(c.city);
+                                } else {
+                                  setConciergesCities(prev => { const { [c.name]: _, ...rest } = prev; return rest; });
+                                }
+                              }}
+                              className="rounded"
+                            />
+                            <span className="flex-1">{c.name}</span>
+                            {!checked && <span className="text-[10px] text-neutral-400">{c.city}</span>}
+                          </label>
+                          {checked && multiCity && (
+                            <div className="flex gap-1.5 mt-1.5 ml-6">
+                              {kickoffCityList.map(code => (
+                                <button
+                                  key={code}
+                                  type="button"
+                                  onClick={() => setConciergesCities(prev => ({ ...prev, [c.name]: code }))}
+                                  className={`text-[10px] px-2 py-0.5 rounded-full border font-medium transition-colors ${
+                                    conciergesCities[c.name] === code
+                                      ? "bg-indigo-600 text-white border-indigo-600"
+                                      : "bg-white text-neutral-500 border-neutral-300 hover:border-indigo-400"
+                                  }`}
+                                >
+                                  {cityFullName(code) || code}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {checked && !multiCity && (
+                            <div className="ml-6 mt-0.5">
+                              <span className="text-[10px] text-indigo-600 font-medium">{cityFullName(c.city) || c.city}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <a href={`https://wa.me/?text=${encodeURIComponent(waMsgEs)}`}
-                      target="_blank" rel="noreferrer"
-                      className="text-[11px] text-green-700 border border-green-300 bg-green-50 rounded-lg px-3 py-1.5 hover:bg-green-100">
-                      WhatsApp ES
-                    </a>
-                    <a href={`https://wa.me/?text=${encodeURIComponent(waMsgEn)}`}
-                      target="_blank" rel="noreferrer"
-                      className="text-[11px] text-green-700 border border-green-300 bg-green-50 rounded-lg px-3 py-1.5 hover:bg-green-100">
-                      WhatsApp EN
-                    </a>
-                  </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="text-[11px] text-neutral-500">Título del concierge (PDF)</label>
+              <input
+                value={conciergeTitle}
+                onChange={e => setConciergeTitle(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                placeholder="Senior Concierge Cartagena"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="text-[11px] text-neutral-500">Estado</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+              >
+                <option value="new">{STATUS_LABELS.new.es}</option>
+                <option value="client_submitted">{STATUS_LABELS.client_submitted.es}</option>
+                <option value="concierge_editing">{STATUS_LABELS.concierge_editing.es}</option>
+                <option value="sent_to_preview">{STATUS_LABELS.sent_to_preview.es}</option>
+                <option value="sent_to_travify">{STATUS_LABELS.sent_to_travify.es}</option>
+                <option value="feedback_submitted">{STATUS_LABELS.feedback_submitted.es}</option>
+                <option value="done">{STATUS_LABELS.done.es}</option>
+              </select>
+            </div>
 
             {/* ── FECHAS DE ESTADÍA (editables por el concierge) ── */}
             <div className="col-span-2 border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
@@ -5026,102 +5060,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               </div>
             )}
 
-            <div className="sm:col-span-2">
-              <label className="text-[11px] text-neutral-500 mb-1 block">
-                Concierge(s) asignado(s)
-                {assignedConcierges.length > 0 && (
-                  <span className="ml-1 text-neutral-400">({assignedConcierges.join(", ")})</span>
-                )}
-              </label>
-              {(() => {
-                const kickoffCityList = city.split(",").map(c => c.trim().toUpperCase()).filter(Boolean);
-                const multiCity = kickoffCityList.length > 1;
-                return (
-                  <div className="border rounded-lg divide-y bg-white">
-                    {CONCIERGE_LIST.filter(c=>!c.hidden).map(c => {
-                      const checked = assignedConcierges.includes(c.name);
-                      return (
-                        <div key={c.email} className="px-3 py-2 hover:bg-neutral-50">
-                          <label className="flex items-center gap-2 cursor-pointer text-sm">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => {
-                                setAssignedConcierges(prev =>
-                                  checked ? prev.filter(n => n !== c.name) : [...prev, c.name]
-                                );
-                                if (!checked) {
-                                  // Auto-assign default city when checking
-                                  const defaultCity = kickoffCityList.find(code => code === c.city) || c.city;
-                                  setConciergesCities(prev => ({ ...prev, [c.name]: defaultCity }));
-                                  // If kickoff has no city yet, inherit from concierge
-                                  if (!city) setCity(c.city);
-                                } else {
-                                  setConciergesCities(prev => { const { [c.name]: _, ...rest } = prev; return rest; });
-                                }
-                              }}
-                              className="rounded"
-                            />
-                            <span className="flex-1">{c.name}</span>
-                            {!checked && <span className="text-[10px] text-neutral-400">{c.city}</span>}
-                          </label>
-                          {checked && multiCity && (
-                            <div className="flex gap-1.5 mt-1.5 ml-6">
-                              {kickoffCityList.map(code => (
-                                <button
-                                  key={code}
-                                  type="button"
-                                  onClick={() => setConciergesCities(prev => ({ ...prev, [c.name]: code }))}
-                                  className={`text-[10px] px-2 py-0.5 rounded-full border font-medium transition-colors ${
-                                    conciergesCities[c.name] === code
-                                      ? "bg-indigo-600 text-white border-indigo-600"
-                                      : "bg-white text-neutral-500 border-neutral-300 hover:border-indigo-400"
-                                  }`}
-                                >
-                                  {cityFullName(code) || code}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                          {checked && !multiCity && (
-                            <div className="ml-6 mt-0.5">
-                              <span className="text-[10px] text-indigo-600 font-medium">{cityFullName(c.city) || c.city}</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="text-[11px] text-neutral-500">Título del concierge (PDF)</label>
-              <input
-                value={conciergeTitle}
-                onChange={e => setConciergeTitle(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                placeholder="Senior Concierge Cartagena"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="text-[11px] text-neutral-500">Estado</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-              >
-                <option value="new">{STATUS_LABELS.new.es}</option>
-                <option value="client_submitted">{STATUS_LABELS.client_submitted.es}</option>
-                <option value="concierge_editing">{STATUS_LABELS.concierge_editing.es}</option>
-                <option value="sent_to_preview">{STATUS_LABELS.sent_to_preview.es}</option>
-                <option value="sent_to_travify">{STATUS_LABELS.sent_to_travify.es}</option>
-                <option value="feedback_submitted">{STATUS_LABELS.feedback_submitted.es}</option>
-                <option value="done">{STATUS_LABELS.done.es}</option>
-              </select>
-            </div>
           </div>
 
           {/* ── OPERACIONES ── */}
@@ -5287,15 +5225,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             </div>
           </DrawerSection>
 
-          <div>
-            <label className="text-[11px] text-neutral-500 flex items-center gap-1">
-              🥗 Dieta / Restricciones
-              <span style={{fontSize:9,background:"#f3f4f6",color:"#9ca3af",border:"1px solid #e5e7eb",borderRadius:3,padding:"0px 5px",fontWeight:500}}>del formulario</span>
-            </label>
-            <div className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-neutral-50 text-neutral-600 whitespace-pre-wrap min-h-[40px]">
-              {kickoff.dietInfo || kickoff.briefDietary || <span className="text-neutral-400 italic">Sin restricciones registradas</span>}
-            </div>
-          </div>
 
           <div>
             <label className="text-[11px] text-neutral-500">📝 Notas internas</label>
@@ -8383,11 +8312,11 @@ const loadKickoffs = async () => {
                           let ciResps = [];
                           try { ciResps = JSON.parse(k.checkInResponses || "[]"); } catch {}
                           if (!ciResps.length) return null;
-                          const dietary = ciResps.filter(r => r.foodRestrictions || r.allergies);
+                          const groupSize = k.groupSize || k.pax || "?";
                           return (
                             <span onClick={e => { e.stopPropagation(); setInfoPopup({ title:"📋 Pre Check-in", text: ciResps.map(r => [r.name, r.foodRestrictions && `Dieta: ${r.foodRestrictions}`, r.allergies && `Alergias: ${r.allergies}`].filter(Boolean).join(" · ")).join("\n") }); }}
                               style={{fontSize:9,background:"#F5F3FF",color:"#5B21B6",border:"1px solid #DDD6FE",borderRadius:3,padding:"0px 5px",cursor:"pointer",fontWeight:600}}>
-                              📋 PRE ✓ {dietary.length > 0 ? `· 🥗×${dietary.length}` : ""}
+                              📋 {ciResps.length}/{groupSize}
                             </span>
                           );
                         })()}

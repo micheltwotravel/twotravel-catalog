@@ -1292,7 +1292,6 @@ function ClientesTable({ kickoffs, loading }) {
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState({});
   const [generatingTasks, setGeneratingTasks] = useState({});
-  const [importModal, setImportModal] = useState(null); // { kickoffId, guestName }
 
   async function generateTasksFromKickoff(r) {
     setGeneratingTasks(g => ({ ...g, [r.id]: true }));
@@ -1505,10 +1504,6 @@ function ClientesTable({ kickoffs, loading }) {
                           <div style={{ fontWeight:600, color:"#111" }}>{r.guestName || r.tripName || "—"}</div>
                           {r.tripName && r.guestName && <div style={{ fontSize:10, color:"#9ca3af" }}>{r.tripName}</div>}
                         </div>
-                        <button
-                          onClick={() => setImportModal({ kickoffId: r.id, guestName: r.guestName || r.tripName })}
-                          title="Importar sheet HubSpot"
-                          style={{ fontSize:12, background:"none", border:"none", cursor:"pointer", color:"#d97706", padding:"2px 3px", flexShrink:0 }}>📋</button>
                       </div>
                     </td>
                     <td style={tdStyle}>
@@ -1632,14 +1627,7 @@ function ClientesTable({ kickoffs, loading }) {
           </table>
         </div>
       )}
-      {importModal && (
-        <DashboardImportModal
-          kickoffId={importModal.kickoffId}
-          guestName={importModal.guestName}
-          onSaveField={saveField}
-          onDone={() => setImportModal(null)}
-        />
-      )}
+
     </div>
   );
 }
@@ -4926,7 +4914,8 @@ function CheckinForm() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={lbl}>{en?"Departure date":"Fecha de salida"}</label>
-                <input type="date" value={form.departureDate} onChange={set("departureDate")} className={inp} />
+                <input type="date" value={form.departureDate} onChange={set("departureDate")} className={inp}
+                  min={form.arrivalDate ? new Date(new Date(form.arrivalDate + "T12:00:00").getTime() + 86400000).toISOString().slice(0,10) : undefined} />
               </div>
               <div>
                 <label className={lbl}>{en?"Departure time":"Hora de salida"}</label>

@@ -1072,38 +1072,8 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
           </a>
         )}
 
-        {/* PRE Check-in form — shows responses if filled, CTA link if not */}
-        {checkinResponses.length > 0 ? (
-          <div style={{ marginBottom: 10, border: "1px solid #d8b4fe", borderRadius: 10, overflow: "hidden" }}>
-            <div style={{ background: "#faf5ff", padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 13 }}>📋</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed" }}>
-                {isEs ? "Información de huéspedes" : "Guest Information"}
-              </span>
-              <span style={{ marginLeft: "auto", fontSize: 10, color: "#9ca3af" }}>
-                {checkinResponses.length} {isEs ? "respuesta(s)" : "response(s)"}
-              </span>
-            </div>
-            {checkinResponses.map((r, i) => (
-              <div key={i} style={{ padding: "10px 14px", borderTop: i === 0 ? "none" : "1px solid #f3e8ff", fontSize: 10.5, color: "#374151", lineHeight: 1.6 }}>
-                <div style={{ fontWeight: 700, fontSize: 11, marginBottom: 4 }}>
-                  {r.firstName} {r.lastName}
-                  {r.isGroupContact === "true" || r.isGroupContact === true ? <span style={{ marginLeft: 6, fontSize: 9, background: "#7c3aed", color: "#fff", borderRadius: 4, padding: "1px 5px" }}>{isEs ? "Contacto" : "Lead"}</span> : null}
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 16px" }}>
-                  {r.nationality && <span>🌍 {r.nationality}</span>}
-                  {r.idType && r.idNumber && <span>🪪 {r.idType}: {r.idNumber}</span>}
-                  {r.dob && <span>🎂 {r.dob}</span>}
-                  {r.arrivalFlight && <span>✈️ {r.arrivalFlight}{r.arrivalDate ? ` · ${r.arrivalDate}` : ""}</span>}
-                  {r.departureFlight && <span>🛫 {r.departureFlight}{r.departureDate ? ` · ${r.departureDate}` : ""}</span>}
-                  {(r.foodRestrictions || r.allergies) && (
-                    <span>🥗 {[r.foodRestrictions, r.allergies].filter(Boolean).join(" · ")}</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (a.checkInFormUrl || a.id) ? (
+        {/* PRE Check-in form — always show CTA card; badge shows response count when filled */}
+        {(a.checkInFormUrl || a.id) ? (
           <a href={a.checkInFormUrl || `https://twotravelvip.com/ci/${a.id}`} target="_blank" rel="noreferrer" style={{
             display: "block", textDecoration: "none", background: "#faf5ff",
             border: "1px solid #d8b4fe", borderRadius: 10, padding: "12px 16px", marginBottom: 10,
@@ -1112,7 +1082,14 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
               <div style={{ fontSize: 12, fontWeight: 700, color: "#7c3aed" }}>
                 📋 {isEs ? "Formulario Pre Check-in" : "Pre Check-in Form"}
               </div>
-              <span style={{ fontSize: 16, color: "#7c3aed" }}>→</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {checkinResponses.length > 0 && (
+                  <span style={{ fontSize: 10, background: "#7c3aed", color: "#fff", borderRadius: 99, padding: "2px 8px", fontWeight: 600 }}>
+                    {checkinResponses.length} {isEs ? "respuesta(s)" : "response(s)"}
+                  </span>
+                )}
+                <span style={{ fontSize: 16, color: "#7c3aed" }}>→</span>
+              </div>
             </div>
             <p style={{ fontSize: 11, color: "#7c3aed", opacity: 0.75, margin: 0, lineHeight: 1.5 }}>
               {isEs
@@ -2363,19 +2340,23 @@ function KeepInTouchPage({ kickoff, page, total }) {
         <div style={{ borderTop: "1.5px solid #f3e8d8", maxWidth: 360, margin: "0 auto 28px" }} />
 
         {/* Destinations */}
-        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "#92400e", marginBottom: 16 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "#92400e", marginBottom: 10 }}>
           Explore Our Destinations
         </div>
+        <p style={{ fontSize: 11, color: "#6b5a3e", lineHeight: 1.6, marginBottom: 20, maxWidth: 480, textAlign: "center", margin: "0 auto 20px" }}>
+          Whether it's a luxury getaway, a corporate retreat, or an unforgettable celebration, Two Travel is here to curate every detail. With a presence in Cartagena, Medellín, Mexico City, and now Los Cabos, count on us wherever your next adventure takes you.
+        </p>
         <div style={{ display: "flex", justifyContent: "center", gap: 20, marginBottom: 36, flexWrap: "wrap" }}>
           {[
-            { city: "Cartagena", emoji: "🏖️" },
-            { city: "Medellín",  emoji: "🌿" },
-            { city: "Mexico City", emoji: "🌮" },
+            { city: "Cartagena",   emoji: "🏖️", url: "https://www.twotravelvip.com/blog/cartagena" },
+            { city: "Medellín",    emoji: "🌿", url: "https://www.twotravelvip.com/blog/medellin" },
+            { city: "Mexico City", emoji: "🌮", url: "https://www.twotravelvip.com/blog/mexico-city" },
+            { city: "Los Cabos",   emoji: "🌵", url: "https://www.twotravelvip.com/blog/los-cabos" },
           ].map(d => (
-            <div key={d.city} style={{ textAlign: "center", background: "#fdf8f2", border: "1.5px solid #f3e8d8", borderRadius: 12, padding: "14px 20px", minWidth: 90 }}>
+            <a key={d.city} href={d.url} target="_blank" rel="noreferrer" style={{ textDecoration: "none", textAlign: "center", background: "#fdf8f2", border: "1.5px solid #f3e8d8", borderRadius: 12, padding: "14px 20px", minWidth: 90, display: "block" }}>
               <div style={{ fontSize: 24, marginBottom: 4 }}>{d.emoji}</div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#1a1814" }}>{d.city}</div>
-            </div>
+            </a>
           ))}
         </div>
         <div style={{ borderTop: "1.5px solid #f3e8d8", maxWidth: 360, margin: "0 auto 28px" }} />
