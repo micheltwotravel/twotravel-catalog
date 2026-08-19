@@ -4656,11 +4656,35 @@ function CheckinForm() {
             ...passportParts,
           ].filter(Boolean).join(" · ");
           const updates = {};
-          if (passportInfo)          updates.passportInfo     = passportInfo;
+          // Accumulate passport info across all pax submissions (append, don't overwrite)
+          const personName = `${form.firstName} ${form.lastName}`.trim();
+          const thisDiet = [form.foodRestrictions, form.allergies].filter(Boolean).join(" / ");
+          const thisPassport = [personName, ...passportParts].filter(Boolean).join(" · ");
+
+          const existingPassport = (kickoff?.passportInfo || "").trim();
+          // Replace this person's entry if already present, else append
+          const passportLines = existingPassport ? existingPassport.split("\n") : [];
+          const personLineIdx = passportLines.findIndex(l => l.startsWith(personName + " ·") || l.startsWith(personName + ":") || l === personName);
+          if (thisPassport) {
+            if (personLineIdx >= 0) passportLines[personLineIdx] = thisPassport;
+            else passportLines.push(thisPassport);
+            updates.passportInfo = passportLines.filter(Boolean).join("\n");
+          }
+
           if (form.foodRestrictions) updates.foodRestrictions = form.foodRestrictions;
           if (form.allergies)        updates.allergies        = form.allergies;
-          const diet = [form.foodRestrictions, form.allergies].filter(Boolean).join(" / ");
-          if (diet) updates.dietInfo = diet;
+
+          // Accumulate diet info: "Name: restriction / Name2: restriction2"
+          const existingDiet = (kickoff?.dietInfo || "").trim();
+          const dietParts = existingDiet ? existingDiet.split(" / ") : [];
+          const personDietPrefix = `${personName}: `;
+          const personDietIdx = dietParts.findIndex(p => p.startsWith(personDietPrefix) || p === thisDiet);
+          const thisDietEntry = thisDiet ? `${personName}: ${thisDiet}` : "";
+          if (thisDietEntry) {
+            if (personDietIdx >= 0) dietParts[personDietIdx] = thisDietEntry;
+            else dietParts.push(thisDietEntry);
+            updates.dietInfo = dietParts.filter(Boolean).join(" / ");
+          }
 
           // Write flight times into arrivals/departures JSON so itinerary picks them up
           const fmtTime12 = t => {
@@ -4743,7 +4767,7 @@ function CheckinForm() {
           <div className="flex justify-between items-start mb-4">
             <div>
               <img src="/logo.png" alt="Two Travel" style={{height:22,filter:"brightness(0) invert(1)",marginBottom:10,opacity:.85}} />
-              <h1 className="text-white text-2xl font-bold">Pre Check-in Form</h1>
+              <h1 className="text-white text-2xl font-bold">Pre Check-in</h1>
               {tripLabel && <p className="text-white/60 text-xs mt-1">{tripLabel}</p>}
             </div>
             <button onClick={() => setLang(en?"es":"en")}

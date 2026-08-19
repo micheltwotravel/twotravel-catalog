@@ -795,9 +795,19 @@ export function BookingPage({ conciergeEmail, conciergeName, kickoffId, guestNam
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {dates.map(d => {
             const s  = getAvailableSlots(d, sched, avail?.blocked || [], avail?.bookings || [], cfg.minGap, cfg.slotDuration);
-            if (s.length === 0) return null;
             const dt  = new Date(d + "T12:00:00");
             const dow = isEs ? DAYS_ES[dt.getDay()] : DAYS_EN[dt.getDay()];
+            if (s.length === 0) return (
+              <button key={d} type="button" disabled
+                style={{
+                  padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e8e8e8",
+                  background: "#f8f8f8", color: "#ccc",
+                  cursor: "not-allowed", minWidth: 64, textAlign: "center", opacity: 0.55,
+                }}>
+                <div style={{ fontSize: 11 }}>{dow}</div>
+                <div style={{ fontSize: 17, fontWeight: 700 }}>{dt.getDate()}</div>
+              </button>
+            );
             return (
               <button key={d} type="button" onClick={() => { setSelDate(d); setSelTime(""); }}
                 style={{

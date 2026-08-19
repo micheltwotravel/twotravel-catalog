@@ -4562,6 +4562,14 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignedConcierges]);
 
+  // Auto-set city from first assigned concierge when city is empty
+  useEffect(() => {
+    if (city || assignedConcierges.length === 0) return;
+    const first = CONCIERGE_LIST.find(c => c.name === assignedConcierges[0]);
+    if (first?.city) setCity(first.city);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignedConcierges]);
+
   // Auto-sync tripDates when arrival/departure change
   useEffect(() => {
     if (!arrivalDate || !departureDate) return;
@@ -8298,9 +8306,9 @@ const loadKickoffs = async () => {
                             🛂 passport ✓
                           </span>
                         )}
-                        {k.briefDietary && (
-                          <span onClick={e => { e.stopPropagation(); setInfoPopup({ title:"🥗 Dieta / Restricciones", text: k.briefDietary }); }} style={{fontSize:9,background:"#FFF7ED",color:"#C2410C",border:"1px solid #FED7AA",borderRadius:3,padding:"0px 5px",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"inline-block",verticalAlign:"middle",cursor:"pointer"}}>
-                            🥗 {k.briefDietary}
+                        {(k.dietInfo || k.briefDietary) && (
+                          <span onClick={e => { e.stopPropagation(); setInfoPopup({ title:"🥗 Dieta / Restricciones", text: k.dietInfo || k.briefDietary }); }} style={{fontSize:9,background:"#FFF7ED",color:"#C2410C",border:"1px solid #FED7AA",borderRadius:3,padding:"0px 5px",maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"inline-block",verticalAlign:"middle",cursor:"pointer"}}>
+                            🥗 {(k.dietInfo || k.briefDietary).split(" / ")[0]}
                           </span>
                         )}
                         {k.passportInfo && (
@@ -8402,30 +8410,6 @@ const loadKickoffs = async () => {
 
                     <td>
                       <StatusBadge status={k.status} lang={portalLang} />
-                      {k.drinkOrder && (
-                        <span
-                          onClick={e => { e.stopPropagation(); setInfoPopup({ title:"🍹 Drink Order", text: k.drinkOrder }); }}
-                          title={`Drinks${k.drinkOrderAt ? " · " + new Date(k.drinkOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""} — click para ver pedido`}
-                          style={{marginLeft:4,fontSize:10.5,background:"#F0FDF4",color:"#065F46",border:"1px solid #BBF7D0",borderRadius:3,padding:"1px 5px",cursor:"pointer"}}>
-                          🍹 drinks
-                        </span>
-                      )}
-                      {k.groceryOrder && (
-                        <span
-                          onClick={e => { e.stopPropagation(); setInfoPopup({ title:"🛒 Grocery Order", text: k.groceryOrder }); }}
-                          title={`Groceries${k.groceryOrderAt ? " · " + new Date(k.groceryOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""} — click para ver pedido`}
-                          style={{marginLeft:4,fontSize:10.5,background:"#FFF7ED",color:"#9A3412",border:"1px solid #FED7AA",borderRadius:3,padding:"1px 5px",cursor:"pointer"}}>
-                          🛒 grocery
-                        </span>
-                      )}
-                      {k.breakfastOrder && (
-                        <span
-                          onClick={e => { e.stopPropagation(); setInfoPopup({ title:"☕ Breakfast Order", text: k.breakfastOrder }); }}
-                          title={`Breakfast${k.breakfastOrderAt ? " · " + new Date(k.breakfastOrderAt).toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" }) : ""} — click para ver pedido`}
-                          style={{marginLeft:4,fontSize:10.5,background:"#FFF9F0",color:"#92400E",border:"1px solid #FDE68A",borderRadius:3,padding:"1px 5px",cursor:"pointer"}}>
-                          ☕ breakfast
-                        </span>
-                      )}
   {(() => {
     // cityRatings takes priority; fall back to single conciergeRating
     let ratings = [];
@@ -8532,10 +8516,14 @@ const loadKickoffs = async () => {
                               {(() => {
                                 const conciergeNames = String(k.assignedConcierge || "").split(",").map(s => s.trim()).filter(Boolean);
                                 const concierge = conciergeNames.map(n => CONCIERGE_LIST.find(c => c.name === n)).find(Boolean);
-                                // Fallback to current user's slug when no concierge assigned yet (e.g. new/active leads)
+                                // Fallback: current user's slug if they're a known concierge, else first non-hidden concierge
                                 const slug = concierge
                                   ? concierge.email.split("@")[0].toLowerCase()
-                                  : (currentUser?.email || "").split("@")[0].toLowerCase();
+                                  : (() => {
+                                      const userSlug = (currentUser?.email || "").split("@")[0].toLowerCase();
+                                      const isKnown = CONCIERGE_LIST.some(c => c.email.split("@")[0].toLowerCase() === userSlug);
+                                      return isKnown ? userSlug : (CONCIERGE_LIST.find(c => !c.hidden)?.email.split("@")[0].toLowerCase() || "");
+                                    })();
                                 if (!slug) return null;
                                 const bookLink = `https://www.twotravelvip.com/book.html?c=${slug}&kickoffId=${k.id}&lang=${k.lang || "en"}`;
                                 return (<>
@@ -8709,7 +8697,13 @@ const loadKickoffs = async () => {
             {/* Body */}
             <div style={{padding:"20px 24px 32px",overflowY:"auto"}}>
               <pre style={{fontSize:14,color:"#2d2926",whiteSpace:"pre-wrap",fontFamily:"'Jost',sans-serif",lineHeight:1.8,margin:0,wordBreak:"break-word"}}>
-                {infoPopup.text}
+                {infoPopup.title?.includes("🍹") || infoPopup.title?.includes("Drink")
+                  ? infoPopup.text.split("\n").map((line, i) => {
+                      const m = line.match(/^(\d+(?:\s*x\s*|\s+x\s*)?)(.*)$/i);
+                      if (m && /^\d/.test(line)) return <span key={i}><strong>{m[1]}</strong>{m[2]}{"\n"}</span>;
+                      return <span key={i}>{line}{"\n"}</span>;
+                    })
+                  : infoPopup.text}
               </pre>
             </div>
           </div>

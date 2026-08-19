@@ -280,6 +280,7 @@ if (myProfile) {
   // Calendarios — hide photo card, show all concierge calendars
   document.querySelector(".photo-section").closest(".card").style.display = "none";
   document.querySelectorAll(".section-title")[0].style.display = "none";
+  document.querySelector("h1").textContent = "Calendarios";
   document.getElementById("pageSubtitle").textContent = "Gestiona los calendarios y fotos del equipo";
   loadCalendars();
 }
