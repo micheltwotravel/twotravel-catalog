@@ -6452,8 +6452,7 @@ function PresetMessages({ kickoff }) {
     const names = String(kickoff.assignedConcierge || "").split(",").map(s => s.trim()).filter(Boolean);
     const found = names.map(n => CONCIERGE_LIST.find(c => c.name === n)).find(Boolean);
     if (found) return found.email.split("@")[0].toLowerCase();
-    const all = CONCIERGE_LIST.find(c => !c.hidden);
-    return all ? all.email.split("@")[0].toLowerCase() : "";
+    return "";
   })();
   const copy = (key, text) => {
     navigator.clipboard.writeText(text).catch(()=>{});

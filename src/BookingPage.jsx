@@ -761,7 +761,7 @@ export function BookingPage({ conciergeEmail, conciergeName, kickoffId, guestNam
       <div style={{ background: "#f5f5f5", borderRadius: 12, padding: "16px 20px", margin: "16px 0" }}>
         <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{fmtDateLong(selDate, lang)}</p>
         <p style={{ margin: "4px 0 0", fontSize: 22, fontWeight: 700 }}>{fmtTime12(selTime)}</p>
-        <p style={{ margin: "4px 0 0", fontSize: 13, color: "#666" }}>{conciergeName} · {cfg.slotDuration} min</p>
+        <p style={{ margin: "4px 0 0", fontSize: 13, color: "#666" }}>{conciergeName} · {isEs ? "Por video o WhatsApp" : "Via video or WhatsApp"}</p>
       </div>
       <div style={{ marginBottom: 16 }}>
         <label style={{ display: "block", fontSize: 13, color: "#666", marginBottom: 6 }}>
