@@ -3857,7 +3857,7 @@ function DrinksCatalog() {
         if (!k) return;
         if (k.arrivalDate)   setKickoffArrival(k.arrivalDate);
         if (k.departureDate) setKickoffDepart(k.departureDate);
-        if (k.guestName && !prefillName) setGuestName(k.guestName);
+        if (!prefillName) setGuestName(k.tripName || k.guestName || "");
         if (k.drinkOrderJson) {
           try {
             const saved = JSON.parse(k.drinkOrderJson);
@@ -4320,7 +4320,7 @@ function GroceryCatalog() {
       const cats = applyMenuOverrides(GROCERY_CATEGORIES_DEFAULT, overrides);
       setGROCERY_CATEGORIES(cats);
       if (k) {
-        if (k.guestName && !prefillName) setGuestName(k.guestName);
+        if (!prefillName) setGuestName(k.tripName || k.guestName || "");
         if (k.groceryOrderJson) {
           try {
             const saved = JSON.parse(k.groceryOrderJson);
@@ -5095,7 +5095,7 @@ function BreakfastCatalog() {
             } catch {}
           }
         }
-        if (!params.get("guestName") && k.guestName) setGuestName(k.guestName);
+        if (!params.get("guestName")) setGuestName(k.tripName || k.guestName || "");
         if (!params.get("arrivalDate") && k.arrivalDate) setArrivalDate(k.arrivalDate);
         if (k.checkInFormUrl) setCheckInFormUrl(k.checkInFormUrl);
         if (k.breakfastOrderJson) {
