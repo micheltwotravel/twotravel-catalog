@@ -784,7 +784,7 @@ export function BookingPage({ conciergeEmail, conciergeName, kickoffId, guestNam
         {isEs ? `Agenda una reunión con ${conciergeName}` : `Schedule a meeting with ${conciergeName}`}
       </h2>
       <p style={{ color: "#888", fontSize: 13, marginBottom: 24 }}>
-        {cfg.slotDuration} min · {isEs ? "Por video o WhatsApp" : "Via video or WhatsApp"}
+        {isEs ? "Por video o WhatsApp" : "Via video or WhatsApp"}
       </p>
 
       {/* Date picker */}

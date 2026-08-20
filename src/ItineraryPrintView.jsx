@@ -2275,11 +2275,17 @@ function KeepInTouchPage({ kickoff, page, total }) {
     },
   ];
 
+  const kickoffCity = String(kickoff?.city || "").toUpperCase();
+  const isMexicoCity = /CDMX|TUL|CABO/.test(kickoffCity);
+  const googleReviewUrl = isMexicoCity
+    ? "https://www.google.com/maps/place/Two+Travel+Concierge+Mexico+City/@19.4126255,-99.163745,"
+    : "https://www.google.com/maps/place/Two+Travel/@10.4246252,-75.5499402,";
+
   const REVIEWS = [
     {
       label: "Google Review",
       sub: "Share your experience on Google",
-      url: "https://share.google/UvyICj95CeOsw7VgN",
+      url: googleReviewUrl,
       color: "#4285f4",
       icon: (
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2348,10 +2354,10 @@ function KeepInTouchPage({ kickoff, page, total }) {
         </p>
         <div style={{ display: "flex", justifyContent: "center", gap: 20, marginBottom: 36, flexWrap: "wrap" }}>
           {[
-            { city: "Cartagena",   emoji: "🏖️", url: "https://www.twotravelvip.com/blog/cartagena" },
-            { city: "Medellín",    emoji: "🌿", url: "https://www.twotravelvip.com/blog/medellin" },
-            { city: "Mexico City", emoji: "🌮", url: "https://www.twotravelvip.com/blog/mexico-city" },
-            { city: "Los Cabos",   emoji: "🌵", url: "https://www.twotravelvip.com/blog/los-cabos" },
+            { city: "Cartagena",   emoji: "🏖️", url: "https://two.travel/cartagena-colombia/" },
+            { city: "Medellín",    emoji: "🌿", url: "https://two.travel/medellin-colombia/" },
+            { city: "Mexico City", emoji: "🌮", url: "https://two.travel/mexico-city/" },
+            { city: "Los Cabos",   emoji: "🌵", url: "https://two.travel/cabo-san-lucas/" },
           ].map(d => (
             <a key={d.city} href={d.url} target="_blank" rel="noreferrer" style={{ textDecoration: "none", textAlign: "center", background: "#fdf8f2", border: "1.5px solid #f3e8d8", borderRadius: 12, padding: "14px 20px", minWidth: 90, display: "block" }}>
               <div style={{ fontSize: 24, marginBottom: 4 }}>{d.emoji}</div>

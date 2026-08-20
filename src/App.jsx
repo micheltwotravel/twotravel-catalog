@@ -4729,7 +4729,7 @@ function CheckinForm() {
     const city = String(kickoff.city || "").split(",")[0]?.trim();
     const MAP = { CTG:"Cartagena", MDE:"Medellín", BOG:"Bogotá", CDMX:"Ciudad de México", TUL:"Tulum" };
     const name = kickoff.tripName || kickoff.guestName || "";
-    return [name, MAP[city?.toUpperCase()] || city, kickoff.tripDates].filter(Boolean).join(" · ");
+    return name;
   })();
 
   const inp = "w-full border border-neutral-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-neutral-400 bg-white";
@@ -4767,8 +4767,8 @@ function CheckinForm() {
           <div className="flex justify-between items-start mb-4">
             <div>
               <img src="/logo.png" alt="Two Travel" style={{height:22,filter:"brightness(0) invert(1)",marginBottom:10,opacity:.85}} />
-              <h1 className="text-white text-2xl font-bold">Pre Check-in</h1>
-              {tripLabel && <p className="text-white/60 text-xs mt-1">{tripLabel}</p>}
+              <h1 className="text-white text-2xl font-bold">Pre Check-in Form</h1>
+              {tripLabel && <p className="text-white/70 text-sm font-semibold mt-1">{tripLabel}</p>}
             </div>
             <button onClick={() => setLang(en?"es":"en")}
               className="text-white/60 text-xs border border-white/20 rounded-full px-3 py-1 hover:bg-white/10">
