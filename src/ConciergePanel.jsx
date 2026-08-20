@@ -6493,6 +6493,14 @@ function PresetMessages({ kickoff }) {
   const waBase = phone ? `https://wa.me/${phone}?text=` : `https://wa.me/?text=`;
   const base = "https://www.twotravelvip.com";
   const id = kickoff.id || "";
+  // Build booking slug: assigned concierge → current user fallback → first non-hidden concierge
+  const bookingSlug = (() => {
+    const names = String(kickoff.assignedConcierge || "").split(",").map(s => s.trim()).filter(Boolean);
+    const found = names.map(n => CONCIERGE_LIST.find(c => c.name === n)).find(Boolean);
+    if (found) return found.email.split("@")[0].toLowerCase();
+    const all = CONCIERGE_LIST.find(c => !c.hidden);
+    return all ? all.email.split("@")[0].toLowerCase() : "";
+  })();
   const copy = (key, text) => {
     navigator.clipboard.writeText(text).catch(()=>{});
     setCopied(key); setTimeout(() => setCopied(null), 1500);
@@ -6504,6 +6512,13 @@ function PresetMessages({ kickoff }) {
     finally { setSavingCalendly(false); }
   };
   const msgs = [
+    ...(bookingSlug ? [{
+      key: "reunion", icon: "📅", label: isEs ? "Reunión" : "Meeting",
+      url: `${base}/book.html?c=${bookingSlug}&kickoffId=${id}&lang=${kickoff.lang || "en"}`,
+      text: isEs
+        ? `Hola ${first}! 📅 Me gustaría agendar una reunión contigo para coordinar los detalles de tu estadía. Elige el horario que mejor te funcione:\n${base}/book.html?c=${bookingSlug}&kickoffId=${id}&lang=${kickoff.lang || "en"}`
+        : `Hi ${first}! 📅 I'd love to schedule a meeting with you to coordinate the details of your stay. Pick the time that works best for you:\n${base}/book.html?c=${bookingSlug}&kickoffId=${id}&lang=${kickoff.lang || "en"}`,
+    }] : []),
     {
       key: "pre", icon: "📋", label: isEs ? "Pre Check-in" : "Pre Check-in",
       url: `${base}/ci/${id}`,

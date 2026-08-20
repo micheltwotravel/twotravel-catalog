@@ -4635,6 +4635,18 @@ function CheckinForm() {
 
   const submit = async () => {
     if (!form.firstName.trim()) { setError(en ? "First name is required." : "El nombre es requerido."); return; }
+    if (!form.lastName.trim())  { setError(en ? "Last name is required."  : "El apellido es requerido."); return; }
+    if (!form.idNumber.trim())  { setError(en ? "ID number is required."  : "El número de ID es requerido."); return; }
+    if (!form.foodRestrictions.trim()) { setError(en ? "Food restrictions are required (write 'None' if you have none)." : "Las restricciones alimentarias son requeridas (escribe 'Ninguna' si no tienes)."); return; }
+    if (!form.allergies.trim())        { setError(en ? "Allergies field is required (write 'None' if you have none)." : "El campo de alergias es requerido (escribe 'Ninguna' si no tienes)."); return; }
+    if (!form.arrivalAirline.trim())   { setError(en ? "Arrival airline is required." : "La aerolínea de llegada es requerida."); return; }
+    if (!form.arrivalFlight.trim())    { setError(en ? "Arrival flight number is required." : "El número de vuelo de llegada es requerido."); return; }
+    if (!form.arrivalDate)             { setError(en ? "Arrival date is required." : "La fecha de llegada es requerida."); return; }
+    if (!form.arrivalTime)             { setError(en ? "Arrival time is required." : "La hora de llegada es requerida."); return; }
+    if (!form.departureAirline.trim()) { setError(en ? "Departure airline is required." : "La aerolínea de salida es requerida."); return; }
+    if (!form.departureFlight.trim())  { setError(en ? "Departure flight number is required." : "El número de vuelo de salida es requerido."); return; }
+    if (!form.departureDate)           { setError(en ? "Departure date is required." : "La fecha de salida es requerida."); return; }
+    if (!form.departureTime)           { setError(en ? "Departure time is required." : "La hora de salida es requerida."); return; }
     setSending(true); setError("");
     try {
       const res = await fetch(GAS_URL, {
@@ -4811,15 +4823,14 @@ function CheckinForm() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={lbl}>{en?"ID Type":"Tipo de ID"}</label>
+                <label className={lbl}>{en?"ID Type *":"Tipo de ID *"}</label>
                 <select value={form.idType} onChange={set("idType")} className={sel}>
                   <option value="Passport">{en?"Passport":"Pasaporte"}</option>
                   <option value="ID Card">{en?"ID Card":"Cédula"}</option>
-                  <option value="Driver's License">{en?"Driver's License":"Licencia"}</option>
                 </select>
               </div>
               <div>
-                <label className={lbl}>{en?"ID Number":"Número de ID"}</label>
+                <label className={lbl}>{en?"ID Number *":"Número de ID *"}</label>
                 <input value={form.idNumber} onChange={set("idNumber")} className={inp} placeholder="AB123456" />
               </div>
             </div>
@@ -4852,12 +4863,12 @@ function CheckinForm() {
           <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">🥗 {en?"Food & Health":"Alimentación y Salud"}</h3>
           <div className="space-y-3">
             <div>
-              <label className={lbl}>{en?"Food restrictions":"Restricciones alimentarias"}</label>
+              <label className={lbl}>{en?"Food restrictions *":"Restricciones alimentarias *"}</label>
               <textarea value={form.foodRestrictions} onChange={set("foodRestrictions")} rows={2} className={inp + " resize-none"}
                 placeholder={en?"Gluten-free, vegan, kosher… or None":"Sin gluten, vegano, kosher… o Ninguna"} />
             </div>
             <div>
-              <label className={lbl}>{en?"Allergies / Medical conditions":"Alergias / Condiciones médicas"}</label>
+              <label className={lbl}>{en?"Allergies / Medical conditions *":"Alergias / Condiciones médicas *"}</label>
               <textarea value={form.allergies} onChange={set("allergies")} rows={2} className={inp + " resize-none"}
                 placeholder={en?"Nut allergy, asthma… or None":"Alergia a nueces, asma… o Ninguna"} />
             </div>
@@ -4870,21 +4881,21 @@ function CheckinForm() {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={lbl}>{en?"Airline":"Aerolínea"}</label>
+                <label className={lbl}>{en?"Airline *":"Aerolínea *"}</label>
                 <input value={form.arrivalAirline} onChange={set("arrivalAirline")} className={inp} placeholder="Avianca, Delta…" />
               </div>
               <div>
-                <label className={lbl}>{en?"Flight #":"Vuelo #"}</label>
+                <label className={lbl}>{en?"Flight # *":"Vuelo # *"}</label>
                 <input value={form.arrivalFlight} onChange={set("arrivalFlight")} className={inp} placeholder="AV204" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={lbl}>{en?"Arrival date":"Fecha de llegada"}</label>
+                <label className={lbl}>{en?"Arrival date *":"Fecha de llegada *"}</label>
                 <input type="date" value={form.arrivalDate} onChange={set("arrivalDate")} className={inp} />
               </div>
               <div>
-                <label className={lbl}>{en?"Arrival time":"Hora de llegada"}</label>
+                <label className={lbl}>{en?"Arrival time *":"Hora de llegada *"}</label>
                 <input type="time" value={form.arrivalTime} onChange={set("arrivalTime")} className={inp} />
               </div>
             </div>
@@ -4927,22 +4938,22 @@ function CheckinForm() {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={lbl}>{en?"Airline":"Aerolínea"}</label>
+                <label className={lbl}>{en?"Airline *":"Aerolínea *"}</label>
                 <input value={form.departureAirline} onChange={set("departureAirline")} className={inp} placeholder="Avianca, Delta…" />
               </div>
               <div>
-                <label className={lbl}>{en?"Flight #":"Vuelo #"}</label>
+                <label className={lbl}>{en?"Flight # *":"Vuelo # *"}</label>
                 <input value={form.departureFlight} onChange={set("departureFlight")} className={inp} placeholder="AV205" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={lbl}>{en?"Departure date":"Fecha de salida"}</label>
+                <label className={lbl}>{en?"Departure date *":"Fecha de salida *"}</label>
                 <input type="date" value={form.departureDate} onChange={set("departureDate")} className={inp}
                   min={form.arrivalDate ? new Date(new Date(form.arrivalDate + "T12:00:00").getTime() + 86400000).toISOString().slice(0,10) : undefined} />
               </div>
               <div>
-                <label className={lbl}>{en?"Departure time":"Hora de salida"}</label>
+                <label className={lbl}>{en?"Departure time *":"Hora de salida *"}</label>
                 <input type="time" value={form.departureTime} onChange={set("departureTime")} className={inp} />
               </div>
             </div>
