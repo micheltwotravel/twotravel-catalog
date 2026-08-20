@@ -5021,52 +5021,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               </div>
             )}
 
-            {/* Quiz answers submitted by client */}
-            {(Object.keys(quizAnswers).some(k => quizAnswers[k] && quizAnswers[k] !== "no" && !(Array.isArray(quizAnswers[k]) && !quizAnswers[k].length))) && (
-              <div className="col-span-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-3 text-xs text-blue-900 space-y-2">
-                <p className="font-semibold text-[11px] uppercase tracking-wide text-blue-700">📋 Info del cuestionario</p>
-
-                {/* Group size */}
-                {(quizAnswers.groupSize || quizAnswers.pax) && (
-                  <p>👥 Personas: <strong>{quizAnswers.groupSize || quizAnswers.pax}</strong></p>
-                )}
-
-                {/* Kids */}
-                {quizAnswers.kids === "yes" && (
-                  <p>🧒 Viajan con niños</p>
-                )}
-
-                {/* Budget */}
-                {quizAnswers.budget && (
-                  <p>💰 Presupuesto: <strong>{
-                    quizAnswers.budget === "low" ? "$ Económico"
-                    : quizAnswers.budget === "mid" ? "$$ Intermedio"
-                    : quizAnswers.budget === "high" ? "$$$ Premium"
-                    : quizAnswers.budget
-                  }</strong></p>
-                )}
-
-                {/* Vibes */}
-                {quizAnswers.vibes?.length > 0 && (
-                  <p>✨ Vibes: <strong>{quizAnswers.vibes.join(", ")}</strong></p>
-                )}
-
-                {/* Cuisines */}
-                {quizAnswers.cuisines?.length > 0 && (
-                  <p>🍴 Cocinas: <strong>{quizAnswers.cuisines.join(", ")}</strong></p>
-                )}
-
-                {/* Additional notes from client */}
-                {kickoff?.additionalNotes && (
-                  <p>📝 Nota del cliente: <strong>{kickoff.additionalNotes}</strong></p>
-                )}
-
-                {/* Group notes from quiz */}
-                {quizAnswers.groupNotes && (
-                  <p>💬 Notas del grupo: <strong>{quizAnswers.groupNotes}</strong></p>
-                )}
-              </div>
-            )}
 
           </div>
 
@@ -8395,7 +8349,17 @@ const loadKickoffs = async () => {
                           return part;
                         }).filter(Boolean);
                         if (!names.length) return <span style={{color:"var(--text-3)",fontStyle:"italic"}}>—</span>;
-                        return names.join(", ");
+                        return (
+                          <div>
+                            <span>{names.join(", ")}</span>
+                            {k.juniorConcierge && (
+                              <div style={{marginTop:2,fontSize:9.5,color:"#6d28d9",fontWeight:500}}>Jr. grupo: {k.juniorConcierge}</div>
+                            )}
+                            {k.juniorBoat && (
+                              <div style={{marginTop:1,fontSize:9.5,color:"#0369a1",fontWeight:500}}>Jr. bote: {k.juniorBoat}</div>
+                            )}
+                          </div>
+                        );
                       })()}
                     </td>
 
