@@ -1218,6 +1218,28 @@ function TableViz({table, tGuests, isSelected}) {
   );
 }
 
+const DEFAULT_FLOOR_SVG = `<svg viewBox="0 0 700 480" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+  <rect x="14" y="14" width="672" height="452" fill="#fdf4f7" stroke="#7f1d3a" stroke-width="5" rx="3"/>
+  <rect x="14" y="14" width="672" height="74" fill="#f5e5ee" stroke="none" rx="3"/>
+  <line x1="14" y1="88" x2="686" y2="88" stroke="#7f1d3a" stroke-width="1.5"/>
+  <line x1="14" y1="91" x2="686" y2="91" stroke="#c9a96e" stroke-width="0.6" stroke-dasharray="5,9"/>
+  <text x="350" y="57" text-anchor="middle" font-size="15" fill="#7f1d3a" font-family="Georgia,serif" font-style="italic">Escenario · Mesa de honor</text>
+  <rect x="200" y="152" width="300" height="200" rx="8" fill="rgba(201,169,110,.06)" stroke="#c9a96e" stroke-width="1.5" stroke-dasharray="9,6"/>
+  <text x="350" y="256" text-anchor="middle" font-size="11" fill="#c9a96e" font-family="Arial,sans-serif" letter-spacing="2.5">PISTA DE BAILE</text>
+  <rect x="605" y="160" width="70" height="36" rx="4" fill="#f5e5ee" stroke="#7f1d3a" stroke-width="1.5"/>
+  <text x="640" y="182" text-anchor="middle" font-size="11" fill="#7f1d3a" font-family="Arial,sans-serif">Bar</text>
+  <rect x="16" y="190" width="70" height="36" rx="4" fill="#f5e5ee" stroke="#7f1d3a" stroke-width="1.5"/>
+  <text x="51" y="212" text-anchor="middle" font-size="10" fill="#7f1d3a" font-family="Arial,sans-serif">Recepción</text>
+  <line x1="302" y1="462" x2="302" y2="466" stroke="#7f1d3a" stroke-width="2.5"/>
+  <line x1="398" y1="462" x2="398" y2="466" stroke="#7f1d3a" stroke-width="2.5"/>
+  <path d="M302,462 Q350,428 398,462" fill="none" stroke="#7f1d3a" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="350" y="477" text-anchor="middle" font-size="9" fill="#7f1d3a" font-family="Arial,sans-serif" letter-spacing="2">ENTRADA</text>
+  <line x1="14" y1="300" x2="18" y2="300" stroke="#7f1d3a" stroke-width="2"/>
+  <line x1="14" y1="360" x2="18" y2="360" stroke="#7f1d3a" stroke-width="2"/>
+  <path d="M14,300 Q44,330 14,360" fill="none" stroke="#7f1d3a" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <text x="36" y="333" text-anchor="middle" font-size="8" fill="#7f1d3a" font-family="Arial,sans-serif" transform="rotate(-90,36,333)">Salida</text>
+</svg>`;
+
 function SeatingTab({ boda, onPatch }) {
   const [seating,setSeating]=useState(()=>(boda.seating||[]).map((t,i)=>({x:80+(i%4)*170,y:60+Math.floor(i/4)*160,...t})));
   const [guests,setGuests]=useState(boda.guests||[]);
@@ -1226,10 +1248,11 @@ function SeatingTab({ boda, onPatch }) {
   const [showFloor,setShowFloor]=useState(false);
   const [saving,setSaving]=useState(false);
   const [selected,setSelected]=useState(null);
-  const [drag,setDrag]=useState(null); // {id, ox, oy}
+  const [pendingGuest,setPendingGuest]=useState(null);
+  const [drag,setDrag]=useState(null);
   const canvasRef=useRef(null);
   const seatingRef=useRef(seating);
-  seatingRef.current=seating; // always current for async handlers
+  seatingRef.current=seating;
 
   const BLANK={name:"",shape:"Redonda",seats:8};
   const [blank,setBlank]=useState(BLANK);
@@ -1253,7 +1276,6 @@ function SeatingTab({ boda, onPatch }) {
   }
   async function assignGuest(gId,tId){ const u=guests.map(g=>g.id===gId?{...g,tableId:tId}:g); try{await saveGuests(u);}catch{} }
 
-  // Drag
   function onTblDown(e,tbl){
     e.preventDefault(); e.stopPropagation();
     if(!canvasRef.current) return;
@@ -1275,15 +1297,10 @@ function SeatingTab({ boda, onPatch }) {
     try{await apiSaveNotes(boda.id,{...boda,seating:s});}catch{}
   }
 
-  // Floor plan
   function handleFloorFile(e){
     const file=e.target.files[0]; if(!file) return;
     const reader=new FileReader();
-    reader.onload=ev=>{
-      const url=ev.target.result;
-      setFloorUrl(url);
-      try{localStorage.setItem("tt_floor_"+boda.id,url);}catch{}
-    };
+    reader.onload=ev=>{ const url=ev.target.result; setFloorUrl(url); try{localStorage.setItem("tt_floor_"+boda.id,url);}catch{}; };
     reader.readAsDataURL(file);
   }
   function clearFloor(){ setFloorUrl(""); try{localStorage.removeItem("tt_floor_"+boda.id);}catch{} }
@@ -1292,65 +1309,80 @@ function SeatingTab({ boda, onPatch }) {
   const unassigned=guests.filter(g=>!g.tableId||!seating.find(t=>t.id===g.tableId));
   const selTable=selected?seating.find(t=>t.id===selected):null;
   const selGuests=selTable?guests.filter(g=>g.tableId===selTable.id):[];
+  const pendingName=pendingGuest?guests.find(g=>g.id===pendingGuest)?.name:"";
+
+  const BTN_SM={background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif"};
 
   return (
     <div>
       {/* Toolbar */}
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
-        <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{seating.length} mesa{seating.length!==1?"s":""} · {assigned.length}/{guests.length} asignados</span>
+        <span style={{fontSize:11,color:R.muted,letterSpacing:".03em"}}>{seating.length} mesa{seating.length!==1?"s":""} · {assigned.length}/{guests.length} asignados</span>
         <div style={{flex:1}}/>
-        <button onClick={()=>setShowFloor(v=>!v)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 10px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>🗺 Plano de fondo</button>
-        <button onClick={()=>{setShowNew(v=>!v);setSelected(null);}} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600}}>+ Mesa</button>
+        <button onClick={()=>setShowFloor(v=>!v)} style={BTN_SM}>Plano personalizado</button>
+        <button onClick={()=>{setShowNew(v=>!v);setSelected(null);setPendingGuest(null);}}
+          style={{background:`linear-gradient(135deg,${R.accent},${R.mid})`,color:"#fff",border:"none",borderRadius:8,padding:"6px 16px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,boxShadow:"0 2px 8px rgba(190,18,60,.25)"}}>+ Mesa</button>
       </div>
 
-      {/* Floor plan URL */}
+      {/* Floor plan upload */}
       {showFloor&&(
-        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:12,marginBottom:12,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-          <span style={{fontSize:11,color:R.muted,flexShrink:0}}>Subir imagen del salón:</span>
-          <label style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:11,color:R.accent,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
-            📎 Elegir archivo
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:"12px 16px",marginBottom:12,display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+          <span style={{fontSize:11,color:R.muted}}>Subir plano del salón:</span>
+          <label style={{...BTN_SM,color:R.accent,cursor:"pointer"}}>
+            Elegir imagen
             <input type="file" accept="image/*" onChange={handleFloorFile} style={{display:"none"}} />
           </label>
-          {floorUrl&&<button onClick={clearFloor} style={{background:"none",border:"none",color:"#dc2626",cursor:"pointer",fontSize:12}}>✕ Quitar</button>}
-          <button onClick={()=>setShowFloor(false)} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:11,marginLeft:"auto"}}>Cerrar</button>
+          {floorUrl&&<button onClick={clearFloor} style={{background:"none",border:"none",color:"#dc2626",cursor:"pointer",fontSize:11,fontFamily:"'Jost',sans-serif"}}>Quitar</button>}
+          <button onClick={()=>setShowFloor(false)} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:11,marginLeft:"auto",fontFamily:"'Jost',sans-serif"}}>Cerrar</button>
         </div>
       )}
 
       {/* New table form */}
       {showNew&&(
         <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:12}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 80px",gap:8,marginBottom:8}}>
-            <input style={INP_SM} value={blank.name} onChange={e=>setBlank(p=>({...p,name:e.target.value}))} placeholder="Nombre *" autoFocus />
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 72px",gap:8,marginBottom:10}}>
+            <input style={INP_SM} value={blank.name} onChange={e=>setBlank(p=>({...p,name:e.target.value}))} placeholder="Nombre de la mesa *" autoFocus />
             <select style={INP_SM} value={blank.shape} onChange={e=>setBlank(p=>({...p,shape:e.target.value}))}>{TABLE_SHAPES.map(s=><option key={s}>{s}</option>)}</select>
-            <input type="number" style={INP_SM} value={blank.seats} onChange={e=>setBlank(p=>({...p,seats:Math.max(1,parseInt(e.target.value)||8)}))} min={1} max={40} />
+            <input type="number" style={INP_SM} value={blank.seats} onChange={e=>setBlank(p=>({...p,seats:Math.max(1,parseInt(e.target.value)||8)}))} min={1} max={40} placeholder="Sillas" />
           </div>
           <div style={{display:"flex",gap:8}}>
-            <button onClick={addTable} disabled={saving||!blank.name.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.name.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Crear"}</button>
-            <button onClick={()=>setShowNew(false)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+            <button onClick={addTable} disabled={saving||!blank.name.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 16px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.name.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"Guardando…":"Crear mesa"}</button>
+            <button onClick={()=>setShowNew(false)} style={BTN_SM}>Cancelar</button>
           </div>
         </div>
       )}
 
-      {/* ── CANVAS ── */}
-      <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-        {/* Floor plan canvas */}
+      {/* ── CANVAS + SIDE PANEL ── */}
+      <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+
+        {/* Canvas */}
         <div
           ref={canvasRef}
-          style={{flex:1,position:"relative",minHeight:480,background:"#f5f0f2",borderRadius:16,border:`2px dashed ${R.border}`,overflow:"hidden",cursor:drag?"grabbing":"default",userSelect:"none"}}
+          style={{flex:1,position:"relative",minHeight:500,background:"#faf5f7",borderRadius:16,border:`1px solid ${R.border}`,overflow:"hidden",cursor:drag?"grabbing":"default",userSelect:"none",boxShadow:"inset 0 2px 12px rgba(127,29,58,.04)"}}
           onMouseMove={onCanvasMove}
           onMouseUp={onCanvasUp}
           onMouseLeave={onCanvasUp}
-          onClick={()=>setSelected(null)}
+          onClick={()=>{ setSelected(null); if(!drag) setPendingGuest(null); }}
         >
-          {/* Floor plan background */}
-          {floorUrl&&<img src={floorUrl} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"contain",opacity:.25,pointerEvents:"none"}} />}
+          {/* Default room SVG sketch */}
+          {!floorUrl&&<div style={{position:"absolute",inset:0,pointerEvents:"none",opacity:.22}} dangerouslySetInnerHTML={{__html:DEFAULT_FLOOR_SVG}}/>}
 
-          {/* Room walls hint */}
-          {!floorUrl&&seating.length===0&&(
-            <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,pointerEvents:"none"}}>
-              <span style={{fontSize:40}}>🏛</span>
-              <p style={{fontSize:13,color:R.muted,margin:0,fontFamily:"'Jost',sans-serif"}}>Agrega mesas con el botón de arriba</p>
-              <p style={{fontSize:11,color:R.border,margin:0}}>Arrastra para acomodar el salón · Click para asignar invitados</p>
+          {/* Custom floor plan */}
+          {floorUrl&&<img src={floorUrl} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"contain",opacity:.28,pointerEvents:"none"}}/>}
+
+          {/* Pending guest banner */}
+          {pendingGuest&&(
+            <div style={{position:"absolute",top:14,left:"50%",transform:"translateX(-50%)",background:"rgba(26,8,18,.88)",backdropFilter:"blur(8px)",borderRadius:10,padding:"9px 18px",display:"flex",gap:12,alignItems:"center",zIndex:100,border:`1px solid ${R.gold}`,boxShadow:"0 4px 20px rgba(0,0,0,.25)"}}>
+              <div style={{width:6,height:6,borderRadius:"50%",background:R.gold,flexShrink:0}}/>
+              <span style={{fontSize:12,color:R.white,fontFamily:"'Jost',sans-serif"}}>Haz clic en una mesa para asignar a <strong style={{color:R.gold}}>{pendingName}</strong></span>
+              <button onClick={e=>{e.stopPropagation();setPendingGuest(null);}} style={{background:"none",border:"none",color:"rgba(255,255,255,.5)",cursor:"pointer",fontSize:16,lineHeight:1,padding:0,marginLeft:4}}>×</button>
+            </div>
+          )}
+
+          {/* Empty room hint */}
+          {seating.length===0&&(
+            <div style={{position:"absolute",bottom:48,left:0,right:0,textAlign:"center",pointerEvents:"none"}}>
+              <p style={{fontSize:12,color:R.muted,margin:0,fontFamily:"'Jost',sans-serif",letterSpacing:".03em"}}>Agrega mesas · Arrástralas para acomodar el salón</p>
             </div>
           )}
 
@@ -1358,71 +1390,100 @@ function SeatingTab({ boda, onPatch }) {
           {seating.map(tbl=>{
             const tG=guests.filter(g=>g.tableId===tbl.id);
             const isSel=selected===tbl.id;
+            const isFull=tG.length>=tbl.seats;
+            const highlight=pendingGuest&&!isFull;
             return (
               <div key={tbl.id}
-                style={{position:"absolute",left:tbl.x||50,top:tbl.y||50,cursor:drag?.id===tbl.id?"grabbing":"grab",zIndex:isSel?10:1,filter:isSel?"drop-shadow(0 4px 12px rgba(190,18,60,.3))":"drop-shadow(0 2px 4px rgba(0,0,0,.15))"}}
+                style={{position:"absolute",left:tbl.x||50,top:tbl.y||50,cursor:drag?.id===tbl.id?"grabbing":"grab",zIndex:isSel?10:1,
+                  filter:isSel?"drop-shadow(0 6px 16px rgba(190,18,60,.35))":highlight?"drop-shadow(0 4px 12px rgba(201,169,110,.5))":"drop-shadow(0 2px 6px rgba(0,0,0,.12))",
+                  transition:"filter .15s"}}
                 onMouseDown={e=>onTblDown(e,tbl)}
-                onClick={e=>{e.stopPropagation();setSelected(isSel?null:tbl.id);}}>
+                onClick={e=>{
+                  e.stopPropagation();
+                  if(pendingGuest){
+                    if(!isFull){ assignGuest(pendingGuest,tbl.id); setPendingGuest(null); setSelected(tbl.id); }
+                  } else {
+                    setSelected(isSel?null:tbl.id);
+                  }
+                }}>
                 <TableViz table={tbl} tGuests={tG} isSelected={isSel}/>
               </div>
             );
           })}
 
           {/* Legend */}
-          <div style={{position:"absolute",bottom:10,left:10,display:"flex",gap:8,flexWrap:"wrap"}}>
-            {[["#4ade80","Disponible"],["#f59e0b",">70%"],["#ef4444","Llena"],["#d1d5db","Vacía"]].map(([c,l])=>(
-              <div key={l} style={{display:"flex",alignItems:"center",gap:3,background:"rgba(255,255,255,.8)",borderRadius:99,padding:"2px 8px"}}>
-                <div style={{width:8,height:8,borderRadius:"50%",background:c}}/>
-                <span style={{fontSize:9,color:R.muted}}>{l}</span>
+          <div style={{position:"absolute",bottom:12,left:12,display:"flex",gap:6}}>
+            {[["#4ade80","Libre"],["#f59e0b","+70%"],["#ef4444","Llena"],["#d1d5db","Vacía"]].map(([c,l])=>(
+              <div key={l} style={{display:"flex",alignItems:"center",gap:4,background:"rgba(255,255,255,.85)",backdropFilter:"blur(4px)",borderRadius:99,padding:"2px 9px",border:"1px solid rgba(0,0,0,.06)"}}>
+                <div style={{width:7,height:7,borderRadius:"50%",background:c}}/>
+                <span style={{fontSize:9,color:R.muted,fontFamily:"'Jost',sans-serif"}}>{l}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Side panel: selected table OR unassigned */}
-        <div style={{width:200,flexShrink:0}}>
+        {/* Side panel */}
+        <div style={{width:210,flexShrink:0,display:"flex",flexDirection:"column",gap:10}}>
           {selTable?(
-            <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:14,overflow:"hidden"}}>
-              <div style={{background:R.dark,padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <span style={{fontSize:13,fontWeight:600,color:R.white,fontFamily:"'Cormorant Garamond',serif"}}>{selTable.name}</span>
-                <button onClick={()=>delTable(selTable.id)} style={{background:"none",border:"none",color:"rgba(255,255,255,.5)",cursor:"pointer",fontSize:12}}>🗑</button>
+            <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:16,overflow:"hidden"}}>
+              <div style={{background:`linear-gradient(135deg,${R.dark},#2d0a1a)`,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div>
+                  <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:16,fontWeight:400,fontStyle:"italic",color:R.white,margin:0}}>{selTable.name}</p>
+                  <p style={{fontSize:9,color:R.gold,margin:"2px 0 0",textTransform:"uppercase",letterSpacing:".07em"}}>{selTable.shape} · {selGuests.length}/{selTable.seats} puestos</p>
+                </div>
+                <button onClick={()=>delTable(selTable.id)} style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(255,255,255,.55)",cursor:"pointer",fontSize:11,borderRadius:6,padding:"3px 7px",fontFamily:"'Jost',sans-serif"}}>Borrar</button>
               </div>
-              <div style={{padding:10}}>
-                <p style={{fontSize:10,color:R.muted,margin:"0 0 8px"}}>{selTable.shape} · {selGuests.length}/{selTable.seats} puestos</p>
+              <div style={{padding:"10px 12px",maxHeight:340,overflowY:"auto"}}>
                 {selGuests.map(g=>(
-                  <div key={g.id} style={{display:"flex",alignItems:"center",gap:4,marginBottom:4,background:R.cream,borderRadius:8,padding:"4px 8px"}}>
+                  <div key={g.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:5,background:R.cream,borderRadius:8,padding:"5px 10px",border:`1px solid ${R.border}`}}>
                     <span style={{flex:1,fontSize:11,color:R.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</span>
-                    <button onClick={()=>assignGuest(g.id,"")} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:10,flexShrink:0}}>✕</button>
+                    <button onClick={()=>assignGuest(g.id,"")} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:13,lineHeight:1,flexShrink:0}}>×</button>
                   </div>
                 ))}
-                {unassigned.length>0&&selGuests.length<selTable.seats&&(
-                  <select onChange={e=>{if(e.target.value){assignGuest(e.target.value,selTable.id);e.target.value="";}}} style={{...INP_SM,width:"100%",fontSize:11,marginTop:4}} defaultValue="">
-                    <option value="">+ Asignar...</option>
-                    {unassigned.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
-                  </select>
-                )}
-                {selGuests.length>=selTable.seats&&<p style={{fontSize:10,color:"#dc2626",margin:"6px 0 0",fontWeight:600}}>⚠️ Mesa completa</p>}
+                {selGuests.length>=selTable.seats?(
+                  <p style={{fontSize:10,color:"#dc2626",margin:"8px 0 0",fontWeight:600,textAlign:"center"}}>Mesa completa</p>
+                ):unassigned.length>0?(
+                  <div style={{marginTop:6}}>
+                    <p style={{fontSize:10,color:R.muted,margin:"0 0 6px",letterSpacing:".03em"}}>Agregar a esta mesa:</p>
+                    {unassigned.slice(0,8).map(g=>(
+                      <button key={g.id} onClick={()=>assignGuest(g.id,selTable.id)}
+                        style={{width:"100%",textAlign:"left",background:"none",border:`1px dashed ${R.border}`,borderRadius:7,padding:"4px 10px",fontSize:11,color:R.text2,cursor:"pointer",marginBottom:3,fontFamily:"'Jost',sans-serif",transition:"all .12s"}}
+                        onMouseEnter={e=>{e.currentTarget.style.background=R.light;e.currentTarget.style.borderColor=R.accent;}}
+                        onMouseLeave={e=>{e.currentTarget.style.background="none";e.currentTarget.style.borderColor=R.border;}}>
+                        {g.name}
+                      </button>
+                    ))}
+                    {unassigned.length>8&&<p style={{fontSize:10,color:R.muted,margin:"4px 0 0",textAlign:"center"}}>+{unassigned.length-8} más</p>}
+                  </div>
+                ):null}
               </div>
             </div>
           ):(
-            <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:14,overflow:"hidden"}}>
-              <div style={{background:R.cream,padding:"10px 14px",borderBottom:`1px solid ${R.border}`}}>
-                <p style={{fontSize:11,fontWeight:700,color:R.muted,margin:0,textTransform:"uppercase",letterSpacing:".05em"}}>Sin asignar ({unassigned.length})</p>
+            <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:16,overflow:"hidden"}}>
+              <div style={{padding:"12px 14px",borderBottom:`1px solid ${R.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <p style={{fontSize:11,fontWeight:600,color:R.text,margin:0,letterSpacing:".02em"}}>Sin mesa <span style={{color:R.muted,fontWeight:400}}>({unassigned.length})</span></p>
+                {pendingGuest&&<button onClick={()=>setPendingGuest(null)} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:11,fontFamily:"'Jost',sans-serif"}}>Cancelar</button>}
               </div>
-              <div style={{padding:10,maxHeight:380,overflowY:"auto"}}>
-                {unassigned.length===0?(
-                  <p style={{fontSize:11,color:R.muted,fontStyle:"italic",margin:0}}>¡Todos asignados! 🎉</p>
-                ):unassigned.map(g=>(
-                  <div key={g.id} style={{fontSize:11,color:R.text,padding:"4px 8px",marginBottom:3,background:R.cream,borderRadius:8,display:"flex",alignItems:"center",gap:4}}>
-                    <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</span>
-                    {seating.length>0&&(
-                      <select onChange={e=>{if(e.target.value){assignGuest(g.id,e.target.value);e.target.value="";}}} style={{...INP_SM,padding:"1px 4px",fontSize:9,width:70,flexShrink:0}} defaultValue="">
-                        <option value="">Mesa…</option>
-                        {seating.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
-                      </select>
-                    )}
+              <div style={{padding:"10px 12px",maxHeight:400,overflowY:"auto"}}>
+                {pendingGuest&&(
+                  <div style={{background:"rgba(201,169,110,.1)",border:`1px solid rgba(201,169,110,.4)`,borderRadius:8,padding:"7px 10px",marginBottom:10,fontSize:11,color:R.text2,fontStyle:"italic"}}>
+                    Haz clic en una mesa para asignar
                   </div>
-                ))}
+                )}
+                {unassigned.length===0?(
+                  <p style={{fontSize:11,color:R.muted,fontStyle:"italic",margin:0,textAlign:"center",padding:"12px 0"}}>Todos asignados</p>
+                ):unassigned.map(g=>{
+                  const isActive=pendingGuest===g.id;
+                  return (
+                    <button key={g.id} onClick={()=>setPendingGuest(isActive?null:g.id)}
+                      style={{width:"100%",textAlign:"left",background:isActive?R.gold:"transparent",border:`1px solid ${isActive?R.gold:R.border}`,borderRadius:9,padding:"6px 10px",fontSize:11,color:isActive?R.dark:R.text,cursor:"pointer",marginBottom:4,fontFamily:"'Jost',sans-serif",fontWeight:isActive?600:400,display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}
+                      onMouseEnter={e=>{if(!isActive){e.currentTarget.style.background=R.cream;e.currentTarget.style.borderColor=R.muted;}}}
+                      onMouseLeave={e=>{if(!isActive){e.currentTarget.style.background="transparent";e.currentTarget.style.borderColor=R.border;}}}>
+                      {isActive&&<span style={{fontSize:12}}>→</span>}
+                      <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
