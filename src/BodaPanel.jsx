@@ -699,7 +699,7 @@ function GuestTab({ boda, onPatch }) {
   const [filter,setFilter]=useState("todos");
   const [view,setView]=useState("lista");
   const [editId,setEditId]=useState(null);
-  const BLANK={name:"",contact:"",table:"",rsvp:"Pendiente",ceremony:true,cocktail:true,reception:true,meal:"Sin especificar",notes:""};
+  const BLANK={name:"",contact:"",table:"",tableId:"",rsvp:"Pendiente",ceremony:true,cocktail:true,reception:true,meal:"Sin especificar",notes:""};
   const [blank,setBlank]=useState(BLANK);
 
   async function persist(u){ setGuests(u); onPatch({guests:u}); await apiSaveNotes(boda.id,{...boda,guests:u}); }
@@ -758,7 +758,14 @@ function GuestTab({ boda, onPatch }) {
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
             <input style={INP_SM} value={blank.name}    onChange={e=>setBlank(p=>({...p,name:e.target.value}))}    placeholder="Nombre del invitado *" />
             <input style={INP_SM} value={blank.contact} onChange={e=>setBlank(p=>({...p,contact:e.target.value}))} placeholder="WhatsApp / email" />
-            <input style={INP_SM} value={blank.table}   onChange={e=>setBlank(p=>({...p,table:e.target.value}))}   placeholder="Mesa" />
+            {(boda.seating||[]).length>0?(
+              <select style={INP_SM} value={blank.tableId||""} onChange={e=>setBlank(p=>({...p,tableId:e.target.value}))}>
+                <option value="">Sin mesa</option>
+                {(boda.seating||[]).map(t=><option key={t.id} value={t.id}>{t.name} ({t.seats} lugares)</option>)}
+              </select>
+            ):(
+              <input style={INP_SM} value={blank.table} onChange={e=>setBlank(p=>({...p,table:e.target.value}))} placeholder="Mesa (número o nombre)" />
+            )}
             <select style={INP_SM} value={blank.rsvp} onChange={e=>setBlank(p=>({...p,rsvp:e.target.value}))}>{RSVP_STATES.map(s=><option key={s}>{s}</option>)}</select>
             <select style={INP_SM} value={blank.meal} onChange={e=>setBlank(p=>({...p,meal:e.target.value}))}>{MEAL_OPTIONS.map(m=><option key={m}>{m}</option>)}</select>
             <input style={INP_SM} value={blank.notes}   onChange={e=>setBlank(p=>({...p,notes:e.target.value}))}   placeholder="Notas / restricciones" />
@@ -807,7 +814,17 @@ function GuestTab({ boda, onPatch }) {
                       <td style={{textAlign:"center",padding:"7px 8px",borderBottom:`1px solid ${R.border}`}}>
                         <button onClick={()=>cycleRsvp(g.id)} style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:rs.bg,color:rs.color,border:"none",cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'Jost',sans-serif"}}>{g.rsvp||"Pendiente"}</button>
                       </td>
-                      <td style={{textAlign:"center",padding:"7px 8px",borderBottom:`1px solid ${R.border}`,fontSize:11,color:R.muted}}>{g.table||"–"}</td>
+                      <td style={{textAlign:"center",padding:"5px 8px",borderBottom:`1px solid ${R.border}`}}>
+                        {(boda.seating||[]).length>0?(
+                          <select value={g.tableId||""} onChange={e=>{const u=guests.map(x=>x.id===g.id?{...x,tableId:e.target.value}:x);persist(u);}}
+                            style={{fontSize:10,border:`1px solid ${R.border}`,borderRadius:7,padding:"3px 5px",background:g.tableId?R.light:R.white,color:g.tableId?R.accent:R.muted,fontFamily:"'Jost',sans-serif",cursor:"pointer",maxWidth:90,fontWeight:g.tableId?600:400}}>
+                            <option value="">– Sin mesa</option>
+                            {(boda.seating||[]).map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+                          </select>
+                        ):(
+                          <span style={{fontSize:11,color:R.muted}}>{g.table||"–"}</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -843,7 +860,7 @@ function GuestTab({ boda, onPatch }) {
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                       <span style={{fontSize:13,fontWeight:500,color:R.text}}>{g.name}</span>
-                      {g.table&&<span style={{fontSize:11,color:R.muted}}>Mesa {g.table}</span>}
+                      {(()=>{const t=(boda.seating||[]).find(t=>t.id===g.tableId);return t?<span style={{fontSize:10,fontWeight:600,padding:"1px 8px",borderRadius:99,background:R.light,color:R.accent}}>{t.name}</span>:g.table?<span style={{fontSize:11,color:R.muted}}>Mesa {g.table}</span>:null;})()}
                       {g.meal&&g.meal!=="Sin especificar"&&<span style={{fontSize:10,padding:"1px 7px",borderRadius:99,background:"#fffbeb",color:"#92400e"}}>🍽 {g.meal}</span>}
                       <div style={{display:"flex",gap:3}}>
                         {G_EVENTS.map(([k,ic])=>g[k]&&<span key={k} style={{fontSize:9,padding:"1px 5px",borderRadius:99,background:R.light,color:R.accent}}>{ic}</span>)}
@@ -1435,9 +1452,21 @@ function SeatingTab({ boda, onPatch }) {
               </div>
               <div style={{padding:"10px 12px",maxHeight:340,overflowY:"auto"}}>
                 {selGuests.map(g=>(
-                  <div key={g.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:5,background:R.cream,borderRadius:8,padding:"5px 10px",border:`1px solid ${R.border}`}}>
-                    <span style={{flex:1,fontSize:11,color:R.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</span>
-                    <button onClick={()=>assignGuest(g.id,"")} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:13,lineHeight:1,flexShrink:0}}>×</button>
+                  <div key={g.id} style={{marginBottom:5,background:R.cream,borderRadius:8,padding:"5px 10px",border:`1px solid ${R.border}`}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <span style={{flex:1,fontSize:11,color:R.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</span>
+                      <button onClick={()=>assignGuest(g.id,"")} title="Quitar de esta mesa" style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:13,lineHeight:1,flexShrink:0}}>×</button>
+                    </div>
+                    {seating.filter(t=>t.id!==selTable.id).length>0&&(
+                      <select defaultValue="" onChange={e=>{if(e.target.value){assignGuest(g.id,e.target.value);e.target.value="";}}}
+                        style={{fontSize:9,border:`1px dashed ${R.border}`,borderRadius:5,padding:"2px 4px",background:"transparent",color:R.muted,fontFamily:"'Jost',sans-serif",cursor:"pointer",width:"100%",marginTop:3}}>
+                        <option value="">Mover a otra mesa…</option>
+                        {seating.filter(t=>t.id!==selTable.id).map(t=>{
+                          const filled=guests.filter(x=>x.tableId===t.id).length;
+                          return <option key={t.id} value={t.id} disabled={filled>=t.seats}>{t.name} ({filled}/{t.seats})</option>;
+                        })}
+                      </select>
+                    )}
                   </div>
                 ))}
                 {selGuests.length>=selTable.seats?(
