@@ -539,6 +539,35 @@ const TL_HIGHLIGHTS=[
   {label:"Lila",value:"#ede9fe"},
 ];
 
+function TimelineEventForm({val,setVal,saving,onSubmit,onCancel,submitLabel}){
+  return(
+    <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+        <input type="time" style={INP_SM} value={val.time} onChange={e=>setVal(p=>({...p,time:e.target.value}))} />
+        <select style={INP_SM} value={val.category} onChange={e=>setVal(p=>({...p,category:e.target.value}))}>{M_CATS.map(c=><option key={c}>{c}</option>)}</select>
+        <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={val.description} onChange={e=>setVal(p=>({...p,description:e.target.value}))} placeholder="Descripción del evento *" /></div>
+        <input style={INP_SM} value={val.assignedTo} onChange={e=>setVal(p=>({...p,assignedTo:e.target.value}))} placeholder="Responsable" />
+        <input style={INP_SM} value={val.notes} onChange={e=>setVal(p=>({...p,notes:e.target.value}))} placeholder="Notas" />
+        <div style={{gridColumn:"span 2",display:"flex",flexWrap:"wrap",gap:10,alignItems:"center"}}>
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={val.isInternal} onChange={e=>setVal(p=>({...p,isInternal:e.target.checked}))} /> Solo interno</label>
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={val.isHighlight} onChange={e=>setVal(p=>({...p,isHighlight:e.target.checked}))} /> ⭐ Destacado</label>
+          <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
+            <span style={{fontSize:11,color:R.muted}}>🖍 Resaltar:</span>
+            {TL_HIGHLIGHTS.map(h=>(
+              <button key={h.value} title={h.label} onClick={()=>setVal(p=>({...p,highlightColor:h.value}))}
+                style={{width:18,height:18,borderRadius:4,border:val.highlightColor===h.value?`2px solid ${R.accent}`:"1px solid #ddd",background:h.value||"#fff",cursor:"pointer",padding:0,flexShrink:0}} />
+            ))}
+          </div>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={onSubmit} disabled={saving||!val.time||!val.description.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!val.time||!val.description.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":submitLabel}</button>
+        <button onClick={onCancel} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
 function TimelineTab({ boda, onScheduleChange }) {
   const [schedule,setSchedule]=useState(boda.schedule||[]);
   const [show,setShow]=useState(false);
@@ -553,35 +582,6 @@ function TimelineTab({ boda, onScheduleChange }) {
   async function add(){ if(!blank.time||!blank.description.trim()) return; setSaving(true); try{await persist([...schedule,{...blank,id:uid()}]); setBlank(BLANK); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
   async function saveEdit(){ if(!editing||!editing.time||!editing.description.trim()) return; setSaving(true); try{await persist(schedule.map(e=>e.id===editing.id?editing:e)); setEditing(null);}catch(e){alert("Error: "+e.message);} setSaving(false); }
   async function del(id){ try{await persist(schedule.filter(e=>e.id!==id));}catch{setSchedule(schedule);} }
-
-  function EventForm({val,setVal,onSubmit,onCancel,submitLabel}){
-    return(
-      <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-          <input type="time" style={INP_SM} value={val.time} onChange={e=>setVal(p=>({...p,time:e.target.value}))} />
-          <select style={INP_SM} value={val.category} onChange={e=>setVal(p=>({...p,category:e.target.value}))}>{M_CATS.map(c=><option key={c}>{c}</option>)}</select>
-          <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={val.description} onChange={e=>setVal(p=>({...p,description:e.target.value}))} placeholder="Descripción del evento *" /></div>
-          <input style={INP_SM} value={val.assignedTo} onChange={e=>setVal(p=>({...p,assignedTo:e.target.value}))} placeholder="Responsable" />
-          <input style={INP_SM} value={val.notes} onChange={e=>setVal(p=>({...p,notes:e.target.value}))} placeholder="Notas" />
-          <div style={{gridColumn:"span 2",display:"flex",flexWrap:"wrap",gap:10,alignItems:"center"}}>
-            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={val.isInternal} onChange={e=>setVal(p=>({...p,isInternal:e.target.checked}))} /> Solo interno</label>
-            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={val.isHighlight} onChange={e=>setVal(p=>({...p,isHighlight:e.target.checked}))} /> ⭐ Destacado</label>
-            <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
-              <span style={{fontSize:11,color:R.muted}}>🖍 Resaltar:</span>
-              {TL_HIGHLIGHTS.map(h=>(
-                <button key={h.value} title={h.label} onClick={()=>setVal(p=>({...p,highlightColor:h.value}))}
-                  style={{width:18,height:18,borderRadius:4,border:val.highlightColor===h.value?`2px solid ${R.accent}`:"1px solid #ddd",background:h.value||"#fff",cursor:"pointer",padding:0,flexShrink:0}} />
-              ))}
-            </div>
-          </div>
-        </div>
-        <div style={{display:"flex",gap:8}}>
-          <button onClick={onSubmit} disabled={saving||!val.time||!val.description.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!val.time||!val.description.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":submitLabel}</button>
-          <button onClick={onCancel} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div>
@@ -598,8 +598,8 @@ function TimelineTab({ boda, onScheduleChange }) {
           <button onClick={()=>{setShow(v=>!v);setEditing(null);}} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Agregar</button>
         </div>
       </div>
-      {show&&!editing&&<EventForm val={blank} setVal={setBlank} onSubmit={add} onCancel={()=>setShow(false)} submitLabel="Agregar" />}
-      {editing&&<EventForm val={editing} setVal={v=>setEditing(p=>({...p,...(typeof v==="function"?v(p):v)}))} onSubmit={saveEdit} onCancel={()=>setEditing(null)} submitLabel="Guardar" />}
+      {show&&!editing&&<TimelineEventForm val={blank} setVal={setBlank} saving={saving} onSubmit={add} onCancel={()=>setShow(false)} submitLabel="Agregar" />}
+      {editing&&<TimelineEventForm val={editing} setVal={v=>setEditing(p=>({...p,...(typeof v==="function"?v(p):v)}))} saving={saving} onSubmit={saveEdit} onCancel={()=>setEditing(null)} submitLabel="Guardar" />}
       {visible.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>{sorted.length===0?"Sin eventos. Agrega el primero arriba.":"No hay eventos para la vista cliente."}</p>}
       <div style={{position:"relative"}}>
         {visible.length>0&&<div style={{position:"absolute",left:55,top:8,bottom:8,width:1,background:R.border}} />}
