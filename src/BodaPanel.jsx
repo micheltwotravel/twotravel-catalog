@@ -14,9 +14,9 @@ const R = {
   border: "#f0c0ce",
   white:  "#ffffff",
 };
-const HDR = { background:R.dark, padding:"18px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 };
-const GOLD_BAR = { height:2, background:`linear-gradient(90deg,${R.mid},${R.gold},${R.mid})`, flexShrink:0 };
-const CARD = { background:R.white, border:`1px solid ${R.border}`, borderRadius:16, overflow:"hidden" };
+const HDR = { background:`linear-gradient(135deg,${R.dark} 0%,#2d0a1a 60%,${R.mid} 100%)`, padding:"20px 26px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 };
+const GOLD_BAR = { height:3, background:`linear-gradient(90deg,transparent,${R.gold} 30%,#e8c97a 50%,${R.gold} 70%,transparent)`, flexShrink:0 };
+const CARD = { background:R.white, border:`1px solid ${R.border}`, borderRadius:20, overflow:"hidden" };
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function parseDate(d) { if(!d) return null; const dt=new Date(typeof d==="string"&&d.length===10?d+"T12:00:00":d); return isNaN(dt)?null:dt; }
@@ -1470,21 +1470,31 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
   return (
     <div style={{maxWidth:700,margin:"0 auto"}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
-        <button onClick={onBack} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:13,padding:0,fontFamily:"'Jost',sans-serif"}}>← Bodas</button>
-        <span style={{color:R.border}}>/</span>
-        <span style={{fontSize:14,fontWeight:500,color:R.text}}>{boda.clienteName}</span>
+        <button onClick={onBack} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:12,padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em",textTransform:"uppercase"}}>← Bodas</button>
+        <span style={{color:R.border,fontSize:12}}>/</span>
+        <span style={{fontSize:13,color:R.text2,fontFamily:"'Cormorant Garamond',serif",fontStyle:"italic"}}>{boda.clienteName}</span>
       </div>
 
       <div style={{...CARD,marginBottom:16}}>
         <div style={HDR}>
-          <div>
-            <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:500,color:R.white,margin:0,letterSpacing:".02em"}}>{boda.clienteName}</p>
-            {boda.weddingDate&&<p style={{fontSize:12,color:"rgba(255,255,255,.65)",margin:"4px 0 0"}}>💍 {fmtDate(boda.weddingDate)}{days!==null&&<span style={{marginLeft:8,fontWeight:600,color:days<0?"rgba(255,255,255,.4)":days<=30?"#fca5a5":"rgba(255,255,255,.75)"}}>{days<0?`(hace ${Math.abs(days)} días)`:days===0?"(¡hoy!)":`(en ${days} días)`}</span>}</p>}
+          <div style={{flex:1,minWidth:0}}>
+            <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:30,fontWeight:400,color:R.white,margin:0,letterSpacing:".05em",fontStyle:"italic",lineHeight:1.1}}>{boda.clienteName}</p>
+            {boda.weddingDate&&<p style={{fontSize:12,color:R.gold,margin:"8px 0 0",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:500}}>💍 {fmtDate(boda.weddingDate)}</p>}
           </div>
-          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
-            <span style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:99,background:ph.bg,color:ph.color}}>{boda.phase}</span>
-            <button onClick={shareLink} style={{background:"rgba(255,255,255,.12)",color:copied?"#86efac":R.white,border:"1px solid rgba(255,255,255,.2)",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",transition:"color .2s"}}>{copied?"✓ Link copiado":"🔗 Compartir"}</button>
-            <button onClick={()=>setEditing(v=>!v)} style={{background:"rgba(255,255,255,.12)",color:R.white,border:"1px solid rgba(255,255,255,.2)",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>{editing?"Cancelar":"✏️ Editar"}</button>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10,flexShrink:0,marginLeft:16}}>
+            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
+              <span style={{fontSize:10,fontWeight:700,padding:"4px 12px",borderRadius:99,background:ph.bg,color:ph.color,letterSpacing:".05em",textTransform:"uppercase"}}>{boda.phase}</span>
+              {days!==null&&(
+                <div style={{background:days<0?"rgba(0,0,0,.35)":days<=30?"rgba(190,18,60,.7)":"rgba(201,169,110,.25)",border:`1px solid ${days<=30&&days>=0?"rgba(252,165,165,.5)":"rgba(201,169,110,.4)"}`,borderRadius:10,padding:"4px 12px",textAlign:"center",backdropFilter:"blur(4px)"}}>
+                  <p style={{fontSize:10,color:"rgba(255,255,255,.65)",margin:0,textTransform:"uppercase",letterSpacing:".06em",lineHeight:1}}>{days<0?"celebrada":"faltan"}</p>
+                  <p style={{fontSize:18,fontWeight:700,color:days<0?"rgba(255,255,255,.45)":days<=30?"#fca5a5":R.gold,margin:0,fontVariantNumeric:"tabular-nums",lineHeight:1.2}}>{days<0?`${Math.abs(days)}d`:`${days}d`}</p>
+                </div>
+              )}
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={shareLink} style={{background:"rgba(255,255,255,.1)",color:copied?"#86efac":R.gold,border:`1px solid ${copied?"rgba(134,239,172,.4)":"rgba(201,169,110,.35)"}`,borderRadius:8,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".03em",transition:"all .2s"}}>{copied?"✓ Copiado":"🔗 Compartir"}</button>
+              <button onClick={()=>setEditing(v=>!v)} style={{background:editing?"rgba(255,255,255,.18)":"rgba(255,255,255,.1)",color:R.white,border:"1px solid rgba(255,255,255,.2)",borderRadius:8,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".03em"}}>{editing?"Cancelar":"✏️ Editar"}</button>
+            </div>
           </div>
         </div>
         <div style={GOLD_BAR} />
@@ -1496,7 +1506,7 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
           <div style={{display:"flex",minWidth:"max-content"}}>
             {TABS.map(t=>(
               <button key={t.id} onClick={()=>setTab(t.id)}
-                style={{padding:"11px 14px",border:"none",borderBottom:tab===t.id?`2px solid ${R.accent}`:"2px solid transparent",background:"transparent",fontSize:12,fontWeight:tab===t.id?600:400,color:tab===t.id?R.accent:R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif",whiteSpace:"nowrap",transition:"color .15s"}}>
+                style={{padding:"13px 17px",border:"none",borderBottom:tab===t.id?`2.5px solid ${R.gold}`:"2.5px solid transparent",background:"transparent",fontSize:12,fontWeight:tab===t.id?600:400,color:tab===t.id?R.text:R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif",whiteSpace:"nowrap",transition:"color .15s",letterSpacing:tab===t.id?".01em":"normal"}}>
                 {t.label}
               </button>
             ))}
@@ -2081,23 +2091,23 @@ export default function BodaPanel({ currentUser, onLogout }) {
 
   return (
     <div style={{minHeight:"100vh",background:R.cream,fontFamily:"'Jost',sans-serif"}}>
-      <div style={{background:R.dark,padding:"0 24px"}}>
-        <div style={{...GOLD_BAR,height:3}} />
+      <div style={{background:`linear-gradient(135deg,${R.dark} 0%,#280b18 60%,${R.mid} 100%)`,padding:"0 24px"}}>
+        <div style={GOLD_BAR} />
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 0"}}>
-          <div style={{display:"flex",alignItems:"center",gap:14}}>
-            <span style={{fontSize:28}}>💍</span>
+          <div style={{display:"flex",alignItems:"center",gap:16}}>
+            <div style={{width:36,height:36,borderRadius:"50%",background:"rgba(201,169,110,.15)",border:`1px solid rgba(201,169,110,.4)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>💍</div>
             <div>
-              <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:500,color:R.white,margin:0,letterSpacing:".04em"}}>Two Lovers — Bodas</p>
-              <p style={{fontSize:11,color:"rgba(255,255,255,.45)",margin:"2px 0 0",letterSpacing:".06em",textTransform:"uppercase"}}>{bodas.filter(b=>b.status==="Activa").length} bodas activas</p>
+              <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:400,color:R.white,margin:0,letterSpacing:".06em",fontStyle:"italic"}}>Two Lovers</p>
+              <p style={{fontSize:10,color:R.gold,margin:"1px 0 0",letterSpacing:".12em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:500}}>{bodas.filter(b=>b.status==="Activa").length} bodas activas</p>
             </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:12,color:"rgba(255,255,255,.45)"}}>{currentUser?.name||currentUser?.email}</span>
+            <span style={{fontSize:11,color:"rgba(255,255,255,.4)",letterSpacing:".03em"}}>{currentUser?.name||currentUser?.email}</span>
             <button onClick={forceRefresh} disabled={refreshing} title="Forzar recarga desde la hoja"
-              style={{background:"rgba(255,255,255,.08)",color:refreshing?"rgba(255,255,255,.3)":"rgba(255,255,255,.6)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"5px 10px",fontSize:14,cursor:"pointer",transition:"opacity .15s",lineHeight:1}}>
+              style={{background:"rgba(255,255,255,.07)",color:refreshing?"rgba(255,255,255,.25)":"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 10px",fontSize:14,cursor:"pointer",transition:"opacity .15s",lineHeight:1}}>
               {refreshing?"⏳":"🔄"}
             </button>
-            <button onClick={onLogout} style={{background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"5px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Salir</button>
+            <button onClick={onLogout} style={{background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>Salir</button>
           </div>
         </div>
       </div>
@@ -2107,12 +2117,12 @@ export default function BodaPanel({ currentUser, onLogout }) {
         <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:20,borderBottom:`1px solid ${R.border}`}}>
           {[{id:"dashboard",label:"📊 Dashboard"},{id:"calendario",label:"📆 Calendario"},{id:"lista",label:"💍 Lista"}].map(v=>(
             <button key={v.id} onClick={()=>setMainView(v.id)}
-              style={{padding:"10px 20px",border:"none",borderBottom:mainView===v.id?`2px solid ${R.accent}`:"2px solid transparent",background:"transparent",fontSize:13,fontWeight:mainView===v.id?600:400,color:mainView===v.id?R.accent:R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif",transition:"color .15s"}}>
+              style={{padding:"12px 22px",border:"none",borderBottom:mainView===v.id?`2.5px solid ${R.gold}`:"2.5px solid transparent",background:"transparent",fontSize:13,fontWeight:mainView===v.id?600:400,color:mainView===v.id?R.text:R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif",transition:"color .15s",letterSpacing:mainView===v.id?".01em":"normal"}}>
               {v.label}
             </button>
           ))}
           <div style={{flex:1}} />
-          <button onClick={()=>setShowNew(v=>!v)} style={{background:R.accent,color:"#fff",border:"none",borderRadius:10,padding:"8px 18px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"'Jost',sans-serif",marginBottom:2}}>+ Nueva boda</button>
+          <button onClick={()=>setShowNew(v=>!v)} style={{background:`linear-gradient(135deg,${R.accent},${R.mid})`,color:"#fff",border:"none",borderRadius:10,padding:"8px 20px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"'Jost',sans-serif",marginBottom:2,letterSpacing:".03em",boxShadow:"0 2px 12px rgba(190,18,60,.3)"}}>+ Nueva boda</button>
         </div>
 
         {/* Lista filters — only in lista view */}
@@ -2166,56 +2176,58 @@ export default function BodaPanel({ currentUser, onLogout }) {
               const initials=boda.clienteName.split(/[&,\/\s]+/).filter(Boolean).map(w=>w[0]?.toUpperCase()||"").slice(0,2).join("");
               return (
                 <div key={boda.id} onClick={()=>setSelected(boda)}
-                  style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:20,overflow:"hidden",cursor:"pointer",transition:"transform .18s,box-shadow .18s,border-color .18s",display:"flex",flexDirection:"column"}}
-                  onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 8px 32px rgba(127,29,58,.13)";e.currentTarget.style.borderColor=R.mid;}}
+                  style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:24,overflow:"hidden",cursor:"pointer",transition:"transform .2s cubic-bezier(.25,.46,.45,.94),box-shadow .2s,border-color .2s",display:"flex",flexDirection:"column"}}
+                  onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow=`0 16px 48px rgba(127,29,58,.16),0 0 0 1px rgba(201,169,110,.25)`;e.currentTarget.style.borderColor="rgba(201,169,110,.4)";}}
                   onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";e.currentTarget.style.borderColor=R.border;}}>
                   {/* Photo / cover area */}
-                  <div style={{position:"relative",height:160,background:`linear-gradient(135deg,${R.dark} 0%,${R.mid} 100%)`,flexShrink:0}}>
+                  <div style={{position:"relative",height:175,background:`linear-gradient(145deg,${R.dark} 0%,#2d0a1a 50%,${R.mid} 100%)`,flexShrink:0}}>
                     {boda.coverPhoto?(
                       <img src={boda.coverPhoto} alt={boda.clienteName} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} onError={e=>{e.target.style.display="none";}} />
                     ):(
                       <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        <div style={{width:72,height:72,borderRadius:"50%",background:"rgba(255,255,255,.12)",border:"2px solid rgba(201,169,110,.5)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                          <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:500,color:R.gold,letterSpacing:".04em"}}>{initials||"💍"}</span>
+                        <div style={{width:76,height:76,borderRadius:"50%",background:"rgba(255,255,255,.08)",border:"1.5px solid rgba(201,169,110,.55)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 40px rgba(201,169,110,.15)"}}>
+                          <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:30,fontWeight:400,color:R.gold,letterSpacing:".04em",fontStyle:"italic"}}>{initials||"💍"}</span>
                         </div>
                       </div>
                     )}
+                    {/* Subtle bottom gradient overlay */}
+                    <div style={{position:"absolute",bottom:0,left:0,right:0,height:50,background:"linear-gradient(transparent,rgba(26,8,18,.4))",pointerEvents:"none"}} />
                     {/* Days badge */}
                     {days!==null&&(
-                      <div style={{position:"absolute",top:10,right:10,background:days<0?"rgba(0,0,0,.55)":days<=30?"rgba(190,18,60,.85)":"rgba(26,8,18,.75)",backdropFilter:"blur(6px)",borderRadius:10,padding:"4px 10px",textAlign:"center"}}>
-                        <p style={{fontSize:9,color:"rgba(255,255,255,.7)",margin:0,textTransform:"uppercase",letterSpacing:".06em",lineHeight:1}}>{days<0?"boda":"faltan"}</p>
-                        <p style={{fontSize:15,fontWeight:700,color:"#fff",margin:"1px 0 0",fontVariantNumeric:"tabular-nums",lineHeight:1}}>{days<0?`hace ${Math.abs(days)}d`:`${days}d`}</p>
+                      <div style={{position:"absolute",top:12,right:12,background:days<0?"rgba(0,0,0,.5)":days<=30?"rgba(190,18,60,.8)":"rgba(26,8,18,.7)",backdropFilter:"blur(8px)",borderRadius:10,padding:"5px 11px",textAlign:"center",border:"1px solid rgba(255,255,255,.12)"}}>
+                        <p style={{fontSize:9,color:"rgba(255,255,255,.65)",margin:0,textTransform:"uppercase",letterSpacing:".07em",lineHeight:1}}>{days<0?"celebrada":"faltan"}</p>
+                        <p style={{fontSize:16,fontWeight:700,color:days<=30&&days>=0?"#fca5a5":R.gold,margin:"2px 0 0",fontVariantNumeric:"tabular-nums",lineHeight:1}}>{days<0?`${Math.abs(days)}d`:`${days}d`}</p>
                       </div>
                     )}
                     {/* Phase badge */}
-                    <div style={{position:"absolute",top:10,left:10,background:"rgba(255,255,255,.9)",borderRadius:99,padding:"3px 10px"}}>
-                      <span style={{fontSize:9,fontWeight:700,color:ph.color,textTransform:"uppercase",letterSpacing:".05em"}}>{boda.phase}</span>
+                    <div style={{position:"absolute",top:12,left:12,background:"rgba(255,255,255,.92)",backdropFilter:"blur(4px)",borderRadius:99,padding:"3px 11px"}}>
+                      <span style={{fontSize:9,fontWeight:700,color:ph.color,textTransform:"uppercase",letterSpacing:".06em"}}>{boda.phase}</span>
                     </div>
                     {/* Late tasks warning */}
                     {late.length>0&&(
-                      <div style={{position:"absolute",bottom:10,left:10,background:"rgba(190,18,60,.9)",borderRadius:99,padding:"3px 10px"}}>
+                      <div style={{position:"absolute",bottom:10,left:12,background:"rgba(190,18,60,.88)",backdropFilter:"blur(4px)",borderRadius:99,padding:"3px 10px",border:"1px solid rgba(255,255,255,.15)"}}>
                         <span style={{fontSize:9,fontWeight:700,color:"#fff"}}>⚠️ {late.length} atrasada{late.length>1?"s":""}</span>
                       </div>
                     )}
                     {/* Delete btn */}
                     <button onClick={e=>handleDelete(e,boda)}
-                      style={{position:"absolute",bottom:8,right:8,width:26,height:26,borderRadius:"50%",background:"rgba(0,0,0,.4)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"rgba(255,255,255,.7)",transition:"background .15s"}}
+                      style={{position:"absolute",bottom:8,right:10,width:26,height:26,borderRadius:"50%",background:"rgba(0,0,0,.35)",border:"1px solid rgba(255,255,255,.12)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"rgba(255,255,255,.65)",transition:"all .15s"}}
                       onMouseEnter={e=>{e.currentTarget.style.background="rgba(220,38,38,.8)";e.currentTarget.style.color="#fff";}}
-                      onMouseLeave={e=>{e.currentTarget.style.background="rgba(0,0,0,.4)";e.currentTarget.style.color="rgba(255,255,255,.7)";}}>🗑</button>
+                      onMouseLeave={e=>{e.currentTarget.style.background="rgba(0,0,0,.35)";e.currentTarget.style.color="rgba(255,255,255,.65)";}}>🗑</button>
                   </div>
                   {/* Card body */}
-                  <div style={{padding:"14px 16px",flex:1,display:"flex",flexDirection:"column",gap:6}}>
-                    <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:19,fontWeight:600,color:R.text,margin:0,lineHeight:1.2}}>{boda.clienteName}</p>
-                    {boda.weddingDate&&<p style={{fontSize:11,color:R.muted,margin:0}}>💍 {fmtDate(boda.weddingDate)}</p>}
-                    <div style={{display:"flex",flexWrap:"wrap",gap:"4px 10px",fontSize:11,color:R.text2,marginTop:2}}>
+                  <div style={{padding:"16px 18px",flex:1,display:"flex",flexDirection:"column",gap:7}}>
+                    <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:21,fontWeight:400,fontStyle:"italic",color:R.text,margin:0,lineHeight:1.15,letterSpacing:".02em"}}>{boda.clienteName}</p>
+                    {boda.weddingDate&&<p style={{fontSize:11,color:R.gold,margin:0,fontWeight:600,letterSpacing:".04em",textTransform:"uppercase"}}>💍 {fmtDate(boda.weddingDate)}</p>}
+                    <div style={{display:"flex",flexWrap:"wrap",gap:"3px 10px",fontSize:11,color:R.text2,marginTop:1}}>
                       {boda.venue&&<span style={{display:"flex",alignItems:"center",gap:3}}>📍 {boda.venue}</span>}
                       {boda.responsable&&<span>👤 {boda.responsable}</span>}
                     </div>
-                    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:"auto",paddingTop:8,borderTop:`1px solid ${R.border}`}}>
-                      {active.length>0&&<span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:R.light,color:R.accent}}>{active.length} tarea{active.length>1?"s":""}</span>}
-                      {confirmed>0&&<span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:"#f0fdf4",color:"#15803d"}}>✓ {confirmed} confirmados</span>}
-                      {boda.guestCount&&!confirmed&&<span style={{fontSize:10,padding:"2px 8px",borderRadius:99,background:R.cream,color:R.muted}}>👥 {boda.guestCount}</span>}
-                      <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,marginLeft:"auto",background:boda.status==="Activa"?"#f0fdf4":boda.status==="En pausa"?"#fffbeb":"#f5f5f4",color:boda.status==="Activa"?"#15803d":boda.status==="En pausa"?"#b45309":"#57534e"}}>{boda.status}</span>
+                    <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:"auto",paddingTop:10,borderTop:`1px solid ${R.border}`}}>
+                      {active.length>0&&<span style={{fontSize:10,fontWeight:600,padding:"3px 9px",borderRadius:99,background:R.light,color:R.accent}}>{active.length} tarea{active.length>1?"s":""}</span>}
+                      {confirmed>0&&<span style={{fontSize:10,fontWeight:600,padding:"3px 9px",borderRadius:99,background:"#f0fdf4",color:"#15803d"}}>✓ {confirmed}</span>}
+                      {boda.guestCount&&!confirmed&&<span style={{fontSize:10,padding:"3px 9px",borderRadius:99,background:R.cream,color:R.muted}}>👥 {boda.guestCount}</span>}
+                      <span style={{fontSize:10,fontWeight:600,padding:"3px 9px",borderRadius:99,marginLeft:"auto",background:boda.status==="Activa"?"#f0fdf4":boda.status==="En pausa"?"#fffbeb":"#f5f5f4",color:boda.status==="Activa"?"#15803d":boda.status==="En pausa"?"#b45309":"#57534e"}}>{boda.status}</span>
                     </div>
                   </div>
                 </div>
