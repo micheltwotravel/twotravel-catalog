@@ -645,42 +645,119 @@ function PaletteTab({ boda, onPatch }) {
   const [palette,setPalette]=useState(boda.palette||[]);
   const [show,setShow]=useState(false);
   const [saving,setSaving]=useState(false);
+  const [copied,setCopied]=useState(null);
   const [blank,setBlank]=useState({color:"#c9a96e",name:"",notes:""});
+
   async function persist(u){ setPalette(u); onPatch({palette:u}); await apiSaveNotes(boda.id,{...boda,palette:u}); }
   async function add(){ setSaving(true); try{await persist([...palette,{...blank,id:uid()}]); setBlank({color:"#c9a96e",name:"",notes:""}); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
   async function del(id){ try{await persist(palette.filter(p=>p.id!==id));}catch{setPalette(palette);} }
+
+  function copyHex(hex){
+    navigator.clipboard.writeText(hex.toUpperCase()).then(()=>{ setCopied(hex); setTimeout(()=>setCopied(null),1600); });
+  }
+  function onSwatch(hex){
+    const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+    return (0.299*r+0.587*g+0.114*b)>145?"#1a0812":"#ffffff";
+  }
+
   return (
     <div>
+      {/* Hero color strip */}
+      {palette.length>0&&(
+        <div style={{borderRadius:14,overflow:"hidden",height:52,display:"flex",marginBottom:24,boxShadow:"0 6px 24px rgba(0,0,0,.1)"}}>
+          {palette.map((p,i)=>(
+            <div key={p.id} title={p.name||p.color} style={{flex:1,background:p.color,transition:"flex .25s",cursor:"pointer",position:"relative"}}
+              onClick={()=>copyHex(p.color)}>
+              {copied===p.color&&(
+                <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,.25)"}}>
+                  <span style={{fontSize:11,color:"#fff",fontFamily:"'Jost',sans-serif",fontWeight:600}}>✓</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Toolbar */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-        <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{palette.length} color{palette.length!==1?"es":""}</span>
-        <button onClick={()=>setShow(v=>!v)} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Color</button>
+        <div>
+          <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:17,fontStyle:"italic",color:R.text,fontWeight:400}}>Paleta de la boda</span>
+          {palette.length>0&&<span style={{fontSize:11,color:R.muted,marginLeft:10}}>{palette.length} color{palette.length!==1?"es":""}</span>}
+        </div>
+        <button onClick={()=>setShow(v=>!v)} style={{background:show?"transparent":R.dark,color:show?R.muted:R.white,border:`1px solid ${show?R.border:R.dark}`,borderRadius:9,padding:"6px 16px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".03em",transition:"all .15s"}}>
+          {show?"Cancelar":"+ Color"}
+        </button>
       </div>
+
+      {/* Add form */}
       {show&&(
-        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
-          <div style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr",gap:8,marginBottom:8,alignItems:"center"}}>
-            <input type="color" value={blank.color} onChange={e=>setBlank(p=>({...p,color:e.target.value}))} style={{width:40,height:36,border:"none",borderRadius:8,cursor:"pointer",padding:2}} />
-            <input style={INP_SM} value={blank.name}  onChange={e=>setBlank(p=>({...p,name:e.target.value}))}  placeholder="Nombre (ej: Burdeos)" />
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:14,padding:16,marginBottom:20}}>
+          <div style={{display:"grid",gridTemplateColumns:"52px 1fr 1fr",gap:10,marginBottom:12,alignItems:"center"}}>
+            <div style={{position:"relative"}}>
+              <input type="color" value={blank.color} onChange={e=>setBlank(p=>({...p,color:e.target.value}))}
+                style={{width:52,height:44,border:`1.5px solid ${R.border}`,borderRadius:10,cursor:"pointer",padding:3,background:"transparent"}} />
+            </div>
+            <input style={INP_SM} value={blank.name}  onChange={e=>setBlank(p=>({...p,name:e.target.value}))}  placeholder="Nombre del color (ej: Burdeos)" autoFocus />
             <input style={INP_SM} value={blank.notes} onChange={e=>setBlank(p=>({...p,notes:e.target.value}))} placeholder="Uso (ej: Flores principales)" />
           </div>
+          {/* Preview */}
+          <div style={{height:36,borderRadius:10,background:blank.color,marginBottom:12,display:"flex",alignItems:"center",paddingLeft:14}}>
+            <span style={{fontSize:12,fontFamily:"'Cormorant Garamond',serif",fontStyle:"italic",fontWeight:400,color:onSwatch(blank.color)}}>{blank.name||blank.color.toUpperCase()}</span>
+          </div>
           <div style={{display:"flex",gap:8}}>
-            <button onClick={add} disabled={saving} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:saving?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Agregar"}</button>
-            <button onClick={()=>setShow(false)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+            <button onClick={add} disabled={saving} style={{background:R.dark,color:"#fff",border:"none",borderRadius:9,padding:"7px 18px",fontSize:12,cursor:"pointer",opacity:saving?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"Guardando…":"Agregar"}</button>
+            <button onClick={()=>setShow(false)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:9,padding:"7px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
           </div>
         </div>
       )}
-      {palette.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin colores. Agrega la paleta de la boda.</p>}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:10}}>
-        {palette.map(p=>(
-          <div key={p.id} style={{borderRadius:12,overflow:"hidden",border:`1px solid ${R.border}`,background:R.white,position:"relative"}}>
-            <div style={{height:68,background:p.color}} />
-            <div style={{padding:"8px 10px 10px"}}>
-              <p style={{fontSize:12,fontWeight:600,color:R.text,margin:0}}>{p.name||p.color}</p>
-              <p style={{fontSize:10,color:R.muted,margin:"2px 0 0",fontFamily:"monospace"}}>{p.color}</p>
-              {p.notes&&<p style={{fontSize:10,color:R.muted,margin:"2px 0 0"}}>{p.notes}</p>}
-            </div>
-            <button onClick={()=>del(p.id)} style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,.4)",color:"#fff",border:"none",borderRadius:"50%",width:18,height:18,fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+
+      {/* Empty state */}
+      {palette.length===0&&!show&&(
+        <div style={{textAlign:"center",padding:"40px 0",color:R.muted}}>
+          <div style={{display:"flex",gap:6,justifyContent:"center",marginBottom:16}}>
+            {["#c9a96e","#be123c","#fdf6f8","#1a0812","#7f1d3a"].map(c=>(
+              <div key={c} style={{width:32,height:32,borderRadius:"50%",background:c,boxShadow:"0 2px 8px rgba(0,0,0,.12)"}}/>
+            ))}
           </div>
-        ))}
+          <p style={{fontSize:13,margin:"0 0 4px",fontFamily:"'Cormorant Garamond',serif",fontStyle:"italic",fontSize:16,color:R.text2}}>Sin paleta definida</p>
+          <p style={{fontSize:11,margin:0}}>Agrega los colores de la boda para tener todo en un lugar</p>
+        </div>
+      )}
+
+      {/* Swatches grid */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:14}}>
+        {palette.map(p=>{
+          const tc=onSwatch(p.color);
+          const isCopied=copied===p.color;
+          return (
+            <div key={p.id} style={{borderRadius:18,overflow:"hidden",border:`1px solid ${R.border}`,background:R.white,boxShadow:"0 3px 16px rgba(0,0,0,.06)",transition:"transform .18s,box-shadow .18s"}}
+              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 8px 28px rgba(0,0,0,.12)";}}
+              onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 3px 16px rgba(0,0,0,.06)";}}>
+              {/* Swatch block */}
+              <div style={{height:120,background:p.color,position:"relative",cursor:"pointer"}} onClick={()=>copyHex(p.color)}>
+                {/* Name overlay */}
+                {p.name&&(
+                  <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"24px 12px 10px",background:`linear-gradient(transparent,rgba(0,0,0,${tc==="#1a0812"?".08":".35"}))`}}>
+                    <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:15,fontStyle:"italic",fontWeight:400,color:tc,margin:0,lineHeight:1.1,textShadow:tc==="#ffffff"?"0 1px 3px rgba(0,0,0,.4)":"none"}}>{p.name}</p>
+                  </div>
+                )}
+                {/* Copy / hex badge */}
+                <div style={{position:"absolute",top:8,right:8,background:"rgba(0,0,0,.32)",backdropFilter:"blur(4px)",borderRadius:7,padding:"3px 7px",transition:"opacity .2s",opacity:.8}}>
+                  <span style={{fontSize:9,color:"#fff",fontFamily:"monospace",letterSpacing:".05em"}}>{isCopied?"✓ copiado":p.color.toUpperCase()}</span>
+                </div>
+                {/* Delete */}
+                <button onClick={e=>{e.stopPropagation();del(p.id);}}
+                  style={{position:"absolute",top:6,left:6,background:"rgba(0,0,0,.32)",backdropFilter:"blur(4px)",color:"#fff",border:"none",borderRadius:"50%",width:20,height:20,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,opacity:.7}}>×</button>
+              </div>
+              {/* Info below */}
+              <div style={{padding:"10px 12px 12px"}}>
+                <p style={{fontSize:12,fontWeight:600,color:R.text,margin:0,fontFamily:"'Jost',sans-serif"}}>{p.name||"Sin nombre"}</p>
+                <p style={{fontSize:10,color:R.muted,margin:"2px 0 0",fontFamily:"monospace",letterSpacing:".04em"}}>{p.color.toUpperCase()}</p>
+                {p.notes&&<p style={{fontSize:10,color:R.muted,margin:"4px 0 0",fontStyle:"italic",lineHeight:1.3}}>{p.notes}</p>}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1604,36 +1681,46 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
         </div>
         <div style={{padding:20}}>
           {tab==="resumen"&&(
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px 24px"}}>
-              {boda.venue      &&<C label="Venue"       v={boda.venue} />}
-              {boda.responsable&&<C label="Responsable" v={boda.responsable} />}
-              {boda.contact    &&<C label="Contacto"    v={boda.contact} />}
-              {boda.guestCount &&<C label="Invitados"   v={boda.guestCount} />}
-              {boda.budget     &&<C label="Presupuesto" v={`$${fmt$(boda.budget)} USD`} />}
-              {boda.status     &&<C label="Estado"      v={boda.status} />}
-              {boda.notes&&<div style={{gridColumn:"span 2"}}><C label="Notas" v={boda.notes} multi /></div>}
-              <div style={{gridColumn:"span 2",borderTop:`1px solid ${R.border}`,paddingTop:12,marginTop:4,display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                {(()=>{
-                  const num=s=>parseFloat(String(s||"").replace(/,/g,"."))||0;
-                  const budgetTotal=(boda.budgetItems||[]).reduce((s,it)=>s+num(it.budgetAmount),0);
-                  const actualTotal=(boda.budgetItems||[]).reduce((s,it)=>s+num(it.actualCost),0);
-                  const payReceived=(boda.payments||[]).filter(p=>p.received&&p.type!=="Devolución").reduce((s,p)=>s+num(p.amount),0);
-                  const payPending=(boda.payments||[]).filter(p=>!p.received).reduce((s,p)=>s+num(p.amount),0);
-                  return [
-                    {label:"Tareas activas",  n:activeTasks.length,                                                                           color:R.accent},
-                    {label:"Invitados ✅",     n:(boda.guests||[]).filter(g=>g.rsvp==="Confirmado").length+"/"+(boda.guests||[]).length,        color:"#15803d"},
-                    {label:"Proveedores",      n:(boda.suppliers||[]).length,                                                                   color:"#1d4ed8"},
-                    {label:"Presupuesto",      n:budgetTotal>0?`$${(budgetTotal/1000).toFixed(0)}k`:"—",                                        color:R.accent},
-                    {label:"Gasto real",       n:actualTotal>0?`$${(actualTotal/1000).toFixed(0)}k`:"—",                                        color:"#7c3aed"},
-                    {label:payPending>0?"Pago pendiente":"Recibido",n:payPending>0?`$${(payPending/1000).toFixed(0)}k`:`$${(payReceived/1000).toFixed(0)}k`,color:payPending>0?"#92400e":"#166534"},
-                  ];
-                })().map(s=>(
-                  <div key={s.label} style={{textAlign:"center",background:R.cream,borderRadius:10,padding:"10px 8px",border:`1px solid ${R.border}`}}>
-                    <p style={{fontSize:18,fontWeight:700,color:s.color,margin:0,fontVariantNumeric:"tabular-nums"}}>{s.n}</p>
-                    <p style={{fontSize:10,color:R.muted,margin:"2px 0 0"}}>{s.label}</p>
-                  </div>
-                ))}
+            <div>
+              {/* Info fields */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px 32px",marginBottom:20}}>
+                {boda.venue      &&<C label="Venue"       v={boda.venue} />}
+                {boda.responsable&&<C label="Responsable" v={boda.responsable} />}
+                {boda.contact    &&<C label="Contacto"    v={boda.contact} />}
+                {boda.guestCount &&<C label="Invitados estimados" v={boda.guestCount} />}
+                {boda.budget     &&<C label="Presupuesto" v={`$${fmt$(boda.budget)} USD`} />}
+                {boda.status     &&<C label="Estado"      v={boda.status} />}
+                {boda.notes&&<div style={{gridColumn:"span 2"}}><C label="Notas" v={boda.notes} multi /></div>}
               </div>
+              {/* Stats */}
+              {(()=>{
+                const num=s=>parseFloat(String(s||"").replace(/,/g,"."))||0;
+                const budgetTotal=(boda.budgetItems||[]).reduce((s,it)=>s+num(it.budgetAmount),0);
+                const actualTotal=(boda.budgetItems||[]).reduce((s,it)=>s+num(it.actualCost),0);
+                const payReceived=(boda.payments||[]).filter(p=>p.received&&p.type!=="Devolución").reduce((s,p)=>s+num(p.amount),0);
+                const payPending=(boda.payments||[]).filter(p=>!p.received).reduce((s,p)=>s+num(p.amount),0);
+                const gConfirmed=(boda.guests||[]).filter(g=>g.rsvp==="Confirmado").length;
+                const gTotal=(boda.guests||[]).length;
+                const stats=[
+                  {label:"Tareas activas",   n:activeTasks.length,                                                                         accent:R.accent,   icon:"✓"},
+                  {label:"Confirmados",       n:gTotal>0?`${gConfirmed} / ${gTotal}`:"—",                                                  accent:"#15803d",  icon:"👥"},
+                  {label:"Proveedores",       n:(boda.suppliers||[]).length||"—",                                                          accent:"#1d4ed8",  icon:"🤝"},
+                  {label:"Presupuesto",       n:budgetTotal>0?`$${(budgetTotal/1000).toFixed(0)}k`:"—",                                    accent:R.gold,     icon:"$"},
+                  {label:"Gasto real",        n:actualTotal>0?`$${(actualTotal/1000).toFixed(0)}k`:"—",                                    accent:"#7c3aed",  icon:"↗"},
+                  {label:payPending>0?"Por cobrar":"Cobrado",n:payPending>0?`$${(payPending/1000).toFixed(0)}k`:`$${(payReceived/1000).toFixed(0)}k`,accent:payPending>0?"#92400e":"#166534",icon:"💰"},
+                ];
+                return (
+                  <div style={{borderTop:`1px solid ${R.border}`,paddingTop:16,display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+                    {stats.map(s=>(
+                      <div key={s.label} style={{borderRadius:14,padding:"12px 14px",background:R.white,border:`1px solid ${R.border}`,borderLeft:`3px solid ${s.accent}`,position:"relative",overflow:"hidden"}}>
+                        <div style={{position:"absolute",top:8,right:10,fontSize:16,opacity:.12,lineHeight:1}}>{s.icon}</div>
+                        <p style={{fontSize:20,fontWeight:700,color:s.accent,margin:"0 0 3px",fontVariantNumeric:"tabular-nums",fontFamily:"'Cormorant Garamond',serif"}}>{s.n}</p>
+                        <p style={{fontSize:10,color:R.muted,margin:0,letterSpacing:".03em",textTransform:"uppercase"}}>{s.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           )}
           {tab==="tareas"      &&<TasksTab        boda={boda} users={users} onPatch={handlePatch} />}
@@ -1658,8 +1745,8 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
 function C({label,v,multi}) {
   return (
     <div>
-      <span style={{display:"block",fontSize:11,color:R.muted,marginBottom:2}}>{label}</span>
-      <p style={{fontSize:13,color:R.text,margin:0,whiteSpace:multi?"pre-line":"normal"}}>{v}</p>
+      <span style={{display:"block",fontSize:10,color:R.muted,marginBottom:3,textTransform:"uppercase",letterSpacing:".07em",fontFamily:"'Jost',sans-serif",fontWeight:600}}>{label}</span>
+      <p style={{fontSize:14,color:R.text,margin:0,whiteSpace:multi?"pre-line":"normal",lineHeight:1.45,fontFamily:"'Jost',sans-serif"}}>{v}</p>
     </div>
   );
 }
