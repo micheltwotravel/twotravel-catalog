@@ -526,17 +526,59 @@ function LlamadasTab({ boda, onPatch }) {
 const M_CATS=["General","Novios","Proveedores","Coordinación","Música","Fotos/Video","Protocolo"];
 const M_COLORS={"General":{bg:"#f5f5f4",color:"#57534e"},"Novios":{bg:"#fff0f3",color:"#be123c"},"Proveedores":{bg:"#fffbeb",color:"#b45309"},"Coordinación":{bg:"#eff6ff",color:"#1d4ed8"},"Música":{bg:"#f5f3ff",color:"#7c3aed"},"Fotos/Video":{bg:"#f0fdfa",color:"#0f766e"},"Protocolo":{bg:"#fff7ed",color:"#c2410c"}};
 
+const TL_HIGHLIGHTS=[
+  {label:"Sin resaltar",value:""},
+  {label:"Rosa",value:"#fce7f3"},
+  {label:"Dorado",value:"#fef3c7"},
+  {label:"Azul",value:"#dbeafe"},
+  {label:"Verde",value:"#dcfce7"},
+  {label:"Lila",value:"#ede9fe"},
+];
+
 function TimelineTab({ boda, onScheduleChange }) {
   const [schedule,setSchedule]=useState(boda.schedule||[]);
   const [show,setShow]=useState(false);
   const [saving,setSaving]=useState(false);
+  const [editing,setEditing]=useState(null);
   const [view,setView]=useState("interno");
-  const [blank,setBlank]=useState({time:"",description:"",assignedTo:"",notes:"",category:"General",isInternal:false,isHighlight:false});
+  const BLANK={time:"",description:"",assignedTo:"",notes:"",category:"General",isInternal:false,isHighlight:false,highlightColor:""};
+  const [blank,setBlank]=useState(BLANK);
   const sorted=[...schedule].sort((a,b)=>(a.time||"").localeCompare(b.time||""));
   const visible=view==="cliente"?sorted.filter(e=>!e.isInternal):sorted;
   async function persist(u){ setSchedule(u); onScheduleChange(u); await apiUpdateSchedule(boda.id,u); }
-  async function add(){ if(!blank.time||!blank.description.trim()) return; setSaving(true); try{await persist([...schedule,{...blank,id:uid()}]); setBlank({time:"",description:"",assignedTo:"",notes:"",category:"General",isInternal:false,isHighlight:false}); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
+  async function add(){ if(!blank.time||!blank.description.trim()) return; setSaving(true); try{await persist([...schedule,{...blank,id:uid()}]); setBlank(BLANK); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
+  async function saveEdit(){ if(!editing||!editing.time||!editing.description.trim()) return; setSaving(true); try{await persist(schedule.map(e=>e.id===editing.id?editing:e)); setEditing(null);}catch(e){alert("Error: "+e.message);} setSaving(false); }
   async function del(id){ try{await persist(schedule.filter(e=>e.id!==id));}catch{setSchedule(schedule);} }
+
+  function EventForm({val,setVal,onSubmit,onCancel,submitLabel}){
+    return(
+      <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+          <input type="time" style={INP_SM} value={val.time} onChange={e=>setVal(p=>({...p,time:e.target.value}))} />
+          <select style={INP_SM} value={val.category} onChange={e=>setVal(p=>({...p,category:e.target.value}))}>{M_CATS.map(c=><option key={c}>{c}</option>)}</select>
+          <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={val.description} onChange={e=>setVal(p=>({...p,description:e.target.value}))} placeholder="Descripción del evento *" /></div>
+          <input style={INP_SM} value={val.assignedTo} onChange={e=>setVal(p=>({...p,assignedTo:e.target.value}))} placeholder="Responsable" />
+          <input style={INP_SM} value={val.notes} onChange={e=>setVal(p=>({...p,notes:e.target.value}))} placeholder="Notas" />
+          <div style={{gridColumn:"span 2",display:"flex",flexWrap:"wrap",gap:10,alignItems:"center"}}>
+            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={val.isInternal} onChange={e=>setVal(p=>({...p,isInternal:e.target.checked}))} /> Solo interno</label>
+            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={val.isHighlight} onChange={e=>setVal(p=>({...p,isHighlight:e.target.checked}))} /> ⭐ Destacado</label>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
+              <span style={{fontSize:11,color:R.muted}}>🖍 Resaltar:</span>
+              {TL_HIGHLIGHTS.map(h=>(
+                <button key={h.value} title={h.label} onClick={()=>setVal(p=>({...p,highlightColor:h.value}))}
+                  style={{width:18,height:18,borderRadius:4,border:val.highlightColor===h.value?`2px solid ${R.accent}`:"1px solid #ddd",background:h.value||"#fff",cursor:"pointer",padding:0,flexShrink:0}} />
+              ))}
+            </div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={onSubmit} disabled={saving||!val.time||!val.description.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!val.time||!val.description.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":submitLabel}</button>
+          <button onClick={onCancel} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
@@ -549,40 +591,25 @@ function TimelineTab({ boda, onScheduleChange }) {
         </div>
         <div style={{display:"flex",gap:8}}>
           {sorted.length>0&&<button onClick={()=>window.print()} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>🖨</button>}
-          <button onClick={()=>setShow(v=>!v)} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Agregar</button>
+          <button onClick={()=>{setShow(v=>!v);setEditing(null);}} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Agregar</button>
         </div>
       </div>
-      {show&&(
-        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-            <input type="time" style={INP_SM} value={blank.time}        onChange={e=>setBlank(p=>({...p,time:e.target.value}))} />
-            <select style={INP_SM} value={blank.category} onChange={e=>setBlank(p=>({...p,category:e.target.value}))}>{M_CATS.map(c=><option key={c}>{c}</option>)}</select>
-            <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.description} onChange={e=>setBlank(p=>({...p,description:e.target.value}))} placeholder="Descripción del evento *" /></div>
-            <input style={INP_SM} value={blank.assignedTo} onChange={e=>setBlank(p=>({...p,assignedTo:e.target.value}))} placeholder="Responsable" />
-            <input style={INP_SM} value={blank.notes}      onChange={e=>setBlank(p=>({...p,notes:e.target.value}))}      placeholder="Notas" />
-            <div style={{gridColumn:"span 2",display:"flex",gap:16}}>
-              <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={blank.isInternal} onChange={e=>setBlank(p=>({...p,isInternal:e.target.checked}))} /> Solo interno (no aparece en vista cliente)</label>
-              <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={blank.isHighlight} onChange={e=>setBlank(p=>({...p,isHighlight:e.target.checked}))} /> ⭐ Destacado</label>
-            </div>
-          </div>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={add} disabled={saving||!blank.time||!blank.description.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.time||!blank.description.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Agregar"}</button>
-            <button onClick={()=>setShow(false)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
-          </div>
-        </div>
-      )}
+      {show&&!editing&&<EventForm val={blank} setVal={setBlank} onSubmit={add} onCancel={()=>setShow(false)} submitLabel="Agregar" />}
+      {editing&&<EventForm val={editing} setVal={v=>setEditing(p=>({...p,...(typeof v==="function"?v(p):v)}))} onSubmit={saveEdit} onCancel={()=>setEditing(null)} submitLabel="Guardar" />}
       {visible.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>{sorted.length===0?"Sin eventos. Agrega el primero arriba.":"No hay eventos para la vista cliente."}</p>}
       <div style={{position:"relative"}}>
         {visible.length>0&&<div style={{position:"absolute",left:55,top:8,bottom:8,width:1,background:R.border}} />}
         {visible.map(ev=>{
           const cs=M_COLORS[ev.category]||M_COLORS["General"];
           const hl=!!ev.isHighlight;
+          const hlBg=ev.highlightColor||(hl?"#fffbf0":ev.isInternal?"#fafafa":R.white);
+          const hlBd=ev.highlightColor?R.gold:hl?R.gold:ev.isInternal?"#e5e7eb":R.border;
           return (
             <div key={ev.id} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:10}}>
               <div style={{width:54,textAlign:"right",flexShrink:0,paddingTop:10}}><span style={{fontSize:12,fontFamily:"'Jost',sans-serif",fontWeight:600,color:R.text,letterSpacing:".02em",fontVariantNumeric:"tabular-nums"}}>{ev.time}</span></div>
               <div style={{display:"flex",alignItems:"flex-start",gap:10,flex:1,minWidth:0}}>
-                <div style={{width:10,height:10,borderRadius:"50%",background:hl?R.gold:R.accent,flexShrink:0,marginTop:12,zIndex:1,boxShadow:`0 0 0 3px ${hl?"rgba(201,169,110,.2)":R.light}`}} />
-                <div style={{flex:1,background:hl?"#fffbf0":ev.isInternal?"#fafafa":R.white,border:`1px solid ${hl?R.gold:ev.isInternal?"#e5e7eb":R.border}`,borderRadius:12,padding:"10px 14px",minWidth:0}}>
+                <div style={{width:10,height:10,borderRadius:"50%",background:hl||ev.highlightColor?R.gold:R.accent,flexShrink:0,marginTop:12,zIndex:1,boxShadow:`0 0 0 3px ${hl||ev.highlightColor?"rgba(201,169,110,.2)":R.light}`}} />
+                <div style={{flex:1,background:hlBg,border:`1px solid ${hlBd}`,borderRadius:12,padding:"10px 14px",minWidth:0,borderLeft:ev.highlightColor?`4px solid ${R.gold}`:undefined}}>
                   <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
@@ -594,7 +621,10 @@ function TimelineTab({ boda, onScheduleChange }) {
                       {ev.assignedTo&&<p style={{fontSize:11,color:R.muted,margin:"3px 0 0"}}>👤 {ev.assignedTo}</p>}
                       {ev.notes     &&<p style={{fontSize:11,color:R.muted,margin:"2px 0 0"}}>{ev.notes}</p>}
                     </div>
-                    <button onClick={()=>del(ev.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:14,flexShrink:0,marginTop:2}}>✕</button>
+                    <div style={{display:"flex",gap:4,flexShrink:0}}>
+                      <button onClick={()=>{setEditing({...ev});setShow(false);}} style={{color:R.muted,background:"none",border:"none",cursor:"pointer",fontSize:12,padding:"0 3px"}}>✏️</button>
+                      <button onClick={()=>del(ev.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:14,padding:"0 2px"}}>✕</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1662,49 +1692,68 @@ export default function BodaPanel({ currentUser, onLogout }) {
             <p style={{fontSize:14,color:R.muted}}>{bodas.length===0?"Aún no hay bodas. Crea la primera arriba.":"Sin resultados para esa búsqueda."}</p>
           </div>
         ):(
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:20}}>
             {filtered.map(boda=>{
               const days=daysUntil(boda.weddingDate);
               const ph=FASE_COLORS[boda.phase]||{bg:"#f5f5f4",color:"#57534e"};
               const active=(boda.tasks||[]).filter(t=>!["Terminado","Cancelado"].includes(t.status));
               const late=active.filter(t=>{ if(!t.dueDate) return false; const d=new Date(t.dueDate+"T12:00:00"); d.setHours(0,0,0,0); return d<today; });
-              const contratado=(boda.suppliers||[]).filter(s=>["Contratado","Pagado"].includes(s.status)).length;
+              const confirmed=(boda.guests||[]).filter(g=>g.rsvp==="Confirmado").length;
+              const initials=boda.clienteName.split(/[&,\/\s]+/).filter(Boolean).map(w=>w[0]?.toUpperCase()||"").slice(0,2).join("");
               return (
                 <div key={boda.id} onClick={()=>setSelected(boda)}
-                  style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:14,padding:"14px 18px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",transition:"border-color .15s,box-shadow .15s"}}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor=R.mid;e.currentTarget.style.boxShadow="0 2px 16px rgba(190,18,60,.08)";}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor=R.border;e.currentTarget.style.boxShadow="none";}}>
-                  <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:"8px 12px",textAlign:"center",flexShrink:0,minWidth:56}}>
-                    {boda.weddingDate?(
-                      <>
-                        <p style={{fontSize:11,color:R.muted,margin:0,lineHeight:1}}>{fmtDate(boda.weddingDate).split(" ")[1]?.toUpperCase()||""}</p>
-                        <p style={{fontSize:20,fontWeight:700,color:R.accent,margin:"2px 0 0",fontFamily:"'Cormorant Garamond',serif",lineHeight:1}}>{fmtDate(boda.weddingDate).split(" ")[0]}</p>
-                      </>
-                    ):<p style={{fontSize:20,margin:0}}>💍</p>}
-                  </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}}>
-                      <p style={{fontSize:15,fontWeight:600,color:R.text,margin:0}}>{boda.clienteName}</p>
-                      <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:ph.bg,color:ph.color}}>{boda.phase}</span>
-                      {late.length>0&&<span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:"#fff1f2",color:"#be123c"}}>⚠️ {late.length} atrasada{late.length>1?"s":""}</span>}
+                  style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:20,overflow:"hidden",cursor:"pointer",transition:"transform .18s,box-shadow .18s,border-color .18s",display:"flex",flexDirection:"column"}}
+                  onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 8px 32px rgba(127,29,58,.13)";e.currentTarget.style.borderColor=R.mid;}}
+                  onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";e.currentTarget.style.borderColor=R.border;}}>
+                  {/* Photo / cover area */}
+                  <div style={{position:"relative",height:160,background:`linear-gradient(135deg,${R.dark} 0%,${R.mid} 100%)`,flexShrink:0}}>
+                    {boda.coverPhoto?(
+                      <img src={boda.coverPhoto} alt={boda.clienteName} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} onError={e=>{e.target.style.display="none";}} />
+                    ):(
+                      <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        <div style={{width:72,height:72,borderRadius:"50%",background:"rgba(255,255,255,.12)",border:"2px solid rgba(201,169,110,.5)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:500,color:R.gold,letterSpacing:".04em"}}>{initials||"💍"}</span>
+                        </div>
+                      </div>
+                    )}
+                    {/* Days badge */}
+                    {days!==null&&(
+                      <div style={{position:"absolute",top:10,right:10,background:days<0?"rgba(0,0,0,.55)":days<=30?"rgba(190,18,60,.85)":"rgba(26,8,18,.75)",backdropFilter:"blur(6px)",borderRadius:10,padding:"4px 10px",textAlign:"center"}}>
+                        <p style={{fontSize:9,color:"rgba(255,255,255,.7)",margin:0,textTransform:"uppercase",letterSpacing:".06em",lineHeight:1}}>{days<0?"boda":"faltan"}</p>
+                        <p style={{fontSize:15,fontWeight:700,color:"#fff",margin:"1px 0 0",fontVariantNumeric:"tabular-nums",lineHeight:1}}>{days<0?`hace ${Math.abs(days)}d`:`${days}d`}</p>
+                      </div>
+                    )}
+                    {/* Phase badge */}
+                    <div style={{position:"absolute",top:10,left:10,background:"rgba(255,255,255,.9)",borderRadius:99,padding:"3px 10px"}}>
+                      <span style={{fontSize:9,fontWeight:700,color:ph.color,textTransform:"uppercase",letterSpacing:".05em"}}>{boda.phase}</span>
                     </div>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:"2px 12px",fontSize:12,color:R.muted}}>
-                      {days!==null&&days>=0&&<span>⏳ {days}d</span>}
-                      {days!==null&&days<0 &&<span>Hace {Math.abs(days)}d</span>}
-                      {boda.venue      &&<span>📍 {boda.venue}</span>}
+                    {/* Late tasks warning */}
+                    {late.length>0&&(
+                      <div style={{position:"absolute",bottom:10,left:10,background:"rgba(190,18,60,.9)",borderRadius:99,padding:"3px 10px"}}>
+                        <span style={{fontSize:9,fontWeight:700,color:"#fff"}}>⚠️ {late.length} atrasada{late.length>1?"s":""}</span>
+                      </div>
+                    )}
+                    {/* Delete btn */}
+                    <button onClick={e=>handleDelete(e,boda)}
+                      style={{position:"absolute",bottom:8,right:8,width:26,height:26,borderRadius:"50%",background:"rgba(0,0,0,.4)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"rgba(255,255,255,.7)",transition:"background .15s"}}
+                      onMouseEnter={e=>{e.currentTarget.style.background="rgba(220,38,38,.8)";e.currentTarget.style.color="#fff";}}
+                      onMouseLeave={e=>{e.currentTarget.style.background="rgba(0,0,0,.4)";e.currentTarget.style.color="rgba(255,255,255,.7)";}}>🗑</button>
+                  </div>
+                  {/* Card body */}
+                  <div style={{padding:"14px 16px",flex:1,display:"flex",flexDirection:"column",gap:6}}>
+                    <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:19,fontWeight:600,color:R.text,margin:0,lineHeight:1.2}}>{boda.clienteName}</p>
+                    {boda.weddingDate&&<p style={{fontSize:11,color:R.muted,margin:0}}>💍 {fmtDate(boda.weddingDate)}</p>}
+                    <div style={{display:"flex",flexWrap:"wrap",gap:"4px 10px",fontSize:11,color:R.text2,marginTop:2}}>
+                      {boda.venue&&<span style={{display:"flex",alignItems:"center",gap:3}}>📍 {boda.venue}</span>}
                       {boda.responsable&&<span>👤 {boda.responsable}</span>}
-                      {boda.guestCount &&<span>👥 {boda.guestCount}</span>}
-                      {contratado>0    &&<span>🤝 {contratado} contratado{contratado>1?"s":""}</span>}
+                    </div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:"auto",paddingTop:8,borderTop:`1px solid ${R.border}`}}>
+                      {active.length>0&&<span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:R.light,color:R.accent}}>{active.length} tarea{active.length>1?"s":""}</span>}
+                      {confirmed>0&&<span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:"#f0fdf4",color:"#15803d"}}>✓ {confirmed} confirmados</span>}
+                      {boda.guestCount&&!confirmed&&<span style={{fontSize:10,padding:"2px 8px",borderRadius:99,background:R.cream,color:R.muted}}>👥 {boda.guestCount}</span>}
+                      <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,marginLeft:"auto",background:boda.status==="Activa"?"#f0fdf4":boda.status==="En pausa"?"#fffbeb":"#f5f5f4",color:boda.status==="Activa"?"#15803d":boda.status==="En pausa"?"#b45309":"#57534e"}}>{boda.status}</span>
                     </div>
                   </div>
-                  <div style={{textAlign:"right",flexShrink:0,minWidth:64}}>
-                    {active.length>0&&<p style={{fontSize:12,color:R.muted,margin:"0 0 2px"}}>{active.length} tarea{active.length>1?"s":""}</p>}
-                    <span style={{fontSize:11,fontWeight:600,color:boda.status==="Activa"?"#16a34a":boda.status==="En pausa"?"#d97706":R.muted}}>{boda.status}</span>
-                  </div>
-                  <button onClick={e=>handleDelete(e,boda)}
-                    style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:16,padding:"0 4px",flexShrink:0}}
-                    onMouseEnter={e=>e.currentTarget.style.color="#dc2626"}
-                    onMouseLeave={e=>e.currentTarget.style.color=R.border}>🗑</button>
                 </div>
               );
             })}
