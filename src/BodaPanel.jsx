@@ -1174,140 +1174,260 @@ function DesignStudioTab({ boda, onPatch }) {
 // ─── MESAS / SEATING ─────────────────────────────────────────────────────────
 const TABLE_SHAPES=["Redonda","Rectangular","Cuadrada","Imperial"];
 
+// SVG table-with-chairs renderer
+function TableViz({table, tGuests, isSelected}) {
+  const total=table.seats, filled=tGuests.length;
+  const ratio=filled/Math.max(1,total);
+  const chairCol=ratio>=1?"#ef4444":ratio>0.7?"#f59e0b":"#4ade80";
+  const emptyCol="#d1d5db";
+  const stroke=isSelected?R.accent:ratio>=1?"#ef4444":ratio>0?"#22c55e":R.border;
+  const tableBg=ratio>=1?"#fef2f2":ratio>0?"#f0fdf4":"#fff";
+  const nameText=table.name.length>8?table.name.slice(0,7)+"…":table.name;
+
+  if(table.shape==="Redonda"){
+    const shown=Math.min(total,16);
+    const Rt=26, Rc=40, rc=5.5;
+    const sz=(Rc+rc+4)*2; const cx=sz/2, cy=sz/2;
+    return (
+      <svg width={sz} height={sz} style={{display:"block",overflow:"visible"}}>
+        {Array.from({length:shown},(_,i)=>{
+          const a=(i/shown)*2*Math.PI-Math.PI/2;
+          return <circle key={i} cx={cx+Rc*Math.cos(a)} cy={cy+Rc*Math.sin(a)} r={rc} fill={i<filled?chairCol:emptyCol} stroke="rgba(0,0,0,.12)" strokeWidth={0.5}/>;
+        })}
+        <circle cx={cx} cy={cy} r={Rt} fill={tableBg} stroke={stroke} strokeWidth={isSelected?2:1.5}/>
+        <text x={cx} y={cy-3} textAnchor="middle" fontSize={8} fontFamily="'Jost',sans-serif" fontWeight="700" fill={R.text}>{nameText}</text>
+        <text x={cx} y={cy+8} textAnchor="middle" fontSize={7} fontFamily="'Jost',sans-serif" fill={R.muted}>{filled}/{total}</text>
+      </svg>
+    );
+  }
+  // Rectangular / Cuadrada / Imperial
+  const perTop=Math.ceil(total/2), perBot=total-perTop;
+  const cw=10,ch=7,gap=3;
+  const tableW=table.shape==="Imperial"?Math.max(100,perTop*(cw+gap)+8):Math.max(64,perTop*(cw+gap)+8);
+  const tableH=table.shape==="Imperial"?18:26;
+  const svgW=tableW+8, svgH=tableH+2*(ch+gap+6);
+  const ty=ch+gap+4;
+  return (
+    <svg width={svgW} height={svgH} style={{display:"block",overflow:"visible"}}>
+      {Array.from({length:perTop},(_,i)=><rect key={`t${i}`} x={4+i*(cw+gap)} y={2} width={cw} height={ch} rx={2} fill={i<Math.ceil(filled/2)?chairCol:emptyCol} stroke="rgba(0,0,0,.12)" strokeWidth={0.5}/>)}
+      {Array.from({length:perBot},(_,i)=><rect key={`b${i}`} x={4+i*(cw+gap)} y={ty+tableH+gap} width={cw} height={ch} rx={2} fill={perTop+i<filled?chairCol:emptyCol} stroke="rgba(0,0,0,.12)" strokeWidth={0.5}/>)}
+      <rect x={2} y={ty} width={tableW} height={tableH} rx={table.shape==="Imperial"?3:5} fill={tableBg} stroke={stroke} strokeWidth={isSelected?2:1.5}/>
+      <text x={2+tableW/2} y={ty+tableH/2-2} textAnchor="middle" fontSize={7} fontFamily="'Jost',sans-serif" fontWeight="700" fill={R.text}>{nameText}</text>
+      <text x={2+tableW/2} y={ty+tableH/2+7} textAnchor="middle" fontSize={6} fontFamily="'Jost',sans-serif" fill={R.muted}>{filled}/{total}</text>
+    </svg>
+  );
+}
+
 function SeatingTab({ boda, onPatch }) {
-  const [seating,setSeating]=useState(boda.seating||[]);
+  const [seating,setSeating]=useState(()=>(boda.seating||[]).map((t,i)=>({x:80+(i%4)*170,y:60+Math.floor(i/4)*160,...t})));
   const [guests,setGuests]=useState(boda.guests||[]);
-  const [show,setShow]=useState(false);
+  const [floorUrl,setFloorUrl]=useState(()=>{ try{return localStorage.getItem("tt_floor_"+boda.id)||"";}catch{return "";} });
+  const [showNew,setShowNew]=useState(false);
+  const [showFloor,setShowFloor]=useState(false);
   const [saving,setSaving]=useState(false);
-  const [view,setView]=useState("mesas");
-  const BLANK={name:"",shape:"Redonda",seats:8,notes:""};
+  const [selected,setSelected]=useState(null);
+  const [drag,setDrag]=useState(null); // {id, ox, oy}
+  const canvasRef=useRef(null);
+  const seatingRef=useRef(seating);
+  seatingRef.current=seating; // always current for async handlers
+
+  const BLANK={name:"",shape:"Redonda",seats:8};
   const [blank,setBlank]=useState(BLANK);
 
-  async function persistSeating(u){ setSeating(u); onPatch({seating:u}); await apiSaveNotes(boda.id,{...boda,seating:u}); }
-  async function persistGuests(u){ setGuests(u); onPatch({guests:u}); await apiSaveNotes(boda.id,{...boda,guests:u}); }
-  async function addTable(){ if(!blank.name.trim()) return; setSaving(true); try{await persistSeating([...seating,{...blank,id:uid()}]); setBlank(BLANK); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
-  async function delTable(id){ try{await persistSeating(seating.filter(t=>t.id!==id)); await persistGuests(guests.map(g=>g.tableId===id?{...g,tableId:""}:g));}catch{} }
-  async function assignGuest(guestId,tableId){ const u=guests.map(g=>g.id===guestId?{...g,tableId}:g); try{await persistGuests(u);}catch{} }
+  async function saveSeating(s){ setSeating(s); onPatch({seating:s}); await apiSaveNotes(boda.id,{...boda,seating:s}); }
+  async function saveGuests(g){ setGuests(g); onPatch({guests:g}); await apiSaveNotes(boda.id,{...boda,guests:g}); }
+
+  async function addTable(){
+    if(!blank.name.trim()) return; setSaving(true);
+    const placed=seatingRef.current;
+    const newT={...blank,id:uid(),x:80+(placed.length%4)*170,y:60+Math.floor(placed.length/4)*160};
+    try{await saveSeating([...placed,newT]);setBlank(BLANK);setShowNew(false);}catch(e){alert(e.message);}
+    setSaving(false);
+  }
+  async function delTable(id){
+    try{
+      await saveSeating(seatingRef.current.filter(t=>t.id!==id));
+      await saveGuests(guests.map(g=>g.tableId===id?{...g,tableId:""}:g));
+      setSelected(null);
+    }catch{}
+  }
+  async function assignGuest(gId,tId){ const u=guests.map(g=>g.id===gId?{...g,tableId:tId}:g); try{await saveGuests(u);}catch{} }
+
+  // Drag
+  function onTblDown(e,tbl){
+    e.preventDefault(); e.stopPropagation();
+    if(!canvasRef.current) return;
+    const r=canvasRef.current.getBoundingClientRect();
+    setDrag({id:tbl.id,ox:e.clientX-r.left-tbl.x,oy:e.clientY-r.top-tbl.y});
+  }
+  function onCanvasMove(e){
+    if(!drag||!canvasRef.current) return;
+    const r=canvasRef.current.getBoundingClientRect();
+    const nx=Math.max(0,Math.min(r.width-100,e.clientX-r.left-drag.ox));
+    const ny=Math.max(0,Math.min(r.height-80,e.clientY-r.top-drag.oy));
+    setSeating(prev=>prev.map(t=>t.id===drag.id?{...t,x:nx,y:ny}:t));
+  }
+  async function onCanvasUp(){
+    if(!drag) return;
+    setDrag(null);
+    const s=seatingRef.current;
+    onPatch({seating:s});
+    try{await apiSaveNotes(boda.id,{...boda,seating:s});}catch{}
+  }
+
+  // Floor plan
+  function handleFloorFile(e){
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const url=ev.target.result;
+      setFloorUrl(url);
+      try{localStorage.setItem("tt_floor_"+boda.id,url);}catch{}
+    };
+    reader.readAsDataURL(file);
+  }
+  function clearFloor(){ setFloorUrl(""); try{localStorage.removeItem("tt_floor_"+boda.id);}catch{} }
 
   const assigned=guests.filter(g=>g.tableId&&seating.find(t=>t.id===g.tableId));
   const unassigned=guests.filter(g=>!g.tableId||!seating.find(t=>t.id===g.tableId));
-
-  const shapeStyle=(shape)=>{
-    if(shape==="Redonda") return {borderRadius:"50%"};
-    if(shape==="Cuadrada") return {borderRadius:6};
-    if(shape==="Imperial") return {borderRadius:4,width:120};
-    return {borderRadius:4};
-  };
+  const selTable=selected?seating.find(t=>t.id===selected):null;
+  const selGuests=selTable?guests.filter(g=>g.tableId===selTable.id):[];
 
   return (
     <div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{seating.length} mesa{seating.length!==1?"s":" "} · {assigned.length}/{guests.length} asignados</span>
-        </div>
-        <div style={{display:"flex",gap:6}}>
-          {[["mesas","Mesas"],["plano","Plano"]].map(([v,l])=>(
-            <button key={v} onClick={()=>setView(v)} style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${view===v?R.accent:R.border}`,background:view===v?R.accent:"transparent",color:view===v?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600}}>{l}</button>
-          ))}
-          <button onClick={()=>setShow(v=>!v)} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Mesa</button>
-        </div>
+      {/* Toolbar */}
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+        <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{seating.length} mesa{seating.length!==1?"s":""} · {assigned.length}/{guests.length} asignados</span>
+        <div style={{flex:1}}/>
+        <button onClick={()=>setShowFloor(v=>!v)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 10px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>🗺 Plano de fondo</button>
+        <button onClick={()=>{setShowNew(v=>!v);setSelected(null);}} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600}}>+ Mesa</button>
       </div>
 
-      {show&&(
-        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
-            <input style={INP_SM} value={blank.name}  onChange={e=>setBlank(p=>({...p,name:e.target.value}))}  placeholder="Nombre de mesa *" />
+      {/* Floor plan URL */}
+      {showFloor&&(
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:12,marginBottom:12,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+          <span style={{fontSize:11,color:R.muted,flexShrink:0}}>Subir imagen del salón:</span>
+          <label style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:11,color:R.accent,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+            📎 Elegir archivo
+            <input type="file" accept="image/*" onChange={handleFloorFile} style={{display:"none"}} />
+          </label>
+          {floorUrl&&<button onClick={clearFloor} style={{background:"none",border:"none",color:"#dc2626",cursor:"pointer",fontSize:12}}>✕ Quitar</button>}
+          <button onClick={()=>setShowFloor(false)} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:11,marginLeft:"auto"}}>Cerrar</button>
+        </div>
+      )}
+
+      {/* New table form */}
+      {showNew&&(
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 80px",gap:8,marginBottom:8}}>
+            <input style={INP_SM} value={blank.name} onChange={e=>setBlank(p=>({...p,name:e.target.value}))} placeholder="Nombre *" autoFocus />
             <select style={INP_SM} value={blank.shape} onChange={e=>setBlank(p=>({...p,shape:e.target.value}))}>{TABLE_SHAPES.map(s=><option key={s}>{s}</option>)}</select>
-            <input type="number" style={INP_SM} value={blank.seats} onChange={e=>setBlank(p=>({...p,seats:parseInt(e.target.value)||8}))} placeholder="Puestos" min={1} max={40} />
-            <div style={{gridColumn:"span 3"}}><input style={INP_SM} value={blank.notes} onChange={e=>setBlank(p=>({...p,notes:e.target.value}))} placeholder="Notas (zona VIP, terraza...)" /></div>
+            <input type="number" style={INP_SM} value={blank.seats} onChange={e=>setBlank(p=>({...p,seats:Math.max(1,parseInt(e.target.value)||8)}))} min={1} max={40} />
           </div>
           <div style={{display:"flex",gap:8}}>
-            <button onClick={addTable} disabled={saving||!blank.name.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.name.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Crear mesa"}</button>
-            <button onClick={()=>setShow(false)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+            <button onClick={addTable} disabled={saving||!blank.name.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.name.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Crear"}</button>
+            <button onClick={()=>setShowNew(false)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
           </div>
         </div>
       )}
 
-      {/* List view */}
-      {view==="mesas"&&(
-        <div>
-          {seating.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin mesas. Crea la primera arriba para empezar a asignar invitados.</p>}
+      {/* ── CANVAS ── */}
+      <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+        {/* Floor plan canvas */}
+        <div
+          ref={canvasRef}
+          style={{flex:1,position:"relative",minHeight:480,background:"#f5f0f2",borderRadius:16,border:`2px dashed ${R.border}`,overflow:"hidden",cursor:drag?"grabbing":"default",userSelect:"none"}}
+          onMouseMove={onCanvasMove}
+          onMouseUp={onCanvasUp}
+          onMouseLeave={onCanvasUp}
+          onClick={()=>setSelected(null)}
+        >
+          {/* Floor plan background */}
+          {floorUrl&&<img src={floorUrl} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"contain",opacity:.25,pointerEvents:"none"}} />}
+
+          {/* Room walls hint */}
+          {!floorUrl&&seating.length===0&&(
+            <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,pointerEvents:"none"}}>
+              <span style={{fontSize:40}}>🏛</span>
+              <p style={{fontSize:13,color:R.muted,margin:0,fontFamily:"'Jost',sans-serif"}}>Agrega mesas con el botón de arriba</p>
+              <p style={{fontSize:11,color:R.border,margin:0}}>Arrastra para acomodar el salón · Click para asignar invitados</p>
+            </div>
+          )}
+
+          {/* Tables */}
           {seating.map(tbl=>{
-            const tGuests=guests.filter(g=>g.tableId===tbl.id);
-            const free=tbl.seats-tGuests.length;
+            const tG=guests.filter(g=>g.tableId===tbl.id);
+            const isSel=selected===tbl.id;
             return (
-              <div key={tbl.id} style={{border:`1px solid ${R.border}`,borderRadius:14,marginBottom:12,overflow:"hidden",background:R.white}}>
-                <div style={{background:R.cream,padding:"10px 14px",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${R.border}`}}>
-                  <div style={{width:28,height:28,background:R.accent,...shapeStyle(tbl.shape),flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <span style={{fontSize:9,fontWeight:700,color:"#fff"}}>{tGuests.length}</span>
-                  </div>
-                  <div style={{flex:1}}>
-                    <span style={{fontSize:13,fontWeight:700,color:R.text}}>{tbl.name}</span>
-                    <span style={{fontSize:11,color:R.muted,marginLeft:8}}>{tbl.shape} · {tGuests.length}/{tbl.seats} puestos · {free>0?`${free} libre${free>1?"s":""}`:free===0?"completa":"⚠️ excedida"}</span>
-                  </div>
-                  <button onClick={()=>delTable(tbl.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:13,flexShrink:0}}>✕</button>
-                </div>
-                <div style={{padding:"10px 14px"}}>
-                  {tGuests.length===0&&<p style={{fontSize:11,color:R.muted,fontStyle:"italic",margin:0}}>Sin invitados asignados.</p>}
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:tGuests.length>0?8:0}}>
-                    {tGuests.map(g=>(
-                      <div key={g.id} style={{display:"flex",alignItems:"center",gap:4,background:R.light,borderRadius:99,padding:"3px 10px",border:`1px solid ${R.border}`}}>
-                        <span style={{fontSize:12,color:R.text}}>{g.name}</span>
-                        <button onClick={()=>assignGuest(g.id,"")} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:11,padding:0,lineHeight:1}}>✕</button>
-                      </div>
-                    ))}
-                  </div>
-                  {unassigned.length>0&&(
-                    <select onChange={e=>{if(e.target.value){assignGuest(e.target.value,tbl.id);e.target.value="";}}} style={{...INP_SM,width:"auto",fontSize:11}} defaultValue="">
-                      <option value="">+ Asignar invitado...</option>
-                      {unassigned.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
-                    </select>
-                  )}
-                </div>
+              <div key={tbl.id}
+                style={{position:"absolute",left:tbl.x||50,top:tbl.y||50,cursor:drag?.id===tbl.id?"grabbing":"grab",zIndex:isSel?10:1,filter:isSel?"drop-shadow(0 4px 12px rgba(190,18,60,.3))":"drop-shadow(0 2px 4px rgba(0,0,0,.15))"}}
+                onMouseDown={e=>onTblDown(e,tbl)}
+                onClick={e=>{e.stopPropagation();setSelected(isSel?null:tbl.id);}}>
+                <TableViz table={tbl} tGuests={tG} isSelected={isSel}/>
               </div>
             );
           })}
-          {unassigned.length>0&&seating.length>0&&(
-            <div style={{background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:12,padding:"12px 16px",marginTop:8}}>
-              <p style={{fontSize:11,fontWeight:700,color:"#92400e",margin:"0 0 8px",textTransform:"uppercase",letterSpacing:".05em"}}>⏳ Sin asignar ({unassigned.length})</p>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {unassigned.map(g=><span key={g.id} style={{fontSize:11,color:"#7c2d12",background:"#ffedd5",borderRadius:99,padding:"2px 10px",border:"1px solid #fed7aa"}}>{g.name}</span>)}
+
+          {/* Legend */}
+          <div style={{position:"absolute",bottom:10,left:10,display:"flex",gap:8,flexWrap:"wrap"}}>
+            {[["#4ade80","Disponible"],["#f59e0b",">70%"],["#ef4444","Llena"],["#d1d5db","Vacía"]].map(([c,l])=>(
+              <div key={l} style={{display:"flex",alignItems:"center",gap:3,background:"rgba(255,255,255,.8)",borderRadius:99,padding:"2px 8px"}}>
+                <div style={{width:8,height:8,borderRadius:"50%",background:c}}/>
+                <span style={{fontSize:9,color:R.muted}}>{l}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Side panel: selected table OR unassigned */}
+        <div style={{width:200,flexShrink:0}}>
+          {selTable?(
+            <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:14,overflow:"hidden"}}>
+              <div style={{background:R.dark,padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <span style={{fontSize:13,fontWeight:600,color:R.white,fontFamily:"'Cormorant Garamond',serif"}}>{selTable.name}</span>
+                <button onClick={()=>delTable(selTable.id)} style={{background:"none",border:"none",color:"rgba(255,255,255,.5)",cursor:"pointer",fontSize:12}}>🗑</button>
+              </div>
+              <div style={{padding:10}}>
+                <p style={{fontSize:10,color:R.muted,margin:"0 0 8px"}}>{selTable.shape} · {selGuests.length}/{selTable.seats} puestos</p>
+                {selGuests.map(g=>(
+                  <div key={g.id} style={{display:"flex",alignItems:"center",gap:4,marginBottom:4,background:R.cream,borderRadius:8,padding:"4px 8px"}}>
+                    <span style={{flex:1,fontSize:11,color:R.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</span>
+                    <button onClick={()=>assignGuest(g.id,"")} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:10,flexShrink:0}}>✕</button>
+                  </div>
+                ))}
+                {unassigned.length>0&&selGuests.length<selTable.seats&&(
+                  <select onChange={e=>{if(e.target.value){assignGuest(e.target.value,selTable.id);e.target.value="";}}} style={{...INP_SM,width:"100%",fontSize:11,marginTop:4}} defaultValue="">
+                    <option value="">+ Asignar...</option>
+                    {unassigned.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                )}
+                {selGuests.length>=selTable.seats&&<p style={{fontSize:10,color:"#dc2626",margin:"6px 0 0",fontWeight:600}}>⚠️ Mesa completa</p>}
+              </div>
+            </div>
+          ):(
+            <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:14,overflow:"hidden"}}>
+              <div style={{background:R.cream,padding:"10px 14px",borderBottom:`1px solid ${R.border}`}}>
+                <p style={{fontSize:11,fontWeight:700,color:R.muted,margin:0,textTransform:"uppercase",letterSpacing:".05em"}}>Sin asignar ({unassigned.length})</p>
+              </div>
+              <div style={{padding:10,maxHeight:380,overflowY:"auto"}}>
+                {unassigned.length===0?(
+                  <p style={{fontSize:11,color:R.muted,fontStyle:"italic",margin:0}}>¡Todos asignados! 🎉</p>
+                ):unassigned.map(g=>(
+                  <div key={g.id} style={{fontSize:11,color:R.text,padding:"4px 8px",marginBottom:3,background:R.cream,borderRadius:8,display:"flex",alignItems:"center",gap:4}}>
+                    <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</span>
+                    {seating.length>0&&(
+                      <select onChange={e=>{if(e.target.value){assignGuest(g.id,e.target.value);e.target.value="";}}} style={{...INP_SM,padding:"1px 4px",fontSize:9,width:70,flexShrink:0}} defaultValue="">
+                        <option value="">Mesa…</option>
+                        {seating.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </div>
-      )}
-
-      {/* Plano view — visual grid */}
-      {view==="plano"&&(
-        <div>
-          {seating.length===0&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Crea mesas para verlas aquí.</p>}
-          <div style={{display:"flex",flexWrap:"wrap",gap:20,padding:20,background:R.cream,borderRadius:14,border:`1px solid ${R.border}`,minHeight:200,alignItems:"center",justifyContent:"center"}}>
-            {seating.map(tbl=>{
-              const tGuests=guests.filter(g=>g.tableId===tbl.id);
-              const isRound=tbl.shape==="Redonda";
-              const sz=isRound?80+Math.min(tbl.seats,20)*2:undefined;
-              return (
-                <div key={tbl.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                  <div style={{
-                    width:isRound?sz:Math.max(80,40+tbl.seats*6),
-                    height:isRound?sz:50,
-                    background:tGuests.length>=tbl.seats?"#fecaca":tGuests.length>0?R.light:R.white,
-                    border:`2px solid ${tGuests.length>=tbl.seats?"#ef4444":R.mid}`,
-                    borderRadius:isRound?"50%":tbl.shape==="Cuadrada"?6:4,
-                    display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",
-                    boxShadow:"0 2px 8px rgba(127,29,58,.1)"
-                  }}>
-                    <span style={{fontSize:10,fontWeight:700,color:R.accent}}>{tbl.name}</span>
-                    <span style={{fontSize:9,color:R.muted}}>{tGuests.length}/{tbl.seats}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <p style={{fontSize:11,color:R.muted,marginTop:8,textAlign:"center"}}>Vista de plano — asigna invitados desde la vista "Mesas"</p>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
