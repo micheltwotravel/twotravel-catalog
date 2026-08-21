@@ -64,6 +64,8 @@ function rowToBoda(row) {
     budgetItems: parseJ(row.budgetItems, []),
     payments:    parseJ(row.payments,    []),
     contracts:   parseJ(row.contracts,   []),
+    seating:     parseJ(row.seating,     []),
+    studio:      parseJ(row.studio,      []),
   };
 }
 
@@ -112,7 +114,7 @@ async function apiSaveBoda(f) {
     notes: f.notes, coverPhoto: f.coverPhoto || "",
     tasks: "[]", suppliers: "[]", songs: "[]",
     photos: "[]", calls: "[]", guests: "[]", palette: "[]", schedule: "[]",
-    budgetItems: "[]", payments: "[]", contracts: "[]",
+    budgetItems: "[]", payments: "[]", contracts: "[]", seating: "[]", studio: "[]",
   }});
   return d.id;
 }
@@ -138,6 +140,8 @@ async function apiSaveNotes(id, boda) {
     budgetItems: JSON.stringify(boda.budgetItems || []),
     payments:    JSON.stringify(boda.payments    || []),
     contracts:   JSON.stringify(boda.contracts   || []),
+    seating:     JSON.stringify(boda.seating     || []),
+    studio:      JSON.stringify(boda.studio      || []),
   }});
 }
 async function apiUpdateSchedule(id, sc) {
@@ -685,80 +689,177 @@ function PaletteTab({ boda, onPatch }) {
 // ─── INVITADOS TAB ───────────────────────────────────────────────────────────
 const RSVP_STATES=["Pendiente","Confirmado","No asiste"];
 const RSVP_STYLE={"Pendiente":{bg:"#fff7ed",color:"#c2410c"},"Confirmado":{bg:"#f0fdf4",color:"#15803d"},"No asiste":{bg:"#f1f5f9",color:"#64748b"}};
+const G_EVENTS=[["ceremony","⛪","Ceremonia"],["cocktail","🥂","Cóctel"],["reception","🎊","Recepción"]];
+const MEAL_OPTIONS=["Sin especificar","Carne","Pescado","Vegetariano","Vegano","Sin gluten","Infantil"];
 
 function GuestTab({ boda, onPatch }) {
   const [guests,setGuests]=useState(boda.guests||[]);
   const [show,setShow]=useState(false);
   const [saving,setSaving]=useState(false);
   const [filter,setFilter]=useState("todos");
-  const [blank,setBlank]=useState({name:"",table:"",rsvp:"Pendiente",ceremony:true,cocktail:true,reception:true,notes:""});
+  const [view,setView]=useState("lista");
+  const [editId,setEditId]=useState(null);
+  const BLANK={name:"",contact:"",table:"",rsvp:"Pendiente",ceremony:true,cocktail:true,reception:true,meal:"Sin especificar",notes:""};
+  const [blank,setBlank]=useState(BLANK);
+
   async function persist(u){ setGuests(u); onPatch({guests:u}); await apiSaveNotes(boda.id,{...boda,guests:u}); }
-  async function add(){ if(!blank.name.trim()) return; setSaving(true); try{await persist([...guests,{...blank,id:uid()}]); setBlank({name:"",table:"",rsvp:"Pendiente",ceremony:true,cocktail:true,reception:true,notes:""}); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
+  async function add(){
+    if(!blank.name.trim()) return;
+    setSaving(true);
+    try{
+      if(editId){ await persist(guests.map(g=>g.id===editId?{...blank,id:editId}:g)); setEditId(null); }
+      else { await persist([...guests,{...blank,id:uid()}]); }
+      setBlank(BLANK); setShow(false);
+    }catch(e){alert("Error: "+e.message);} setSaving(false);
+  }
+  function startEdit(g){ setBlank({...BLANK,...g}); setEditId(g.id); setShow(true); }
   async function del(id){ try{await persist(guests.filter(g=>g.id!==id));}catch{setGuests(guests);} }
   async function cycleRsvp(id){ const u=guests.map(g=>{if(g.id!==id)return g; const idx=(RSVP_STATES.indexOf(g.rsvp||"Pendiente")+1)%RSVP_STATES.length; return {...g,rsvp:RSVP_STATES[idx]};}); try{await persist(u);}catch{setGuests(guests);} }
+
   const confirmed=guests.filter(g=>g.rsvp==="Confirmado").length;
   const pending=guests.filter(g=>g.rsvp==="Pendiente"||!g.rsvp).length;
+  const noAsiste=guests.filter(g=>g.rsvp==="No asiste").length;
   const visible=filter==="todos"?guests:guests.filter(g=>(g.rsvp||"Pendiente")===filter);
+
+  const mealSummary=MEAL_OPTIONS.filter(m=>m!=="Sin especificar").map(m=>({m,n:guests.filter(g=>g.rsvp==="Confirmado"&&g.meal===m).length})).filter(x=>x.n>0);
+
   return (
     <div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-        <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
-          <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{guests.length} invitado{guests.length!==1?"s":""}</span>
-          {confirmed>0&&<span style={{fontSize:11,color:"#15803d",fontWeight:600}}>✅ {confirmed}</span>}
-          {pending>0&&<span style={{fontSize:11,color:"#c2410c",fontWeight:600}}>⏳ {pending}</span>}
+      {/* Header */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,flexWrap:"wrap",gap:8}}>
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <span style={{fontSize:11,fontWeight:700,color:R.text,background:R.cream,borderRadius:99,padding:"2px 10px",border:`1px solid ${R.border}`}}>{guests.length} total</span>
+          {confirmed>0&&<span style={{fontSize:11,fontWeight:600,color:"#15803d",background:"#f0fdf4",borderRadius:99,padding:"2px 8px",border:"1px solid #bbf7d0"}}>✅ {confirmed}</span>}
+          {pending>0&&<span style={{fontSize:11,fontWeight:600,color:"#c2410c",background:"#fff7ed",borderRadius:99,padding:"2px 8px",border:"1px solid #fed7aa"}}>⏳ {pending}</span>}
+          {noAsiste>0&&<span style={{fontSize:11,color:"#64748b",background:"#f1f5f9",borderRadius:99,padding:"2px 8px",border:"1px solid #e2e8f0"}}>✕ {noAsiste}</span>}
         </div>
-        <button onClick={()=>setShow(v=>!v)} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Agregar</button>
+        <div style={{display:"flex",gap:6}}>
+          {[["lista","☰"],["tabla","⊞"]].map(([v,ic])=>(
+            <button key={v} onClick={()=>setView(v)} title={v==="lista"?"Vista lista":"Vista tabla RSVP"} style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${view===v?R.accent:R.border}`,background:view===v?R.accent:"transparent",color:view===v?"#fff":R.muted,fontSize:13,cursor:"pointer"}}>{ic}</button>
+          ))}
+          <button onClick={()=>{setShow(v=>!v);setEditId(null);setBlank(BLANK);}} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Agregar</button>
+        </div>
       </div>
-      <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
-        {["todos","Confirmado","Pendiente","No asiste"].map(f=>(
-          <button key={f} onClick={()=>setFilter(f)} style={{padding:"3px 10px",borderRadius:20,border:`1px solid ${filter===f?R.accent:R.border}`,background:filter===f?R.accent:"transparent",color:filter===f?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
-            {f==="todos"?"Todos":f}
-          </button>
-        ))}
-      </div>
+
+      {/* Filters (list view only) */}
+      {view==="lista"&&(
+        <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
+          {["todos","Confirmado","Pendiente","No asiste"].map(f=>(
+            <button key={f} onClick={()=>setFilter(f)} style={{padding:"3px 10px",borderRadius:20,border:`1px solid ${filter===f?R.accent:R.border}`,background:filter===f?R.accent:"transparent",color:filter===f?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+              {f==="todos"?"Todos":f}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Add/Edit form */}
       {show&&(
         <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-            <input style={INP_SM} value={blank.name}  onChange={e=>setBlank(p=>({...p,name:e.target.value}))}  placeholder="Nombre del invitado *" />
-            <input style={INP_SM} value={blank.table} onChange={e=>setBlank(p=>({...p,table:e.target.value}))} placeholder="Mesa / Tabla" />
+            <input style={INP_SM} value={blank.name}    onChange={e=>setBlank(p=>({...p,name:e.target.value}))}    placeholder="Nombre del invitado *" />
+            <input style={INP_SM} value={blank.contact} onChange={e=>setBlank(p=>({...p,contact:e.target.value}))} placeholder="WhatsApp / email" />
+            <input style={INP_SM} value={blank.table}   onChange={e=>setBlank(p=>({...p,table:e.target.value}))}   placeholder="Mesa" />
             <select style={INP_SM} value={blank.rsvp} onChange={e=>setBlank(p=>({...p,rsvp:e.target.value}))}>{RSVP_STATES.map(s=><option key={s}>{s}</option>)}</select>
-            <input style={INP_SM} value={blank.notes} onChange={e=>setBlank(p=>({...p,notes:e.target.value}))} placeholder="Notas (dieta, restricciones...)" />
-            <div style={{gridColumn:"span 2",display:"flex",gap:16}}>
-              {[["ceremony","⛪ Ceremonia"],["cocktail","🥂 Cóctel"],["reception","🎊 Recepción"]].map(([k,l])=>(
-                <label key={k} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={blank[k]} onChange={e=>setBlank(p=>({...p,[k]:e.target.checked}))} /> {l}</label>
+            <select style={INP_SM} value={blank.meal} onChange={e=>setBlank(p=>({...p,meal:e.target.value}))}>{MEAL_OPTIONS.map(m=><option key={m}>{m}</option>)}</select>
+            <input style={INP_SM} value={blank.notes}   onChange={e=>setBlank(p=>({...p,notes:e.target.value}))}   placeholder="Notas / restricciones" />
+            <div style={{gridColumn:"span 2",display:"flex",gap:16,flexWrap:"wrap"}}>
+              {G_EVENTS.map(([k,ic,l])=>(
+                <label key={k} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={!!blank[k]} onChange={e=>setBlank(p=>({...p,[k]:e.target.checked}))} /> {ic} {l}</label>
               ))}
             </div>
           </div>
           <div style={{display:"flex",gap:8}}>
-            <button onClick={add} disabled={saving||!blank.name.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.name.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Agregar"}</button>
-            <button onClick={()=>setShow(false)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+            <button onClick={add} disabled={saving||!blank.name.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.name.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":(editId?"Guardar":"Agregar")}</button>
+            <button onClick={()=>{setShow(false);setEditId(null);}} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
           </div>
         </div>
       )}
-      {visible.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>{guests.length===0?"Sin invitados. Agrega el primero arriba.":"Sin invitados con ese estado."}</p>}
-      <div style={{display:"flex",flexDirection:"column",gap:6}}>
-        {visible.map(g=>{
-          const rs=RSVP_STYLE[g.rsvp||"Pendiente"]||RSVP_STYLE["Pendiente"];
-          return (
-            <div key={g.id} style={{border:`1px solid ${R.border}`,borderRadius:10,padding:"10px 14px",background:R.white,display:"flex",alignItems:"center",gap:10}}>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                  <span style={{fontSize:13,fontWeight:500,color:R.text}}>{g.name}</span>
-                  {g.table&&<span style={{fontSize:11,color:R.muted}}>Mesa {g.table}</span>}
-                  <div style={{display:"flex",gap:3}}>
-                    {g.ceremony&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:99,background:"#eff6ff",color:"#1d4ed8"}}>⛪</span>}
-                    {g.cocktail&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:99,background:"#f5f3ff",color:"#7c3aed"}}>🥂</span>}
-                    {g.reception&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:99,background:"#fff0f3",color:"#be123c"}}>🎊</span>}
+
+      {/* RSVP grid view */}
+      {view==="tabla"&&(
+        <div>
+          <div style={{overflowX:"auto",marginBottom:16}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+              <thead>
+                <tr style={{background:R.cream}}>
+                  <th style={{textAlign:"left",padding:"8px 12px",borderBottom:`1px solid ${R.border}`,fontWeight:600,color:R.text,fontSize:11}}>Invitado</th>
+                  {G_EVENTS.map(([k,ic,l])=><th key={k} style={{padding:"8px 8px",borderBottom:`1px solid ${R.border}`,fontWeight:600,color:R.muted,fontSize:10,textAlign:"center"}}>{ic}<br/>{l}</th>)}
+                  <th style={{padding:"8px 8px",borderBottom:`1px solid ${R.border}`,fontWeight:600,color:R.muted,fontSize:10,textAlign:"center"}}>Menú</th>
+                  <th style={{padding:"8px 8px",borderBottom:`1px solid ${R.border}`,fontWeight:600,color:R.muted,fontSize:10,textAlign:"center"}}>RSVP</th>
+                  <th style={{padding:"8px 8px",borderBottom:`1px solid ${R.border}`,color:R.border,fontSize:10,textAlign:"center"}}>Mesa</th>
+                </tr>
+              </thead>
+              <tbody>
+                {guests.map((g,i)=>{
+                  const rs=RSVP_STYLE[g.rsvp||"Pendiente"];
+                  return (
+                    <tr key={g.id} style={{background:i%2===0?R.white:R.cream}}>
+                      <td style={{padding:"7px 12px",borderBottom:`1px solid ${R.border}`,color:R.text,fontWeight:500}}>
+                        {g.name}
+                        {g.contact&&<div style={{fontSize:10,color:R.muted}}>{g.contact}</div>}
+                      </td>
+                      {G_EVENTS.map(([k,ic])=>(
+                        <td key={k} style={{textAlign:"center",padding:"7px 8px",borderBottom:`1px solid ${R.border}`}}>
+                          {g[k]?<span style={{color:"#15803d",fontSize:13}}>✓</span>:<span style={{color:"#e2e8f0",fontSize:13}}>–</span>}
+                        </td>
+                      ))}
+                      <td style={{textAlign:"center",padding:"7px 8px",borderBottom:`1px solid ${R.border}`,fontSize:11,color:R.muted}}>{g.meal&&g.meal!=="Sin especificar"?g.meal:"–"}</td>
+                      <td style={{textAlign:"center",padding:"7px 8px",borderBottom:`1px solid ${R.border}`}}>
+                        <button onClick={()=>cycleRsvp(g.id)} style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:rs.bg,color:rs.color,border:"none",cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'Jost',sans-serif"}}>{g.rsvp||"Pendiente"}</button>
+                      </td>
+                      <td style={{textAlign:"center",padding:"7px 8px",borderBottom:`1px solid ${R.border}`,fontSize:11,color:R.muted}}>{g.table||"–"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {/* Meal summary */}
+          {mealSummary.length>0&&(
+            <div style={{background:R.cream,borderRadius:12,padding:"12px 16px",border:`1px solid ${R.border}`}}>
+              <p style={{fontSize:11,fontWeight:700,color:R.muted,textTransform:"uppercase",letterSpacing:".06em",margin:"0 0 10px"}}>Resumen de menú (confirmados)</p>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {mealSummary.map(({m,n})=>(
+                  <div key={m} style={{background:R.white,borderRadius:8,padding:"6px 12px",border:`1px solid ${R.border}`,textAlign:"center"}}>
+                    <p style={{fontSize:16,fontWeight:700,color:R.accent,margin:0}}>{n}</p>
+                    <p style={{fontSize:10,color:R.muted,margin:"2px 0 0"}}>{m}</p>
                   </div>
-                </div>
-                {g.notes&&<p style={{fontSize:11,color:R.muted,margin:"2px 0 0"}}>{g.notes}</p>}
+                ))}
               </div>
-              <button onClick={()=>cycleRsvp(g.id)} style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:rs.bg,color:rs.color,border:"none",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,fontFamily:"'Jost',sans-serif"}}>{g.rsvp||"Pendiente"}</button>
-              <button onClick={()=>del(g.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:13,flexShrink:0}}>✕</button>
             </div>
-          );
-        })}
-      </div>
+          )}
+        </div>
+      )}
+
+      {/* List view */}
+      {view==="lista"&&(
+        <>
+          {visible.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>{guests.length===0?"Sin invitados. Agrega el primero arriba.":"Sin invitados con ese estado."}</p>}
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {visible.map(g=>{
+              const rs=RSVP_STYLE[g.rsvp||"Pendiente"]||RSVP_STYLE["Pendiente"];
+              return (
+                <div key={g.id} style={{border:`1px solid ${R.border}`,borderRadius:10,padding:"10px 14px",background:R.white,display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <span style={{fontSize:13,fontWeight:500,color:R.text}}>{g.name}</span>
+                      {g.table&&<span style={{fontSize:11,color:R.muted}}>Mesa {g.table}</span>}
+                      {g.meal&&g.meal!=="Sin especificar"&&<span style={{fontSize:10,padding:"1px 7px",borderRadius:99,background:"#fffbeb",color:"#92400e"}}>🍽 {g.meal}</span>}
+                      <div style={{display:"flex",gap:3}}>
+                        {G_EVENTS.map(([k,ic])=>g[k]&&<span key={k} style={{fontSize:9,padding:"1px 5px",borderRadius:99,background:R.light,color:R.accent}}>{ic}</span>)}
+                      </div>
+                    </div>
+                    {(g.notes||g.contact)&&<p style={{fontSize:11,color:R.muted,margin:"2px 0 0"}}>{[g.contact,g.notes].filter(Boolean).join(" · ")}</p>}
+                  </div>
+                  <button onClick={()=>cycleRsvp(g.id)} style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:rs.bg,color:rs.color,border:"none",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,fontFamily:"'Jost',sans-serif"}}>{g.rsvp||"Pendiente"}</button>
+                  <button onClick={()=>{startEdit(g);}} style={{color:R.muted,background:"none",border:"none",cursor:"pointer",fontSize:12,flexShrink:0}}>✏️</button>
+                  <button onClick={()=>del(g.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:13,flexShrink:0}}>✕</button>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -972,6 +1073,245 @@ function PagosTab({ boda, onPatch }) {
   );
 }
 
+// ─── DESIGN STUDIO ───────────────────────────────────────────────────────────
+const STUDIO_CATS=["Fotografía","Video","Flores","Decoración","Venue","Catering","Música","Iluminación","Papelería","Vestido","Inspiración","Otro"];
+
+function DesignStudioTab({ boda, onPatch }) {
+  const [items,setItems]=useState(boda.studio||[]);
+  const [show,setShow]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [editId,setEditId]=useState(null);
+  const [filter,setFilter]=useState("todos");
+  const BLANK={title:"",category:STUDIO_CATS[0],url:"",notes:""};
+  const [blank,setBlank]=useState(BLANK);
+
+  async function persist(u){ setItems(u); onPatch({studio:u}); await apiSaveNotes(boda.id,{...boda,studio:u}); }
+  async function add(){
+    if(!blank.title.trim()) return;
+    setSaving(true);
+    try{
+      if(editId){ await persist(items.map(it=>it.id===editId?{...blank,id:editId}:it)); setEditId(null); }
+      else { await persist([...items,{...blank,id:uid()}]); }
+      setBlank(BLANK); setShow(false);
+    }catch(e){alert("Error: "+e.message);} setSaving(false);
+  }
+  function startEdit(it){ setBlank({...BLANK,...it}); setEditId(it.id); setShow(true); }
+  async function del(id){ try{await persist(items.filter(it=>it.id!==id));}catch{setItems(items);} }
+
+  const visible=filter==="todos"?items:items.filter(it=>it.category===filter);
+  const cats=[...new Set(items.map(it=>it.category))];
+
+  function isImage(url){ return /\.(jpg|jpeg|png|gif|webp|avif|svg)(\?|$)/i.test(url)||url.includes("drive.google.com/uc")||url.includes("lh3.googleusercontent"); }
+
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
+        <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{items.length} referencia{items.length!==1?"s":""}</span>
+        <button onClick={()=>{setShow(v=>!v);setEditId(null);setBlank(BLANK);}} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Agregar</button>
+      </div>
+      {cats.length>0&&(
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+          {["todos",...cats].map(c=>(
+            <button key={c} onClick={()=>setFilter(c)} style={{padding:"3px 10px",borderRadius:20,border:`1px solid ${filter===c?R.accent:R.border}`,background:filter===c?R.accent:"transparent",color:filter===c?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+              {c==="todos"?"Todos":c}
+            </button>
+          ))}
+        </div>
+      )}
+      {show&&(
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+            <input style={INP_SM} value={blank.title}    onChange={e=>setBlank(p=>({...p,title:e.target.value}))}    placeholder="Título / nombre *" />
+            <select style={INP_SM} value={blank.category} onChange={e=>setBlank(p=>({...p,category:e.target.value}))}>{STUDIO_CATS.map(c=><option key={c}>{c}</option>)}</select>
+            <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.url} onChange={e=>setBlank(p=>({...p,url:e.target.value}))} placeholder="URL (imagen, Pinterest, Drive, PDF...)" /></div>
+            <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.notes} onChange={e=>setBlank(p=>({...p,notes:e.target.value}))} placeholder="Notas / descripción" /></div>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={add} disabled={saving||!blank.title.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.title.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":(editId?"Guardar":"Agregar")}</button>
+            <button onClick={()=>{setShow(false);setEditId(null);}} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+          </div>
+        </div>
+      )}
+      {visible.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>{items.length===0?"Sin referencias aún. Agrega fotos, links de Pinterest, PDFs de proveedores...":"Sin items en esta categoría."}</p>}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12}}>
+        {visible.map(it=>(
+          <div key={it.id} style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:14,overflow:"hidden",position:"relative"}}>
+            {/* Preview */}
+            {it.url&&isImage(it.url)?(
+              <div style={{height:140,overflow:"hidden",background:R.cream,position:"relative"}}>
+                <img src={it.url} alt={it.title} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} onError={e=>{e.target.parentElement.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:28px;">🖼</div>';}} />
+              </div>
+            ):it.url?(
+              <div style={{height:80,background:`linear-gradient(135deg,${R.dark},${R.mid})`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <a href={it.url} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{color:R.gold,fontSize:12,fontFamily:"'Jost',sans-serif",textDecoration:"none",display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontSize:20}}>{it.url.includes("pdf")?"📄":"🔗"}</span> Ver enlace →
+                </a>
+              </div>
+            ):(
+              <div style={{height:80,background:R.light,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>✨</div>
+            )}
+            <div style={{padding:"10px 12px"}}>
+              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:6}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <p style={{fontSize:13,fontWeight:600,color:R.text,margin:"0 0 2px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.title}</p>
+                  <span style={{fontSize:10,padding:"1px 7px",borderRadius:99,background:R.light,color:R.accent,fontWeight:600}}>{it.category}</span>
+                  {it.notes&&<p style={{fontSize:11,color:R.muted,margin:"4px 0 0"}}>{it.notes}</p>}
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:2,flexShrink:0}}>
+                  {it.url&&<a href={it.url} target="_blank" rel="noreferrer" style={{color:R.muted,fontSize:12,textDecoration:"none"}} title="Abrir link">↗</a>}
+                  <button onClick={()=>startEdit(it)} style={{color:R.muted,background:"none",border:"none",cursor:"pointer",fontSize:11,padding:0}}>✏️</button>
+                  <button onClick={()=>del(it.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:12,padding:0}}>✕</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── MESAS / SEATING ─────────────────────────────────────────────────────────
+const TABLE_SHAPES=["Redonda","Rectangular","Cuadrada","Imperial"];
+
+function SeatingTab({ boda, onPatch }) {
+  const [seating,setSeating]=useState(boda.seating||[]);
+  const [guests,setGuests]=useState(boda.guests||[]);
+  const [show,setShow]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [view,setView]=useState("mesas");
+  const BLANK={name:"",shape:"Redonda",seats:8,notes:""};
+  const [blank,setBlank]=useState(BLANK);
+
+  async function persistSeating(u){ setSeating(u); onPatch({seating:u}); await apiSaveNotes(boda.id,{...boda,seating:u}); }
+  async function persistGuests(u){ setGuests(u); onPatch({guests:u}); await apiSaveNotes(boda.id,{...boda,guests:u}); }
+  async function addTable(){ if(!blank.name.trim()) return; setSaving(true); try{await persistSeating([...seating,{...blank,id:uid()}]); setBlank(BLANK); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
+  async function delTable(id){ try{await persistSeating(seating.filter(t=>t.id!==id)); await persistGuests(guests.map(g=>g.tableId===id?{...g,tableId:""}:g));}catch{} }
+  async function assignGuest(guestId,tableId){ const u=guests.map(g=>g.id===guestId?{...g,tableId}:g); try{await persistGuests(u);}catch{} }
+
+  const assigned=guests.filter(g=>g.tableId&&seating.find(t=>t.id===g.tableId));
+  const unassigned=guests.filter(g=>!g.tableId||!seating.find(t=>t.id===g.tableId));
+
+  const shapeStyle=(shape)=>{
+    if(shape==="Redonda") return {borderRadius:"50%"};
+    if(shape==="Cuadrada") return {borderRadius:6};
+    if(shape==="Imperial") return {borderRadius:4,width:120};
+    return {borderRadius:4};
+  };
+
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{seating.length} mesa{seating.length!==1?"s":" "} · {assigned.length}/{guests.length} asignados</span>
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          {[["mesas","Mesas"],["plano","Plano"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setView(v)} style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${view===v?R.accent:R.border}`,background:view===v?R.accent:"transparent",color:view===v?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600}}>{l}</button>
+          ))}
+          <button onClick={()=>setShow(v=>!v)} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Mesa</button>
+        </div>
+      </div>
+
+      {show&&(
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+            <input style={INP_SM} value={blank.name}  onChange={e=>setBlank(p=>({...p,name:e.target.value}))}  placeholder="Nombre de mesa *" />
+            <select style={INP_SM} value={blank.shape} onChange={e=>setBlank(p=>({...p,shape:e.target.value}))}>{TABLE_SHAPES.map(s=><option key={s}>{s}</option>)}</select>
+            <input type="number" style={INP_SM} value={blank.seats} onChange={e=>setBlank(p=>({...p,seats:parseInt(e.target.value)||8}))} placeholder="Puestos" min={1} max={40} />
+            <div style={{gridColumn:"span 3"}}><input style={INP_SM} value={blank.notes} onChange={e=>setBlank(p=>({...p,notes:e.target.value}))} placeholder="Notas (zona VIP, terraza...)" /></div>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={addTable} disabled={saving||!blank.name.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.name.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Crear mesa"}</button>
+            <button onClick={()=>setShow(false)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {/* List view */}
+      {view==="mesas"&&(
+        <div>
+          {seating.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin mesas. Crea la primera arriba para empezar a asignar invitados.</p>}
+          {seating.map(tbl=>{
+            const tGuests=guests.filter(g=>g.tableId===tbl.id);
+            const free=tbl.seats-tGuests.length;
+            return (
+              <div key={tbl.id} style={{border:`1px solid ${R.border}`,borderRadius:14,marginBottom:12,overflow:"hidden",background:R.white}}>
+                <div style={{background:R.cream,padding:"10px 14px",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${R.border}`}}>
+                  <div style={{width:28,height:28,background:R.accent,...shapeStyle(tbl.shape),flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <span style={{fontSize:9,fontWeight:700,color:"#fff"}}>{tGuests.length}</span>
+                  </div>
+                  <div style={{flex:1}}>
+                    <span style={{fontSize:13,fontWeight:700,color:R.text}}>{tbl.name}</span>
+                    <span style={{fontSize:11,color:R.muted,marginLeft:8}}>{tbl.shape} · {tGuests.length}/{tbl.seats} puestos · {free>0?`${free} libre${free>1?"s":""}`:free===0?"completa":"⚠️ excedida"}</span>
+                  </div>
+                  <button onClick={()=>delTable(tbl.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:13,flexShrink:0}}>✕</button>
+                </div>
+                <div style={{padding:"10px 14px"}}>
+                  {tGuests.length===0&&<p style={{fontSize:11,color:R.muted,fontStyle:"italic",margin:0}}>Sin invitados asignados.</p>}
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:tGuests.length>0?8:0}}>
+                    {tGuests.map(g=>(
+                      <div key={g.id} style={{display:"flex",alignItems:"center",gap:4,background:R.light,borderRadius:99,padding:"3px 10px",border:`1px solid ${R.border}`}}>
+                        <span style={{fontSize:12,color:R.text}}>{g.name}</span>
+                        <button onClick={()=>assignGuest(g.id,"")} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:11,padding:0,lineHeight:1}}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  {unassigned.length>0&&(
+                    <select onChange={e=>{if(e.target.value){assignGuest(e.target.value,tbl.id);e.target.value="";}}} style={{...INP_SM,width:"auto",fontSize:11}} defaultValue="">
+                      <option value="">+ Asignar invitado...</option>
+                      {unassigned.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {unassigned.length>0&&seating.length>0&&(
+            <div style={{background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:12,padding:"12px 16px",marginTop:8}}>
+              <p style={{fontSize:11,fontWeight:700,color:"#92400e",margin:"0 0 8px",textTransform:"uppercase",letterSpacing:".05em"}}>⏳ Sin asignar ({unassigned.length})</p>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {unassigned.map(g=><span key={g.id} style={{fontSize:11,color:"#7c2d12",background:"#ffedd5",borderRadius:99,padding:"2px 10px",border:"1px solid #fed7aa"}}>{g.name}</span>)}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Plano view — visual grid */}
+      {view==="plano"&&(
+        <div>
+          {seating.length===0&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Crea mesas para verlas aquí.</p>}
+          <div style={{display:"flex",flexWrap:"wrap",gap:20,padding:20,background:R.cream,borderRadius:14,border:`1px solid ${R.border}`,minHeight:200,alignItems:"center",justifyContent:"center"}}>
+            {seating.map(tbl=>{
+              const tGuests=guests.filter(g=>g.tableId===tbl.id);
+              const isRound=tbl.shape==="Redonda";
+              const sz=isRound?80+Math.min(tbl.seats,20)*2:undefined;
+              return (
+                <div key={tbl.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                  <div style={{
+                    width:isRound?sz:Math.max(80,40+tbl.seats*6),
+                    height:isRound?sz:50,
+                    background:tGuests.length>=tbl.seats?"#fecaca":tGuests.length>0?R.light:R.white,
+                    border:`2px solid ${tGuests.length>=tbl.seats?"#ef4444":R.mid}`,
+                    borderRadius:isRound?"50%":tbl.shape==="Cuadrada"?6:4,
+                    display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",
+                    boxShadow:"0 2px 8px rgba(127,29,58,.1)"
+                  }}>
+                    <span style={{fontSize:10,fontWeight:700,color:R.accent}}>{tbl.name}</span>
+                    <span style={{fontSize:9,color:R.muted}}>{tGuests.length}/{tbl.seats}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p style={{fontSize:11,color:R.muted,marginTop:8,textAlign:"center"}}>Vista de plano — asigna invitados desde la vista "Mesas"</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── BODA DETAIL ─────────────────────────────────────────────────────────────
 function BodaDetail({ boda:init, users, onBack, onRefresh }) {
   const [boda,setBoda]=useState(init);
@@ -998,7 +1338,9 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
     {id:"contratos",    label:`Contratos (${(boda.contracts||[]).length})`},
     {id:"timeline",     label:"Timeline"},
     {id:"invitados",    label:`Invitados (${(boda.guests||[]).length})`},
+    {id:"mesas",        label:`Mesas`},
     {id:"palette",      label:"Paleta"},
+    {id:"studio",       label:`Estudio (${(boda.studio||[]).length})`},
     {id:"proveedores",  label:`Proveedores (${(boda.suppliers||[]).length})`},
     {id:"musica",       label:`Música (${(boda.songs||[]).length})`},
     {id:"fotos",        label:`Fotos (${(boda.photos||[]).length})`},
@@ -1079,8 +1421,10 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
           {tab==="pagos"       &&<PagosTab        boda={boda} onPatch={handlePatch} />}
           {tab==="contratos"   &&<ContratosTab    boda={boda} onPatch={handlePatch} />}
           {tab==="timeline"    &&<TimelineTab     boda={boda} onScheduleChange={sc=>setBoda(b=>({...b,schedule:sc}))} />}
-          {tab==="invitados"  &&<GuestTab       boda={boda} onPatch={handlePatch} />}
-          {tab==="palette"    &&<PaletteTab     boda={boda} onPatch={handlePatch} />}
+          {tab==="invitados"  &&<GuestTab         boda={boda} onPatch={handlePatch} />}
+          {tab==="mesas"      &&<SeatingTab       boda={boda} onPatch={handlePatch} />}
+          {tab==="palette"    &&<PaletteTab       boda={boda} onPatch={handlePatch} />}
+          {tab==="studio"     &&<DesignStudioTab  boda={boda} onPatch={handlePatch} />}
           {tab==="proveedores"&&<ProveedoresTab boda={boda} onPatch={handlePatch} />}
           {tab==="musica"     &&<MusicTab       boda={boda} onPatch={handlePatch} />}
           {tab==="fotos"      &&<FotosTab       boda={boda} onPatch={handlePatch} />}
