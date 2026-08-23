@@ -894,8 +894,13 @@ function parseDrinkSummary(k) {
     const lines = [];
     ["house","boat"].forEach(loc => {
       if (!d[loc]) return;
-      Object.entries(d[loc]).forEach(([name, qty]) => {
-        if (qty > 0) lines.push(`${qty}× ${name} (${loc === "house" ? "Casa" : "Bote"})`);
+      const locLabel = loc === "house" ? "Casa" : "Bote";
+      const cats = Array.isArray(d[loc]) ? d[loc] : [];
+      cats.forEach(cat => {
+        (cat.items || []).forEach(it => {
+          const qty = Number(it.qty || 0);
+          if (qty > 0) lines.push(`${it.name || it.label} x ${qty} (${locLabel})`);
+        });
       });
     });
     if (d.extra) lines.push(`Extras: ${d.extra}`);
@@ -1160,7 +1165,7 @@ function OrderCell({ summary, at, empty = "—", fullText, icon = "✅" }) {
     </div>
   );
 }
-function BoatDayCell({ kickoffId, boatName: initBoatName, boatDay: initBoatDay, boatProvider: initProvider, dock: initDock, boatNotes: initNotes, onSave }) {
+function BoatDayCell({ kickoffId, boatName: initBoatName, boatDay: initBoatDay, boatProvider: initProvider, dock: initDock, boatNotes: initNotes, arrivalDate, departureDate, onSave }) {
   const parse = v => { try { return JSON.parse(v||"{}"); } catch { return {}; } };
   const init = parse(initNotes);
   const [open, setOpen] = React.useState(false);
@@ -1187,6 +1192,7 @@ function BoatDayCell({ kickoffId, boatName: initBoatName, boatDay: initBoatDay, 
           <span>
             <span style={{display:"block", fontWeight:700}}>🛥 {nombre || "Boat Day"}</span>
             {fecha && <span style={{display:"block", fontSize:10, color:"#6b7280"}}>{fecha}</span>}
+            {muelle && <span style={{display:"block", fontSize:10, color:"#0369a1"}}>⚓ {muelle}</span>}
             {proveedor && <span style={{display:"block", fontSize:10, color:"#6b7280"}}>{proveedor}</span>}
             {nota && <span style={{display:"block", fontSize:10, color:"#6b7280", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:140}}>{nota.slice(0,60)}{nota.length>60?"…":""}</span>}
           </span>
@@ -1201,15 +1207,15 @@ function BoatDayCell({ kickoffId, boatName: initBoatName, boatDay: initBoatDay, 
             </div>
             <div style={{ padding:20, display:"flex", flexDirection:"column", gap:12 }}>
               {[
-                { label:"Fecha", value:fecha, set:setFecha, type:"date" },
+                { label:"Fecha", value:fecha, set:setFecha, type:"date", min:arrivalDate, max:departureDate },
                 { label:"Nombre del bote", value:nombre, set:setNombre, placeholder:"Sea Star…" },
                 { label:"Proveedor", value:proveedor, set:setProveedor, placeholder:"Empresa o contacto…" },
                 { label:"Muelle", value:muelle, set:setMuelle, placeholder:"Club Náutico…" },
-              ].map(({ label, value, set, type, placeholder }) => (
+              ].map(({ label, value, set, type, placeholder, min, max }) => (
                 <div key={label}>
                   <label style={{ fontSize:10, fontWeight:700, color:"#6b7280", textTransform:"uppercase", letterSpacing:".06em", display:"block", marginBottom:4 }}>{label}</label>
                   <input type={type||"text"} value={value} onChange={e => set(e.target.value)}
-                    placeholder={placeholder||""}
+                    placeholder={placeholder||""} min={min||""} max={max||""}
                     style={{ width:"100%", fontSize:12, border:"1px solid #e5e7eb", borderRadius:8, padding:"7px 10px", boxSizing:"border-box", background:"#f9fafb" }} />
                 </div>
               ))}
@@ -1525,34 +1531,17 @@ function ClientesTable({ kickoffs, loading }) {
                     <td style={{ ...tdStyle, textAlign:"center" }}>{r.pax || r.groupSize || "—"}</td>
                     <td style={{ ...tdStyle, color:"#374151" }}>{r.assignedConciergeName || r.concierge || "—"}</td>
                     <td style={tdStyle}>
-                      {(() => {
-                        const list = juniorListForCity(r._rowCity);
-                        if (!list.length) return <span style={{ fontSize:11, color:"#d1d5db" }}>—</span>;
-                        return <>
-                          <select
-                            defaultValue={r.juniorConcierge || ""}
-                            onBlur={e => { if (e.target.value !== (r.juniorConcierge||"")) saveField(r.id, "juniorConcierge", e.target.value); }}
-                            style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"3px 6px", background:"#fff", color:"#374151", cursor:"pointer" }}>
-                            <option value="">— asignar —</option>
-                            {list.map(n => <option key={n} value={n}>{n}</option>)}
-                          </select>
-                          {isSaving("juniorConcierge") && <span style={{ fontSize:9, color:"#9ca3af" }}> ↑</span>}
-                        </>;
-                      })()}
+                      {(r.juniorConcierge || r.juniorBoat)
+                        ? <div style={{ fontSize:11, color:"#374151", lineHeight:1.5 }}>
+                            {r.juniorConcierge && <div><span style={{ color:"#6d28d9", fontWeight:600 }}>Grupo:</span> {r.juniorConcierge}</div>}
+                            {r.juniorBoat && <div><span style={{ color:"#0369a1", fontWeight:600 }}>Bote:</span> {r.juniorBoat}</div>}
+                          </div>
+                        : <span style={{ fontSize:11, color:"#d1d5db" }}>—</span>}
                     </td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>
                       {r.passportInfo
                         ? <PassportPopup passportInfo={r.passportInfo} dietInfo="" guestName={r.guestName || r.tripName} />
                         : <span style={{ color:"#d1d5db" }}>—</span>}
-                    </td>
-                    <td style={tdStyle}>
-                      <textarea
-                        defaultValue={r.internalNotes || ""}
-                        onBlur={e => { const v = e.target.value.trim(); if (v !== (r.internalNotes||"").trim()) saveField(r.id, "internalNotes", v); }}
-                        placeholder="Notas…"
-                        rows={2}
-                        style={{ width:"100%", fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 6px", resize:"vertical", background:"#fafafa", color:"#374151", lineHeight:1.4, boxSizing:"border-box" }}
-                      />
                     </td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>
                       {(() => {
@@ -1563,6 +1552,15 @@ function ClientesTable({ kickoffs, loading }) {
                           ? <PassportPopup passportInfo="" dietInfo={combined} guestName={r.guestName || r.tripName} />
                           : <span style={{ color:"#d1d5db" }}>—</span>;
                       })()}
+                    </td>
+                    <td style={tdStyle}>
+                      <textarea
+                        defaultValue={r.internalNotes || ""}
+                        onBlur={e => { const v = e.target.value.trim(); if (v !== (r.internalNotes||"").trim()) saveField(r.id, "internalNotes", v); }}
+                        placeholder="Notas…"
+                        rows={2}
+                        style={{ width:"100%", fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 6px", resize:"vertical", background:"#fafafa", color:"#374151", lineHeight:1.4, boxSizing:"border-box" }}
+                      />
                     </td>
                     <td style={tdStyle}>
                       <a href={itinLink} target="_blank" rel="noreferrer"
@@ -1604,7 +1602,7 @@ function ClientesTable({ kickoffs, loading }) {
                     </td>
                     <td style={tdStyle}>
                       {normCity(r._rowCity) === "cartagena"
-                        ? <BoatDayCell kickoffId={r.id} boatDay={r.boatDay||""} boatName={r.boatName||""} boatProvider={r.boatProvider||""} dock={r.dock||""} boatNotes={r.boatNotes||""} onSave={saveField} />
+                        ? <BoatDayCell kickoffId={r.id} boatDay={r.boatDay||""} boatName={r.boatName||""} boatProvider={r.boatProvider||""} dock={r.dock||""} boatNotes={r.boatNotes||""} arrivalDate={r.arrivalDate||""} departureDate={r.departureDate||""} onSave={saveField} />
                         : <span style={{ color:"#d1d5db", fontSize:11 }}>—</span>}
                     </td>
                     <td style={tdStyle}>
@@ -3909,7 +3907,7 @@ function DrinksCatalog() {
       lines.push(`*${catLabel(cat)}*`);
       sel.forEach(it => {
         const cop = it.priceCOP > 0 ? ` · COP ${fmtCOP(it.priceCOP * Number(it.qty))}` : "";
-        lines.push(`  • ${itemName(it)}: *${it.qty}*${cop}`);
+        lines.push(`  • ${itemName(it)} *x ${it.qty}*${cop}`);
       });
     });
     if (!lines.length) return "";
@@ -4000,6 +3998,7 @@ function DrinksCatalog() {
               {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
             </button>
           </div>
+          {guestName && <p style={{fontSize:12,color:"#9a7d52",margin:0,textAlign:"center"}}>{guestName}</p>}
         </div>
       </div>
 
@@ -4422,6 +4421,7 @@ function GroceryCatalog() {
               {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
             </button>
           </div>
+          {guestName && <p style={{fontSize:12,color:"#9a7d52",margin:0,textAlign:"center"}}>{guestName}</p>}
         </div>
       </div>
 
@@ -5358,6 +5358,11 @@ function BreakfastCatalog() {
                 ? "Choose what you'd like for breakfast each day of your stay. You can mix categories — pick individual dishes or go for the full menu of a category. Prices are per day for the whole group."
                 : "Elige lo que quieres para el desayuno cada día de tu estadía. Puedes combinar categorías — elige platos individuales o toma el menú completo de una categoría. Los precios son por día para todo el grupo."}
             </p>
+            {currency === "USD" && fxRate > 500 && (
+              <p style={{fontSize:10,color:"#b8a899",marginTop:4,margin:0}}>
+                {en ? `Exchange rate: 1 USD = COP ${fxRate.toLocaleString("es-CO")}` : `Tasa de cambio: 1 USD = COP ${fxRate.toLocaleString("es-CO")}`}
+              </p>
+            )}
           </div>
         </div>
       </div>

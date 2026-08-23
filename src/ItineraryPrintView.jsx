@@ -1116,7 +1116,7 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
           return (
             <div style={{ marginBottom: 16, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
               {card(
-                `https://twotravelvip.com/?mode=drinks&kickoffId=${a.id}&lang=${lang}`,
+                `https://twotravelvip.com/d/${a.id}?lang=${lang}`,
                 "#e9d5ff",
                 "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=140&fit=crop&auto=format",
                 "#7c3aed",
@@ -1124,7 +1124,7 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
                 isEs ? "Personaliza tus bebidas para la casa y el bote." : "Select your drinks for the house and boat."
               )}
               {card(
-                `https://twotravelvip.com/?mode=groceries&kickoffId=${a.id}&lang=${lang}`,
+                `https://twotravelvip.com/g/${a.id}?lang=${lang}`,
                 "#bbf7d0",
                 "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=140&fit=crop&auto=format",
                 "#15803d",
@@ -1132,7 +1132,7 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
                 isEs ? "Personaliza tu lista de mercado para la estadía." : "Customize your grocery list for the stay."
               )}
               {card(
-                `https://twotravelvip.com/?mode=breakfast&kickoffId=${a.id}&lang=${lang}`,
+                `https://twotravelvip.com/b/${a.id}?lang=${lang}`,
                 "#fde68a",
                 "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=400&h=140&fit=crop&auto=format",
                 "#b45309",
@@ -1195,7 +1195,7 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
                   {multiCity && e.city ? <span style={{ fontWeight:400, color:"#16a34a" }}> · {e.city}</span> : null}
                 </div>
                 <div style={{ fontSize:9.5, color:"#6b7280", marginTop:2 }}>
-                  {isEs ? "30 minutos · Elige el día y hora que mejor te convenga." : "30 minutes · Pick the day and time that works best for you."}
+                  {isEs ? "Elige el día y hora que mejor te convenga." : "Pick the day and time that works best for you."}
                 </div>
               </div>
               <span style={{ fontSize:14, color:"#15803d" }}>→</span>
@@ -2278,8 +2278,8 @@ function KeepInTouchPage({ kickoff, page, total }) {
   const kickoffCity = String(kickoff?.city || "").toUpperCase();
   const isMexicoCity = /CDMX|TUL|CABO/.test(kickoffCity);
   const googleReviewUrl = isMexicoCity
-    ? "https://www.google.com/maps/place/Two+Travel+Concierge+Mexico+City/@19.4126255,-99.163745,"
-    : "https://www.google.com/maps/place/Two+Travel/@10.4246252,-75.5499402,";
+    ? "https://www.google.com/maps/place/Two+Travel+Concierge+Mexico+City/@19.4126255,-99.163745,17z/data=!4m8!3m7!1s0x85d1ffe74c93137b:0xa0d5cd7a707b4f62!8m2!3d19.4126255!9m1!1b1!16s%2Fg%2F11vi68z9v8?entry=ttu&g_ep=EgoyMDI2MDgxNy4wIKXMDSoASAFQAw%3D%3D"
+    : "https://www.google.com/maps/place/Two+Travel/@10.4246252,-75.5499402,17z/data=!4m8!3m7!1s0x8ef62f5261cc37e3:0xc3a9008caaf63acb!8m2!3d10.4246252!4d-75.5473653!9m1!1b1!16s%2Fg%2F11fmc2tt3w?entry=ttu&g_ep=EgoyMDI2MDgxNy4wIKXMDSoASAFQAw%3D%3D";
 
   const REVIEWS = [
     {

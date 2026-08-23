@@ -56,7 +56,7 @@ function toCityCode(raw) {
    Fallback: TRM aproximada COP/USD si la API falla.
    Actualizar FX_FALLBACK cuando la TRM cambie significativamente.
 ================================== */
-const FX_FALLBACK = 3560;   // TRM junio 2026 — actualizar si cambia >5%
+const FX_FALLBACK = 3075;   // TRM agosto 2026 — actualizar si cambia >5%
 
 /* ================================
    2) I18N (textos de interfaz)

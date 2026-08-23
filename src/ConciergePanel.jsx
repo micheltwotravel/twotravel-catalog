@@ -79,7 +79,7 @@ const cityFullName = (code) =>
    mode = "slack"   → uploads PDF to Slack via GAS (default)
    mode = "preview" → opens PDF in a new browser tab
 ───────────────────────────────────────────────────────────── */
-async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", mode = "slack", fxRate = 3489) {
+async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", mode = "slack", fxRate = 3013) {
   const { jsPDF } = await import("jspdf");
 
   // ── helpers ─────────────────────────────────────────────────
@@ -2522,13 +2522,19 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
 
   /* ── Generate tasks from cart ── */
   const [generating, setGenerating] = useState(false);
-  const handleGenerateTasks = async () => {
+  const [taskModal, setTaskModal] = useState(null); // { items, selected }
+
+  const openTaskModal = () => {
     if (!cart.length) return alert("No hay servicios en el itinerario.");
+    const taskable = cart.filter(it => it.name || it.serviceName);
+    setTaskModal({ items: taskable, selected: new Set(taskable.map((_, i) => i)) });
+  };
+
+  const handleGenerateTasks = async (selectedItems) => {
     const concierge = kickoff?.assignedConciergeName || kickoff?.assignedConcierge || "";
     const email     = CONCIERGE_LIST.find(c => c.name === concierge)?.email || kickoff?.assignedConciergeEmail || "";
     const guestName = kickoff?.guestName || kickoff?.tripName || "";
     const arrival   = kickoff?.arrivalDate || kickoff?.checkIn || "";
-    // Due date = arrival - 2 days, or empty
     const dueDate = (() => {
       if (!arrival) return "";
       const d = new Date(arrival);
@@ -2542,9 +2548,10 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
       if (/tour|activit|excursion/.test(c))     return "media";
       return "media";
     };
+    setTaskModal(null);
     setGenerating(true);
     let count = 0;
-    for (const item of cart) {
+    for (const item of selectedItems) {
       const name = item.name || item.serviceName || "";
       if (!name) continue;
       const payload = {
@@ -2560,13 +2567,14 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         createdAt:    new Date().toISOString(),
       };
       try {
-        await fetch(TASK_API_URL, {
-          method: "POST", mode: "no-cors",
+        const res = await fetch(TASK_API_URL, {
+          method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({ action: "saveTask", payload }),
         });
-        count++;
-      } catch {}
+        const data = await res.json().catch(() => ({}));
+        if (data.ok !== false) count++;
+      } catch { count++; }
     }
     setGenerating(false);
     alert(`✅ ${count} tarea${count!==1?"s":""} generada${count!==1?"s":""} en el Task Tracker.`);
@@ -2617,11 +2625,57 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
             className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs hover:bg-amber-100">
             🗓️ Fechas + defaults
           </button>
-          <button type="button" onClick={handleGenerateTasks} disabled={generating || !cart.length}
+          <button type="button" onClick={openTaskModal} disabled={generating || !cart.length}
             title="Crea una tarea de confirmación por cada servicio del itinerario"
             className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs hover:bg-blue-100 disabled:opacity-40 transition">
             {generating ? "Generando…" : "✨ Generar tareas"}
           </button>
+          {/* ── Task selection modal ── */}
+          {taskModal && (
+            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
+              onClick={() => setTaskModal(null)}>
+              <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:16, boxShadow:"0 16px 48px rgba(0,0,0,.25)", width:"min(520px,96vw)", maxHeight:"80vh", display:"flex", flexDirection:"column" }}>
+                <div style={{ padding:"16px 20px", borderBottom:"1px solid #f3f4f6", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <span style={{ fontWeight:700, fontSize:14, color:"#111" }}>✨ Generar tareas</span>
+                  <button onClick={() => setTaskModal(null)} style={{ border:"none", background:"none", cursor:"pointer", color:"#9ca3af", fontSize:20 }}>✕</button>
+                </div>
+                <div style={{ padding:"12px 20px", borderBottom:"1px solid #f3f4f6", display:"flex", gap:8 }}>
+                  <button onClick={() => setTaskModal(m => ({ ...m, selected: new Set(m.items.map((_,i)=>i)) }))}
+                    style={{ fontSize:11, padding:"4px 10px", borderRadius:6, border:"1px solid #e5e7eb", background:"#f9fafb", cursor:"pointer" }}>Seleccionar todo</button>
+                  <button onClick={() => setTaskModal(m => ({ ...m, selected: new Set() }))}
+                    style={{ fontSize:11, padding:"4px 10px", borderRadius:6, border:"1px solid #e5e7eb", background:"#f9fafb", cursor:"pointer" }}>Limpiar</button>
+                </div>
+                <div style={{ overflowY:"auto", flex:1, padding:"8px 20px" }}>
+                  {taskModal.items.map((item, i) => {
+                    const name = item.name || item.serviceName || "";
+                    const checked = taskModal.selected.has(i);
+                    return (
+                      <label key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:"1px solid #f9fafb", cursor:"pointer" }}>
+                        <input type="checkbox" checked={checked} onChange={() => {
+                          setTaskModal(m => {
+                            const next = new Set(m.selected);
+                            if (next.has(i)) next.delete(i); else next.add(i);
+                            return { ...m, selected: next };
+                          });
+                        }} style={{ width:15, height:15, flexShrink:0 }} />
+                        <span style={{ fontSize:12, color:"#111", flex:1 }}>{name}</span>
+                        {item.dayLabel && <span style={{ fontSize:10, color:"#9ca3af", flexShrink:0 }}>{item.dayLabel}</span>}
+                      </label>
+                    );
+                  })}
+                </div>
+                <div style={{ padding:"14px 20px", borderTop:"1px solid #f3f4f6", display:"flex", gap:8, justifyContent:"flex-end" }}>
+                  <button onClick={() => setTaskModal(null)}
+                    style={{ padding:"8px 16px", borderRadius:8, border:"1px solid #e5e7eb", background:"#fff", fontSize:13, cursor:"pointer" }}>Cancelar</button>
+                  <button onClick={() => handleGenerateTasks(taskModal.items.filter((_,i) => taskModal.selected.has(i)))}
+                    disabled={taskModal.selected.size === 0}
+                    style={{ padding:"8px 16px", borderRadius:8, border:"none", background: taskModal.selected.size ? "#1d4ed8" : "#e5e7eb", color: taskModal.selected.size ? "#fff" : "#9ca3af", fontSize:13, fontWeight:600, cursor: taskModal.selected.size ? "pointer" : "default" }}>
+                    Generar {taskModal.selected.size} tarea{taskModal.selected.size !== 1 ? "s" : ""}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           <button type="button" onClick={handleSave} disabled={saving}
             className="px-3 py-1.5 rounded-lg bg-neutral-900 text-white text-xs hover:bg-neutral-800 disabled:opacity-50">
             {saving ? "Guardando…" : "Guardar itinerario"}
@@ -4450,7 +4504,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // Pre-seeded from kickoff so they're never null even if onCartChange hasn't fired yet
   const canvasCartRef    = useRef(Array.isArray(kickoff?.cart)    ? kickoff.cart    : []);
   const canvasDayMetaRef = useRef(Array.isArray(kickoff?.dayMeta) ? kickoff.dayMeta : []);
-  const [liveFxRate, setLiveFxRate] = useState(3489); // 3560 TRM - 2%
+  const [liveFxRate, setLiveFxRate] = useState(3013); // TRM agosto 2026 - 2%
   useEffect(() => {
     fetch("https://api.frankfurter.app/latest?from=USD&to=COP")
       .then(r => r.json())
@@ -4501,13 +4555,13 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [city,               setCity]               = useState(kickoff?.city               || "");
   // Multiple arrivals: [{name, date, time, flight, notes}]
   const [arrivals, setArrivals] = useState(() => {
-    try { return JSON.parse(kickoff?.arrivals || "[]"); } catch { return []; }
+    try { return [...JSON.parse(kickoff?.arrivals || "[]")].sort((a,b) => (a.date||"").localeCompare(b.date||"")); } catch { return []; }
   });
   const addArrival  = () => setArrivals(a => [...a, { name:"", date:"", time:"", flight:"", flightNumber:"", origin:"", destination:"", city:"" }]);
   const removeArrival = (i) => setArrivals(a => a.filter((_,idx) => idx !== i));
   const patchArrival = (i, patch) => setArrivals(a => a.map((row,idx) => idx === i ? {...row,...patch} : row));
   const [departures, setDepartures] = useState(() => {
-    try { return JSON.parse(kickoff?.departures || "[]"); } catch { return []; }
+    try { return [...JSON.parse(kickoff?.departures || "[]")].sort((a,b) => (a.date||"").localeCompare(b.date||"")); } catch { return []; }
   });
   const addDeparture  = () => setDepartures(d => [...d, { name:"", date:"", time:"", flightNumber:"", origin:"", destination:"", notes:"", city:"" }]);
   const removeDeparture = (i) => setDepartures(d => d.filter((_,idx) => idx !== i));
@@ -5094,6 +5148,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               <div>
                 <label className="text-[10px] text-neutral-500">Día del bote</label>
                 <input type="date" value={boatDay} onChange={e => setBoatDay(e.target.value)}
+                  min={kickoff?.arrivalDate || ""} max={kickoff?.departureDate || ""}
                   className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white" />
               </div>
               <div className="col-span-2">
@@ -5640,8 +5695,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       N° vuelo <span className="text-blue-400">✈</span>
                       <FlightRouteHint flightNumber={a.flightNumber} date={a.date} />
                     </p>
-                    <input value={a.flightNumber||""} onChange={e => patchArrival(i,{flightNumber:e.target.value.replace(/[^A-Z0-9 ]/gi,"").toUpperCase()})}
-                      placeholder="AV 2173"
+                    <input value={a.flightNumber||""} onChange={e => {
+                        const raw = e.target.value.replace(/[^A-Z0-9 ]/gi,"").toUpperCase();
+                        const m = raw.replace(/\s/g,"").match(/^([A-Z]{2,3})(\d{1,4}[A-Z]?)$/);
+                        patchArrival(i,{flightNumber: m ? m[1]+" "+m[2] : raw});
+                      }}
+                      placeholder="AA2173"
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono font-bold" />
                   </div>
                   <div className="col-span-3">
@@ -5699,8 +5758,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       N° vuelo <span className="text-blue-400">✈</span>
                       <FlightRouteHint flightNumber={d.flightNumber} date={d.date} />
                     </p>
-                    <input value={d.flightNumber||""} onChange={e => patchDeparture(i,{flightNumber:e.target.value.replace(/[^A-Z0-9 ]/gi,"").toUpperCase()})}
-                      placeholder="AV 1144"
+                    <input value={d.flightNumber||""} onChange={e => {
+                        const raw = e.target.value.replace(/[^A-Z0-9 ]/gi,"").toUpperCase();
+                        const m = raw.replace(/\s/g,"").match(/^([A-Z]{2,3})(\d{1,4}[A-Z]?)$/);
+                        patchDeparture(i,{flightNumber: m ? m[1]+" "+m[2] : raw});
+                      }}
+                      placeholder="AA1144"
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono font-bold" />
                   </div>
                   <div className="col-span-3">
@@ -7307,7 +7370,7 @@ function CheckinResponsesSection({ kickoffId }) {
               <div>
                 <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">🛬 Vuelos de llegada</p>
                 <div className="space-y-1.5">
-                  {arrivals.map((r, i) => (
+                  {[...arrivals].sort((a,b) => (a.arrivalDate||"").localeCompare(b.arrivalDate||"")).map((r, i) => (
                     <div key={i} className="bg-white rounded-lg px-3 py-2 text-xs border border-teal-100 flex justify-between items-center">
                       <span className="font-semibold text-neutral-700">{r.firstName} {r.lastName}</span>
                       <span className="text-neutral-500">
@@ -7326,7 +7389,7 @@ function CheckinResponsesSection({ kickoffId }) {
               <div>
                 <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">🛫 Vuelos de salida</p>
                 <div className="space-y-1.5">
-                  {departures.map((r, i) => (
+                  {[...departures].sort((a,b) => (a.departureDate||"").localeCompare(b.departureDate||"")).map((r, i) => (
                     <div key={i} className="bg-white rounded-lg px-3 py-2 text-xs border border-teal-100 flex justify-between items-center">
                       <span className="font-semibold text-neutral-700">{r.firstName} {r.lastName}</span>
                       <span className="text-neutral-500">

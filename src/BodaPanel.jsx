@@ -719,7 +719,7 @@ function PaletteTab({ boda, onPatch }) {
               <div key={c} style={{width:32,height:32,borderRadius:"50%",background:c,boxShadow:"0 2px 8px rgba(0,0,0,.12)"}}/>
             ))}
           </div>
-          <p style={{fontSize:13,margin:"0 0 4px",fontFamily:"'Cormorant Garamond',serif",fontStyle:"italic",fontSize:16,color:R.text2}}>Sin paleta definida</p>
+          <p style={{fontSize:16,margin:"0 0 4px",fontFamily:"'Cormorant Garamond',serif",fontStyle:"italic",color:R.text2}}>Sin paleta definida</p>
           <p style={{fontSize:11,margin:0}}>Agrega los colores de la boda para tener todo en un lugar</p>
         </div>
       )}
