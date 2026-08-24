@@ -899,7 +899,7 @@ function parseDrinkSummary(k) {
       cats.forEach(cat => {
         (cat.items || []).forEach(it => {
           const qty = Number(it.qty || 0);
-          if (qty > 0) lines.push(`${it.name || it.label} x ${qty} (${locLabel})`);
+          if (qty > 0) lines.push(`${it.name || it.label} *x ${qty}* (${locLabel})`);
         });
       });
     });
@@ -1134,14 +1134,17 @@ function OrderCell({ summary, at, empty = "—", fullText, icon = "✅" }) {
               <button onClick={() => setOpen(false)} style={{ border:"none", background:"none", cursor:"pointer", color:"#9ca3af", fontSize:20, lineHeight:1, padding:"0 4px" }}>✕</button>
             </div>
             <div style={{ padding:"16px 24px", overflowY:"auto", flex:1, display:"flex", flexDirection:"column", gap:12 }}>
-              {(fullText || summary).split(/\n{2,}/).map((block, i) => {
+              {(fullText || summary).split(/\n{2,}|\n(?=(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat|Dom|Lun|Mar|Mié|Jue|Vie|Sáb)\s+\d)/).map((block, i) => {
                 const lines = block.trim().split("\n");
-                const isHeader = lines[0] && /^(☕|🍹|🛒|[A-Z]|[A-ZÁÉÍÓÚ]|\*|Vie|Lun|Mar|Mié|Jue|Vie|Sáb|Dom|Mon|Tue|Wed|Thu|Fri|Sat|Sun)/.test(lines[0].trim());
+                const isHeader = lines[0] && /^(☕|🍹|🛒|[A-Z]|[A-ZÁÉÍÓÚ]|\*|Vie|Lun|Mar|Mié|Jue|Sáb|Dom|Mon|Tue|Wed|Thu|Fri|Sat|Sun)/.test(lines[0].trim());
+                const renderLine = (text) => text ? text.split(/(\*[^*]+\*)/).map((part, k) =>
+                  /^\*[^*]+\*$/.test(part) ? <strong key={k}>{part.slice(1,-1)}</strong> : part
+                ) : " ";
                 return (
                   <div key={i} style={{ background: isHeader ? "#f9fafb" : "#fff", borderRadius:10, padding:"12px 14px", border:"1px solid #f0f0f0" }}>
                     {lines.map((line, j) => (
                       <div key={j} style={{ fontSize:13, color: j===0 && isHeader ? "#111" : "#374151", fontWeight: j===0 && isHeader ? 600 : 400, lineHeight:1.7 }}>
-                        {line || " "}
+                        {renderLine(line)}
                       </div>
                     ))}
                   </div>
@@ -4045,34 +4048,12 @@ function DrinksCatalog() {
           </div>
         ); })()}
 
-        {/* Previous order banner */}
-        {prevOrderAt && (
-          <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center gap-3">
-            <span className="text-lg">✅</span>
-            <div>
-              <p className="text-sm font-semibold text-green-800">{lang==="en" ? "You have a saved order" : "Tienes un pedido guardado"}</p>
-              <p className="text-xs text-green-600">{lang==="en" ? "Last updated" : "Última actualización"}: {new Date(prevOrderAt).toLocaleDateString(lang==="en"?"en-US":"es-CO",{month:"short",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"})}</p>
-            </div>
-          </div>
-        )}
-
         {/* Exchange rate badge */}
         <div className="flex justify-end">
           <span className="text-[10px] text-neutral-400 bg-neutral-100 rounded-full px-3 py-1">
             {T.rateLabel}: 1 USD = COP {fxRate.toLocaleString("es-CO")}
           </span>
         </div>
-
-        {/* Guest name */}
-        {prefillName ? (
-          <div className="bg-white border border-neutral-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
-            <span>👤</span><span className="text-sm font-medium text-neutral-800">{prefillName}</span>
-          </div>
-        ) : (
-          <input value={guestName} onChange={e=>setGuestName(e.target.value)}
-            placeholder={T.namePlaceholder}
-            className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"/>
-        )}
 
         {/* House / Boat tabs */}
         <div className="flex gap-2">
@@ -4444,28 +4425,6 @@ function GroceryCatalog() {
 
       <div className="max-w-xl mx-auto px-4 pt-4 space-y-4">
 
-        {/* Previous order banner */}
-        {prevAt && (
-          <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center gap-3">
-            <span className="text-lg">✅</span>
-            <div>
-              <p className="text-sm font-semibold text-green-800">{lang==="en" ? "You have a saved list" : "Tienes una lista guardada"}</p>
-              <p className="text-xs text-green-600">{lang==="en" ? "Last updated" : "Última actualización"}: {new Date(prevAt).toLocaleDateString(lang==="en"?"en-US":"es-CO",{month:"short",day:"numeric",year:"numeric"})}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Guest name */}
-        {prefillName ? (
-          <div className="bg-white border border-neutral-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
-            <span>👤</span><span className="text-sm font-medium text-neutral-800">{prefillName}</span>
-          </div>
-        ) : (
-          <input value={guestName} onChange={e=>setGuestName(e.target.value)}
-            placeholder={lang==="en" ? "Your name (optional)" : "Tu nombre (opcional)"}
-            className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"/>
-        )}
-
         {/* Categories */}
         {GROCERY_CATEGORIES.map(cat => (
           <div key={cat.id} className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
@@ -4673,7 +4632,14 @@ function CheckinForm() {
           const thisDiet = [form.foodRestrictions, form.allergies].filter(Boolean).join(" / ");
           const thisPassport = [personName, ...passportParts].filter(Boolean).join(" · ");
 
-          const existingPassport = (kickoff?.passportInfo || "").trim();
+          // Fetch fresh kickoff to avoid stale state overwriting prior pax submissions
+          let freshKickoff = null;
+          try {
+            freshKickoff = await getKickoffByIdFromSheet(kickoffId);
+          } catch {}
+          const latestKickoff = freshKickoff || kickoff;
+
+          const existingPassport = (latestKickoff?.passportInfo || "").trim();
           // Replace this person's entry if already present, else append
           const passportLines = existingPassport ? existingPassport.split("\n") : [];
           const personLineIdx = passportLines.findIndex(l => l.startsWith(personName + " ·") || l.startsWith(personName + ":") || l === personName);
@@ -4687,7 +4653,7 @@ function CheckinForm() {
           if (form.allergies)        updates.allergies        = form.allergies;
 
           // Accumulate diet info: "Name: restriction / Name2: restriction2"
-          const existingDiet = (kickoff?.dietInfo || "").trim();
+          const existingDiet = (latestKickoff?.dietInfo || "").trim();
           const dietParts = existingDiet ? existingDiet.split(" / ") : [];
           const personDietPrefix = `${personName}: `;
           const personDietIdx = dietParts.findIndex(p => p.startsWith(personDietPrefix) || p === thisDiet);
@@ -4708,7 +4674,7 @@ function CheckinForm() {
           };
           if (form.arrivalFlight || form.arrivalTime) {
             let arr = [];
-            try { arr = JSON.parse(kickoff?.arrivals || "[]"); } catch {}
+            try { arr = JSON.parse(latestKickoff?.arrivals || "[]"); } catch {}
             const idx = arr.findIndex(f => f.flightNumber === form.arrivalFlight);
             const entry = { flightNumber: form.arrivalFlight, date: form.arrivalDate, time: fmtTime12(form.arrivalTime), name: form.arrivalAirline };
             if (idx >= 0) arr[idx] = { ...arr[idx], ...entry };
@@ -4717,7 +4683,7 @@ function CheckinForm() {
           }
           if (form.departureFlight || form.departureTime) {
             let dep = [];
-            try { dep = JSON.parse(kickoff?.departures || "[]"); } catch {}
+            try { dep = JSON.parse(latestKickoff?.departures || "[]"); } catch {}
             const idx = dep.findIndex(f => f.flightNumber === form.departureFlight);
             const entry = { flightNumber: form.departureFlight, date: form.departureDate, time: fmtTime12(form.departureTime), name: form.departureAirline };
             if (idx >= 0) dep[idx] = { ...dep[idx], ...entry };
@@ -5358,13 +5324,15 @@ function BreakfastCatalog() {
                 ? "Choose what you'd like for breakfast each day of your stay. You can mix categories — pick individual dishes or go for the full menu of a category. Prices are per day for the whole group."
                 : "Elige lo que quieres para el desayuno cada día de tu estadía. Puedes combinar categorías — elige platos individuales o toma el menú completo de una categoría. Los precios son por día para todo el grupo."}
             </p>
-            {currency === "USD" && fxRate > 500 && (
-              <p style={{fontSize:10,color:"#b8a899",marginTop:4,margin:0}}>
-                {en ? `Exchange rate: 1 USD = COP ${fxRate.toLocaleString("es-CO")}` : `Tasa de cambio: 1 USD = COP ${fxRate.toLocaleString("es-CO")}`}
-              </p>
-            )}
           </div>
         </div>
+        {currency === "USD" && fxRate > 500 && (
+          <div style={{maxWidth:680,margin:"6px auto 0",display:"flex",justifyContent:"flex-end"}}>
+            <span style={{fontSize:10,color:"#9ca3af",background:"#f3f4f6",borderRadius:9999,padding:"3px 12px"}}>
+              {en ? `Exchange rate: 1 USD = COP ${fxRate.toLocaleString("es-CO")}` : `Tasa de cambio: 1 USD = COP ${fxRate.toLocaleString("es-CO")}`}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Day tabs */}

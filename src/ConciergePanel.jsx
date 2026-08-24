@@ -5697,8 +5697,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     </p>
                     <input value={a.flightNumber||""} onChange={e => {
                         const raw = e.target.value.replace(/[^A-Z0-9 ]/gi,"").toUpperCase();
-                        const m = raw.replace(/\s/g,"").match(/^([A-Z]{2,3})(\d{1,4}[A-Z]?)$/);
-                        patchArrival(i,{flightNumber: m ? m[1]+" "+m[2] : raw});
+                        patchArrival(i,{flightNumber: raw});
+                      }}
+                      onBlur={e => {
+                        const raw = e.target.value.replace(/\s/g,"");
+                        const m = raw.match(/^([A-Z]{2,3})(\d{1,4}[A-Z]?)$/);
+                        if (m) patchArrival(i,{flightNumber: m[1]+" "+m[2]});
                       }}
                       placeholder="AA2173"
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono font-bold" />
@@ -5760,8 +5764,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     </p>
                     <input value={d.flightNumber||""} onChange={e => {
                         const raw = e.target.value.replace(/[^A-Z0-9 ]/gi,"").toUpperCase();
-                        const m = raw.replace(/\s/g,"").match(/^([A-Z]{2,3})(\d{1,4}[A-Z]?)$/);
-                        patchDeparture(i,{flightNumber: m ? m[1]+" "+m[2] : raw});
+                        patchDeparture(i,{flightNumber: raw});
+                      }}
+                      onBlur={e => {
+                        const raw = e.target.value.replace(/\s/g,"");
+                        const m = raw.match(/^([A-Z]{2,3})(\d{1,4}[A-Z]?)$/);
+                        if (m) patchDeparture(i,{flightNumber: m[1]+" "+m[2]});
                       }}
                       placeholder="AA1144"
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono font-bold" />
@@ -8332,21 +8340,6 @@ const loadKickoffs = async () => {
                     <td style={{fontWeight:500,color:"var(--text-1)"}}>
                       {k.guestName || "Sin nombre"}
                       <div style={{display:"flex",gap:4,marginTop:2,flexWrap:"wrap"}}>
-                        {k.passportOk && (
-                          <span title="Pasaportes recolectados" style={{fontSize:9,background:"#EFF6FF",color:"#1D4ED8",border:"1px solid #BFDBFE",borderRadius:3,padding:"0px 5px",fontWeight:600}}>
-                            🛂 passport ✓
-                          </span>
-                        )}
-                        {(k.dietInfo || k.briefDietary) && (
-                          <span onClick={e => { e.stopPropagation(); setInfoPopup({ title:"🥗 Dieta / Restricciones", text: k.dietInfo || k.briefDietary }); }} style={{fontSize:9,background:"#FFF7ED",color:"#C2410C",border:"1px solid #FED7AA",borderRadius:3,padding:"0px 5px",maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"inline-block",verticalAlign:"middle",cursor:"pointer"}}>
-                            🥗 {(k.dietInfo || k.briefDietary).split(" / ")[0]}
-                          </span>
-                        )}
-                        {k.passportInfo && (
-                          <span onClick={e => { e.stopPropagation(); setInfoPopup({ title:"🪪 Pasaportes", text: k.passportInfo }); }} style={{fontSize:9,background:"#F0FDF4",color:"#15803D",border:"1px solid #BBF7D0",borderRadius:3,padding:"0px 5px",maxWidth:130,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"inline-block",verticalAlign:"middle",cursor:"pointer"}}>
-                            🪪 {k.passportInfo.split("\n")[0]}
-                          </span>
-                        )}
                         {(() => {
                           let ciResps = [];
                           try { ciResps = JSON.parse(k.checkInResponses || "[]"); } catch {}
