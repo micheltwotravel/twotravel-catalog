@@ -3827,7 +3827,7 @@ function DrinksCatalog() {
   const [sent,       setSent]       = React.useState(false);
   const [sending,    setSending]    = React.useState(false);
   const [guestName,  setGuestName]  = React.useState(prefillName);
-  const [fxRate,     setFxRate]     = React.useState(4000);
+  const [fxRate,     setFxRate]     = React.useState(3013);
   const [prevOrderAt,setPrevOrderAt]= React.useState(""); // ISO date of last submission
   const [loading,    setLoading]    = React.useState(!!kickoffId);
   const [kickoffArrival,    setKickoffArrival]    = React.useState("");
@@ -3837,9 +3837,9 @@ function DrinksCatalog() {
 
   // Fetch live exchange rate + menu overrides
   React.useEffect(() => {
-    fetch("https://open.er-api.com/v6/latest/USD")
+    fetch("https://api.frankfurter.app/latest?from=USD&to=COP")
       .then(r => r.json())
-      .then(d => { if (d?.rates?.COP) setFxRate(Math.round(d.rates.COP)); })
+      .then(d => { if (d?.rates?.COP > 500) setFxRate(Math.round(d.rates.COP * 0.98)); })
       .catch(() => {});
     fetch(`${GAS_URL}?action=getMenuConfig`)
       .then(r => r.json()).then(d => {
@@ -5023,7 +5023,7 @@ function BreakfastCatalog() {
   const [notes,           setNotes]           = React.useState("");
   const [sent,            setSent]            = React.useState(false);
   const [sending,         setSending]         = React.useState(false);
-  const [fxRate,          setFxRate]          = React.useState(4000);
+  const [fxRate,          setFxRate]          = React.useState(3013);
   const [arrivalDate,      setArrivalDate]      = React.useState(params.get("arrivalDate") || "");
   const [checkInFormUrl,   setCheckInFormUrl]   = React.useState("");
   const [coverPhotoId,     setCoverPhotoId]     = React.useState("");
@@ -5031,9 +5031,9 @@ function BreakfastCatalog() {
   const autosaveRef = React.useRef(null);
 
   React.useEffect(() => {
-    fetch("https://open.er-api.com/v6/latest/USD")
+    fetch("https://api.frankfurter.app/latest?from=USD&to=COP")
       .then(r => r.json())
-      .then(d => { if (d?.rates?.COP) setFxRate(Math.round(d.rates.COP)); })
+      .then(d => { if (d?.rates?.COP > 500) setFxRate(Math.round(d.rates.COP * 0.98)); })
       .catch(() => {});
   }, []);
 

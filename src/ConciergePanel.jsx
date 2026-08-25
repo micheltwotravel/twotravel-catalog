@@ -8436,6 +8436,9 @@ const loadKickoffs = async () => {
                             {k.juniorBoat && (
                               <div style={{marginTop:1,fontSize:9.5,color:"#0369a1",fontWeight:500}}>Jr. bote: {k.juniorBoat}</div>
                             )}
+                            {k.boatDay && (
+                              <div style={{marginTop:2,fontSize:9.5,color:"#0c7c84",fontWeight:500}}>🛥 {new Date(k.boatDay+"T12:00:00").toLocaleDateString("es-CO",{day:"2-digit",month:"short"})}</div>
+                            )}
                           </div>
                         );
                       })()}
