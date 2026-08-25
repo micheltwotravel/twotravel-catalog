@@ -4560,13 +4560,19 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   });
   const addArrival  = () => setArrivals(a => [...a, { name:"", date:"", time:"", flight:"", flightNumber:"", origin:"", destination:"", city:"" }]);
   const removeArrival = (i) => setArrivals(a => a.filter((_,idx) => idx !== i));
-  const patchArrival = (i, patch) => setArrivals(a => a.map((row,idx) => idx === i ? {...row,...patch} : row));
+  const patchArrival = (i, patch) => setArrivals(a => {
+    const updated = a.map((row,idx) => idx === i ? {...row,...patch} : row);
+    return [...updated].sort((x,y) => (x.date||"").localeCompare(y.date||""));
+  });
   const [departures, setDepartures] = useState(() => {
     try { return [...JSON.parse(kickoff?.departures || "[]")].sort((a,b) => (a.date||"").localeCompare(b.date||"")); } catch { return []; }
   });
   const addDeparture  = () => setDepartures(d => [...d, { name:"", date:"", time:"", flightNumber:"", origin:"", destination:"", notes:"", city:"" }]);
   const removeDeparture = (i) => setDepartures(d => d.filter((_,idx) => idx !== i));
-  const patchDeparture = (i, patch) => setDepartures(d => d.map((row,idx) => idx === i ? {...row,...patch} : row));
+  const patchDeparture = (i, patch) => setDepartures(d => {
+    const updated = d.map((row,idx) => idx === i ? {...row,...patch} : row);
+    return [...updated].sort((x,y) => (x.date||"").localeCompare(y.date||""));
+  });
   const [guestEmailState,    setGuestEmailState]    = useState(kickoff?.email || kickoff?.guestEmail || "");
   const [groupSize,          setGroupSize]          = useState(autoGroupSize);
   const [conciergeTitle,     setConciergeTitle]     = useState(kickoff?.conciergeTitle     || "");
@@ -5730,7 +5736,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent" />
                   </div>
                   <div className="col-span-2">
-                    <p className="text-[9px] text-neutral-400 mb-0.5">Hora</p>
+                    <p className="text-[9px] text-neutral-400 mb-0.5">ARR</p>
                     <input type="time" value={a.time} onChange={e => patchArrival(i,{time:e.target.value})}
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent" />
                   </div>
@@ -5797,7 +5803,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent" />
                   </div>
                   <div className="col-span-2">
-                    <p className="text-[9px] text-neutral-400 mb-0.5">Hora</p>
+                    <p className="text-[9px] text-neutral-400 mb-0.5">DEP</p>
                     <input type="time" value={d.time} onChange={e => patchDeparture(i,{time:e.target.value})}
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent" />
                   </div>
