@@ -290,6 +290,7 @@ function matchCart(cartRaw, catalog, kickoff) {
           bullets:       userBullets.length ? userBullets : (isCtg ? (isEs ? CTG_BULLETS_ES : CTG_BULLETS_EN) : []),
           note:          kickoff?.boatNote           || (isCtg ? (isEs ? CTG_NOTE_ES  : CTG_NOTE_EN)  : ""),
           photos:        parsePhotos(kickoff?.boatPhotos).map(driveImgUrl).filter(Boolean),
+          addons:        parseArr(kickoff?.boatAddons),
         },
       };
     }
@@ -1483,7 +1484,7 @@ function WelcomePage({ kickoff, lang, page, total, editMode, localPreTrip, setLo
 function BoatDetailCard({ it, lang, editMode, onRemove }) {
   const isEs = lang === "es";
   const bd = it._boatData || {};
-  const { title: boatTitle, departureTime, description, bullets, note, photos } = bd;
+  const { title: boatTitle, departureTime, description, bullets, note, photos, addons } = bd;
   const boatName = it.location || "";
   const dock = it.description || "";
   const displayTitle = boatTitle || it.title || (isEs ? "Día de Bote" : "Boat Day");
@@ -1559,6 +1560,19 @@ function BoatDetailCard({ it, lang, editMode, onRemove }) {
                 <div style={{ fontSize:12.5, fontWeight:600, color:"#111" }}>{departureTime}</div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Add-ons chips */}
+        {addons?.length > 0 && (
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:20 }}>
+            {addons.map((a, i) => (
+              <span key={i} style={{
+                fontSize:10, fontWeight:600, color:"#5b21b6",
+                background:"#f5f3ff", border:"1.5px solid #ddd6fe",
+                borderRadius:20, padding:"3px 12px", letterSpacing:".3px",
+              }}>✦ {a}</span>
+            ))}
           </div>
         )}
 
@@ -1723,6 +1737,13 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
           if (/breakfast|desayuno/.test(n)) return null;
           return null;
         })()}
+
+        {/* Day Pass badge for beach-club items */}
+        {isConfirmed && /beach.?club|beachclub/.test((it.category||"").toLowerCase()) && (
+          <div style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:9,fontWeight:700,color:"#0c7c84",background:"#ecfeff",border:"1px solid #a5f3fc",borderRadius:4,padding:"2px 8px",letterSpacing:"0.3px",marginBottom:6}}>
+            ☀️ Day Pass
+          </div>
+        )}
 
         {/* Title + price */}
         <div className="ev-title-row">

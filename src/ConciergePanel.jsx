@@ -1673,8 +1673,8 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
               />
             </div>
           )}
-          {/* Boating & Beach clubs — modalidad + tipo de bote + add-ons */}
-          {["boating","beach","beach-clubs","boating & beach"].some(k => String(item.category||"").toLowerCase().includes(k)) && (
+          {/* Boating — modalidad + tipo de bote + add-ons (beach-clubs excluded: they are always Day Pass) */}
+          {String(item.category||"").toLowerCase().includes("boating") && (
             <>
               <div className="flex items-center gap-2">
                 <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Modalidad</span>
@@ -4482,6 +4482,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     if (!raw) return "";
     try { return JSON.parse(raw).join('\n'); } catch { return raw; }
   });
+  const [boatAddons,             setBoatAddons]              = useState(() => { try { return JSON.parse(kickoff?.boatAddons || "[]"); } catch { return []; } });
   const [beachClub,              setBeachClub]               = useState(kickoff?.beachClub              || "");
   const [beachClubDay,           setBeachClubDay]            = useState(kickoff?.beachClubDay           || "");
   const [juniorConcierge,        setJuniorConcierge]         = useState(kickoff?.juniorConcierge        || "");
@@ -4779,6 +4780,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   updates.boatBullets            = JSON.stringify(boatBulletsRaw.split('\n').map(s => s.trim()).filter(Boolean));
   updates.boatNote               = boatNote.trim();
   updates.boatPhotos             = JSON.stringify(boatPhotosRaw.split('\n').map(s => s.trim()).filter(Boolean));
+  updates.boatAddons             = JSON.stringify(boatAddons);
   updates.beachClub              = beachClub.trim();
   updates.beachClubDay           = beachClubDay.trim();
   updates.juniorConcierge        = juniorConcierge.trim();
@@ -5156,6 +5158,21 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 <input value={dock} onChange={e => setDock(e.target.value)}
                   className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs bg-white"
                   placeholder="Club Náutico…" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-[10px] text-neutral-500 block mb-1">Add-ons del bote</label>
+                <div className="flex gap-1.5 flex-wrap">
+                  {["DJ","Bartender","Comida en bote"].map(addon => {
+                    const active = boatAddons.includes(addon);
+                    return (
+                      <button key={addon} type="button"
+                        onClick={() => setBoatAddons(active ? boatAddons.filter(a => a !== addon) : [...boatAddons, addon])}
+                        className={`text-xs px-2.5 py-1 rounded-full border transition ${active ? "bg-violet-600 text-white border-violet-600" : "bg-white text-neutral-500 border-neutral-300 hover:border-violet-400"}`}>
+                        {addon}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
