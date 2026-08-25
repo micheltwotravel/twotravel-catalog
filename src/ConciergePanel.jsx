@@ -2567,14 +2567,14 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         createdAt:    new Date().toISOString(),
       };
       try {
-        const res = await fetch(TASK_API_URL, {
+        await fetch(TASK_API_URL, {
           method: "POST",
+          mode: "no-cors",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({ action: "saveTask", payload }),
         });
-        const data = await res.json().catch(() => ({}));
-        if (data.ok !== false) count++;
-      } catch { count++; }
+        count++;
+      } catch { /* network error — skip */ }
     }
     setGenerating(false);
     alert(`✅ ${count} tarea${count!==1?"s":""} generada${count!==1?"s":""} en el Task Tracker.`);
