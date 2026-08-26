@@ -1017,31 +1017,33 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
           </div>
         )}
 
-        {/* City 2 accommodation block */}
-        {a.accommodationName2 && (
+        {/* City 2 accommodation + dates block */}
+        {(a.accommodationName2 || a.tripDates2 || a.arrivalDate2 || a.departureDate2) && (
           <div className="cover-info-grid" style={{ marginTop: 8 }}>
-            <div className="cover-info-card">
-              <div className="cover-info-label">
-                {isEs ? "Alojamiento" : "Accommodation"}{a.city && String(a.city).split(",").length > 1 ? ` — ${String(a.city).split(",").map(c => ({ CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" })[c.trim().toUpperCase()] || c.trim())[1]}` : " 2"}
-              </div>
-              {a.accommodationUrl2 ? (
-                <a href={a.accommodationUrl2} target="_blank" rel="noreferrer"
-                  className="cover-info-value"
-                  style={{ color: "#1d4ed8", textDecoration: "underline", display: "block" }}>
-                  {a.accommodationName2}
-                </a>
-              ) : (
-                <Editable tag="div" className="cover-info-value" editMode={editMode} value={a.accommodationName2}/>
-              )}
-              {a.accommodationAddr2 && (
-                <Editable tag="div" className="cover-info-sub" editMode={editMode} value={a.accommodationAddr2}/>
-              )}
-              {a.barrio2 && (
-                <div className="cover-info-sub" style={{ color: "#6b7280", fontStyle: "italic" }}>
-                  {isEs ? "Barrio" : "Neighborhood"}: {a.barrio2}
+            {a.accommodationName2 ? (
+              <div className="cover-info-card">
+                <div className="cover-info-label">
+                  {isEs ? "Alojamiento" : "Accommodation"}{a.city && String(a.city).split(",").length > 1 ? ` — ${String(a.city).split(",").map(c => ({ CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" })[c.trim().toUpperCase()] || c.trim())[1]}` : " 2"}
                 </div>
-              )}
-            </div>
+                {a.accommodationUrl2 ? (
+                  <a href={a.accommodationUrl2} target="_blank" rel="noreferrer"
+                    className="cover-info-value"
+                    style={{ color: "#1d4ed8", textDecoration: "underline", display: "block" }}>
+                    {a.accommodationName2}
+                  </a>
+                ) : (
+                  <Editable tag="div" className="cover-info-value" editMode={editMode} value={a.accommodationName2}/>
+                )}
+                {a.accommodationAddr2 && (
+                  <Editable tag="div" className="cover-info-sub" editMode={editMode} value={a.accommodationAddr2}/>
+                )}
+                {a.barrio2 && (
+                  <div className="cover-info-sub" style={{ color: "#6b7280", fontStyle: "italic" }}>
+                    {isEs ? "Barrio" : "Neighborhood"}: {a.barrio2}
+                  </div>
+                )}
+              </div>
+            ) : <div />}
             {(a.tripDates2 || a.arrivalDate2 || a.departureDate2) && (
               <div className="cover-info-card">
                 <div className="cover-info-label">{isEs ? "Fechas — Ciudad 2" : "Dates — City 2"}</div>
