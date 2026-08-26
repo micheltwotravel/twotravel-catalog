@@ -493,6 +493,8 @@ let selDate   = null;
 let selSlot   = null;
 // Cache of dates known to have no slots: Set of "YYYY-MM-DD" strings
 const noSlotDates = new Set();
+// Track which months have already been pre-fetched
+const fetchedMonths = new Set();
 
 const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -500,6 +502,21 @@ const DAYS_ES   = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
 const DAYS_EN   = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const MONTHS = lang === "es" ? MONTHS_ES : MONTHS_EN;
 const DAYS   = lang === "es" ? DAYS_ES   : DAYS_EN;
+
+// Pre-fetch busy dates for a month so they appear greyed from the start
+async function prefetchBusyDates(year, month) {
+  const monthStr = `${year}-${String(month + 1).padStart(2,"0")}`;
+  if (fetchedMonths.has(monthStr)) return;
+  fetchedMonths.add(monthStr);
+  try {
+    const res = await fetch(`/api/calendar/busy-dates?concierge=${slug}&month=${monthStr}&duration=${duration}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    (data.busyDates || []).forEach(d => noSlotDates.add(d));
+    // Re-render calendar with newly greyed dates (only if still on this month)
+    if (viewYear === year && viewMonth === month) renderCalendar();
+  } catch { /* non-critical — calendar still works by clicking */ }
+}
 
 function renderCalendar() {
   document.getElementById("calTitle").textContent = `${MONTHS[viewMonth]} ${viewYear}`;
@@ -530,8 +547,16 @@ function renderCalendar() {
   }
 }
 
-function prevMonth() { if (viewMonth === 0) { viewMonth = 11; viewYear--; } else viewMonth--; renderCalendar(); }
-function nextMonth() { if (viewMonth === 11) { viewMonth = 0; viewYear++; } else viewMonth++; renderCalendar(); }
+function prevMonth() {
+  if (viewMonth === 0) { viewMonth = 11; viewYear--; } else viewMonth--;
+  renderCalendar();
+  prefetchBusyDates(viewYear, viewMonth);
+}
+function nextMonth() {
+  if (viewMonth === 11) { viewMonth = 0; viewYear++; } else viewMonth++;
+  renderCalendar();
+  prefetchBusyDates(viewYear, viewMonth);
+}
 
 function addMinutes(time, mins) {
   const [h, m] = time.split(":").map(Number);
@@ -706,6 +731,8 @@ function applyTranslations() {
 
 renderCalendar();
 applyTranslations();
+// Pre-fetch busy dates for current month so they show greyed from the start
+prefetchBusyDates(viewYear, viewMonth);
 </script>
 </body>
 </html>
