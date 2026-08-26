@@ -1134,7 +1134,7 @@ function OrderCell({ summary, at, empty = "—", fullText, icon = "✅" }) {
               <button onClick={() => setOpen(false)} style={{ border:"none", background:"none", cursor:"pointer", color:"#9ca3af", fontSize:20, lineHeight:1, padding:"0 4px" }}>✕</button>
             </div>
             <div style={{ padding:"16px 24px", overflowY:"auto", flex:1, display:"flex", flexDirection:"column", gap:12 }}>
-              {(fullText || summary).split(/\n{2,}|\n(?=(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat|Dom|Lun|Mar|Mié|Jue|Vie|Sáb)\s+\d)/).map((block, i) => {
+              {(fullText || summary).split(/\n{2,}|\n(?=\*?(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat|Dom|Lun|Mar|Mié|Jue|Vie|Sáb)\s+\d)/).map((block, i) => {
                 const lines = block.trim().split("\n");
                 const isHeader = lines[0] && /^(☕|🍹|🛒|[A-Z]|[A-ZÁÉÍÓÚ]|\*|Vie|Lun|Mar|Mié|Jue|Sáb|Dom|Mon|Tue|Wed|Thu|Fri|Sat|Sun)/.test(lines[0].trim());
                 const renderLine = (text) => text ? text.split(/(\*[^*]+\*)/).map((part, k) =>
@@ -1542,12 +1542,35 @@ function ClientesTable({ kickoffs, loading }) {
                         : <span style={{ fontSize:11, color:"#d1d5db" }}>—</span>}
                     </td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>
-                      {r.passportInfo
-                        ? <PassportPopup passportInfo={r.passportInfo} dietInfo="" guestName={r.guestName || r.tripName} />
-                        : <span style={{ color:"#d1d5db" }}>—</span>}
+                      {(() => {
+                        let ciResps = [];
+                        try { ciResps = JSON.parse(r.checkInResponses || "[]"); } catch {}
+                        const withPassport = ciResps.filter(c => c.idType || c.idNumber);
+                        const passportText = withPassport.length
+                          ? withPassport.map(c => {
+                              const name = [c.firstName, c.lastName].filter(Boolean).join(" ");
+                              const idStr = [c.idType && `${c.idType}:`, c.idNumber].filter(Boolean).join(" ");
+                              return [name, idStr, c.dob && `DOB: ${c.dob}`, c.nationality && `Nat: ${c.nationality}`].filter(Boolean).join(" · ");
+                            }).join("\n")
+                          : (r.passportInfo || "");
+                        return passportText
+                          ? <PassportPopup passportInfo={passportText} dietInfo="" guestName={r.guestName || r.tripName} />
+                          : <span style={{ color:"#d1d5db" }}>—</span>;
+                      })()}
                     </td>
                     <td style={{ ...tdStyle, textAlign:"center" }}>
                       {(() => {
+                        let ciResps = [];
+                        try { ciResps = JSON.parse(r.checkInResponses || "[]"); } catch {}
+                        const withDiet = ciResps.filter(c => c.foodRestrictions || c.allergies);
+                        if (withDiet.length) {
+                          const dietText = withDiet.map(c => {
+                            const name = [c.firstName, c.lastName].filter(Boolean).join(" ");
+                            const restriction = [c.foodRestrictions, c.allergies].filter(Boolean).join(" / ");
+                            return name ? `${name}: ${restriction}` : restriction;
+                          }).join("\n");
+                          return <PassportPopup passportInfo="" dietInfo={dietText} guestName={r.guestName || r.tripName} />;
+                        }
                         const food = r.foodRestrictions || r["Food Restrictions"] || "";
                         const allergy = r.allergies || r["Allergies and/or Medical Conditions"] || "";
                         const combined = r.dietInfo || r.briefDietary || [food, allergy].filter(Boolean).join(" / ");
@@ -3931,7 +3954,7 @@ function DrinksCatalog() {
     if (totalCOP > 0) parts.push(`\n💰 *Total: COP ${fmtCOP(totalCOP)} (~USD ${fmtUSD(totalUSD)})*`);
     const action = isUpdate ? "✏️ *UPDATED*" : "🆕 *NEW*";
     const slackText = `🍹 ${action} Drink Order ${guestName ? `(${guestName})` : ""} · kickoff: ${kickoffId}\n\n${parts.join("\n\n")}`;
-    const drinkOrder = slackText.replace(/\*/g, "");
+    const drinkOrder = slackText;
     const drinkOrderJson = JSON.stringify({ house: houseItems, boat: boatItems, extra });
     const now = new Date().toISOString();
     try {
@@ -4333,7 +4356,7 @@ function GroceryCatalog() {
     if (others.trim()) lines.push(`\n📝 Others: ${others}`);
     const action = isUpdate ? "✏️ *UPDATED*" : "🆕 *NEW*";
     const slackText = `🛒 ${action} Grocery List ${guestName ? `(${guestName})` : ""} · kickoff: ${kickoffId}\n\n${lines.join("\n")}`;
-    const groceryOrder = slackText.replace(/\*/g,"");
+    const groceryOrder = slackText;
     const groceryOrderJson = JSON.stringify({ checked, others });
     const now = new Date().toISOString();
     try {
@@ -5184,6 +5207,7 @@ function BreakfastCatalog() {
       if (!dayHasAny(order)) return;
       if (order.status === "no-breakfast") {
         if (stayNights > 1) lines.push(`*${getDayLabel(i)} — ${en ? "No breakfast" : "Sin desayuno"}*`);
+        if (stayNights > 1 && i < dayOrders.length - 1) lines.push("");
         return;
       }
       if (stayNights > 1) {
@@ -5326,7 +5350,7 @@ function BreakfastCatalog() {
             </p>
           </div>
         </div>
-        {currency === "USD" && fxRate > 500 && (
+        {fxRate > 500 && (
           <div style={{maxWidth:680,margin:"6px auto 0",display:"flex",justifyContent:"flex-end"}}>
             <span style={{fontSize:10,color:"#9ca3af",background:"#f3f4f6",borderRadius:9999,padding:"3px 12px"}}>
               {en ? `Exchange rate: 1 USD = COP ${fxRate.toLocaleString("es-CO")}` : `Tasa de cambio: 1 USD = COP ${fxRate.toLocaleString("es-CO")}`}

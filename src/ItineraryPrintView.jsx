@@ -117,10 +117,10 @@ function FlightRow({ flight, lang, type }) {
   const st = data?.status ? (STATUS_STYLE[data.status] || STATUS_STYLE.unknown) : null;
   const depTime = data ? fmtTime(data.depActual || data.depScheduled) : (flight.time || "—");
   const arrTime = data ? fmtTime(data.arrActual || data.arrEstimated || data.arrScheduled) : "—";
-  const route = data ? `${data.depIata || ""}  →  ${data.arrIata || ""}` : "";
+  const timeValue = type === "arrival" ? arrTime : depTime;
 
   return (
-    <div style={{ display:"grid", gridTemplateColumns:"90px 1fr 90px 90px 90px", alignItems:"center", gap:12,
+    <div style={{ display:"grid", gridTemplateColumns:"90px 1fr 90px 90px", alignItems:"center", gap:12,
       padding:"12px 0", borderBottom:"1px solid #f3f4f6" }}>
       {/* Flight # */}
       <div>
@@ -129,14 +129,13 @@ function FlightRow({ flight, lang, type }) {
         </div>
         {data?.airline && <div style={{ fontSize:9, color:"#9ca3af", marginTop:1 }}>{data.airline}</div>}
       </div>
-      {/* Route */}
+      {/* Passenger */}
       <div>
         <div style={{ fontSize:13, color:"#374151", fontWeight:500 }}>
-          {route || (flight.name ? flight.name : <span style={{ color:"#d1d5db" }}>—</span>)}
+          {flight.name ? flight.name : <span style={{ color:"#d1d5db" }}>—</span>}
         </div>
-        {route && flight.name && <div style={{ fontSize:10, color:"#9ca3af" }}>{flight.name}</div>}
-        {data?.depAirport && !route.includes(data.depAirport) && (
-          <div style={{ fontSize:9, color:"#9ca3af" }}>{data.depAirport} → {data.arrAirport}</div>
+        {data?.depIata && data?.arrIata && (
+          <div style={{ fontSize:9, color:"#9ca3af" }}>{data.depIata} → {data.arrIata}</div>
         )}
       </div>
       {/* Date */}
@@ -144,19 +143,13 @@ function FlightRow({ flight, lang, type }) {
         <div style={{ fontSize:11, color:"#374151" }}>{fmtDate(data?.depScheduled)}</div>
         {data?.depDelay > 0 && <div style={{ fontSize:9, color:"#dc2626" }}>+{data.depDelay}m</div>}
       </div>
-      {/* Dep / Arr time */}
+      {/* ARR for arrivals, DEP for departures */}
       <div style={{ textAlign:"center" }}>
         <div style={{ fontSize:10, color:"#9ca3af", textTransform:"uppercase", letterSpacing:".06em", marginBottom:2 }}>
-          {type === "arrival" ? (isEs ? "Sale" : "Dep") : (isEs ? "Sale" : "Dep")}
+          {type === "arrival" ? (isEs ? "Llega" : "Arr") : (isEs ? "Sale" : "Dep")}
         </div>
-        <div style={{ fontSize:13, fontWeight:600, color:"#111" }}>{loading ? "…" : depTime}</div>
-        {data?.gate && <div style={{ fontSize:9, color:"#9ca3af" }}>Gate {data.gate}</div>}
-      </div>
-      <div style={{ textAlign:"center" }}>
-        <div style={{ fontSize:10, color:"#9ca3af", textTransform:"uppercase", letterSpacing:".06em", marginBottom:2 }}>
-          {type === "arrival" ? (isEs ? "Llega" : "Arr") : (isEs ? "Llega" : "Arr")}
-        </div>
-        <div style={{ fontSize:13, fontWeight:600, color:"#111" }}>{loading ? "…" : arrTime}</div>
+        <div style={{ fontSize:13, fontWeight:600, color:"#111" }}>{loading ? "…" : timeValue}</div>
+        {data?.gate && type === "departure" && <div style={{ fontSize:9, color:"#9ca3af" }}>Gate {data.gate}</div>}
         {st && (
           <span style={{ fontSize:8, fontWeight:700, padding:"1px 6px", borderRadius:99,
             background:st.bg, color:st.color, letterSpacing:".06em", textTransform:"uppercase" }}>
@@ -171,7 +164,7 @@ function FlightRow({ flight, lang, type }) {
 function FlightBlock({ kickoff, lang, type }) {
   let flights = [];
   const key = type === "arrival" ? "arrivals" : "departures";
-  try { flights = JSON.parse(kickoff[key] || "[]").filter(f => f.flightNumber); } catch {}
+  try { flights = JSON.parse(kickoff[key] || "[]").filter(f => f.flightNumber).sort((a,b) => (a.date||"").localeCompare(b.date||"")); } catch {}
   if (!flights.length) return null;
   const isEs = lang === "es";
   const label = type === "arrival"
@@ -187,11 +180,11 @@ function FlightBlock({ kickoff, lang, type }) {
           <span style={{ color:"#fff", fontWeight:700, fontSize:12, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</span>
         </div>
         {/* Column headers */}
-        <div style={{ display:"grid", gridTemplateColumns:"90px 1fr 90px 90px 90px", gap:12,
+        <div style={{ display:"grid", gridTemplateColumns:"90px 1fr 90px 90px", gap:12,
           padding:"8px 20px", background:"#f9fafb", borderBottom:"1px solid #e5e7eb" }}>
-          {["Vuelo","Ruta","Fecha",isEs?"Sale":"Dep",isEs?"Llega":"Arr"].map(h => (
+          {["Vuelo", isEs?"Pasajero":"Passenger", "Fecha", type==="arrival"?(isEs?"Llega":"Arr"):(isEs?"Sale":"Dep")].map(h => (
             <div key={h} style={{ fontSize:9, fontWeight:600, color:"#9ca3af", textTransform:"uppercase", letterSpacing:".08em",
-              textAlign: h === "Vuelo" || h === "Ruta" ? "left" : "center" }}>{h}</div>
+              textAlign: h === "Vuelo" || h === (isEs?"Pasajero":"Passenger") ? "left" : "center" }}>{h}</div>
           ))}
         </div>
         {/* Rows */}
@@ -2298,7 +2291,8 @@ function KeepInTouchPage({ kickoff, page, total }) {
     },
   ];
 
-  const kickoffCity = String(kickoff?.city || "").toUpperCase();
+  const kickoffCity = String(kickoff?.city || kickoff?.destination || "")
+    .toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   const isMexicoCity = /CDMX|TUL|CABO|MEXICO|CIUDAD|TULUM/.test(kickoffCity);
   const googleReviewUrl = isMexicoCity
     ? "https://www.google.com/maps/place/Two+Travel+Concierge+Mexico+City/@19.4126255,-99.163745,17z/data=!4m8!3m7!1s0x85d1ffe74c93137b:0xa0d5cd7a707b4f62!8m2!3d19.4126255!9m1!1b1!16s%2Fg%2F11vi68z9v8?entry=ttu&g_ep=EgoyMDI2MDgxNy4wIKXMDSoASAFQAw%3D%3D"
