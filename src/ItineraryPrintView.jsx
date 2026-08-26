@@ -290,7 +290,7 @@ function matchCart(cartRaw, catalog, kickoff) {
           bullets:       userBullets.length ? userBullets : (isCtg ? (isEs ? CTG_BULLETS_ES : CTG_BULLETS_EN) : []),
           note:          kickoff?.boatNote           || (isCtg ? (isEs ? CTG_NOTE_ES  : CTG_NOTE_EN)  : ""),
           photos:        parsePhotos(kickoff?.boatPhotos).map(driveImgUrl).filter(Boolean),
-          addons:        parseArr(kickoff?.boatAddons),
+          addons:        [...new Set([...parseArr(kickoff?.boatAddons), ...parseArr(item.boatAddons)])],
         },
       };
     }
