@@ -4141,6 +4141,7 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
               <div>
                 <label className="text-[10px] text-neutral-500">Día bote</label>
                 <input type="date" value={boatDay} onChange={e => setBoatDay(e.target.value)}
+                  min={kickoff?.arrivalDate || ""} max={kickoff?.departureDate || ""}
                   className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs" />
               </div>
               <div className="col-span-2">
@@ -4156,6 +4157,7 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
               <div>
                 <label className="text-[10px] text-neutral-500">Día beach club</label>
                 <input type="date" value={beachClubDay} onChange={e => setBeachClubDay(e.target.value)}
+                  min={kickoff?.arrivalDate || ""} max={kickoff?.departureDate || ""}
                   className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs" />
               </div>
             </div>
