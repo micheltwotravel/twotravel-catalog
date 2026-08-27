@@ -6560,60 +6560,61 @@ function PresetMessages({ kickoff }) {
     try { await updateKickoffInSheet(id, { kickoffCallUrl: calendlyUrl.trim() }); }
     finally { setSavingCalendly(false); }
   };
+  const meetingUrl = `${base}/book.html?c=${bookingSlug}&kickoffId=${id}&lang=${kickoff.lang || "en"}`;
   const msgs = [
     ...(bookingSlug ? [{
       key: "reunion", icon: "📅", label: isEs ? "Reunión" : "Meeting",
-      url: `${base}/book.html?c=${bookingSlug}&kickoffId=${id}&lang=${kickoff.lang || "en"}`,
+      url: meetingUrl,
       text: isEs
-        ? `Hola ${first}! 📅 Me gustaría agendar una reunión contigo para coordinar los detalles de tu estadía. Elige el horario que mejor te funcione:\n${base}/book.html?c=${bookingSlug}&kickoffId=${id}&lang=${kickoff.lang || "en"}`
-        : `Hi ${first}! 📅 I'd love to schedule a meeting with you to coordinate the details of your stay. Pick the time that works best for you:\n${base}/book.html?c=${bookingSlug}&kickoffId=${id}&lang=${kickoff.lang || "en"}`,
+        ? `Hola ${first}!\n\nSoy Carolina, pero todos me llaman Caro, Senior Concierge en Two Travel. Estoy muy emocionada de empezar a planear un viaje memorable para ti y tu grupo.\n\nA continuación te comparto el link de mi calendario para que puedas elegir el día y la hora que mejor te funcione. En esta llamada vamos a revisar el itinerario de tu viaje: reservas, día de bote, actividades en la ciudad y lo que quieras discutir.\n\n¡Espero conocerte pronto!\n\n${meetingUrl}`
+        : `Hi ${first}!\n\nI'm Carolina, but everyone calls me Caro, Senior Concierge at Two Travel. I'm excited to start planning a memorable trip for you and your group.\n\nBelow is a link to my calendar so you can pick a day and time that works best for you. On this call, we'll go over your trip's itinerary: reservations, boat day, activities around the city, and anything else you'd like to discuss.\n\nLooking forward to meeting you.\n\n${meetingUrl}`,
     }] : []),
     {
-      key: "pre", icon: "📋", label: isEs ? "Pre Check-in" : "Pre Check-in",
+      key: "pre", icon: "📋", label: "Pre Check-in",
       url: `${base}/ci/${id}`,
       text: isEs
-        ? `Hola ${first}! 📋 Para preparar todo antes de tu llegada, completa este formulario de pre check-in. ¡Solo toma unos minutos!\n${base}/ci/${id}`
-        : `Hi ${first}! 📋 To get everything ready before your arrival, please fill out this pre check-in form. It only takes a few minutes!\n${base}/ci/${id}`,
+        ? `Hola ${first}!\n\nPor favor completa este formulario de pre check-in antes de tu llegada. Es importante que todos en el grupo lo completen. Esto nos ayuda a organizar la logística de tu viaje, como:\n• Información de vuelos (para transporte y solicitudes de check-in/check-out temprano).\n• Alergias e intolerancias alimentarias (para informar al staff y restaurantes).\n• Datos del pasaporte (requeridos para el check-in de la villa y entrada a la marina el día de bote).\n\n${base}/ci/${id}\n\n¡Gracias!`
+        : `Hi ${first}!\n\nPlease fill out this quick pre check-in form before your arrival. It's important that everyone in the group completes it. This helps us organize the logistics for your trip, like:\n• Flight information (for transport & early check-in/out requests).\n• Food allergies & restrictions (so we can inform staff and restaurants).\n• Passport details (required for villa check-in and marina entry on your boat day).\n\n${base}/ci/${id}\n\nThank you!`,
     },
     {
       key: "catalogo", icon: "📖", label: isEs ? "Catálogo" : "Catalog",
       url: `${base}/c/${id}`,
       text: isEs
-        ? `Hola ${first}! 👋 Aquí está tu catálogo personalizado con todas las experiencias disponibles para tu estadía. Explóralo y cuéntanos qué te interesa.\n${base}/c/${id}`
-        : `Hi ${first}! 👋 Here's your personalized catalog with all the experiences available during your stay. Take a look and let us know what interests you!\n${base}/c/${id}`,
+        ? `Hola ${first}!\n\nPrepare un catálogo con todo lo disponible para tu viaje: restaurantes, tours, beach clubs, bares, todo en un solo lugar.\n\nDate un momento para explorarlo y marca con ❤️ lo que te llame la atención. Es como ir de shopping, solo navega y escoge lo que te interesa.\n\nEn nuestra llamada lo revisamos todo en detalle y construyo el itinerario completo y personalizado desde ahí.\n\n${base}/c/${id}`
+        : `Hi ${first}!\n\nI put together a catalog with everything available for your trip: restaurants, tours, beach clubs, bars, all in one place.\n\nTake a look whenever you have a minute and heart ❤️ anything that catches your eye. Think of it as window shopping, just browse and pick what interests you.\n\nOn our call, we'll go through it all together in detail and I'll build out your full, personalized itinerary from there.\n\n${base}/c/${id}`,
     },
     {
       key: "bebidas", icon: "🍹", label: isEs ? "Bebidas" : "Drink Order",
       url: `${base}/d/${id}`,
       text: isEs
-        ? `Hola ${first}! 🍹 Para tener todo listo en la villa antes de que lleguen, compártenos tu selección de bebidas aquí:\n${base}/d/${id}`
-        : `Hi ${first}! 🍹 To have everything ready at the villa before you arrive, please share your drinks selection here:\n${base}/d/${id}`,
+        ? `Hola ${first}!\n\nAquí está nuestra lista de pedido de bebidas. La mayoría de lo que encuentras aquí está disponible en la ciudad, con precios aproximados para que tengas una idea del presupuesto.\n\nSelecciona lo que quieres para la villa y para el bote, elige tus licores y cantidad, y al final te aparece un total aproximado.\n\nTen en cuenta que este link es editable. Puedes hacer tu pedido en cualquier momento y volver para hacer cambios. Confirmamos la lista final contigo unos días antes de tu viaje.\n\n${base}/d/${id}`
+        : `Hi ${first}!\n\nHere's our drink order list. Most of what you'll find here in the city, with approximate prices so you have an idea for your budget.\n\nSelect what you'd like for the villa and for the boat, choose your liquor and quantity, and you'll get an approximate total at the end.\n\nPlease note that this link is editable. You can send an order anytime and come back to make changes. We'll confirm the final list with you a few days before your trip.\n\n${base}/d/${id}`,
     },
     {
       key: "desayuno", icon: "☕", label: isEs ? "Desayuno" : "Breakfast",
       url: `${base}/b/${id}`,
       text: isEs
-        ? `Hola ${first}! ☕ Aquí puedes seleccionar el menú de desayuno para cada día de tu estadía. ¡Nos encargamos del resto!\n${base}/b/${id}`
-        : `Hi ${first}! ☕ Here you can choose your breakfast menu for each day of your stay. We'll take care of the rest!\n${base}/b/${id}`,
+        ? `Hola ${first}!\n\nElige el menú de desayuno para cada día de tu estadía. Puedes escoger un menú completo (Americano, Típico o Saludable) o armar el tuyo propio con platos individuales. Puedes mantener el mismo menú cada día o cambiarlo.\n\nUna vez que decidas, márcalo como "confirmado" o "aún decidiendo", o selecciona "sin desayuno" si no aplica. Los precios son aproximados, por grupo, por día.\n\nEste link es editable. Puedes enviar tu pedido en cualquier momento y volver para hacer cambios. Confirmamos la lista final contigo unos días antes del viaje.\n\n${base}/b/${id}`
+        : `Hi ${first}!\n\nChoose your breakfast menu for each day of your stay. You can pick a full menu (American, Traditional, or Healthy) or build your own from individual items. You can keep the same menu every day or switch it up.\n\nOnce you've decided, mark it as "confirmed" or "still deciding," or select "no breakfast" if it doesn't apply. Prices shown are approximate, per group, per day.\n\nPlease note that this link is editable. You can send an order anytime and come back to make changes. We'll confirm the final list with you a few days before your trip.\n\n${base}/b/${id}`,
     },
     {
       key: "mercado", icon: "🛒", label: isEs ? "Mercado" : "Groceries",
       url: `${base}/g/${id}`,
       text: isEs
-        ? `Hola ${first}! 🛒 Cuéntanos qué productos quieren tener disponibles en la villa y los coordinamos antes de su llegada:\n${base}/g/${id}`
-        : `Hi ${first}! 🛒 Let us know what products you'd like available at the villa and we'll have them ready before you arrive:\n${base}/g/${id}`,
+        ? `Hola ${first}!\n\nAquí está nuestra lista de mercado. Puedes seleccionar los artículos específicos que quieres tener en la villa, como snacks, etc. También hay un cuadro de notas donde puedes agregar más detalle o pedir algo que no está en la lista. Agrega lo que quieras y nosotros nos encargamos de tenerlo listo.\n\nEste link es editable. Puedes enviar tu pedido en cualquier momento y volver para hacer cambios. Confirmamos la lista final contigo unos días antes del viaje.\n\n${base}/g/${id}`
+        : `Hi ${first}!\n\nHere's our groceries order list. Here you can select specific items you'd like to have at the villa, like snacks and so on. There's also a notes box where you can add more detail or request anything that's not on the list. Just add what you want, and we'll take care of having it ready for you.\n\nPlease note that this link is editable. You can send an order anytime and come back to make changes. We'll confirm the final list with you a few days before your trip.\n\n${base}/g/${id}`,
     },
     {
       key: "feedback", icon: "⭐", label: "Feedback",
       url: `${base}/f/${id}`,
       text: isEs
-        ? `Hola ${first}! ⭐ Esperamos que hayan tenido una experiencia increíble. ¿Nos dejan sus comentarios? Nos ayuda mucho a seguir mejorando:\n${base}/f/${id}`
-        : `Hi ${first}! ⭐ We hope you had an amazing experience! Would you mind leaving us some feedback? It really helps us keep improving:\n${base}/f/${id}`,
+        ? `Hola ${first}!\n\nFue un placer recibirlos, gracias por ser unos huéspedes increíbles. Esperamos haber cumplido y superado sus expectativas, y que hayan disfrutado mucho su estadía.\n\nSi tienen un momento, nos encantaría que nos dejaran una reseña en Google y tal vez algunas fotos. Estas reseñas ayudan a que futuros clientes entiendan nuestro servicio y sepan que nos esforzamos al máximo por cada grupo.\n\nCualquier palabra amable es muy apreciada 💛\n\n${base}/f/${id}`
+        : `Hi ${first}!\n\nIt was a pleasure hosting such a nice group, thank you for being amazing guests. We really hope we were able to meet and exceed expectations. And that you enjoyed your stay and Two Travel!\n\nIf you have time we would appreciate it if you leave us a nice review on Google and maybe add some cool photos. These reviews allow our future clients to understand our service and know we try very hard to make things as easy as possible for our clients.\n\nAny and all nice words are greatly appreciated 💛\n\n${base}/f/${id}`,
     },
   ];
   const calendlyMsg = calendlyUrl ? (isEs
-    ? `Hola ${first}! 📅 Me gustaría agendar una reunión contigo para coordinar los detalles de tu estadía. Elige el horario que mejor te funcione:\n${calendlyUrl}`
-    : `Hi ${first}! 📅 I'd love to schedule a meeting with you to coordinate the details of your stay. Pick the time that works best for you:\n${calendlyUrl}`) : "";
+    ? `Hola ${first}!\n\nSoy Carolina, pero todos me llaman Caro, Senior Concierge en Two Travel. Estoy muy emocionada de empezar a planear un viaje memorable para ti y tu grupo.\n\nA continuación te comparto el link de mi calendario para que puedas elegir el día y la hora que mejor te funcione. En esta llamada vamos a revisar el itinerario de tu viaje: reservas, día de bote, actividades en la ciudad y lo que quieras discutir.\n\n¡Espero conocerte pronto!\n\n${calendlyUrl}`
+    : `Hi ${first}!\n\nI'm Carolina, but everyone calls me Caro, Senior Concierge at Two Travel. I'm excited to start planning a memorable trip for you and your group.\n\nBelow is a link to my calendar so you can pick a day and time that works best for you. On this call, we'll go over your trip's itinerary: reservations, boat day, activities around the city, and anything else you'd like to discuss.\n\nLooking forward to meeting you.\n\n${calendlyUrl}`) : "";
   return (
     <div>
       <button type="button" onClick={() => setOpen(v => !v)}
