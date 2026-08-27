@@ -8372,7 +8372,7 @@ const loadKickoffs = async () => {
                           if (!ciResps.length) return null;
                           const groupSize = k.groupSize || k.pax || "?";
                           return (
-                            <span onClick={e => { e.stopPropagation(); setInfoPopup({ title:"📋 Pre Check-in", text: ciResps.map(r => [r.name, r.foodRestrictions && `Dieta: ${r.foodRestrictions}`, r.allergies && `Alergias: ${r.allergies}`].filter(Boolean).join(" · ")).join("\n") }); }}
+                            <span onClick={e => { e.stopPropagation(); setInfoPopup({ title:"📋 Pre Check-in", text: ciResps.map(r => { const name = [r.firstName, r.lastName].filter(Boolean).join(" ") || r.name || ""; const diet = [r.foodRestrictions && `Dieta: ${r.foodRestrictions}`, r.allergies && `Alergias: ${r.allergies}`].filter(Boolean).join(" / "); return [name, diet].filter(Boolean).join(": "); }).filter(Boolean).join("\n") }); }}
                               style={{fontSize:9,background:"#F5F3FF",color:"#5B21B6",border:"1px solid #DDD6FE",borderRadius:3,padding:"0px 5px",cursor:"pointer",fontWeight:600}}>
                               📋 {ciResps.length}/{groupSize}
                             </span>

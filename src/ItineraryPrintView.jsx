@@ -2324,7 +2324,7 @@ function KeepInTouchPage({ kickoff, page, total }) {
     .toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   const isMexicoCity = /CDMX|TUL|CABO|MEXICO|CIUDAD|TULUM/.test(kickoffCity);
   const googleReviewUrl = isMexicoCity
-    ? "https://www.google.com/maps/place/Two+Travel+Concierge+Mexico+City/@19.4126255,-99.163745,17z/data=!4m8!3m7!1s0x85d1ffe74c93137b:0xa0d5cd7a707b4f62!8m2!3d19.4126255!9m1!1b1!16s%2Fg%2F11vi68z9v8?entry=ttu&g_ep=EgoyMDI2MDgxNy4wIKXMDSoASAFQAw%3D%3D"
+    ? "https://www.google.com/maps/place/Two+Travel+Concierge+Mexico+City/@19.4126255,-99.163745,17z/data=!4m8!3m7!1s0x85d1ffe74c93137b:0xa0d5cd7a707b4f62!8m2!3d19.4126255!4d-99.163745!9m1!1b1!16s%2Fg%2F11vj68z9y8?entry=ttu&g_ep=EgoyMDI2MDgxNy4wIKXMDSoASAFQAw%3D%3D"
     : "https://www.google.com/maps/place/Two+Travel/@10.4246252,-75.5499402,17z/data=!4m8!3m7!1s0x8ef62f5261cc37e3:0xc3a9008caaf63acb!8m2!3d10.4246252!4d-75.5473653!9m1!1b1!16s%2Fg%2F11fmc2tt3w?entry=ttu&g_ep=EgoyMDI2MDgxNy4wIKXMDSoASAFQAw%3D%3D";
 
   const REVIEWS = [
@@ -2931,10 +2931,18 @@ export default function ItineraryPrintView() {
         let departures = [];
         try { arrivals = JSON.parse(kickoff.arrivals || "[]").filter(f => f.flightNumber); } catch {}
         try { departures = JSON.parse(kickoff.departures || "[]").filter(f => f.flightNumber); } catch {}
+        const baseDate = kickoff.arrivalDate || kickoff.arrivalDate2 || "";
+        const isoForDay = (di) => {
+          if (!baseDate) return "";
+          const d = new Date(baseDate + "T12:00:00");
+          d.setDate(d.getDate() + di);
+          return d.toISOString().slice(0, 10);
+        };
         return activeDays.map((day, di) => {
-          const dayFlights = day.date ? [
-            ...arrivals.filter(f => f.date === day.date).map(f => ({ flight:f, type:"arrival" })),
-            ...departures.filter(f => f.date === day.date).map(f => ({ flight:f, type:"departure" })),
+          const dateStr = day.date || isoForDay(di);
+          const dayFlights = dateStr ? [
+            ...arrivals.filter(f => f.date === dateStr).map(f => ({ flight:f, type:"arrival" })),
+            ...departures.filter(f => f.date === dateStr).map(f => ({ flight:f, type:"departure" })),
           ] : [];
           return (
             <DayPage

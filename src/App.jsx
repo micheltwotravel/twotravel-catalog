@@ -1116,6 +1116,10 @@ function OrderCell({ summary, at, empty = "—", fullText, icon = "✅" }) {
     <span style={{ color:"#d1d5db", fontSize:16, cursor:"default" }} title="Pendiente">⏰</span>
   );
   const copyText = fullText || summary;
+  // Render summary with bold quantities (*x N* → <strong>x N</strong>)
+  const renderSummary = (text) => text ? text.split(/(\*[^*]+\*)/).map((part, k) =>
+    /^\*[^*]+\*$/.test(part) ? <strong key={k}>{part.slice(1,-1)}</strong> : part
+  ) : null;
   return (
     <div style={{ position:"relative" }}>
       <button
@@ -1123,6 +1127,12 @@ function OrderCell({ summary, at, empty = "—", fullText, icon = "✅" }) {
         title="Ver pedido completo"
         style={{ fontSize:18, background:"none", border:"none", cursor:"pointer", padding:"2px 4px", lineHeight:1 }}
       >{icon}</button>
+      <div style={{ fontSize:9.5, color:"#374151", lineHeight:1.5, maxWidth:180, marginTop:1 }}>
+        {summary.split(" · ").slice(0,4).map((item, i) => (
+          <div key={i}>{renderSummary(item)}</div>
+        ))}
+        {summary.split(" · ").length > 4 && <div style={{color:"#9ca3af"}}>+{summary.split(" · ").length - 4} más</div>}
+      </div>
       {open && (
         <div style={{ position:"fixed", inset:0, zIndex:9998, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", padding:16 }} onClick={() => setOpen(false)}>
           <div onClick={e => e.stopPropagation()} style={{
