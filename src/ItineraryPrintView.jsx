@@ -210,6 +210,35 @@ function DepartureTracker({ kickoff, lang }) {
   return <FlightBlock kickoff={kickoff} lang={lang} type="departure" />;
 }
 
+// Compact flight entry rendered inline within a day's item list
+function InlineFlightRow({ flight, lang, type }) {
+  const { data, loading } = useFlightData(flight.flightNumber, flight.date);
+  const isEs = lang === "es";
+  const fmtTime = iso => iso
+    ? new Date(iso).toLocaleTimeString("es-CO", { hour:"2-digit", minute:"2-digit", timeZone:"America/Bogota" })
+    : "";
+  const displayTime = type === "arrival"
+    ? (data ? fmtTime(data.arrActual || data.arrEstimated || data.arrScheduled) : (flight.time || ""))
+    : (data ? fmtTime(data.depActual || data.depScheduled) : (flight.time || ""));
+  const label = type === "arrival" ? (isEs ? "Llegada" : "Arrival") : (isEs ? "Salida" : "Departure");
+
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 40px", borderBottom:"1px solid #f3f4f6", background:"#fafafa" }}>
+      <span style={{ fontSize:18, flexShrink:0 }}>{type === "arrival" ? "🛬" : "🛫"}</span>
+      <div style={{ minWidth:52, fontFamily:"monospace", fontWeight:700, fontSize:13, color:"#111" }}>
+        {loading ? "…" : (displayTime || "—")}
+      </div>
+      <div style={{ flex:1 }}>
+        <div style={{ fontSize:12, fontWeight:600, color:"#374151" }}>
+          {flight.flightNumber} — {label}
+          {data?.depIata && data?.arrIata ? ` · ${data.depIata}→${data.arrIata}` : ""}
+        </div>
+        {flight.name && <div style={{ fontSize:11, color:"#9ca3af", marginTop:1 }}>{flight.name}</div>}
+      </div>
+    </div>
+  );
+}
+
 function fmtPrice(v) {
   const n = num(v);
   if (!n) return "";
@@ -432,7 +461,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       return ta !== tb ? ta - tb : a.sort - b.sort;
     });
     // Day band shows label; subtitle shows the descriptive title if set
-    return { label, title: dm?.title || "", items };
+    return { label, title: dm?.title || "", date: dm?.date || "", items };
   });
 }
 
@@ -2438,7 +2467,14 @@ function BillingPage({ kickoff }) {
 /* ═══════════════════════════════════════════════════════════
    DAY PAGE
 ═══════════════════════════════════════════════════════════ */
-function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onAddItem, billingBlock, hasFamilies, patchDay, patchItemFn }) {
+function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onAddItem, billingBlock, hasFamilies, patchDay, patchItemFn, dayFlights }) {
+  // Merge regular items with inline flight rows, sorted by time
+  const parseTime = t => { const m = String(t||"").match(/^(\d{1,2}):(\d{2})/); return m ? +m[1]*60 + +m[2] : Infinity; };
+  const allEntries = [
+    ...day.items.map(it => ({ kind:"item", it, sortTime: parseTime(it.time || "") })),
+    ...(dayFlights || []).map(({ flight, type }) => ({ kind:"flight", flight, type, sortTime: parseTime(flight.time || "") })),
+  ].sort((a, b) => a.sortTime - b.sortTime);
+
   return (
     <div className="page" style={{ position: "relative" }}>
       <PH kickoff={kickoff}/>
@@ -2470,7 +2506,9 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
       </div>
 
       <div style={{ flex: 1 }}>
-        {day.items.map((it, i) => it.isBlock
+        {allEntries.map((entry, i) => entry.kind === "flight"
+          ? <InlineFlightRow key={`fl-${i}`} flight={entry.flight} lang={lang} type={entry.type} />
+          : entry.it.isBlock
           ? (
             <div key={i} style={{ margin: "10px 0", position: "relative", display:"flex", borderBottom:"1px solid #f0f0f0" }}>
               <div style={{ width:"40%", flexShrink:0, background:"linear-gradient(145deg,#f5f5f5 0%,#ebebeb 100%)", display:"flex", alignItems:"center", justifyContent:"center", minHeight:80 }}>
@@ -2480,13 +2518,13 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
                 {editMode && onRemoveItem && (
                   <button onClick={() => onRemoveItem(i)} style={{position:"absolute",top:8,right:8,border:"none",background:"none",cursor:"pointer",color:"#9ca3af",fontSize:11,zIndex:2}}>✕</button>
                 )}
-                <div dangerouslySetInnerHTML={{ __html: it.cartItem.html }} style={{ fontSize: 13, color: "#111827", lineHeight: 1.6 }} />
+                <div dangerouslySetInnerHTML={{ __html: entry.it.cartItem.html }} style={{ fontSize: 13, color: "#111827", lineHeight: 1.6 }} />
               </div>
             </div>
           ) : (
             <EventBlock
               key={i}
-              it={it}
+              it={entry.it}
               lang={lang}
               editMode={editMode}
               hasFamilies={hasFamilies}
@@ -2873,8 +2911,6 @@ export default function ItineraryPrintView() {
         checkinResponses={checkinResponses}
       />
 
-      <FlightTracker kickoff={kickoff} lang={lang} />
-
       {/* WelcomePage removed — content is repetitive with cover page */}
 
       {hasSummary && (
@@ -2890,24 +2926,37 @@ export default function ItineraryPrintView() {
 
       
 
-      {activeDays.map((day, di) => (
-        <DayPage
-          key={`${day.label}-${di}`}
-          kickoff={kickoff}
-          day={day}
-          page={++pageNum}
-          total={total}
-          lang={lang}
-          editMode={editMode}
-          onRemoveDay={editMode ? () => removeDay(di) : undefined}
-          onRemoveItem={editMode ? (ii) => removeItem(di, ii) : undefined}
-          onAddItem={editMode ? () => openPickerForDay(di) : undefined}
-          billingBlock={null}
-          hasFamilies={hasFamilies}
-          patchDay={editMode ? (field, val) => patchDay(di, field, val) : undefined}
-          patchItemFn={editMode ? (ii, field, val) => patchItem(di, ii, field, val) : undefined}
-        />
-      ))}
+      {(() => {
+        let arrivals = [];
+        let departures = [];
+        try { arrivals = JSON.parse(kickoff.arrivals || "[]").filter(f => f.flightNumber); } catch {}
+        try { departures = JSON.parse(kickoff.departures || "[]").filter(f => f.flightNumber); } catch {}
+        return activeDays.map((day, di) => {
+          const dayFlights = day.date ? [
+            ...arrivals.filter(f => f.date === day.date).map(f => ({ flight:f, type:"arrival" })),
+            ...departures.filter(f => f.date === day.date).map(f => ({ flight:f, type:"departure" })),
+          ] : [];
+          return (
+            <DayPage
+              key={`${day.label}-${di}`}
+              kickoff={kickoff}
+              day={day}
+              page={++pageNum}
+              total={total}
+              lang={lang}
+              editMode={editMode}
+              onRemoveDay={editMode ? () => removeDay(di) : undefined}
+              onRemoveItem={editMode ? (ii) => removeItem(di, ii) : undefined}
+              onAddItem={editMode ? () => openPickerForDay(di) : undefined}
+              billingBlock={null}
+              hasFamilies={hasFamilies}
+              patchDay={editMode ? (field, val) => patchDay(di, field, val) : undefined}
+              patchItemFn={editMode ? (ii, field, val) => patchItem(di, ii, field, val) : undefined}
+              dayFlights={dayFlights}
+            />
+          );
+        });
+      })()}
 
       {/* ── PDF notes block (printable) ── */}
       {pdfNotes.trim() && (
@@ -2958,8 +3007,6 @@ export default function ItineraryPrintView() {
           });
         }}
       />
-
-      <DepartureTracker kickoff={kickoff} lang={lang} />
 
       {/* ── Let's Keep in Touch page ── */}
       <KeepInTouchPage kickoff={kickoff} page={++pageNum} total={total} />
