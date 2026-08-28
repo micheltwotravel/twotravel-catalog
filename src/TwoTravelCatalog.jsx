@@ -3331,7 +3331,7 @@ setCart([]);
             <div className="grid md:grid-cols-3 gap-3 text-sm">
               {/* Vibe — multi-select chips (pick one or more) */}
               <div className="space-y-1 md:col-span-3">
-                <label className="text-[11px] text-neutral-600">
+                <label className="text-sm font-semibold text-neutral-900">
                   {lang === "es" ? "¿Cuál es tu vibe? (elige uno o más)" : "What's your vibe? (pick one or more)"}
                 </label>
                 <div className="flex flex-wrap gap-2 pt-1">
@@ -3370,7 +3370,7 @@ setCart([]);
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] text-neutral-600">
+                <label className="text-sm font-semibold text-neutral-900">
                   {lang === "es" ? "Presupuesto" : "Budget"}
                 </label>
                 <select
@@ -3381,15 +3381,15 @@ setCart([]);
   }
 >
   <option value="">—</option>
-  <option value="low">{lang === "es" ? "Económico $" : "Budget $"}</option>
-  <option value="mid">{lang === "es" ? "Medio $$" : "Mid $$"}</option>
-  <option value="high">{lang === "es" ? "Alto $$$" : "High $$$"}</option>
+  <option value="low">{lang === "es" ? "Económico" : "Budget Friendly"}</option>
+  <option value="mid">{lang === "es" ? "Medio - Alto" : "Mid to High End"}</option>
+  <option value="high">{lang === "es" ? "Alto - Lujo" : "High to Luxury"}</option>
 </select>
 
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] text-neutral-600">
+                <label className="text-sm font-semibold text-neutral-900">
                   {lang === "es" ? "¿Niños?" : "Kids?"}
                 </label>
                 <select
@@ -3403,13 +3403,13 @@ setCart([]);
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] text-neutral-600">
+                <label className="text-sm font-semibold text-neutral-900">
                   {lang === "es" ? "¿Cuántas personas?" : "Group size"}
                 </label>
                 <input
                   type="number"
-                  min="1"
-                  max="200"
+                  min="2"
+                  max="99"
                   className="w-full border rounded-lg px-3 py-2 bg-white"
                   value={quiz.groupSize}
                   onChange={(e) => setQuiz((q) => ({ ...q, groupSize: e.target.value }))}
@@ -3419,7 +3419,7 @@ setCart([]);
             </div>
 
             <div className="space-y-2">
-              <p className="text-[11px] text-neutral-600">
+              <p className="text-sm font-semibold text-neutral-900">
                 {lang === "es" ? "Cocinas favoritas (opcional)" : "Favorite cuisines (optional)"}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -3459,7 +3459,7 @@ setCart([]);
             </div>
 
             <div className="space-y-2">
-              <p className="text-[11px] text-neutral-600">
+              <p className="text-sm font-semibold text-neutral-900">
                 {lang === "es"
                   ? "¿Qué actividades o experiencias quiere priorizar tu grupo en este viaje?"
                   : "What kinds of activities or experiences would your group like to prioritize on this trip?"}
