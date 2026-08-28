@@ -518,7 +518,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
       {/* Header */}
       <div style={{ background:"#1a1814", color:"#f5f0e8", padding:"13px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:100 }}>
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <a href="/menu.html" style={{ color:"#9a7d52", textDecoration:"none", fontSize:18, lineHeight:1 }}>←</a>
+          <a href="/?mode=concierge" style={{ color:"#9a7d52", textDecoration:"none", fontSize:18, lineHeight:1 }} title="Volver al panel">←</a>
           <span style={{ fontSize:17, fontWeight:600 }}>✅ Tareas</span>
           <span style={{ fontSize:11, color:"#9a7d52", background:"rgba(154,125,82,.15)", padding:"2px 8px", borderRadius:10 }}>Two Lovers</span>
         </div>
