@@ -7332,8 +7332,12 @@ function CheckinResponsesSection({ kickoffId }) {
 
   const fmtDate = (s) => {
     if (!s) return "";
-    try { return new Date(s + "T12:00:00").toLocaleDateString("es", { day: "numeric", month: "short" }); }
-    catch { return s; }
+    try {
+      const str = String(s);
+      // If already has time component, slice just the date part to avoid TZ shifts
+      const dateOnly = str.includes("T") ? str.slice(0, 10) : str;
+      return new Date(dateOnly + "T12:00:00").toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" });
+    } catch { return String(s).slice(0, 10); }
   };
 
   return (
