@@ -109,7 +109,7 @@ async function apiSaveBoda(f) {
   clearBodasCache();
   const d = await gasPost({ action: "saveBoda", payload: {
     clienteName: f.clienteName, weddingDate: f.weddingDate, venue: f.venue,
-    responsable: f.responsable, contact: f.contact, phase: f.phase,
+    responsable: f.responsable, contact: f.contact, coupleEmail: f.coupleEmail || "", phase: f.phase,
     status: f.status, guestCount: f.guestCount, budget: f.budget,
     notes: f.notes, coverPhoto: f.coverPhoto || "",
     tasks: "[]", suppliers: "[]", songs: "[]",
@@ -122,7 +122,7 @@ async function apiUpdateBoda(id, f) {
   clearBodasCache();
   await gasPost({ action: "updateBoda", id, updates: {
     clienteName: f.clienteName, weddingDate: f.weddingDate, venue: f.venue,
-    responsable: f.responsable, contact: f.contact, phase: f.phase,
+    responsable: f.responsable, contact: f.contact, coupleEmail: f.coupleEmail || "", phase: f.phase,
     status: f.status, guestCount: f.guestCount, budget: f.budget,
     notes: f.notes, coverPhoto: f.coverPhoto || "",
   }});
@@ -155,7 +155,7 @@ const INP_SM = {...INP,padding:"6px 10px",fontSize:12};
 
 // ─── BODA FORM ───────────────────────────────────────────────────────────────
 function BodaForm({ boda, onSave, onCancel, saving, users=[] }) {
-  const [f,setF]=useState({clienteName:boda?.clienteName||"",weddingDate:toDateInput(boda?.weddingDate),venue:boda?.venue||"",responsable:boda?.responsable||"",phase:boda?.phase||"Onboarding",status:boda?.status||"Activa",guestCount:boda?.guestCount||"",budget:boda?.budget||"",notes:boda?.notes||"",contact:boda?.contact||""});
+  const [f,setF]=useState({clienteName:boda?.clienteName||"",weddingDate:toDateInput(boda?.weddingDate),venue:boda?.venue||"",responsable:boda?.responsable||"",phase:boda?.phase||"Onboarding",status:boda?.status||"Activa",guestCount:boda?.guestCount||"",budget:boda?.budget||"",notes:boda?.notes||"",contact:boda?.contact||"",coupleEmail:boda?.coupleEmail||""});
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
   return (
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
@@ -166,6 +166,7 @@ function BodaForm({ boda, onSave, onCancel, saving, users=[] }) {
       </div>
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Venue</label><input style={INP} value={f.venue} onChange={e=>set("venue",e.target.value)} placeholder="Nombre del lugar" /></div>
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Contacto cliente</label><input style={INP} value={f.contact} onChange={e=>set("contact",e.target.value)} placeholder="WhatsApp o email" /></div>
+      <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Email novios 💌</label><input type="email" style={INP} value={f.coupleEmail} onChange={e=>set("coupleEmail",e.target.value)} placeholder="Para notificaciones de tareas" /></div>
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Fase</label><select style={INP} value={f.phase} onChange={e=>set("phase",e.target.value)}>{FASES.map(p=><option key={p}>{p}</option>)}</select></div>
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Estado</label><select style={INP} value={f.status} onChange={e=>set("status",e.target.value)}>{ESTADOS_BODA.map(s=><option key={s}>{s}</option>)}</select></div>
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>N° invitados</label><input type="number" style={INP} value={f.guestCount} onChange={e=>set("guestCount",e.target.value)} placeholder="150" /></div>
@@ -188,7 +189,14 @@ function TasksTab({ boda, users, onPatch }) {
   const today=new Date(); today.setHours(0,0,0,0);
   function cat(t) { if(!t.dueDate) return "up"; const d=new Date(t.dueDate+"T12:00:00"); d.setHours(0,0,0,0); if(d<today) return "late"; if(d.getTime()===today.getTime()) return "today"; return "up"; }
   async function persist(u){ setTasks(u); onPatch({tasks:u}); await apiSaveNotes(boda.id,{...boda,tasks:u}); }
-  async function add(){ if(!blank.taskName.trim()) return; setSaving(true); try{await persist([...tasks,{...blank,id:uid(),createdAt:new Date().toISOString()}]); setBlank({taskName:"",assignedTo:"",dueDate:"",status:"Pendiente",phase:"General",notes:""}); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
+  async function sendTaskEmail(taskName, dueDate, isReminder) {
+    const email = boda.coupleEmail;
+    if (!email || !email.includes("@")) return;
+    try {
+      await gasPost({ action:"sendBodaTaskEmail", payload:{ to:email, taskName, bodaName:boda.clienteName, dueDate:dueDate||"", isReminder:!!isReminder } });
+    } catch(e) { console.warn("Email error:", e.message); }
+  }
+  async function add(){ if(!blank.taskName.trim()) return; setSaving(true); try{ const newTask={...blank,id:uid(),createdAt:new Date().toISOString()}; await persist([...tasks,newTask]); if(blank.assignedTo==="Novios") await sendTaskEmail(blank.taskName, blank.dueDate, false); setBlank({taskName:"",assignedTo:"",dueDate:"",status:"Pendiente",phase:"General",notes:""}); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
   async function toggle(id){ const u=tasks.map(t=>t.id===id?{...t,status:t.status==="Terminado"?"Pendiente":"Terminado"}:t); try{await persist(u);}catch{setTasks(tasks);} }
   async function remove(id){ try{await persist(tasks.filter(t=>t.id!==id));}catch{setTasks(tasks);} }
   const active=tasks.filter(t=>!["Terminado","Cancelado"].includes(t.status));
@@ -205,7 +213,11 @@ function TasksTab({ boda, users, onPatch }) {
         <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:12}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
             <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.taskName} onChange={e=>setBlank(p=>({...p,taskName:e.target.value}))} placeholder="Descripción de la tarea *" /></div>
-            {users.length>0?(<select style={INP_SM} value={blank.assignedTo} onChange={e=>setBlank(p=>({...p,assignedTo:e.target.value}))}><option value="">— responsable —</option>{users.map(u=><option key={u.email} value={u.name||u.email}>{u.name||u.email}</option>)}</select>):<input style={INP_SM} value={blank.assignedTo} onChange={e=>setBlank(p=>({...p,assignedTo:e.target.value}))} placeholder="Responsable" />}
+            <select style={INP_SM} value={blank.assignedTo} onChange={e=>setBlank(p=>({...p,assignedTo:e.target.value}))}>
+              <option value="">— responsable —</option>
+              <option value="Novios">💍 Novios</option>
+              {users.map(u=><option key={u.email} value={u.name||u.email}>{u.name||u.email}</option>)}
+            </select>
             <input type="date" style={INP_SM} value={blank.dueDate} onChange={e=>setBlank(p=>({...p,dueDate:e.target.value}))} />
             <select style={INP_SM} value={blank.phase} onChange={e=>setBlank(p=>({...p,phase:e.target.value}))}>{["General",...FASES].map(ph=><option key={ph}>{ph}</option>)}</select>
             <select style={INP_SM} value={blank.status} onChange={e=>setBlank(p=>({...p,status:e.target.value}))}>{ESTADOS_TASK.map(s=><option key={s}>{s}</option>)}</select>
@@ -231,7 +243,12 @@ function TasksTab({ boda, users, onPatch }) {
               {cat(t)==="today"&&<span style={{fontWeight:600,color:"#d97706"}}>🔥 Hoy</span>}
             </div>
           </div>
-          <button onClick={()=>remove(t.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:14,padding:"0 2px"}}>✕</button>
+          <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
+            {t.assignedTo==="Novios"&&boda.coupleEmail&&(
+              <button onClick={()=>sendTaskEmail(t.taskName,t.dueDate,true)} title="Enviar recordatorio por email" style={{background:"transparent",color:R.gold,border:`1px solid ${R.gold}`,borderRadius:6,padding:"2px 8px",fontSize:10,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'Jost',sans-serif"}}>📧 Recordar</button>
+            )}
+            <button onClick={()=>remove(t.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:14,padding:"0 2px"}}>✕</button>
+          </div>
         </div>
       ))}
       {done.length>0&&(
