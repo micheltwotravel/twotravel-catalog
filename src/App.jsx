@@ -949,10 +949,11 @@ function DashboardImportModal({ kickoffId, guestName, onDone, onSaveField }) {
         });
         if (!rows.length) { setError("Sin datos"); return; }
         const g = h => rows[0][h] || "";
+        const fmtPassDob = (s) => { if (!s) return ""; const d = String(s); const only = d.includes("T") ? d.slice(0,10) : d; try { return new Date(only+"T12:00:00").toLocaleDateString("es",{day:"numeric",month:"short",year:"numeric"}); } catch { return only; } };
         const passportLines = rows.map(r => {
           const name = [r["First Name"], r["Last Name"]].filter(Boolean).join(" ");
           const id = [r["ID Type"], r["ID Number"]].filter(Boolean).join(": ");
-          const dob = r["Date of Birth"] ? "DOB " + r["Date of Birth"] : "";
+          const dob = r["Date of Birth"] ? "DOB " + fmtPassDob(r["Date of Birth"]) : "";
           const nat = r["Nationality"] || "";
           return [name, id, dob, nat].filter(Boolean).join(" · ");
         });
@@ -1127,12 +1128,6 @@ function OrderCell({ summary, at, empty = "—", fullText, icon = "✅" }) {
         title="Ver pedido completo"
         style={{ fontSize:18, background:"none", border:"none", cursor:"pointer", padding:"2px 4px", lineHeight:1 }}
       >{icon}</button>
-      <div style={{ fontSize:9.5, color:"#374151", lineHeight:1.5, maxWidth:180, marginTop:1 }}>
-        {summary.split(" · ").slice(0,4).map((item, i) => (
-          <div key={i}>{renderSummary(item)}</div>
-        ))}
-        {summary.split(" · ").length > 4 && <div style={{color:"#9ca3af"}}>+{summary.split(" · ").length - 4} más</div>}
-      </div>
       {open && (
         <div style={{ position:"fixed", inset:0, zIndex:9998, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", padding:16 }} onClick={() => setOpen(false)}>
           <div onClick={e => e.stopPropagation()} style={{
@@ -1555,12 +1550,15 @@ function ClientesTable({ kickoffs, loading }) {
                       {(() => {
                         let ciResps = [];
                         try { ciResps = JSON.parse(r.checkInResponses || "[]"); } catch {}
+                        const fmtDob = (s) => { if (!s) return ""; const d = String(s); const only = d.includes("T") ? d.slice(0,10) : d; try { return new Date(only+"T12:00:00").toLocaleDateString("es",{day:"numeric",month:"short",year:"numeric"}); } catch { return only; } };
                         const withPassport = ciResps.filter(c => c.idType || c.idNumber);
                         const passportText = withPassport.length
                           ? withPassport.map(c => {
                               const name = [c.firstName, c.lastName].filter(Boolean).join(" ");
                               const idStr = [c.idType && `${c.idType}:`, c.idNumber].filter(Boolean).join(" ");
-                              return [name, idStr, c.dob && `DOB: ${c.dob}`, c.nationality && `Nat: ${c.nationality}`].filter(Boolean).join(" · ");
+                              const dobStr = c.dob ? `DOB: ${fmtDob(c.dob)}` : "";
+                              const natStr = c.nationality ? `Nat: ${c.nationality}` : "";
+                              return [name, idStr, dobStr, natStr].filter(Boolean).join(" · ");
                             }).join("\n")
                           : (r.passportInfo || "");
                         return passportText
