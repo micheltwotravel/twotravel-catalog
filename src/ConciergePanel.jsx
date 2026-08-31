@@ -5701,6 +5701,59 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
           {/* ── LLEGADAS Y SALIDAS DEL GRUPO ─────────────────────────────── */}
           <DrawerSection title="✈️ Llegadas y salidas del grupo" accent="neutral">
+            {/* Import from check-in responses */}
+            {(() => {
+              let ciResps = [];
+              try { ciResps = JSON.parse(kickoff.checkInResponses || "[]"); } catch {}
+              const hasFlightData = ciResps.some(r => r.arrivalFlight || r.arrivalDate || r.departureFlight || r.departureDate);
+              if (!hasFlightData) return null;
+              const importFromCheckin = () => {
+                // Group arrivals by flight+date
+                const arrMap = {};
+                const depMap = {};
+                ciResps.forEach(r => {
+                  const name = [r.firstName, r.lastName].filter(Boolean).join(" ");
+                  if (r.arrivalFlight || r.arrivalDate) {
+                    const key = `${(r.arrivalFlight||"").toUpperCase()}_${r.arrivalDate||""}`;
+                    if (!arrMap[key]) arrMap[key] = { flightNumber: r.arrivalFlight||"", date: r.arrivalDate||"", time: r.arrivalTime||"", names: [] };
+                    if (name) arrMap[key].names.push(name);
+                  }
+                  if (r.departureFlight || r.departureDate) {
+                    const key = `${(r.departureFlight||"").toUpperCase()}_${r.departureDate||""}`;
+                    if (!depMap[key]) depMap[key] = { flightNumber: r.departureFlight||"", date: r.departureDate||"", time: r.departureTime||"", names: [] };
+                    if (name) depMap[key].names.push(name);
+                  }
+                });
+                const newArr = Object.values(arrMap).map(a => ({ flightNumber: a.flightNumber, date: a.date, time: a.time, name: a.names.join(" + "), city: "" }));
+                const newDep = Object.values(depMap).map(d => ({ flightNumber: d.flightNumber, date: d.date, time: d.time, name: d.names.join(" + "), city: "" }));
+                if (newArr.length) setArrivals(prev => {
+                  const merged = [...prev];
+                  newArr.forEach(na => {
+                    if (!merged.some(e => e.flightNumber === na.flightNumber && e.date === na.date)) merged.push(na);
+                  });
+                  return merged.sort((a,b) => (a.date||"").localeCompare(b.date||""));
+                });
+                if (newDep.length) setDepartures(prev => {
+                  const merged = [...prev];
+                  newDep.forEach(nd => {
+                    if (!merged.some(e => e.flightNumber === nd.flightNumber && e.date === nd.date)) merged.push(nd);
+                  });
+                  return merged.sort((a,b) => (a.date||"").localeCompare(b.date||""));
+                });
+              };
+              return (
+                <div className="flex items-center justify-between bg-teal-50 border border-teal-200 rounded-lg px-3 py-2 mb-1">
+                  <p className="text-[10px] text-teal-700 font-medium">
+                    📋 {ciResps.filter(r => r.arrivalFlight || r.departureFlight).length} personas con vuelos en el form de check-in
+                  </p>
+                  <button type="button" onClick={importFromCheckin}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-teal-700 text-white hover:bg-teal-600 whitespace-nowrap">
+                    ⬇ Importar
+                  </button>
+                </div>
+              );
+            })()}
+
             {/* Llegadas */}
             <div className="flex items-center justify-between">
               <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">🛬 Llegadas</p>
