@@ -11,7 +11,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-const TASK_API_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+const TASK_API_URL = import.meta.env.VITE_GAS_URL;
 
 import {
   fetchKickoffsFromSheet,
@@ -41,7 +41,7 @@ import {
    ========================================= */
 const SLACK_BOT_TOKEN = import.meta.env.VITE_SLACK_BOT_TOKEN || "";
 const SLACK_CHANNEL_ID = import.meta.env.VITE_SLACK_CHANNEL_ID || "C094NE421NV";
-const BILLING_GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+const BILLING_GAS_URL = import.meta.env.VITE_GAS_URL;
 
 // ── Yachts & Speedboats PDF ──────────────────────────────────────────────────
 // TODO: upload YATCH & SPEEDBOATS.pdf to Google Drive → share "Anyone with link"
@@ -4030,7 +4030,7 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
   const [saving, setSaving] = useState(false);
   const [boatList, setBoatList] = useState([]);
   useEffect(() => {
-    const GAS = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+    const GAS = import.meta.env.VITE_GAS_URL;
     fetch(GAS, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "property_get", data: { id: "all", limit: 600 } }) })
       .then(r => r.json()).then(d => {
@@ -4677,7 +4677,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // Property list for accommodation autocomplete
   const [propertyList, setPropertyList] = useState([]);
   useEffect(() => {
-    const GAS = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+    const GAS = import.meta.env.VITE_GAS_URL;
     fetch(`${GAS}?action=listProperties`)
       .then(r => r.json()).then(d => {
         const list = (d.data || d.properties || []).filter(p => p.Name);
@@ -7310,7 +7310,7 @@ export function ReunionesPage({ currentUser, initialKickoffId }) {
 }
 
 function CheckinResponsesSection({ kickoffId }) {
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+  const GAS_URL = import.meta.env.VITE_GAS_URL;
   const [responses, setResponses] = useState([]);
   const [loading,   setLoading]   = useState(false);
   const [open,      setOpen]      = useState(false);
@@ -7470,7 +7470,7 @@ function CheckinResponsesSection({ kickoffId }) {
 /* ================================================================
    MENU ADMIN PANEL — edit photos & prices for drinks/groceries
 ================================================================ */
-const MENU_GAS = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+const MENU_GAS = import.meta.env.VITE_GAS_URL;
 
 function MenuAdminPanel() {
   const ALL_CATS = [

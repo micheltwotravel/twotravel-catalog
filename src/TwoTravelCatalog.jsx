@@ -3074,7 +3074,7 @@ console.log("PAYLOAD QUE SE ENVIA:", payload);
 await updateKickoffInSheet(idToUse, payload);
 
 // ── Auto-create concierge tasks based on cart ─────────────────────────────
-const TASK_API_URL = "https://script.google.com/macros/s/AKfycbwZJudfRGEZm9hx_WiyOif4Nu3RL9NecJTP7gIrFqyHukU146-sdaLqAafZz0gdR7KVvw/exec";
+const TASK_API_URL = import.meta.env.VITE_GAS_URL_CATALOG;
 const autoTaskLabel = (item) => {
   const cat = (item.category || "").toLowerCase();
   const name = item.name || "servicio";

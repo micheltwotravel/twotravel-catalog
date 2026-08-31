@@ -31,7 +31,7 @@ const ESTADOS_BODA = ["Activa","En pausa","Terminada","Cancelada"];
 const ESTADOS_TASK = ["Pendiente","En curso","Terminado","Cancelado"];
 const FASE_COLORS  = { "Onboarding":{"bg":"#eff6ff","color":"#1e40af"}, "Planning":{"bg":"#f5f3ff","color":"#6d28d9"}, "Pre-Wedding":{"bg":"#fffbeb","color":"#b45309"}, "Wedding Day":{"bg":"#fff0f3","color":"#be123c"}, "Post-Wedding":{"bg":"#f0fdf4","color":"#166534"} };
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+const GAS_URL = import.meta.env.VITE_GAS_URL;
 
 // ─── DATA LAYER ──────────────────────────────────────────────────────────────
 const BODAS_CACHE_KEY = "tt_bodas_cache";

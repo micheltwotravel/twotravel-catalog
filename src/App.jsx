@@ -400,7 +400,7 @@ function FeedbackForm({ kickoffId }) {
   };
 
   const SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbys30F3VOqsDbqA1P2ar6VHjSQe-8awkeuOMFBCp5pQ35VhwKrdOHTg9pw6a6Sv9pqT/exec";
+  import.meta.env.VITE_GAS_URL_FEEDBACK;
 
 const handleSubmit = async (e) => {
   e.preventDefault();
@@ -858,7 +858,7 @@ const handleSubmit = async (e) => {
     </div>
   );
 }
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+const GAS_URL = import.meta.env.VITE_GAS_URL;
 const JUNIOR_CONCIERGES_BY_CITY = {
   cartagena: ["Juan David","Yosayro"],
   default:   [],
@@ -2599,7 +2599,7 @@ function UnifiedDashboard({ currentUser, onLogout }) {
    SOPORTE TÉCNICO
 ════════════════════════════════════════════════════════ */
 const SOPORTE_API =
-  "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+  import.meta.env.VITE_GAS_URL;
 
 function SoportePage() {
   const [form, setForm]         = useState({ nombre: "", tipo: "", prioridad: "", titulo: "", descripcion: "" });
@@ -3089,7 +3089,7 @@ function exportKpiCsv(kickoffs, period = "all", conciergeFilter = "all", kpiType
    TASK TRACKER  (?mode=tasks)
    Tasks live in a "Tasks" sheet tab, managed via GAS.
 ════════════════════════════════════════════════════════ */
-const TASK_API = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+const TASK_API = import.meta.env.VITE_GAS_URL;
 
 const TASK_STATUS = {
   pending:     { label: "Pendiente",   cls: "bg-amber-100 text-amber-700" },
@@ -3851,7 +3851,7 @@ function DrinksCatalog() {
   const itemName = (it) => (lang === "en" && it.name_en) ? it.name_en : it.name;
   const catLabel = (cat) => (lang === "en" && cat.label_en) ? cat.label_en : cat.label;
 
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+  const GAS_URL = import.meta.env.VITE_GAS_URL;
   const mkItems = (cats) => (cats || DRINK_CATEGORIES_DEFAULT).map(cat => ({ ...cat, items: cat.items.map(it => ({ ...it })) }));
   const [houseItems, setHouseItems] = React.useState(() => mkItems());
   const [boatItems,  setBoatItems]  = React.useState(() => mkItems());
@@ -4298,7 +4298,7 @@ function WelcomeCatalogPage({ mode }) {
    ?mode=groceries&kickoffId=...&lang=en|es
 ================================================================ */
 function GroceryCatalog() {
-  const GAS_URL    = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+  const GAS_URL    = import.meta.env.VITE_GAS_URL;
   const params     = new URLSearchParams(window.location.search);
   const kickoffId  = params.get("kickoffId") || "";
   const [lang, setLang] = React.useState(params.get("lang") === "es" ? "es" : "en");
@@ -4592,7 +4592,7 @@ const BREAKFAST_MENUS = [
 ];
 
 function CheckinForm() {
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+  const GAS_URL = import.meta.env.VITE_GAS_URL;
   const params    = new URLSearchParams(window.location.search);
   const kickoffId = params.get("kickoffId") || "";
   const [lang, setLang] = React.useState(params.get("lang") === "es" ? "es" : "en");
@@ -5000,7 +5000,7 @@ function CheckinForm() {
 }
 
 function BreakfastCatalog() {
-  const GAS_URL   = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+  const GAS_URL   = import.meta.env.VITE_GAS_URL;
   const params      = new URLSearchParams(window.location.search);
   const kickoffId   = params.get("kickoffId") || "";
   const gsParam     = parseInt(params.get("groupSize")) || 0;
@@ -5644,7 +5644,7 @@ const ROLE_ACCESS = {
 const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates"]);
 
 // ─── ITINERARY CATALOG (client-facing viewer) ─────────────────────
-const GAS_URL_IC = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+const GAS_URL_IC = import.meta.env.VITE_GAS_URL;
 
 function ItineraryCatalog() {
   const params    = new URLSearchParams(window.location.search);

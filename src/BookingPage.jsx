@@ -4,7 +4,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 
-const GAS = "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
+const GAS = import.meta.env.VITE_GAS_URL;
 
 const DAYS_ES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 const DAYS_EN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
