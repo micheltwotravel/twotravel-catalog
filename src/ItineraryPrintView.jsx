@@ -1012,12 +1012,23 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
                   </div>
                 )}
                 {/* Stay details inline below address */}
-                {(a.groupSize || a.checkIn || a.checkOut) && (
+                {(a.groupSize || a.checkIn || a.checkOut || a.arrivalDate) && (
                   <div style={{ display: "flex", gap: 16, marginTop: 10, paddingTop: 10, borderTop: "1px solid #f0f0f0", flexWrap: "wrap" }}>
+                    {/* City-specific date range for 2-city trips */}
+                    {a.arrivalDate && String(a.city||"").includes(",") && (
+                      <div style={{ fontSize: 11, color: "#374151" }}>
+                        <span style={{ color: "#aaa", fontSize: 9, textTransform: "uppercase", letterSpacing: 1 }}>📅 </span>
+                        {(() => {
+                          const city1End = a.arrivalDate2 || a.departureDate;
+                          if (!city1End) return fmtFullDate(a.arrivalDate);
+                          return `${fmtFullDate(a.arrivalDate)} – ${fmtFullDate(city1End)}`;
+                        })()}
+                      </div>
+                    )}
                     {a.groupSize && (
                       <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#374151" }}>
                         <span>👥</span>
-                        <span>{(() => { const n = parseInt(a.groupSize) || 0; if (!n) return a.groupSize; return isEs ? `${n} ${n===1?"persona":"personas"}` : `${n} ${n===1?"person":"people"}`; })()}</span>
+                        <span>{(() => { const gs = String(a.groupSize||"").trim(); const n = parseInt(gs) || 0; if (!n) return gs; const hasExtra = /[\(\)adults kids niños adultos]/i.test(gs) || gs.replace(/^\d+/,"").trim().length > 0; if (hasExtra) return gs; return isEs ? `${n} ${n===1?"persona":"personas"}` : `${n} ${n===1?"person":"people"}`; })()}</span>
                       </div>
                     )}
                     {a.checkIn && (
@@ -1041,13 +1052,21 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
 
         {/* City 2 accommodation + dates block */}
         {(a.accommodationName2 || a.tripDates2 || a.arrivalDate2 || a.departureDate2) && (
-          <div className="cover-info-grid" style={{ marginTop: 8 }}>
-            {a.accommodationName2 ? (
-              <div className="cover-info-card">
+          <div style={{ marginTop: 8 }}>
+            <div className="cover-info-card" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "row" }}>
+              {a.accommodationPhoto2 && (
+                <div style={{ flexShrink: 0, width: 130, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                  <img src={driveImgUrl(a.accommodationPhoto2)} alt={a.accommodationName2}
+                    style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                    onError={e => { e.target.parentElement.style.display = "none"; }}
+                  />
+                </div>
+              )}
+              <div style={{ padding: "12px 16px", flex: 1 }}>
                 <div className="cover-info-label">
                   {isEs ? "Alojamiento" : "Accommodation"}{a.city && String(a.city).split(",").length > 1 ? ` — ${String(a.city).split(",").map(c => ({ CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" })[c.trim().toUpperCase()] || c.trim())[1]}` : " 2"}
                 </div>
-                {a.accommodationUrl2 ? (
+                {a.accommodationName2 && (a.accommodationUrl2 ? (
                   <a href={a.accommodationUrl2} target="_blank" rel="noreferrer"
                     className="cover-info-value"
                     style={{ color: "#1d4ed8", textDecoration: "underline", display: "block" }}>
@@ -1055,7 +1074,7 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
                   </a>
                 ) : (
                   <Editable tag="div" className="cover-info-value" editMode={editMode} value={a.accommodationName2}/>
-                )}
+                ))}
                 {a.accommodationAddr2 && (
                   <Editable tag="div" className="cover-info-sub" editMode={editMode} value={a.accommodationAddr2}/>
                 )}
@@ -1064,21 +1083,23 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
                     {isEs ? "Barrio" : "Neighborhood"}: {a.barrio2}
                   </div>
                 )}
+                {/* City 2 dates inline in the card */}
+                {(a.arrivalDate2 || a.tripDates2) && (
+                  <div style={{ display: "flex", gap: 16, marginTop: 10, paddingTop: 10, borderTop: "1px solid #f0f0f0", flexWrap: "wrap" }}>
+                    <div style={{ fontSize: 11, color: "#374151" }}>
+                      <span style={{ color: "#aaa", fontSize: 9, textTransform: "uppercase", letterSpacing: 1 }}>📅 </span>
+                      {(() => {
+                        if (a.arrivalDate2 && (a.departureDate2 || a.departureDate)) {
+                          const end = a.departureDate2 || a.departureDate;
+                          return `${fmtFullDate(a.arrivalDate2)} – ${fmtFullDate(end)}`;
+                        }
+                        return a.tripDates2 || "";
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
-            ) : <div />}
-            {(a.tripDates2 || a.arrivalDate2 || a.departureDate2) && (
-              <div className="cover-info-card">
-                <div className="cover-info-label">{isEs ? "Fechas — Ciudad 2" : "Dates — City 2"}</div>
-                <Editable tag="div" className="cover-info-value" editMode={editMode}
-                  value={(() => {
-                    if (a.arrivalDate2 && a.departureDate2) {
-                      const yr = new Date(a.departureDate2 + "T12:00:00").getFullYear();
-                      return `${fmtFullDate(a.arrivalDate2)} – ${fmtFullDate(a.departureDate2)}, ${yr}`;
-                    }
-                    return a.tripDates2 || "";
-                  })()}/>
-              </div>
-            )}
+            </div>
           </div>
         )}
 

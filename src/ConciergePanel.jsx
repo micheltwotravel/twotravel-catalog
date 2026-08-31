@@ -4557,24 +4557,19 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [tripDates,          setTripDates]          = useState(autoTripDates);
   const [city,               setCity]               = useState(kickoff?.city               || "");
   // Multiple arrivals: [{name, date, time, flight, notes}]
+  const _arrUid = () => Math.random().toString(36).slice(2,8);
   const [arrivals, setArrivals] = useState(() => {
-    try { return [...JSON.parse(kickoff?.arrivals || "[]")].sort((a,b) => (a.date||"").localeCompare(b.date||"")); } catch { return []; }
+    try { return [...JSON.parse(kickoff?.arrivals || "[]")].sort((a,b) => (a.date||"").localeCompare(b.date||"")).map(r => ({...r, _id: r._id||_arrUid()})); } catch { return []; }
   });
-  const addArrival  = () => setArrivals(a => [...a, { name:"", date:"", time:"", flight:"", flightNumber:"", origin:"", destination:"", city:"" }]);
+  const addArrival  = () => setArrivals(a => [...a, { _id:_arrUid(), name:"", date:"", time:"", flight:"", flightNumber:"", origin:"", destination:"", city:"" }]);
   const removeArrival = (i) => setArrivals(a => a.filter((_,idx) => idx !== i));
-  const patchArrival = (i, patch) => setArrivals(a => {
-    const updated = a.map((row,idx) => idx === i ? {...row,...patch} : row);
-    return [...updated].sort((x,y) => (x.date||"").localeCompare(y.date||""));
-  });
+  const patchArrival = (i, patch) => setArrivals(a => a.map((row,idx) => idx === i ? {...row,...patch} : row));
   const [departures, setDepartures] = useState(() => {
-    try { return [...JSON.parse(kickoff?.departures || "[]")].sort((a,b) => (a.date||"").localeCompare(b.date||"")); } catch { return []; }
+    try { return [...JSON.parse(kickoff?.departures || "[]")].sort((a,b) => (a.date||"").localeCompare(b.date||"")).map(r => ({...r, _id: r._id||_arrUid()})); } catch { return []; }
   });
-  const addDeparture  = () => setDepartures(d => [...d, { name:"", date:"", time:"", flightNumber:"", origin:"", destination:"", notes:"", city:"" }]);
+  const addDeparture  = () => setDepartures(d => [...d, { _id:_arrUid(), name:"", date:"", time:"", flightNumber:"", origin:"", destination:"", notes:"", city:"" }]);
   const removeDeparture = (i) => setDepartures(d => d.filter((_,idx) => idx !== i));
-  const patchDeparture = (i, patch) => setDepartures(d => {
-    const updated = d.map((row,idx) => idx === i ? {...row,...patch} : row);
-    return [...updated].sort((x,y) => (x.date||"").localeCompare(y.date||""));
-  });
+  const patchDeparture = (i, patch) => setDepartures(d => d.map((row,idx) => idx === i ? {...row,...patch} : row));
   const [guestEmailState,    setGuestEmailState]    = useState(kickoff?.email || kickoff?.guestEmail || "");
   const [groupSize,          setGroupSize]          = useState(autoGroupSize);
   const [conciergeTitle,     setConciergeTitle]     = useState(kickoff?.conciergeTitle     || "");
@@ -5724,21 +5719,21 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     if (name) depMap[key].names.push(name);
                   }
                 });
-                const newArr = Object.values(arrMap).map(a => ({ flightNumber: a.flightNumber, date: a.date, time: a.time, name: a.names.join(" + "), city: "" }));
-                const newDep = Object.values(depMap).map(d => ({ flightNumber: d.flightNumber, date: d.date, time: d.time, name: d.names.join(" + "), city: "" }));
+                const newArr = Object.values(arrMap).map(a => ({ _id:_arrUid(), flightNumber: a.flightNumber, date: a.date, time: a.time, name: a.names.join(" + "), city: "" }));
+                const newDep = Object.values(depMap).map(d => ({ _id:_arrUid(), flightNumber: d.flightNumber, date: d.date, time: d.time, name: d.names.join(" + "), city: "" }));
                 if (newArr.length) setArrivals(prev => {
                   const merged = [...prev];
                   newArr.forEach(na => {
                     if (!merged.some(e => e.flightNumber === na.flightNumber && e.date === na.date)) merged.push(na);
                   });
-                  return merged.sort((a,b) => (a.date||"").localeCompare(b.date||""));
+                  return merged;
                 });
                 if (newDep.length) setDepartures(prev => {
                   const merged = [...prev];
                   newDep.forEach(nd => {
                     if (!merged.some(e => e.flightNumber === nd.flightNumber && e.date === nd.date)) merged.push(nd);
                   });
-                  return merged.sort((a,b) => (a.date||"").localeCompare(b.date||""));
+                  return merged;
                 });
               };
               return (
@@ -5766,7 +5761,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               <p className="text-[11px] text-neutral-400">Sin llegadas. Úsalo cuando el grupo llega en vuelos distintos.</p>
             )}
             {arrivals.map((a, i) => (
-              <div key={i} className="bg-white border border-neutral-200 rounded-xl px-3 py-2">
+              <div key={a._id||i} className="bg-white border border-neutral-200 rounded-xl px-3 py-2">
                 <div className="grid grid-cols-12 gap-1.5 items-center">
                   <div className="col-span-3">
                     <p className="text-[9px] text-neutral-400 mb-0.5">
@@ -5833,7 +5828,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               <p className="text-[11px] text-neutral-400">Sin salidas registradas.</p>
             )}
             {departures.map((d, i) => (
-              <div key={i} className="bg-white border border-neutral-200 rounded-xl px-3 py-2">
+              <div key={d._id||i} className="bg-white border border-neutral-200 rounded-xl px-3 py-2">
                 <div className="grid grid-cols-12 gap-1.5 items-center">
                   <div className="col-span-3">
                     <p className="text-[9px] text-neutral-400 mb-0.5">
