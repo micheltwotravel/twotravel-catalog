@@ -185,10 +185,11 @@ function TasksTab({ boda, users, onPatch }) {
   const [tasks,setTasks]=useState(boda.tasks||[]);
   const [show,setShow]=useState(false);
   const [saving,setSaving]=useState(false);
+  const [saveErr,setSaveErr]=useState("");
   const [blank,setBlank]=useState({taskName:"",assignedTo:"",dueDate:"",status:"Pendiente",phase:"General",notes:""});
   const today=new Date(); today.setHours(0,0,0,0);
   function cat(t) { if(!t.dueDate) return "up"; const d=new Date(t.dueDate+"T12:00:00"); d.setHours(0,0,0,0); if(d<today) return "late"; if(d.getTime()===today.getTime()) return "today"; return "up"; }
-  async function persist(u){ setTasks(u); onPatch({tasks:u}); await apiSaveNotes(boda.id,{...boda,tasks:u}); }
+  async function persist(u){ setTasks(u); onPatch({tasks:u}); try{ await apiSaveNotes(boda.id,{...boda,tasks:u}); } catch(e){ setSaveErr("No se pudo guardar: "+e.message); setTimeout(()=>setSaveErr(""),6000); } }
   async function sendTaskEmail(taskName, dueDate, isReminder) {
     const email = boda.coupleEmail;
     if (!email || !email.includes("@")) return;
@@ -196,7 +197,7 @@ function TasksTab({ boda, users, onPatch }) {
       await gasPost({ action:"sendBodaTaskEmail", payload:{ to:email, taskName, bodaName:boda.clienteName, dueDate:dueDate||"", isReminder:!!isReminder } });
     } catch(e) { console.warn("Email error:", e.message); }
   }
-  async function add(){ if(!blank.taskName.trim()) return; setSaving(true); try{ const newTask={...blank,id:uid(),createdAt:new Date().toISOString()}; await persist([...tasks,newTask]); if(blank.assignedTo==="Novios") await sendTaskEmail(blank.taskName, blank.dueDate, false); setBlank({taskName:"",assignedTo:"",dueDate:"",status:"Pendiente",phase:"General",notes:""}); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
+  async function add(){ if(!blank.taskName.trim()) return; setSaving(true); const newTask={...blank,id:uid(),createdAt:new Date().toISOString()}; await persist([...tasks,newTask]); if(blank.assignedTo==="Novios") await sendTaskEmail(blank.taskName, blank.dueDate, false); setBlank({taskName:"",assignedTo:"",dueDate:"",status:"Pendiente",phase:"General",notes:""}); setShow(false); setSaving(false); }
   async function toggle(id){ const u=tasks.map(t=>t.id===id?{...t,status:t.status==="Terminado"?"Pendiente":"Terminado"}:t); try{await persist(u);}catch{setTasks(tasks);} }
   async function remove(id){ try{await persist(tasks.filter(t=>t.id!==id));}catch{setTasks(tasks);} }
   const active=tasks.filter(t=>!["Terminado","Cancelado"].includes(t.status));
@@ -229,6 +230,7 @@ function TasksTab({ boda, users, onPatch }) {
           </div>
         </div>
       )}
+      {saveErr&&<p style={{fontSize:11,color:"#b91c1c",background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:8,padding:"6px 12px",marginBottom:8}}>{saveErr}</p>}
       {active.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin tareas activas.</p>}
       {active.map(t=>(
         <div key={t.id} style={{border:`1px solid ${rowBd(t)}`,borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"flex-start",gap:10,background:rowBg(t),marginBottom:6}}>
@@ -2301,6 +2303,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
               style={{background:"rgba(255,255,255,.07)",color:refreshing?"rgba(255,255,255,.25)":"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 10px",fontSize:14,cursor:"pointer",transition:"opacity .15s",lineHeight:1}}>
               {refreshing?"⏳":"🔄"}
             </button>
+            <a href="/?mode=tareas-bodas" style={{background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",textDecoration:"none"}}>📋 Tareas</a>
             <a href="/?mode=concierge" style={{background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",textDecoration:"none"}}>← Panel</a>
             <button onClick={onLogout} style={{background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>Salir</button>
           </div>

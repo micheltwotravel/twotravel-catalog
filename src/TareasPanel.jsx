@@ -524,6 +524,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           <span style={{ fontSize:12, color:"#9a7d52" }}>{currentUser?.name || currentUser?.email}</span>
+          <a href="/?mode=bodas" style={{ background:"none", border:"1px solid #555", color:"#9a7d52", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:12, textDecoration:"none" }}>💍 Bodas</a>
           <button onClick={() => setVista(v => v==="lista"?"calendario":"lista")} style={{ background:"none", border:"1px solid #555", color:"#9a7d52", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:12 }}>
             {vista === "lista" ? "📅 Calendario" : "☰ Lista"}
           </button>
