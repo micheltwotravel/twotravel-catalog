@@ -377,6 +377,29 @@ export function AvailabilityManager({ conciergeEmail, conciergeName }) {
             {/* Add block form */}
             <div style={{ background: "#faf9f7", border: "1px solid #e5ddd3", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
               <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 600, color: "#555" }}>Bloquear un horario específico</p>
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ display: "block", fontSize: 10, color: "#999", marginBottom: 3 }}>Día completo bloqueado</label>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input type="date"
+                    id="block-full-day-date"
+                    style={{ border: "1px solid #e5ddd3", borderRadius: 7, padding: "6px 8px", fontSize: 12 }} />
+                  <input type="text" placeholder="Motivo (opcional)"
+                    id="block-full-day-reason"
+                    style={{ border: "1px solid #e5ddd3", borderRadius: 7, padding: "6px 8px", fontSize: 12, flex: 1 }} />
+                  <button type="button" onClick={() => {
+                    const d = document.getElementById("block-full-day-date").value;
+                    const r = document.getElementById("block-full-day-reason").value;
+                    if (!d) return;
+                    setBlocked(b => [...b, { date: d, start: "00:00", end: "23:59", reason: r || "Día bloqueado", id: Date.now() }]);
+                    document.getElementById("block-full-day-date").value = "";
+                    document.getElementById("block-full-day-reason").value = "";
+                  }}
+                    style={{ padding: "7px 18px", background: "#c00", color: "#fff", border: "none", borderRadius: 8, fontSize: 12, cursor: "pointer", fontWeight: 500, whiteSpace: "nowrap" }}>
+                    🚫 Bloquear día
+                  </button>
+                </div>
+              </div>
+              <hr style={{ border: "none", borderTop: "1px solid #e5ddd3", margin: "10px 0" }}/>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "flex-end" }}>
                 <div>
                   <label style={{ display: "block", fontSize: 10, color: "#999", marginBottom: 3 }}>Fecha</label>
