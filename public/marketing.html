@@ -161,6 +161,7 @@ tr:hover td{background:var(--sand)}
 
   <div class="tabs">
     <button class="tab active" onclick="showTab('filming')">🎬 Filmación</button>
+    <button class="tab" onclick="showTab('live')">📍 Activos</button>
     <button class="tab" onclick="showTab('behavior')">📊 Comportamiento</button>
     <button class="tab" onclick="showTab('calendar')">📅 Calendario</button>
     <button class="tab" onclick="showTab('metrics')">📈 Métricas</button>
@@ -175,6 +176,30 @@ tr:hover td{background:var(--sand)}
       <div style="font-size:11px;color:var(--ink3)">Las notas se guardan automáticamente</div>
     </div>
     <div id="filming-list"><div class="spinner">Cargando trips…</div></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       TAB ACTIVOS
+  ══════════════════════════════════════════════════ -->
+  <div id="tab-live" style="display:none">
+    <div class="sec-head">
+      <div>
+        <div class="sec-label">Clientes activos ahora</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:2px">Vista en tiempo real para planificar contenido</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="renderLive()">↺ Actualizar</button>
+    </div>
+
+    <!-- Selector de rango -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
+      <span style="font-size:11px;font-weight:600;color:var(--ink2)">Mostrar:</span>
+      <button class="btn btn-ghost btn-sm" id="live-btn-0" onclick="setLiveRange(0)">Hoy</button>
+      <button class="btn btn-ghost btn-sm" id="live-btn-3" onclick="setLiveRange(3)">Próximos 3 días</button>
+      <button class="btn btn-ghost btn-sm" id="live-btn-7" onclick="setLiveRange(7)">Próximos 7 días</button>
+      <button class="btn btn-ghost btn-sm" id="live-btn-14" onclick="setLiveRange(14)">2 semanas</button>
+    </div>
+
+    <div id="live-list"></div>
   </div>
 
   <!-- ══════════════════════════════════════════════════
@@ -393,16 +418,150 @@ function uid() { return Date.now().toString(36) + Math.random().toString(36).sli
 
 // ─── TABS ────────────────────────────────────────────
 function showTab(name) {
-  ['filming','behavior','calendar','metrics'].forEach(t => {
+  ['filming','live','behavior','calendar','metrics'].forEach(t => {
     document.getElementById('tab-'+t).style.display = t===name ? '' : 'none';
   });
   document.querySelectorAll('.tab').forEach((b,i) => {
-    b.classList.toggle('active', ['filming','behavior','calendar','metrics'][i]===name);
+    b.classList.toggle('active', ['filming','live','behavior','calendar','metrics'][i]===name);
   });
-  if (name==='filming' && kickoffs.length===0) loadKickoffs();
+  if ((name==='filming'||name==='live') && kickoffs.length===0) loadKickoffs();
+  else if (name==='live') renderLive();
   if (name==='behavior') loadBehavior();
   if (name==='calendar') renderCal();
   if (name==='metrics') renderMetrics();
+}
+
+// ══════════════════════════════════════════════════════
+// TAB ACTIVOS
+// ══════════════════════════════════════════════════════
+let liveRange = 7;
+function setLiveRange(days) {
+  liveRange = days;
+  ['0','3','7','14'].forEach(d => {
+    const b = document.getElementById('live-btn-'+d);
+    if (b) b.style.background = d==days ? 'var(--ink)' : '', b.style.color = d==days ? '#fff' : '';
+  });
+  renderLive();
+}
+
+function renderLive() {
+  const el = document.getElementById('live-list');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const rangeEnd = new Date(today); rangeEnd.setDate(rangeEnd.getDate() + liveRange);
+
+  // Filter trips overlapping [today, rangeEnd]
+  const active = kickoffs.filter(k => {
+    const arr = k.arrivalDate ? new Date(k.arrivalDate) : null;
+    const dep = k.departureDate ? new Date(k.departureDate) : null;
+    if (!arr && !dep) return false;
+    const tripStart = arr || dep;
+    const tripEnd   = dep || arr;
+    return tripStart <= rangeEnd && tripEnd >= today;
+  }).sort((a,b) => (a.arrivalDate||'').localeCompare(b.arrivalDate||''));
+
+  if (!active.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📍</div><div>No hay grupos en este período.</div></div>';
+    return;
+  }
+
+  // Build day labels for the range
+  const dayLabels = [];
+  for (let i=0; i<=liveRange; i++) {
+    const d = new Date(today); d.setDate(d.getDate()+i);
+    dayLabels.push(d.toISOString().slice(0,10));
+  }
+
+  el.innerHTML = active.map(k => {
+    let items = [];
+    try { items = JSON.parse(k.cartItems || k.itinerary || '[]'); } catch {}
+
+    // flatten to per-item list
+    let flat = [];
+    if (Array.isArray(items)) {
+      items.forEach(item => {
+        if (item.items && Array.isArray(item.items)) {
+          flat = flat.concat(item.items.map(i => ({ ...i, _day: item.day || item.date || '' })));
+        } else if (item.name || item.name_es) {
+          flat.push(item);
+        }
+      });
+    }
+
+    // Group by day if _day is a date string, otherwise just show all
+    const hasDayDates = flat.some(i => /^\d{4}-\d{2}-\d{2}$/.test(i._day || ''));
+    const city = [k.city, k.city2].filter(Boolean).join(' → ');
+    const pax  = k.groupSize ? ` · ${k.groupSize}` : '';
+    const arr  = k.arrivalDate || '';
+    const dep  = k.departureDate || '';
+
+    let itemsHtml = '';
+    if (hasDayDates) {
+      // Show only items falling in the range
+      const rangeItems = flat.filter(i => dayLabels.includes(i._day));
+      if (rangeItems.length) {
+        // group by day
+        const byDay = {};
+        rangeItems.forEach(i => { (byDay[i._day] = byDay[i._day]||[]).push(i); });
+        itemsHtml = Object.entries(byDay).sort(([a],[b])=>a.localeCompare(b)).map(([day, its]) => `
+          <div style="margin-bottom:10px">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:6px">${fmtDay(day)}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              ${its.map(i => activityPill(i)).join('')}
+            </div>
+          </div>`).join('');
+      } else {
+        itemsHtml = '<div style="font-size:11px;color:var(--ink3)">Sin actividades programadas en este rango.</div>';
+      }
+    } else if (flat.length) {
+      itemsHtml = `<div style="display:flex;flex-wrap:wrap;gap:6px">${flat.slice(0,20).map(i=>activityPill(i)).join('')}</div>`;
+    }
+
+    const isNow = arr <= today.toISOString().slice(0,10) && dep >= today.toISOString().slice(0,10);
+
+    return `
+      <div class="trip-card" style="margin-bottom:14px">
+        <div class="trip-card-head">
+          <div>
+            <div class="trip-name">${esc(k.guestName || k.tripName || '—')}</div>
+            <div class="trip-meta">${esc(city)}${pax} · ${arr||'?'} → ${dep||'?'}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+            ${isNow ? '<span class="chip chip-green" style="animation:pulse 2s infinite">🔴 En curso</span>' : '<span class="chip chip-blue">📅 Próximo</span>'}
+            ${k.concierges ? '<span class="chip chip-gray">'+esc(Array.isArray(k.concierges)?k.concierges[0]:k.concierges)+'</span>' : ''}
+          </div>
+        </div>
+        <div class="trip-card-body">
+          ${itemsHtml || '<div style="font-size:11px;color:var(--ink3)">Sin itinerario cargado todavía.</div>'}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function activityPill(i) {
+  const CAT_COLOR = {
+    'actividades':'#f3e8ff;color:#7c3aed',
+    'food':'#fef9c3;color:#854d0e',
+    'restaurante':'#fef9c3;color:#854d0e',
+    'tours':'#dbeafe;color:#1d4ed8',
+    'boating':'#cffafe;color:#0e7490',
+    'beach':'#dcfce7;color:#15803d',
+    'nightlife':'#fce7f3;color:#be185d',
+  };
+  const cat = (i.category||'').toLowerCase();
+  let style = '#f0ece4;color:#4b4540';
+  for (const [k,v] of Object.entries(CAT_COLOR)) { if (cat.includes(k)) { style=v; break; } }
+  const name = i.name_es || i.name || '';
+  const time = i.timeLabel ? ` <span style="opacity:.6">${esc(i.timeLabel)}</span>` : '';
+  return `<span style="font-size:11px;padding:3px 9px;border-radius:6px;background:${style.split(';')[0]};${style.split(';')[1]||''}">${esc(name)}${time}</span>`;
+}
+
+function fmtDay(dateStr) {
+  const d = new Date(dateStr+'T12:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((d-today)/86400000);
+  const days = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const label = diff===0 ? 'Hoy' : diff===1 ? 'Mañana' : days[d.getDay()];
+  return `${label} ${d.getDate()}/${d.getMonth()+1}`;
 }
 
 // ─── KICKOFFS ────────────────────────────────────────
@@ -777,6 +936,7 @@ function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 function fmt(n){ return (n||0).toLocaleString('es-CO'); }
 
 // ─── INIT ─────────────────────────────────────────────
+setLiveRange(7);
 loadKickoffs();
 document.getElementById('modal-content').addEventListener('click', e => { if(e.target===e.currentTarget) closeContentModal(); });
 document.getElementById('modal-metric').addEventListener('click', e => { if(e.target===e.currentTarget) closeMetricModal(); });
