@@ -315,6 +315,7 @@
       <h1 id="s2title">Elige una hora</h1>
       <p class="step-sub" id="step2Date"></p>
       <div id="slotsLoading" class="loading">Consultando disponibilidad…</div>
+      <p id="tzNote" style="font-size:11px;color:#9a7d52;text-align:center;margin:0 0 8px;display:none"></p>
       <div class="slots-grid" id="slotsGrid" style="display:none"></div>
       <p class="error-msg" id="slotsError" style="display:none"></p>
     </div>
@@ -436,6 +437,23 @@ const T = {
   },
 };
 const t = T[lang] || T.en;
+
+// Timezone: detect client timezone and convert Colombia slots to local time
+const clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const isColTz   = clientTz === "America/Bogota";
+const tzShort   = (() => {
+  try {
+    return new Intl.DateTimeFormat("en", { timeZoneName: "short", timeZone: clientTz })
+      .formatToParts(new Date()).find(p => p.type === "timeZoneName")?.value || "";
+  } catch { return ""; }
+})();
+function toLocalTime(dateIso, colTime) {
+  // colTime is "HH:MM" in America/Bogota (always UTC-5, no DST)
+  const d = new Date(`${dateIso}T${colTime}:00-05:00`);
+  return d.toLocaleTimeString(lang === "es" ? "es-CO" : "en-US", {
+    hour: "2-digit", minute: "2-digit", hour12: true, timeZone: clientTz
+  });
+}
 
 const CONCIERGES = {
   caro:    { name: "Carolina Lopez",        role: "Senior Concierge · Cartagena", initials: "CL" },
@@ -598,11 +616,32 @@ async function pickDate(iso) {
         document.getElementById("slotsError").textContent = t.errNoSlots;
         document.getElementById("slotsError").style.display = "block";
       } else {
+        // Show timezone note
+        const tzNote = document.getElementById("tzNote");
+        if (tzNote) {
+          if (isColTz) {
+            tzNote.textContent = lang === "es" ? "Hora Colombia (UTC-5)" : "Colombia time (UTC-5)";
+          } else {
+            tzNote.textContent = lang === "es"
+              ? `Horario en tu zona${tzShort ? ` (${tzShort})` : ""}`
+              : `Times in your timezone${tzShort ? ` (${tzShort})` : ""}`;
+          }
+          tzNote.style.display = "block";
+        }
         visibleSlots.forEach(s => {
           const el  = document.createElement("div");
           el.className  = "slot";
-          el.textContent = s.start;
           const end = addMinutes(s.start, duration);
+          if (isColTz) {
+            el.textContent = s.start;
+          } else {
+            const localStart = toLocalTime(iso, s.start);
+            const localEnd   = toLocalTime(iso, end);
+            el.innerHTML = `<div style="font-size:13px;font-weight:500">${localStart}</div><div style="font-size:10px;color:#9a7d52;margin-top:2px">${s.start} COL</div>`;
+            el.onclick = () => pickSlot(el, { start: s.start, end, localStart, localEnd });
+            grid.appendChild(el);
+            return;
+          }
           el.onclick = () => pickSlot(el, { start: s.start, end });
           grid.appendChild(el);
         });
@@ -621,11 +660,14 @@ function pickSlot(el, slot) {
   document.querySelectorAll(".slot").forEach(s => s.classList.remove("selected"));
   el.classList.add("selected");
   const display = document.getElementById("selectedTimeDisplay");
-  document.getElementById("selectedTimeText").textContent = `${formatDate(selDate)}\n${slot.start} – ${slot.end}`;
+  const timeStr = slot.localStart
+    ? `${slot.localStart} – ${slot.localEnd}`
+    : `${slot.start} – ${slot.end}`;
+  document.getElementById("selectedTimeText").textContent = `${formatDate(selDate)}\n${timeStr}`;
   display.style.display = "flex";
   setTimeout(() => {
     goStep(3);
-    document.getElementById("step3Summary").textContent = `${formatDate(selDate)} · ${slot.start} – ${slot.end}`;
+    document.getElementById("step3Summary").textContent = `${formatDate(selDate)} · ${timeStr}`;
   }, 300);
 }
 
@@ -684,7 +726,7 @@ async function confirmBook() {
     }
     goStep(4);
     document.getElementById("confirmText").innerHTML =
-      t.confirmText(profile?.name || "Two Travel", formatDate(selDate), selSlot.start, duration, email);
+      t.confirmText(profile?.name || "Two Travel", formatDate(selDate), selSlot.localStart || selSlot.start, duration, email);
     if (data.meetLink) {
       const meetBtn = document.getElementById("meetLinkBtn");
       meetBtn.href = data.meetLink; meetBtn.style.display = "inline-block";
