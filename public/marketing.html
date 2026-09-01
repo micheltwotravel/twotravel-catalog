@@ -449,14 +449,11 @@ function renderLive() {
   const today = new Date(); today.setHours(0,0,0,0);
   const rangeEnd = new Date(today); rangeEnd.setDate(rangeEnd.getDate() + liveRange);
 
-  // Filter trips overlapping [today, rangeEnd]
   const active = kickoffs.filter(k => {
-    const arr = k.arrivalDate ? new Date(k.arrivalDate) : null;
-    const dep = k.departureDate ? new Date(k.departureDate) : null;
+    const arr = k.arrivalDate ? new Date(k.arrivalDate+'T12:00:00') : null;
+    const dep = k.departureDate ? new Date(k.departureDate+'T12:00:00') : null;
     if (!arr && !dep) return false;
-    const tripStart = arr || dep;
-    const tripEnd   = dep || arr;
-    return tripStart <= rangeEnd && tripEnd >= today;
+    return (arr||dep) <= rangeEnd && (dep||arr) >= today;
   }).sort((a,b) => (a.arrivalDate||'').localeCompare(b.arrivalDate||''));
 
   if (!active.length) {
@@ -464,95 +461,103 @@ function renderLive() {
     return;
   }
 
-  // Build day labels for the range
-  const dayLabels = [];
-  for (let i=0; i<=liveRange; i++) {
-    const d = new Date(today); d.setDate(d.getDate()+i);
-    dayLabels.push(d.toISOString().slice(0,10));
-  }
-
-  el.innerHTML = active.map(k => {
-    let items = [];
-    try { items = JSON.parse(k.cartItems || k.itinerary || '[]'); } catch {}
-
-    // flatten to per-item list
-    let flat = [];
-    if (Array.isArray(items)) {
-      items.forEach(item => {
-        if (item.items && Array.isArray(item.items)) {
-          flat = flat.concat(item.items.map(i => ({ ...i, _day: item.day || item.date || '' })));
-        } else if (item.name || item.name_es) {
-          flat.push(item);
-        }
-      });
-    }
-
-    // Group by day if _day is a date string, otherwise just show all
-    const hasDayDates = flat.some(i => /^\d{4}-\d{2}-\d{2}$/.test(i._day || ''));
-    const city = [k.city, k.city2].filter(Boolean).join(' → ');
-    const pax  = k.groupSize ? ` · ${k.groupSize}` : '';
-    const arr  = k.arrivalDate || '';
-    const dep  = k.departureDate || '';
-
-    let itemsHtml = '';
-    if (hasDayDates) {
-      // Show only items falling in the range
-      const rangeItems = flat.filter(i => dayLabels.includes(i._day));
-      if (rangeItems.length) {
-        // group by day
-        const byDay = {};
-        rangeItems.forEach(i => { (byDay[i._day] = byDay[i._day]||[]).push(i); });
-        itemsHtml = Object.entries(byDay).sort(([a],[b])=>a.localeCompare(b)).map(([day, its]) => `
-          <div style="margin-bottom:10px">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:6px">${fmtDay(day)}</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px">
-              ${its.map(i => activityPill(i)).join('')}
-            </div>
-          </div>`).join('');
-      } else {
-        itemsHtml = '<div style="font-size:11px;color:var(--ink3)">Sin actividades programadas en este rango.</div>';
-      }
-    } else if (flat.length) {
-      itemsHtml = `<div style="display:flex;flex-wrap:wrap;gap:6px">${flat.slice(0,20).map(i=>activityPill(i)).join('')}</div>`;
-    }
-
-    const isNow = arr <= today.toISOString().slice(0,10) && dep >= today.toISOString().slice(0,10);
-
-    return `
-      <div class="trip-card" style="margin-bottom:14px">
-        <div class="trip-card-head">
-          <div>
-            <div class="trip-name">${esc(k.guestName || k.tripName || '—')}</div>
-            <div class="trip-meta">${esc(city)}${pax} · ${arr||'?'} → ${dep||'?'}</div>
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-            ${isNow ? '<span class="chip chip-green" style="animation:pulse 2s infinite">🔴 En curso</span>' : '<span class="chip chip-blue">📅 Próximo</span>'}
-            ${k.concierges ? '<span class="chip chip-gray">'+esc(Array.isArray(k.concierges)?k.concierges[0]:k.concierges)+'</span>' : ''}
-          </div>
-        </div>
-        <div class="trip-card-body">
-          ${itemsHtml || '<div style="font-size:11px;color:var(--ink3)">Sin itinerario cargado todavía.</div>'}
-        </div>
-      </div>`;
-  }).join('');
+  el.innerHTML = active.map(k => renderTripItinerary(k, today)).join('');
 }
 
-function activityPill(i) {
-  const CAT_COLOR = {
-    'actividades':'#f3e8ff;color:#7c3aed',
-    'food':'#fef9c3;color:#854d0e',
-    'restaurante':'#fef9c3;color:#854d0e',
-    'tours':'#dbeafe;color:#1d4ed8',
-    'boating':'#cffafe;color:#0e7490',
-    'beach':'#dcfce7;color:#15803d',
-    'nightlife':'#fce7f3;color:#be185d',
-  };
-  const cat = (i.category||'').toLowerCase();
-  let style = '#f0ece4;color:#4b4540';
-  for (const [k,v] of Object.entries(CAT_COLOR)) { if (cat.includes(k)) { style=v; break; } }
-  const name = i.name_es || i.name || '';
-  const time = i.timeLabel ? ` <span style="opacity:.6">${esc(i.timeLabel)}</span>` : '';
-  return `<span style="font-size:11px;padding:3px 9px;border-radius:6px;background:${style.split(';')[0]};${style.split(';')[1]||''}">${esc(name)}${time}</span>`;
+function parseCart(k) {
+  let cart = [];
+  try { cart = JSON.parse(k.cart || '[]'); } catch {}
+  if (!Array.isArray(cart)) cart = [];
+  return cart.filter(it => it && (it.name || it.displayName || it.title || it.name_es));
+}
+
+function renderTripItinerary(k, today) {
+  const cart = parseCart(k);
+  const city = [k.city, k.city2].filter(Boolean).join(' → ');
+  const pax  = k.groupSize ? ` · ${k.groupSize}` : '';
+  const arr  = k.arrivalDate || '';
+  const dep  = k.departureDate || '';
+  const todayStr = today.toISOString().slice(0,10);
+  const isNow = arr && dep && arr <= todayStr && dep >= todayStr;
+  const concierge = Array.isArray(k.concierges) ? k.concierges[0] : (k.concierges || '');
+
+  // Group by dayLabel
+  const byDay = new Map();
+  cart.forEach(it => {
+    const label = it.dayLabel || it.day || 'Itinerario';
+    if (!byDay.has(label)) byDay.set(label, []);
+    byDay.get(label).push(it);
+  });
+
+  let bodyHtml = '';
+  if (byDay.size === 0) {
+    bodyHtml = '<div style="font-size:12px;color:var(--ink3);padding:8px 0">El concierge aún no ha cargado el itinerario.</div>';
+  } else {
+    const filmNotes = lsGet('marketing_activity_notes', {});
+    bodyHtml = [...byDay.entries()].map(([dayLabel, items]) => {
+      const sortedItems = [...items].sort((a,b) => (a.sortOrder??999)-(b.sortOrder??999));
+      return `
+        <div style="margin-bottom:20px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">${esc(dayLabel)}</div>
+          ${sortedItems.map((it, idx) => {
+            const name = it.displayName || it.name || it.title || it.name_es || '';
+            const time = it.timeLabel || it.time || '';
+            const loc  = it.location || '';
+            const cat  = (it.category || '').toLowerCase();
+            const noteKey = `${k.id}_${dayLabel}_${idx}`;
+            const note = filmNotes[noteKey] || '';
+            const CAT_COLORS = {
+              'actividad':'#7c3aed','tour':'#1d4ed8','food':'#854d0e',
+              'restaurante':'#854d0e','drink':'#854d0e','boating':'#0e7490',
+              'beach':'#15803d','nightlife':'#be185d','night':'#be185d',
+            };
+            let catColor = '#6b5d45';
+            for (const [k2,v] of Object.entries(CAT_COLORS)) { if (cat.includes(k2)) { catColor=v; break; } }
+            return `
+              <div style="display:flex;gap:12px;margin-bottom:10px;padding:10px 12px;background:var(--sand);border-radius:8px">
+                <div style="min-width:54px;font-size:11px;font-weight:600;color:var(--ink3);padding-top:1px">${esc(time)}</div>
+                <div style="flex:1">
+                  <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+                    <span style="font-size:13px;font-weight:600;color:var(--ink)">${esc(name)}</span>
+                    ${it.category ? `<span style="font-size:10px;color:${catColor};font-weight:600">${esc(it.category)}</span>` : ''}
+                    ${loc ? `<span style="font-size:11px;color:var(--ink3)">📍 ${esc(loc)}</span>` : ''}
+                  </div>
+                  <div style="margin-top:6px">
+                    <input type="text"
+                      value="${esc(note)}"
+                      placeholder="🎬 Nota para Vale (oportunidad de contenido, hora exacta, tipo de toma…)"
+                      onchange="saveActivityNote('${noteKey}', this.value)"
+                      style="width:100%;padding:5px 9px;border:1px solid var(--border);border-radius:6px;font-size:11.5px;font-family:Jost,sans-serif;background:var(--white);color:var(--ink);outline:none"
+                      onfocus="this.style.borderColor='var(--gold)'"
+                      onblur="this.style.borderColor='var(--border)'">
+                  </div>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>`;
+    }).join('');
+  }
+
+  return `
+    <div class="trip-card" style="margin-bottom:16px">
+      <div class="trip-card-head">
+        <div>
+          <div class="trip-name">${esc(k.guestName || k.tripName || '—')}</div>
+          <div class="trip-meta">${esc(city)}${pax}${arr||dep ? ' · '+(arr||'?')+' → '+(dep||'?') : ''}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center">
+          ${isNow ? '<span class="chip chip-green">🔴 En curso</span>' : '<span class="chip chip-blue">📅 Próximo</span>'}
+          ${concierge ? '<span class="chip chip-gray">'+esc(concierge)+'</span>' : ''}
+        </div>
+      </div>
+      <div class="trip-card-body">${bodyHtml}</div>
+    </div>`;
+}
+
+function saveActivityNote(key, val) {
+  const notes = lsGet('marketing_activity_notes', {});
+  if (val.trim()) notes[key] = val.trim(); else delete notes[key];
+  lsSet('marketing_activity_notes', notes);
 }
 
 function fmtDay(dateStr) {
