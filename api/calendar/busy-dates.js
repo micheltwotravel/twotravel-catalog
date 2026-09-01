@@ -140,14 +140,18 @@ export default async function handler(req, res) {
   let bookings = [];
   let refreshToken = null;
   try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 8000);
     const [availRes, tokenRes] = await Promise.all([
-      fetch(`${GAS_URL}?action=getAvailability&email=${encodeURIComponent(email)}`),
+      fetch(`${GAS_URL}?action=getAvailability&email=${encodeURIComponent(email)}`, { signal: ctrl.signal }),
       fetch(GAS_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action: "getCalendarToken", payload: { concierge } }),
+        signal: ctrl.signal,
       }),
     ]);
+    clearTimeout(timeout);
     const [availData, tokenData] = await Promise.all([availRes.json(), tokenRes.json()]);
     if (availData.ok) {
       schedule = { ...DEFAULT_SCHEDULE, ...(availData.schedule || {}) };
@@ -156,7 +160,7 @@ export default async function handler(req, res) {
     }
     refreshToken = tokenData?.refreshToken || tokenData?.token || null;
   } catch (e) {
-    console.error("GAS fetch error:", e.message);
+    console.error("GAS fetch error:", e.name === "AbortError" ? "timeout (>8s)" : e.message);
   }
 
   // 2. Fetch Google Calendar freebusy for the full month — one API call
