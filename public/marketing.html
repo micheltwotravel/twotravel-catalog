@@ -193,9 +193,10 @@ tr:hover td{background:var(--sand)}
     <!-- Selector de rango -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
       <span style="font-size:11px;font-weight:600;color:var(--ink2)">Mostrar:</span>
+      <button class="btn btn-ghost btn-sm" id="live-btn-all" onclick="setLiveRange('all')">Todos activos</button>
       <button class="btn btn-ghost btn-sm" id="live-btn-0" onclick="setLiveRange(0)">Hoy</button>
       <button class="btn btn-ghost btn-sm" id="live-btn-3" onclick="setLiveRange(3)">Próximos 3 días</button>
-      <button class="btn btn-ghost btn-sm" id="live-btn-7" onclick="setLiveRange(7)">Próximos 7 días</button>
+      <button class="btn btn-ghost btn-sm" id="live-btn-7" onclick="setLiveRange(7)">7 días</button>
       <button class="btn btn-ghost btn-sm" id="live-btn-14" onclick="setLiveRange(14)">2 semanas</button>
     </div>
 
@@ -451,12 +452,12 @@ function showTab(name) {
 // ══════════════════════════════════════════════════════
 // TAB ACTIVOS
 // ══════════════════════════════════════════════════════
-let liveRange = 7;
+let liveRange = 'all';
 function setLiveRange(days) {
   liveRange = days;
-  ['0','3','7','14'].forEach(d => {
+  ['all','0','3','7','14'].forEach(d => {
     const b = document.getElementById('live-btn-'+d);
-    if (b) b.style.background = d==days ? 'var(--ink)' : '', b.style.color = d==days ? '#fff' : '';
+    if (b) { b.style.background = String(d)===String(days) ? 'var(--ink)' : ''; b.style.color = String(d)===String(days) ? '#fff' : ''; }
   });
   renderLive();
 }
@@ -466,12 +467,15 @@ function renderLive() {
   const today = new Date(); today.setHours(0,0,0,0);
   const rangeEnd = new Date(today); rangeEnd.setDate(rangeEnd.getDate() + liveRange);
 
+  const DONE = new Set(['completed','cancelled','archived']);
   const active = kickoffs.filter(k => {
+    if (DONE.has(k.status)) return false;
+    if (liveRange === 'all') return true;
     const arr = k.arrivalDate ? new Date(k.arrivalDate+'T12:00:00') : null;
     const dep = k.departureDate ? new Date(k.departureDate+'T12:00:00') : null;
-    if (!arr && !dep) return false;
+    if (!arr && !dep) return true; // being edited, no dates yet — always show
     return (arr||dep) <= rangeEnd && (dep||arr) >= today;
-  }).sort((a,b) => (a.arrivalDate||'').localeCompare(b.arrivalDate||''));
+  }).sort((a,b) => (a.arrivalDate||'zzz').localeCompare(b.arrivalDate||'zzz'));
 
   if (!active.length) {
     el.innerHTML = '<div class="empty"><div class="empty-icon">📍</div><div>No hay grupos en este período.</div></div>';
@@ -1011,7 +1015,7 @@ function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 function fmt(n){ return (n||0).toLocaleString('es-CO'); }
 
 // ─── INIT ─────────────────────────────────────────────
-setLiveRange(7);
+setLiveRange('all');
 loadKickoffs();
 document.getElementById('modal-content').addEventListener('click', e => { if(e.target===e.currentTarget) closeContentModal(); });
 document.getElementById('modal-metric').addEventListener('click', e => { if(e.target===e.currentTarget) closeMetricModal(); });
