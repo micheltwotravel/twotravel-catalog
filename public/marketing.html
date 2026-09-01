@@ -202,6 +202,23 @@ tr:hover td{background:var(--sand)}
     <div id="live-list"></div>
   </div>
 
+  <!-- ══════════ MODAL: ITINERARIO COMPLETO ══════════ -->
+  <div id="modal-itinerary" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;overflow-y:auto">
+    <div style="max-width:760px;margin:32px auto;background:var(--white);border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--white);z-index:1">
+        <div>
+          <div id="modal-itin-name" style="font-size:17px;font-weight:600;color:var(--ink)"></div>
+          <div id="modal-itin-meta" style="font-size:11px;color:var(--ink3);margin-top:2px"></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <a id="modal-itin-link" href="#" target="_blank" class="btn btn-ghost btn-sm">Ver PDF ↗</a>
+          <button onclick="closeItinModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink3);line-height:1">×</button>
+        </div>
+      </div>
+      <div id="modal-itin-body" style="padding:24px"></div>
+    </div>
+  </div>
+
   <!-- ══════════════════════════════════════════════════
        TAB 2: COMPORTAMIENTO
   ══════════════════════════════════════════════════ -->
@@ -489,63 +506,29 @@ function renderTripItinerary(k, today) {
     byDay.get(label).push(it);
   });
 
-  let bodyHtml = '';
-  if (byDay.size === 0) {
-    bodyHtml = '<div style="font-size:12px;color:var(--ink3);padding:8px 0">El concierge aún no ha cargado el itinerario.</div>';
-  } else {
-    const filmNotes = lsGet('marketing_activity_notes', {});
-    bodyHtml = [...byDay.entries()].map(([dayLabel, items]) => {
-      const sortedItems = [...items].sort((a,b) => (a.sortOrder??999)-(b.sortOrder??999));
-      return `
-        <div style="margin-bottom:20px">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">${esc(dayLabel)}</div>
-          ${sortedItems.map((it, idx) => {
-            const name = it.displayName || it.name || it.title || it.name_es || '';
-            const time = it.timeLabel || it.time || '';
-            const loc  = it.location || '';
-            const cat  = (it.category || '').toLowerCase();
-            const noteKey = `${k.id}_${dayLabel}_${idx}`;
-            const note = filmNotes[noteKey] || '';
-            const CAT_COLORS = {
-              'actividad':'#7c3aed','tour':'#1d4ed8','food':'#854d0e',
-              'restaurante':'#854d0e','drink':'#854d0e','boating':'#0e7490',
-              'beach':'#15803d','nightlife':'#be185d','night':'#be185d',
-            };
-            let catColor = '#6b5d45';
-            for (const [k2,v] of Object.entries(CAT_COLORS)) { if (cat.includes(k2)) { catColor=v; break; } }
-            return `
-              <div style="display:flex;gap:12px;margin-bottom:10px;padding:10px 12px;background:var(--sand);border-radius:8px">
-                <div style="min-width:54px;font-size:11px;font-weight:600;color:var(--ink3);padding-top:1px">${esc(time)}</div>
-                <div style="flex:1">
-                  <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
-                    <span style="font-size:13px;font-weight:600;color:var(--ink)">${esc(name)}</span>
-                    ${it.category ? `<span style="font-size:10px;color:${catColor};font-weight:600">${esc(it.category)}</span>` : ''}
-                    ${loc ? `<span style="font-size:11px;color:var(--ink3)">📍 ${esc(loc)}</span>` : ''}
-                  </div>
-                  <div style="margin-top:6px">
-                    <input type="text"
-                      value="${esc(note)}"
-                      placeholder="🎬 Nota para Vale (oportunidad de contenido, hora exacta, tipo de toma…)"
-                      onchange="saveActivityNote('${noteKey}', this.value)"
-                      style="width:100%;padding:5px 9px;border:1px solid var(--border);border-radius:6px;font-size:11.5px;font-family:Jost,sans-serif;background:var(--white);color:var(--ink);outline:none"
-                      onfocus="this.style.borderColor='var(--gold)'"
-                      onblur="this.style.borderColor='var(--border)'">
-                  </div>
-                </div>
-              </div>`;
-          }).join('')}
-        </div>`;
-    }).join('');
-  }
+  // Compact summary for the card
+  const activityCount = [...byDay.values()].reduce((s,a)=>s+a.length,0);
+  const dayCount = byDay.size;
+  const filmNotes = lsGet('marketing_activity_notes', {});
+  const notedCount = [...byDay.entries()].reduce((s,[dl,its]) =>
+    s + its.filter((_,idx) => filmNotes[`${k.id}_${dl}_${idx}`]).length, 0);
+
+  const summaryHtml = activityCount
+    ? `<div style="display:flex;gap:16px;align-items:center;font-size:12px;color:var(--ink3)">
+        <span>📅 ${dayCount} ${dayCount===1?'día':'días'}</span>
+        <span>🎯 ${activityCount} actividades</span>
+        ${notedCount ? `<span class="chip chip-purple">🎬 ${notedCount} notas de filmación</span>` : ''}
+        <button onclick="openItinModal('${esc(k.id)}')" class="btn btn-ghost btn-sm" style="margin-left:auto">Ver itinerario completo →</button>
+      </div>`
+    : `<div style="font-size:12px;color:var(--ink3)">Sin itinerario todavía — <button onclick="openItinModal('${esc(k.id)}')" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:12px;font-family:Jost,sans-serif;padding:0">abrir de todas formas →</button></div>`;
 
   return `
-    <div class="trip-card" style="margin-bottom:16px">
-      <div class="trip-card-head">
+    <div class="trip-card" style="margin-bottom:12px">
+      <div class="trip-card-head" style="cursor:pointer" onclick="openItinModal('${esc(k.id)}')">
         <div>
-          <a href="/?mode=itinerary&kickoffId=${esc(k.id)}" target="_blank" class="trip-name"
-            style="text-decoration:none;border-bottom:1px dashed var(--gold);cursor:pointer" title="Ver PDF completo">
-            ${esc(k.guestName || k.tripName || '—')} ↗
-          </a>
+          <div class="trip-name" style="border-bottom:1px dashed var(--gold);display:inline">
+            ${esc(k.guestName || k.tripName || '—')} →
+          </div>
           <div class="trip-meta">${esc(city)}${pax}${arr||dep ? ' · '+(arr||'?')+' → '+(dep||'?') : ''}</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center">
@@ -553,7 +536,7 @@ function renderTripItinerary(k, today) {
           ${concierge ? '<span class="chip chip-gray">'+esc(concierge)+'</span>' : ''}
         </div>
       </div>
-      <div class="trip-card-body">${bodyHtml}</div>
+      <div class="trip-card-body">${summaryHtml}</div>
     </div>`;
 }
 
@@ -561,6 +544,90 @@ function saveActivityNote(key, val) {
   const notes = lsGet('marketing_activity_notes', {});
   if (val.trim()) notes[key] = val.trim(); else delete notes[key];
   lsSet('marketing_activity_notes', notes);
+}
+
+function openItinModal(kickoffId) {
+  const k = kickoffs.find(x => x.id === kickoffId);
+  if (!k) return;
+  const city = [k.city, k.city2].filter(Boolean).join(' → ');
+  const arr  = k.arrivalDate || '';
+  const dep  = k.departureDate || '';
+  const pax  = k.groupSize ? ` · ${k.groupSize}` : '';
+
+  document.getElementById('modal-itin-name').textContent = k.guestName || k.tripName || '—';
+  document.getElementById('modal-itin-meta').textContent = [city, (arr||dep)?arr+' → '+dep:''].filter(Boolean).join(' · ') + pax;
+  document.getElementById('modal-itin-link').href = `/?mode=itinerary&kickoffId=${encodeURIComponent(kickoffId)}`;
+
+  const cart = parseCart(k);
+  const byDay = new Map();
+  cart.forEach(it => {
+    const label = it.dayLabel || it.day || 'Itinerario';
+    if (!byDay.has(label)) byDay.set(label, []);
+    byDay.get(label).push(it);
+  });
+
+  const filmNotes = lsGet('marketing_activity_notes', {});
+  const CAT_COLORS = {
+    'actividad':'#7c3aed','tour':'#1d4ed8','food':'#854d0e',
+    'restaurante':'#854d0e','drink':'#854d0e','boating':'#0e7490',
+    'beach':'#15803d','nightlife':'#be185d','night':'#be185d',
+  };
+
+  let html = '';
+  if (byDay.size === 0) {
+    html = '<div style="text-align:center;padding:40px 0;color:var(--ink3)"><div style="font-size:32px;margin-bottom:12px">📋</div><div>El concierge aún no ha cargado actividades en el itinerario.</div></div>';
+  } else {
+    html = [...byDay.entries()].map(([dayLabel, items]) => {
+      const sorted = [...items].sort((a,b)=>(a.sortOrder??999)-(b.sortOrder??999));
+      return `<div style="margin-bottom:28px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--gold);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)">${esc(dayLabel)}</div>
+        ${sorted.map((it, idx) => {
+          const name = it.displayName || it.name || it.title || it.name_es || '';
+          const time = it.timeLabel || it.time || '';
+          const loc  = it.location || '';
+          const cat  = (it.category || '').toLowerCase();
+          const noteKey = `${kickoffId}_${dayLabel}_${idx}`;
+          const note = filmNotes[noteKey] || '';
+          let catColor = '#6b5d45';
+          for (const [ck,cv] of Object.entries(CAT_COLORS)) { if (cat.includes(ck)) { catColor=cv; break; } }
+          return `
+            <div style="display:flex;gap:14px;margin-bottom:12px;padding:12px 14px;background:var(--sand);border-radius:10px;border-left:3px solid ${catColor}20">
+              <div style="min-width:60px;font-size:11.5px;font-weight:600;color:var(--ink3);padding-top:2px">${esc(time||'—')}</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+                  <span style="font-size:14px;font-weight:600;color:var(--ink)">${esc(name)}</span>
+                  ${it.category ? `<span style="font-size:10px;color:${catColor};font-weight:600;text-transform:uppercase;letter-spacing:.04em">${esc(it.category)}</span>` : ''}
+                </div>
+                ${loc ? `<div style="font-size:11px;color:var(--ink3);margin-bottom:6px">📍 ${esc(loc)}</div>` : ''}
+                <input type="text"
+                  id="anote-${noteKey}"
+                  value="${esc(note)}"
+                  placeholder="🎬 Nota de filmación para Vale…"
+                  onchange="saveActivityNoteModal('${noteKey}', this.value, '${kickoffId}')"
+                  style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:Jost,sans-serif;background:var(--white);color:var(--ink);outline:none;transition:border-color .15s"
+                  onfocus="this.style.borderColor='var(--gold)'"
+                  onblur="this.style.borderColor='var(--border)'">
+              </div>
+            </div>`;
+        }).join('')}
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('modal-itin-body').innerHTML = html;
+  document.getElementById('modal-itinerary').style.display = '';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeItinModal() {
+  document.getElementById('modal-itinerary').style.display = 'none';
+  document.body.style.overflow = '';
+  // Refresh live list to update note counts
+  renderLive();
+}
+
+function saveActivityNoteModal(key, val, kickoffId) {
+  saveActivityNote(key, val);
 }
 
 function fmtDay(dateStr) {
@@ -948,6 +1015,7 @@ setLiveRange(7);
 loadKickoffs();
 document.getElementById('modal-content').addEventListener('click', e => { if(e.target===e.currentTarget) closeContentModal(); });
 document.getElementById('modal-metric').addEventListener('click', e => { if(e.target===e.currentTarget) closeMetricModal(); });
+document.getElementById('modal-itinerary').addEventListener('click', e => { if(e.target===e.currentTarget) closeItinModal(); });
 </script>
 </body>
 </html>
