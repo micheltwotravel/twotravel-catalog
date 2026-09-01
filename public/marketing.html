@@ -542,7 +542,10 @@ function renderTripItinerary(k, today) {
     <div class="trip-card" style="margin-bottom:16px">
       <div class="trip-card-head">
         <div>
-          <div class="trip-name">${esc(k.guestName || k.tripName || '—')}</div>
+          <a href="/?mode=itinerary&kickoffId=${esc(k.id)}" target="_blank" class="trip-name"
+            style="text-decoration:none;border-bottom:1px dashed var(--gold);cursor:pointer" title="Ver PDF completo">
+            ${esc(k.guestName || k.tripName || '—')} ↗
+          </a>
           <div class="trip-meta">${esc(city)}${pax}${arr||dep ? ' · '+(arr||'?')+' → '+(dep||'?') : ''}</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center">
