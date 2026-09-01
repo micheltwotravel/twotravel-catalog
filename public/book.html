@@ -600,7 +600,8 @@ async function pickDate(iso) {
       document.getElementById("slotsError").textContent = "Error: " + data.error;
       document.getElementById("slotsError").style.display = "block";
     } else if (!data.slots?.length) {
-      noSlotDates.add(iso);  // remember this date has no availability
+      noSlotDates.add(iso);
+      renderCalendar();  // immediately grey this date out in the background
       document.getElementById("slotsError").textContent = t.errNoSlots;
       document.getElementById("slotsError").style.display = "block";
     } else {
@@ -613,6 +614,7 @@ async function pickDate(iso) {
 
       if (!visibleSlots.length) {
         noSlotDates.add(iso);
+        renderCalendar();  // immediately grey this date out in the background
         document.getElementById("slotsError").textContent = t.errNoSlots;
         document.getElementById("slotsError").style.display = "block";
       } else {
@@ -739,6 +741,7 @@ async function confirmBook() {
 
 function goStep(n) {
   [1,2,3,4].forEach(i => document.getElementById(`step${i}`).style.display = i === n ? "block" : "none");
+  if (n === 1) renderCalendar();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
