@@ -8128,6 +8128,14 @@ const loadKickoffs = async () => {
   )}
 
   <a
+    href="/estimates.html"
+    className="tt-btn-ghost"
+    title="Herramienta de estimados y cotizaciones"
+  >
+    💰 Estimados
+  </a>
+
+  <a
     href="/menu.html"
     className="tt-btn-ghost"
     title="Menú principal"
