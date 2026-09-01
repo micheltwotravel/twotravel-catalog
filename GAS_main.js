@@ -1142,7 +1142,7 @@ function getAvailability(e) {
     .setMimeType(ContentService.MimeType.JSON);
 
   // Load saved schedule/settings/manualSlots from the Availability sheet
-  let savedSchedule = null, savedSettings = null, savedManualSlots = null, savedBookings = [];
+  let savedSchedule = null, savedSettings = null, savedManualSlots = null, savedBookings = [], savedBlocked = [];
   try {
     const ss    = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName("Availability");
@@ -1153,10 +1153,11 @@ function getAvailability(e) {
       for (let i = 1; i < data.length; i++) {
         if ((data[i][col("email")] || "").toLowerCase().trim() === email) {
           const parse = (v) => { try { return v ? JSON.parse(v) : null; } catch { return null; } };
-          savedSchedule   = parse(data[i][col("schedule")]);
-          savedSettings   = parse(data[i][col("settings")]);
+          savedSchedule    = parse(data[i][col("schedule")]);
+          savedSettings    = parse(data[i][col("settings")]);
           savedManualSlots = parse(data[i][col("manualslots")]);
-          savedBookings   = parse(data[i][col("bookings")]) || [];
+          savedBookings    = parse(data[i][col("bookings")]) || [];
+          savedBlocked     = parse(data[i][col("blocked")]) || [];
           break;
         }
       }
@@ -1182,8 +1183,10 @@ function getAvailability(e) {
                       title.includes("fuera") ||
                       title.includes("vacacion") ||
                       title.includes("libre") ||
-                      title.includes("no disponible");
-        if (isOOO || !ev.isAllDayEvent()) {
+                      title.includes("no disponible") ||
+                      title.includes("bloqueado") ||
+                      title.includes("ocupado");
+        if (isOOO) {
           const evStart = ev.getStartTime();
           const evEnd = ev.getEndTime();
           const dateStr = Utilities.formatDate(evStart, "America/Bogota", "yyyy-MM-dd");
@@ -1211,7 +1214,7 @@ function getAvailability(e) {
     settings:    savedSettings,
     manualSlots: savedManualSlots,
     bookings:    savedBookings,
-    blocked:     calBlocked,
+    blocked:     [...savedBlocked, ...calBlocked],
   };
   return ContentService.createTextOutput(JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
