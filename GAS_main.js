@@ -1172,7 +1172,7 @@ function getAvailability(e) {
   const end = new Date(now.getFullYear(), now.getMonth() + 3, 1);
   let calBlocked = [];
   try {
-    const cal = CalendarApp.getCalendarById(email) || CalendarApp.getDefaultCalendar();
+    const cal = CalendarApp.getCalendarById(email);
     if (cal) {
       const events = cal.getEvents(start, end);
       events.forEach(ev => {
