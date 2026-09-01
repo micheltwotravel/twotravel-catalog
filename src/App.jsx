@@ -6088,6 +6088,7 @@ function FinanceLanding({ user, onLogout }) {
       group: "Operaciones",
       items: [
         { icon:"📈", label:"Reservaciones & Ventas", desc:"Ingresos esperados y comisiones de ventas", href:"/?mode=f-reservaciones", live:true },
+        { icon:"💰", label:"Estimados",               desc:"Herramienta de cotizaciones para ventas",   href:"/estimates.html",        live:true },
         { icon:"✅", label:"Cierre Mensual",          desc:"Checklist de cierre por mes",               href:"/?mode=f-cierre",        live:true },
         { icon:"📅", label:"Calendario de Trabajo",   desc:"Agenda financiera del equipo",              href:null,                     live:false },
         { icon:"📥", label:"Templates",               desc:"Payana · QuickBooks Bills · Estimates",     href:"/?mode=f-templates",     live:true },
