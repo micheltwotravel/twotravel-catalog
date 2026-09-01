@@ -757,13 +757,8 @@ async function loadBehavior() {
 function renderBehavior() {
   const items = [];
   kickoffs.forEach(k => {
-    let cart = [];
-    try { cart = JSON.parse(k.cartItems || k.itinerary || '[]'); } catch {}
-    if (!Array.isArray(cart)) return;
-    cart.forEach(item => {
-      const sub = Array.isArray(item.items) ? item.items : [item];
-      sub.forEach(i => { if (i.name || i.name_es) items.push(i); });
-    });
+    const cart = parseCart(k);
+    cart.forEach(i => { if (i.name || i.name_es || i.displayName) items.push(i); });
   });
 
   const FOOD_CATS = ['food','drink','restaurant','bar','rooftop','brunch','dinner','lunch','restaurante','bebidas','nightlife','night'];
@@ -775,7 +770,7 @@ function renderBehavior() {
     const counts = {};
     items.forEach(i => {
       const cat = (i.category||'').toLowerCase();
-      const name = (i.name_es||i.name||'').trim();
+      const name = (i.displayName||i.name_es||i.name||i.title||'').trim();
       if (!name) return;
       if (!filter(cat, name)) return;
       counts[name] = (counts[name]||0)+1;
