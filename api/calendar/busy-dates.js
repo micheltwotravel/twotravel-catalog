@@ -186,10 +186,8 @@ export default async function handler(req, res) {
     const date = `${month}-${String(d).padStart(2,"0")}`;
     const dateObj = new Date(date + "T12:00:00");
 
-    // Skip past dates and weekends — these are already greyed out by the calendar
+    // Skip past dates
     if (dateObj < today) continue;
-    const dow = dateObj.getDay();
-    if (dow === 0 || dow === 6) continue;
 
     const available = hasAvailableSlot(date, schedule, blocked, bookings, calBusyPeriods, slotMinutes);
     if (!available) busyDates.push(date);
