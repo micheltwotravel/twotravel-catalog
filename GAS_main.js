@@ -1490,7 +1490,7 @@ function createMondayItems_(payload) {
 
 // ═══════════════ COMISIONES A PROVEEDORES ════════════════════════
 const COMISIONES_SHEET = "Comisiones";
-const COMISIONES_COLS  = ["id","proveedor","concepto","monto","moneda","estado","fechaVencimiento","phone","cobroAt","reminderAt","notes","createdAt","updatedAt"];
+const COMISIONES_COLS  = ["id","date","vendor","client","category","desc","total","pct","amount","currency","phone","person","dueDate","notes","status","cobroAt","createdAt","updatedAt"];
 
 function getComisionesSheet_() {
   let sh = SS.getSheetByName(COMISIONES_SHEET);

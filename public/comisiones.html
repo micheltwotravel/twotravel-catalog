@@ -137,6 +137,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
   <div style="width:1px;height:22px;background:var(--border2);margin:0 2px"></div>
   <button class="tbtn" id="view-lista" onclick="setView('lista')" style="background:var(--ink);color:#fff;border-color:var(--ink)">Lista</button>
   <button class="tbtn" id="view-proveedores" onclick="setView('proveedores')">Por Proveedor</button>
+  <button class="tbtn" id="view-alertas" onclick="setView('alertas')">🔔 Alertas</button>
   <button class="tbtn" onclick="exportCSV()">⬇ Excel</button>
   <span class="sync-info" id="sync-info">Cargando...</span>
 </div>
@@ -240,6 +241,21 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
         <div class="form-group">
           <label class="form-label">Fecha de vencimiento</label>
           <input class="form-input" type="date" id="n-due">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">¿Facturar?</label>
+          <select class="form-select" id="n-facturar">
+            <option value="">—</option>
+            <option value="si">Sí</option>
+            <option value="no">No</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Soporte de pago (URL / Drive)</label>
+          <input class="form-input" id="n-soporte" type="url" placeholder="https://drive.google.com/...">
         </div>
       </div>
 
@@ -412,8 +428,15 @@ async function loadFromGAS(){
     const r = await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
       body:JSON.stringify({action:'getComisiones'})});
     const d = await r.json();
-    if(d.ok && d.data?.length){
-      comisiones = d.data;
+    if(d.ok && d.data?.length && d.data.some(x => x.vendor || x.amount || x.proveedor)){
+      // Migrate old field names if needed
+      comisiones = d.data.map(x => ({
+        ...x,
+        vendor: x.vendor || x.proveedor || '',
+        amount: x.amount || x.monto || '',
+        status: x.status || x.estado || 'pend',
+        dueDate: x.dueDate || x.fechaVencimiento || '',
+      }));
       localStorage.setItem('tt_comisiones', JSON.stringify(comisiones));
       setSyncInfo('Sincronizado · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
     } else {
@@ -456,6 +479,7 @@ function calcComision(){
 /* ── RENDER ── */
 function render(){
   if(currentView === 'proveedores'){ renderProveedores(); return; }
+  if(currentView === 'alertas'){ renderAlertas(); return; }
   const main = document.getElementById('main');
   const today = new Date().toISOString().slice(0,10);
 
@@ -503,17 +527,20 @@ function render(){
       <th>%</th>
       <th>Comisión</th>
       <th>Gestionado por</th>
+      <th>Facturar</th>
+      <th>Soporte</th>
       <th>Vencimiento</th>
       <th>Cobrar</th>
       <th>Estado</th>
       <th>Notas</th>
+      <th></th>
     </tr></thead>
     <tbody>`;
 
   items.forEach(c => { html += renderRow(c, today); });
 
   html += `<tr class="add-row" onclick="openNewModal()">
-    <td colspan="13">+ Agregar comisión</td>
+    <td colspan="16">+ Agregar comisión</td>
   </tr>`;
   html += `</tbody></table></div>`;
 
@@ -553,7 +580,17 @@ function renderRow(c, today){
       ` : '<span style="font-size:10px;color:var(--border2)">sin tel.</span>'}
     </div></td>
     <td class="status-wrap"><span class="status-chip" style="background:${st.color}" onclick="openStatusPopup('${c.id}',event)">${st.label}</span></td>
-    <td><div class="cell editable" ondblclick="editField('${c.id}','notes')" style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink3)">${esc(c.notes||'')}</div></td>
+    <td><div class="cell" style="justify-content:center">
+      ${c.facturar==='si' ? `<span style="background:#dcfce7;color:#15803d;padding:2px 9px;font-size:10px;font-weight:600;border-radius:2px">Sí</span>` :
+        c.facturar==='no' ? `<span style="background:#fee2e2;color:#b91c1c;padding:2px 9px;font-size:10px;font-weight:600;border-radius:2px">No</span>` : '—'}
+    </div></td>
+    <td><div class="cell" style="justify-content:center">
+      ${c.soporte ? `<a href="${esc(c.soporte)}" target="_blank" style="color:var(--gold);font-size:11px;text-decoration:none" title="${esc(c.soporte)}">📎 Ver</a>` : '<span style="color:var(--border2);font-size:11px">—</span>'}
+    </div></td>
+    <td><div class="cell editable" ondblclick="editField('${c.id}','notes')" style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink3)">${esc(c.notes||'')}</div></td>
+    <td><div class="cell" style="justify-content:center">
+      <button onclick="deleteComision('${c.id}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--border2);font-size:14px;padding:2px 6px;transition:color .12s" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='var(--border2)'">×</button>
+    </div></td>
   </tr>`;
 }
 
@@ -621,6 +658,8 @@ function openNewModal(){
   document.getElementById('n-due').value = '';
   document.getElementById('n-notes').value = '';
   document.getElementById('n-pct-hint').textContent = '';
+  document.getElementById('n-facturar').value = '';
+  document.getElementById('n-soporte').value = '';
   document.getElementById('client-services').style.display = 'none';
   document.getElementById('new-modal').style.display = 'flex';
   setTimeout(()=>{ document.getElementById('n-vendor').focus(); }, 50);
@@ -651,6 +690,8 @@ function createComision(){
     person:    document.getElementById('n-person').value,
     dueDate:   document.getElementById('n-due').value,
     notes:     document.getElementById('n-notes').value.trim(),
+    facturar:  document.getElementById('n-facturar').value,
+    soporte:   document.getElementById('n-soporte').value.trim(),
     status:    'pend',
     createdAt: new Date().toISOString(),
   };
@@ -715,12 +756,97 @@ function exportCSV(){
   showToast('Exportando CSV...');
 }
 
+/* ── DELETE ── */
+function deleteComision(id){
+  if(!confirm('¿Eliminar esta comisión?')) return;
+  comisiones = comisiones.filter(c => c.id !== id);
+  save(); render();
+  showToast('Comisión eliminada');
+}
+
 /* ── VIEW TOGGLE ── */
 function setView(v){
   currentView = v;
-  document.getElementById('view-lista').style.cssText       = v==='lista'       ? 'background:var(--ink);color:#fff;border-color:var(--ink)' : '';
-  document.getElementById('view-proveedores').style.cssText = v==='proveedores' ? 'background:var(--ink);color:#fff;border-color:var(--ink)' : '';
+  const views = ['lista','proveedores','alertas'];
+  views.forEach(name => {
+    const el = document.getElementById('view-'+name);
+    if(el) el.style.cssText = v===name ? 'background:var(--ink);color:#fff;border-color:var(--ink)' : '';
+  });
   render();
+}
+
+/* ── RENDER ALERTAS ── */
+function renderAlertas(){
+  const main = document.getElementById('main');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in7 = new Date(today); in7.setDate(in7.getDate()+7);
+  const in30 = new Date(today); in30.setDate(in30.getDate()+30);
+
+  const active = comisiones.filter(c => c.status !== 'cobrado');
+  const vencidas = active.filter(c => c.dueDate && new Date(c.dueDate+'T12:00') < today);
+  const esta_semana = active.filter(c => { if(!c.dueDate) return false; const d=new Date(c.dueDate+'T12:00'); return d>=today && d<=in7; });
+  const este_mes = active.filter(c => { if(!c.dueDate) return false; const d=new Date(c.dueDate+'T12:00'); return d>in7 && d<=in30; });
+  const sin_fecha = active.filter(c => !c.dueDate);
+  const cobradas_mes = comisiones.filter(c => c.status==='cobrado' && c.cobroAt && c.cobroAt >= new Date(today.getFullYear(), today.getMonth(), 1).toISOString());
+
+  const totalVencido = vencidas.reduce((s,c)=>s+(parseFloat(c.amount)||0),0);
+  const totalSemana  = esta_semana.reduce((s,c)=>s+(parseFloat(c.amount)||0),0);
+  const totalMes     = cobradas_mes.reduce((s,c)=>s+(parseFloat(c.amount)||0),0);
+
+  function alertCards(items, color, icon, label){
+    if(!items.length) return '';
+    return items.map(c => `
+      <div style="background:var(--white);border-left:4px solid ${color};border:1px solid var(--border);border-left:4px solid ${color};padding:12px 14px;display:flex;align-items:center;gap:12px">
+        <span style="font-size:18px">${icon}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500;color:var(--ink)">${esc(c.vendor||'—')}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:1px">${esc(c.client||'')}${c.dueDate?' · Vence: '+fmtDate(c.dueDate):''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:13px;font-weight:600;color:${color}">${fmtAmount(c.amount, c.currency)}</div>
+          ${c.phone ? `<button onclick="cobrarComision('${c.id}')" style="margin-top:4px;padding:3px 9px;font-size:10px;font-family:Jost,sans-serif;background:#25d366;color:#fff;border:none;border-radius:2px;cursor:pointer">WhatsApp</button>` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  let html = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px">
+    <div style="background:var(--white);border:1px solid var(--border);padding:16px;border-top:3px solid #dc2626">
+      <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#dc2626;margin-bottom:4px">🔴 Vencidas</div>
+      <div style="font-size:26px;font-weight:300;color:var(--ink)">${vencidas.length}</div>
+      <div style="font-size:11px;color:var(--ink3)">Total: ${fmtAmount(totalVencido,'USD')}</div>
+    </div>
+    <div style="background:var(--white);border:1px solid var(--border);padding:16px;border-top:3px solid #f59e0b">
+      <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#f59e0b;margin-bottom:4px">🟡 Vence esta semana</div>
+      <div style="font-size:26px;font-weight:300;color:var(--ink)">${esta_semana.length}</div>
+      <div style="font-size:11px;color:var(--ink3)">Total: ${fmtAmount(totalSemana,'USD')}</div>
+    </div>
+    <div style="background:var(--white);border:1px solid var(--border);padding:16px;border-top:3px solid #22c55e">
+      <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#22c55e;margin-bottom:4px">🟢 Cobradas este mes</div>
+      <div style="font-size:26px;font-weight:300;color:var(--ink)">${cobradas_mes.length}</div>
+      <div style="font-size:11px;color:var(--ink3)">Total: ${fmtAmount(totalMes,'USD')}</div>
+    </div>
+  </div>`;
+
+  if(vencidas.length){
+    html += `<div style="margin-bottom:16px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#dc2626;margin-bottom:8px">🔴 Acción urgente — Vencidas (${vencidas.length})</div>
+      <div style="display:flex;flex-direction:column;gap:6px">${alertCards(vencidas,'#dc2626','🔴','Vencida')}</div></div>`;
+  }
+  if(esta_semana.length){
+    html += `<div style="margin-bottom:16px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#f59e0b;margin-bottom:8px">🟡 Vencen esta semana (${esta_semana.length})</div>
+      <div style="display:flex;flex-direction:column;gap:6px">${alertCards(esta_semana,'#f59e0b','🟡','Esta semana')}</div></div>`;
+  }
+  if(este_mes.length){
+    html += `<div style="margin-bottom:16px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);margin-bottom:8px">📅 Vencen este mes (${este_mes.length})</div>
+      <div style="display:flex;flex-direction:column;gap:6px">${alertCards(este_mes,'var(--gold)','📅','Este mes')}</div></div>`;
+  }
+  if(sin_fecha.length){
+    html += `<div style="margin-bottom:16px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);margin-bottom:8px">⚪ Sin fecha de vencimiento (${sin_fecha.length})</div>
+      <div style="display:flex;flex-direction:column;gap:6px">${alertCards(sin_fecha,'var(--border2)','⚪','Sin fecha')}</div></div>`;
+  }
+  if(!vencidas.length && !esta_semana.length && !sin_fecha.length){
+    html += `<div style="text-align:center;padding:48px;color:var(--ink3);font-size:13px">✅ Todo al día — no hay comisiones pendientes urgentes.</div>`;
+  }
+  main.innerHTML = html;
 }
 
 /* ── RENDER PROVEEDORES ── */
