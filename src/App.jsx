@@ -4013,22 +4013,22 @@ function DrinksCatalog() {
             </h1>
           </div>
         </div>
-        <div className="px-6 pt-5 pb-5">
-          <div className="flex items-center justify-between mb-3">
-            {kickoffConcierge ? (
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"rgba(255,255,255,.8)",fontWeight:600,flexShrink:0}}>
-                  {kickoffConcierge.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}
-                </div>
-                <span style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>{kickoffConcierge}</span>
+        <div style={{padding:"20px 24px 20px",textAlign:"center"}}>
+          {kickoffConcierge && (
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:10}}>
+              <div style={{width:26,height:26,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"rgba(255,255,255,.8)",fontWeight:600,flexShrink:0}}>
+                {kickoffConcierge.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}
               </div>
-            ) : <div/>}
-            <button onClick={() => setLang(l => l === "en" ? "es" : "en")}
-              className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition">
-              {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
-            </button>
+              <span style={{fontSize:12,color:"rgba(255,255,255,.65)"}}>{kickoffConcierge}</span>
+            </div>
+          )}
+          {guestName && <p style={{fontSize:12,color:"#9a7d52",letterSpacing:".06em",margin:"0 0 12px"}}>{guestName}</p>}
+          <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+            <button onClick={() => setLang(l => l === "en" ? "es" : "en")} style={{
+              padding:"4px 14px",fontSize:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",
+              border:"1px solid rgba(255,255,255,.15)",borderRadius:6,cursor:"pointer",
+            }}>{lang === "en" ? "ES" : "EN"}</button>
           </div>
-          {guestName && <p style={{fontSize:12,color:"#9a7d52",margin:0,textAlign:"center"}}>{guestName}</p>}
         </div>
       </div>
 
@@ -4044,6 +4044,13 @@ function DrinksCatalog() {
             <p style={{fontSize:10,color:"#9a918a",lineHeight:1.5,margin:"4px 0 0",fontStyle:"italic"}}>{T.instr2}</p>
           </div>
         </div>
+        {fxRate > 500 && (
+          <div style={{maxWidth:560,margin:"6px auto 0",display:"flex",justifyContent:"flex-end"}}>
+            <span style={{fontSize:10,color:"#9ca3af",background:"#f3f4f6",borderRadius:9999,padding:"3px 12px"}}>
+              {T.rateLabel}: 1 USD = COP {fxRate.toLocaleString("es-CO")}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="max-w-xl mx-auto px-4 pt-4 space-y-4">
@@ -4074,13 +4081,6 @@ function DrinksCatalog() {
             })()}
           </div>
         ); })()}
-
-        {/* Exchange rate badge */}
-        <div className="flex justify-end">
-          <span className="text-[10px] text-neutral-400 bg-neutral-100 rounded-full px-3 py-1">
-            {T.rateLabel}: 1 USD = COP {fxRate.toLocaleString("es-CO")}
-          </span>
-        </div>
 
         {/* House / Boat tabs */}
         <div className="flex gap-2">
@@ -4414,22 +4414,22 @@ function GroceryCatalog() {
             </h1>
           </div>
         </div>
-        <div className="px-6 pt-5 pb-5">
-          <div className="flex items-center justify-between mb-2">
-            {kickoffConcierge ? (
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"rgba(255,255,255,.8)",fontWeight:600,flexShrink:0}}>
-                  {kickoffConcierge.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}
-                </div>
-                <span style={{fontSize:12,color:"rgba(255,255,255,.7)"}}>{kickoffConcierge}</span>
+        <div style={{padding:"20px 24px 20px",textAlign:"center"}}>
+          {kickoffConcierge && (
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:10}}>
+              <div style={{width:26,height:26,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"rgba(255,255,255,.8)",fontWeight:600,flexShrink:0}}>
+                {kickoffConcierge.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}
               </div>
-            ) : <div/>}
-            <button onClick={() => setLang(l => l === "en" ? "es" : "en")}
-              className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium text-white transition">
-              {lang === "en" ? "🇪🇸 ES" : "🇺🇸 EN"}
-            </button>
+              <span style={{fontSize:12,color:"rgba(255,255,255,.65)"}}>{kickoffConcierge}</span>
+            </div>
+          )}
+          {guestName && <p style={{fontSize:12,color:"#9a7d52",letterSpacing:".06em",margin:"0 0 12px"}}>{guestName}</p>}
+          <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+            <button onClick={() => setLang(l => l === "en" ? "es" : "en")} style={{
+              padding:"4px 14px",fontSize:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.7)",
+              border:"1px solid rgba(255,255,255,.15)",borderRadius:6,cursor:"pointer",
+            }}>{lang === "en" ? "ES" : "EN"}</button>
           </div>
-          {guestName && <p style={{fontSize:12,color:"#9a7d52",margin:0,textAlign:"center"}}>{guestName}</p>}
         </div>
       </div>
 
