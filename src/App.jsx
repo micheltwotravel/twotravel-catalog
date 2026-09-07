@@ -1498,7 +1498,6 @@ function ClientesTable({ kickoffs, loading }) {
                 <th style={thStyle}>✅ Tareas</th>
                 <th style={thStyle}>🛥 Boat Day</th>
                 <th style={thStyle}>🛒 Grocery $</th>
-                <th style={{ ...thStyle, minWidth:180 }}>📣 Marketing</th>
               </tr>
             </thead>
             <tbody>
@@ -1648,9 +1647,6 @@ function ClientesTable({ kickoffs, loading }) {
                         style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 8px", width:80, background:"#fff", boxSizing:"border-box" }}
                       />
                       {isSaving("groceryBudget") && <span style={{ fontSize:9, color:"#9ca3af" }}>guardando…</span>}
-                    </td>
-                    <td style={tdStyle}>
-                      <MarketingCell kickoffId={r.id} value={r.marketingNotes || ""} onSave={saveField} saving={isSaving("marketingNotes")} />
                     </td>
                   </tr>
                 );
@@ -3784,7 +3780,7 @@ function DrinkSummaryBox({ houseItems, boatItems, catLabel, itemName, houseCOP, 
         <div className="flex flex-wrap gap-1.5 mb-2">
           {selected.map((it, i) => (
             <span key={i} className="bg-white/10 text-white text-xs px-2.5 py-1 rounded-full">
-              {Number(it.qty)}× {itemName(it)}
+              <strong>{Number(it.qty)}</strong>× {itemName(it)}
             </span>
           ))}
         </div>
@@ -5277,6 +5273,9 @@ function BreakfastCatalog() {
             ? "Your breakfast order has been sent to your concierge. We'll have everything ready for you."
             : "Tu pedido de desayuno fue enviado a tu concierge. Tendremos todo listo para ti."}
         </p>
+        <p style={{fontSize:12,color:"#9a9590",marginTop:6,lineHeight:1.6}}>
+          {en ? "You can come back anytime to make changes." : "Puedes volver cuando quieras para hacer cambios."}
+        </p>
         <button onClick={() => setSent(false)}
           style={{marginTop:32,fontSize:11,color:"#9a7d52",background:"none",border:"none",cursor:"pointer",letterSpacing:".1em",textTransform:"uppercase"}}>
           {en ? "Edit order" : "Editar pedido"}
@@ -5594,11 +5593,16 @@ function BreakfastCatalog() {
             ? "Note: Basic items (sugar, salt, oil, napkins) are not included. An additional cost of $10–$20 USD may apply."
             : "Nota: Los básicos (azúcar, sal, aceite, servilletas) no están incluidos. Puede aplicar un costo adicional de $10–$20 USD."}
         </p>
+        <p style={{fontSize:11,color:"#9a9590",marginBottom:4,lineHeight:1.6}}>
+          {en
+            ? "Note: USD prices are approximate and may vary based on the exchange rate on the day of purchase."
+            : "Nota: Los precios en USD son aproximados y pueden variar según la tasa de cambio del día de la compra."}
+        </p>
         <p style={{fontSize:11,color:"#9a9590",marginBottom:8,lineHeight:1.6}}>
           {en
-            ? "Dietary restrictions or allergies? Please include them in your check-in form — your concierge will have that information ready."
-            : "¿Restricciones alimentarias o alergias? Inclúyelas en tu formulario de check-in — tu concierge ya tendrá esa información."}
-          {checkInFormUrl && <>{" "}<a href={checkInFormUrl} target="_blank" rel="noreferrer" style={{color:"#9a7d52",textDecoration:"underline"}}>{en ? "Open check-in form →" : "Abrir formulario →"}</a></>}
+            ? "Dietary restrictions or allergies? Please include them in your pre check-in form — your concierge will have that information ready."
+            : "¿Restricciones alimentarias o alergias? Inclúyelas en tu formulario de pre check-in — tu concierge ya tendrá esa información."}
+          {checkInFormUrl && <>{" "}<a href={checkInFormUrl} target="_blank" rel="noreferrer" style={{color:"#9a7d52",textDecoration:"underline"}}>{en ? "Open pre check-in form →" : "Abrir formulario →"}</a></>}
         </p>
         <textarea value={notes} onChange={e => { setNotes(e.target.value); doAutosave(dayOrders, e.target.value); }} rows={2}
           placeholder={en ? "Any specific requests for your breakfast order…" : "Peticiones específicas para tu pedido de desayuno…"}

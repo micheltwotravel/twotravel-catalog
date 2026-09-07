@@ -3053,32 +3053,6 @@ function SummaryModal({ kickoff, onClose }) {
           );
         })()}
 
-        {/* ── Mensaje cuestionario ── */}
-        {link && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold text-emerald-800">📲 Mensaje para enviar cuestionario</p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleCopyMsg}
-                  className="px-2.5 py-1 rounded-lg bg-emerald-700 text-white text-[11px] hover:bg-emerald-800 transition"
-                >
-                  {copiedMsg ? "✓ Copiado" : "Copiar"}
-                </button>
-                <a
-                  href={`https://wa.me/${(kickoff.guestContact||"").replace(/\D/g,"")}?text=${encodeURIComponent(quizMsg)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-2.5 py-1 rounded-lg bg-green-600 text-white text-[11px] hover:bg-green-700 transition"
-                >
-                  WhatsApp
-                </a>
-              </div>
-            </div>
-            <pre className="text-[11px] text-neutral-700 whitespace-pre-wrap font-sans">{quizMsg}</pre>
-          </div>
-        )}
 
         {/* ── Quiz answers ── */}
         {(() => {
@@ -6741,7 +6715,7 @@ function BreakfastLink({ kickoff }) {
 /* =========================================================
    REUNIONES PAGE — CRM de llamadas Two Travel
    ========================================================= */
-const MEETING_TYPES = ["Kickoff Call", "Pre-check in", "Follow-up", "Otro"];
+const MEETING_TYPES = ["Kickoff Call", "Meeting or Call", "Pre-check in", "Follow-up", "Otro"];
 const MEETING_STATUSES = [
   { value: "done",      label: "Hecho",     color: "#16a34a", bg: "#dcfce7", dot: "🟢" },
   { value: "pending",   label: "Pendiente", color: "#2563eb", bg: "#dbeafe", dot: "🔵" },
@@ -7044,6 +7018,7 @@ export function ReunionesPage({ currentUser, initialKickoffId }) {
   const [error,         setError]         = useState("");
   const [selectedId,    setSelectedId]    = useState(initialKickoffId || null); // kickoff id in right panel
   const [filterConcierge, setFilterConcierge] = useState("all");
+  const [filterCity,    setFilterCity]    = useState("all");
   const [search,        setSearch]        = useState("");
   const [addingFor,     setAddingFor]     = useState(null); // kickoffId when inline form open
   const [editingMeeting,setEditingMeeting]= useState(null); // {kickoffId, meeting}
@@ -7079,7 +7054,7 @@ export function ReunionesPage({ currentUser, initialKickoffId }) {
     const k = kickoffs.find(x => x.id === kickoffId);
     const existing = getMeetings(k);
     // Auto-tag first meeting as Kickoff Call, rest as Follow-up
-    const autoType = existing.length === 0 ? "Kickoff Call" : (entry.type === "Kickoff Call" ? "Follow-up" : entry.type);
+    const autoType = existing.length === 0 ? "Kickoff Call" : (entry.type === "Kickoff Call" ? "Meeting or Call" : entry.type);
     await saveMeetings(kickoffId, [...existing, { ...entry, type: autoType }]);
     setAddingFor(null);
   };
@@ -7816,6 +7791,18 @@ const loadKickoffs = async () => {
     return ["all", ...CONCIERGE_LIST.filter(c=>!c.hidden).map((c) => c.name)];
   }, []);
 
+  const cityOptions = useMemo(() => {
+    const FULL_TO_CODE = { CARTAGENA:"CTG", MEDELLÍN:"MDE", MEDELLIN:"MDE", "CIUDAD DE MÉXICO":"CDMX", "CIUDAD DE MEXICO":"CDMX", TULUM:"TUL", BOGOTÁ:"BOG", BOGOTA:"BOG", CALI:"CLO" };
+    const seen = new Set();
+    kickoffs.forEach(k => {
+      String(k.city || "").split(",").map(c => c.trim().toUpperCase()).filter(Boolean).forEach(raw => {
+        const code = FULL_TO_CODE[raw] || raw;
+        if (code) seen.add(code);
+      });
+    });
+    return ["all", ...["CTG","MDE","CDMX","TUL","BOG","CLO"].filter(c => seen.has(c))];
+  }, [kickoffs]);
+
   const toggleSelect = (id) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -7862,6 +7849,11 @@ const loadKickoffs = async () => {
       .filter((k) => {
         if (statusFilter !== "all" && k.status !== statusFilter) return false;
         if (conciergeFilter !== "all" && !String(k.assignedConcierge || "").split(",").map(s => s.trim()).includes(conciergeFilter)) return false;
+        if (filterCity !== "all") {
+          const FULL_TO_CODE = { CARTAGENA:"CTG", MEDELLÍN:"MDE", MEDELLIN:"MDE", "CIUDAD DE MÉXICO":"CDMX", "CIUDAD DE MEXICO":"CDMX", TULUM:"TUL", BOGOTÁ:"BOG", BOGOTA:"BOG", CALI:"CLO" };
+          const codes = String(k.city || "").split(",").map(c => { const u = c.trim().toUpperCase(); return FULL_TO_CODE[u] || u; }).filter(Boolean);
+          if (!codes.includes(filterCity)) return false;
+        }
 
         if (!q) return true;
         const text = [
@@ -7882,7 +7874,7 @@ const loadKickoffs = async () => {
         const db = new Date(b.lastModified || b.createdAt || 0).getTime();
         return db - da;
       });
-  }, [kickoffs, search, statusFilter, conciergeFilter]);
+  }, [kickoffs, search, statusFilter, conciergeFilter, filterCity]);
 
   // Updates kickoff locally + in sheet but does NOT close the drawer
   const broadcastKickoffUpdate = (id, updates) => {
@@ -8030,7 +8022,7 @@ const loadKickoffs = async () => {
       search: "Buscar por huésped, viaje, ID...",
       filterStatus: "Estado:", filterConcierge: "Concierge:",
       all: "Todos",
-      colGuest: "Huésped", colTrip: "Viaje", colType: "Tipo",
+      colGuest: "Huésped", colTrip: "Viaje", colType: "Tier",
       colContact: "Contacto", colCreated: "Creado",
       colConcierge: "Concierge", colCity: "Ciudad", colStatus: "Estado", colMeetings: "Reuniones", colNotes: "Notas", colActions: "Acciones",
       loading: "Cargando kick-offs...",
@@ -8043,7 +8035,7 @@ const loadKickoffs = async () => {
       search: "Search by guest, trip, ID...",
       filterStatus: "Status:", filterConcierge: "Concierge:",
       all: "All",
-      colGuest: "Guest", colTrip: "Trip", colType: "Type",
+      colGuest: "Guest", colTrip: "Trip", colType: "Tier",
       colContact: "Contact", colCreated: "Created",
       colConcierge: "Concierge", colCity: "City", colStatus: "Status", colMeetings: "Meetings", colNotes: "Notes", colActions: "Actions",
       loading: "Loading kick-offs...",
@@ -8187,6 +8179,27 @@ const loadKickoffs = async () => {
                       key={c}
                       onClick={() => setConciergeFilter(c)}
                       className={`tt-pill${active ? " active" : ""}`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {cityOptions.length > 2 && (
+              <div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"}}>
+                {cityOptions.map((code) => {
+                  const label = code === "all" ? "Todas las ciudades" : (CITY_NAMES[code] || code);
+                  const active = filterCity === code;
+                  const CITY_COLORS = { CTG:"#dbeafe", MDE:"#dcfce7", CDMX:"#ffedd5", TUL:"#ccfbf1", BOG:"#f3e8ff", CLO:"#fef9c3" };
+                  const CITY_TEXT   = { CTG:"#1d4ed8", MDE:"#16a34a", CDMX:"#ea580c", TUL:"#0f766e", BOG:"#7c3aed", CLO:"#854d0e" };
+                  return (
+                    <button
+                      key={code}
+                      onClick={() => setFilterCity(code)}
+                      className={`tt-pill${active ? " active" : ""}`}
+                      style={active && code !== "all" ? { background: CITY_COLORS[code] || undefined, color: CITY_TEXT[code] || undefined, borderColor: CITY_TEXT[code] || undefined } : {}}
                     >
                       {label}
                     </button>
@@ -8445,8 +8458,8 @@ const loadKickoffs = async () => {
                         }}
                         style={{border:"1px solid var(--border)",borderRadius:"var(--radius-xs)",padding:"3px 7px",fontSize:11.5,background:"var(--surface)"}}
                       >
-                        <option value={1}>Tipo 1</option>
-                        <option value={2}>Tipo 2</option>
+                        <option value={1}>Tier 1</option>
+                        <option value={2}>Tier 2</option>
                       </select>
                     </td>
                     <td style={{color:"var(--text-2)"}}>
@@ -8499,10 +8512,12 @@ const loadKickoffs = async () => {
                           const up = c.toUpperCase();
                           return FULL_TO_CODE[up] || (CITY_NAMES[up] ? up : up);
                         }).filter(code => { if (seen.has(code)) return false; seen.add(code); return true; });
+                        const CITY_BG   = { CTG:"#dbeafe", MDE:"#dcfce7", CDMX:"#ffedd5", TUL:"#ccfbf1", BOG:"#f3e8ff", CLO:"#fef9c3" };
+                        const CITY_TEXT_C = { CTG:"#1d4ed8", MDE:"#16a34a", CDMX:"#ea580c", TUL:"#0f766e", BOG:"#7c3aed", CLO:"#854d0e" };
                         return (
                           <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
                             {codes.map(code => (
-                              <span key={code} style={{padding:"2px 7px",borderRadius:3,background:"var(--border-soft)",color:"var(--text-2)",fontSize:10.5,fontWeight:600}}>
+                              <span key={code} style={{padding:"2px 7px",borderRadius:3,background:CITY_BG[code]||"var(--border-soft)",color:CITY_TEXT_C[code]||"var(--text-2)",fontSize:10.5,fontWeight:600}}>
                                 {CITY_NAMES[code] || code}
                               </span>
                             ))}
@@ -8587,14 +8602,7 @@ const loadKickoffs = async () => {
                           className="tt-btn-ghost"
                           style={{padding:"4px 9px",fontSize:11.5}}
                         >
-                          Editar
-                        </button>
-
-                        <button
-                          onClick={() => setRatingModalKickoff(k)}
-                          style={{padding:"4px 9px",fontSize:11.5,fontWeight:500,border:"1px solid #FDE68A",borderRadius:"var(--radius-sm)",background:"#FFFBEB",color:"#92400E",cursor:"pointer"}}
-                        >
-                          Feedback
+                          Editar Itinerario
                         </button>
 
                         <div style={{position:"relative"}}>
@@ -8614,6 +8622,10 @@ const loadKickoffs = async () => {
                                 style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"var(--text-1)",background:"none",border:"none",cursor:"pointer"}}>
                                 Ver resumen
                               </button>
+                              <button onClick={() => { setOpenMenuId(null); setRatingModalKickoff(k); }}
+                                style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"#92400E",background:"none",border:"none",cursor:"pointer"}}>
+                                ⭐ Feedback
+                              </button>
                               <button onClick={() => { setOpenMenuId(null); window.location.href = `/?mode=reuniones&kickoffId=${k.id}`; }}
                                 style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"#7c3aed",background:"none",border:"none",cursor:"pointer"}}>
                                 📅 Ir a reuniones
@@ -8632,10 +8644,6 @@ const loadKickoffs = async () => {
                                 if (!slug) return null;
                                 const bookLink = `https://www.twotravelvip.com/book.html?c=${slug}&kickoffId=${k.id}&lang=${k.lang || "en"}`;
                                 return (<>
-                                  <button onClick={() => { setOpenMenuId(null); window.open(bookLink, "_blank"); }}
-                                    style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"#7c3aed",background:"none",border:"none",cursor:"pointer"}}>
-                                    🗓 Abrir link de reunión
-                                  </button>
                                   <button onClick={async () => {
                                     setOpenMenuId(null);
                                     try { await navigator.clipboard.writeText(bookLink); alert("Link copiado — pásaselo al cliente por WhatsApp"); }
