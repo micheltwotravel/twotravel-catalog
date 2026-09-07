@@ -169,7 +169,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Cliente / Grupo *</label>
-          <input class="form-input" id="n-client" list="clients-dl" autocomplete="off" placeholder="Buscar cliente del panel..." oninput="onClientInput(this.value)" onchange="onClientInput(this.value)">
+          <input class="form-input" id="n-client" list="clients-dl" autocomplete="off" placeholder="Buscar cliente del panel..." oninput="scheduleClientLookup(this.value)" onchange="scheduleClientLookup(this.value)" onblur="scheduleClientLookup(this.value)">
           <datalist id="clients-dl"></datalist>
         </div>
         <div class="form-group">
@@ -305,6 +305,11 @@ function onVendorInput(val) {
 }
 
 let clientsData = [];
+let _clientTimer;
+function scheduleClientLookup(val){
+  clearTimeout(_clientTimer);
+  _clientTimer = setTimeout(() => onClientInput(val), 200);
+}
 
 async function loadClients() {
   try {
@@ -340,17 +345,25 @@ async function loadClients() {
 }
 
 function onClientInput(val) {
-  const k = clientsData.find(c => c.name.toLowerCase() === val.trim().toLowerCase());
+  const q = val.trim().toLowerCase();
   const el = document.getElementById('client-services');
+  if (!q) { el.style.display='none'; return; }
+  // Find by exact match first, then partial
+  const k = clientsData.find(c => c.name.toLowerCase() === q)
+         || clientsData.find(c => c.name.toLowerCase().includes(q));
   if (!k || !k.cart.length) { el.style.display='none'; return; }
   const items = k.cart;
   el.style.display = 'block';
   el._items = items;
-  el.innerHTML = `<div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:7px">Servicios reservados · clic para auto-llenar</div>
+  el._kickoff = k;
+  el.innerHTML = `
+    <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin-bottom:7px;font-weight:600">
+      Itinerario de ${esc(k.name)} · clic para auto-llenar →
+    </div>
     <div style="display:flex;flex-wrap:wrap;gap:6px">${
     items.map((it,i) => {
-      const label = esc(it.displayName||it.name||it.name_es||'Servicio');
-      const date  = it.date||it.serviceDate||it.arrivalDate||'';
+      const label = esc(it.displayName||it.name||it.name_es||it.name_en||'Servicio');
+      const date  = it.date||it.serviceDate||'';
       const tag   = date ? ` · ${fmtDate(date)}` : '';
       return `<button type="button" class="svc-chip" data-idx="${i}" onclick="fillFromService(${i})">${label}${tag}</button>`;
     }).join('')
