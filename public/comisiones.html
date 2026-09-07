@@ -1126,13 +1126,6 @@ function loadDemo(){
 }
 
 /* ── INIT ── */
-// Populate vendor datalist
-(function(){
-  const dl = document.getElementById('vendors-dl');
-  PROVIDERS.forEach(p => {
-    const opt = document.createElement('option'); opt.value = p.n; dl.appendChild(opt);
-  });
-})();
 
 load();
 render();
