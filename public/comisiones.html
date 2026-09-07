@@ -345,33 +345,22 @@ function _norm(s){
     .replace(/[^a-z0-9\s]/g,'').trim();
 }
 
-let _selectedClientCart = []; // set by onClientInput, used by vendor DD
+let _selectedClientCart = [];
+let _matchedProviderNames = new Set(); // pre-computed in onClientInput
 
-function _getClientServices() {
-  return _selectedClientCart;
-}
-
-function _getMatchedProviderNames(services) {
-  // Returns Set of catalog provider names that fuzzy-match any cart item
-  const svcNorms = services.map(it =>
-    _norm(it.displayName||it.name||it.name_es||it.name_en||'')
-  ).filter(Boolean);
-  if (!svcNorms.length) return new Set();
-  const matched = new Set();
-  PROVIDERS.forEach(p => {
-    const pn = _norm(p.n);
-    if (svcNorms.some(sn => pn === sn || pn.includes(sn) || sn.includes(pn))) {
-      matched.add(p.n);
-    }
-  });
-  return matched;
+function _norm2(s){
+  // Safe version using unicode escapes
+  return String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9 ]/g,'').trim();
 }
 
 function _buildVendorDD(query) {
   const dd = document.getElementById('vendor-dd');
   const q = (query||'').trim().toLowerCase();
-  const services = _getClientServices();
-  const matched = _getMatchedProviderNames(services);
+  const services = _selectedClientCart;
+  const matched  = _matchedProviderNames;
+  console.log('[VDD] cart items:', services.length, 'matched providers:', matched.size, 'query:', q);
 
   // Split providers: matched ones first (sorted), then the rest
   let filtered = PROVIDERS.filter(p => !q || p.n.toLowerCase().includes(q) || _norm(p.n).includes(_norm(q)));
@@ -481,9 +470,23 @@ function onClientInput(val) {
   const el = document.getElementById('client-services');
   const k = q ? (clientsData.find(c => c.name.toLowerCase() === q)
               || clientsData.find(c => c.name.toLowerCase().includes(q))) : null;
-  // Store cart for vendor dropdown highlight
+  // Store cart + pre-compute matched providers for vendor DD highlight
   _selectedClientCart = (k && k.cart) ? k.cart : [];
-  // If vendor DD is open, refresh it so highlighted section updates
+  _matchedProviderNames = new Set();
+  if (_selectedClientCart.length) {
+    const svcNorms = _selectedClientCart.map(it =>
+      _norm2(it.displayName||it.name||it.name_es||it.name_en||'')
+    ).filter(Boolean);
+    console.log('[CLIENT] svcNorms:', svcNorms);
+    PROVIDERS.forEach(p => {
+      const pn = _norm2(p.n);
+      if (svcNorms.some(sn => sn && (pn === sn || pn.includes(sn) || sn.includes(pn)))) {
+        _matchedProviderNames.add(p.n);
+      }
+    });
+    console.log('[CLIENT] matched providers:', [..._matchedProviderNames]);
+  }
+  // If vendor DD is open, refresh it
   const dd = document.getElementById('vendor-dd');
   if (dd && dd.style.display !== 'none') _buildVendorDD(document.getElementById('n-vendor').value);
 
