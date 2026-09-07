@@ -101,6 +101,8 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 .vdd-item:hover,.vdd-item.active{background:var(--sand)}
 .vdd-item.highlight{font-weight:500;color:var(--ink);padding-left:16px}
 .vdd-item.highlight::before{content:'✦ ';color:var(--gold);font-size:10px}
+.vdd-item.vdd-match{background:#fdf6e3;border-left:3px solid var(--gold);padding-left:13px;font-weight:600;color:var(--ink)}
+.vdd-item.vdd-match:hover,.vdd-item.vdd-match.active{background:#faedc4}
 </style>
 </head>
 <body>
@@ -336,8 +338,14 @@ function onVendorInput(val) {
 
 /* ── VENDOR CUSTOM DROPDOWN ── */
 let _vddActive = -1;
+
+function _norm(s){
+  return String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9\s]/g,'').trim();
+}
+
 function _getClientServices() {
-  // Returns cart items for the currently typed client
   const clientVal = (document.getElementById('n-client')||{}).value||'';
   const q = clientVal.trim().toLowerCase();
   if (!q) return [];
@@ -346,30 +354,46 @@ function _getClientServices() {
   return k ? k.cart : [];
 }
 
+function _getMatchedProviderNames(services) {
+  // Returns Set of catalog provider names that fuzzy-match any cart item
+  const svcNorms = services.map(it =>
+    _norm(it.displayName||it.name||it.name_es||it.name_en||'')
+  ).filter(Boolean);
+  if (!svcNorms.length) return new Set();
+  const matched = new Set();
+  PROVIDERS.forEach(p => {
+    const pn = _norm(p.n);
+    if (svcNorms.some(sn => pn === sn || pn.includes(sn) || sn.includes(pn))) {
+      matched.add(p.n);
+    }
+  });
+  return matched;
+}
+
 function _buildVendorDD(query) {
   const dd = document.getElementById('vendor-dd');
   const q = (query||'').trim().toLowerCase();
   const services = _getClientServices();
+  const matched = _getMatchedProviderNames(services);
+
+  // Split providers: matched ones first (sorted), then the rest
+  let filtered = PROVIDERS.filter(p => !q || p.n.toLowerCase().includes(q) || _norm(p.n).includes(_norm(q)));
+  const top    = filtered.filter(p => matched.has(p.n));
+  const rest   = filtered.filter(p => !matched.has(p.n)).slice(0, 50);
+
   let html = '';
-  // Client's itinerary items — highlighted section
-  const matchSvc = services.filter(it => {
-    const name = (it.displayName||it.name||it.name_es||it.name_en||'').toLowerCase();
-    return name && (!q || name.includes(q));
-  });
-  if (matchSvc.length) {
-    html += `<div class="vdd-section">Del itinerario del cliente</div>`;
-    matchSvc.forEach((it, i) => {
-      const name = it.displayName||it.name||it.name_es||it.name_en||'';
-      const date = it.date||it.serviceDate||'';
-      const tag = date ? ` <span style="color:var(--ink3);font-size:10px">· ${fmtDate(date)}</span>` : '';
-      html += `<div class="vdd-item highlight" data-val="${esc(name)}" onmousedown="pickVendor('${esc(name)}')">${esc(name)}${tag}</div>`;
+  if (top.length) {
+    html += `<div class="vdd-section">✦ Usados por este cliente</div>`;
+    top.forEach(p => {
+      const date = services.find(it => _norm(it.displayName||it.name||it.name_es||it.name_en||'') === _norm(p.n));
+      const tag  = (date && (date.date||date.serviceDate))
+        ? ` <span style="color:var(--gold);font-size:10px;opacity:.8">· ${fmtDate(date.date||date.serviceDate)}</span>` : '';
+      html += `<div class="vdd-item vdd-match" data-val="${esc(p.n)}" onmousedown="pickVendor('${esc(p.n)}')">${esc(p.n)}${tag}</div>`;
     });
   }
-  // All providers filtered
-  const matchProv = PROVIDERS.filter(p => !q || p.n.toLowerCase().includes(q)).slice(0, 60);
-  if (matchProv.length) {
-    if (matchSvc.length) html += `<div class="vdd-section" style="margin-top:2px">Todos los proveedores</div>`;
-    matchProv.forEach(p => {
+  if (rest.length) {
+    if (top.length) html += `<div class="vdd-section">Todos los proveedores</div>`;
+    rest.forEach(p => {
       html += `<div class="vdd-item" data-val="${esc(p.n)}" onmousedown="pickVendor('${esc(p.n)}')">${esc(p.n)}${p.ci ? `<span style="color:var(--ink3);font-size:10px;margin-left:6px">${esc(p.ci.split(':')[1]||p.ci)}</span>` : ''}</div>`;
     });
   }
