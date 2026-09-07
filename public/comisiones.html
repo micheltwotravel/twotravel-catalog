@@ -92,6 +92,9 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 .pct-hint{font-size:10px;color:#3d7a52;font-weight:500;margin-top:3px}
 
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 18px;font-size:12px;letter-spacing:.04em;z-index:600;border-radius:2px;pointer-events:none;opacity:1;transition:opacity .3s}
+.svc-chip{padding:4px 10px;font-size:11px;font-family:'Jost',sans-serif;border:1px solid var(--border2);background:var(--white);color:var(--ink2);cursor:pointer;border-radius:2px;transition:all .12s;white-space:nowrap}
+.svc-chip:hover{border-color:var(--gold);color:var(--gold)}
+.svc-chip.selected{background:var(--ink);color:#fff;border-color:var(--ink)}
 </style>
 </head>
 <body>
@@ -165,7 +168,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Cliente / Grupo *</label>
-          <input class="form-input" id="n-client" list="clients-dl" autocomplete="off" placeholder="Buscar cliente del panel...">
+          <input class="form-input" id="n-client" list="clients-dl" autocomplete="off" placeholder="Buscar cliente del panel..." oninput="onClientInput(this.value)" onchange="onClientInput(this.value)">
           <datalist id="clients-dl"></datalist>
         </div>
         <div class="form-group">
@@ -184,6 +187,9 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
           </select>
         </div>
       </div>
+
+      <!-- Servicios del cliente seleccionado -->
+      <div id="client-services" style="display:none;margin:-6px 0 14px;padding:10px 12px;background:var(--sand);border:1px solid var(--border2)"></div>
 
       <div class="form-row single">
         <div class="form-group">
@@ -282,17 +288,84 @@ function onVendorInput(val) {
   calcComision();
 }
 
+let clientsData = [];
+
 async function loadClients() {
   try {
     const r = await fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify({action:'listKickoffs'})});
     const d = await r.json();
     const dl = document.getElementById('clients-dl');
-    const names = [...new Set((d.data||[]).map(k=>k.guestName).filter(Boolean))].sort();
-    names.forEach(name => {
-      const opt = document.createElement('option'); opt.value = name; dl.appendChild(opt);
+    // Build client map with their cart items
+    const nameMap = {};
+    (d.data||[]).forEach(k => {
+      if (!k.guestName) return;
+      let cart = [];
+      try { cart = JSON.parse(k.cart||'[]'); } catch {}
+      if (!Array.isArray(cart)) cart = [];
+      cart = cart.filter(it => {
+        if (!it) return false;
+        if (String(it._uid||'').startsWith('preset_')) return false;
+        const n = String(it.name||it.name_en||'').toLowerCase();
+        if (n==='check-in'||n==='check-out'||n==='checkin'||n==='checkout') return false;
+        if (n.includes('desayuno')||n.includes('breakfast')) return false;
+        return !!(it.name||it.displayName||it.name_es);
+      });
+      const existing = nameMap[k.guestName];
+      if (!existing || cart.length > existing.cart.length) {
+        nameMap[k.guestName] = {name: k.guestName, id: k.id, arrivalDate: k.arrivalDate, cart};
+      }
     });
-  } catch {}
+    clientsData = Object.values(nameMap).sort((a,b)=>a.name.localeCompare(b.name));
+    clientsData.forEach(c => {
+      const opt = document.createElement('option'); opt.value = c.name; dl.appendChild(opt);
+    });
+  } catch(e) { console.warn('loadClients', e); }
+}
+
+function onClientInput(val) {
+  const k = clientsData.find(c => c.name.toLowerCase() === val.trim().toLowerCase());
+  const el = document.getElementById('client-services');
+  if (!k || !k.cart.length) { el.style.display='none'; return; }
+  const items = k.cart;
+  el.style.display = 'block';
+  el._items = items;
+  el.innerHTML = `<div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:7px">Servicios reservados · clic para auto-llenar</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">${
+    items.map((it,i) => {
+      const label = esc(it.displayName||it.name||it.name_es||'Servicio');
+      const date  = it.date||it.serviceDate||it.arrivalDate||'';
+      const tag   = date ? ` · ${fmtDate(date)}` : '';
+      return `<button type="button" class="svc-chip" data-idx="${i}" onclick="fillFromService(${i})">${label}${tag}</button>`;
+    }).join('')
+  }</div>`;
+}
+
+function fillFromService(idx) {
+  const el = document.getElementById('client-services');
+  const it = (el._items||[])[idx];
+  if (!it) return;
+  // Highlight selected chip
+  el.querySelectorAll('.svc-chip').forEach((b,i) => b.classList.toggle('selected', i===idx));
+  // Fill vendor
+  const vendorName = it.displayName||it.name||it.name_es||'';
+  if (vendorName) {
+    document.getElementById('n-vendor').value = vendorName;
+    onVendorInput(vendorName);
+  }
+  // Fill date
+  const date = it.date||it.serviceDate||'';
+  if (date) document.getElementById('n-date').value = date.slice(0,10);
+  // Fill description
+  const desc = [it.description, it.desc, it.notes, it.name_en].filter(Boolean)[0]||'';
+  if (desc && desc !== vendorName) document.getElementById('n-desc').value = desc;
+  // Fill category from item
+  if (it.category && !document.getElementById('n-category').value) {
+    const catMap2 = {'beach-clubs':'Beach Club','tours':'Tour / Excursión','transportation':'Transporte',
+      'services':'Spa / Wellness','restaurant':'Restaurant'};
+    const mapped = CAT_FORM_MAP[it.category]||catMap2[it.category]||'';
+    if (mapped) document.getElementById('n-category').value = mapped;
+  }
 }
 
 const STATUSES = {
@@ -548,6 +621,7 @@ function openNewModal(){
   document.getElementById('n-due').value = '';
   document.getElementById('n-notes').value = '';
   document.getElementById('n-pct-hint').textContent = '';
+  document.getElementById('client-services').style.display = 'none';
   document.getElementById('new-modal').style.display = 'flex';
   setTimeout(()=>{ document.getElementById('n-vendor').focus(); }, 50);
 }
