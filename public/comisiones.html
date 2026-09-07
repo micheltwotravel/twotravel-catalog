@@ -154,20 +154,9 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
     </div>
     <div class="modal-body">
 
+      <!-- 1. CLIENTE primero → chips → 2. PROVEEDOR -->
       <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Proveedor *</label>
-          <input class="form-input" id="n-vendor" list="vendors-dl" autocomplete="off" placeholder="Buscar proveedor..." oninput="onVendorInput(this.value)">
-          <datalist id="vendors-dl"></datalist>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Fecha del servicio</label>
-          <input class="form-input" type="date" id="n-date">
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
+        <div class="form-group" style="flex:1.5">
           <label class="form-label">Cliente / Grupo *</label>
           <input class="form-input" id="n-client" list="clients-dl" autocomplete="off" placeholder="Buscar cliente del panel..." oninput="scheduleClientLookup(this.value)" onchange="scheduleClientLookup(this.value)" onblur="scheduleClientLookup(this.value)">
           <datalist id="clients-dl"></datalist>
@@ -189,8 +178,20 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
         </div>
       </div>
 
-      <!-- Servicios del cliente seleccionado -->
-      <div id="client-services" style="display:none;margin:-6px 0 14px;padding:10px 12px;background:var(--sand);border:1px solid var(--border2)"></div>
+      <!-- Servicios del cliente — chips para auto-llenar proveedor -->
+      <div id="client-services" style="display:none;margin:-6px 0 14px;padding:10px 12px;background:var(--sand);border:1px solid var(--border2);border-radius:6px"></div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex:1.5">
+          <label class="form-label">Proveedor *</label>
+          <input class="form-input" id="n-vendor" list="vendors-dl" autocomplete="off" placeholder="O escribe el proveedor manualmente..." oninput="onVendorInput(this.value)">
+          <datalist id="vendors-dl"></datalist>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha del servicio</label>
+          <input class="form-input" type="date" id="n-date">
+        </div>
+      </div>
 
       <div class="form-row single">
         <div class="form-group">
@@ -675,7 +676,9 @@ function openNewModal(){
   document.getElementById('n-soporte').value = '';
   document.getElementById('client-services').style.display = 'none';
   document.getElementById('new-modal').style.display = 'flex';
-  setTimeout(()=>{ document.getElementById('n-vendor').focus(); }, 50);
+  // Retry loading clients if not loaded yet
+  if (!clientsData.length) loadClients();
+  setTimeout(()=>{ document.getElementById('n-client').focus(); }, 80);
 }
 function closeNewModal(){
   document.getElementById('new-modal').style.display = 'none';
