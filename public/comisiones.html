@@ -146,7 +146,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 <div id="status-popup" class="status-popup" style="display:none"></div>
 
 <!-- MODAL: Nueva comisión -->
-<div class="overlay" id="new-modal" style="display:none" onclick="if(event.target===this)closeNewModal()">
+<div class="overlay" id="new-modal" style="display:none">
   <div class="modal">
     <div class="modal-head">
       <span class="modal-title">Nueva Comisión</span>
@@ -226,6 +226,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
         <div class="form-group">
           <label class="form-label">Teléfono proveedor (WhatsApp)</label>
           <input class="form-input" id="n-phone" type="tel" placeholder="573001234567">
+          <div id="n-phone-hint" style="font-size:11px;color:var(--ink3);margin-top:4px"></div>
         </div>
         <div class="form-group">
           <label class="form-label">Gestionado por</label>
@@ -255,8 +256,17 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Soporte de pago (URL / Drive)</label>
-          <input class="form-input" id="n-soporte" type="url" placeholder="https://drive.google.com/...">
+          <label class="form-label">Soporte de pago</label>
+          <div id="soporte-zone" onclick="document.getElementById('soporte-file').click()"
+            ondragover="event.preventDefault();this.style.borderColor='var(--gold)'"
+            ondragleave="this.style.borderColor='var(--border2)'"
+            ondrop="event.preventDefault();this.style.borderColor='var(--border2)';handleSoporteFile(event.dataTransfer.files[0])"
+            style="border:1.5px dashed var(--border2);border-radius:7px;padding:10px 14px;cursor:pointer;text-align:center;transition:border-color .15s;min-height:44px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:var(--ink3)">
+            <span id="soporte-label">📎 Clic o arrastra una imagen</span>
+            <img id="soporte-preview" src="" style="display:none;max-height:40px;max-width:80px;border-radius:4px;object-fit:cover">
+          </div>
+          <input type="file" id="soporte-file" accept="image/*" style="display:none" onchange="handleSoporteFile(this.files[0])">
+          <input type="hidden" id="n-soporte">
         </div>
       </div>
 
@@ -295,12 +305,18 @@ const CAT_FORM_MAP = {
 
 function onVendorInput(val) {
   const p = PROV_MAP[val.trim().toLowerCase()];
-  if (!p) return;
+  const hint = document.getElementById('n-phone-hint');
+  if (!p) { if (hint) hint.textContent = ''; return; }
   const pctEl = document.getElementById('n-pct');
   const phoneEl = document.getElementById('n-phone');
   const catEl = document.getElementById('n-category');
   if (p.p != null && !pctEl.value) pctEl.value = p.p;
-  if (p.w && !phoneEl.value) phoneEl.value = p.w;
+  if (p.w) {
+    if (!phoneEl.value) phoneEl.value = p.w;
+    if (hint) hint.textContent = '';
+  } else {
+    if (hint) hint.textContent = '⚠ Sin número en la base de datos';
+  }
   if (p.c && CAT_FORM_MAP[p.c]) catEl.value = CAT_FORM_MAP[p.c];
   calcComision();
 }
@@ -348,11 +364,21 @@ async function loadClients() {
 function onClientInput(val) {
   const q = val.trim().toLowerCase();
   const el = document.getElementById('client-services');
-  if (!q) { el.style.display='none'; return; }
-  // Find by exact match first, then partial
-  const k = clientsData.find(c => c.name.toLowerCase() === q)
-         || clientsData.find(c => c.name.toLowerCase().includes(q));
-  if (!k || !k.cart.length) { el.style.display='none'; return; }
+  // Rebuild vendor datalist: client's services first, then full list
+  const dl = document.getElementById('vendors-dl');
+  dl.innerHTML = '';
+  const k = q ? (clientsData.find(c => c.name.toLowerCase() === q)
+              || clientsData.find(c => c.name.toLowerCase().includes(q))) : null;
+  if (k && k.cart.length) {
+    // Client's itinerary items at top of vendor list
+    k.cart.forEach(it => {
+      const name = it.displayName||it.name||it.name_es||it.name_en||'';
+      if (name) { const o = document.createElement('option'); o.value = name; dl.appendChild(o); }
+    });
+  }
+  PROVIDERS.forEach(p => { const o = document.createElement('option'); o.value = p.n; dl.appendChild(o); });
+
+  if (!q || !k || !k.cart.length) { el.style.display='none'; return; }
   const items = k.cart;
   el.style.display = 'block';
   el._items = items;
@@ -599,7 +625,11 @@ function renderRow(c, today){
         c.facturar==='no' ? `<span style="background:#fee2e2;color:#b91c1c;padding:2px 9px;font-size:10px;font-weight:600;border-radius:2px">No</span>` : '—'}
     </div></td>
     <td><div class="cell" style="justify-content:center">
-      ${c.soporte ? `<a href="${esc(c.soporte)}" target="_blank" style="color:var(--gold);font-size:11px;text-decoration:none" title="${esc(c.soporte)}">📎 Ver</a>` : '<span style="color:var(--border2);font-size:11px">—</span>'}
+      ${c.soporte
+        ? (c.soporte.startsWith('data:image')
+          ? `<img src="${esc(c.soporte)}" style="max-height:28px;max-width:52px;border-radius:3px;object-fit:cover;cursor:pointer" onclick="window.open(this.src,'_blank')" title="Ver soporte">`
+          : `<a href="${esc(c.soporte)}" target="_blank" style="color:var(--gold);font-size:11px;text-decoration:none">📎 Ver</a>`)
+        : '<span style="color:var(--border2);font-size:11px">—</span>'}
     </div></td>
     <td><div class="cell editable" ondblclick="editField('${c.id}','notes')" style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink3)">${esc(c.notes||'')}</div></td>
     <td><div class="cell" style="justify-content:center">
@@ -656,6 +686,43 @@ function closePopups(){
 document.addEventListener('click', closePopups);
 
 /* ── NEW COMISION MODAL ── */
+/* ── SOPORTE DE PAGO ── */
+function handleSoporteFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    // Compress via canvas to keep size reasonable
+    const img = new Image();
+    img.onload = function() {
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const data = canvas.toDataURL('image/jpeg', 0.7);
+      document.getElementById('n-soporte').value = data;
+      const prev = document.getElementById('soporte-preview');
+      const lbl  = document.getElementById('soporte-label');
+      prev.src = data; prev.style.display = 'block';
+      lbl.textContent = file.name;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetSoporte() {
+  document.getElementById('n-soporte').value = '';
+  document.getElementById('soporte-file').value = '';
+  document.getElementById('soporte-preview').style.display = 'none';
+  document.getElementById('soporte-label').textContent = '📎 Clic o arrastra una imagen';
+  document.getElementById('soporte-zone').style.borderColor = 'var(--border2)';
+}
+
 function openNewModal(){
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('n-date').value = today;
@@ -672,8 +739,9 @@ function openNewModal(){
   document.getElementById('n-due').value = '';
   document.getElementById('n-notes').value = '';
   document.getElementById('n-pct-hint').textContent = '';
+  document.getElementById('n-phone-hint').textContent = '';
   document.getElementById('n-facturar').value = '';
-  document.getElementById('n-soporte').value = '';
+  resetSoporte();
   document.getElementById('client-services').style.display = 'none';
   document.getElementById('new-modal').style.display = 'flex';
   // Retry loading clients if not loaded yet
