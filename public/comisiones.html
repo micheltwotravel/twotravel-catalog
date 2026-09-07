@@ -345,13 +345,10 @@ function _norm(s){
     .replace(/[^a-z0-9\s]/g,'').trim();
 }
 
+let _selectedClientCart = []; // set by onClientInput, used by vendor DD
+
 function _getClientServices() {
-  const clientVal = (document.getElementById('n-client')||{}).value||'';
-  const q = clientVal.trim().toLowerCase();
-  if (!q) return [];
-  const k = clientsData.find(c => c.name.toLowerCase() === q)
-         || clientsData.find(c => c.name.toLowerCase().includes(q));
-  return k ? k.cart : [];
+  return _selectedClientCart;
 }
 
 function _getMatchedProviderNames(services) {
@@ -484,7 +481,9 @@ function onClientInput(val) {
   const el = document.getElementById('client-services');
   const k = q ? (clientsData.find(c => c.name.toLowerCase() === q)
               || clientsData.find(c => c.name.toLowerCase().includes(q))) : null;
-  // If vendor DD is open, refresh it so client sections update
+  // Store cart for vendor dropdown highlight
+  _selectedClientCart = (k && k.cart) ? k.cart : [];
+  // If vendor DD is open, refresh it so highlighted section updates
   const dd = document.getElementById('vendor-dd');
   if (dd && dd.style.display !== 'none') _buildVendorDD(document.getElementById('n-vendor').value);
 
@@ -860,6 +859,7 @@ function openNewModal(){
   document.getElementById('n-phone-hint').textContent = '';
   document.getElementById('n-facturar').value = '';
   resetSoporte();
+  _selectedClientCart = [];
   document.getElementById('client-services').style.display = 'none';
   document.getElementById('new-modal').style.display = 'flex';
   // Retry loading clients if not loaded yet
