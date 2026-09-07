@@ -153,7 +153,8 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Proveedor *</label>
-          <input class="form-input" id="n-vendor" placeholder="Ej. Bora Bora, Dennis Chef, Villa Vela">
+          <input class="form-input" id="n-vendor" list="vendors-dl" autocomplete="off" placeholder="Buscar proveedor..." oninput="onVendorInput(this.value)">
+          <datalist id="vendors-dl"></datalist>
         </div>
         <div class="form-group">
           <label class="form-label">Fecha del servicio</label>
@@ -164,7 +165,8 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Cliente / Grupo *</label>
-          <input class="form-input" id="n-client" placeholder="Ej. Jerome V., Ana & Luis">
+          <input class="form-input" id="n-client" list="clients-dl" autocomplete="off" placeholder="Buscar cliente del panel...">
+          <datalist id="clients-dl"></datalist>
         </div>
         <div class="form-group">
           <label class="form-label">Categoría</label>
@@ -252,6 +254,46 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec';
+
+/* ── PROVIDER DATABASE ── */
+const PROVIDERS = [{"n":"Daniel Morillo","c":"Jr Concierge Assitant.","ci":"Colombia: Medellín"},{"n":"Mangata","c":"Beach Club","p":10,"ci":"Colombia: Cartagena"},{"n":"Palenque Tours","c":"Tours","ci":"Colombia: Cartagena"},{"n":"Corona Tours","c":"Transport","ci":"Colombia: Cartagena"},{"n":"Magic Hands","c":"Massage","ci":"Colombia: Medellín"},{"n":"Agua de Leon","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Salon Tropical","c":"Restaurant","p":10,"w":"3246227092","ci":"Colombia: Cartagena"},{"n":"Alma","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Amare","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Amasa","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Andres Carne de Res","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Arabe Internacional","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Buena Vida Marisqueria","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Cafe del Mar","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Candé","c":"Restaurant","p":10,"w":"3145374833","ci":"Colombia: Cartagena"},{"n":"Carmen Cartagena 5%","c":"Restaurant","p":5,"w":"3143614826","ci":"Colombia: Cartagena"},{"n":"Celele","c":"Restaurant","w":"3017420389","ci":"Colombia: Cartagena"},{"n":"Club de Pesca","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Cuzco","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Don Ignazio","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Don Juan","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"El Baron","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"El Gobernador","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Los Tacos del Gordo","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Ely Cafe","c":"Restaurant","p":10,"w":"3004602059","ci":"Colombia: Cartagena"},{"n":"Gente de Mar","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Harrys","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Juan del Mar","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"La Cevicheria","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"La Cocina de Pepina","c":"Restaurant","p":5,"w":"3013632817","ci":"Colombia: Cartagena"},{"n":"La Perla","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"La Unica 10%","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"La Vitrola","c":"Restaurant","p":10,"w":"3156649676","ci":"Colombia: Cartagena"},{"n":"Lobo de Mar","c":"Restaurant","p":5,"w":"3043923397","ci":"Colombia: Cartagena"},{"n":"M Cocina","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Marea","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Members only","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Nena Beach","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Pascal","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Porthos","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Quebracho","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Restaurante o chef","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"San Pedro de Majagua","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Santa Clara","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Taquería Puerto Vallarta","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Blue Apple","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Bora Bora","c":"Beach Club","p":100,"w":"3242382750","ci":"Colombia: Cartagena"},{"n":"Majagua","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Makani","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Namasté","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Alquimico","c":"Bar","ci":"Colombia: Cartagena"},{"n":"Casa Cruxada","c":"Bar","ci":"Colombia: Cartagena"},{"n":"Delirium","c":"Bar","ci":"Colombia: Cartagena"},{"n":"Dolce Vita","c":"Bar","ci":"Colombia: Cartagena"},{"n":"La Jugada","c":"Bar","ci":"Colombia: Cartagena"},{"n":"La Movida","c":"Bar","ci":"Colombia: Cartagena"},{"n":"Seven 7 Times","c":"Bar","ci":"Colombia: Cartagena"},{"n":"The City Club","c":"Bar","ci":"Colombia: Cartagena"},{"n":"Ana","c":"Restaurant","p":10,"w":"3126676309","ci":"Colombia: Cartagena"},{"n":"Apogeo","c":"Restaurant","p":10,"w":"3184527625","ci":"Colombia: Cartagena"},{"n":"Casa del Tunel","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Casa Pura","c":"Restaurant","p":10,"w":"3245564787","ci":"Colombia: Cartagena"},{"n":"Discos y Mariscos","c":"Restaurant","p":10,"w":"3246227092","ci":"Colombia: Cartagena"},{"n":"El Beso","c":"Restaurant","p":10,"w":"3004602059","ci":"Colombia: Cartagena"},{"n":"Harry's Restaurant","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Hotel San Pedro Majagua","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Jardin Santa Clara","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Kanuu","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"King Curry","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"La Magnolia","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Manglar","c":"Restaurant","p":10,"w":"3042156309","ci":"Colombia: Cartagena"},{"n":"Mar y Zielo","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Miador Gastro Bar","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Morena","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Pa'ue Beach Club","c":"Beach Club","p":100,"w":"3004602059","ci":"Colombia: Cartagena"},{"n":"Pezetarian","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Restaurante 1621","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Sala despecho","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"San Pascual de baylon","c":"Restaurant","p":100,"ci":"Colombia: Cartagena"},{"n":"Tierra","c":"Restaurant","p":10,"w":"3215236922","ci":"Colombia: Cartagena"},{"n":"Townhouse","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Viva La Vida","c":"Restaurant","p":10,"w":"3113356638","ci":"Colombia: Cartagena"},{"n":"Mar y Miel Two Travel","c":"Chef Two Travel","ci":"Colombia: Cartagena"},{"n":"Atolon","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Banana","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Capri","c":"Beach Club","p":100,"ci":"Colombia: Cartagena"},{"n":"Corona Island","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Morena","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Rabo de Pez","c":"Restaurant","p":7,"ci":"Colombia: Cartagena"},{"n":"Norma","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Relato","c":"Restaurant","p":8,"ci":"Colombia: Medellín"},{"n":"Test Kitchen Lab","c":"Restaurant","p":8,"ci":"Colombia: Medellín"},{"n":"Mamba Negra","c":"Restaurant","p":10,"w":"3244203857","ci":"Colombia: Medellín"},{"n":"Teatro Victoria","c":"Restaurant","p":10,"ci":"Colombia: Medellín"},{"n":"Coralina Island","c":"Beach Club","p":10,"w":"3143590253","ci":"Colombia: Cartagena"},{"n":"Mirador Gastro Bar","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Hi I'm Sci","c":"Restaurant","p":10,"w":"3244203857","ci":"Colombia: Medellín"},{"n":"Casa Curanto","c":"Restaurant","p":10,"w":"3126915403","ci":"Colombia: Cartagena"},{"n":"Baroca","c":"Restaurant","p":10,"w":"3012324142","ci":"Colombia: Cartagena"},{"n":"1811 Gastro Bar","c":"Restaurant","p":10,"w":"3117771203","ci":"Colombia: Cartagena"},{"n":"Wala Beach Club","c":"Beach Club","p":100,"ci":"Colombia: Cartagena"},{"n":"X.O","c":"Restaurant"},{"n":"Hookah Master","c":"Hookah Services","ci":"Colombia: Medellín"},{"n":"Jaider Pemberthy","c":"Bodyguard","ci":"Colombia: Medellín"},{"n":"Alambique","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"La Isla","c":"Club","ci":"Colombia: Medellín"},{"n":"Carmen Medellín","c":"Restaurant","p":8,"ci":"Colombia: Medellín"},{"n":"Chef Manuel","c":"Chef","ci":"Colombia: Medellín"},{"n":"Carmen Cleaning","c":"Cleaning","ci":"Colombia: Medellín"},{"n":"Maoke Tours","c":"Tours","ci":"Colombia: Medellín"},{"n":"Vaquero","c":"Dj","ci":"Colombia: Medellín"},{"n":"El Candombe","c":"Dance Class","ci":"Colombia: Medellín"},{"n":"Maoke Transport","c":"Transport","ci":"Colombia: Medellín"},{"n":"Uzima Massage","c":"Massage","ci":"Colombia: Cartagena"},{"n":"Miguel Cruz","c":"Chef Two Travel","ci":"Colombia: Cartagena"},{"n":"LeoTours","c":"Transport","ci":"Colombia: Medellín"},{"n":"La Cabrera","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Iokanan Photographer","c":"Photographer","ci":"Colombia: Cartagena"},{"n":"Denis Spa","c":"Massage","ci":"Colombia: Cartagena"},{"n":"Jairo Security","c":"Bodyguard","ci":"Colombia: Cartagena"},{"n":"Corona tours","c":""},{"n":"Sions tours","c":"Tours","ci":"Colombia: Cartagena"},{"n":"A&E Frias - Dimensions tours","c":""},{"n":"EC Transportes","c":""},{"n":"Body Guard - Almario","c":"Bodyguard","ci":"Colombia: Cartagena"},{"n":"Jr Concierge","c":"Jr Concierge Assitant.","ci":"Colombia: Cartagena"},{"n":"Santa Cattleya","c":"Club","p":100,"ci":"Colombia: Cartagena"},{"n":"Aura Hotel","c":"Beach Club","p":10,"ci":"Colombia: Cartagena"},{"n":"Bloom Saloon","c":"Hair and Make up","ci":"Colombia: Medellín"},{"n":"Serenity Yacht","c":"Party","ci":"Colombia: Medellín"},{"n":"IV's Medellin","c":"IV Service","ci":"Colombia: Medellín"},{"n":"Ritwal","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"Jr Concierge","c":"Jr Concierge Assitant.","ci":"Colombia: Medellín"},{"n":"903 by Maluma","c":"Club","ci":"Colombia: Medellín"},{"n":"El Rodeo Golf","c":"Club","ci":"Colombia: Medellín"},{"n":"Simah","c":"Restaurant","p":8,"ci":"Colombia: Medellín"},{"n":"Buxury","c":"Tours","ci":"Colombia: Medellín"},{"n":"Fernando cepeda","c":"Snorkel","ci":"Colombia: Cartagena"},{"n":"Carmen Cartagena 7%","c":"Restaurant","p":7},{"n":"Carmen Cartagena 8%","c":"Restaurant","p":8},{"n":"IV's Cartagena","c":"IV Service","ci":"Colombia: Cartagena"},{"n":"La Unica 8%","c":"Restaurant","p":8,"ci":"Colombia: Cartagena"},{"n":"Picnic Cartagena","c":"Decoracion","ci":"Colombia: Cartagena"},{"n":"Rosita Benedetti","c":"Bakery","ci":"Colombia: Cartagena"},{"n":"Shala","c":"Massage","ci":"Colombia: Medellín"},{"n":"Niku 3%","c":"Restaurant","p":3,"ci":"Colombia: Cartagena"},{"n":"Niku 6%","c":"Restaurant","p":6,"ci":"Colombia: Cartagena"},{"n":"Niku 8%","c":"Restaurant","p":8,"ci":"Colombia: Cartagena"},{"n":"Niku 10%","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"El Pasquin de Joaco","c":"Bar","p":100,"ci":"Colombia: Cartagena"},{"n":"Gusto","c":"Bar","ci":"Colombia: Medellín"},{"n":"Superbowling","c":"Restaurant","p":10,"ci":"Colombia: Medellín"},{"n":"Kristy Tours","c":"Tours","ci":"Colombia: Cartagena"},{"n":"Peluqueria Bloom","c":"Hair and Make up","ci":"Colombia: Medellín"},{"n":"Transportes Medellín Travel","c":"Tours","ci":"Colombia: Medellín"},{"n":"Carmen Cartagena 6%","c":"Restaurant","p":6,"ci":"Colombia: Cartagena"},{"n":"Casa El Ramal","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"Monkey Bar","c":"Bar","ci":"Colombia: Cartagena"},{"n":"Barbaro Cocina Primitiva","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"Dulcinea","c":"Club","ci":"Colombia: Medellín"},{"n":"Alfonso Horseback","c":"Tours","ci":"Colombia: Cartagena"},{"n":"Sambombi","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"Bar Tropical","c":"Bartender","ci":"Colombia: Cartagena"},{"n":"Christian DJ","c":"Dj","ci":"Colombia: Cartagena"},{"n":"Mal de Ojo","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"Salon Amador","c":"Club","ci":"Colombia: Medellín"},{"n":"Pablo Surf","c":"Activity","ci":"Colombia: Cartagena"},{"n":"Camilo Blanco","c":"Lunch in Cholon, Jetsky","p":20,"ci":"Colombia: Cartagena"},{"n":"Chiva Tours","c":"Tours","p":100,"ci":"Colombia: Cartagena"},{"n":"Runico","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"The Rum Box (Arsenal)","c":"Activity","ci":"Colombia: Cartagena"},{"n":"Della Nonna","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"La Hacienda","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"La Matriarca","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"Mar de las Antillas","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Al Alma","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Andres DC","c":"Restaurant","ci":"Colombia: Bogotá"},{"n":"Astoria Rooftop","c":"Restaurant","ci":"Colombia: Bogotá"},{"n":"Casa Santa Clara Monserrate","c":"Restaurant","ci":"Colombia: Bogotá"},{"n":"Chato","c":"Restaurant","ci":"Colombia: Bogotá"},{"n":"El Cielo","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"Carlos","c":"Tours","ci":"Colombia: Medellín"},{"n":"Premium Medical Care","c":"IV Service","ci":"Colombia: Cartagena"},{"n":"ATV Cartagena","c":"Activity","ci":"Colombia: Cartagena"},{"n":"Aurum Spa","c":"Massage","p":10,"ci":"Colombia: Cartagena"},{"n":"Bomba Tours","c":"Activity","ci":"Colombia: Cartagena"}];
+
+const PROV_MAP = {};
+PROVIDERS.forEach(p => { PROV_MAP[p.n.toLowerCase()] = p; });
+
+const CAT_FORM_MAP = {
+  'Restaurant':'Restaurant','Bar':'Restaurant','Beach Club':'Beach Club',
+  'Tours':'Tour / Excursión','Transport':'Transporte','Massage':'Spa / Wellness',
+  'Chef':'Chef / Catering','Chef Two Travel':'Chef / Catering',
+  'Club':'Otro','Activity':'Otro','Dj':'Otro','Bartender':'Otro',
+  'IV Service':'Spa / Wellness','Party':'Otro','Bodyguard':'Otro',
+  'Snorkel':'Tour / Excursión','Lunch in Cholon, Jetsky':'Boating',
+};
+
+function onVendorInput(val) {
+  const p = PROV_MAP[val.trim().toLowerCase()];
+  if (!p) return;
+  const pctEl = document.getElementById('n-pct');
+  const phoneEl = document.getElementById('n-phone');
+  const catEl = document.getElementById('n-category');
+  if (p.p != null && !pctEl.value) pctEl.value = p.p;
+  if (p.w && !phoneEl.value) phoneEl.value = p.w;
+  if (p.c && CAT_FORM_MAP[p.c]) catEl.value = CAT_FORM_MAP[p.c];
+  calcComision();
+}
+
+async function loadClients() {
+  try {
+    const r = await fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'listKickoffs'})});
+    const d = await r.json();
+    const dl = document.getElementById('clients-dl');
+    const names = [...new Set((d.data||[]).map(k=>k.guestName).filter(Boolean))].sort();
+    names.forEach(name => {
+      const opt = document.createElement('option'); opt.value = name; dl.appendChild(opt);
+    });
+  } catch {}
+}
 
 const STATUSES = {
   pend:      { label:'Pendiente',  color:'#aaaaaa' },
@@ -554,7 +596,7 @@ function showToast(msg, duration=3000){
 }
 
 /* ── COBRAR COMISION (WhatsApp) ── */
-async function cobrarComision(id){
+function cobrarComision(id){
   const c = comisiones.find(x=>x.id===id);
   if(!c || !c.phone) return;
   const isReminder = !!c.cobroAt;
@@ -562,21 +604,12 @@ async function cobrarComision(id){
   const msg = isReminder
     ? `Hola, te escribimos de Two Travel para recordarte la comisión pendiente por el servicio de ${c.desc||c.category||'nuestro cliente'} (${c.client||''}).\n\nMonto: ${amtStr}\n\nQuedamos atentos. ¡Gracias!`
     : `Hola, te escribimos de Two Travel.\n\nTenemos pendiente el cobro de comisión por el servicio de ${c.desc||c.category||'nuestro cliente'} (${c.client||''}).\n\nMonto: ${amtStr}\n\nQuedamos atentos para coordinar el pago. ¡Gracias!`;
-  if(!confirm(`¿Enviar ${isReminder?'recordatorio':'cobro'} por WhatsApp a ${c.vendor}?`)) return;
-  showToast('Enviando...');
-  try{
-    const r = await fetch('/api/whatsapp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:c.phone,message:msg})});
-    const d = await r.json();
-    if(d.ok){
-      c.cobroAt = new Date().toISOString();
-      save(); render();
-      showToast(`✅ ${isReminder?'Recordatorio':'Cobro'} enviado a ${c.vendor}`);
-    } else {
-      showToast('❌ ' + (d.error||'Error al enviar'));
-    }
-  }catch(err){
-    showToast('❌ Error de red: ' + err.message);
-  }
+  const phone = c.phone.replace(/\D/g,'');
+  const waPhone = (phone.startsWith('57')||phone.startsWith('52')||phone.startsWith('1')) ? phone : '57'+phone;
+  window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+  c.cobroAt = new Date().toISOString();
+  save(); render();
+  showToast(`✅ WhatsApp abierto para ${c.vendor}`);
 }
 
 /* ── EXPORT CSV ── */
@@ -715,6 +748,14 @@ function loadDemo(){
 }
 
 /* ── INIT ── */
+// Populate vendor datalist
+(function(){
+  const dl = document.getElementById('vendors-dl');
+  PROVIDERS.forEach(p => {
+    const opt = document.createElement('option'); opt.value = p.n; dl.appendChild(opt);
+  });
+})();
+
 load();
 render();
 if(new URLSearchParams(location.search).get('demo')==='1'){
@@ -722,6 +763,7 @@ if(new URLSearchParams(location.search).get('demo')==='1'){
 } else {
   setSyncInfo('Cargando...');
   loadFromGAS();
+  loadClients();
 }
 </script>
 </body>

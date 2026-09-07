@@ -254,6 +254,14 @@ tr:hover td{background:var(--sand)}
       <div class="card-title" style="margin-bottom:4px">💬 Feedback de check-out</div>
       <div class="card-sub">Restaurante favorito, el que menos gustó y actividad favorita según los clientes</div>
       <div id="chart-feedback"></div>
+      <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">📝 Notas manuales de feedback</div>
+        <textarea id="feedback-notes" rows="3" placeholder="Agrega notas verbales de clientes sobre su experiencia…"
+          style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;font-family:'Jost',sans-serif;color:var(--ink);background:var(--sand);resize:vertical;outline:none"
+          oninput="saveFeedbackNotes(this.value)"
+          onfocus="this.style.borderColor='var(--gold)'"
+          onblur="this.style.borderColor='var(--border)'"></textarea>
+      </div>
     </div>
   </div>
 
@@ -432,6 +440,8 @@ let calYear, calMonth;
 // ─── STORAGE HELPERS ─────────────────────────────────
 function lsGet(key, def) { try { return JSON.parse(localStorage.getItem(key)) ?? def; } catch { return def; } }
 function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+function saveFeedbackNotes(val) { lsSet('marketing_feedback_notes', val); }
+function initFeedbackNotes() { const el = document.getElementById('feedback-notes'); if (el) el.value = lsGet('marketing_feedback_notes', ''); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 
 // ─── TABS ────────────────────────────────────────────
@@ -470,9 +480,12 @@ function renderLive() {
   const DONE = new Set(['completed','cancelled','archived']);
   const active = kickoffs.filter(k => {
     if (DONE.has(k.status)) return false;
-    if (liveRange === 'all') return true;
     const arr = k.arrivalDate ? new Date(k.arrivalDate+'T12:00:00') : null;
     const dep = k.departureDate ? new Date(k.departureDate+'T12:00:00') : null;
+    // Always exclude trips that have already ended, even in 'all' mode
+    if (dep && dep < today) return false;
+    if (arr && !dep && arr < today) return false;
+    if (liveRange === 'all') return true;
     if (!arr && !dep) return true; // being edited, no dates yet — always show
     return (arr||dep) <= rangeEnd && (dep||arr) >= today;
   }).sort((a,b) => (a.arrivalDate||'zzz').localeCompare(b.arrivalDate||'zzz'));
@@ -489,7 +502,15 @@ function parseCart(k) {
   let cart = [];
   try { cart = JSON.parse(k.cart || '[]'); } catch {}
   if (!Array.isArray(cart)) cart = [];
-  return cart.filter(it => it && (it.name || it.displayName || it.title || it.name_es));
+  return cart.filter(it => {
+    if (!it || !(it.name || it.displayName || it.title || it.name_es)) return false;
+    // Exclude auto-generated logistics (check-in, check-out, breakfast)
+    if (it._uid && String(it._uid).startsWith('preset_')) return false;
+    const n = String(it.name || it.name_en || '').toLowerCase();
+    if (n === 'check-in' || n === 'check-out' || n === 'checkin' || n === 'checkout') return false;
+    if (n.includes('desayuno') || n.includes('breakfast')) return false;
+    return true;
+  });
 }
 
 function renderTripItinerary(k, today) {
@@ -752,6 +773,7 @@ function chipStatus(s) {
 async function loadBehavior() {
   if (!kickoffs.length) await loadKickoffs();
   renderBehavior();
+  initFeedbackNotes();
 }
 
 function renderBehavior() {

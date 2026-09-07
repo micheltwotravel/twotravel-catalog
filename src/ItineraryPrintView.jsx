@@ -1688,7 +1688,11 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
 
   const isConfirmed = it.confirmed !== false;
   const isTBC       = !isConfirmed && it.tbc === true;
-  const showPrice = isConfirmed && (it.priceIsOverride || !HIDE_PRICE_CATS.has(String(it.category || "").trim().toLowerCase()));
+  const showPrice = isConfirmed && (
+    it.priceIsOverride ||
+    !HIDE_PRICE_CATS.has(String(it.category || "").trim().toLowerCase()) ||
+    String(it.priceUnit || "").toLowerCase().includes("day pass")
+  );
   const price    = showPrice ? fmtPrice(it.price) : "";
   const hiList   = splitList(it.highlights);
   const incList  = splitList(it.includes);

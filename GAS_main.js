@@ -19,7 +19,7 @@ const KICKOFF_HEADERS = [
   "tripDates2","arrivalDate2","departureDate2",
   "accommodationName2","accommodationAddr2","accommodationUrl2",
   "drinkOrderJson","groceryOrder","groceryOrderAt","groceryOrderJson",
-  "sentToTravifyAt","doneAt","lastModified",
+  "sentToTravifyAt","doneAt","lastModified","checkInResponses",
 ];
 
 function testApprovalEmail() {
@@ -135,6 +135,19 @@ function doPost(e) {
       case "saveBoda":    return jsonResponse(saveBoda_(payload));
       case "updateBoda":  return jsonResponse(updateBoda_(id, updates));
       case "deleteBoda":  return jsonResponse(deleteBoda_(payload.id || id));
+      case "sendBodaTaskEmail": {
+        const { to, taskName, bodaName, dueDate, isReminder } = payload;
+        if (!to || !to.includes("@")) return jsonResponse({ ok: false, error: "Email inválido o no configurado" });
+        const subject = isReminder
+          ? `📋 Recordatorio: "${taskName}" — ${bodaName}`
+          : `✅ Nueva tarea para su boda: "${taskName}"`;
+        const fmtDue = dueDate ? new Date(dueDate + "T12:00:00").toLocaleDateString("es", { day:"numeric", month:"long", year:"numeric" }) : null;
+        const body = isReminder
+          ? `¡Hola!\n\nLes recordamos que tienen una tarea pendiente para su boda:\n\n📋 ${taskName}${fmtDue ? `\n📅 Fecha límite: ${fmtDue}` : ""}\n\nEstamos aquí para apoyarlos en cada paso.\n\nCon amor,\nEquipo Two Lovers 💍`
+          : `¡Hola!\n\nSe les ha asignado una nueva tarea para su boda:\n\n✅ ${taskName}${fmtDue ? `\n📅 Fecha límite: ${fmtDue}` : ""}\n\nSi tienen alguna duda, escríbannos.\n\nCon amor,\nEquipo Two Lovers 💍`;
+        MailApp.sendEmail({ to, subject, body, name: "Two Lovers by Two Travel" });
+        return jsonResponse({ ok: true });
+      }
 
       case "soporte":            return jsonResponse(saveSoporte_(payload));
       case "saveCalendarToken":  return jsonResponse(saveCalendarToken(payload));
@@ -224,8 +237,9 @@ function doPost(e) {
         const rows = ciSh.getDataRange().getValues();
         const hdrs = rows[0];
         const kidIdx = hdrs.indexOf("kickoffId");
+        const targetId = body.kickoffId || payload.kickoffId || id;
         const data = rows.slice(1)
-          .filter(r => String(r[kidIdx]) === String(payload.kickoffId))
+          .filter(r => String(r[kidIdx]) === String(targetId))
           .map(r => {
             const obj = {};
             hdrs.forEach((h, i) => { obj[h] = r[i]; });
@@ -326,6 +340,43 @@ function doPost(e) {
         if (ciSheet.getLastRow() === 0) ciSheet.appendRow(headers);
         ciSheet.appendRow(headers.map(h => h === "kickoffId" ? kickoffId : (response[h] || "")));
         SpreadsheetApp.flush();
+        try {
+          const ciRows = ciSheet.getDataRange().getValues();
+          const ciHdrs = ciRows[0].map(String);
+          const kidIdx = ciHdrs.indexOf("kickoffId");
+          const allResponses = ciRows.slice(1)
+            .filter(r => String(r[kidIdx]) === String(kickoffId))
+            .map(r => { const o = {}; ciHdrs.forEach((h, i) => { o[h] = r[i]; }); return o; });
+          const fmtDate = (v) => {
+            if (!v) return "";
+            const s = String(v);
+            if (s.includes("T")) return s.slice(0, 10);
+            const m = s.match(/(\d{4}-\d{2}-\d{2})/);
+            return m ? m[1] : s;
+          };
+          const arrivals = allResponses
+            .filter(r => r.arrivalFlight || r.arrivalAirline)
+            .map(r => ({
+              flightNumber: (r.arrivalFlight || "").trim(),
+              date: fmtDate(r.arrivalDate),
+              time: "",
+              name: [r.firstName, r.lastName].filter(Boolean).join(" "),
+            }));
+          const departures = allResponses
+            .filter(r => r.departureFlight || r.departureAirline)
+            .map(r => ({
+              flightNumber: (r.departureFlight || "").trim(),
+              date: fmtDate(r.departureDate),
+              time: "",
+              name: [r.firstName, r.lastName].filter(Boolean).join(" "),
+            }));
+          const updates = { checkInResponses: JSON.stringify(allResponses) };
+          if (arrivals.length) updates.arrivals = JSON.stringify(arrivals);
+          if (departures.length) updates.departures = JSON.stringify(departures);
+          updateKickoff_(kickoffId, updates);
+        } catch(e) {
+          Logger.log("checkInResponses sync error: " + e.message);
+        }
         return jsonResponse({ ok: true });
       }
 
@@ -359,6 +410,28 @@ function doGet(e) {
           (p.Name || p.name || "").toLowerCase().includes(nl) || nl.includes((p.Name || p.name || "").toLowerCase())
         );
         return jsonResponse({ ok: true, data: match || null });
+      }
+      case "listItineraryItems": {
+        const sh = SS.getSheetByName("Itinerary (no catalog)");
+        if (!sh) return jsonResponse({ ok: true, data: [] });
+        const vals = sh.getDataRange().getValues();
+        if (vals.length < 2) return jsonResponse({ ok: true, data: [] });
+        const headers = vals[0].map(String);
+        const nameEnIdx = headers.indexOf("Item NAME");
+        const nameEsIdx = headers.indexOf("Item NOMBRE");
+        const descEnIdx = headers.indexOf("Description");
+        const descEsIdx = headers.indexOf("Descripcion ESP");
+        const imgIdx    = headers.indexOf("Image");
+        const data = vals.slice(1)
+          .filter(r => r[nameEnIdx] || r[nameEsIdx])
+          .map(r => ({
+            name_en:        String(r[nameEnIdx] || ""),
+            name_es:        String(r[nameEsIdx] || ""),
+            description:    String(r[descEnIdx] || ""),
+            description_es: String(r[descEsIdx] || ""),
+            image:          String(imgIdx >= 0 ? r[imgIdx] : ""),
+          }));
+        return jsonResponse({ ok: true, data });
       }
       default: return jsonResponse({ ok: true, status: "Two Travel GAS v3 ready" });
     }
@@ -397,33 +470,46 @@ function saveKickoff_(payload) {
 function updateKickoff_(id, updates) {
   if (!id) throw new Error("updateKickoff: id vacío");
   const sh = getSheet_("Sheet1");
-  const lastCol  = sh.getLastColumn();
+
+  // Add any missing columns in one batch call instead of one-by-one
+  const lastCol = sh.getLastColumn();
   const existing = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
-  Object.keys(updates).forEach(key => {
-    if (key && !existing.includes(key)) {
-      sh.getRange(1, sh.getLastColumn() + 1).setValue(key);
-      existing.push(key);
-    }
-  });
+  const newCols = Object.keys(updates).filter(k => k && !existing.includes(k));
+  if (newCols.length > 0) {
+    const startCol = sh.getLastColumn() + 1;
+    sh.getRange(1, startCol, 1, newCols.length).setValues([newCols]);
+    newCols.forEach(c => existing.push(c));
+  }
+
   const data    = sh.getDataRange().getValues();
-  const headers = data[0].map(h => String(h || "").trim().toLowerCase());
-  const idCol = headers.indexOf("id");
+  const headers = data[0].map(h => String(h || "").trim());
+  const headersLower = headers.map(h => h.toLowerCase());
+  const idCol = headersLower.indexOf("id");
   if (idCol === -1) throw new Error("No existe columna 'id' en Sheet1");
   const idStr = String(id).trim();
+
   for (let r = 1; r < data.length; r++) {
     const rowId = String(data[r][idCol] ?? "").trim();
     if (rowId !== idStr) continue;
+
+    // Build updated row in memory, then write the entire row in one call
+    const row = data[r].map(v => (v instanceof Date ? v.toISOString() : (v ?? "")));
+    while (row.length < headers.length) row.push("");
+
     Object.entries(updates).forEach(([key, val]) => {
-      const col = headers.indexOf(key.trim().toLowerCase());
+      const col = headersLower.indexOf(key.trim().toLowerCase());
       if (col === -1) return;
       const cell = (val !== null && val !== undefined) ? val : "";
-      const cellRange = sh.getRange(r + 1, col + 1);
-      cellRange.setNumberFormat("@");
-      cellRange.setValue(typeof cell === "object" ? JSON.stringify(cell) : cell);
+      row[col] = (typeof cell === "object") ? JSON.stringify(cell) : cell;
     });
+
+    const rowRange = sh.getRange(r + 1, 1, 1, row.length);
+    rowRange.setNumberFormat("@");
+    rowRange.setValues([row]);
     SpreadsheetApp.flush();
     return { ok: true };
   }
+
   const foundIds = data.slice(1).map(row => String(row[idCol] ?? "").trim()).filter(Boolean);
   throw new Error(
     "Kickoff not found: '" + idStr + "'. " +
@@ -1459,8 +1545,9 @@ function getComisiones_() {
 const BODAS_SHEET = "Bodas";
 const BODAS_COLS  = [
   "id","clienteName","weddingDate","venue","responsable","phase","status",
-  "guestCount","budget","notes","contact","coverPhoto",
+  "guestCount","budget","notes","contact","coupleEmail","coverPhoto",
   "tasks","suppliers","songs","photos","calls","guests","palette","schedule",
+  "budgetItems","payments","contracts","seating","studio",
   "createdAt","updatedAt",
 ];
 
@@ -1633,4 +1720,29 @@ function saveMenuConfig_(payload) {
   sheet.appendRow(["menuConfig", json]);
   SpreadsheetApp.flush();
   return { ok: true };
+}
+
+// ═══════════════ BACKFILL CHECKIN RESPONSES ══════════════════════
+function backfillCheckinResponses() {
+  const ciSheet = SS.getSheetByName("CheckinResponses");
+  if (!ciSheet || ciSheet.getLastRow() < 2) {
+    Logger.log("No hay datos en CheckinResponses"); return;
+  }
+  const rows = ciSheet.getDataRange().getValues();
+  const hdrs = rows[0].map(String);
+  const kidIdx = hdrs.indexOf("kickoffId");
+  const kickoffIds = [...new Set(rows.slice(1).map(r => String(r[kidIdx])).filter(Boolean))];
+  Logger.log("Kickoffs a sincronizar: " + kickoffIds.length);
+  kickoffIds.forEach(kickoffId => {
+    const allResponses = rows.slice(1)
+      .filter(r => String(r[kidIdx]) === kickoffId)
+      .map(r => { const o = {}; hdrs.forEach((h, i) => { o[h] = r[i]; }); return o; });
+    try {
+      updateKickoff_(kickoffId, { checkInResponses: JSON.stringify(allResponses) });
+      Logger.log("✅ " + kickoffId + " — " + allResponses.length + " respuestas");
+    } catch(e) {
+      Logger.log("❌ " + kickoffId + ": " + e.message);
+    }
+  });
+  Logger.log("Backfill listo");
 }

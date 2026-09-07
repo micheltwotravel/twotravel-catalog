@@ -2374,7 +2374,8 @@ const PriceLevelChip = ({ service, lang, clientType = 1 }) => {
   const categoryHasVisiblePrice = (category) =>
   category === "tours" ||
   category === "services" ||
-  category === "transportation";
+  category === "transportation" ||
+  category === "beach-clubs";
 
 
   const hasPrice = (cop) => !!cop && cop > 0; // must return boolean — React renders 0 literally
