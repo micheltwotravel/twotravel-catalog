@@ -638,7 +638,15 @@ function render(){
   </div>`;
 
   if(!items.length){
-    html += `<div style="text-align:center;padding:60px;color:var(--ink3);font-size:13px">No hay comisiones. Crea la primera con "+ Nueva comisión".</div>`;
+    html += `<div style="text-align:center;padding:56px 24px;color:var(--ink3)">
+      <div style="font-size:32px;margin-bottom:12px">📋</div>
+      <div style="font-size:15px;font-weight:500;color:var(--ink2);margin-bottom:6px">Aún no hay comisiones registradas</div>
+      <div style="font-size:12px;margin-bottom:20px">Crea la primera con el botón de arriba, o carga datos de ejemplo para ver cómo funciona el tablero.</div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button onclick="openNewModal()" style="padding:8px 18px;border-radius:6px;border:none;background:var(--ink);color:#fff;font-size:12px;font-family:Jost,sans-serif;cursor:pointer;font-weight:500">+ Nueva comisión</button>
+        <button onclick="loadDemo()" style="padding:8px 18px;border-radius:6px;border:1.5px solid var(--border2);background:none;color:var(--ink2);font-size:12px;font-family:Jost,sans-serif;cursor:pointer">Ver datos de ejemplo</button>
+      </div>
+    </div>`;
     main.innerHTML = html; return;
   }
 
