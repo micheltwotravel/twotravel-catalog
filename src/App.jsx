@@ -5051,6 +5051,7 @@ function BreakfastCatalog() {
   const [sent,            setSent]            = React.useState(false);
   const [sending,         setSending]         = React.useState(false);
   const [fxRate,          setFxRate]          = React.useState(3013);
+  const [menuOverrides,   setMenuOverrides]   = React.useState({});
   const [arrivalDate,      setArrivalDate]      = React.useState(params.get("arrivalDate") || "");
   const [checkInFormUrl,   setCheckInFormUrl]   = React.useState("");
   const [coverPhotoId,     setCoverPhotoId]     = React.useState("");
@@ -5061,6 +5062,13 @@ function BreakfastCatalog() {
     fetch("https://api.frankfurter.app/latest?from=USD&to=COP")
       .then(r => r.json())
       .then(d => { if (d?.rates?.COP > 500) setFxRate(Math.round(d.rates.COP * 0.98)); })
+      .catch(() => {});
+  }, []);
+
+  React.useEffect(() => {
+    fetch(`${GAS_URL}?action=getMenuConfig`)
+      .then(r => r.json())
+      .then(d => { if (d?.ok && d.data) setMenuOverrides(d.data); })
       .catch(() => {});
   }, []);
 
@@ -5148,11 +5156,23 @@ function BreakfastCatalog() {
     return en ? `Day ${i+1}` : `Día ${i+1}`;
   };
 
+  const getItemPrices = (menuId, item) => {
+    const ov = menuOverrides[`bf:${menuId}:${item.name}`];
+    if (!ov) return item.prices;
+    return [ov.p0 ?? item.prices[0], ov.p1 ?? item.prices[1], ov.p2 ?? item.prices[2]];
+  };
+
+  const getMenuFullPrice = (menu) => {
+    const ov = menuOverrides[`bf:${menu.id}:_full`];
+    if (!ov) return menu.fullPrice;
+    return [ov.p0 ?? menu.fullPrice[0], ov.p1 ?? menu.fullPrice[1], ov.p2 ?? menu.fullPrice[2]];
+  };
+
   const catPrice = (cat, menu) => {
     if (!cat || !menu) return 0;
-    if (cat.full) return menu.fullPrice[tierIdx] || 0;
+    if (cat.full) return getMenuFullPrice(menu)[tierIdx] || 0;
     return menu.sections.flatMap(s => s.items)
-      .reduce((s, it) => cat.checked[it.name] ? s + (it.prices[tierIdx] || 0) : s, 0);
+      .reduce((s, it) => cat.checked[it.name] ? s + (getItemPrices(menu.id, it)[tierIdx] || 0) : s, 0);
   };
 
   const dayPrice = (order) =>
@@ -5223,12 +5243,12 @@ function BreakfastCatalog() {
         if (!cat) return;
         const catLabel = en ? menu.label : menu.label_es;
         if (cat.full) {
-          lines.push(`  · ${catLabel}: ${en ? "Full Menu" : "Menú Completo"} — ${fmt(menu.fullPrice[tierIdx])}`);
+          lines.push(`  · ${catLabel}: ${en ? "Full Menu" : "Menú Completo"} — ${fmt(getMenuFullPrice(menu)[tierIdx])}`);
         } else {
           const items = menu.sections.flatMap(s => s.items).filter(it => cat.checked[it.name]);
           if (items.length) {
             const itemList = items.map(it => en ? it.name : it.name_es).join(", ");
-            const itemTotal = items.reduce((s, it) => s + (it.prices[tierIdx] || 0), 0);
+            const itemTotal = items.reduce((s, it) => s + (getItemPrices(menu.id, it)[tierIdx] || 0), 0);
             lines.push(`  · ${catLabel}: ${itemList} — ${fmt(itemTotal)}`);
           }
         }
@@ -5472,7 +5492,7 @@ function BreakfastCatalog() {
                     </p>
                   </div>
                   <div style={{textAlign:"right",flexShrink:0}}>
-                    <span style={{fontSize:15,fontWeight:700,color:badgeColor}}>{fmt(menu.fullPrice[tierIdx])}</span>
+                    <span style={{fontSize:15,fontWeight:700,color:badgeColor}}>{fmt(getMenuFullPrice(menu)[tierIdx])}</span>
                     <span style={{fontSize:9,color:"#b8b0a8",display:"block"}}>{en ? "/ day" : "/ día"}</span>
                   </div>
                 </button>
@@ -5514,7 +5534,7 @@ function BreakfastCatalog() {
                             )}
                           </div>
                           <span style={{fontSize:12,fontWeight:500,color:badgeColor,flexShrink:0,marginLeft:8}}>
-                            {fmt(it.prices[tierIdx])}
+                            {fmt(getItemPrices(menu.id, it)[tierIdx])}
                           </span>
                         </button>
                       );

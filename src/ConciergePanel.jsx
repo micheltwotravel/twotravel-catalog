@@ -7481,21 +7481,81 @@ function CheckinResponsesSection({ kickoffId }) {
 }
 
 /* ================================================================
-   MENU ADMIN PANEL — edit photos & prices for drinks/groceries
+   MENU ADMIN PANEL — edit photos & prices for drinks/groceries/breakfast
 ================================================================ */
 const MENU_GAS = import.meta.env.VITE_GAS_URL;
 
-function MenuAdminPanel() {
-  const ALL_CATS = [
-    ...DRINK_CATEGORIES_DEFAULT.map(c => ({ ...c, _type: "drink" })),
-    ...GROCERY_CATEGORIES_DEFAULT.map(c => ({ ...c, _type: "grocery" })),
-  ];
+const BREAKFAST_ADMIN = [
+  { id:"traditional", label:"Menú Típico", fullPrice:[197000,316000,422000], sections:[
+    { label:"Platos Principales", items:[
+      { name:"Arepa de Huevo",    name_es:"Arepa de Huevo",             prices:[24000,60000,72000] },
+      { name:"Arepa de Queso",    name_es:"Arepa de Queso",             prices:[40000,52000,80000] },
+      { name:"Pericos Eggs",      name_es:"Huevos Pericos",             prices:[24000,40000,40000] },
+      { name:"Empanadas",         name_es:"Empanadas",                  prices:[40000,40000,40000] },
+      { name:"Cheese Fingers",    name_es:"Deditos de queso",           prices:[40000,40000,40000] },
+      { name:"Fried Plantain",    name_es:"Patacones",                  prices:[12000,12000,20000] },
+    ]},
+    { label:"Acompañamientos", items:[
+      { name:"Costeño Sour Cream",     name_es:"Suero Costeño",                 prices:[12000,12000,24000] },
+      { name:"Hogao",                  name_es:"Hogao",                         prices:[28000,28000,36000] },
+      { name:"Seasonal Exotic Fruits", name_es:"Frutas Exóticas de Temporada",  prices:[80000,80000,140000] },
+      { name:"Sausage and Chorizo",    name_es:"Salchicha y Chorizo",           prices:[36000,52000,104000] },
+      { name:"Costeño Cheese",         name_es:"Queso Costeño",                 prices:[16000,16000,28000] },
+      { name:"Pan de Bono",            name_es:"Pan de Bono",                   prices:[5000,5000,5000] },
+    ]},
+    { label:"Bebidas", items:[
+      { name:"Coffee",                       name_es:"Café",                           prices:[44000,44000,44000] },
+      { name:"Natural Juice (local fruits)", name_es:"Jugo Natural de Frutas Locales", prices:[40000,40000,40000] },
+    ]},
+  ]},
+  { id:"american", label:"Menú Americano", fullPrice:[215000,337500,445000], sections:[
+    { label:"Platos Principales", items:[
+      { name:"Scrambled Eggs",               name_es:"Huevos Revueltos",          prices:[14000,28000,28000] },
+      { name:"Classic Pancakes",             name_es:"Hotcakes Clásicos",         prices:[24000,48000,72000] },
+      { name:"Fruit Bowl with Greek Yogurt", name_es:"Bowl de Frutas con Yogurt", prices:[100000,140000,200000] },
+    ]},
+    { label:"Proteínas", items:[
+      { name:"Bacon",              name_es:"Tocino",                prices:[24000,44000,88000] },
+      { name:"Sausages",           name_es:"Salchichas",            prices:[12000,32000,64000] },
+      { name:"Chorizo",            name_es:"Chorizo",               prices:[24000,28000,56000] },
+      { name:"Pork or Turkey Ham", name_es:"Jamón de Cerdo o Pavo", prices:[16000,32000,64000] },
+    ]},
+    { label:"Acompañamientos", items:[
+      { name:"Greek Yogurt",          name_es:"Yogur Griego",                prices:[28000,56000,96000] },
+      { name:"Granola & Nuts",        name_es:"Granola",                     prices:[32000,32000,64000] },
+      { name:"Bread",                 name_es:"Pan",                         prices:[12000,12000,24000] },
+      { name:"Spread Station",        name_es:"Estación de Untables",        prices:[40000,40000,68000] },
+      { name:"Fresh Seasonal Fruits", name_es:"Frutas Frescas de Temporada", prices:[52000,52000,100000] },
+    ]},
+    { label:"Bebidas", items:[
+      { name:"American Coffee",    name_es:"Café Americano",     prices:[44000,44000,44000] },
+      { name:"Fresh Orange Juice", name_es:"Jugo de Naranja",    prices:[32000,32000,40000] },
+      { name:"Milk",               name_es:"Leche",              prices:[24000,24000,80000] },
+      { name:"Almond Milk",        name_es:"Leche de Almendras", prices:[40000,40000,80000] },
+    ]},
+  ]},
+  { id:"healthy", label:"Saludable / Vegano", fullPrice:[400000,550000,870000], sections:[
+    { label:"Platos", items:[
+      { name:"Whole Wheat Toast with Avocado",       name_es:"Tostadas Integrales con Aguacate",           prices:[34000,50000,76000] },
+      { name:"Grilled Arepa with Guacamole",         name_es:"Arepa Asada con Guacamole",                  prices:[50000,61000,94000] },
+      { name:"Egg White Omelette with Vegetables",   name_es:"Omelette de Claras con Vegetales",           prices:[36000,50000,80000] },
+      { name:"Falafel with Tortilla",                name_es:"Falafel con Tortilla",                       prices:[65000,120000,180000] },
+      { name:"Oat & Banana Pancakes",                name_es:"Pancakes de Avena y Banana",                 prices:[42000,50000,59000] },
+      { name:"Fruit Smoothie Bowl",                  name_es:"Smoothie Bowl de Fruta",                     prices:[89000,108500,240000] },
+      { name:"Granola with Nuts & Almond Milk",      name_es:"Granola con Frutos Secos y Leche de Almendra", prices:[61000,122000,160000] },
+      { name:"Chickpea Salad with Cucumber & Herbs", name_es:"Ensalada de Garbanzos con Pepino y Hierbas", prices:[25000,35000,50000] },
+      { name:"Protein Bars",  name_es:"Barras de Proteína", prices:[12000,12000,12000] },
+      { name:"Granola Bars",  name_es:"Barras de Granola",  prices:[15000,15000,15000] },
+    ]},
+  ]},
+];
 
+function MenuAdminPanel() {
   const [overrides, setOverrides] = useState({});
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
   const [saved, setSaved]         = useState(false);
-  const [activeCat, setActiveCat] = useState(ALL_CATS[0]?.id || "");
+  const [activeCat, setActiveCat] = useState(DRINK_CATEGORIES_DEFAULT[0]?.id || "");
 
   useEffect(() => {
     fetch(`${MENU_GAS}?action=getMenuConfig`)
@@ -7526,39 +7586,56 @@ function MenuAdminPanel() {
     setSaving(false);
   };
 
-  const cat = ALL_CATS.find(c => c.id === activeCat) || ALL_CATS[0];
+  const isBf    = activeCat.startsWith("bf:");
+  const bfMenu  = isBf ? BREAKFAST_ADMIN.find(m => `bf:${m.id}` === activeCat) : null;
+  const cat     = isBf ? null : (
+    DRINK_CATEGORIES_DEFAULT.find(c => c.id === activeCat) ||
+    GROCERY_CATEGORIES_DEFAULT.find(c => c.id === activeCat) ||
+    DRINK_CATEGORIES_DEFAULT[0]
+  );
+  const isDrink = !isBf && DRINK_CATEGORIES_DEFAULT.some(c => c.id === activeCat);
+
+  const TIER_LABELS = ["1-5 pax", "6-10 pax", "11+ pax"];
 
   if (loading) return (
     <div style={{ padding: 40, textAlign: "center", color: "#9ca3af", fontSize: 13 }}>Cargando menú…</div>
   );
 
+  const sideBtn = (id, label) => (
+    <button key={id} onClick={() => setActiveCat(id)}
+      style={{ width: "100%", textAlign: "left", padding: "6px 14px", fontSize: 12,
+        background: activeCat === id ? "#fef3c7" : "none",
+        color: activeCat === id ? "#92400e" : "#374151",
+        border: "none", cursor: "pointer", fontWeight: activeCat === id ? 600 : 400 }}>
+      {label}
+    </button>
+  );
+
   return (
     <div style={{ display: "flex", gap: 0, height: "calc(100vh - 130px)", overflow: "hidden", background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb" }}>
 
-      {/* Left sidebar — category list */}
+      {/* Left sidebar */}
       <div style={{ width: 200, flexShrink: 0, borderRight: "1px solid #f3f4f6", overflowY: "auto", padding: "8px 0" }}>
         <div style={{ padding: "10px 14px 6px", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>🍹 Bebidas</div>
-        {DRINK_CATEGORIES_DEFAULT.map(c => (
-          <button key={c.id} onClick={() => setActiveCat(c.id)}
-            style={{ width: "100%", textAlign: "left", padding: "6px 14px", fontSize: 12, background: activeCat === c.id ? "#fef3c7" : "none", color: activeCat === c.id ? "#92400e" : "#374151", border: "none", cursor: "pointer", fontWeight: activeCat === c.id ? 600 : 400 }}>
-            {c.label}
-          </button>
-        ))}
+        {DRINK_CATEGORIES_DEFAULT.map(c => sideBtn(c.id, c.label))}
         <div style={{ padding: "10px 14px 6px", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>🛒 Despensa</div>
-        {GROCERY_CATEGORIES_DEFAULT.map(c => (
-          <button key={c.id} onClick={() => setActiveCat(c.id)}
-            style={{ width: "100%", textAlign: "left", padding: "6px 14px", fontSize: 12, background: activeCat === c.id ? "#fef3c7" : "none", color: activeCat === c.id ? "#92400e" : "#374151", border: "none", cursor: "pointer", fontWeight: activeCat === c.id ? 600 : 400 }}>
-            {c.label}
-          </button>
-        ))}
+        {GROCERY_CATEGORIES_DEFAULT.map(c => sideBtn(c.id, c.label))}
+        <div style={{ padding: "10px 14px 6px", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>☕ Desayunos</div>
+        {BREAKFAST_ADMIN.map(m => sideBtn(`bf:${m.id}`, m.label))}
       </div>
 
-      {/* Main area — items in selected category */}
+      {/* Main area */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ padding: "12px 20px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#111" }}>{cat?.label}</span>
-            <span style={{ fontSize: 11, color: "#9ca3af", marginLeft: 8 }}>{cat?.items?.length} items</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#111" }}>
+              {isBf && bfMenu ? bfMenu.label : cat?.label}
+            </span>
+            <span style={{ fontSize: 11, color: "#9ca3af", marginLeft: 8 }}>
+              {isBf && bfMenu
+                ? `${bfMenu.sections.flatMap(s => s.items).length} items`
+                : `${cat?.items?.length} items`}
+            </span>
           </div>
           <button onClick={handleSave} disabled={saving}
             style={{ background: saved ? "#dcfce7" : "#111827", color: saved ? "#15803d" : "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}>
@@ -7566,61 +7643,125 @@ function MenuAdminPanel() {
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
-          {(cat?.items || []).map(item => {
-            const ov = overrides[item.name] || {};
-            const currentImg = ov.img !== undefined ? ov.img : item.img;
-            const currentPrice = ov.priceCOP !== undefined ? ov.priceCOP : item.priceCOP;
-            const isDrink = DRINK_CATEGORIES_DEFAULT.some(c => c.items.some(i => i.name === item.name));
+        {/* Breakfast editor */}
+        {isBf && bfMenu ? (
+          <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
 
-            return (
-              <div key={item.name} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#fafafa", borderRadius: 10, padding: "12px 14px", border: "1px solid #f0f0f0" }}>
-                {/* Photo preview */}
-                <div style={{ width: 64, height: 64, flexShrink: 0, borderRadius: 8, overflow: "hidden", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>
-                  {currentImg ? (
-                    <img src={currentImg} alt={item.name}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      onError={e => { e.target.style.display = "none"; }}
-                    />
-                  ) : null}
-                  {!currentImg && <span>{item.emoji || "🍽️"}</span>}
-                </div>
-
-                {/* Fields */}
-                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>{item.name}</div>
-                  {item.name_en && item.name_en !== item.name && (
-                    <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_en || item.name_es}</div>
-                  )}
-                  {item.name_es && (
-                    <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_es}</div>
-                  )}
-
-                  <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>URL de foto</label>
-                  <input
-                    value={currentImg}
-                    onChange={e => patch(item.name, "img", e.target.value)}
-                    placeholder="https://…"
-                    style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }}
-                  />
-
-                  {isDrink && (
-                    <>
-                      <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Precio (COP)</label>
-                      <input
-                        type="number"
-                        value={currentPrice || ""}
-                        onChange={e => patch(item.name, "priceCOP", parseInt(e.target.value) || 0)}
-                        placeholder="0"
-                        style={{ width: 160, border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }}
+            {/* Full-menu price row */}
+            <div style={{ background: "#fafafa", borderRadius: 10, padding: "12px 14px", border: "1px solid #f0f0f0" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 8 }}>💰 Precio Menú Completo</div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                {TIER_LABELS.map((label, pi) => {
+                  const key = `bf:${bfMenu.id}:_full`;
+                  const ov  = overrides[key] || {};
+                  const field = `p${pi}`;
+                  const val = ov[field] !== undefined ? ov[field] : bfMenu.fullPrice[pi];
+                  return (
+                    <label key={pi} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                      <span style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>{label}</span>
+                      <input type="number" value={val || ""}
+                        onChange={e => patch(key, field, parseInt(e.target.value) || 0)}
+                        style={{ width: 120, border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }}
                       />
-                    </>
-                  )}
-                </div>
+                    </label>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </div>
+
+            {/* Items by section */}
+            {bfMenu.sections.map((sec, si) => (
+              <div key={si}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", padding: "6px 0 4px" }}>
+                  {sec.label}
+                </div>
+                {sec.items.map(item => {
+                  const key = `bf:${bfMenu.id}:${item.name}`;
+                  const ov  = overrides[key] || {};
+                  return (
+                    <div key={item.name} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#fafafa", borderRadius: 10, padding: "10px 14px", border: "1px solid #f0f0f0", marginBottom: 6 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>{item.name}</div>
+                        {item.name_es && item.name_es !== item.name && (
+                          <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6 }}>{item.name_es}</div>
+                        )}
+                        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
+                          {TIER_LABELS.map((label, pi) => {
+                            const field = `p${pi}`;
+                            const val   = ov[field] !== undefined ? ov[field] : item.prices[pi];
+                            return (
+                              <label key={pi} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                                <span style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>{label}</span>
+                                <input type="number" value={val || ""}
+                                  onChange={e => patch(key, field, parseInt(e.target.value) || 0)}
+                                  style={{ width: 110, border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }}
+                                />
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Drinks / Grocery editor */
+          <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+            {(cat?.items || []).map(item => {
+              const ov = overrides[item.name] || {};
+              const currentImg   = ov.img      !== undefined ? ov.img      : item.img;
+              const currentPrice = ov.priceCOP !== undefined ? ov.priceCOP : item.priceCOP;
+
+              return (
+                <div key={item.name} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#fafafa", borderRadius: 10, padding: "12px 14px", border: "1px solid #f0f0f0" }}>
+                  <div style={{ width: 64, height: 64, flexShrink: 0, borderRadius: 8, overflow: "hidden", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>
+                    {currentImg ? (
+                      <img src={currentImg} alt={item.name}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        onError={e => { e.target.style.display = "none"; }}
+                      />
+                    ) : null}
+                    {!currentImg && <span>{item.emoji || "🍽️"}</span>}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>{item.name}</div>
+                    {item.name_en && item.name_en !== item.name && (
+                      <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_en || item.name_es}</div>
+                    )}
+                    {item.name_es && (
+                      <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_es}</div>
+                    )}
+
+                    <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>URL de foto</label>
+                    <input
+                      value={currentImg}
+                      onChange={e => patch(item.name, "img", e.target.value)}
+                      placeholder="https://…"
+                      style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }}
+                    />
+
+                    {isDrink && (
+                      <>
+                        <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Precio (COP)</label>
+                        <input
+                          type="number"
+                          value={currentPrice || ""}
+                          onChange={e => patch(item.name, "priceCOP", parseInt(e.target.value) || 0)}
+                          placeholder="0"
+                          style={{ width: 160, border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }}
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
