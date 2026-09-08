@@ -2925,22 +2925,10 @@ function Modal({ title, children, footer, onClose, maxWidth = "max-w-3xl" }) {
    ========================================= */
 
 function SummaryModal({ kickoff, onClose }) {
-  const [copiedMsg, setCopiedMsg] = React.useState(false);
   if (!kickoff) return null;
 
   const lang = kickoff.lang || "en";
   const ct   = kickoff.clientType || 1;
-  const isEs = lang === "es";
-  const name = (kickoff.guestName || "").split(" ")[0] || (isEs ? "viajero" : "traveler");
-  const link = buildOnboardLink(kickoff, ct, lang);
-  const quizMsg = isEs
-    ? `Hola ${name} 👋 Bienvenido/a a Two Travel. Aquí tienes tu acceso personalizado — en este link vas a encontrar la bienvenida a tu viaje, un cuestionario rápido y luego el catálogo con todas las experiencias disponibles para ti:\n\n${link}`
-    : `Hi ${name} 👋 Welcome to Two Travel! Here's your personalized access — this link takes you through your trip welcome, a quick questionnaire, and then the full catalog of experiences available for you:\n\n${link}`;
-
-  const handleCopyMsg = async () => {
-    try { await navigator.clipboard.writeText(quizMsg); } catch { prompt("Copia este mensaje:", quizMsg); }
-    setCopiedMsg(true); setTimeout(() => setCopiedMsg(false), 2000);
-  };
 
   return (
     <Modal
@@ -8210,7 +8198,7 @@ const loadKickoffs = async () => {
     🗓 Calendarios
   </a>
 
-  {currentUser?.role !== "junior" && (
+  {["admin","concierge"].includes(currentUser?.role) && (
     <button
       type="button"
       onClick={() => setShowMenuAdmin(m => !m)}

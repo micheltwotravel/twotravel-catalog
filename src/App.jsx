@@ -868,7 +868,7 @@ function juniorListForCity(cityCode) {
   if (c.includes("ctg") || c.includes("cartagena")) return JUNIOR_CONCIERGES_BY_CITY.cartagena;
   return JUNIOR_CONCIERGES_BY_CITY.default;
 }
-const CITY_LABELS_D = { cartagena:"Cartagena", medellin:"Medellín", bogota:"Bogotá", barranquilla:"Barranquilla", santamarta:"Santa Marta" };
+const CITY_LABELS_D = { cartagena:"Cartagena", medellin:"Medellín", bogota:"Bogotá", barranquilla:"Barranquilla", santamarta:"Santa Marta", cdmx:"Mexico City", "mexico city":"Mexico City", tulum:"Tulum", "los cabos":"Los Cabos", cabos:"Los Cabos" };
 
 function cityLabel(code) {
   if (!code) return "";
@@ -1420,6 +1420,9 @@ function ClientesTable({ kickoffs, loading }) {
     if (c === "bog" || c === "bogota" || c === "bogotá") return "bogota";
     if (c === "baq" || c === "barranquilla") return "barranquilla";
     if (c === "smr" || c === "santamarta" || c === "santa marta") return "santamarta";
+    if (c === "cdmx" || c === "mexico city" || c === "ciudad de mexico" || c === "ciudad de méxico") return "cdmx";
+    if (c === "tul" || c === "tulum") return "tulum";
+    if (c === "los cabos" || c === "cabos" || c === "loscabos") return "los cabos";
     return c;
   }
   const cities = ["all", ...Array.from(new Set(rows.map(r => normCity(r._rowCity)).filter(Boolean)))];
@@ -1481,28 +1484,27 @@ function ClientesTable({ kickoffs, loading }) {
                 <th style={thStyle}>Cliente</th>
                 <th style={thStyle}>Ciudad</th>
                 <th style={thStyle}>Fechas</th>
-                <th style={thStyle}>Check-in/out</th>
-                <th style={thStyle}>Casa</th>
                 <th style={thStyle}>Pax</th>
-                <th style={thStyle}>Concierge</th>
-                <th style={thStyle}>Junior</th>
-                <th style={thStyle}>🛂 Pasaporte</th>
-                <th style={thStyle}>🥗 Dieta</th>
-                <th style={{ ...thStyle, minWidth:160 }}>📝 Notas</th>
+                <th style={thStyle}>Sr Concierge</th>
+                <th style={thStyle}>Jr Concierge</th>
+                <th style={thStyle}>Casa</th>
+                <th style={thStyle}>Check-in/out</th>
+                <th style={thStyle}>🛥 Boat Day</th>
                 <th style={thStyle}>Itinerario</th>
                 <th style={thStyle}>Reuniones</th>
-                <th style={thStyle}>Último pedido</th>
-                <th style={thStyle}>🍹 Bebidas</th>
-                <th style={thStyle}>🛒 Comida</th>
-                <th style={thStyle}>☕ Desayuno</th>
-                <th style={thStyle}>✅ Tareas</th>
-                <th style={thStyle}>🛥 Boat Day</th>
+                <th style={{ ...thStyle, minWidth:160 }}>📝 Notas</th>
+                <th style={thStyle}>🛂 Pasaporte</th>
+                <th style={thStyle}>🥗 Dieta</th>
                 <th style={thStyle}>🛒 Grocery $</th>
+                <th style={thStyle}>☕ Desayuno</th>
+                <th style={thStyle}>🍹 Bebidas</th>
+                <th style={thStyle}>Compras</th>
+                <th style={thStyle}>Último pedido</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={18} style={{ ...tdStyle, textAlign:"center", color:"#9ca3af", padding:32 }}>Sin clientes para este filtro.</td></tr>
+                <tr><td colSpan={19} style={{ ...tdStyle, textAlign:"center", color:"#9ca3af", padding:32 }}>Sin clientes para este filtro.</td></tr>
               )}
               {filtered.map((r, i) => {
                 const { drinkSummary, grocerySummary, breakfastSummary, breakfastAt } = orderStatus(r);
@@ -1511,6 +1513,7 @@ function ClientesTable({ kickoffs, loading }) {
                 const isSaving = (f) => saving[r.id + f];
                 return (
                   <tr key={r.id + (r._isCity2 ? "_2" : "")} style={{ background: i%2===0?"#fff":"#fafafa" }}>
+                    {/* 1. Cliente */}
                     <td style={tdStyle}>
                       <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                         <div>
@@ -1519,24 +1522,21 @@ function ClientesTable({ kickoffs, loading }) {
                         </div>
                       </div>
                     </td>
+                    {/* 2. Ciudad */}
                     <td style={tdStyle}>
                       <span style={{ fontSize:11, padding:"2px 8px", borderRadius:99, background:"#f3f4f6", color:"#374151", fontWeight:500 }}>
                         {cityLabel(r._rowCity) || "—"}
                       </span>
                     </td>
+                    {/* 3. Fechas */}
                     <td style={{ ...tdStyle, whiteSpace:"nowrap", color:"#6b7280" }}>
                       {fmtDateShort(r._rowArrival)}{r._rowDeparture ? ` → ${fmtDateShort(r._rowDeparture)}` : ""}
                     </td>
-                    <td style={{ ...tdStyle, whiteSpace:"nowrap", color:"#6b7280", fontSize:11 }}>
-                      {r.checkIn ? <div>In: {r.checkIn}</div> : null}
-                      {r.checkOut ? <div>Out: {r.checkOut}</div> : null}
-                      {!r.checkIn && !r.checkOut ? <span style={{ color:"#d1d5db" }}>—</span> : null}
-                    </td>
-                    <td style={{ ...tdStyle, fontSize:11, color:"#374151", maxWidth:120 }}>
-                      {r._isCity2 ? (r.accommodationName2 || <span style={{ color:"#d1d5db" }}>—</span>) : (r.accommodationName || <span style={{ color:"#d1d5db" }}>—</span>)}
-                    </td>
+                    {/* 4. Pax */}
                     <td style={{ ...tdStyle, textAlign:"center" }}>{r.pax || r.groupSize || "—"}</td>
+                    {/* 5. Sr Concierge */}
                     <td style={{ ...tdStyle, color:"#374151" }}>{r.assignedConciergeName || r.concierge || "—"}</td>
+                    {/* 6. Jr Concierge */}
                     <td style={tdStyle}>
                       {(r.juniorConcierge || r.juniorBoat)
                         ? <div style={{ fontSize:11, color:"#374151", lineHeight:1.5 }}>
@@ -1545,6 +1545,47 @@ function ClientesTable({ kickoffs, loading }) {
                           </div>
                         : <span style={{ fontSize:11, color:"#d1d5db" }}>—</span>}
                     </td>
+                    {/* 7. Casa */}
+                    <td style={{ ...tdStyle, fontSize:11, color:"#374151", maxWidth:120 }}>
+                      {r._isCity2 ? (r.accommodationName2 || <span style={{ color:"#d1d5db" }}>—</span>) : (r.accommodationName || <span style={{ color:"#d1d5db" }}>—</span>)}
+                    </td>
+                    {/* 8. Check-in/out */}
+                    <td style={{ ...tdStyle, whiteSpace:"nowrap", color:"#6b7280", fontSize:11 }}>
+                      {r.checkIn ? <div>In: {r.checkIn}</div> : null}
+                      {r.checkOut ? <div>Out: {r.checkOut}</div> : null}
+                      {!r.checkIn && !r.checkOut ? <span style={{ color:"#d1d5db" }}>—</span> : null}
+                    </td>
+                    {/* 9. Boat Day */}
+                    <td style={tdStyle}>
+                      {normCity(r._rowCity) === "cartagena"
+                        ? <BoatDayCell kickoffId={r.id} boatDay={r.boatDay||""} boatName={r.boatName||""} boatProvider={r.boatProvider||""} dock={r.dock||""} boatNotes={r.boatNotes||""} arrivalDate={r.arrivalDate||""} departureDate={r.departureDate||""} onSave={saveField} />
+                        : <span style={{ color:"#d1d5db", fontSize:11 }}>—</span>}
+                    </td>
+                    {/* 10. Itinerario */}
+                    <td style={tdStyle}>
+                      <a href={itinLink} target="_blank" rel="noreferrer"
+                        style={{ fontSize:11, color:"#2563eb", textDecoration:"none", fontWeight:500 }}>
+                        Ver →
+                      </a>
+                    </td>
+                    {/* 11. Reuniones */}
+                    <td style={tdStyle}>
+                      <a href={reunLink} target="_blank" rel="noreferrer"
+                        style={{ fontSize:11, color:"#7c3aed", textDecoration:"none", fontWeight:500 }}>
+                        Reuniones →
+                      </a>
+                    </td>
+                    {/* 12. Notas */}
+                    <td style={tdStyle}>
+                      <textarea
+                        defaultValue={r.internalNotes || ""}
+                        onBlur={e => { const v = e.target.value.trim(); if (v !== (r.internalNotes||"").trim()) saveField(r.id, "internalNotes", v); }}
+                        placeholder="Notas…"
+                        rows={2}
+                        style={{ width:"100%", fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 6px", resize:"vertical", background:"#fafafa", color:"#374151", lineHeight:1.4, boxSizing:"border-box" }}
+                      />
+                    </td>
+                    {/* 13. Pasaporte */}
                     <td style={{ ...tdStyle, textAlign:"center" }}>
                       {(() => {
                         let ciResps = [];
@@ -1565,6 +1606,7 @@ function ClientesTable({ kickoffs, loading }) {
                           : <span style={{ color:"#d1d5db" }}>—</span>;
                       })()}
                     </td>
+                    {/* 14. Dieta */}
                     <td style={{ ...tdStyle, textAlign:"center" }}>
                       {(() => {
                         let ciResps = [];
@@ -1586,27 +1628,24 @@ function ClientesTable({ kickoffs, loading }) {
                           : <span style={{ color:"#d1d5db" }}>—</span>;
                       })()}
                     </td>
+                    {/* 15. Grocery $ */}
                     <td style={tdStyle}>
-                      <textarea
-                        defaultValue={r.internalNotes || ""}
-                        onBlur={e => { const v = e.target.value.trim(); if (v !== (r.internalNotes||"").trim()) saveField(r.id, "internalNotes", v); }}
-                        placeholder="Notas…"
-                        rows={2}
-                        style={{ width:"100%", fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 6px", resize:"vertical", background:"#fafafa", color:"#374151", lineHeight:1.4, boxSizing:"border-box" }}
+                      <input
+                        type="text"
+                        defaultValue={r.groceryBudget || ""}
+                        placeholder="$50–100"
+                        onBlur={e => { if (e.target.value !== (r.groceryBudget||"")) saveField(r.id, "groceryBudget", e.target.value); }}
+                        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 8px", width:80, background:"#fff", boxSizing:"border-box" }}
                       />
+                      {isSaving("groceryBudget") && <span style={{ fontSize:9, color:"#9ca3af" }}>guardando…</span>}
                     </td>
-                    <td style={tdStyle}>
-                      <a href={itinLink} target="_blank" rel="noreferrer"
-                        style={{ fontSize:11, color:"#2563eb", textDecoration:"none", fontWeight:500 }}>
-                        Ver →
-                      </a>
-                    </td>
-                    <td style={tdStyle}>
-                      <a href={reunLink} target="_blank" rel="noreferrer"
-                        style={{ fontSize:11, color:"#7c3aed", textDecoration:"none", fontWeight:500 }}>
-                        Reuniones →
-                      </a>
-                    </td>
+                    {/* 16. Desayuno */}
+                    <td style={tdStyle}><OrderCell summary={breakfastSummary} at={breakfastAt} fullText={r.breakfastOrder} icon="☕" /></td>
+                    {/* 17. Bebidas */}
+                    <td style={tdStyle}><OrderCell summary={drinkSummary} at={r.drinkOrderAt} fullText={r.drinkOrder} icon="🍹" /></td>
+                    {/* 18. Compras */}
+                    <td style={tdStyle}><OrderCell summary={grocerySummary} at={r.groceryOrderAt} fullText={r.groceryOrder} icon="🛒" /></td>
+                    {/* 19. Último pedido */}
                     <td style={tdStyle}>{(() => {
                       const lo = lastClientOrder(r);
                       if (!lo) return <span style={{ color:"#d1d5db" }}>—</span>;
@@ -1621,33 +1660,6 @@ function ClientesTable({ kickoffs, loading }) {
                         </div>
                       );
                     })()}</td>
-                    <td style={tdStyle}><OrderCell summary={drinkSummary} at={r.drinkOrderAt} fullText={r.drinkOrder} icon="🍹" /></td>
-                    <td style={tdStyle}><OrderCell summary={grocerySummary} at={r.groceryOrderAt} fullText={r.groceryOrder} icon="🛒" /></td>
-                    <td style={tdStyle}><OrderCell summary={breakfastSummary} at={breakfastAt} fullText={r.breakfastOrder} icon="☕" /></td>
-                    <td style={{ ...tdStyle, textAlign:"center" }}>
-                      <button
-                        onClick={() => generateTasksFromKickoff(r)}
-                        disabled={generatingTasks[r.id]}
-                        title="Generar tareas desde el carrito"
-                        style={{ fontSize:11, padding:"3px 8px", borderRadius:6, border:"1px solid #e5e7eb", background: generatingTasks[r.id] ? "#f3f4f6" : "#fff", cursor:"pointer", color:"#374151" }}>
-                        {generatingTasks[r.id] ? "…" : "Generar"}
-                      </button>
-                    </td>
-                    <td style={tdStyle}>
-                      {normCity(r._rowCity) === "cartagena"
-                        ? <BoatDayCell kickoffId={r.id} boatDay={r.boatDay||""} boatName={r.boatName||""} boatProvider={r.boatProvider||""} dock={r.dock||""} boatNotes={r.boatNotes||""} arrivalDate={r.arrivalDate||""} departureDate={r.departureDate||""} onSave={saveField} />
-                        : <span style={{ color:"#d1d5db", fontSize:11 }}>—</span>}
-                    </td>
-                    <td style={tdStyle}>
-                      <input
-                        type="text"
-                        defaultValue={r.groceryBudget || ""}
-                        placeholder="$50–100"
-                        onBlur={e => { if (e.target.value !== (r.groceryBudget||"")) saveField(r.id, "groceryBudget", e.target.value); }}
-                        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 8px", width:80, background:"#fff", boxSizing:"border-box" }}
-                      />
-                      {isSaving("groceryBudget") && <span style={{ fontSize:9, color:"#9ca3af" }}>guardando…</span>}
-                    </td>
                   </tr>
                 );
               })}
@@ -2092,8 +2104,6 @@ function UnifiedDashboard({ currentUser, onLogout }) {
         <div style={{display:"flex",gap:6,marginBottom:24,borderBottom:"1px solid var(--border)",paddingBottom:0}}>
           {[
             { id: "clientes", label: "Clientes" },
-            { id: "kpis",     label: "KPIs" },
-            { id: "gestion",  label: "Gestión" },
             { id: "feedback", label: "Feedback" },
           ].map(({ id, label }) => (
             <button key={id} onClick={() => setTab(id)}
@@ -3827,7 +3837,7 @@ function DrinksCatalog() {
     totalLabel:"Estimated total", rateLabel:"Exchange rate",
     sendBtn:"✅ Submit order to concierge", sending:"Sending…",
     editBtn:"✏️ Edit order",
-    successTitle:"Got it! 🥂", successBody:"Your drink order has been sent to your concierge. You can come back anytime to make changes.",
+    successIcon:"🥂", successTitle:"Got it!", successBody:"Your drink order has been sent to your concierge. We'll have everything ready for you.", successNote:"You can come back anytime to make changes.",
   } : {
     brand:"Two Travel", heading:"🍹 Lista de Bebidas",
     instr1:"Por favor usa este recurso para ordenar y presupuestar lo que quieres para tu casa y el bote. Selecciona la cantidad de cada bebida que deseas tener.",
@@ -3839,7 +3849,7 @@ function DrinksCatalog() {
     totalLabel:"Total estimado", rateLabel:"Tasa de cambio",
     sendBtn:"✅ Enviar pedido al concierge", sending:"Enviando…",
     editBtn:"✏️ Editar pedido",
-    successTitle:"¡Listo! 🥂", successBody:"Tu pedido de bebidas fue enviado a tu concierge. Puedes volver cuando quieras para hacer cambios.",
+    successIcon:"🥂", successTitle:"¡Listo!", successBody:"Tu pedido de bebidas fue enviado a tu concierge. Tendremos todo listo para ti.", successNote:"Puedes volver cuando quieras para hacer cambios.",
   };
 
   const itemName = (it) => (lang === "en" && it.name_en) ? it.name_en : it.name;
@@ -3983,10 +3993,11 @@ function DrinksCatalog() {
   );
 
   if (sent) return (
-    <div className="min-h-screen flex flex-col items-center justify-center text-center px-6 gap-6" style={{background:"#1a1814"}}>
-      <div className="text-5xl">🥂</div>
+    <div className="min-h-screen flex flex-col items-center justify-center text-center px-6 gap-4" style={{background:"#1a1814"}}>
+      <div className="text-5xl">{T.successIcon}</div>
       <h1 className="text-2xl font-semibold text-white">{T.successTitle}</h1>
       <p className="text-neutral-400 text-sm max-w-xs">{T.successBody}</p>
+      <p className="text-neutral-500 text-xs max-w-xs">{T.successNote}</p>
       <button
         onClick={() => setSent(false)}
         className="mt-4 px-6 py-2.5 rounded-xl bg-white/10 text-white text-sm hover:bg-white/20"
@@ -4384,10 +4395,10 @@ function GroceryCatalog() {
   );
 
   if (sent) return (
-    <div className="min-h-screen flex flex-col items-center justify-center text-center px-6 gap-6" style={{background:"#1a1814"}}>
+    <div className="min-h-screen flex flex-col items-center justify-center text-center px-6 gap-4" style={{background:"#1a1814"}}>
       <div className="text-5xl">🛒</div>
-      <h1 className="text-2xl font-semibold text-white">{lang==="en" ? "Got it!" : "¡Recibido!"}</h1>
-      <p className="text-neutral-400 text-sm max-w-xs">{lang==="en" ? "Your grocery list has been sent to your concierge." : "Tu lista de mercado fue enviada al concierge."}</p>
+      <h1 className="text-2xl font-semibold text-white">{lang==="en" ? "Got it!" : "¡Listo!"}</h1>
+      <p className="text-neutral-400 text-sm max-w-xs">{lang==="en" ? "Your grocery list has been sent to your concierge. We'll have everything ready for you." : "Tu lista de mercado fue enviada al concierge. Tendremos todo listo para ti."}</p>
       <p className="text-neutral-500 text-xs">{lang==="en" ? "You can come back anytime to make changes." : "Puedes volver cuando quieras para hacer cambios."}</p>
       <button onClick={()=>setSent(false)} className="mt-4 px-6 py-2.5 rounded-xl bg-white/10 text-white text-sm hover:bg-white/20">
         {lang==="en" ? "✏️ Edit list" : "✏️ Editar lista"}
@@ -5282,25 +5293,23 @@ function BreakfastCatalog() {
   );
 
   if (sent) return (
-    <div style={{minHeight:"100vh",background:"#f7f4ef",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Jost',sans-serif"}}>
-      <div style={{textAlign:"center",maxWidth:400,padding:"40px 24px"}}>
-        <div style={{width:48,height:2,background:"#9a7d52",margin:"0 auto 32px"}}/>
-        <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:500,color:"#1a1814",marginBottom:12}}>
-          {en ? "Got it! ☕" : "¡Listo! ☕"}
-        </p>
-        <p style={{fontSize:13,color:"#7a7570",lineHeight:1.6}}>
-          {en
-            ? "Your breakfast order has been sent to your concierge. We'll have everything ready for you."
-            : "Tu pedido de desayuno fue enviado a tu concierge. Tendremos todo listo para ti."}
-        </p>
-        <p style={{fontSize:12,color:"#9a9590",marginTop:6,lineHeight:1.6}}>
-          {en ? "You can come back anytime to make changes." : "Puedes volver cuando quieras para hacer cambios."}
-        </p>
-        <button onClick={() => setSent(false)}
-          style={{marginTop:32,fontSize:11,color:"#9a7d52",background:"none",border:"none",cursor:"pointer",letterSpacing:".1em",textTransform:"uppercase"}}>
-          {en ? "Edit order" : "Editar pedido"}
-        </button>
-      </div>
+    <div style={{minHeight:"100vh",background:"#1a1814",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'Jost',sans-serif",textAlign:"center",padding:"0 24px",gap:16}}>
+      <div style={{fontSize:48}}>☕</div>
+      <p style={{fontSize:24,fontWeight:600,color:"#fff",margin:0}}>
+        {en ? "Got it!" : "¡Listo!"}
+      </p>
+      <p style={{fontSize:14,color:"rgba(255,255,255,.6)",lineHeight:1.6,maxWidth:300,margin:0}}>
+        {en
+          ? "Your breakfast order has been sent to your concierge. We'll have everything ready for you."
+          : "Tu pedido de desayuno fue enviado a tu concierge. Tendremos todo listo para ti."}
+      </p>
+      <p style={{fontSize:12,color:"rgba(255,255,255,.4)",margin:0}}>
+        {en ? "You can come back anytime to make changes." : "Puedes volver cuando quieras para hacer cambios."}
+      </p>
+      <button onClick={() => setSent(false)}
+        style={{marginTop:16,padding:"10px 24px",fontSize:13,color:"#fff",background:"rgba(255,255,255,.1)",border:"none",borderRadius:12,cursor:"pointer"}}>
+        {en ? "✏️ Edit order" : "✏️ Editar pedido"}
+      </button>
     </div>
   );
 
