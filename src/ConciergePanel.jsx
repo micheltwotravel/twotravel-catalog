@@ -7768,6 +7768,7 @@ export default function ConciergePanel({ onLogout, currentUser }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [conciergeFilter, setConciergeFilter] = useState("all");
+  const [filterCity, setFilterCity] = useState("all");
 
   const [selectedForSummary, setSelectedForSummary] = useState(null);
   const [infoPopup, setInfoPopup] = useState(null); // { title, text } for diet/passport popups
