@@ -15,6 +15,7 @@ const FinanceMovimientos   = React.lazy(() => import("./FinancePanel").then(m =>
 const FinanceCierre        = React.lazy(() => import("./FinancePanel").then(m => ({ default: m.FinanceCierre })));
 const FinanceTemplates     = React.lazy(() => import("./FinancePanel").then(m => ({ default: m.FinanceTemplates })));
 const FinanceReservaciones = React.lazy(() => import("./FinancePanel").then(m => ({ default: m.FinanceReservaciones })));
+const MenuAdminPanel       = React.lazy(() => import("./ConciergePanel").then(m => ({ default: m.MenuAdminPanel })));
 
 function PageLoader() {
   return (
@@ -2105,6 +2106,7 @@ function UnifiedDashboard({ currentUser, onLogout }) {
           {[
             { id: "clientes", label: "Clientes" },
             { id: "feedback", label: "Feedback" },
+            ...( ["admin","concierge"].includes(currentUser?.role) ? [{ id: "menus", label: "🍹 Menús" }] : [] ),
           ].map(({ id, label }) => (
             <button key={id} onClick={() => setTab(id)}
               style={{
@@ -2127,6 +2129,13 @@ function UnifiedDashboard({ currentUser, onLogout }) {
         {/* ══ Clientes tab ══ */}
         {tab === "clientes" && (
           <ClientesTable kickoffs={kickoffs} loading={kLoading} />
+        )}
+
+        {/* ══ Menús tab ══ */}
+        {tab === "menus" && (
+          <Suspense fallback={<PageLoader />}>
+            <MenuAdminPanel />
+          </Suspense>
         )}
 
         {/* ══ KPIs tab ══ */}

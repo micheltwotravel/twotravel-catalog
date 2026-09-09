@@ -7538,7 +7538,7 @@ const BREAKFAST_ADMIN = [
   ]},
 ];
 
-function MenuAdminPanel() {
+export function MenuAdminPanel() {
   const [overrides, setOverrides] = useState({});
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
@@ -7764,8 +7764,6 @@ export default function ConciergePanel({ onLogout, currentUser }) {
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-
-  const [showMenuAdmin, setShowMenuAdmin] = useState(false);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -8198,18 +8196,6 @@ const loadKickoffs = async () => {
     🗓 Calendarios
   </a>
 
-  {["admin","concierge"].includes(currentUser?.role) && (
-    <button
-      type="button"
-      onClick={() => setShowMenuAdmin(m => !m)}
-      className="tt-btn-ghost"
-      title="Editar fotos y precios de bebidas / despensa"
-      style={showMenuAdmin ? { background: "#fef3c7", color: "#92400e" } : {}}
-    >
-      🍹 Menús
-    </button>
-  )}
-
   {currentUser?.email && (() => {
     const slug = currentUser.email.split("@")[0].toLowerCase();
     return (
@@ -8269,8 +8255,7 @@ const loadKickoffs = async () => {
       </header>
 
       <main style={{flex:1,maxWidth:1680,width:"100%",margin:"0 auto",padding:"16px 24px",display:"flex",flexDirection:"column",gap:12}}>
-        {showMenuAdmin && <MenuAdminPanel />}
-        {!showMenuAdmin && <><div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",justifyContent:"space-between"}}>
           <div style={{position:"relative",width:260}}>
             <Search style={{width:14,height:14,color:"var(--text-3)",position:"absolute",left:9,top:"50%",transform:"translateY(-50%)"}} />
             <input
@@ -8817,7 +8802,6 @@ const loadKickoffs = async () => {
             </table>
           </div>
         </div>
-        </>}
       </main>
 
       {selectedForSummary && (
