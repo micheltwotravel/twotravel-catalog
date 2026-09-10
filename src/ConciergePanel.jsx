@@ -7920,7 +7920,7 @@ const loadKickoffs = async () => {
   }, []);
 
   const cityOptions = useMemo(() => {
-    const FULL_TO_CODE = { CARTAGENA:"CTG", MEDELLÍN:"MDE", MEDELLIN:"MDE", "CIUDAD DE MÉXICO":"CDMX", "CIUDAD DE MEXICO":"CDMX", TULUM:"TUL", BOGOTÁ:"BOG", BOGOTA:"BOG", CALI:"CLO" };
+    const FULL_TO_CODE = { CARTAGENA:"CTG", MEDELLÍN:"MDE", MEDELLIN:"MDE", "CIUDAD DE MÉXICO":"CDMX", "CIUDAD DE MEXICO":"CDMX", "MEXICO CITY":"CDMX", CDMX:"CDMX", TULUM:"TUL", BOGOTÁ:"BOG", BOGOTA:"BOG", CALI:"CLO" };
     const seen = new Set();
     kickoffs.forEach(k => {
       String(k.city || "").split(",").map(c => c.trim().toUpperCase()).filter(Boolean).forEach(raw => {
@@ -7978,7 +7978,7 @@ const loadKickoffs = async () => {
         if (statusFilter !== "all" && k.status !== statusFilter) return false;
         if (conciergeFilter !== "all" && !String(k.assignedConcierge || "").split(",").map(s => s.trim()).includes(conciergeFilter)) return false;
         if (filterCity !== "all") {
-          const FULL_TO_CODE = { CARTAGENA:"CTG", MEDELLÍN:"MDE", MEDELLIN:"MDE", "CIUDAD DE MÉXICO":"CDMX", "CIUDAD DE MEXICO":"CDMX", TULUM:"TUL", BOGOTÁ:"BOG", BOGOTA:"BOG", CALI:"CLO" };
+          const FULL_TO_CODE = { CARTAGENA:"CTG", MEDELLÍN:"MDE", MEDELLIN:"MDE", "CIUDAD DE MÉXICO":"CDMX", "CIUDAD DE MEXICO":"CDMX", "MEXICO CITY":"CDMX", CDMX:"CDMX", TULUM:"TUL", BOGOTÁ:"BOG", BOGOTA:"BOG", CALI:"CLO" };
           const codes = String(k.city || "").split(",").map(c => { const u = c.trim().toUpperCase(); return FULL_TO_CODE[u] || u; }).filter(Boolean);
           if (!codes.includes(filterCity)) return false;
         }
@@ -8620,7 +8620,7 @@ const loadKickoffs = async () => {
                     <td>
                       {k.city ? (() => {
                         // Normalize: full names → code, then deduplicate, then display full name
-                        const FULL_TO_CODE = { CARTAGENA:"CTG", MEDELLÍN:"MDE", MEDELLIN:"MDE", "CIUDAD DE MÉXICO":"CDMX", "CIUDAD DE MEXICO":"CDMX", TULUM:"TUL", BOGOTÁ:"BOG", BOGOTA:"BOG", CALI:"CLO" };
+                        const FULL_TO_CODE = { CARTAGENA:"CTG", MEDELLÍN:"MDE", MEDELLIN:"MDE", "CIUDAD DE MÉXICO":"CDMX", "CIUDAD DE MEXICO":"CDMX", "MEXICO CITY":"CDMX", CDMX:"CDMX", TULUM:"TUL", BOGOTÁ:"BOG", BOGOTA:"BOG", CALI:"CLO" };
                         const raw = String(k.city).split(",").map(c => c.trim()).filter(Boolean);
                         const seen = new Set();
                         const codes = raw.map(c => {

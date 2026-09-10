@@ -869,7 +869,7 @@ function juniorListForCity(cityCode) {
   if (c.includes("ctg") || c.includes("cartagena")) return JUNIOR_CONCIERGES_BY_CITY.cartagena;
   return JUNIOR_CONCIERGES_BY_CITY.default;
 }
-const CITY_LABELS_D = { cartagena:"Cartagena", medellin:"Medellín", bogota:"Bogotá", barranquilla:"Barranquilla", santamarta:"Santa Marta", cdmx:"Mexico City", "mexico city":"Mexico City", tulum:"Tulum", "los cabos":"Los Cabos", cabos:"Los Cabos" };
+const CITY_LABELS_D = { cartagena:"Cartagena", medellin:"Medellín", bogota:"Bogotá", barranquilla:"Barranquilla", santamarta:"Santa Marta", cdmx:"Ciudad de México", "mexico city":"Ciudad de México", "ciudad de mexico":"Ciudad de México", "ciudad de méxico":"Ciudad de México", tulum:"Tulum", "los cabos":"Los Cabos", cabos:"Los Cabos" };
 
 function cityLabel(code) {
   if (!code) return "";
