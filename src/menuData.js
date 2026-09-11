@@ -136,18 +136,24 @@ export const GROCERY_CATEGORIES = [
   ]},
 ];
 
-export function applyMenuOverrides(categories, overrides) {
+export function applyMenuOverrides(categories, overrides, type = "drink") {
   if (!overrides || !Object.keys(overrides).length) return categories;
-  return categories.map(cat => ({
+  const result = categories.map(cat => ({
     ...cat,
-    items: cat.items.map(it => {
-      const ov = overrides[it.name];
-      if (!ov) return it;
-      return {
-        ...it,
-        ...(ov.img      !== undefined ? { img:      ov.img      } : {}),
-        ...(ov.priceCOP !== undefined ? { priceCOP: ov.priceCOP } : {}),
-      };
-    }),
+    items: [
+      ...cat.items.map(it => {
+        const ov = overrides[it.name];
+        if (!ov) return it;
+        return {
+          ...it,
+          ...(ov.img      !== undefined ? { img:      ov.img      } : {}),
+          ...(ov.priceCOP !== undefined ? { priceCOP: ov.priceCOP } : {}),
+          ...(ov.name     !== undefined ? { name:     ov.name     } : {}),
+        };
+      }),
+      ...(overrides[`_extra__${cat.id}`] || []),
+    ],
   }));
+  const newCats = overrides[`_newcats__${type}`] || [];
+  return [...result, ...newCats];
 }

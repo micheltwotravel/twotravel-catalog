@@ -7544,6 +7544,8 @@ export function MenuAdminPanel() {
   const [saving, setSaving]       = useState(false);
   const [saved, setSaved]         = useState(false);
   const [activeCat, setActiveCat] = useState(DRINK_CATEGORIES_DEFAULT[0]?.id || "");
+  const [newItemForm, setNewItemForm] = useState(null); // { catId, type, fields: {} }
+  const [newCatForm, setNewCatForm]   = useState(null); // { type: "drink"|"grocery" }
 
   useEffect(() => {
     fetch(`${MENU_GAS}?action=getMenuConfig`)
@@ -7559,6 +7561,56 @@ export function MenuAdminPanel() {
       [name]: { ...(prev[name] || {}), [field]: value },
     }));
     setSaved(false);
+  };
+
+  const addItemToCategory = (catId, type, fields) => {
+    const key = `_extra__${catId}`;
+    const newItem = {
+      name: fields.name.trim(),
+      ...(type === "drink" ? { name_en: fields.name_en || fields.name, priceCOP: parseInt(fields.priceCOP) || 0 } : { name_es: fields.name_es || fields.name }),
+      img: fields.img || "",
+      emoji: fields.emoji || "🍽️",
+      qty: "", note: "",
+    };
+    setOverrides(prev => ({
+      ...prev,
+      [key]: [...(prev[key] || []), newItem],
+    }));
+    setSaved(false);
+    setNewItemForm(null);
+  };
+
+  const removeExtraItem = (catId, idx) => {
+    const key = `_extra__${catId}`;
+    setOverrides(prev => {
+      const arr = [...(prev[key] || [])];
+      arr.splice(idx, 1);
+      return { ...prev, [key]: arr };
+    });
+    setSaved(false);
+  };
+
+  const addCategory = (type, fields) => {
+    const key = `_newcats__${type}`;
+    const id = fields.label.trim().toLowerCase().replace(/[^a-z0-9]/g, "_");
+    const newCat = { id, label: fields.emoji + " " + fields.label, ...(type === "drink" ? { label_en: fields.label_en || fields.label } : { label_es: fields.label_es || fields.label }), items: [] };
+    setOverrides(prev => ({
+      ...prev,
+      [key]: [...(prev[key] || []), newCat],
+    }));
+    setSaved(false);
+    setNewCatForm(null);
+    setActiveCat(id);
+  };
+
+  const removeCustomCategory = (type, catId) => {
+    const key = `_newcats__${type}`;
+    setOverrides(prev => ({
+      ...prev,
+      [key]: (prev[key] || []).filter(c => c.id !== catId),
+    }));
+    setSaved(false);
+    setActiveCat(type === "drink" ? DRINK_CATEGORIES_DEFAULT[0]?.id : GROCERY_CATEGORIES_DEFAULT[0]?.id);
   };
 
   const handleSave = async () => {
@@ -7579,9 +7631,14 @@ export function MenuAdminPanel() {
   const cat     = isBf ? null : (
     DRINK_CATEGORIES_DEFAULT.find(c => c.id === activeCat) ||
     GROCERY_CATEGORIES_DEFAULT.find(c => c.id === activeCat) ||
+    (overrides._newcats__drink    || []).find(c => c.id === activeCat) ||
+    (overrides._newcats__grocery  || []).find(c => c.id === activeCat) ||
     DRINK_CATEGORIES_DEFAULT[0]
   );
-  const isDrink = !isBf && DRINK_CATEGORIES_DEFAULT.some(c => c.id === activeCat);
+  const isDrink = !isBf && (
+    DRINK_CATEGORIES_DEFAULT.some(c => c.id === activeCat) ||
+    (overrides._newcats__drink || []).some(c => c.id === activeCat)
+  );
 
   const TIER_LABELS = ["1-5 pax", "6-10 pax", "11+ pax"];
 
@@ -7604,10 +7661,24 @@ export function MenuAdminPanel() {
 
       {/* Left sidebar */}
       <div style={{ width: 200, flexShrink: 0, borderRight: "1px solid #f3f4f6", overflowY: "auto", padding: "8px 0" }}>
-        <div style={{ padding: "10px 14px 6px", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>🍹 Bebidas</div>
+        <div style={{ padding: "10px 14px 4px", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>🍹 Bebidas</div>
         {DRINK_CATEGORIES_DEFAULT.map(c => sideBtn(c.id, c.label))}
-        <div style={{ padding: "10px 14px 6px", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>🛒 Despensa</div>
+        {(overrides._newcats__drink || []).map(c => (
+          <div key={c.id} style={{ display:"flex", alignItems:"center" }}>
+            {sideBtn(c.id, c.label)}
+            <button onClick={() => removeCustomCategory("drink", c.id)} style={{ flexShrink:0, fontSize:11, color:"#dc2626", background:"none", border:"none", cursor:"pointer", paddingRight:8 }}>✕</button>
+          </div>
+        ))}
+        <button onClick={() => setNewCatForm({ type:"drink" })} style={{ margin:"4px 14px", fontSize:11, color:"#6366f1", background:"none", border:"1px dashed #a5b4fc", borderRadius:6, padding:"3px 10px", cursor:"pointer", width:"calc(100% - 28px)", textAlign:"left" }}>＋ Nueva categoría</button>
+        <div style={{ padding: "10px 14px 4px", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>🛒 Despensa</div>
         {GROCERY_CATEGORIES_DEFAULT.map(c => sideBtn(c.id, c.label))}
+        {(overrides._newcats__grocery || []).map(c => (
+          <div key={c.id} style={{ display:"flex", alignItems:"center" }}>
+            {sideBtn(c.id, c.label)}
+            <button onClick={() => removeCustomCategory("grocery", c.id)} style={{ flexShrink:0, fontSize:11, color:"#dc2626", background:"none", border:"none", cursor:"pointer", paddingRight:8 }}>✕</button>
+          </div>
+        ))}
+        <button onClick={() => setNewCatForm({ type:"grocery" })} style={{ margin:"4px 14px", fontSize:11, color:"#6366f1", background:"none", border:"1px dashed #a5b4fc", borderRadius:6, padding:"3px 10px", cursor:"pointer", width:"calc(100% - 28px)", textAlign:"left" }}>＋ Nueva categoría</button>
         <div style={{ padding: "10px 14px 6px", fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>☕ Desayunos</div>
         {BREAKFAST_ADMIN.map(m => sideBtn(`bf:${m.id}`, m.label))}
       </div>
@@ -7698,59 +7769,121 @@ export function MenuAdminPanel() {
         ) : (
           /* Drinks / Grocery editor */
           <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+            {/* Built-in items */}
             {(cat?.items || []).map(item => {
               const ov = overrides[item.name] || {};
               const currentImg   = ov.img      !== undefined ? ov.img      : item.img;
               const currentPrice = ov.priceCOP !== undefined ? ov.priceCOP : item.priceCOP;
-
               return (
                 <div key={item.name} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#fafafa", borderRadius: 10, padding: "12px 14px", border: "1px solid #f0f0f0" }}>
                   <div style={{ width: 64, height: 64, flexShrink: 0, borderRadius: 8, overflow: "hidden", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>
-                    {currentImg ? (
-                      <img src={currentImg} alt={item.name}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        onError={e => { e.target.style.display = "none"; }}
-                      />
-                    ) : null}
+                    {currentImg ? <img src={currentImg} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.display = "none"; }} /> : null}
                     {!currentImg && <span>{item.emoji || "🍽️"}</span>}
                   </div>
-
                   <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>{item.name}</div>
-                    {item.name_en && item.name_en !== item.name && (
-                      <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_en || item.name_es}</div>
-                    )}
-                    {item.name_es && (
-                      <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_es}</div>
-                    )}
-
+                    {item.name_en && item.name_en !== item.name && <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_en}</div>}
+                    {item.name_es && <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_es}</div>}
                     <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>URL de foto</label>
-                    <input
-                      value={currentImg}
-                      onChange={e => patch(item.name, "img", e.target.value)}
-                      placeholder="https://…"
-                      style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }}
-                    />
-
-                    {isDrink && (
-                      <>
-                        <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Precio (COP)</label>
-                        <input
-                          type="number"
-                          value={currentPrice || ""}
-                          onChange={e => patch(item.name, "priceCOP", parseInt(e.target.value) || 0)}
-                          placeholder="0"
-                          style={{ width: 160, border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }}
-                        />
-                      </>
-                    )}
+                    <input value={currentImg} onChange={e => patch(item.name, "img", e.target.value)} placeholder="https://…" style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }} />
+                    {isDrink && (<>
+                      <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Precio (COP)</label>
+                      <input type="number" value={currentPrice || ""} onChange={e => patch(item.name, "priceCOP", parseInt(e.target.value) || 0)} placeholder="0" style={{ width: 160, border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }} />
+                    </>)}
                   </div>
                 </div>
               );
             })}
+
+            {/* Custom (added) items */}
+            {(overrides[`_extra__${cat?.id}`] || []).map((item, idx) => (
+              <div key={idx} style={{ display: "flex", gap: 14, alignItems: "center", background: "#f0fdf4", borderRadius: 10, padding: "10px 14px", border: "1px solid #bbf7d0" }}>
+                <span style={{ fontSize: 24 }}>{item.emoji || "🍽️"}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>{item.name}</div>
+                  {isDrink && item.priceCOP ? <div style={{ fontSize: 11, color: "#6b7280" }}>COP {item.priceCOP.toLocaleString()}</div> : null}
+                </div>
+                <button onClick={() => removeExtraItem(cat.id, idx)} style={{ color: "#dc2626", background: "none", border: "none", cursor: "pointer", fontSize: 16, flexShrink: 0 }}>✕</button>
+              </div>
+            ))}
+
+            {/* Add item button */}
+            <button
+              onClick={() => setNewItemForm({ catId: cat?.id, type: isDrink ? "drink" : "grocery", fields: {} })}
+              style={{ alignSelf: "flex-start", fontSize: 12, color: "#6366f1", background: "none", border: "1px dashed #a5b4fc", borderRadius: 8, padding: "8px 16px", cursor: "pointer", marginTop: 4 }}>
+              ＋ Agregar item a esta categoría
+            </button>
           </div>
         )}
       </div>
+
+      {/* ── New item modal ── */}
+      {newItemForm && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={() => setNewItemForm(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, boxShadow: "0 16px 48px rgba(0,0,0,.25)", width: "min(480px,96vw)", padding: 24 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: "#111", marginBottom: 16 }}>＋ Nuevo item</h3>
+            {[
+              { key: "name", label: "Nombre (ES)", required: true },
+              { key: newItemForm.type === "drink" ? "name_en" : "name_es", label: newItemForm.type === "drink" ? "Nombre (EN)" : "Nombre alternativo" },
+              { key: "emoji", label: "Emoji (ej: 🥃)" },
+              { key: "img", label: "URL foto" },
+              ...(newItemForm.type === "drink" ? [{ key: "priceCOP", label: "Precio COP", type: "number" }] : []),
+            ].map(f => (
+              <div key={f.key} style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 11, color: "#6b7280", fontWeight: 500, marginBottom: 4 }}>{f.label}{f.required ? " *" : ""}</label>
+                <input
+                  type={f.type || "text"}
+                  value={newItemForm.fields[f.key] || ""}
+                  onChange={e => setNewItemForm(prev => ({ ...prev, fields: { ...prev.fields, [f.key]: e.target.value } }))}
+                  style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, boxSizing: "border-box", background: "#fff" }}
+                />
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+              <button onClick={() => setNewItemForm(null)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", fontSize: 13, cursor: "pointer" }}>Cancelar</button>
+              <button
+                onClick={() => { if (!newItemForm.fields.name?.trim()) return alert("Nombre requerido"); addItemToCategory(newItemForm.catId, newItemForm.type, newItemForm.fields); }}
+                style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#111827", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── New category modal ── */}
+      {newCatForm && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={() => setNewCatForm(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, boxShadow: "0 16px 48px rgba(0,0,0,.25)", width: "min(420px,96vw)", padding: 24 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: "#111", marginBottom: 4 }}>＋ Nueva categoría</h3>
+            <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Sección: {newCatForm.type === "drink" ? "🍹 Bebidas" : "🛒 Despensa"}</p>
+            {[
+              { key: "emoji", label: "Emoji (ej: 🥃)" },
+              { key: "label", label: "Nombre (ES) *" },
+              { key: newCatForm.type === "drink" ? "label_en" : "label_es", label: newCatForm.type === "drink" ? "Nombre (EN)" : "Nombre alternativo" },
+            ].map(f => (
+              <div key={f.key} style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 11, color: "#6b7280", fontWeight: 500, marginBottom: 4 }}>{f.label}</label>
+                <input
+                  value={newCatForm[f.key] || ""}
+                  onChange={e => setNewCatForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                  style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, boxSizing: "border-box", background: "#fff" }}
+                />
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+              <button onClick={() => setNewCatForm(null)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", fontSize: 13, cursor: "pointer" }}>Cancelar</button>
+              <button
+                onClick={() => { if (!newCatForm.label?.trim()) return alert("Nombre requerido"); addCategory(newCatForm.type, newCatForm); }}
+                style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#111827", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Crear categoría
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

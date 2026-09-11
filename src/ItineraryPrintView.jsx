@@ -1112,7 +1112,7 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
             borderRadius: 10, padding: "11px 16px", marginBottom: 10,
           }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: "#1d4ed8" }}>
-              📅 {isEs ? "Agendar Kickoff Call" : "Schedule Kickoff Call"}
+              📅 {isEs ? "Agendar reunión" : "Schedule a meeting"}
             </div>
             <span style={{ fontSize: 16, color: "#1d4ed8" }}>→</span>
           </a>

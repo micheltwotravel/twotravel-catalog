@@ -1398,8 +1398,8 @@ function ClientesTable({ kickoffs, loading }) {
   const CITY_BG   = { cartagena:"#dbeafe", medellin:"#dcfce7", cdmx:"#ffedd5", tulum:"#ccfbf1", "los cabos":"#fce7f3", bogota:"#f3e8ff" };
   const CITY_FG   = { cartagena:"#1d4ed8", medellin:"#16a34a", cdmx:"#ea580c", tulum:"#0f766e", "los cabos":"#9d174d", bogota:"#7c3aed" };
 
-  const thStyle = { fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", color:"#6b7280", padding:"8px 10px", background:"#f9fafb", borderBottom:"1px solid #e5e7eb", whiteSpace:"nowrap", textAlign:"left" };
-  const tdStyle = { fontSize:12, padding:"8px 10px", borderBottom:"1px solid #f3f4f6", verticalAlign:"middle" };
+  const thStyle = { fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", color:"#6b7280", padding:"5px 7px", background:"#f9fafb", borderBottom:"1px solid #e5e7eb", whiteSpace:"nowrap", textAlign:"left" };
+  const tdStyle = { fontSize:11, padding:"5px 7px", borderBottom:"1px solid #f3f4f6", verticalAlign:"middle" };
 
   const pillStyle = (active, norm) => ({
     fontSize:11, padding:"4px 10px", borderRadius:99, border:"1px solid", cursor:"pointer",
@@ -3873,7 +3873,7 @@ function DrinksCatalog() {
     fetch(`${GAS_URL}?action=getMenuConfig`)
       .then(r => r.json()).then(d => {
         if (d?.ok && d.data && Object.keys(d.data).length) {
-          const cats = applyMenuOverrides(DRINK_CATEGORIES_DEFAULT, d.data);
+          const cats = applyMenuOverrides(DRINK_CATEGORIES_DEFAULT, d.data, "drink");
           setHouseItems(mkItems(cats));
           setBoatItems(mkItems(cats));
         }
@@ -4328,7 +4328,7 @@ function GroceryCatalog() {
       : Promise.resolve(null);
 
     Promise.all([fetchOverrides, fetchKickoff]).then(([overrides, k]) => {
-      const cats = applyMenuOverrides(GROCERY_CATEGORIES_DEFAULT, overrides);
+      const cats = applyMenuOverrides(GROCERY_CATEGORIES_DEFAULT, overrides, "grocery");
       setGROCERY_CATEGORIES(cats);
       if (k) {
         if (!prefillName) setGuestName(k.tripName || k.guestName || "");
