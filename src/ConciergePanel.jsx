@@ -5678,14 +5678,14 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   newArr.forEach(na => {
                     if (!merged.some(e => e.flightNumber === na.flightNumber && e.date === na.date)) merged.push(na);
                   });
-                  return merged;
+                  return merged.sort((a,b) => (a.date||"").localeCompare(b.date||""));
                 });
                 if (newDep.length) setDepartures(prev => {
                   const merged = [...prev];
                   newDep.forEach(nd => {
                     if (!merged.some(e => e.flightNumber === nd.flightNumber && e.date === nd.date)) merged.push(nd);
                   });
-                  return merged;
+                  return merged.sort((a,b) => (a.date||"").localeCompare(b.date||""));
                 });
               };
               return (
@@ -5704,10 +5704,18 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             {/* Llegadas */}
             <div className="flex items-center justify-between">
               <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">🛬 Llegadas</p>
-              <button type="button" onClick={addArrival}
-                className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-900 text-white hover:bg-neutral-700">
-                + Agregar llegada
-              </button>
+              <div className="flex gap-1">
+                {arrivals.length > 1 && (
+                  <button type="button" onClick={() => setArrivals(prev => [...prev].sort((a,b) => (a.date||"").localeCompare(b.date||"")))}
+                    className="text-[11px] px-2.5 py-1 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800">
+                    ↑ Ordenar
+                  </button>
+                )}
+                <button type="button" onClick={addArrival}
+                  className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-900 text-white hover:bg-neutral-700">
+                  + Agregar llegada
+                </button>
+              </div>
             </div>
             {arrivals.length === 0 && (
               <p className="text-[11px] text-neutral-400">Sin llegadas. Úsalo cuando el grupo llega en vuelos distintos.</p>
@@ -5771,10 +5779,18 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             {/* Salidas */}
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-neutral-100">
               <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">🛫 Salidas</p>
-              <button type="button" onClick={addDeparture}
-                className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-900 text-white hover:bg-neutral-700">
-                + Agregar salida
-              </button>
+              <div className="flex gap-1">
+                {departures.length > 1 && (
+                  <button type="button" onClick={() => setDepartures(prev => [...prev].sort((a,b) => (a.date||"").localeCompare(b.date||"")))}
+                    className="text-[11px] px-2.5 py-1 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800">
+                    ↑ Ordenar
+                  </button>
+                )}
+                <button type="button" onClick={addDeparture}
+                  className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-900 text-white hover:bg-neutral-700">
+                  + Agregar salida
+                </button>
+              </div>
             </div>
             {departures.length === 0 && (
               <p className="text-[11px] text-neutral-400">Sin salidas registradas.</p>

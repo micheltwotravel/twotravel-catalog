@@ -1467,9 +1467,9 @@ function ClientesTable({ kickoffs, loading }) {
                 <th style={thStyle}>🛥 Boat Day</th>
                 <th style={thStyle}>Itinerario</th>
                 <th style={thStyle}>Reuniones</th>
-                <th style={{ ...thStyle, minWidth:160 }}>📝 Notas</th>
                 <th style={thStyle}>🛂 Pasaporte</th>
                 <th style={thStyle}>🥗 Dieta</th>
+                <th style={{ ...thStyle, minWidth:160 }}>📝 Notas</th>
                 <th style={thStyle}>🛒 Grocery $</th>
                 <th style={thStyle}>☕ Desayuno</th>
                 <th style={thStyle}>🍹 Bebidas</th>
@@ -1558,17 +1558,7 @@ function ClientesTable({ kickoffs, loading }) {
                         Reuniones →
                       </a>
                     </td>
-                    {/* 12. Notas */}
-                    <td style={tdStyle}>
-                      <textarea
-                        defaultValue={r.internalNotes || ""}
-                        onBlur={e => { const v = e.target.value.trim(); if (v !== (r.internalNotes||"").trim()) saveField(r.id, "internalNotes", v); }}
-                        placeholder="Notas…"
-                        rows={2}
-                        style={{ width:"100%", fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 6px", resize:"vertical", background:"#fafafa", color:"#374151", lineHeight:1.4, boxSizing:"border-box" }}
-                      />
-                    </td>
-                    {/* 13. Pasaporte */}
+                    {/* 12. Pasaporte */}
                     <td style={{ ...tdStyle, textAlign:"center" }}>
                       {(() => {
                         let ciResps = [];
@@ -1589,7 +1579,7 @@ function ClientesTable({ kickoffs, loading }) {
                           : <span style={{ color:"#d1d5db" }}>—</span>;
                       })()}
                     </td>
-                    {/* 14. Dieta */}
+                    {/* 13. Dieta */}
                     <td style={{ ...tdStyle, textAlign:"center" }}>
                       {(() => {
                         let ciResps = [];
@@ -1610,6 +1600,16 @@ function ClientesTable({ kickoffs, loading }) {
                           ? <PassportPopup passportInfo="" dietInfo={combined} guestName={r.guestName || r.tripName} />
                           : <span style={{ color:"#d1d5db" }}>—</span>;
                       })()}
+                    </td>
+                    {/* 14. Notas */}
+                    <td style={tdStyle}>
+                      <textarea
+                        defaultValue={r.internalNotes || ""}
+                        onBlur={e => { const v = e.target.value.trim(); if (v !== (r.internalNotes||"").trim()) saveField(r.id, "internalNotes", v); }}
+                        placeholder="Notas…"
+                        rows={2}
+                        style={{ width:"100%", fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"4px 6px", resize:"vertical", background:"#fafafa", color:"#374151", lineHeight:1.4, boxSizing:"border-box" }}
+                      />
                     </td>
                     {/* 15. Grocery $ */}
                     <td style={tdStyle}>
