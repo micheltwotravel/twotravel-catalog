@@ -869,7 +869,7 @@ function juniorListForCity(cityCode) {
   if (c.includes("ctg") || c.includes("cartagena")) return JUNIOR_CONCIERGES_BY_CITY.cartagena;
   return JUNIOR_CONCIERGES_BY_CITY.default;
 }
-const CITY_LABELS_D = { cartagena:"Cartagena", medellin:"Medellín", bogota:"Bogotá", barranquilla:"Barranquilla", santamarta:"Santa Marta", cdmx:"Ciudad de México", "mexico city":"Ciudad de México", "ciudad de mexico":"Ciudad de México", "ciudad de méxico":"Ciudad de México", tulum:"Tulum", "los cabos":"Los Cabos", cabos:"Los Cabos" };
+const CITY_LABELS_D = { cartagena:"Cartagena", ctg:"Cartagena", medellin:"Medellín", medellín:"Medellín", mde:"Medellín", bogota:"Bogotá", bogotá:"Bogotá", bog:"Bogotá", barranquilla:"Barranquilla", baq:"Barranquilla", santamarta:"Santa Marta", smr:"Santa Marta", cdmx:"Ciudad de México", "mexico city":"Ciudad de México", "ciudad de mexico":"Ciudad de México", "ciudad de méxico":"Ciudad de México", tulum:"Tulum", tul:"Tulum", "los cabos":"Los Cabos", cabos:"Los Cabos", cab:"Los Cabos" };
 
 function cityLabel(code) {
   if (!code) return "";
@@ -1303,63 +1303,10 @@ function fmtOrderAt(at) {
 
 function ClientesTable({ kickoffs, loading }) {
   const [cityFilter, setCityFilter] = useState("all");
+  const [conciergeFilter, setConciergeFilter] = useState("all");
   const [period, setPeriod] = useState("all");
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState({});
-  const [generatingTasks, setGeneratingTasks] = useState({});
-
-  async function generateTasksFromKickoff(r) {
-    setGeneratingTasks(g => ({ ...g, [r.id]: true }));
-    try {
-      const cart = (() => { try { return JSON.parse(r.cart || "[]"); } catch { return []; } })();
-      const items = cart.filter(item => item && (item.name || item.displayName || item.title));
-      if (!items.length) {
-        window.open("/handoffs.html?client=" + encodeURIComponent(r.guestName || r.tripName || "") + "&date=" + encodeURIComponent(r._rowArrival ? r._rowArrival.slice(0,10) : ""), "_blank");
-        return;
-      }
-
-      const clientName = r.guestName || r.tripName || "";
-      const dateStr    = r._rowArrival ? r._rowArrival.slice(0,10) : "";
-
-      // Crear handoffs (agregar a los existentes) — las tareas manuales van desde el panel de Tareas
-      const existingRes = await fetch(GAS_URL, { method:"POST", body: JSON.stringify({ action:"getHandoffs", payload:{} }) });
-      const existingJson = await existingRes.json().catch(() => ({ data:[] }));
-      const existing = existingJson.data || [];
-      const newHandoffs = items.map(item => ({
-        id:          "hf_" + Date.now() + "_" + Math.random().toString(36).slice(2,6),
-        client:      clientName,
-        date:        dateStr,
-        activity:    item.displayName || item.name || item.title || "Servicio",
-        pax:         r.pax || r.groupSize || "",
-        operator:    "",
-        bookingWhere:"",
-        travefy:     "",
-        confirmation:"",
-        person:      r.assignedConciergeName || r.concierge || "",
-        personLive:  "",
-        notes:       [item.timeLabel||item.time||"", item.location||""].filter(Boolean).join(" · "),
-        status:      "todo",
-        createdAt:   new Date().toISOString(),
-        updatedAt:   new Date().toISOString(),
-      }));
-      await fetch(GAS_URL, { method:"POST", body: JSON.stringify({ action:"saveHandoffs", payload:{ handoffs: [...existing, ...newHandoffs] } }) });
-
-      // Monday: crear ítems en tablero Concierge + Logística
-      fetch(GAS_URL, { method:"POST", body: JSON.stringify({ action:"createMondayItems", payload:{
-        items: items.map(i => ({ name: i.displayName || i.name || i.title || "Servicio" })),
-        clientName,
-        date: dateStr,
-        pax: r.pax || r.groupSize || "",
-        concierge: r.assignedConciergeName || r.concierge || "",
-      }})}).catch(() => {});
-
-      const handoffUrl = "/handoffs.html?client=" + encodeURIComponent(clientName);
-      if (window.confirm(`✅ ${items.length} servicio(s) generados para ${clientName}.\n\n¿Abrir Handoffs para verificar?`)) {
-        window.open(handoffUrl, "_blank");
-      }
-    } catch(e) { alert("Error: " + e.message); }
-    setGeneratingTasks(g => ({ ...g, [r.id]: false }));
-  }
 
   // Expand multi-city kickoffs into multiple rows
   const rows = React.useMemo(() => {
@@ -1405,13 +1352,21 @@ function ClientesTable({ kickoffs, loading }) {
         }
       }
     }
+    if (conciergeFilter !== "all") {
+      const c = r.assignedConciergeName || r.concierge || "";
+      if (c !== conciergeFilter) return false;
+    }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       const name = (r.guestName || r.tripName || "").toLowerCase();
       if (!name.includes(q)) return false;
     }
     return true;
-  }).sort((a, b) => (a._rowArrival || "") > (b._rowArrival || "") ? 1 : -1);
+  }).sort((a, b) => {
+    const da = new Date(a.lastModified || a.createdAt || 0).getTime();
+    const db = new Date(b.lastModified || b.createdAt || 0).getTime();
+    return db - da;
+  });
 
   // Normalize city codes: "ctg"/"cartagena" → "cartagena", "mde"/"medellin" → "medellin", etc.
   function normCity(raw) {
@@ -1423,10 +1378,11 @@ function ClientesTable({ kickoffs, loading }) {
     if (c === "smr" || c === "santamarta" || c === "santa marta") return "santamarta";
     if (c === "cdmx" || c === "mexico city" || c === "ciudad de mexico" || c === "ciudad de méxico") return "cdmx";
     if (c === "tul" || c === "tulum") return "tulum";
-    if (c === "los cabos" || c === "cabos" || c === "loscabos") return "los cabos";
+    if (c === "los cabos" || c === "cabos" || c === "loscabos" || c === "cab") return "los cabos";
     return c;
   }
   const cities = ["all", ...Array.from(new Set(rows.map(r => normCity(r._rowCity)).filter(Boolean)))];
+  const concierges = ["all", ...Array.from(new Set(rows.map(r => r.assignedConciergeName || r.concierge || "").filter(Boolean))).values()];
 
   async function saveField(kickoffId, field, value) {
     setSaving(s => ({ ...s, [kickoffId + field]: true }));
@@ -1439,20 +1395,26 @@ function ClientesTable({ kickoffs, loading }) {
     setSaving(s => ({ ...s, [kickoffId + field]: false }));
   }
 
+  const CITY_BG   = { cartagena:"#dbeafe", medellin:"#dcfce7", cdmx:"#ffedd5", tulum:"#ccfbf1", "los cabos":"#fce7f3", bogota:"#f3e8ff" };
+  const CITY_FG   = { cartagena:"#1d4ed8", medellin:"#16a34a", cdmx:"#ea580c", tulum:"#0f766e", "los cabos":"#9d174d", bogota:"#7c3aed" };
+
   const thStyle = { fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", color:"#6b7280", padding:"8px 10px", background:"#f9fafb", borderBottom:"1px solid #e5e7eb", whiteSpace:"nowrap", textAlign:"left" };
   const tdStyle = { fontSize:12, padding:"8px 10px", borderBottom:"1px solid #f3f4f6", verticalAlign:"middle" };
+
+  const pillStyle = (active, norm) => ({
+    fontSize:11, padding:"4px 10px", borderRadius:99, border:"1px solid", cursor:"pointer",
+    background: active ? (norm && CITY_BG[norm] ? CITY_BG[norm] : "#111") : "#fff",
+    color: active ? (norm && CITY_FG[norm] ? CITY_FG[norm] : "#fff") : "#555",
+    borderColor: active ? (norm && CITY_FG[norm] ? CITY_FG[norm] : "#111") : "#ddd",
+  });
 
   return (
     <div>
       {/* Filters */}
-      <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap", alignItems:"center" }}>
+      <div style={{ display:"flex", gap:8, marginBottom:8, flexWrap:"wrap", alignItems:"center" }}>
         <span style={{ fontSize:11, color:"#6b7280", fontWeight:600 }}>Ciudad:</span>
         {cities.map(c => (
-          <button key={c} onClick={() => setCityFilter(c)}
-            style={{ fontSize:11, padding:"4px 10px", borderRadius:99, border:"1px solid", cursor:"pointer",
-              background: cityFilter===c ? "#111" : "#fff",
-              color: cityFilter===c ? "#fff" : "#555",
-              borderColor: cityFilter===c ? "#111" : "#ddd" }}>
+          <button key={c} onClick={() => setCityFilter(c)} style={pillStyle(cityFilter===c, c)}>
             {c === "all" ? "Todas" : cityLabel(c)}
           </button>
         ))}
@@ -1464,6 +1426,18 @@ function ClientesTable({ kickoffs, loading }) {
               color: period===v ? "#fff" : "#555",
               borderColor: period===v ? "#111" : "#ddd" }}>
             {l}
+          </button>
+        ))}
+      </div>
+      <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap", alignItems:"center" }}>
+        <span style={{ fontSize:11, color:"#6b7280", fontWeight:600 }}>Concierge:</span>
+        {concierges.map(c => (
+          <button key={c} onClick={() => setConciergeFilter(c)}
+            style={{ fontSize:11, padding:"4px 10px", borderRadius:99, border:"1px solid", cursor:"pointer",
+              background: conciergeFilter===c ? "#111" : "#fff",
+              color: conciergeFilter===c ? "#fff" : "#555",
+              borderColor: conciergeFilter===c ? "#111" : "#ddd" }}>
+            {c === "all" ? "Todas" : c}
           </button>
         ))}
         <input
@@ -1525,9 +1499,17 @@ function ClientesTable({ kickoffs, loading }) {
                     </td>
                     {/* 2. Ciudad */}
                     <td style={tdStyle}>
-                      <span style={{ fontSize:11, padding:"2px 8px", borderRadius:99, background:"#f3f4f6", color:"#374151", fontWeight:500 }}>
-                        {cityLabel(r._rowCity) || "—"}
-                      </span>
+                      {(() => {
+                        const norm = normCity(r._rowCity);
+                        const label = cityLabel(norm) || cityLabel(r._rowCity) || "—";
+                        const bg = CITY_BG[norm] || "#f3f4f6";
+                        const fg = CITY_FG[norm] || "#374151";
+                        return (
+                          <span style={{ fontSize:11, padding:"2px 8px", borderRadius:99, background:bg, color:fg, fontWeight:500 }}>
+                            {label}
+                          </span>
+                        );
+                      })()}
                     </td>
                     {/* 3. Fechas */}
                     <td style={{ ...tdStyle, whiteSpace:"nowrap", color:"#6b7280" }}>
@@ -2089,6 +2071,7 @@ function UnifiedDashboard({ currentUser, onLogout }) {
           {isSuperAdmin(currentUser) && (
             <a href="/?mode=users" className="tt-btn-ghost" style={{textDecoration:"none"}}>👥 Usuarios</a>
           )}
+          <a href="/menu.html" className="tt-btn-ghost" style={{textDecoration:"none"}}>Menu</a>
           {currentUser && (
             <div style={{display:"flex",alignItems:"center",gap:8,paddingLeft:8,borderLeft:"1px solid var(--border)"}}>
               <span style={{fontSize:11,color:"var(--text-3)"}}>{currentUser.name}</span>
@@ -4165,6 +4148,7 @@ const CITY_OPTIONS = [
   { code: "MDE",  label: "🇨🇴 Medellín" },
   { code: "CDMX", label: "🇲🇽 Ciudad de México" },
   { code: "TUL",  label: "🇲🇽 Tulum" },
+  { code: "CAB",  label: "🇲🇽 Los Cabos" },
 ];
 
 function WelcomeCatalogPage({ mode }) {
