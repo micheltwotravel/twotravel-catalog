@@ -8038,7 +8038,7 @@ const loadKickoffs = async () => {
         if (code) seen.add(code);
       });
     });
-    return ["all", ...["CTG","MDE","CDMX","TUL","BOG","CLO"].filter(c => seen.has(c))];
+    return ["all", ...["CTG","MDE","CDMX","TUL","CAB","BOG","CLO"].filter(c => seen.has(c))];
   }, [kickoffs]);
 
   const toggleSelect = (id) => {
