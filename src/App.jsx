@@ -4626,9 +4626,9 @@ function CheckinForm() {
   const empty = () => ({
     firstName: "", lastName: "", email: "", phone: "",
     idType: "Passport", idNumber: "", dob: "", nationality: "", gender: "",
-    arrivalAirline: "", arrivalDate: "", arrivalFlight: "", arrivalTime: "",
-    domesticAirline: "", domesticDate: "", domesticFlight: "", domesticTime: "",
-    departureAirline: "", departureDate: "", departureFlight: "", departureTime: "",
+    arrivalDate: "", arrivalFlight: "", arrivalTime: "",
+    domesticDate: "", domesticFlight: "", domesticTime: "",
+    departureDate: "", departureFlight: "", departureTime: "",
     foodRestrictions: "", allergies: "", occasion: "", photoPermission: "",
     isGroupContact: "",
   });
@@ -4650,11 +4650,9 @@ function CheckinForm() {
     if (!form.idNumber.trim())  { setError(en ? "ID number is required."  : "El número de ID es requerido."); return; }
     if (!form.foodRestrictions.trim()) { setError(en ? "Food restrictions are required (write 'None' if you have none)." : "Las restricciones alimentarias son requeridas (escribe 'Ninguna' si no tienes)."); return; }
     if (!form.allergies.trim())        { setError(en ? "Allergies field is required (write 'None' if you have none)." : "El campo de alergias es requerido (escribe 'Ninguna' si no tienes)."); return; }
-    if (!form.arrivalAirline.trim())   { setError(en ? "Arrival airline is required." : "La aerolínea de llegada es requerida."); return; }
     if (!form.arrivalFlight.trim())    { setError(en ? "Arrival flight number is required." : "El número de vuelo de llegada es requerido."); return; }
     if (!form.arrivalDate)             { setError(en ? "Arrival date is required." : "La fecha de llegada es requerida."); return; }
     if (!form.arrivalTime)             { setError(en ? "Arrival time is required." : "La hora de llegada es requerida."); return; }
-    if (!form.departureAirline.trim()) { setError(en ? "Departure airline is required." : "La aerolínea de salida es requerida."); return; }
     if (!form.departureFlight.trim())  { setError(en ? "Departure flight number is required." : "El número de vuelo de salida es requerido."); return; }
     if (!form.departureDate)           { setError(en ? "Departure date is required." : "La fecha de salida es requerida."); return; }
     if (!form.departureTime)           { setError(en ? "Departure time is required." : "La hora de salida es requerida."); return; }
@@ -4728,7 +4726,7 @@ function CheckinForm() {
             let arr = [];
             try { arr = JSON.parse(latestKickoff?.arrivals || "[]"); } catch {}
             const idx = arr.findIndex(f => f.flightNumber === form.arrivalFlight);
-            const entry = { flightNumber: form.arrivalFlight, date: form.arrivalDate, time: fmtTime12(form.arrivalTime), name: form.arrivalAirline };
+            const entry = { flightNumber: form.arrivalFlight, date: form.arrivalDate, time: fmtTime12(form.arrivalTime), name: personName };
             if (idx >= 0) arr[idx] = { ...arr[idx], ...entry };
             else arr.push(entry);
             updates.arrivals = JSON.stringify(arr);
@@ -4737,7 +4735,7 @@ function CheckinForm() {
             let dep = [];
             try { dep = JSON.parse(latestKickoff?.departures || "[]"); } catch {}
             const idx = dep.findIndex(f => f.flightNumber === form.departureFlight);
-            const entry = { flightNumber: form.departureFlight, date: form.departureDate, time: fmtTime12(form.departureTime), name: form.departureAirline };
+            const entry = { flightNumber: form.departureFlight, date: form.departureDate, time: fmtTime12(form.departureTime), name: personName };
             if (idx >= 0) dep[idx] = { ...dep[idx], ...entry };
             else dep.push(entry);
             updates.departures = JSON.stringify(dep);
@@ -4897,15 +4895,10 @@ function CheckinForm() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
           <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">🛬 {en?"Arrival Flight":"Vuelo de Llegada"}</h3>
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={lbl}>{en?"Airline *":"Aerolínea *"}</label>
-                <input value={form.arrivalAirline} onChange={set("arrivalAirline")} className={inp} placeholder="Avianca, Delta…" />
-              </div>
-              <div>
-                <label className={lbl}>{en?"Flight # *":"Vuelo # *"}</label>
-                <input value={form.arrivalFlight} onChange={set("arrivalFlight")} className={inp} placeholder="AV204" />
-              </div>
+            <div>
+              <label className={lbl}>{en?"Flight code *":"Código de vuelo *"}</label>
+              <input value={form.arrivalFlight} onChange={set("arrivalFlight")} className={inp} placeholder={en?"AV204, AA2173…":"AV204, AA2173…"} />
+              <p className="text-[10px] text-neutral-400 mt-1">{en?"Enter the full flight code (e.g. AV204, AA2173)":"Ingresa el código completo del vuelo (ej. AV204, AA2173)"}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -4926,15 +4919,9 @@ function CheckinForm() {
             <h3 className="text-sm font-semibold text-neutral-700 mb-1 flex items-center gap-2">✈️ {en?"Domestic / Connecting Flight":"Vuelo Doméstico / Conexión"}</h3>
             <p className="text-xs text-neutral-400 mb-4">{en?"If you have a connecting or domestic flight between cities.":"Si tienes un vuelo doméstico o de conexión entre ciudades."}</p>
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={lbl}>{en?"Airline":"Aerolínea"}</label>
-                  <input value={form.domesticAirline} onChange={set("domesticAirline")} className={inp} placeholder="Avianca, LATAM…" />
-                </div>
-                <div>
-                  <label className={lbl}>{en?"Flight #":"Vuelo #"}</label>
-                  <input value={form.domesticFlight} onChange={set("domesticFlight")} className={inp} placeholder="AV8501" />
-                </div>
+              <div>
+                <label className={lbl}>{en?"Flight code":"Código de vuelo"}</label>
+                <input value={form.domesticFlight} onChange={set("domesticFlight")} className={inp} placeholder="AV8501, AV204…" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -4954,15 +4941,10 @@ function CheckinForm() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
           <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">🛫 {en?"Departure Flight":"Vuelo de Salida"}</h3>
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={lbl}>{en?"Airline *":"Aerolínea *"}</label>
-                <input value={form.departureAirline} onChange={set("departureAirline")} className={inp} placeholder="Avianca, Delta…" />
-              </div>
-              <div>
-                <label className={lbl}>{en?"Flight # *":"Vuelo # *"}</label>
-                <input value={form.departureFlight} onChange={set("departureFlight")} className={inp} placeholder="AV205" />
-              </div>
+            <div>
+              <label className={lbl}>{en?"Flight code *":"Código de vuelo *"}</label>
+              <input value={form.departureFlight} onChange={set("departureFlight")} className={inp} placeholder={en?"AV205, AA2174…":"AV205, AA2174…"} />
+              <p className="text-[10px] text-neutral-400 mt-1">{en?"Enter the full flight code (e.g. AV205, AA2174)":"Ingresa el código completo del vuelo (ej. AV205, AA2174)"}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
