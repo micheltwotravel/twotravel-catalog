@@ -1174,24 +1174,39 @@ function OrderCell({ summary, at, empty = "—", fullText, icon = "✅" }) {
     </div>
   );
 }
-function BoatDayCell({ kickoffId, boatName: initBoatName, boatDay: initBoatDay, boatProvider: initProvider, dock: initDock, boatNotes: initNotes, arrivalDate, departureDate, onSave }) {
+function BoatDayCell({ kickoffId, boatName: initBoatName, boatDay: initBoatDay, boatProvider: initProvider, dock: initDock, boatNote: initNote, boatDepartureTime: initDepTime, boatNotes: initNotes, arrivalDate, departureDate, onSave }) {
   const parse = v => { try { return JSON.parse(v||"{}"); } catch { return {}; } };
-  const init = parse(initNotes);
   const [open, setOpen] = React.useState(false);
-  const [fecha,    setFecha]    = React.useState(init.fecha    || initBoatDay  || "");
-  const [nombre,   setNombre]   = React.useState(init.nombre   || initBoatName || "");
-  const [proveedor,setProveedor]= React.useState(init.proveedor|| initProvider || "");
-  const [muelle,   setMuelle]   = React.useState(init.muelle   || initDock     || "");
-  const [nota,     setNota]     = React.useState(init.nota     || "");
+  // Direct GAS fields are authoritative
+  const [fecha,    setFecha]    = React.useState(initBoatDay  || "");
+  const [nombre,   setNombre]   = React.useState(initBoatName || "");
+  const [proveedor,setProveedor]= React.useState(initProvider || "");
+  const [muelle,   setMuelle]   = React.useState(initDock     || "");
+  const [hora,     setHora]     = React.useState(initDepTime  || "");
+  const [nota,     setNota]     = React.useState(initNote     || "");
 
-  const hasData = fecha || nombre || proveedor || muelle || nota;
+  // Sync state from props when dialog is closed — handles external edits (Operaciones, broadcasts)
+  React.useEffect(() => {
+    if (open) return;
+    setFecha(initBoatDay  || "");
+    setNombre(initBoatName || "");
+    setProveedor(initProvider || "");
+    setMuelle(initDock     || "");
+    setHora(initDepTime    || "");
+    setNota(initNote       || "");
+  }, [initBoatDay, initBoatName, initProvider, initDock, initDepTime, initNote]);
+
+  const hasData = fecha || nombre || proveedor || muelle || hora || nota;
 
   const save = () => {
-    const data = { fecha, nombre, proveedor, muelle, nota };
-    onSave(kickoffId, "boatNotes", JSON.stringify(data));
-    if (fecha    !== initBoatDay)   onSave(kickoffId, "boatDay",      fecha);
-    if (nombre   !== initBoatName)  onSave(kickoffId, "boatName",     nombre);
-    if (muelle   !== initDock)      onSave(kickoffId, "dock",         muelle);
+    const data = { fecha, nombre, proveedor, muelle, hora, nota };
+    onSave(kickoffId, "boatNotes",        JSON.stringify(data));
+    onSave(kickoffId, "boatDay",          fecha);
+    onSave(kickoffId, "boatName",         nombre);
+    onSave(kickoffId, "boatProvider",     proveedor);
+    onSave(kickoffId, "dock",             muelle);
+    onSave(kickoffId, "boatDepartureTime",hora);
+    onSave(kickoffId, "boatNote",         nota);
   };
 
   return (
@@ -1201,9 +1216,9 @@ function BoatDayCell({ kickoffId, boatName: initBoatName, boatDay: initBoatDay, 
           <span>
             <span style={{display:"block", fontWeight:700}}>🛥 {nombre || "Boat Day"}</span>
             {fecha && <span style={{display:"block", fontSize:10, color:"#6b7280"}}>{fecha}</span>}
+            {hora && <span style={{display:"block", fontSize:10, color:"#6b7280"}}>🕐 {hora}</span>}
             {muelle && <span style={{display:"block", fontSize:10, color:"#0369a1"}}>⚓ {muelle}</span>}
             {proveedor && <span style={{display:"block", fontSize:10, color:"#6b7280"}}>{proveedor}</span>}
-            {nota && <span style={{display:"block", fontSize:10, color:"#6b7280", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:140}}>{nota.slice(0,60)}{nota.length>60?"…":""}</span>}
           </span>
         ) : "🛥 —"}
       </button>
@@ -1218,8 +1233,9 @@ function BoatDayCell({ kickoffId, boatName: initBoatName, boatDay: initBoatDay, 
               {[
                 { label:"Fecha", value:fecha, set:setFecha, type:"date", min:arrivalDate, max:departureDate },
                 { label:"Nombre del bote", value:nombre, set:setNombre, placeholder:"Sea Star…" },
-                { label:"Proveedor", value:proveedor, set:setProveedor, placeholder:"Empresa o contacto…" },
+                { label:"Hora de salida", value:hora, set:setHora, type:"time" },
                 { label:"Muelle", value:muelle, set:setMuelle, placeholder:"Club Náutico…" },
+                { label:"Proveedor", value:proveedor, set:setProveedor, placeholder:"Empresa o contacto…" },
               ].map(({ label, value, set, type, placeholder, min, max }) => (
                 <div key={label}>
                   <label style={{ fontSize:10, fontWeight:700, color:"#6b7280", textTransform:"uppercase", letterSpacing:".06em", display:"block", marginBottom:4 }}>{label}</label>
@@ -1229,9 +1245,9 @@ function BoatDayCell({ kickoffId, boatName: initBoatName, boatDay: initBoatDay, 
                 </div>
               ))}
               <div>
-                <label style={{ fontSize:10, fontWeight:700, color:"#6b7280", textTransform:"uppercase", letterSpacing:".06em", display:"block", marginBottom:4 }}>Nota</label>
-                <textarea value={nota} onChange={e => setNota(e.target.value)} rows={4}
-                  placeholder="Detalles adicionales…"
+                <label style={{ fontSize:10, fontWeight:700, color:"#6b7280", textTransform:"uppercase", letterSpacing:".06em", display:"block", marginBottom:4 }}>Nota (aparece en el itinerario)</label>
+                <textarea value={nota} onChange={e => setNota(e.target.value)} rows={3}
+                  placeholder="Detalles adicionales para el cliente…"
                   style={{ width:"100%", fontSize:12, border:"1px solid #e5e7eb", borderRadius:8, padding:"7px 10px", boxSizing:"border-box", background:"#f9fafb", resize:"vertical", lineHeight:1.5 }} />
               </div>
               <button onClick={() => { save(); setOpen(false); }}
@@ -1541,7 +1557,7 @@ function ClientesTable({ kickoffs, loading }) {
                     {/* 9. Boat Day */}
                     <td style={tdStyle}>
                       {normCity(r._rowCity) === "cartagena"
-                        ? <BoatDayCell kickoffId={r.id} boatDay={r.boatDay||""} boatName={r.boatName||""} boatProvider={r.boatProvider||""} dock={r.dock||""} boatNotes={r.boatNotes||""} arrivalDate={r.arrivalDate||""} departureDate={r.departureDate||""} onSave={saveField} />
+                        ? <BoatDayCell kickoffId={r.id} boatDay={r.boatDay||""} boatName={r.boatName||""} boatProvider={r.boatProvider||""} dock={r.dock||""} boatNote={r.boatNote||""} boatDepartureTime={r.boatDepartureTime||""} boatNotes={r.boatNotes||""} arrivalDate={r.arrivalDate||""} departureDate={r.departureDate||""} onSave={saveField} />
                         : <span style={{ color:"#d1d5db", fontSize:11 }}>—</span>}
                     </td>
                     {/* 10. Itinerario */}
