@@ -445,6 +445,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       tierTotal       : cartItem.tierTotal || 0,
       _boatBadge      : !!cartItem._boatBadge,
       _boatData       : cartItem._boatData || null,
+      notes           : cartItem.notes || "",
     });
   });
   // Respect dayMeta order if provided
@@ -559,8 +560,8 @@ const CSS = `
 
   .cover-body{padding:32px 40px 24px;flex:1;display:flex;flex-direction:column;}
   .cover-eyebrow{
-    font-size:8.5px;letter-spacing:4px;text-transform:uppercase;
-    color:#aaa;margin-bottom:14px;
+    font-size:12px;letter-spacing:3px;text-transform:uppercase;
+    color:#888;margin-bottom:14px;font-weight:600;
   }
   .cover-title{
     font-family:'Playfair Display','Georgia',serif;
@@ -570,7 +571,7 @@ const CSS = `
   .cover-subtitle{
     font-size:14px;color:#666;margin-bottom:4px;font-weight:400;letter-spacing:.1px;
   }
-  .cover-dates{font-size:12px;color:#999;margin-bottom:28px;font-weight:400;}
+  .cover-dates{font-size:16px;color:#555;margin-bottom:28px;font-weight:500;}
 
   .cover-rule{height:1px;background:linear-gradient(90deg,#111 0,#e0e0e0 100%);margin:0 0 24px;width:80px;}
 

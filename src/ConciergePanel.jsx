@@ -3478,7 +3478,7 @@ function CatalogPickerModal({ services, clientType = 1, lang = "en", city = "", 
     }
     return s.toUpperCase();
   };
-  const CITY_LABELS = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" };
+  const CITY_LABELS = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá", CAB:"Los Cabos" };
 
   // All city codes in this kickoff (multi-city trips have comma-separated values)
   const kickoffCityCodes = useMemo(() => {
@@ -4130,7 +4130,7 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
   );
 }
 
-const CITY_CODE_MAP = { cartagena:"CTG", medellin:"MDE", "ciudad de mexico":"CDMX", cdmx:"CDMX", tulum:"TUL", bogota:"BOG", "mexico city":"CDMX" };
+const CITY_CODE_MAP = { cartagena:"CTG", medellin:"MDE", "ciudad de mexico":"CDMX", cdmx:"CDMX", tulum:"TUL", bogota:"BOG", "mexico city":"CDMX", "los cabos":"CAB", cabos:"CAB", cab:"CAB" };
 function detectCityCode(str) {
   const s = (str || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
   for (const [k, v] of Object.entries(CITY_CODE_MAP)) { if (s.includes(k)) return v; }
@@ -5298,7 +5298,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               <div>
                 <label className="text-[11px] text-neutral-500">Ciudad / Destino</label>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  {[{code:"CTG",label:"Cartagena"},{code:"MDE",label:"Medellín"},{code:"CDMX",label:"CDMX"},{code:"TUL",label:"Tulum"}].map(({code,label}) => {
+                  {[{code:"CTG",label:"Cartagena"},{code:"MDE",label:"Medellín"},{code:"CDMX",label:"CDMX"},{code:"TUL",label:"Tulum"},{code:"CAB",label:"Los Cabos"}].map(({code,label}) => {
                     const cities = city ? city.split(",").map(s=>s.trim().toUpperCase()) : [];
                     const active = cities.includes(code) || cities.includes(label.toUpperCase()) || city.toUpperCase()===code || city.toUpperCase()===label.toUpperCase();
                     return (
@@ -5599,7 +5599,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     className="flex-1 border border-neutral-200 rounded-lg px-2 py-1.5 text-sm bg-white outline-none"
                   >
                     <option value="">— Ciudad —</option>
-                    {["Cartagena","Medellín","CDMX","Tulum"].map(d => (
+                    {["Cartagena","Medellín","CDMX","Tulum","Los Cabos"].map(d => (
                       <option key={d} value={d}>{d}</option>
                     ))}
                   </select>
