@@ -1370,7 +1370,8 @@ function ClientesTable({ kickoffs, loading }) {
     }
     if (conciergeFilter !== "all") {
       const c = r.assignedConciergeName || r.concierge || "";
-      if (c !== conciergeFilter) return false;
+      const names = c.split(",").map(s => s.trim());
+      if (!names.includes(conciergeFilter)) return false;
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -1398,7 +1399,11 @@ function ClientesTable({ kickoffs, loading }) {
     return c;
   }
   const cities = ["all", ...Array.from(new Set(rows.map(r => normCity(r._rowCity)).filter(Boolean)))];
-  const concierges = ["all", ...Array.from(new Set(rows.map(r => r.assignedConciergeName || r.concierge || "").filter(Boolean))).values()];
+  const concierges = ["all", ...Array.from(new Set(
+    rows.flatMap(r => (r.assignedConciergeName || r.concierge || "")
+      .split(",").map(s => s.trim()).filter(s => s && !/^\d{5,}/.test(s))
+    )
+  ))];
 
   async function saveField(kickoffId, field, value) {
     setSaving(s => ({ ...s, [kickoffId + field]: true }));
