@@ -261,7 +261,8 @@ function matchCart(cartRaw, catalog, kickoff) {
   const out = [];
   for (let item of cart) {
     // Keep boat details in sync with kickoff fields — build rich _boatData
-    if (/bote|\bboat\b/i.test(item.name) || /bote|\bboat\b/i.test(item.name_en) || item._boatBadge) {
+    const _descForBoat = item.description_en || item.description_es || item.description || "";
+    if (/bote|\bboat\b/i.test(item.name) || /bote|\bboat\b/i.test(item.name_en) || item._boatBadge || /\*\*(?:Boat|Bote):\*\*/i.test(_descForBoat)) {
       const bn = kickoff?.boatName || "";
       const dk = kickoff?.dock || "";
       const city = String(kickoff?.city || kickoff?._rowCity || "").toUpperCase();

@@ -4489,8 +4489,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
       localStorage.setItem(`tt_kp_${kickoff.id}`, JSON.stringify({ ts: Date.now(), data: patchedKickoff }));
     } catch {}
     setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}&edit=1`);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [kickoff.id]); // re-run when kickoff changes so localStorage is always pre-marked
 
   // Editable arrival/departure dates (concierge sets these)
   const [arrivalDate,   setArrivalDate]   = useState(kickoff?.arrivalDate   || "");
