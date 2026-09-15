@@ -261,7 +261,7 @@ function matchCart(cartRaw, catalog, kickoff) {
   const out = [];
   for (let item of cart) {
     // Keep boat details in sync with kickoff fields — build rich _boatData
-    if (/bote|\bboat\b/i.test(item.name) || /bote|\bboat\b/i.test(item.name_en)) {
+    if (/bote|\bboat\b/i.test(item.name) || /bote|\bboat\b/i.test(item.name_en) || item._boatBadge) {
       const bn = kickoff?.boatName || "";
       const dk = kickoff?.dock || "";
       const city = String(kickoff?.city || kickoff?._rowCity || "").toUpperCase();
@@ -300,8 +300,8 @@ function matchCart(cartRaw, catalog, kickoff) {
 
       // Parse boat name / dock from item's description when kickoff fields are empty
       const descText = item.description_en || item.description_es || "";
-      const parsedBoat = /\*\*(?:Boat|Bote):\*\*\s*([^\n*]+)/i.exec(descText);
-      const parsedDock = /\*\*(?:Dock|Muelle):\*\*\s*([^\n*]+)/i.exec(descText);
+      const parsedBoat = /\*\*(?:Boat|Bote):\*\*\s*([^\n*]{1,60})/i.exec(descText);
+      const parsedDock = /\*\*(?:Dock|Muelle):\*\*\s*([^\n*]{1,60})/i.exec(descText);
       const finalBn = bn || (parsedBoat ? parsedBoat[1].trim() : "");
       const finalDk = dk || (parsedDock ? parsedDock[1].trim() : "");
 

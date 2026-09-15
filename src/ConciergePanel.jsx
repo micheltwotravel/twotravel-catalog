@@ -4472,11 +4472,13 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   useEffect(() => {
     try {
       // Pre-mark boat items so ItineraryPrintView renders BoatDetailCard even on old deployments
-      const patchedCart = (Array.isArray(kickoff.cart) ? kickoff.cart : []).map(item => {
+      let rawCart = kickoff.cart;
+      if (typeof rawCart === "string") { try { rawCart = JSON.parse(rawCart); } catch { rawCart = []; } }
+      const patchedCart = (Array.isArray(rawCart) ? rawCart : []).map(item => {
         if (/bote|\bboat\b/i.test(item.name || "") || /bote|\bboat\b/i.test(item.name_en || "")) {
           const descText = item.description_en || item.description_es || "";
-          const parsedBoat = /\*\*(?:Boat|Bote):\*\*\s*([^\n*]+)/i.exec(descText);
-          const parsedDock = /\*\*(?:Dock|Muelle):\*\*\s*([^\n*]+)/i.exec(descText);
+          const parsedBoat = /\*\*(?:Boat|Bote):\*\*\s*([^\n*]{1,60})/i.exec(descText);
+          const parsedDock = /\*\*(?:Dock|Muelle):\*\*\s*([^\n*]{1,60})/i.exec(descText);
           const finalBn = kickoff.boatName || (parsedBoat ? parsedBoat[1].trim() : "");
           const finalDk = kickoff.dock || (parsedDock ? parsedDock[1].trim() : "");
           return { ...item, location: finalBn || item.location, _boatBadge: true, description: finalDk || item.description };
