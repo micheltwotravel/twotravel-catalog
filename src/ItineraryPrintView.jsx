@@ -261,7 +261,7 @@ function matchCart(cartRaw, catalog, kickoff) {
   const out = [];
   for (let item of cart) {
     // Keep boat details in sync with kickoff fields — build rich _boatData
-    if (/detalles del bote/i.test(item.name) || /boat details/i.test(item.name_en)) {
+    if (/detalles del bote|día de bote/i.test(item.name) || /boat details|boat day/i.test(item.name_en)) {
       const bn = kickoff?.boatName || "";
       const dk = kickoff?.dock || "";
       const city = String(kickoff?.city || kickoff?._rowCity || "").toUpperCase();
