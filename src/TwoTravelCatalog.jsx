@@ -36,7 +36,7 @@ const YACHTS_PDF_URL = "https://drive.google.com/file/d/REPLACE_WITH_YOUR_DRIVE_
 const CITY_CONFIG = {
   CTG:  { name: "Cartagena",           currency: "COP", aliases: ["ctg","cartagena","cartagena de indias"] },
   MDE:  { name: "Medellín",            currency: "COP", aliases: ["mde","medellin","medellín"] },
-  CDMX: { name: "Ciudad de México",    currency: "MXN", aliases: ["cdmx","mexico","ciudad de mexico","ciudad de méxico"] },
+  CDMX: { name: "Ciudad de México",    currency: "MXN", aliases: ["cdmx","mexico","ciudad de mexico","ciudad de méxico","mexico city","cdmx mexico","mexico df"] },
   TUL:  { name: "Tulum",              currency: "USD", aliases: ["tul","tulum"] },
   BOG:  { name: "Bogotá",             currency: "COP", aliases: ["bog","bogota","bogotá"] },
 };

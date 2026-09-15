@@ -423,6 +423,7 @@ export async function fetchKickoffsFromSheet({ forceRefresh = false } = {}) {
 
   const result = data.map((k) => ({
     ...k,
+    city: String(k.city || k.Ciudad || k.ciudad || k.destination || k.destino || k.Destination || "").trim(),
     cart:    parseJsonArr(k.cart),
     dayMeta: parseJsonArr(k.dayMeta ?? k.day_meta),
     checkIn:  sheetsTimeToLabel(k.checkIn),

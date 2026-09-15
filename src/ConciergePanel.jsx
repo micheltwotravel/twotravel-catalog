@@ -6237,6 +6237,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
   const [selectedConcierges, setSelectedConcierges] = React.useState([]);
   const [submitting,         setSubmitting]         = React.useState(false);
   const [customCityInput,    setCustomCityInput]    = React.useState("");
+  const submittingRef = React.useRef(false);
 
   const toggleConcierge = (name) => {
     setSelectedConcierges(prev => {
@@ -6254,7 +6255,9 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const handleSubmit = async () => {
+    if (submittingRef.current) return;
     if (!form.guestName.trim() || !form.email.trim() || !form.city) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const conciergeEmail = selectedConcierges
@@ -6268,6 +6271,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
       setForm({ guestName: "", email: "", tripName: "", guestContact: "", city: "", clientType: 1 });
       setSelectedConcierges([]);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
