@@ -1,21 +1,33 @@
 import React, { useMemo, useState, useEffect, Component, Suspense } from "react";
 import { DRINK_CATEGORIES as DRINK_CATEGORIES_DEFAULT, GROCERY_CATEGORIES as GROCERY_CATEGORIES_DEFAULT, applyMenuOverrides } from "./menuData";
 
+// Wraps React.lazy to auto-reload the page on chunk-not-found errors (e.g. after a Vercel deploy)
+const lazyWithReload = (fn) =>
+  React.lazy(() =>
+    fn().catch((e) => {
+      if (/Failed to fetch|Loading chunk|ChunkLoad/i.test(String(e))) {
+        window.location.reload();
+        return new Promise(() => {});
+      }
+      throw e;
+    })
+  );
+
 // Heavy admin components — loaded only when actually navigated to
-const ConciergePanel   = React.lazy(() => import("./ConciergePanel"));
-const ReunionesPage    = React.lazy(() => import("./ConciergePanel").then(m => ({ default: m.ReunionesPage })));
-const ItineraryPrintView = React.lazy(() => import("./ItineraryPrintView"));
-const TwoTravelCatalog = React.lazy(() => import("./TwoTravelCatalog"));
-const BookingPageLazy  = React.lazy(() => import("./BookingPage").then(m => ({ default: m.BookingPage })));
-const BodaPanel        = React.lazy(() => import("./BodaPanel"));
-const BodaPublicView   = React.lazy(() => import("./BodaPublicView"));
-const TareasPanel      = React.lazy(() => import("./TareasPanel"));
-const FinanceCashFlow      = React.lazy(() => import("./FinancePanel").then(m => ({ default: m.FinanceCashFlow })));
-const FinanceMovimientos   = React.lazy(() => import("./FinancePanel").then(m => ({ default: m.FinanceMovimientos })));
-const FinanceCierre        = React.lazy(() => import("./FinancePanel").then(m => ({ default: m.FinanceCierre })));
-const FinanceTemplates     = React.lazy(() => import("./FinancePanel").then(m => ({ default: m.FinanceTemplates })));
-const FinanceReservaciones = React.lazy(() => import("./FinancePanel").then(m => ({ default: m.FinanceReservaciones })));
-const MenuAdminPanel       = React.lazy(() => import("./ConciergePanel").then(m => ({ default: m.MenuAdminPanel })));
+const ConciergePanel   = lazyWithReload(() => import("./ConciergePanel"));
+const ReunionesPage    = lazyWithReload(() => import("./ConciergePanel").then(m => ({ default: m.ReunionesPage })));
+const ItineraryPrintView = lazyWithReload(() => import("./ItineraryPrintView"));
+const TwoTravelCatalog = lazyWithReload(() => import("./TwoTravelCatalog"));
+const BookingPageLazy  = lazyWithReload(() => import("./BookingPage").then(m => ({ default: m.BookingPage })));
+const BodaPanel        = lazyWithReload(() => import("./BodaPanel"));
+const BodaPublicView   = lazyWithReload(() => import("./BodaPublicView"));
+const TareasPanel      = lazyWithReload(() => import("./TareasPanel"));
+const FinanceCashFlow      = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinanceCashFlow })));
+const FinanceMovimientos   = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinanceMovimientos })));
+const FinanceCierre        = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinanceCierre })));
+const FinanceTemplates     = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinanceTemplates })));
+const FinanceReservaciones = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinanceReservaciones })));
+const MenuAdminPanel       = lazyWithReload(() => import("./ConciergePanel").then(m => ({ default: m.MenuAdminPanel })));
 
 function PageLoader() {
   return (
@@ -30,14 +42,19 @@ class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(e) { return { error: e }; }
   render() {
-    if (this.state.error) {
+    const err = this.state.error;
+    if (err) {
+      if (/Failed to fetch|Loading chunk|ChunkLoad/i.test(String(err))) {
+        window.location.reload();
+        return null;
+      }
       return (
         <div style={{padding:32,fontFamily:"monospace",background:"#fff1f1",minHeight:"100vh"}}>
           <h2 style={{color:"#c00",marginBottom:12}}>⚠️ Runtime Error</h2>
           <pre style={{whiteSpace:"pre-wrap",fontSize:13,color:"#333"}}>
-            {this.state.error?.message || String(this.state.error)}
+            {err?.message || String(err)}
             {"\n\n"}
-            {this.state.error?.stack}
+            {err?.stack}
           </pre>
         </div>
       );
