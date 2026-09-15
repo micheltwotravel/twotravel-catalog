@@ -298,15 +298,23 @@ function matchCart(cartRaw, catalog, kickoff) {
       const CTG_NOTE_EN = "Below you'll find all the options for your boat day — food, beach clubs, water activities and places to visit. Once you've chosen, we'll coordinate the full itinerary. Keep in mind that some water activities (fliteboard, flitescooter) can only be done in Barú, not in the Rosario Islands, so we'll coordinate times accordingly.";
       const CTG_NOTE_ES = "A continuación encontrarás todas las opciones para el día de bote: comida, clubes de playa, actividades acuáticas y lugares para visitar. Cuando elijas, coordinamos el itinerario completo. Ten en cuenta que algunas actividades acuáticas (fliteboard, flitescooter) solo se pueden hacer en Barú, no en las Islas del Rosario.";
 
+      // Parse boat name / dock from item's description when kickoff fields are empty
+      const descText = item.description_en || item.description_es || "";
+      const parsedBoat = /\*\*(?:Boat|Bote):\*\*\s*([^\n*]+)/i.exec(descText);
+      const parsedDock = /\*\*(?:Dock|Muelle):\*\*\s*([^\n*]+)/i.exec(descText);
+      const finalBn = bn || (parsedBoat ? parsedBoat[1].trim() : "");
+      const finalDk = dk || (parsedDock ? parsedDock[1].trim() : "");
+
       const userBullets = parseArr(kickoff?.boatBullets);
       item = {
         ...item,
-        description_es: dk || "",
-        description_en: dk || "",
-        location: bn || "",
+        description:    finalDk,  // BoatDetailCard reads it.description for dock
+        description_es: finalDk,
+        description_en: finalDk,
+        location: finalBn,
         _boatBadge: true,
         _boatData: {
-          title:         kickoff?.boatTitle         || (isCtg ? (isEs ? CTG_TITLE_ES : CTG_TITLE_EN) : ""),
+          title:         kickoff?.boatTitle || finalBn || (isCtg ? (isEs ? CTG_TITLE_ES : CTG_TITLE_EN) : ""),
           departureTime: kickoff?.boatDepartureTime || "",
           description:   kickoff?.boatDescription   || (isCtg ? (isEs ? CTG_DESC_ES  : CTG_DESC_EN)  : ""),
           bullets:       userBullets.length ? userBullets : (isCtg ? (isEs ? CTG_BULLETS_ES : CTG_BULLETS_EN) : []),
