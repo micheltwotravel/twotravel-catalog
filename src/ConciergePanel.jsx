@@ -54,7 +54,7 @@ const NO_QB = new Set(["restaurants","bars","nightlife","beach-clubs","beach clu
 const PAX_MULTIPLIES = new Set(["tours","tour","services","service","chef","private chef","chef privado"]);
 // Transportation is priced per vehicle — never multiply by pax
 // City code → full name for PDF and QuickBooks
-const CITY_NAMES = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", CAB:"Los Cabos", BOG:"Bogotá" };
+const CITY_NAMES = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Mexico City", TUL:"Tulum", CAB:"Los Cabos", BOG:"Bogotá" };
 
 /* Branded cover photos (city photos with TW logo overlay) */
 const PRESET_COVER_PHOTOS = [
@@ -3478,7 +3478,7 @@ function CatalogPickerModal({ services, clientType = 1, lang = "en", city = "", 
     }
     return s.toUpperCase();
   };
-  const CITY_LABELS = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá", CAB:"Los Cabos" };
+  const CITY_LABELS = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Mexico City", TUL:"Tulum", BOG:"Bogotá", CAB:"Los Cabos" };
 
   // All city codes in this kickoff (multi-city trips have comma-separated values)
   const kickoffCityCodes = useMemo(() => {
@@ -7590,6 +7590,24 @@ export function MenuAdminPanel() {
     setActiveCat(type === "drink" ? DRINK_CATEGORIES_DEFAULT[0]?.id : GROCERY_CATEGORIES_DEFAULT[0]?.id);
   };
 
+  const hideDefaultItem = (catId, itemName) => {
+    const key = `_hidden__${catId}`;
+    setOverrides(prev => ({
+      ...prev,
+      [key]: [...new Set([...(prev[key] || []), itemName])],
+    }));
+    setSaved(false);
+  };
+
+  const restoreDefaultItem = (catId, itemName) => {
+    const key = `_hidden__${catId}`;
+    setOverrides(prev => ({
+      ...prev,
+      [key]: (prev[key] || []).filter(n => n !== itemName),
+    }));
+    setSaved(false);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -7748,26 +7766,37 @@ export function MenuAdminPanel() {
           <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
             {/* Built-in items */}
             {(cat?.items || []).map(item => {
+              const hiddenList = overrides[`_hidden__${cat.id}`] || [];
+              const isHidden = hiddenList.includes(item.name);
               const ov = overrides[item.name] || {};
               const currentImg   = ov.img      !== undefined ? ov.img      : item.img;
               const currentPrice = ov.priceCOP !== undefined ? ov.priceCOP : item.priceCOP;
               return (
-                <div key={item.name} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#fafafa", borderRadius: 10, padding: "12px 14px", border: "1px solid #f0f0f0" }}>
+                <div key={item.name} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: isHidden ? "#fef2f2" : "#fafafa", borderRadius: 10, padding: "12px 14px", border: `1px solid ${isHidden ? "#fecaca" : "#f0f0f0"}`, opacity: isHidden ? 0.65 : 1 }}>
                   <div style={{ width: 64, height: 64, flexShrink: 0, borderRadius: 8, overflow: "hidden", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>
-                    {currentImg ? <img src={currentImg} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.display = "none"; }} /> : null}
-                    {!currentImg && <span>{item.emoji || "🍽️"}</span>}
+                    {currentImg && !isHidden ? <img src={currentImg} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.display = "none"; }} /> : null}
+                    {(!currentImg || isHidden) && <span>{item.emoji || "🍽️"}</span>}
                   </div>
                   <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>{item.name}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#111", textDecoration: isHidden ? "line-through" : "none" }}>{item.name}</div>
                     {item.name_en && item.name_en !== item.name && <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_en}</div>}
                     {item.name_es && <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_es}</div>}
-                    <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>URL de foto</label>
-                    <input value={currentImg} onChange={e => patch(item.name, "img", e.target.value)} placeholder="https://…" style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }} />
-                    {isDrink && (<>
-                      <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Precio (COP)</label>
-                      <input type="number" value={currentPrice || ""} onChange={e => patch(item.name, "priceCOP", parseInt(e.target.value) || 0)} placeholder="0" style={{ width: 160, border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }} />
+                    {!isHidden && (<>
+                      <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>URL de foto</label>
+                      <input value={currentImg} onChange={e => patch(item.name, "img", e.target.value)} placeholder="https://…" style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }} />
+                      {isDrink && (<>
+                        <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Precio (COP)</label>
+                        <input type="number" value={currentPrice || ""} onChange={e => patch(item.name, "priceCOP", parseInt(e.target.value) || 0)} placeholder="0" style={{ width: 160, border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }} />
+                      </>)}
                     </>)}
+                    {isHidden && <div style={{ fontSize: 11, color: "#dc2626", fontWeight: 500 }}>Eliminado del menú</div>}
                   </div>
+                  <button
+                    onClick={() => isHidden ? restoreDefaultItem(cat.id, item.name) : hideDefaultItem(cat.id, item.name)}
+                    title={isHidden ? "Restaurar item" : "Eliminar del menú"}
+                    style={{ flexShrink: 0, padding: "4px 8px", borderRadius: 6, border: `1px solid ${isHidden ? "#86efac" : "#fca5a5"}`, background: isHidden ? "#f0fdf4" : "#fff5f5", color: isHidden ? "#16a34a" : "#dc2626", fontSize: 12, cursor: "pointer", fontWeight: 600, marginTop: 2 }}>
+                    {isHidden ? "↩ Restaurar" : "✕ Eliminar"}
+                  </button>
                 </div>
               );
             })}

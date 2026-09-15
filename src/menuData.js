@@ -141,16 +141,18 @@ export function applyMenuOverrides(categories, overrides, type = "drink") {
   const result = categories.map(cat => ({
     ...cat,
     items: [
-      ...cat.items.map(it => {
-        const ov = overrides[it.name];
-        if (!ov) return it;
-        return {
-          ...it,
-          ...(ov.img      !== undefined ? { img:      ov.img      } : {}),
-          ...(ov.priceCOP !== undefined ? { priceCOP: ov.priceCOP } : {}),
-          ...(ov.name     !== undefined ? { name:     ov.name     } : {}),
-        };
-      }),
+      ...cat.items
+        .filter(it => !(overrides[`_hidden__${cat.id}`] || []).includes(it.name))
+        .map(it => {
+          const ov = overrides[it.name];
+          if (!ov) return it;
+          return {
+            ...it,
+            ...(ov.img      !== undefined ? { img:      ov.img      } : {}),
+            ...(ov.priceCOP !== undefined ? { priceCOP: ov.priceCOP } : {}),
+            ...(ov.name     !== undefined ? { name:     ov.name     } : {}),
+          };
+        }),
       ...(overrides[`_extra__${cat.id}`] || []),
     ],
   }));
