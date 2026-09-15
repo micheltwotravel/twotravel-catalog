@@ -6620,9 +6620,6 @@ function PresetMessages({ kickoff }) {
         : `Hi ${first}!\n\nIt was a pleasure hosting such a nice group, thank you for being amazing guests. We really hope we were able to meet and exceed expectations. And that you enjoyed your stay and Two Travel!\n\nIf you have time we would appreciate it if you leave us a nice review on Google and maybe add some cool photos. These reviews allow our future clients to understand our service and know we try very hard to make things as easy as possible for our clients.\n\nAny and all nice words are greatly appreciated 💛\n\n${base}/f/${id}`,
     },
   ];
-  const calendlyMsg = calendlyUrl ? (isEs
-    ? `Hola ${first}!\n\nSoy Carolina, pero todos me llaman Caro, Senior Concierge en Two Travel. Estoy muy emocionada de empezar a planear un viaje memorable para ti y tu grupo.\n\nA continuación te comparto el link de mi calendario para que puedas elegir el día y la hora que mejor te funcione. En esta llamada vamos a revisar el itinerario de tu viaje: reservas, día de bote, actividades en la ciudad y lo que quieras discutir.\n\n¡Espero conocerte pronto!\n\n${calendlyUrl}`
-    : `Hi ${first}!\n\nI'm Carolina, but everyone calls me Caro, Senior Concierge at Two Travel. I'm excited to start planning a memorable trip for you and your group.\n\nBelow is a link to my calendar so you can pick a day and time that works best for you. On this call, we'll go over your trip's itinerary: reservations, boat day, activities around the city, and anything else you'd like to discuss.\n\nLooking forward to meeting you.\n\n${calendlyUrl}`) : "";
   return (
     <div>
       <button type="button" onClick={() => setOpen(v => !v)}
