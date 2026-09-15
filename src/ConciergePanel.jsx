@@ -4470,7 +4470,22 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // Auto-open client web itinerary in side panel when drawer mounts
   const iframeRef = useRef(null);
   useEffect(() => {
-    try { localStorage.setItem(`tt_kp_${kickoff.id}`, JSON.stringify({ ts: Date.now(), data: kickoff })); } catch {}
+    try {
+      // Pre-mark boat items so ItineraryPrintView renders BoatDetailCard even on old deployments
+      const patchedCart = (Array.isArray(kickoff.cart) ? kickoff.cart : []).map(item => {
+        if (/bote|\bboat\b/i.test(item.name || "") || /bote|\bboat\b/i.test(item.name_en || "")) {
+          const descText = item.description_en || item.description_es || "";
+          const parsedBoat = /\*\*(?:Boat|Bote):\*\*\s*([^\n*]+)/i.exec(descText);
+          const parsedDock = /\*\*(?:Dock|Muelle):\*\*\s*([^\n*]+)/i.exec(descText);
+          const finalBn = kickoff.boatName || (parsedBoat ? parsedBoat[1].trim() : "");
+          const finalDk = kickoff.dock || (parsedDock ? parsedDock[1].trim() : "");
+          return { ...item, location: finalBn || item.location, _boatBadge: true, description: finalDk || item.description };
+        }
+        return item;
+      });
+      const patchedKickoff = { ...kickoff, cart: patchedCart };
+      localStorage.setItem(`tt_kp_${kickoff.id}`, JSON.stringify({ ts: Date.now(), data: patchedKickoff }));
+    } catch {}
     setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}&edit=1`);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
