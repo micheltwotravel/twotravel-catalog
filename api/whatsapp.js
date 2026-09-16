@@ -4,54 +4,47 @@ export default async function handler(req, res) {
   const { to, message, mediaUrl, facturaUrl } = req.body;
   if (!to || !message) return res.status(400).json({ ok: false, error: 'Missing to or message' });
 
-  const token   = process.env.META_WA_TOKEN;
-  const phoneId = process.env.META_WA_PHONE_ID || '828425163689171';
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken  = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_WA_NUMBER; // e.g. +14155238886
 
-  if (!token) return res.status(500).json({ ok: false, error: 'META_WA_TOKEN not configured' });
+  if (!accountSid || !authToken || !fromNumber) {
+    return res.status(500).json({ ok: false, error: 'Twilio credentials not configured' });
+  }
 
   const phone = to.replace(/\D/g, '');
+  const toWa   = `whatsapp:+${phone}`;
+  const fromWa = fromNumber.startsWith('whatsapp:') ? fromNumber : `whatsapp:${fromNumber}`;
 
   const attachUrl = facturaUrl || mediaUrl;
 
-  let body;
-  if (attachUrl) {
-    body = {
-      messaging_product: 'whatsapp',
-      to: phone,
-      type: 'document',
-      document: {
-        link: attachUrl,
-        caption: message,
-        filename: 'factura.pdf',
-      },
-    };
-  } else {
-    body = {
-      messaging_product: 'whatsapp',
-      to: phone,
-      type: 'text',
-      text: { body: message, preview_url: false },
-    };
-  }
+  const params = new URLSearchParams({
+    From: fromWa,
+    To:   toWa,
+    Body: message,
+  });
+  if (attachUrl) params.append('MediaUrl', attachUrl);
 
-  const metaRes = await fetch(
-    `https://graph.facebook.com/v25.0/${phoneId}/messages`,
+  const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+
+  const twilioRes = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
     {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        'Authorization': `Basic ${credentials}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify(body),
+      body: params.toString(),
     }
   );
 
-  const data = await metaRes.json();
+  const data = await twilioRes.json();
 
-  if (data.messages?.[0]?.id) {
-    return res.status(200).json({ ok: true, messageId: data.messages[0].id });
+  if (data.sid) {
+    return res.status(200).json({ ok: true, messageId: data.sid });
   } else {
-    const errMsg = data.error?.message || JSON.stringify(data);
+    const errMsg = data.message || data.code || JSON.stringify(data);
     return res.status(400).json({ ok: false, error: errMsg });
   }
 }
