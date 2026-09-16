@@ -1721,19 +1721,19 @@ function ChefMenuGroupCard({ it, lang, editMode, onRemove }) {
         <p style={{ fontSize: 12, color: "#374151", lineHeight: 1.65, margin: "0 0 14px 0", whiteSpace: "pre-line" }}>{it.description}</p>
       )}
       {/* Menu cards grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
         {(it._chefMenuGroup || []).map((menu, i) => (
-          <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 12px" }}>
+          <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 12px", overflow: "hidden", minWidth: 0 }}>
             {menu.image && (
               <img src={menu.image} alt={menu.label}
-                style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, flexShrink: 0 }} />
+                style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, display: "block" }} />
             )}
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#111827", marginBottom: 3 }}>{menu.label}</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#111827", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{menu.label}</div>
               {menu.menuUrl && (
                 <a href={menu.menuUrl} target="_blank" rel="noreferrer"
                   style={{ fontSize: 11, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>
-                  {isEs ? "Descargar ↓" : "Download ↓"}
+                  {isEs ? "Ver menú ↗" : "View menu ↗"}
                 </a>
               )}
             </div>
@@ -2628,15 +2628,21 @@ function BillingPage({ kickoff }) {
 ═══════════════════════════════════════════════════════════ */
 function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onAddItem, billingBlock, hasFamilies, patchDay, patchItemFn, dayFlights, onMoveItem }) {
   const parseTime = t => { const m = String(t||"").match(/^(\d{1,2}):(\d{2})/); return m ? +m[1]*60 + +m[2] : Infinity; };
-  const displayItems = editMode ? day.items : groupChefMenuItems(day.items);
-  // In edit mode: show items in array order (so ↑↓ reordering works, including items with no time).
-  // In view mode: merge flights, group chef menus, and sort by time.
-  const allEntries = editMode
-    ? displayItems.map((it, itemIdx) => ({ kind:"item", it, itemIdx }))
-    : [
-        ...displayItems.map((it, itemIdx) => ({ kind:"item", it, itemIdx, sortTime: parseTime(it.time || "") })),
-        ...(dayFlights || []).map(({ flight, type }) => ({ kind:"flight", flight, type, sortTime: parseTime(flight.time || "") })),
-      ].sort((a, b) => a.sortTime - b.sortTime);
+  const displayItems = groupChefMenuItems(day.items);
+  // Always show items in array order (concierge controls order via ↑↓).
+  // Flights are inserted by time between items so they appear at the right moment.
+  const allEntries = (() => {
+    const items = displayItems.map((it, itemIdx) => ({ kind:"item", it, itemIdx, sortTime: parseTime(it.time || "") }));
+    const flights = (dayFlights || []).map(({ flight, type }) => ({ kind:"flight", flight, type, sortTime: parseTime(flight.time || "") }));
+    if (!flights.length) return items;
+    // Insert each flight before the first item whose time is strictly after the flight's time.
+    const result = [...items];
+    for (const fl of [...flights].sort((a,b) => a.sortTime - b.sortTime)) {
+      const insertAt = result.findIndex(e => e.kind === "item" && e.sortTime > fl.sortTime);
+      if (insertAt === -1) result.push(fl); else result.splice(insertAt, 0, fl);
+    }
+    return result;
+  })();
 
   return (
     <div className="page" style={{ position: "relative" }}>
@@ -2673,15 +2679,12 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
           ? <InlineFlightRow key={`fl-${i}`} flight={entry.flight} lang={lang} type={entry.type} />
           : entry.it.isBlock
           ? (
-            <div key={i} style={{ margin: "10px 0", position: "relative", display:"flex", borderBottom:"1px solid #f0f0f0" }}>
-              <div style={{ width:"40%", flexShrink:0, background:"linear-gradient(145deg,#f5f5f5 0%,#ebebeb 100%)", display:"flex", alignItems:"center", justifyContent:"center", minHeight:80 }}>
-                <span style={{ fontSize:24, opacity:.15 }}>✦</span>
-              </div>
-              <div style={{ flex:1, padding:"18px 28px" }}>
+            <div key={i} style={{ margin: "10px 0", position: "relative", display:"flex", borderLeft:"3px solid #d1c4a8", borderBottom:"1px solid #f0f0f0", background:"#faf9f7" }}>
+              <div style={{ flex:1, padding:"14px 20px" }}>
                 {editMode && onRemoveItem && (
-                  <button onClick={() => onRemoveItem(i)} style={{position:"absolute",top:8,right:8,border:"none",background:"none",cursor:"pointer",color:"#9ca3af",fontSize:11,zIndex:2}}>✕</button>
+                  <button onClick={() => onRemoveItem(i)} style={{position:"absolute",top:6,right:8,border:"none",background:"none",cursor:"pointer",color:"#9ca3af",fontSize:11,zIndex:2}}>✕</button>
                 )}
-                <div dangerouslySetInnerHTML={{ __html: entry.it.cartItem.html }} style={{ fontSize: 13, color: "#111827", lineHeight: 1.6 }} />
+                <div dangerouslySetInnerHTML={{ __html: (entry.it.cartItem.html || "").replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>").replace(/\n/g,"<br>") }} style={{ fontSize: 12.5, color: "#374151", lineHeight: 1.7 }} />
               </div>
             </div>
           ) : (
