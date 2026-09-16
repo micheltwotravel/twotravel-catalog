@@ -2757,6 +2757,7 @@ export default function ItineraryPrintView() {
   const [editMode,  setEditMode]  = useState(canEdit);
   // Mutable deep-copy of days used during edit mode (add/remove days & items)
   const [editDays,  setEditDays]  = useState(null);
+  const editDaysRef = useRef(null); // always in sync with editDays for synchronous reads in saveSnapshot
   const _editDaysInitRef = useRef(false); // prevents re-init on every kickoff update (e.g. after saveSnapshot)
   // Catalog picker: { dayIndex } when open, null when closed
   const [pickerForDay, setPickerForDay] = useState(null);
@@ -2782,7 +2783,9 @@ export default function ItineraryPrintView() {
     if (kickoff?.itinerarySnapshot) {
       try { base = JSON.parse(kickoff.itinerarySnapshot); } catch {}
     }
-    setEditDays(JSON.parse(JSON.stringify(base)));
+    const initDays = JSON.parse(JSON.stringify(base));
+    editDaysRef.current = initDays;
+    setEditDays(initDays);
     setLocalPreTrip(null);
     setPdfNotes(kickoff?.pdfNotes || "");
     setCityGuideHidden(kickoff?.cityGuideHidden || "");
@@ -2792,21 +2795,29 @@ export default function ItineraryPrintView() {
   }, [editMode, kickoff]);
 
   /* ── Edit-mode mutation helpers ── */
+  const _upd = (updater) => {
+    setEditDays(prev => {
+      const next = updater(prev);
+      editDaysRef.current = next;
+      return next;
+    });
+  };
+
   const removeDay = (di) =>
-    setEditDays(prev => prev.filter((_, i) => i !== di));
+    _upd(prev => prev.filter((_, i) => i !== di));
 
   const removeItem = (di, ii) =>
-    setEditDays(prev => prev.map((day, i) =>
+    _upd(prev => prev.map((day, i) =>
       i !== di ? day : { ...day, items: day.items.filter((_, j) => j !== ii) }
     ));
 
   const patchDay = (di, field, val) =>
-    setEditDays(prev => prev.map((day, i) =>
+    _upd(prev => prev.map((day, i) =>
       i !== di ? day : { ...day, [field]: val }
     ));
 
   const patchItem = (di, ii, field, val) =>
-    setEditDays(prev => prev.map((day, i) =>
+    _upd(prev => prev.map((day, i) =>
       i !== di ? day : {
         ...day,
         items: day.items.map((it, j) => j !== ii ? it : { ...it, [field]: val }),
@@ -2814,7 +2825,7 @@ export default function ItineraryPrintView() {
     ));
 
   const moveItem = (di, ii, dir) =>
-    setEditDays(prev => prev.map((day, i) => {
+    _upd(prev => prev.map((day, i) => {
       if (i !== di) return day;
       const items = [...day.items];
       const j = ii + dir;
@@ -2824,11 +2835,15 @@ export default function ItineraryPrintView() {
     }));
 
   const saveSnapshot = async () => {
-    if (!kickoffId || !editDays) return;
+    // Use ref to get the latest editDays synchronously — avoids losing an inline
+    // edit that triggered setEditDays just before the save button click (React
+    // batches setState so the state variable may still hold the previous value).
+    const currentDays = editDaysRef.current || editDays;
+    if (!kickoffId || !currentDays) return;
     setSaving(true);
     const now = new Date().toISOString();
     const updates = {
-      itinerarySnapshot: JSON.stringify(editDays),
+      itinerarySnapshot: JSON.stringify(currentDays),
       pdfNotes: pdfNotes.trim(),
       cityGuideHidden: cityGuideHidden,
       cityGuideIntro: cityGuideIntro.trim(),
@@ -2862,7 +2877,7 @@ export default function ItineraryPrintView() {
     const desc = lang === "es"
       ? (svc.description?.es || svc.descriptionEs || svc.description?.en || "")
       : (svc.description?.en || svc.descriptionEn || svc.description?.es || "");
-    setEditDays(prev => prev.map((day, i) =>
+    _upd(prev => prev.map((day, i) =>
       i !== di ? day : {
         ...day,
         items: [...day.items, {
@@ -2894,7 +2909,7 @@ export default function ItineraryPrintView() {
   };
 
   const addBlankDay = () =>
-    setEditDays(prev => {
+    _upd(prev => {
       const base = prev || days;
       return [...base, {
         label: lang === "es" ? `Día ${base.length + 1}` : `Day ${base.length + 1}`,
@@ -2902,6 +2917,7 @@ export default function ItineraryPrintView() {
         items: [],
       }];
     });
+
 
   useEffect(() => {
     if (!kickoffId) { setError("No kickoffId in URL"); setLoading(false); return; }
