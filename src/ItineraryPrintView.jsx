@@ -1690,6 +1690,114 @@ function BoatDetailCard({ it, lang, editMode, onRemove }) {
 // Categories where price is NEVER shown in the PDF (quoted separately)
 const HIDE_PRICE_CATS = new Set(["restaurants","bars","nightlife","beach-clubs","beach clubs","beachclubs"]);
 
+// ── Chef Menu Group Card ─────────────────────────────────────────
+// Renders multiple "Chef Dinner - X Menu" items as one grouped block
+// with the service description + a 2-col grid of menu download cards.
+function ChefMenuGroupCard({ it, lang, editMode, onRemove }) {
+  const isEs = lang === "es";
+  const isConfirmed = it.confirmed !== false;
+  const time = it.time || it.schedule || "";
+  return (
+    <div style={{ borderBottom: "1px solid #e5e7eb", padding: "20px 0", position: "relative" }}>
+      {/* Time */}
+      {time && (
+        <div style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 4 }}>
+          {time}
+        </div>
+      )}
+      {/* Title */}
+      <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: it.location ? 2 : 8 }}>
+        {it.title}
+        {!isConfirmed && (
+          <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "#92400e", background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 4, padding: "2px 6px" }}>TBC</span>
+        )}
+      </div>
+      {/* Location */}
+      {it.location && (
+        <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 8 }}>{it.location}</div>
+      )}
+      {/* Description */}
+      {it.description && (
+        <p style={{ fontSize: 12, color: "#374151", lineHeight: 1.65, margin: "0 0 14px 0", whiteSpace: "pre-line" }}>{it.description}</p>
+      )}
+      {/* Menu cards grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        {(it._chefMenuGroup || []).map((menu, i) => (
+          <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 12px" }}>
+            {menu.image && (
+              <img src={menu.image} alt={menu.label}
+                style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, flexShrink: 0 }} />
+            )}
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#111827", marginBottom: 3 }}>{menu.label}</div>
+              {menu.menuUrl && (
+                <a href={menu.menuUrl} target="_blank" rel="noreferrer"
+                  style={{ fontSize: 11, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>
+                  {isEs ? "Descargar ↓" : "Download ↓"}
+                </a>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Notes */}
+      {it.notes && (
+        <div style={{ marginTop: 10, fontSize: 11, color: "#374151", fontStyle: "italic" }}>💬 {it.notes}</div>
+      )}
+      {/* Remove button (edit mode) */}
+      {editMode && onRemove && (
+        <button onClick={onRemove} style={{ position:"absolute", top:8, right:0, border:"none", background:"none", cursor:"pointer", color:"#9ca3af", fontSize:11 }}>✕</button>
+      )}
+    </div>
+  );
+}
+
+// Groups chef items that share the same base name and have a menuUrl into one grouped item.
+// Only applied in view/print mode — edit mode shows them individually.
+function groupChefMenuItems(items) {
+  const isChefMenu = it =>
+    /chef/i.test(it.category || "") && it.menuUrl;
+  const baseName = title => {
+    const d = (title || "").lastIndexOf(" - ");
+    return d > 0 ? title.slice(0, d).trim() : title;
+  };
+  const menuLabel = title => {
+    const d = (title || "").lastIndexOf(" - ");
+    return d > 0 ? title.slice(d + 3).trim() : title;
+  };
+
+  const grouped = new Map(); // baseName → [items]
+  items.forEach((it, idx) => {
+    if (!isChefMenu(it)) return;
+    const key = baseName(it.title || "");
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push({ it, idx });
+  });
+
+  const consumed = new Set();
+  const result = [];
+  items.forEach((it, idx) => {
+    if (consumed.has(idx)) return;
+    const key = baseName(it.title || "");
+    if (isChefMenu(it) && grouped.has(key) && grouped.get(key).length > 1) {
+      const group = grouped.get(key);
+      group.forEach(({ idx: j }) => consumed.add(j));
+      result.push({
+        ...it,
+        title: key,
+        _chefMenuGroup: group.map(({ it: m }) => ({
+          label: menuLabel(m.title || ""),
+          menuUrl: m.menuUrl,
+          image: m.cartImages?.[0] || m.serviceImages?.[0] || m.image || "",
+        })),
+      });
+    } else {
+      result.push(it);
+    }
+  });
+  return result;
+}
+
 function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
   // Boat Details gets its own rich card layout.
   // Also check description/title for old snapshots saved before _boatBadge existed.
@@ -2520,12 +2628,13 @@ function BillingPage({ kickoff }) {
 ═══════════════════════════════════════════════════════════ */
 function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onAddItem, billingBlock, hasFamilies, patchDay, patchItemFn, dayFlights, onMoveItem }) {
   const parseTime = t => { const m = String(t||"").match(/^(\d{1,2}):(\d{2})/); return m ? +m[1]*60 + +m[2] : Infinity; };
+  const displayItems = editMode ? day.items : groupChefMenuItems(day.items);
   // In edit mode: show items in array order (so ↑↓ reordering works, including items with no time).
-  // In view mode: merge flights and sort by time.
+  // In view mode: merge flights, group chef menus, and sort by time.
   const allEntries = editMode
-    ? day.items.map((it, itemIdx) => ({ kind:"item", it, itemIdx }))
+    ? displayItems.map((it, itemIdx) => ({ kind:"item", it, itemIdx }))
     : [
-        ...day.items.map((it, itemIdx) => ({ kind:"item", it, itemIdx, sortTime: parseTime(it.time || "") })),
+        ...displayItems.map((it, itemIdx) => ({ kind:"item", it, itemIdx, sortTime: parseTime(it.time || "") })),
         ...(dayFlights || []).map(({ flight, type }) => ({ kind:"flight", flight, type, sortTime: parseTime(flight.time || "") })),
       ].sort((a, b) => a.sortTime - b.sortTime);
 
@@ -2591,14 +2700,17 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
                   >↓</button>
                 </div>
               )}
-              <EventBlock
-                it={entry.it}
-                lang={lang}
-                editMode={editMode}
-                hasFamilies={hasFamilies}
-                onRemove={onRemoveItem ? () => onRemoveItem(entry.itemIdx ?? i) : undefined}
-                patchItem={patchItemFn ? (field, val) => patchItemFn(entry.itemIdx ?? i, field, val) : undefined}
-              />
+              {entry.it._chefMenuGroup
+                ? <ChefMenuGroupCard it={entry.it} lang={lang} editMode={editMode} onRemove={onRemoveItem ? () => onRemoveItem(entry.itemIdx ?? i) : undefined} />
+                : <EventBlock
+                    it={entry.it}
+                    lang={lang}
+                    editMode={editMode}
+                    hasFamilies={hasFamilies}
+                    onRemove={onRemoveItem ? () => onRemoveItem(entry.itemIdx ?? i) : undefined}
+                    patchItem={patchItemFn ? (field, val) => patchItemFn(entry.itemIdx ?? i, field, val) : undefined}
+                  />
+              }
             </div>
           )
         )}
