@@ -1664,7 +1664,7 @@ function BoatDetailCard({ it, lang, editMode, onRemove }) {
             borderRadius:10, padding:"14px 18px",
           }}>
             <div style={{ fontSize:8, letterSpacing:"2.5px", textTransform:"uppercase", color:"#b45309", fontWeight:700, marginBottom:7 }}>
-              {isEs ? "📌 Nota" : "📌 Note"}
+              {isEs ? "💬 Nota" : "💬 Note"}
             </div>
             <p style={{ fontSize:12, color:"#78350f", lineHeight:1.7, margin:0, whiteSpace:"pre-line" }}>
               {note}
@@ -1956,7 +1956,7 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
         {/* Concierge notes for this service */}
         {it.notes && (
           <div style={{ fontSize:11, color:"#6b7280", fontStyle:"italic", marginBottom:8, background:"#f9fafb", borderLeft:"3px solid #e5e7eb", paddingLeft:8, paddingTop:4, paddingBottom:4, borderRadius:"0 4px 4px 0" }}>
-            📌 {it.notes}
+            💬 {it.notes}
           </div>
         )}
 
@@ -2662,25 +2662,29 @@ export default function ItineraryPrintView() {
   const saveSnapshot = async () => {
     if (!kickoffId || !editDays) return;
     setSaving(true);
+    const now = new Date().toISOString();
+    const updates = {
+      itinerarySnapshot: JSON.stringify(editDays),
+      pdfNotes: pdfNotes.trim(),
+      cityGuideHidden: cityGuideHidden,
+      cityGuideIntro: cityGuideIntro.trim(),
+      itineraryUpdatedAt: now,
+    };
+    // Always update local state and localStorage so edits persist in session
+    setKickoff(prev => ({ ...prev, ...updates }));
     try {
-      const now = new Date().toISOString();
-      await updateKickoffInSheet(kickoffId, {
-        itinerarySnapshot: JSON.stringify(editDays),
-        pdfNotes: pdfNotes.trim(),
-        cityGuideHidden: cityGuideHidden,
-        cityGuideIntro: cityGuideIntro.trim(),
-        itineraryUpdatedAt: now,
-      });
+      const cached = localStorage.getItem(`tt_kp_${kickoffId}`);
+      if (cached) {
+        const { data } = JSON.parse(cached);
+        localStorage.setItem(`tt_kp_${kickoffId}`, JSON.stringify({ ts: Date.now(), data: { ...data, ...updates } }));
+      }
+    } catch {}
+    try {
+      await updateKickoffInSheet(kickoffId, updates);
       const ts = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       setSavedAt(ts);
-      setKickoff(prev => ({
-        ...prev,
-        itinerarySnapshot: JSON.stringify(editDays),
-        pdfNotes: pdfNotes.trim(),
-        cityGuideHidden: cityGuideHidden,
-        cityGuideIntro: cityGuideIntro.trim(),
-        itineraryUpdatedAt: now,
-      }));
+    } catch (err) {
+      setSavedAt("⚠️ Error al guardar en servidor");
     } finally {
       setSaving(false);
     }
