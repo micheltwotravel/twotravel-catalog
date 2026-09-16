@@ -1691,9 +1691,25 @@ function BoatDetailCard({ it, lang, editMode, onRemove }) {
 const HIDE_PRICE_CATS = new Set(["restaurants","bars","nightlife","beach-clubs","beach clubs","beachclubs"]);
 
 function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
-  // Boat Details gets its own rich card layout
-  if (it._boatBadge) {
-    return <BoatDetailCard it={it} lang={lang} editMode={editMode} onRemove={onRemove} />;
+  // Boat Details gets its own rich card layout.
+  // Also check description/title for old snapshots saved before _boatBadge existed.
+  const _descText = it.description || "";
+  const _isBoat = it._boatBadge ||
+    /\*\*(?:Boat|Bote):\*\*/i.test(_descText) ||
+    /\bboat\b|\bbote\b/i.test(it.title || "");
+  if (_isBoat) {
+    let boatIt = it;
+    if (!it._boatBadge) {
+      const parsedBoat = /\*\*(?:Boat|Bote):\*\*\s*([^\n*]{1,60})/i.exec(_descText);
+      const parsedDock = /\*\*(?:Dock|Muelle):\*\*\s*([^\n*]{1,60})/i.exec(_descText);
+      boatIt = {
+        ...it,
+        _boatBadge: true,
+        location: it.location || (parsedBoat ? parsedBoat[1].trim() : ""),
+        description: parsedDock ? parsedDock[1].trim() : it.description,
+      };
+    }
+    return <BoatDetailCard it={boatIt} lang={lang} editMode={editMode} onRemove={onRemove} />;
   }
 
   const isConfirmed = it.confirmed !== false;
