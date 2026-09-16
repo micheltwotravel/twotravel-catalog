@@ -2518,13 +2518,16 @@ function BillingPage({ kickoff }) {
 /* ═══════════════════════════════════════════════════════════
    DAY PAGE
 ═══════════════════════════════════════════════════════════ */
-function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onAddItem, billingBlock, hasFamilies, patchDay, patchItemFn, dayFlights }) {
-  // Merge regular items with inline flight rows, sorted by time
+function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onAddItem, billingBlock, hasFamilies, patchDay, patchItemFn, dayFlights, onMoveItem }) {
   const parseTime = t => { const m = String(t||"").match(/^(\d{1,2}):(\d{2})/); return m ? +m[1]*60 + +m[2] : Infinity; };
-  const allEntries = [
-    ...day.items.map(it => ({ kind:"item", it, sortTime: parseTime(it.time || "") })),
-    ...(dayFlights || []).map(({ flight, type }) => ({ kind:"flight", flight, type, sortTime: parseTime(flight.time || "") })),
-  ].sort((a, b) => a.sortTime - b.sortTime);
+  // In edit mode: show items in array order (so ↑↓ reordering works, including items with no time).
+  // In view mode: merge flights and sort by time.
+  const allEntries = editMode
+    ? day.items.map((it, itemIdx) => ({ kind:"item", it, itemIdx }))
+    : [
+        ...day.items.map((it, itemIdx) => ({ kind:"item", it, itemIdx, sortTime: parseTime(it.time || "") })),
+        ...(dayFlights || []).map(({ flight, type }) => ({ kind:"flight", flight, type, sortTime: parseTime(flight.time || "") })),
+      ].sort((a, b) => a.sortTime - b.sortTime);
 
   return (
     <div className="page" style={{ position: "relative" }}>
@@ -2573,15 +2576,30 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
               </div>
             </div>
           ) : (
-            <EventBlock
-              key={i}
-              it={entry.it}
-              lang={lang}
-              editMode={editMode}
-              hasFamilies={hasFamilies}
-              onRemove={onRemoveItem ? () => onRemoveItem(i) : undefined}
-              patchItem={patchItemFn ? (field, val) => patchItemFn(i, field, val) : undefined}
-            />
+            <div key={i} style={{ position: "relative" }}>
+              {editMode && onMoveItem && (
+                <div className="no-print" style={{ position:"absolute", left:-30, top:"50%", transform:"translateY(-50%)", display:"flex", flexDirection:"column", gap:2, zIndex:10 }}>
+                  <button
+                    onClick={() => onMoveItem(entry.itemIdx ?? i, -1)}
+                    disabled={i === 0}
+                    style={{ border:"1px solid #d1d5db", borderRadius:3, background:"#fff", color: i===0 ? "#d1d5db" : "#374151", cursor: i===0 ? "default" : "pointer", fontSize:10, padding:"1px 5px", lineHeight:1.2 }}
+                  >↑</button>
+                  <button
+                    onClick={() => onMoveItem(entry.itemIdx ?? i, +1)}
+                    disabled={i === allEntries.length - 1}
+                    style={{ border:"1px solid #d1d5db", borderRadius:3, background:"#fff", color: i===allEntries.length-1 ? "#d1d5db" : "#374151", cursor: i===allEntries.length-1 ? "default" : "pointer", fontSize:10, padding:"1px 5px", lineHeight:1.2 }}
+                  >↓</button>
+                </div>
+              )}
+              <EventBlock
+                it={entry.it}
+                lang={lang}
+                editMode={editMode}
+                hasFamilies={hasFamilies}
+                onRemove={onRemoveItem ? () => onRemoveItem(entry.itemIdx ?? i) : undefined}
+                patchItem={patchItemFn ? (field, val) => patchItemFn(entry.itemIdx ?? i, field, val) : undefined}
+              />
+            </div>
           )
         )}
 
@@ -2627,6 +2645,7 @@ export default function ItineraryPrintView() {
   const [editMode,  setEditMode]  = useState(canEdit);
   // Mutable deep-copy of days used during edit mode (add/remove days & items)
   const [editDays,  setEditDays]  = useState(null);
+  const _editDaysInitRef = useRef(false); // prevents re-init on every kickoff update (e.g. after saveSnapshot)
   // Catalog picker: { dayIndex } when open, null when closed
   const [pickerForDay, setPickerForDay] = useState(null);
   const [localPreTrip, setLocalPreTrip] = useState(null);
@@ -2638,9 +2657,15 @@ export default function ItineraryPrintView() {
   const [cityGuideIntro, setCityGuideIntro] = useState("");
   const [checkinResponses, setCheckinResponses] = useState([]);
 
-  // Sync editDays from computed days (or itinerarySnapshot) when editMode is active and data is loaded
+  // Sync editDays from snapshot when entering edit mode. Guard prevents re-init when
+  // kickoff updates after saveSnapshot (which would overwrite in-progress inline edits).
   useEffect(() => {
-    if (!editMode || !kickoff) return;
+    if (!editMode) {
+      _editDaysInitRef.current = false;
+      setEditDays(null);
+      return;
+    }
+    if (!kickoff || _editDaysInitRef.current) return;
     let base = days;
     if (kickoff?.itinerarySnapshot) {
       try { base = JSON.parse(kickoff.itinerarySnapshot); } catch {}
@@ -2650,6 +2675,7 @@ export default function ItineraryPrintView() {
     setPdfNotes(kickoff?.pdfNotes || "");
     setCityGuideHidden(kickoff?.cityGuideHidden || "");
     setCityGuideIntro(kickoff?.cityGuideIntro || "");
+    _editDaysInitRef.current = true;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode, kickoff]);
 
@@ -2674,6 +2700,16 @@ export default function ItineraryPrintView() {
         items: day.items.map((it, j) => j !== ii ? it : { ...it, [field]: val }),
       }
     ));
+
+  const moveItem = (di, ii, dir) =>
+    setEditDays(prev => prev.map((day, i) => {
+      if (i !== di) return day;
+      const items = [...day.items];
+      const j = ii + dir;
+      if (j < 0 || j >= items.length) return day;
+      [items[ii], items[j]] = [items[j], items[ii]];
+      return { ...day, items };
+    }));
 
   const saveSnapshot = async () => {
     if (!kickoffId || !editDays) return;
@@ -3010,6 +3046,7 @@ export default function ItineraryPrintView() {
               editMode={editMode}
               onRemoveDay={editMode ? () => removeDay(di) : undefined}
               onRemoveItem={editMode ? (ii) => removeItem(di, ii) : undefined}
+              onMoveItem={editMode ? (ii, dir) => moveItem(di, ii, dir) : undefined}
               onAddItem={editMode ? () => openPickerForDay(di) : undefined}
               billingBlock={null}
               hasFamilies={hasFamilies}

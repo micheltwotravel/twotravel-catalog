@@ -2048,9 +2048,11 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
   const [saving,   setSaving]   = useState(false);
   const [catalogTargetDay, setCatalogTargetDay] = useState(null);
   const [itineraryItems, setItineraryItems] = useState([]);
+  const allItineraryItemsRef = useRef([]); // unfiltered — used for preset description lookups
 
   useEffect(() => {
     fetchItineraryItems().then(items => {
+      allItineraryItemsRef.current = items;
       const filtered = items.filter(i => {
         const n = (i.name_en || i.name_es || "").toLowerCase();
         return !n.includes("check-in") && !n.includes("check-out") && !n.includes("checkin") && !n.includes("checkout");
@@ -2251,10 +2253,11 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         const accom = kickoff?.accommodationName || "";
         const checkinTime  = kickoff?.checkIn  || "3:00 PM";
         const checkoutTime = kickoff?.checkOut || "11:00 AM";
-        // Services from itinerary sheet (if available)
-        const bfService = itineraryItems.find(i => /breakfast/i.test(i.name_en) || /desayuno/i.test(i.name_es));
-        const ciService = itineraryItems.find(i => /^check.?in$/i.test((i.name_en||"").trim()) || /^check.?in$/i.test((i.name_es||"").trim()));
-        const coService = itineraryItems.find(i => /^check.?out$/i.test((i.name_en||"").trim()) || /^check.?out$/i.test((i.name_es||"").trim()));
+        // Use allItineraryItemsRef (unfiltered) so check-in/check-out descriptions from the sheet are applied
+        const _allItems = allItineraryItemsRef.current;
+        const bfService = _allItems.find(i => /breakfast/i.test(i.name_en) || /desayuno/i.test(i.name_es));
+        const ciService = _allItems.find(i => /^check.?in$/i.test((i.name_en||"").trim()) || /^check.?in$/i.test((i.name_es||"").trim()));
+        const coService = _allItems.find(i => /^check.?out$/i.test((i.name_en||"").trim()) || /^check.?out$/i.test((i.name_es||"").trim()));
         if (firstLabel) {
           setCart(prev => {
             const hasCheckin  = prev.some(i => i.dayLabel === firstLabel && (i.name === "Check-in" || i.name_en === "Check-in"));
@@ -2365,7 +2368,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
     const lang = kickoff?.lang || "en";
     const presets = {
       checkin: (() => {
-        const ci = itineraryItems.find(i => /^check.?in$/i.test((i.name_en||"").trim()) || /^check.?in$/i.test((i.name_es||"").trim()));
+        const ci = allItineraryItemsRef.current.find(i => /^check.?in$/i.test((i.name_en||"").trim()) || /^check.?in$/i.test((i.name_es||"").trim()));
         return {
           name: "Check-in", name_en: "Check-in", category: "services",
           timeLabel: checkinTime,
@@ -2375,7 +2378,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         };
       })(),
       breakfast: (() => {
-        const s = itineraryItems.find(i => /breakfast/i.test(i.name_en) || /desayuno/i.test(i.name_es));
+        const s = allItineraryItemsRef.current.find(i => /breakfast/i.test(i.name_en) || /desayuno/i.test(i.name_es));
         return {
           name:    s?.name_es || "Desayuno en la Villa",
           name_en: s?.name_en || "Breakfast at the Villa",
@@ -2411,26 +2414,12 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         const guestName = kickoff?.guestName || "";
         const accom = kickoff?.accommodationName || "the accommodation";
         const accomEs = kickoff?.accommodationName || "el alojamiento";
-        const pax = parseInt(kickoff?.groupSize || kickoff?.pax || "1", 10) || 1;
-        const tier = parseInt(kickoff?.clientType || kickoff?.tier || "1", 10) || 1;
-        // Vehicle options by pax count
-        const vehicleOptions = (() => {
-          if (pax <= 3) return {
-            en: `**Option A — SUV** (1–3 pax) · $130,000 COP\n**Option B — Minivan** (3–6 pax) · $195,000 COP`,
-            es: `**Opción A — SUV** (1–3 pax) · $130,000 COP\n**Opción B — Minivan** (3–6 pax) · $195,000 COP`,
-            note: tier === 1 ? "SUV / Minivan" : "Minivan",
-          };
-          if (pax <= 6) return {
-            en: `**Option A — Minivan** (3–6 pax) · $195,000 COP\n**Option B — Master Van** (6–8 pax) · $255,000 COP`,
-            es: `**Opción A — Minivan** (3–6 pax) · $195,000 COP\n**Opción B — Master Van** (6–8 pax) · $255,000 COP`,
-            note: "Minivan",
-          };
-          return {
-            en: `**Master Van** (6–8 pax) · $255,000 COP`,
-            es: `**Master Van** (6–8 pax) · $255,000 COP`,
-            note: "Master Van",
-          };
-        })();
+        // Always show all vehicle options — group may arrive on separate flights
+        const vehicleOptions = {
+          en: `**SUV** (1–3 pax) · $130,000 COP per vehicle\n**Mini Van** (3–6 pax) · $195,000 COP per vehicle\n**Master Van** (6–8 pax) · $255,000 COP per vehicle\n**Sprinter** (9–10 pax) · $370,000 COP per vehicle`,
+          es: `**SUV** (1–3 pax) · $130,000 COP por vehículo\n**Mini Van** (3–6 pax) · $195,000 COP por vehículo\n**Master Van** (6–8 pax) · $255,000 COP por vehículo\n**Sprinter** (9–10 pax) · $370,000 COP por vehículo`,
+          note: "Ver opciones de transporte",
+        };
         // Airport name by city
         const cityRaw = (kickoff?._rowCity || kickoff?.city || "").toLowerCase();
         const AIRPORTS = {
@@ -2485,7 +2474,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         return items;
       })(),
       checkout: (() => {
-        const co = itineraryItems.find(i => /^check.?out$/i.test((i.name_en||"").trim()) || /^check.?out$/i.test((i.name_es||"").trim()));
+        const co = allItineraryItemsRef.current.find(i => /^check.?out$/i.test((i.name_en||"").trim()) || /^check.?out$/i.test((i.name_es||"").trim()));
         return {
           name: "Check-out", name_en: "Check-out", category: "services",
           timeLabel: checkoutTime,
