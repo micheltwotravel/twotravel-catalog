@@ -467,10 +467,10 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
   const parseTime = t => { const m = String(t||"").match(/^(\d{1,2}):(\d{2})/); return m ? +m[1]*60 + +m[2] : Infinity; };
   return orderedLabels.map(label => {
     const dm = metaList.find(d => cl(d.label) === label);
-    const items = (map.get(label) || []).sort((a, b) => {
-      const ta = parseTime(a.time), tb = parseTime(b.time);
-      return ta !== tb ? ta - tb : a.sort - b.sort;
-    });
+    // Sort by sortOrder only — concierge controls order via ↑↓ arrows.
+    // Time is displayed but does not drive position; timed and no-time items
+    // can be interleaved freely.
+    const items = (map.get(label) || []).sort((a, b) => a.sort - b.sort);
     // Day band shows label; subtitle shows the descriptive title if set
     return { label, title: dm?.title || "", date: dm?.date || "", items };
   });
@@ -2783,26 +2783,10 @@ export default function ItineraryPrintView() {
       return;
     }
     if (!kickoff || _editDaysInitRef.current) return;
-    let base = days;
-    if (kickoff?.itinerarySnapshot) {
-      try {
-        const snap = JSON.parse(kickoff.itinerarySnapshot);
-        // Enrich snapshot items with _rawCartItem refs from days (built from cart)
-        base = snap.map(snapDay => ({
-          ...snapDay,
-          items: (snapDay.items || []).map(snapItem => {
-            if (snapItem._rawCartItem) return snapItem;
-            const cartDay = days.find(d => d.label === snapDay.label);
-            if (cartDay) {
-              const match = cartDay.items.find(ci => ci.title === snapItem.title);
-              if (match?._rawCartItem) return { ...snapItem, _rawCartItem: match._rawCartItem };
-            }
-            return snapItem;
-          }),
-        }));
-      } catch {}
-    }
-    const initDays = JSON.parse(JSON.stringify(base));
+    // Always derive from cart+dayMeta (the single source of truth).
+    // itinerarySnapshot is no longer used as primary source; cart edits
+    // from ItineraryCanvas and ItineraryPrintView both go to cart.
+    const initDays = JSON.parse(JSON.stringify(days));
     editDaysRef.current = initDays;
     setEditDays(initDays);
     setLocalPreTrip(null);
@@ -2839,7 +2823,24 @@ export default function ItineraryPrintView() {
     _upd(prev => prev.map((day, i) =>
       i !== di ? day : {
         ...day,
-        items: day.items.map((it, j) => j !== ii ? it : { ...it, [field]: val }),
+        items: day.items.map((it, j) => {
+          if (j !== ii) return it;
+          const updated = { ...it, [field]: val };
+          // Mirror editable fields to _rawCartItem so saveSnapshot writes them to cart
+          if (updated._rawCartItem) {
+            const cartMirror = {};
+            if (field === "title")       cartMirror.displayName = val;
+            else if (field === "time")   cartMirror.timeLabel   = val;
+            else if (field === "notes")  cartMirror.notes       = val;
+            else if (field === "description") cartMirror.description = val;
+            else if (field === "confirmed")   cartMirror.confirmed   = val;
+            else if (field === "price")       cartMirror.priceOverride_cop = val;
+            if (Object.keys(cartMirror).length) {
+              updated._rawCartItem = { ...updated._rawCartItem, ...cartMirror };
+            }
+          }
+          return updated;
+        }),
       }
     ));
 
@@ -2898,7 +2899,6 @@ export default function ItineraryPrintView() {
     const newDayMeta = currentDays.map(d => ({ label: d.label, title: d.title || "", date: d.date || "" }));
 
     const updates = {
-      itinerarySnapshot: JSON.stringify(currentDays),
       cart: JSON.stringify(newCart),
       dayMeta: JSON.stringify(newDayMeta),
       pdfNotes: pdfNotes.trim(),
