@@ -7990,8 +7990,23 @@ const loadKickoffs = async () => {
   }, []);
   // After creating a new client, store the kickoff here so we can show both links
   const [newClientKickoff, setNewClientKickoff] = useState(null);
+  const _creatingRef = React.useRef(false);
 
   const handleCreateAndOpenLink = async (form) => {
+    if (_creatingRef.current) return;
+
+    // Duplicate guard: block if same guestName was created in the last 5 min
+    const fiveMinAgo = Date.now() - 5 * 60 * 1000;
+    const duplicate = kickoffs.find(k =>
+      k.guestName?.trim().toLowerCase() === form.guestName?.trim().toLowerCase() &&
+      new Date(k.createdAt).getTime() > fiveMinAgo
+    );
+    if (duplicate) {
+      if (!window.confirm(`Ya existe "${form.guestName}" creado hace menos de 5 minutos (ID: ${duplicate.id}).\n\n¿Crear de todas formas?`)) return;
+    }
+
+    _creatingRef.current = true;
+    try {
     const {
       guestName,
       email,
@@ -8056,6 +8071,9 @@ const loadKickoffs = async () => {
     } else {
       // Default: show both links modal
       setNewClientKickoff(kickoff);
+    }
+    } finally {
+      _creatingRef.current = false;
     }
   };
 
