@@ -1,5 +1,6 @@
 // src/sheetServices.js
 import Papa from "papaparse";
+import { supabase } from "./supabaseClient.js";
 
 
 
@@ -296,78 +297,60 @@ export function getHighlights(service, lang = "en") {
 // fetchConciergesFromSheet: pendiente hasta que exista pestaña "Concierges" con GID conocido.
 // Por ahora concierges se asignan manualmente con campos de texto libre.
 
-export async function fetchKickoffById(kickoffId) {
-  // Run direct lookup and list-all in parallel — whichever is faster wins.
-  // Direct lookup (POST) is fast once GAS is redeployed with getKickoffById.
-  // List fallback (GET listKickoffs) works with older deployments.
-  const directPromise = postToKickoffAPI({ action: "getKickoffById", id: kickoffId })
-    .then(j => j?.data ?? null).catch(() => null);
-
-  const listPromise = fetchKickoffsFromSheet()
-    .then(all => (Array.isArray(all) ? all : []).find(k => String(k.id).trim() === String(kickoffId).trim()) ?? null)
-    .catch(() => null);
-
-  const [direct, fromList] = await Promise.all([directPromise, listPromise]);
-  return direct ?? fromList ?? null;
-}
 /* ============================================================
-   2) KICKOFFS – REAL (Apps Script Web App)
-   ============================================================ */
-/* ============================================================
-   2) KICKOFFS – REAL (Apps Script Web App)
+   2) KICKOFFS – SUPABASE
    ============================================================ */
 
-const KICKOFF_API_URL =
-  import.meta.env.VITE_GAS_URL;
-
-
-
-async function postToKickoffAPI(bodyObj) {
-  const res = await fetch(KICKOFF_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(bodyObj),
-  });
-
-  const text = await res.text();
-
-  // HTML response = GAS returned an error page (404, permission error, etc.)
-  if (text.trimStart().startsWith("<")) {
-    const hint = !res.ok ? ` (HTTP ${res.status})` : "";
-    throw new Error(`Error de conexión con el servidor${hint}. Intenta guardar de nuevo.`);
-  }
-
-  let json = null;
-  try {
-    json = JSON.parse(text);
-  } catch (parseErr) {
-    console.warn("Could not parse API response as JSON:", parseErr.message, "| Raw:", text?.slice(0, 200));
-    throw new Error("Respuesta inesperada del servidor. Intenta guardar de nuevo.");
-  }
-
-  if (!res.ok) throw new Error(json?.error || "Error en API kickoffs");
-  if (json?.ok === false) throw new Error(json?.error || "Error en API kickoffs");
-
-  return json;
-}
-
-
-
-
-/**
- * Trae todos los kickoffs desde el Sheet
- * Retorna un array:
- * [{ id, guestName, tripName, createdAt, status, conciergeSummary, travifyText, internalNotes, cart }]
- */
 const KICKOFFS_CACHE_KEY = "tt_kickoffs_cache";
-const KICKOFFS_CACHE_TTL = 90 * 1000; // 90 segundos
+const KICKOFFS_CACHE_TTL = 90 * 1000;
 
 export function invalidateKickoffsCache() {
   try { sessionStorage.removeItem(KICKOFFS_CACHE_KEY); } catch {}
 }
 
+function normalizeKickoff(row) {
+  const k = { id: row.id, ...row.data };
+  const parseJsonArr = (v) => {
+    if (Array.isArray(v)) return v;
+    if (typeof v === "string" && v.trim()) { try { return JSON.parse(v); } catch {} }
+    return [];
+  };
+  const sheetsTimeToLabel = (v) => {
+    if (!v || typeof v !== "string") return v;
+    if (!v.includes("T") || !v.startsWith("1899")) return v;
+    try { return new Date(v).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }); } catch { return v; }
+  };
+  return {
+    ...k,
+    city: String(k.city || k.Ciudad || k.ciudad || k.destination || k.destino || k.Destination || "").trim(),
+    cart:    parseJsonArr(k.cart),
+    dayMeta: parseJsonArr(k.dayMeta ?? k.day_meta),
+    checkIn:  sheetsTimeToLabel(k.checkIn),
+    checkOut: sheetsTimeToLabel(k.checkOut),
+    guestContact: String(k?.guestContact ?? k?.GuestContact ?? k?.guest_contact ?? k?.contact ?? k?.Contact ?? k?.contacto ?? k?.Contacto ?? "").trim(),
+    mainContact: String(k?.mainContact ?? k?.main_contact ?? k?.MainContact ?? k?.whatsapp ?? k?.Whatsapp ?? k?.conciergePhone ?? "").trim(),
+    accommodationMapsUrl: String(k?.accommodationMapsUrl ?? k?.accommodation_maps_url ?? k?.accommodationMap ?? k?.villaMap ?? k?.house_map ?? "").trim(),
+    clientType: Number(k?.clientType || 1),
+  };
+}
+
+export async function fetchKickoffById(kickoffId) {
+  try {
+    const raw = sessionStorage.getItem(KICKOFFS_CACHE_KEY);
+    if (raw) {
+      const { ts, data } = JSON.parse(raw);
+      if (Date.now() - ts < KICKOFFS_CACHE_TTL) {
+        const found = data.find(k => String(k.id).trim() === String(kickoffId).trim());
+        if (found) return found;
+      }
+    }
+  } catch {}
+  const { data, error } = await supabase.from("kickoffs").select("*").eq("id", kickoffId).single();
+  if (error) throw new Error(error.message);
+  return normalizeKickoff(data);
+}
+
 export async function fetchKickoffsFromSheet({ forceRefresh = false } = {}) {
-  // Serve from cache if fresh
   if (!forceRefresh) {
     try {
       const raw = sessionStorage.getItem(KICKOFFS_CACHE_KEY);
@@ -377,113 +360,28 @@ export async function fetchKickoffsFromSheet({ forceRefresh = false } = {}) {
       }
     } catch {}
   }
-
-  // listKickoffs uses GET (GAS doGet handles this action)
-  const _ctrl = new AbortController();
-  const _timeout = setTimeout(() => _ctrl.abort(), 30000); // 30s timeout
-  let _res;
-  try {
-    _res = await fetch(`${KICKOFF_API_URL}?action=listKickoffs`, { signal: _ctrl.signal });
-  } catch (e) {
-    clearTimeout(_timeout);
-    throw new Error(e.name === "AbortError" ? "El servidor tardó demasiado. Intenta guardar de nuevo." : "Error de red. Intenta guardar de nuevo.");
-  }
-  clearTimeout(_timeout);
-  const _text = await _res.text();
-  if (_text.trimStart().startsWith("<")) throw new Error("Error de conexión con el servidor. Intenta guardar de nuevo.");
-  let json;
-  try { json = JSON.parse(_text); } catch { throw new Error("Respuesta inesperada del servidor. Intenta guardar de nuevo."); }
-  if (json?.ok === false) throw new Error(json?.error || "Error en API kickoffs");
-
-  let data = [];
-
-  if (!json) data = [];
-  else if (Array.isArray(json)) data = json;
-  else if (Array.isArray(json.data)) data = json.data;
-
-
-  // Parse a JSON-array field that may come back as a string or already-parsed array
-  const parseJsonArr = (v) => {
-    if (Array.isArray(v)) return v;
-    if (typeof v === "string" && v.trim()) {
-      try { return JSON.parse(v); } catch {}
-    }
-    return [];
-  };
-
-  // Convert a Sheets-serialised time (e.g. "1899-12-30T15:00:00.000Z") → "3:00 PM"
-  const sheetsTimeToLabel = (v) => {
-    if (!v || typeof v !== "string") return v;
-    if (!v.includes("T") || !v.startsWith("1899")) return v; // already human text
-    try {
-      const d = new Date(v);
-      return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
-    } catch { return v; }
-  };
-
-  const result = data.map((k) => ({
-    ...k,
-    city: String(k.city || k.Ciudad || k.ciudad || k.destination || k.destino || k.Destination || "").trim(),
-    cart:    parseJsonArr(k.cart),
-    dayMeta: parseJsonArr(k.dayMeta ?? k.day_meta),
-    checkIn:  sheetsTimeToLabel(k.checkIn),
-    checkOut: sheetsTimeToLabel(k.checkOut),
-    guestContact: String(
-      k?.guestContact ?? k?.GuestContact ?? k?.guest_contact ??
-      k?.contact ?? k?.Contact ?? k?.contacto ?? k?.Contacto ?? ""
-    ).trim(),
-    mainContact: String(
-      k?.mainContact ?? k?.main_contact ?? k?.MainContact ??
-      k?.whatsapp ?? k?.Whatsapp ?? k?.conciergePhone ?? ""
-    ).trim(),
-    accommodationMapsUrl: String(
-      k?.accommodationMapsUrl ?? k?.accommodation_maps_url ??
-      k?.accommodationMap ?? k?.villaMap ?? k?.house_map ?? ""
-    ).trim(),
-    clientType: Number(k?.clientType || 1),
-  }));
-
+  const { data, error } = await supabase.from("kickoffs").select("*").order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  const result = (data || []).map(normalizeKickoff);
   try { sessionStorage.setItem(KICKOFFS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}
   return result;
 }
 
-
-/**
- * Guarda un kickoff nuevo en el Sheet
- * payload debe parecerse a:
- * { guestName, tripName, status, conciergeSummary, travifyText, internalNotes, cart }
- */
 export async function saveKickoffToSheet(payload) {
   invalidateKickoffsCache();
-  const json = await postToKickoffAPI({ action: "saveKickoff", payload });
-
-  // Algunos backends devuelven { ok:true, id:"..." }
-  // Otros devuelven { ok:true, data:{ id:"..." } }
-  const id = json?.id || json?.data?.id;
-
-  if (!id) {
-    console.error("saveKickoff response (sin id):", json);
-    throw new Error("Faltó ID en la respuesta del backend");
-  }
-
-  // Devuelve siempre en formato consistente
-  return { ...json, id };
+  const id = payload.id || `k_${Date.now()}`;
+  const { error } = await supabase.from("kickoffs").insert({ id, data: { ...payload, id } });
+  if (error) throw new Error(error.message);
+  return { ok: true, id };
 }
 
-/**
- * Actualiza un kickoff existente
- * updates puede incluir:
- * { guestName, tripName, status, conciergeSummary, travifyText, internalNotes, cart }
- */
 export async function updateKickoffInSheet(id, updates) {
   invalidateKickoffsCache();
-  const json = await postToKickoffAPI({
-    action: "updateKickoff",
-    id,
-    updates,
-  });
-
-  if (json.ok === false) throw new Error(json.error || "GAS updateKickoff falló");
+  const { data: existing, error: fetchErr } = await supabase.from("kickoffs").select("data").eq("id", id).single();
+  if (fetchErr) throw new Error(fetchErr.message);
+  const merged = { ...(existing?.data || {}), ...updates };
+  const { error } = await supabase.from("kickoffs").update({ data: merged }).eq("id", id);
+  if (error) throw new Error(error.message);
   return true;
 }
 
