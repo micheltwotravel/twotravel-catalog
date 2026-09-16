@@ -1,191 +1,283 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Two Travel · Menu</title>
-<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Two Travel · Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{min-height:100%;font-family:'Jost',sans-serif;font-weight:300;background:#f7f4ef;color:#1a1814}
-.header{background:#f7f4ef;border-bottom:1px solid #e5ddd3;padding:24px 32px;text-align:center}
-.logo{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:500;color:#f7f4ef;letter-spacing:.06em}
-.tagline{font-size:11px;color:#9a7d52;letter-spacing:.14em;text-transform:uppercase;margin-top:5px}
-.wrap{max-width:860px;margin:0 auto;padding:40px 24px 60px}
-.section{margin-bottom:36px}
-.sec-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #e5ddd3}
-.sec-icon{font-size:20px}
-.sec-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:500}
-.sec-sub{font-size:11px;color:#7a7570;letter-spacing:.06em;text-transform:uppercase;margin-top:1px}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
-.card{background:#fff;border:1px solid #e5ddd3;border-radius:8px;padding:18px 20px;text-decoration:none;color:#1a1814;transition:all .15s;display:block}
-.card:hover{border-color:#9a7d52;box-shadow:0 2px 12px rgba(154,125,82,.12);transform:translateY(-1px)}
-.card-icon{font-size:22px;margin-bottom:10px}
-.card-title{font-size:14px;font-weight:500;margin-bottom:4px}
-.card-desc{font-size:11px;color:#7a7570;line-height:1.5}
-.card.gold{border-left:3px solid #9a7d52}
-.divider{width:40px;height:2px;background:#9a7d52;margin:0 auto 32px;border-radius:2px}
+:root{
+  --bg:#f5f4f1;
+  --surface:#ffffff;
+  --border:#e8e3db;
+  --text:#1a1814;
+  --muted:#7a746c;
+  --gold:#9a7d52;
+  --gold-light:#f5ede0;
+  --header-bg:#141210;
+  --header-border:#2a2420;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+  --shadow-hover:0 4px 20px rgba(0,0,0,.1),0 1px 4px rgba(0,0,0,.06);
+}
+html,body{min-height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+
+/* HEADER */
+.header{
+  background:var(--header-bg);
+  border-bottom:1px solid var(--header-border);
+  padding:0 32px;
+  height:60px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  position:sticky;top:0;z-index:10;
+}
+.header img{height:32px;object-fit:contain;filter:brightness(0) invert(1);opacity:.9}
+.header-divider{width:1px;height:20px;background:var(--header-border)}
+.header-title{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:400;color:rgba(255,255,255,.7);letter-spacing:.04em}
+
+/* MAIN */
+.wrap{max-width:960px;margin:0 auto;padding:40px 24px 80px}
+
+/* SECTION */
+.section{margin-bottom:40px}
+.sec-label{
+  font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:14px;padding-left:2px;
+}
+
+/* CARDS GRID */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:20px;
+  text-decoration:none;
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  transition:box-shadow .15s,transform .15s,border-color .15s;
+  box-shadow:var(--shadow);
+  position:relative;
+  overflow:hidden;
+}
+.card:hover{
+  box-shadow:var(--shadow-hover);
+  transform:translateY(-2px);
+  border-color:var(--gold);
+}
+.card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;height:3px;
+  background:transparent;
+  transition:background .15s;
+  border-radius:12px 12px 0 0;
+}
+.card:hover::before{background:var(--gold)}
+
+.card-icon{font-size:20px;margin-bottom:2px}
+.card-name{font-size:13px;font-weight:600;color:var(--text)}
+.card-desc{font-size:11.5px;color:var(--muted);line-height:1.5}
+
+/* PRIMARY card */
+.card.primary{
+  border-color:var(--gold);
+  background:linear-gradient(135deg,#fffcf8 0%,var(--gold-light) 100%);
+}
+.card.primary::before{background:var(--gold)}
+.card.primary .card-name{color:#7a5c2e}
+
+/* HERO — welcome strip */
+.hero{
+  background:var(--header-bg);
+  border-radius:16px;
+  padding:28px 32px;
+  margin-bottom:36px;
+  display:flex;
+  align-items:center;
+  gap:20px;
+}
+.hero-text h1{
+  font-family:'Cormorant Garamond',serif;
+  font-size:26px;font-weight:600;
+  color:#fff;
+  line-height:1.15;
+}
+.hero-text p{font-size:13px;color:rgba(255,255,255,.5);margin-top:6px}
+
+/* DIVIDER */
+.section-divider{
+  height:1px;background:var(--border);margin:8px 0 32px;
+}
+
+@media(max-width:600px){
+  .header{padding:0 16px}
+  .wrap{padding:24px 16px 60px}
+  .hero{padding:20px}
+  .hero-text h1{font-size:20px}
+  .cards{grid-template-columns:1fr 1fr}
+}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <img src="/logo.png" alt="Two Travel" style="height:48px;object-fit:contain;margin-bottom:10px">
+  <img src="/logo.png" alt="Two Travel">
+  <div class="header-divider"></div>
+  <span class="header-title">Panel interno</span>
 </div>
 
 <div class="wrap">
-  <div class="divider"></div>
 
-  <!-- CONCIERGE & LOGÍSTICA -->
-  <div class="section">
-    <div class="sec-head">
-      <div>
-        <div class="sec-title">Concierge & Logística</div>
-      </div>
+  <div class="hero">
+    <div class="hero-text">
+      <h1>Bienvenido al panel de Two Travel</h1>
+      <p>Concierge · Finanzas · Ventas · Bodas · Marketing</p>
     </div>
+  </div>
+
+  <!-- CONCIERGE -->
+  <div class="section">
+    <div class="sec-label">Concierge & Operaciones</div>
     <div class="cards">
-      <a href="/?mode=concierge" class="card gold">
+      <a href="/?mode=concierge" class="card primary">
         <div class="card-icon">👥</div>
-        <div class="card-title">Clientes</div>
+        <div class="card-name">Clientes</div>
         <div class="card-desc">Kickoffs, itinerarios, PDFs y catálogo de servicios</div>
+      </a>
+      <a href="/?mode=dashboard" class="card primary">
+        <div class="card-icon">📊</div>
+        <div class="card-name">Dashboard</div>
+        <div class="card-desc">Rendimiento del equipo y métricas de operación</div>
       </a>
       <a href="/handoffs.html" class="card">
         <div class="card-icon">🔁</div>
-        <div class="card-title">Handoffs</div>
+        <div class="card-name">Handoffs</div>
         <div class="card-desc">Registro de servicios confirmados por trip</div>
       </a>
       <a href="/tasks.html" class="card">
         <div class="card-icon">✅</div>
-        <div class="card-title">Tareas</div>
-        <div class="card-desc">Tareas del equipo y seguimiento</div>
-      </a>
-      <a href="/?mode=dashboard" class="card">
-        <div class="card-icon">📊</div>
-        <div class="card-title">Dashboard</div>
-        <div class="card-desc">Rendimiento del equipo y métricas de operación</div>
-      </a>
-      <a href="/?mode=soporte" class="card">
-        <div class="card-icon">🛠</div>
-        <div class="card-title">Soporte</div>
-        <div class="card-desc">Solicitudes de soporte del equipo</div>
+        <div class="card-name">Tareas</div>
+        <div class="card-desc">Seguimiento de tareas del equipo</div>
       </a>
       <a href="/accesos.html" class="card">
         <div class="card-icon">🔑</div>
-        <div class="card-title">Accesos</div>
-        <div class="card-desc">Calendarios conectados y links de reservas por concierge</div>
+        <div class="card-name">Accesos</div>
+        <div class="card-desc">Calendarios y links de reservas por concierge</div>
+      </a>
+      <a href="/?mode=soporte" class="card">
+        <div class="card-icon">🛠</div>
+        <div class="card-name">Soporte</div>
+        <div class="card-desc">Solicitudes de soporte del equipo</div>
       </a>
     </div>
   </div>
+
+  <div class="section-divider"></div>
 
   <!-- FINANZAS -->
   <div class="section">
-    <div class="sec-head">
-      <div>
-        <div class="sec-title">Finanzas</div>
-      </div>
-    </div>
+    <div class="sec-label">Finanzas & Pagos</div>
     <div class="cards">
-      <a href="/?mode=pagos" class="card gold">
-        <div class="card-icon">💰</div>
-        <div class="card-title">Panel de Finanzas</div>
-        <div class="card-desc">Cash flow, movimientos, reservaciones, cierre y templates</div>
-      </a>
-      <a href="/pagos.html" class="card">
+      <a href="/?mode=pagos" class="card primary">
         <div class="card-icon">💳</div>
-        <div class="card-title">Solicitudes de Pago</div>
-        <div class="card-desc">Aprobar, pagar y exportar solicitudes del equipo</div>
+        <div class="card-name">Pagos</div>
+        <div class="card-desc">Tablero de pagos · Colombia y México</div>
+      </a>
+      <a href="/comisiones.html" class="card">
+        <div class="card-icon">💰</div>
+        <div class="card-name">Comisiones</div>
+        <div class="card-desc">Seguimiento de comisiones del equipo</div>
       </a>
       <a href="/guia-pagos-lyna.html" class="card">
         <div class="card-icon">📋</div>
-        <div class="card-title">Guía de uso</div>
-        <div class="card-desc">Cómo usar el tablero de pagos · Imprimir PDF</div>
+        <div class="card-name">Guía pagos</div>
+        <div class="card-desc">Manual de uso del tablero de pagos</div>
       </a>
     </div>
   </div>
 
+  <div class="section-divider"></div>
+
   <!-- VENTAS -->
   <div class="section">
-    <div class="sec-head">
-      <div>
-        <div class="sec-title">Ventas</div>
-      </div>
-    </div>
+    <div class="sec-label">Ventas & Portafolio</div>
     <div class="cards">
-      <a href="/agent.html" class="card gold">
+      <a href="/agent.html" class="card primary">
         <div class="card-icon">🤖</div>
-        <div class="card-title">Agente IA</div>
+        <div class="card-name">Agente IA</div>
         <div class="card-desc">Chatbot de ventas para calificar y atender leads</div>
+      </a>
+      <a href="/estimates.html" class="card primary">
+        <div class="card-icon">💰</div>
+        <div class="card-name">Estimados</div>
+        <div class="card-desc">Cotizaciones — 708 servicios · Tier 1 y Tier 2</div>
       </a>
       <a href="/admin.html" class="card">
         <div class="card-icon">🏡</div>
-        <div class="card-title">Portafolio</div>
+        <div class="card-name">Portafolio</div>
         <div class="card-desc">Catálogo de propiedades · Portfolio Manager</div>
       </a>
       <a href="/pricing.html" class="card">
         <div class="card-icon">📋</div>
-        <div class="card-title">Precios</div>
+        <div class="card-name">Precios</div>
         <div class="card-desc">Desayuno · Bebidas · Mercado — tablas de precios</div>
-      </a>
-      <a href="/estimates.html" class="card gold">
-        <div class="card-icon">💰</div>
-        <div class="card-title">Estimados</div>
-        <div class="card-desc">Cotizaciones para clientes — 708 servicios con Tier 1 y Tier 2</div>
       </a>
     </div>
   </div>
 
-  <!-- TWO LOVERS / BODAS -->
+  <div class="section-divider"></div>
+
+  <!-- BODAS -->
   <div class="section">
-    <div class="sec-head">
-      <div>
-        <div class="sec-title">Two Lovers</div>
-      </div>
-    </div>
+    <div class="sec-label">Two Lovers · Bodas</div>
     <div class="cards">
-      <a href="/?mode=bodas" class="card gold">
+      <a href="/?mode=bodas" class="card primary">
         <div class="card-icon">💍</div>
-        <div class="card-title">Bodas</div>
+        <div class="card-name">Bodas</div>
         <div class="card-desc">Gestión de bodas, fases y clientes de Two Lovers</div>
       </a>
       <a href="/?mode=tareas-bodas" class="card">
         <div class="card-icon">✅</div>
-        <div class="card-title">Tareas</div>
+        <div class="card-name">Tareas</div>
         <div class="card-desc">Tareas del equipo Two Lovers — atrasadas, hoy, próximas</div>
       </a>
     </div>
   </div>
 
+  <div class="section-divider"></div>
+
   <!-- MARKETING -->
   <div class="section">
-    <div class="sec-head">
-      <div>
-        <div class="sec-title">Marketing</div>
-      </div>
-    </div>
+    <div class="sec-label">Marketing & Contenido</div>
     <div class="cards">
-      <a href="/marketing.html" class="card gold">
+      <a href="/marketing.html" class="card primary">
         <div class="card-icon">🎬</div>
-        <div class="card-title">Marketing Board</div>
+        <div class="card-name">Marketing Board</div>
         <div class="card-desc">Filmación · Comportamiento · Calendario · Métricas</div>
       </a>
     </div>
   </div>
 
-  <!-- GUÍA GENERAL -->
+  <div class="section-divider"></div>
+
+  <!-- RECURSOS -->
   <div class="section">
-    <div class="sec-head">
-      <div>
-        <div class="sec-title">Recursos</div>
-      </div>
-    </div>
+    <div class="sec-label">Recursos & Configuración</div>
     <div class="cards">
       <a href="/guia-plataforma.html" class="card">
         <div class="card-icon">📖</div>
-        <div class="card-title">Guía de la plataforma</div>
-        <div class="card-desc">Manual de uso completo para todo el equipo</div>
+        <div class="card-name">Guía de la plataforma</div>
+        <div class="card-desc">Manual de uso completo para el equipo</div>
       </a>
       <a href="/?mode=users" class="card">
-        <div class="card-icon">👥</div>
-        <div class="card-title">Usuarios</div>
+        <div class="card-icon">👤</div>
+        <div class="card-name">Usuarios</div>
         <div class="card-desc">Gestión de accesos y permisos del equipo</div>
       </a>
     </div>

@@ -5916,7 +5916,7 @@ function useAuth() {
     });
     const data = await res.json();
     if (!data.ok) return { ok: false, error: data.error || "Credenciales incorrectas" };
-    const u = { ...data.user, exp: Date.now() + 12 * 3600_000 };
+    const u = { ...data.user, exp: Date.now() + 30 * 24 * 3600_000 };
     localStorage.setItem("tt_auth2", JSON.stringify(u));
     setUser(u);
     return { ok: true };
@@ -6382,7 +6382,11 @@ function App() {
     if (!user) return <LoginScreen onLogin={login} />;
     return <ChangePinScreen user={user} onDone={() => { window.location.href = "/?mode=dashboard"; }} />;
   }
-  if (!mode)                return <FeedbackForm kickoffId={kickoffId} />;
+  if (!mode) {
+    if (kickoffId) return <FeedbackForm kickoffId={kickoffId} />;
+    window.location.replace("/menu.html");
+    return null;
+  }
 
   // Protected routes
   if (PROTECTED_MODES.has(mode)) {
