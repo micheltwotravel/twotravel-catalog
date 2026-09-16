@@ -394,7 +394,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
     const key = cl(cartItem?.dayLabel || cartItem?.day || "Itinerary");
     if (!map.has(key)) map.set(key, []);
     if (isBlock) {
-      map.get(key).push({ isBlock: true, cartItem, sort: Number(cartItem.sortOrder ?? idx) });
+      map.get(key).push({ isBlock: true, cartItem, sort: Number(cartItem.sortOrder ?? idx), _rawCartItem: cartItem });
       return;
     }
     const desc = lang === "es"
@@ -455,6 +455,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       _boatBadge      : !!cartItem._boatBadge,
       _boatData       : cartItem._boatData || null,
       notes           : cartItem.notes || "",
+      _rawCartItem    : cartItem,
     });
   });
   // Respect dayMeta order if provided
@@ -2784,7 +2785,22 @@ export default function ItineraryPrintView() {
     if (!kickoff || _editDaysInitRef.current) return;
     let base = days;
     if (kickoff?.itinerarySnapshot) {
-      try { base = JSON.parse(kickoff.itinerarySnapshot); } catch {}
+      try {
+        const snap = JSON.parse(kickoff.itinerarySnapshot);
+        // Enrich snapshot items with _rawCartItem refs from days (built from cart)
+        base = snap.map(snapDay => ({
+          ...snapDay,
+          items: (snapDay.items || []).map(snapItem => {
+            if (snapItem._rawCartItem) return snapItem;
+            const cartDay = days.find(d => d.label === snapDay.label);
+            if (cartDay) {
+              const match = cartDay.items.find(ci => ci.title === snapItem.title);
+              if (match?._rawCartItem) return { ...snapItem, _rawCartItem: match._rawCartItem };
+            }
+            return snapItem;
+          }),
+        }));
+      } catch {}
     }
     const initDays = JSON.parse(JSON.stringify(base));
     editDaysRef.current = initDays;
@@ -2845,8 +2861,46 @@ export default function ItineraryPrintView() {
     if (!kickoffId || !currentDays) return;
     setSaving(true);
     const now = new Date().toISOString();
+
+    // Rebuild cart and dayMeta from editDays so the ItineraryCanvas stays in sync.
+    // Items with _rawCartItem carry the original cart entry; _isNewService items are
+    // newly added from the catalog; unrecognized items fall back to title matching.
+    let origCart = [];
+    try { origCart = Array.isArray(kickoff?.cart) ? kickoff.cart : JSON.parse(kickoff?.cart || "[]"); } catch {}
+    const newCart = [];
+    currentDays.forEach((day, _di) => {
+      (day.items || []).forEach((it, si) => {
+        if (it._rawCartItem) {
+          newCart.push({ ...it._rawCartItem, dayLabel: day.label, sortOrder: si });
+        } else if (it._isNewService) {
+          newCart.push({
+            id: it._serviceId || null,
+            dayLabel: day.label,
+            sortOrder: si,
+            timeLabel: it.time || "",
+            displayName: it.title || "",
+            notes: it.notes || "",
+            confirmed: it.confirmed !== false,
+            priceUsd: it.priceUsd || 0,
+            price: it.price || "",
+            priceUnit: it.priceUnit || "",
+            category: it.category || "",
+            image: it.image || "",
+          });
+        } else {
+          // Snapshot item without a cart ref — try to match by title+dayLabel
+          const match = origCart.find(c => c.dayLabel === day.label &&
+            (c.displayName || c.name || c.name_es || c.name_en) === it.title);
+          if (match) newCart.push({ ...match, dayLabel: day.label, sortOrder: si });
+        }
+      });
+    });
+    const newDayMeta = currentDays.map(d => ({ label: d.label, title: d.title || "", date: d.date || "" }));
+
     const updates = {
       itinerarySnapshot: JSON.stringify(currentDays),
+      cart: JSON.stringify(newCart),
+      dayMeta: JSON.stringify(newDayMeta),
       pdfNotes: pdfNotes.trim(),
       cityGuideHidden: cityGuideHidden,
       cityGuideIntro: cityGuideIntro.trim(),
@@ -2906,6 +2960,8 @@ export default function ItineraryPrintView() {
           familyFriendly: !!(svc.family_friendly),
           confirmed:    true,
           sort:         day.items.length,
+          _isNewService: true,
+          _serviceId:   svc.id || svc._id || null,
         }]
       }
     ));
