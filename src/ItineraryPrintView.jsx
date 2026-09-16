@@ -1698,7 +1698,7 @@ function ChefMenuGroupCard({ it, lang, editMode, onRemove }) {
   const isConfirmed = it.confirmed !== false;
   const time = it.time || it.schedule || "";
   return (
-    <div style={{ borderBottom: "1px solid #e5e7eb", padding: "20px 0", position: "relative" }}>
+    <div style={{ borderBottom: "1px solid #e5e7eb", padding: "20px 40px", position: "relative", boxSizing: "border-box", overflow: "hidden" }}>
       {/* Time */}
       {time && (
         <div style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", letterSpacing: "0.8px", textTransform: "uppercase", marginBottom: 4 }}>
