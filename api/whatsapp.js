@@ -4,9 +4,9 @@ export default async function handler(req, res) {
   const { to, message, mediaUrl, facturaUrl } = req.body;
   if (!to || !message) return res.status(400).json({ ok: false, error: 'Missing to or message' });
 
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken  = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_WA_NUMBER; // e.g. +14155238886
+  const accountSid = (process.env.TWILIO_ACCOUNT_SID || '').trim();
+  const authToken  = (process.env.TWILIO_AUTH_TOKEN || '').trim();
+  const fromNumber = (process.env.TWILIO_WA_NUMBER || '').trim();
 
   if (!accountSid || !authToken || !fromNumber) {
     return res.status(500).json({ ok: false, error: 'Twilio credentials not configured' });
