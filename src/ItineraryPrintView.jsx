@@ -20,10 +20,38 @@ function driveImgUrl(url) {
   return url;
 }
 
-function Editable({ value, tag: Tag = "span", className = "", editMode, style, onChange }) {
+function Editable({ value, tag: Tag = "span", className = "", editMode, style, onChange, multiline }) {
   const ref = useRef();
   if (!editMode) {
-    return <Tag className={className} style={style}>{value}</Tag>;
+    return multiline
+      ? <Tag className={className} style={{ ...style, whiteSpace: "pre-line" }}>{renderMd(value)}</Tag>
+      : <Tag className={className} style={style}>{value}</Tag>;
+  }
+  if (multiline) {
+    return (
+      <textarea
+        key={value}
+        defaultValue={value}
+        className={className}
+        style={{
+          ...style,
+          width: "100%",
+          border: "1px dashed #aaa",
+          borderRadius: 4,
+          padding: "4px 6px",
+          resize: "vertical",
+          fontFamily: "inherit",
+          fontSize: "inherit",
+          lineHeight: "inherit",
+          background: "rgba(255,255,255,0.6)",
+          outline: "none",
+          minHeight: 64,
+          boxSizing: "border-box",
+          display: "block",
+        }}
+        onBlur={e => onChange?.(e.target.value)}
+      />
+    );
   }
   return (
     <Tag
@@ -51,6 +79,22 @@ function Editable({ value, tag: Tag = "span", className = "", editMode, style, o
 ═══════════════════════════════════════════════════════════ */
 const cl  = (v) => String(v ?? "").trim();
 const num = (v) => { const n = Number(cl(v).replace(/[^0-9.-]/g, "")); return isNaN(n) ? 0 : n; };
+
+// Renders inline markdown: **bold** and _italic_ → JSX elements.
+// Newlines are preserved via white-space: pre-line on the parent.
+function renderMd(text) {
+  const parts = [];
+  const re = /\*\*(.+?)\*\*|_(.+?)_/g;
+  let i = 0, m, key = 0;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > i) parts.push(text.slice(i, m.index));
+    if (m[1] !== undefined) parts.push(<strong key={key++}>{m[1]}</strong>);
+    else parts.push(<em key={key++}>{m[2]}</em>);
+    i = m.index + m[0].length;
+  }
+  if (i < text.length) parts.push(text.slice(i));
+  return parts;
+}
 
 /* Default pre-trip content shown when concierge hasn't filled the block yet */
 const DEFAULT_PRETRIP_PDF = `Promo!
@@ -1537,10 +1581,11 @@ function WelcomePage({ kickoff, lang, page, total, editMode, localPreTrip, setLo
 /* ═══════════════════════════════════════════════════════════
    BOAT DETAIL CARD — rich full-width layout for boat day
 ═══════════════════════════════════════════════════════════ */
-function BoatDetailCard({ it, lang, editMode, onRemove }) {
+function BoatDetailCard({ it, lang, editMode, onRemove, patchItem }) {
   const isEs = lang === "es";
   const bd = it._boatData || {};
   const { title: boatTitle, departureTime, description, bullets, note, photos, addons } = bd;
+  const displayNote = it.notes || note;
   const boatName = it.location || "";
   const dock = it.description || "";
   const displayTitle = boatTitle || it.title || (isEs ? "Día de Bote" : "Boat Day");
@@ -1659,7 +1704,7 @@ function BoatDetailCard({ it, lang, editMode, onRemove }) {
         )}
 
         {/* Note callout */}
-        {note && (
+        {displayNote && (
           <div style={{
             background:"#fffbeb", border:"1.5px solid #fcd34d",
             borderRadius:10, padding:"14px 18px",
@@ -1667,9 +1712,14 @@ function BoatDetailCard({ it, lang, editMode, onRemove }) {
             <div style={{ fontSize:8, letterSpacing:"2.5px", textTransform:"uppercase", color:"#b45309", fontWeight:700, marginBottom:7 }}>
               {isEs ? "💬 Nota" : "💬 Note"}
             </div>
-            <p style={{ fontSize:12, color:"#78350f", lineHeight:1.7, margin:0, whiteSpace:"pre-line" }}>
-              {note}
-            </p>
+            <Editable
+              value={displayNote}
+              tag="p"
+              editMode={editMode}
+              style={{ fontSize:12, color:"#78350f", lineHeight:1.7, margin:0 }}
+              onChange={v => patchItem?.("notes", v)}
+              multiline
+            />
           </div>
         )}
 
@@ -1709,7 +1759,7 @@ function ChefMenuGroupCard({ it, lang, editMode, onRemove }) {
       {/* Title */}
       <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: it.location ? 2 : 8 }}>
         {it.title}
-        {!isConfirmed && (
+        {!isConfirmed && it.tbc && (
           <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "#92400e", background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 4, padding: "2px 6px" }}>TBC</span>
         )}
       </div>
@@ -1818,7 +1868,7 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
         description: parsedDock ? parsedDock[1].trim() : it.description,
       };
     }
-    return <BoatDetailCard it={boatIt} lang={lang} editMode={editMode} onRemove={onRemove} />;
+    return <BoatDetailCard it={boatIt} lang={lang} editMode={editMode} onRemove={onRemove} patchItem={patchItem} />;
   }
 
   const isConfirmed = it.confirmed !== false;
@@ -2051,7 +2101,7 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
 
         {/* Description */}
         {it.description && (
-          <Editable value={it.description} tag="p" className="ev-desc" editMode={editMode} onChange={v => patchItem?.("description", v)} />
+          <Editable value={it.description} tag="p" className="ev-desc" editMode={editMode} onChange={v => patchItem?.("description", v)} multiline />
         )}
 
         {/* Highlights */}

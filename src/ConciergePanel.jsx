@@ -5901,7 +5901,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           </button>
           {/* Itinerary: shareable link (PDF button removed — use the visual panel) */}
           {kickoff?.cart?.length > 0 && (() => {
-            const clientUrl = `${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff.lang || "en"}`;
+            const clientUrl = `${CLIENT_BASE_URL}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff.lang || "en"}`;
             return <CopyLinkButton url={clientUrl} />;
           })()}
           {/* WhatsApp — enviar PDF al cliente */}
