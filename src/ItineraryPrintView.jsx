@@ -1744,7 +1744,7 @@ const HIDE_PRICE_CATS = new Set(["restaurants","bars","nightlife","beach-clubs",
 // ── Chef Menu Group Card ─────────────────────────────────────────
 // Renders multiple "Chef Dinner - X Menu" items as one grouped block
 // with the service description + a 2-col grid of menu download cards.
-function ChefMenuGroupCard({ it, lang, editMode, onRemove }) {
+function ChefMenuGroupCard({ it, lang, editMode, onRemove, patchItem }) {
   const isEs = lang === "es";
   const isConfirmed = it.confirmed !== false;
   const time = it.time || it.schedule || "";
@@ -1768,8 +1768,12 @@ function ChefMenuGroupCard({ it, lang, editMode, onRemove }) {
         <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 8 }}>{it.location}</div>
       )}
       {/* Description */}
-      {it.description && (
-        <p style={{ fontSize: 12, color: "#374151", lineHeight: 1.65, margin: "0 0 14px 0", whiteSpace: "pre-line" }}>{it.description}</p>
+      {(it.description || editMode) && (
+        <Editable value={it.description || ""} tag="p"
+          style={{ fontSize: 12, color: "#374151", lineHeight: 1.65, margin: "0 0 14px 0" }}
+          editMode={editMode}
+          onChange={v => patchItem?.("description", v)}
+          multiline />
       )}
       {/* Menu cards grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
@@ -2760,7 +2764,7 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
                 </div>
               )}
               {entry.it._chefMenuGroup
-                ? <ChefMenuGroupCard it={entry.it} lang={lang} editMode={editMode} onRemove={onRemoveItem ? () => onRemoveItem(entry.itemIdx ?? i) : undefined} />
+                ? <ChefMenuGroupCard it={entry.it} lang={lang} editMode={editMode} onRemove={onRemoveItem ? () => onRemoveItem(entry.itemIdx ?? i) : undefined} patchItem={patchItemFn ? (field, val) => patchItemFn(entry.itemIdx ?? i, field, val) : undefined} />
                 : <EventBlock
                     it={entry.it}
                     lang={lang}
