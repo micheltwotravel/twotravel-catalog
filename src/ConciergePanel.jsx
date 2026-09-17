@@ -1110,7 +1110,7 @@ function StatusBadge({ status, lang = "es" }) {
   );
 }
 // Always use the production domain so shared links never show Vercel/GitHub URLs
-const CLIENT_BASE_URL = "https://www.twotravelvip.com";
+const CLIENT_BASE_URL = "https://twotravelvip.com";
 
 function buildCatalogLink(kickoff, clientType = 1, lang = "en") {
   const url = new URL("/", CLIENT_BASE_URL);
