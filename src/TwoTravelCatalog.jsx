@@ -3055,6 +3055,7 @@ const payload = {
   additionalNotes: additionalNotes.trim(),
   quizAnswers: JSON.stringify(quiz),
   cart: JSON.stringify(cart),                    // stringified so Apps Script stores cleanly
+  clientSubmittedCart: JSON.stringify(cart),     // immutable backup — never overwritten by concierge panel
   groupSubmissions: JSON.stringify(updatedSubmissions), // all people's carts
   conciergeSummary,
   lang,

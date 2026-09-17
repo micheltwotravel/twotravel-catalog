@@ -4707,8 +4707,15 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     accommodationUrl2:   accommodationUrl2.trim(),
     barrio2:             barrio2.trim(),
     accommodationPhoto2: accommodationPhoto2.trim(),
-    // Always include latest canvas state so itinerary edits aren't lost
-    cart:    JSON.stringify(canvasCartRef.current),
+    // Always include latest canvas state so itinerary edits aren't lost.
+    // Guard: if client just submitted (status=client_submitted) and the canvas is still
+    // empty/uninitialized while the kickoff already has items, preserve the kickoff's cart
+    // rather than overwriting with a stale empty canvas from before the client submitted.
+    cart: JSON.stringify(
+      status === "client_submitted" && canvasCartRef.current.length === 0 && kickoff.cart?.length > 0
+        ? kickoff.cart
+        : canvasCartRef.current
+    ),
     dayMeta: JSON.stringify(canvasDayMetaRef.current),
     // Clear itinerarySnapshot so client link rebuilds from fresh cart data
     itinerarySnapshot: "",
