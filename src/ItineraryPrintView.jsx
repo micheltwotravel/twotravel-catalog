@@ -1781,12 +1781,15 @@ function ChefMenuGroupCard({ it, lang, editMode, onRemove }) {
             )}
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: "#111827", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{menu.label}</div>
-              {menu.menuUrl && (
-                <a href={menu.menuUrl} target="_blank" rel="noreferrer"
-                  style={{ fontSize: 11, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>
-                  {isEs ? "Ver menú ↗" : "View menu ↗"}
-                </a>
-              )}
+              {menu.menuUrl && (() => {
+                const isDownload = /export=download|\.pdf|\.docx?|\.xlsx?/i.test(menu.menuUrl);
+                return (
+                  <a href={menu.menuUrl} target="_blank" rel="noreferrer"
+                    style={{ fontSize: 11, color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>
+                    {isDownload ? (isEs ? "Descargar ↓" : "Download ↓") : (isEs ? "Ver menú ↗" : "View menu ↗")}
+                  </a>
+                );
+              })()}
             </div>
           </div>
         ))}
@@ -1803,11 +1806,13 @@ function ChefMenuGroupCard({ it, lang, editMode, onRemove }) {
   );
 }
 
-// Groups chef items that share the same base name and have a menuUrl into one grouped item.
+// Groups items that share the same base name (before last " - ") and have a menuUrl
+// into one grouped card with a download/view grid.
+// Works for chef menus, boat food options, water activities menus, etc.
 // Only applied in view/print mode — edit mode shows them individually.
 function groupChefMenuItems(items) {
-  const isChefMenu = it =>
-    /chef/i.test(it.category || "") && it.menuUrl;
+  // Any item with a menuUrl and a " - " variant suffix is groupable
+  const isMenuGroup = it => !!it.menuUrl && (it.title || "").includes(" - ");
   const baseName = title => {
     const d = (title || "").lastIndexOf(" - ");
     return d > 0 ? title.slice(0, d).trim() : title;
@@ -1819,7 +1824,7 @@ function groupChefMenuItems(items) {
 
   const grouped = new Map(); // baseName → [items]
   items.forEach((it, idx) => {
-    if (!isChefMenu(it)) return;
+    if (!isMenuGroup(it)) return;
     const key = baseName(it.title || "");
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key).push({ it, idx });
@@ -1830,7 +1835,7 @@ function groupChefMenuItems(items) {
   items.forEach((it, idx) => {
     if (consumed.has(idx)) return;
     const key = baseName(it.title || "");
-    if (isChefMenu(it) && grouped.has(key) && grouped.get(key).length > 1) {
+    if (isMenuGroup(it) && grouped.has(key) && grouped.get(key).length > 1) {
       const group = grouped.get(key);
       group.forEach(({ idx: j }) => consumed.add(j));
       result.push({
