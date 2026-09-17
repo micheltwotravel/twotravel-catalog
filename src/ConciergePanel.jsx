@@ -7326,18 +7326,37 @@ function CheckinResponsesSection({ kickoffId }) {
 
   return (
     <div className="border border-teal-200 rounded-xl bg-teal-50/40 overflow-hidden">
-      <button type="button" onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-teal-50 transition-colors">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between px-4 py-3">
+        <button type="button" onClick={() => setOpen(v => !v)}
+          className="flex items-center gap-2 flex-1 text-left hover:opacity-80 transition-opacity">
           <span className="text-[11px] font-semibold text-teal-700 uppercase tracking-wide">👥 Check-in Responses</span>
           {responses.length > 0 && (
             <span className="text-[10px] bg-teal-100 text-teal-700 rounded-full px-2 py-0.5 font-semibold">
               {responses.length} {responses.length === 1 ? "persona" : "personas"}
             </span>
           )}
-        </div>
-        <span className="text-teal-500 text-xs">{open ? "▲" : "▼"}</span>
-      </button>
+          <span className="text-teal-500 text-xs">{open ? "▲" : "▼"}</span>
+        </button>
+        {responses.length > 0 && (
+          <button type="button" onClick={() => {
+            const headers = ["First Name", "Last Name", "Email", "Phone", "Food Restrictions", "Allergies"];
+            const rows = responses.map(r => [
+              r.firstName || "", r.lastName || "", r.email || "", r.phone || "",
+              r.foodRestrictions || "", r.allergies || "",
+            ]);
+            const csv = [headers, ...rows]
+              .map(row => row.map(c => `"${String(c).replace(/"/g,'""')}"`).join(","))
+              .join("\n");
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+            a.download = `checkin_${kickoffId}.csv`;
+            a.click();
+          }}
+            className="text-[10px] px-2.5 py-1 rounded-lg border border-teal-300 bg-white text-teal-700 hover:bg-teal-50 whitespace-nowrap ml-2">
+            ⬇ CSV
+          </button>
+        )}
+      </div>
 
       {open && (
         <div className="px-4 pb-4 space-y-4">
