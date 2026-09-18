@@ -1368,6 +1368,24 @@ async function saveSolicitudes(rows) {
   }
 }
 
+const PROV_DB_ID = "finance_providers_v1";
+
+async function loadProviderDB() {
+  const { data } = await supabase.from("kickoffs").select("data").eq("id", PROV_DB_ID).maybeSingle();
+  if (!data) return [];
+  const notes = typeof data.data?.internalNotes === "string" ? JSON.parse(data.data.internalNotes) : (data.data?.internalNotes || {});
+  return notes.providers || [];
+}
+
+async function saveProviderDB(providers) {
+  const { data: existing } = await supabase.from("kickoffs").select("data").eq("id", PROV_DB_ID).maybeSingle();
+  const d = existing?.data || {};
+  const notes = typeof d.internalNotes === "string" ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
+  const merged = { ...d, internalNotes: JSON.stringify({ ...notes, providers }) };
+  if (existing) { await supabase.from("kickoffs").update({ data: merged }).eq("id", PROV_DB_ID); }
+  else { await supabase.from("kickoffs").insert({ id: PROV_DB_ID, data: merged }); }
+}
+
 const AREAS    = ["Concierge","Logistica","Marketing","HR","Sales","Finance","Property Management"];
 const CLASES   = ["Colombia: Cartagena","Colombia: Medellín","Mexico: Mexico City"];
 const PRIOS    = ["Alta","Media","Normal"];
@@ -1401,31 +1419,64 @@ const SecHead = ({ children }) => <div style={{fontSize:11,fontWeight:700,color:
 
 export function FinancePagosProveedores() {
   const today = new Date().toISOString().slice(0,10);
-  const [rows, setRows]         = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [err, setErr]           = useState("");
-  const [saving, setSaving]     = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId]     = useState(null);
-  const [form, setForm]         = useState(emptyProvForm(today));
-  const [searchQ, setSearchQ]   = useState("");
-  const [fStatus, setFStatus]   = useState("");
-  const [fArea, setFArea]       = useState("");
-  const [fClase, setFClase]     = useState("");
-  const [toast, setToast]       = useState("");
+  const [rows, setRows]           = useState([]);
+  const [providers, setProviders] = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [err, setErr]             = useState("");
+  const [saving, setSaving]       = useState(false);
+  const [showForm, setShowForm]   = useState(false);
+  const [editId, setEditId]       = useState(null);
+  const [form, setForm]           = useState(emptyProvForm(today));
+  const [provSearch, setProvSearch] = useState("");
+  const [provSugs, setProvSugs]   = useState([]);
+  const [searchQ, setSearchQ]     = useState("");
+  const [fStatus, setFStatus]     = useState("");
+  const [fArea, setFArea]         = useState("");
+  const [fClase, setFClase]       = useState("");
+  const [toast, setToast]         = useState("");
 
   useEffect(() => {
-    loadSolicitudes().then(r => { setRows(r); setLoading(false); }).catch(e => { setErr(e.message); setLoading(false); });
+    Promise.all([loadSolicitudes(), loadProviderDB()])
+      .then(([r, p]) => { setRows(r); setProviders(p); setLoading(false); })
+      .catch(e => { setErr(e.message); setLoading(false); });
   }, []);
 
   function showToastMsg(msg) { setToast(msg); setTimeout(()=>setToast(""),3000); }
-  function openNew()   { setEditId(null); setForm(emptyProvForm(today)); setShowForm(true); }
+
+  function openNew() {
+    setEditId(null); setForm(emptyProvForm(today));
+    setProvSearch(""); setProvSugs([]); setShowForm(true);
+  }
   function openEdit(id) {
     const r = rows.find(x=>x.id===id);
     if(!r) return;
-    setEditId(id); setForm({...emptyProvForm(today),...r}); setShowForm(true);
+    setEditId(id); setForm({...emptyProvForm(today),...r});
+    setProvSearch(r.provNombre||""); setProvSugs([]); setShowForm(true);
   }
-  function upd(k,v)   { setForm(f=>({...f,[k]:v})); }
+  function upd(k,v) { setForm(f=>({...f,[k]:v})); }
+
+  function onProvSearch(q) {
+    setProvSearch(q);
+    if(!q||q.length<2) { setProvSugs([]); return; }
+    const ql = q.toLowerCase();
+    setProvSugs(providers.filter(p=>(p.provNombre||"").toLowerCase().includes(ql)||(p.provId||"").includes(q)).slice(0,10));
+  }
+
+  function selectProvSug(p) {
+    setProvSearch(p.provNombre);
+    setProvSugs([]);
+    setForm(f=>({...f, provId:p.provId, provNombre:p.provNombre, provTipoId:p.provTipoId||"NIT", banco:p.banco||"BANCOLOMBIA", tipoCuenta:p.tipoCuenta||"Cuenta de Ahorro", numeroCuenta:p.numeroCuenta||""}));
+  }
+
+  async function saveNewProvider(entry) {
+    if(!entry.provId||!entry.provNombre) return;
+    const already = providers.find(p=>p.provId===entry.provId);
+    if(already) return;
+    const newProv = { provId:entry.provId, provNombre:entry.provNombre, provTipoId:entry.provTipoId, banco:entry.banco, tipoCuenta:entry.tipoCuenta, numeroCuenta:entry.numeroCuenta };
+    const updated = [newProv, ...providers];
+    setProviders(updated);
+    try { await saveProviderDB(updated); } catch {}
+  }
 
   async function submitForm(e) {
     e.preventDefault();
@@ -1434,8 +1485,11 @@ export function FinancePagosProveedores() {
     const newId = editId || (Date.now().toString(36)+Math.random().toString(36).slice(2,5));
     const entry = { ...form, amount:parseFloat(form.amount)||0, id:newId, createdAt:editId?(rows.find(x=>x.id===editId)?.createdAt||today):today, status:editId?(rows.find(x=>x.id===editId)?.status||"pendiente"):"pendiente" };
     const updated = editId ? rows.map(r=>r.id===editId?entry:r) : [entry,...rows];
-    try { await saveSolicitudes(updated); setRows(updated); setShowForm(false); showToastMsg(editId?"✅ Actualizada":"✅ Solicitud creada"); }
-    catch(ex) { alert("Error: "+ex.message); }
+    try {
+      await saveSolicitudes(updated);
+      await saveNewProvider(entry);
+      setRows(updated); setShowForm(false); showToastMsg(editId?"✅ Actualizada":"✅ Solicitud creada");
+    } catch(ex) { alert("Error: "+ex.message); }
     setSaving(false);
   }
 
@@ -1523,6 +1577,7 @@ export function FinancePagosProveedores() {
               </select>
             ))}
             <button onClick={exportPayana} style={{padding:"7px 14px",background:"#10b981",color:WHT,border:"none",borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",fontWeight:600}}>⬇ CSV Payana</button>
+            <a href="/solicitud-pago.html" target="_blank" rel="noreferrer" style={{padding:"7px 14px",background:"#6366f1",color:WHT,border:"none",borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",fontWeight:600,textDecoration:"none"}}>🔗 Link solicitud</a>
             <button onClick={openNew} style={{padding:"7px 14px",background:GOLD,color:WHT,border:"none",borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",fontWeight:600}}>+ Nueva Solicitud</button>
           </div>
 
@@ -1615,10 +1670,27 @@ export function FinancePagosProveedores() {
 
                   <div style={{borderTop:`1px solid ${BRD}`,paddingTop:12}}>
                     <SecHead>Proveedor</SecHead>
+                    {/* Autocomplete search */}
+                    <div style={{position:"relative",marginBottom:12}}>
+                      <FLbl>Buscar por nombre o NIT</FLbl>
+                      <input {...PINP()} value={provSearch} onChange={e=>onProvSearch(e.target.value)} placeholder="Escribe nombre o NIT…" autoComplete="off"/>
+                      {provSugs.length>0 && (
+                        <div style={{position:"absolute",top:"100%",left:0,right:0,background:WHT,border:`1px solid ${BRD}`,borderTop:"none",borderRadius:"0 0 4px 4px",maxHeight:180,overflowY:"auto",zIndex:50,boxShadow:"0 4px 12px rgba(0,0,0,.1)"}}>
+                          {provSugs.map(p=>(
+                            <div key={p.provId} onClick={()=>selectProvSug(p)}
+                              style={{padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${BRD}`,fontSize:12}}
+                              onMouseEnter={e=>e.currentTarget.style.background=BG} onMouseLeave={e=>e.currentTarget.style.background=WHT}>
+                              <div style={{fontWeight:600,color:DARK}}>{p.provNombre}</div>
+                              <div style={{fontSize:10,color:MUT}}>{p.provTipoId} {p.provId} · {p.banco} · {p.tipoCuenta}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
                       <FGrp label="Tipo ID" half><select {...PSEL()} value={form.provTipoId} onChange={e=>upd("provTipoId",e.target.value)}>{TIPO_ID.map(t=><option key={t}>{t}</option>)}</select></FGrp>
                       <FGrp label="Número ID" half><input {...PINP()} value={form.provId} onChange={e=>upd("provId",e.target.value)} placeholder="890801748"/></FGrp>
-                      <FGrp label="Nombre Proveedor *"><input {...PINP()} value={form.provNombre} onChange={e=>upd("provNombre",e.target.value)} placeholder="MABE SERVICIOS" required/></FGrp>
+                      <FGrp label="Nombre Proveedor *"><input {...PINP()} value={form.provNombre} onChange={e=>{upd("provNombre",e.target.value);setProvSearch(e.target.value);}} placeholder="MABE SERVICIOS" required/></FGrp>
                     </div>
                   </div>
 

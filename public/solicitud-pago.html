@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Two Travel · Solicitud de Pago a Proveedor</title>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sand:#f7f4ef;--sand2:#efe9e0;
+  --ink:#1a1814;--ink2:#3d3a35;--ink3:#7a7570;
+  --gold:#9a7d52;--gold2:#c4a272;
+  --white:#ffffff;
+  --border:rgba(26,24,20,0.09);--border2:rgba(26,24,20,0.18);
+  --red:#dc2626;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;font-family:'Jost',sans-serif;background:var(--sand);color:var(--ink);font-weight:300}
+
+.header{background:var(--white);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:12}
+.logo{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:500;letter-spacing:.04em;color:var(--ink)}
+.hdiv{width:1px;height:14px;background:var(--border2)}
+.hls{font-size:10px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase}
+
+.wrap{max-width:680px;margin:32px auto;padding:0 20px 60px}
+.card{background:var(--white);border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;margin-bottom:20px}
+.card-head{background:var(--gold);padding:14px 22px}
+.card-head h2{font-size:14px;font-weight:700;color:var(--white);letter-spacing:.04em;text-transform:uppercase}
+.card-head p{font-size:11px;color:rgba(255,255,255,.75);margin-top:3px}
+.card-body{padding:22px}
+
+.field-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.field{flex:1 1 220px}
+.field.half{flex:0 0 calc(50% - 6px);min-width:140px}
+.field.full{flex:1 1 100%}
+label{display:block;font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+label .req{color:var(--red)}
+input,select,textarea{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:4px;font-size:12px;font-family:'Jost',sans-serif;color:var(--ink);background:var(--white);outline:none;transition:border .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--gold)}
+textarea{resize:vertical}
+
+.prov-wrap{position:relative}
+.prov-suggestions{position:absolute;top:100%;left:0;right:0;background:var(--white);border:1px solid var(--border2);border-top:none;border-radius:0 0 4px 4px;max-height:200px;overflow-y:auto;z-index:50;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.prov-suggestions.open{display:block}
+.prov-item{padding:8px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border)}
+.prov-item:hover{background:var(--sand)}
+.prov-item strong{display:block;font-weight:600;color:var(--ink)}
+.prov-item span{font-size:10px;color:var(--ink3)}
+
+.sec-label{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700}
+
+.submit-btn{width:100%;padding:14px;background:var(--gold);color:var(--white);border:none;border-radius:6px;font-size:14px;font-family:'Jost',sans-serif;font-weight:700;cursor:pointer;letter-spacing:.04em;transition:background .15s}
+.submit-btn:hover{background:var(--gold2)}
+.submit-btn:disabled{opacity:.6;cursor:not-allowed}
+
+.success{display:none;text-align:center;padding:60px 20px}
+.success h2{font-size:22px;font-weight:700;color:var(--gold);margin:16px 0 8px}
+.success p{font-size:14px;color:var(--ink3);max-width:400px;margin:0 auto 24px}
+.success .check{font-size:56px}
+
+.info-box{background:#fef9ec;border:1px solid #fde68a;border-radius:6px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:16px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="logo">Two Travel</span>
+  <div class="hdiv"></div>
+  <span class="hls">Solicitud de Pago a Proveedor</span>
+</div>
+
+<div class="wrap">
+
+  <!-- SUCCESS STATE -->
+  <div class="success" id="success-view">
+    <div class="check">✅</div>
+    <h2>Solicitud enviada</h2>
+    <p>Tu solicitud fue registrada y está pendiente de aprobación. Mario la revisará y procesará en el próximo lote.</p>
+    <button onclick="resetForm()" style="padding:10px 24px;background:var(--gold);color:#fff;border:none;border-radius:4px;font-size:13px;font-family:'Jost',sans-serif;cursor:pointer">Nueva solicitud</button>
+  </div>
+
+  <!-- FORM -->
+  <div id="form-view">
+
+    <div class="info-box">
+      📦 Completa el formulario para solicitar un pago a proveedor. Las solicitudes se agrupan en <strong>lotes diarios</strong> y son procesadas por el equipo de finanzas.
+    </div>
+
+    <form id="sol-form" onsubmit="submitForm(event)">
+
+      <!-- Concepto -->
+      <div class="card">
+        <div class="card-head"><h2>Información del pago</h2><p>Qué se está pagando y cuándo</p></div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field full">
+              <label>Concepto / Descripción <span class="req">*</span></label>
+              <input id="f-concepto" placeholder="Ej: Arreglo lavadora Casa Moneda" required>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field half">
+              <label>Monto <span class="req">*</span></label>
+              <input id="f-amount" type="number" min="0" placeholder="349000" required>
+            </div>
+            <div class="field half">
+              <label>Moneda</label>
+              <select id="f-currency">
+                <option value="COP">COP — Peso colombiano</option>
+                <option value="USD">USD — Dólar</option>
+                <option value="MXN">MXN — Peso mexicano</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field half">
+              <label>Prioridad</label>
+              <select id="f-priority">
+                <option value="Alta">🔴 Alta — pagar hoy</option>
+                <option value="Media" selected>🟡 Media — en 2 días</option>
+                <option value="Normal">🟢 Normal — 3 días o más</option>
+              </select>
+            </div>
+            <div class="field half">
+              <label>Fecha de vencimiento <span class="req">*</span></label>
+              <input id="f-duedate" type="date" required>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field half">
+              <label>Área</label>
+              <select id="f-area">
+                <option>Concierge</option><option>Logistica</option><option>Marketing</option>
+                <option>HR</option><option>Sales</option><option>Finance</option>
+                <option>Property Management</option>
+              </select>
+            </div>
+            <div class="field half">
+              <label>Clase</label>
+              <select id="f-clase">
+                <option>Colombia: Cartagena</option>
+                <option>Colombia: Medellín</option>
+                <option>Mexico: Mexico City</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field full">
+              <label>Cliente / Centro de costos</label>
+              <input id="f-client" placeholder="Nombre del cliente de Slack (si aplica)">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Proveedor -->
+      <div class="card">
+        <div class="card-head"><h2>Proveedor</h2><p>Escribe el nombre o NIT para buscar en la base de datos</p></div>
+        <div class="card-body">
+
+          <div class="field-row">
+            <div class="field full">
+              <label>Buscar proveedor (nombre o NIT) <span class="req">*</span></label>
+              <div class="prov-wrap">
+                <input id="f-prov-search" placeholder="Escribe nombre o NIT…" autocomplete="off" oninput="searchProviders(this.value)" required>
+                <div class="prov-suggestions" id="prov-list"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="prov-fields" style="display:none">
+            <div style="margin-bottom:12px" class="sec-label">Datos del proveedor seleccionado</div>
+            <div class="field-row">
+              <div class="field half">
+                <label>Tipo de ID</label>
+                <select id="f-tipo-id">
+                  <option>NIT</option><option>CC</option><option>CE</option><option>Pasaporte</option><option>RUT</option>
+                </select>
+              </div>
+              <div class="field half">
+                <label>Número ID</label>
+                <input id="f-prov-id" placeholder="890801748">
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field full">
+                <label>Nombre del proveedor <span class="req">*</span></label>
+                <input id="f-prov-nombre" placeholder="MABE SERVICIOS" required>
+              </div>
+            </div>
+            <div style="margin-top:4px;margin-bottom:14px" class="sec-label">Cuenta bancaria</div>
+            <div class="field-row">
+              <div class="field half">
+                <label>Banco</label>
+                <select id="f-banco">
+                  <option>BANCOLOMBIA</option><option>DAVIVIENDA</option><option>BANCO DE BOGOTÁ</option>
+                  <option>BBVA</option><option>NEQUI</option><option>SCOTIABANK COLPATRIA</option>
+                  <option>BANCO POPULAR</option><option>AV VILLAS</option><option>ITAÚ</option><option>OTRO</option>
+                </select>
+              </div>
+              <div class="field half">
+                <label>Tipo de cuenta</label>
+                <select id="f-tipo-cta">
+                  <option>Cuenta de Ahorro</option><option>Cuenta Corriente</option>
+                </select>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field full">
+                <label>Número de cuenta</label>
+                <input id="f-num-cta" placeholder="07080174803">
+              </div>
+            </div>
+          </div>
+
+          <!-- New provider toggle -->
+          <div id="new-prov-toggle" style="margin-top:8px">
+            <button type="button" onclick="showNewProviderFields()" style="font-size:11px;color:var(--gold);background:none;border:none;cursor:pointer;font-family:'Jost',sans-serif;text-decoration:underline">
+              + Ingresar proveedor nuevo (no está en la base de datos)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Solicitante -->
+      <div class="card">
+        <div class="card-head"><h2>Solicitante</h2></div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field half">
+              <label>Solicitado por <span class="req">*</span></label>
+              <input id="f-requested-by" placeholder="Tu nombre" required>
+            </div>
+            <div class="field half">
+              <label>Asignado a</label>
+              <input id="f-assigned-to" placeholder="Ej: Mario">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field half">
+              <label>Frecuencia de pago</label>
+              <select id="f-freq">
+                <option>Única</option><option>Mensual</option><option>Quincenal</option>
+                <option>Semanal</option><option>Eventual</option>
+              </select>
+            </div>
+            <div class="field half">
+              <label>Link Factura / Cuenta de cobro</label>
+              <input id="f-invoice" placeholder="https://…" type="url">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field full">
+              <label>Notas u observaciones</label>
+              <textarea id="f-notes" rows="3" placeholder="Información adicional relevante…"></textarea>
+            </div>
+          </div>
+          <label style="font-size:12px;display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:4px;font-weight:300;text-transform:none;letter-spacing:0">
+            <input type="checkbox" id="f-prebill"> ¿Ya se pagó el Prebill?
+          </label>
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submit-btn">Enviar solicitud</button>
+    </form>
+
+  </div><!-- /form-view -->
+</div>
+
+<script>
+const SUPABASE_URL = 'https://zcgisoigfzytpanoaomq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_7k9A4WP1x7hDQdrsHY52jQ_Rpj3ASjU';
+const PROV_DB_ID   = 'finance_providers_v1';
+const SOL_ID       = 'finance_proveedores_v1';
+
+let allProviders = [];
+let selectedProvider = null;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  // Set default due date based on priority
+  setDefaultDueDate();
+  document.getElementById('f-priority').addEventListener('change', setDefaultDueDate);
+  allProviders = await loadProviders();
+  // Click outside closes suggestion list
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.prov-wrap')) closeSuggestions();
+  });
+});
+
+function setDefaultDueDate() {
+  const priority = document.getElementById('f-priority').value;
+  const d = new Date();
+  if (priority === 'Alta')  d.setDate(d.getDate() + 0);
+  if (priority === 'Media') d.setDate(d.getDate() + 2);
+  if (priority === 'Normal') d.setDate(d.getDate() + 3);
+  document.getElementById('f-duedate').value = d.toISOString().slice(0,10);
+}
+
+// ── Provider DB ───────────────────────────────────────────────────────────────
+async function sb(path, opts={}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json', ...opts.headers },
+    ...opts
+  });
+  return res.json();
+}
+
+async function loadProviders() {
+  try {
+    const [rec] = await sb('kickoffs?select=data&id=eq.' + PROV_DB_ID);
+    const d = rec?.data || {};
+    const notes = typeof d.internalNotes === 'string' ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
+    return notes.providers || [];
+  } catch { return []; }
+}
+
+function searchProviders(q) {
+  const list = document.getElementById('prov-list');
+  if (!q || q.length < 2) { list.classList.remove('open'); return; }
+  const matches = allProviders.filter(p =>
+    p.provNombre.toLowerCase().includes(q.toLowerCase()) ||
+    p.provId.includes(q)
+  ).slice(0, 12);
+
+  if (!matches.length) { list.classList.remove('open'); return; }
+
+  list.innerHTML = matches.map(p => `
+    <div class="prov-item" onclick="selectProvider(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+      <strong>${p.provNombre}</strong>
+      <span>${p.provTipoId} ${p.provId} · ${p.banco} · ${p.tipoCuenta}</span>
+    </div>
+  `).join('');
+  list.classList.add('open');
+}
+
+function selectProvider(p) {
+  selectedProvider = p;
+  document.getElementById('f-prov-search').value = p.provNombre;
+  closeSuggestions();
+  // Fill fields
+  document.getElementById('f-prov-id').value    = p.provId || '';
+  document.getElementById('f-prov-nombre').value = p.provNombre || '';
+  document.getElementById('f-tipo-id').value    = p.provTipoId || 'NIT';
+  document.getElementById('f-banco').value       = p.banco || '';
+  document.getElementById('f-tipo-cta').value   = p.tipoCuenta || '';
+  document.getElementById('f-num-cta').value     = p.numeroCuenta || '';
+  document.getElementById('prov-fields').style.display = 'block';
+  document.getElementById('new-prov-toggle').style.display = 'none';
+}
+
+function closeSuggestions() {
+  document.getElementById('prov-list').classList.remove('open');
+}
+
+function showNewProviderFields() {
+  selectedProvider = null;
+  document.getElementById('f-prov-search').value = '';
+  document.getElementById('f-prov-id').value = '';
+  document.getElementById('f-prov-nombre').value = '';
+  document.getElementById('f-num-cta').value = '';
+  document.getElementById('prov-fields').style.display = 'block';
+  document.getElementById('new-prov-toggle').style.display = 'none';
+  document.getElementById('f-prov-nombre').focus();
+}
+
+// ── Submit ────────────────────────────────────────────────────────────────────
+async function submitForm(e) {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'Enviando…';
+
+  const today = new Date().toISOString().slice(0,10);
+  const uid = Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+
+  const entry = {
+    id: uid, lote: today, status: 'pendiente', createdAt: today,
+    concepto:     document.getElementById('f-concepto').value,
+    amount:       parseFloat(document.getElementById('f-amount').value) || 0,
+    currency:     document.getElementById('f-currency').value,
+    priority:     document.getElementById('f-priority').value,
+    dueDate:      document.getElementById('f-duedate').value,
+    area:         document.getElementById('f-area').value,
+    clase:        document.getElementById('f-clase').value,
+    client:       document.getElementById('f-client').value,
+    provId:       document.getElementById('f-prov-id').value,
+    provNombre:   document.getElementById('f-prov-nombre').value,
+    provTipoId:   document.getElementById('f-tipo-id').value,
+    banco:        document.getElementById('f-banco').value,
+    tipoCuenta:   document.getElementById('f-tipo-cta').value,
+    numeroCuenta: document.getElementById('f-num-cta').value,
+    requestedBy:  document.getElementById('f-requested-by').value,
+    assignedTo:   document.getElementById('f-assigned-to').value,
+    payFreq:      document.getElementById('f-freq').value,
+    invoiceUrl:   document.getElementById('f-invoice').value,
+    notes:        document.getElementById('f-notes').value,
+    prebill:      document.getElementById('f-prebill').checked,
+    category:     '', payFreq: document.getElementById('f-freq').value,
+  };
+
+  try {
+    // Load existing solicitudes and append
+    const [rec] = await sb('kickoffs?select=data&id=eq.' + SOL_ID);
+    const d = rec?.data || {};
+    const notes = typeof d.internalNotes === 'string' ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
+    const existing = notes.solicitudes || [];
+    const merged = { ...d, internalNotes: JSON.stringify({ ...notes, solicitudes: [entry, ...existing] }) };
+
+    // Save provider to DB if new
+    if (!selectedProvider && entry.provId && entry.provNombre) {
+      const [provRec] = await sb('kickoffs?select=data&id=eq.' + PROV_DB_ID);
+      const pd = provRec?.data || {};
+      const pnotes = typeof pd.internalNotes === 'string' ? JSON.parse(pd.internalNotes) : (pd.internalNotes || {});
+      const existing_provs = pnotes.providers || [];
+      if (!existing_provs.find(p => p.provId === entry.provId)) {
+        const newProv = { provId:entry.provId, provNombre:entry.provNombre, provTipoId:entry.provTipoId, banco:entry.banco, tipoCuenta:entry.tipoCuenta, numeroCuenta:entry.numeroCuenta };
+        const pmerged = { ...pd, internalNotes: JSON.stringify({ ...pnotes, providers: [newProv, ...existing_provs] }) };
+        await sb('kickoffs?id=eq.' + PROV_DB_ID, { method:'PATCH', body: JSON.stringify({ data: pmerged }) });
+      }
+    }
+
+    // Update solicitudes
+    const method = rec ? 'PATCH' : 'POST';
+    const path = rec ? 'kickoffs?id=eq.' + SOL_ID : 'kickoffs';
+    const body = rec ? JSON.stringify({ data: merged }) : JSON.stringify({ id: SOL_ID, data: merged });
+    await sb(path, { method, body });
+
+    document.getElementById('form-view').style.display = 'none';
+    document.getElementById('success-view').style.display = 'block';
+  } catch (err) {
+    alert('Error al enviar: ' + (err.message || err));
+    btn.disabled = false; btn.textContent = 'Enviar solicitud';
+  }
+}
+
+function resetForm() {
+  document.getElementById('sol-form').reset();
+  selectedProvider = null;
+  document.getElementById('prov-fields').style.display = 'none';
+  document.getElementById('new-prov-toggle').style.display = 'block';
+  document.getElementById('form-view').style.display = 'block';
+  document.getElementById('success-view').style.display = 'none';
+  document.getElementById('submit-btn').disabled = false;
+  document.getElementById('submit-btn').textContent = 'Enviar solicitud';
+  setDefaultDueDate();
+}
+</script>
+</body>
+</html>
