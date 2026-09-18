@@ -822,6 +822,8 @@ export function FinanceReservaciones() {
   const [rows,     setRows]     = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
+  const [saved,    setSaved]    = useState(false);   // shows ✓ briefly
+  const [isDirty,  setIsDirty]  = useState(false);
   const [err,      setErr]      = useState("");
   const [view,     setView]     = useState("tabla");
   const [search,   setSearch]   = useState("");
@@ -833,44 +835,53 @@ export function FinanceReservaciones() {
   const [dateTo,   setDateTo]   = useState("");
   const [sortCol,  setSortCol]  = useState("checkIn");
   const [sortDir,  setSortDir]  = useState(1);
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
 
   const load = useCallback(async () => {
-    setLoading(true); setErr("");
+    setLoading(true); setErr(""); setIsDirty(false);
     try { setRows(await loadReservations()); }
     catch(e) { setErr("Error cargando: "+e.message); }
     setLoading(false);
   }, []);
   useEffect(()=>{load();},[load]);
 
-  const patchRow = useCallback(async (rowIdx, field, val) => {
-    const updated = rows.map((r,i) => i===rowIdx ? {...r,[field]:val} : r);
-    setRows(updated);
-    setSaving(true);
-    try { await saveReservations(updated); }
-    catch(e) { setErr("Error guardando: "+e.message); }
-    setSaving(false);
-  }, [rows]);
+  // Warn on tab close when there are unsaved changes
+  useEffect(()=>{
+    const handler = e => { if(isDirty){ e.preventDefault(); e.returnValue=""; } };
+    window.addEventListener("beforeunload", handler);
+    return ()=>window.removeEventListener("beforeunload", handler);
+  },[isDirty]);
 
-  const addRow = async () => {
-    const blank = { name:"", salesRep:"", dealSource:"", type:"", checkIn:"", checkOut:"",
-      property:"", city:"", qty:"", rate:"", tax:"", total:"", commission:"", ourPrice:"",
-      status:"Confirmed", confirmedAt:"" };
-    const updated = [blank, ...rows];
-    setRows(updated);
-    setSaving(true);
-    try { await saveReservations(updated); }
-    catch(e) { setErr("Error guardando: "+e.message); }
+  const handleSave = async () => {
+    setSaving(true); setErr("");
+    try {
+      await saveReservations(rowsRef.current);
+      setIsDirty(false);
+      setSaved(true);
+      setTimeout(()=>setSaved(false), 2500);
+    } catch(e) { setErr("Error guardando: "+e.message); }
     setSaving(false);
   };
 
-  const deleteRow = async (idx) => {
+  // All mutations only update local state and mark dirty
+  const patchRow = useCallback((rowIdx, field, val) => {
+    setRows(prev => prev.map((r,i) => i===rowIdx ? {...r,[field]:val} : r));
+    setIsDirty(true);
+  }, []);
+
+  const addRow = () => {
+    const blank = { name:"", salesRep:"", dealSource:"", type:"", checkIn:"", checkOut:"",
+      property:"", city:"", qty:"", rate:"", tax:"", total:"", commission:"", ourPrice:"",
+      status:"Confirmed", confirmedAt:"" };
+    setRows(prev => [blank, ...prev]);
+    setIsDirty(true);
+  };
+
+  const deleteRow = (idx) => {
     if (!confirm("¿Eliminar esta fila?")) return;
-    const updated = rows.filter((_,i)=>i!==idx);
-    setRows(updated);
-    setSaving(true);
-    try { await saveReservations(updated); }
-    catch(e) { setErr("Error guardando: "+e.message); }
-    setSaving(false);
+    setRows(prev => prev.filter((_,i)=>i!==idx));
+    setIsDirty(true);
   };
 
   const repOpts    = [...new Set(rows.map(r=>r.salesRep).filter(Boolean))].sort();
@@ -935,13 +946,29 @@ export function FinanceReservaciones() {
   );
 
   return (
-    <Shell title="Reservaciones & Ventas" subtitle={`${sorted.length} de ${rows.length} registros${saving?" · Guardando…":""}`}>
+    <Shell title="Reservaciones & Ventas" subtitle={`${sorted.length} de ${rows.length} registros`}>
       {err&&<Err msg={err} onRetry={load} />}
 
-      <div style={{display:"flex",gap:8,marginBottom:20}}>
+      <div style={{display:"flex",gap:8,marginBottom:20,alignItems:"center",flexWrap:"wrap"}}>
         <TabBtn label="Tabla" k="tabla"/>
         <TabBtn label="Calendario" k="calendario"/>
         <TabBtn label="Dashboard" k="dashboard"/>
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
+          {saved && <span style={{fontSize:12,color:"#059669",fontWeight:600}}>✓ Guardado</span>}
+          {isDirty && !saving && <span style={{fontSize:11,color:GOLD}}>Cambios sin guardar</span>}
+          <button
+            onClick={handleSave}
+            disabled={saving || (!isDirty && !saved)}
+            style={{
+              padding:"8px 20px", fontSize:13, fontWeight:700,
+              background: saving ? MUT : isDirty ? "#059669" : saved ? "#d1fae5" : "#e5e7eb",
+              color: saving||isDirty ? WHT : saved ? "#065f46" : "#9ca3af",
+              border:"none", borderRadius:8, cursor: isDirty||saving?"pointer":"default",
+              transition:"background .2s", whiteSpace:"nowrap",
+            }}>
+            {saving ? "Guardando…" : saved ? "✓ Guardado" : isDirty ? "💾 Guardar cambios" : "Sin cambios"}
+          </button>
+        </div>
       </div>
 
       {view==="calendario" && <ReservationsCalendar rows={rows}/>}
