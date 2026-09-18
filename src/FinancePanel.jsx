@@ -540,30 +540,14 @@ async function loadReservations() {
   return notes.reservations || [];
 }
 
-const TYPE_COLORS = {
-  Airbnb:             ["#fff7ed","#9a3412"],
-  VRBO:               ["#fdf4ff","#7e22ce"],
-  Concierge:          ["#eff6ff","#1d4ed8"],
-  "Boat / Concierge": ["#ecfeff","#0e7490"],
-  Boats:              ["#ecfeff","#0e7490"],
-  "House / Concierge":["#f0fdf4","#166534"],
-  "House / Weddings": ["#fdf4ff","#7e22ce"],
-  Weddings:           ["#fdf4ff","#9d174d"],
-  "Check In Only":    ["#f9fafb","#4b5563"],
-  Cancelled:          ["#fef2f2","#991b1b"],
-};
-function TypeBadge({ type }) {
-  const [bg, fg] = TYPE_COLORS[type] || ["#f3f4f6","#6b7280"];
-  return <span style={{fontSize:10,padding:"2px 8px",borderRadius:12,background:bg,color:fg,fontWeight:600,whiteSpace:"nowrap"}}>{type||"—"}</span>;
-}
-function StatusDot({ status }) {
-  const ok = status === "Confirmed";
-  return (
-    <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,color:ok?"#065f46":"#991b1b",fontWeight:500}}>
-      <span style={{width:7,height:7,borderRadius:"50%",background:ok?"#10b981":"#f87171",flexShrink:0,display:"inline-block"}}/>
-      {status||"—"}
-    </span>
-  );
+async function saveReservations(rows) {
+  const { data: existing, error: fetchErr } = await supabase.from("kickoffs").select("data").eq("id", "finance_reservations_v1").single();
+  if (fetchErr) throw new Error(fetchErr.message);
+  const d = existing?.data || {};
+  const notes = typeof d.internalNotes === "string" ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
+  const merged = { ...d, internalNotes: JSON.stringify({ ...notes, reservations: rows }) };
+  const { error } = await supabase.from("kickoffs").update({ data: merged }).eq("id", "finance_reservations_v1");
+  if (error) throw new Error(error.message);
 }
 
 const MONTH_NAMES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -572,14 +556,91 @@ function monthLabel(ym) {
   return `${MONTH_NAMES[parseInt(m,10)-1]} ${y}`;
 }
 
+const ALL_COLS = [
+  { key:"name",        label:"Cliente",         w:160, num:false },
+  { key:"salesRep",    label:"Sales Rep",        w:110, num:false },
+  { key:"dealSource",  label:"Deal Source",      w:110, num:false },
+  { key:"type",        label:"Customer Type",    w:120, num:false },
+  { key:"checkIn",     label:"Check In",         w:95,  num:false, date:true },
+  { key:"checkOut",    label:"Check Out",        w:95,  num:false, date:true },
+  { key:"property",    label:"Property",         w:120, num:false },
+  { key:"city",        label:"City",             w:90,  num:false },
+  { key:"qty",         label:"Cant.",            w:60,  num:true  },
+  { key:"rate",        label:"Rate",             w:80,  num:true  },
+  { key:"tax",         label:"Tax",              w:70,  num:true  },
+  { key:"total",       label:"Total Amount",     w:100, num:true  },
+  { key:"commission",  label:"Commission",       w:100, num:true  },
+  { key:"ourPrice",    label:"Our Price",        w:90,  num:true  },
+  { key:"status",      label:"Status",           w:100, num:false },
+  { key:"confirmedAt", label:"Fecha Confirm.",   w:110, num:false, date:true },
+];
+
+const STATUS_OPTS = ["Confirmed","Cancelled",""];
+
+function EditCell({ value, field, onSave, isNum, isDate }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(value ?? "");
+  const ref = useRef();
+
+  if (!editing) {
+    const display = isNum && val !== "" && val !== null
+      ? (["total","commission","rate","ourPrice","tax"].includes(field) ? fmt$(parseFloat(val)||0) : val)
+      : (val || "");
+    return (
+      <div onClick={()=>{ setVal(value??""); setEditing(true); }}
+        style={{minWidth:isNum?60:80, cursor:"text", padding:"2px 4px", borderRadius:4,
+          whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+          color: field==="status" ? (val==="Confirmed"?"#065f46":val==="Cancelled"?"#991b1b":DARK) : (isNum?DARK:MUT),
+          fontWeight: ["total","name"].includes(field)?600:400,
+          background:"transparent",
+        }}
+        title={String(val||"")}>
+        {field==="status"
+          ? <span style={{display:"inline-flex",alignItems:"center",gap:4}}>
+              <span style={{width:6,height:6,borderRadius:"50%",display:"inline-block",flexShrink:0,
+                background:val==="Confirmed"?"#10b981":val==="Cancelled"?"#f87171":"#d1d5db"}}/>
+              {val||"—"}
+            </span>
+          : (display || <span style={{color:"#d1d5db",fontSize:11}}>—</span>)
+        }
+      </div>
+    );
+  }
+
+  const finish = () => {
+    setEditing(false);
+    if (String(val??"") !== String(value??"")) onSave(val);
+  };
+
+  if (field === "status") {
+    return (
+      <select autoFocus value={val} onChange={e=>setVal(e.target.value)} onBlur={finish}
+        style={{fontSize:11,border:"1px solid "+GOLD,borderRadius:4,padding:"2px 4px",background:WHT,fontFamily:"'Jost',sans-serif",outline:"none",minWidth:100}}>
+        {STATUS_OPTS.map(o=><option key={o} value={o}>{o||"—"}</option>)}
+      </select>
+    );
+  }
+
+  return (
+    <input ref={ref} autoFocus value={val} type={isDate?"date":isNum?"number":"text"}
+      onChange={e=>setVal(e.target.value)}
+      onBlur={finish}
+      onKeyDown={e=>{ if(e.key==="Enter") finish(); if(e.key==="Escape"){ setEditing(false); setVal(value??""); } }}
+      style={{fontSize:11,border:"1px solid "+GOLD,borderRadius:4,padding:"2px 6px",width:"100%",
+        minWidth: isNum?60:isDate?110:100, maxWidth:200, boxSizing:"border-box",
+        background:WHT, fontFamily:"'Jost',sans-serif", outline:"none"}} />
+  );
+}
+
 export function FinanceReservaciones() {
   const [rows,    setRows]    = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving,  setSaving]  = useState(false);
   const [err,     setErr]     = useState("");
   const [search,  setSearch]  = useState("");
   const [typeF,   setTypeF]   = useState("all");
   const [repF,    setRepF]    = useState("all");
-  const [statusF, setStatusF] = useState("Confirmed");
+  const [statusF, setStatusF] = useState("all");
   const [monthF,  setMonthF]  = useState("all");
   const [sortCol, setSortCol] = useState("checkIn");
   const [sortDir, setSortDir] = useState(1);
@@ -592,140 +653,175 @@ export function FinanceReservaciones() {
   }, []);
   useEffect(()=>{load();},[load]);
 
-  const now = new Date().toISOString().slice(0,10);
+  const patchRow = useCallback(async (rowIdx, field, val) => {
+    const updated = rows.map((r,i) => i===rowIdx ? {...r,[field]:val} : r);
+    setRows(updated);
+    setSaving(true);
+    try { await saveReservations(updated); }
+    catch(e) { setErr("Error guardando: "+e.message); }
+    setSaving(false);
+  }, [rows]);
 
-  const types   = ["all",...[...new Set(rows.map(r=>r.type).filter(Boolean))].sort()];
-  const reps    = ["all",...[...new Set(rows.map(r=>r.salesRep).filter(Boolean))].sort()];
-  const months  = ["all",...[...new Set(rows.map(r=>r.checkIn?.slice(0,7)).filter(Boolean))].sort()];
+  const addRow = async () => {
+    const blank = { name:"", salesRep:"", dealSource:"", type:"", checkIn:"", checkOut:"",
+      property:"", city:"", qty:"", rate:"", tax:"", total:"", commission:"", ourPrice:"",
+      status:"Confirmed", confirmedAt:"" };
+    const updated = [blank, ...rows];
+    setRows(updated);
+    setSaving(true);
+    try { await saveReservations(updated); }
+    catch(e) { setErr("Error guardando: "+e.message); }
+    setSaving(false);
+  };
 
-  const filtered = rows.filter(r => {
-    if (statusF !== "all" && r.status !== statusF) return false;
-    if (typeF   !== "all" && r.type   !== typeF)   return false;
-    if (repF    !== "all" && r.salesRep !== repF)  return false;
-    if (monthF  !== "all" && r.checkIn?.slice(0,7) !== monthF) return false;
+  const deleteRow = async (idx) => {
+    if (!confirm("¿Eliminar esta fila?")) return;
+    const updated = rows.filter((_,i)=>i!==idx);
+    setRows(updated);
+    setSaving(true);
+    try { await saveReservations(updated); }
+    catch(e) { setErr("Error guardando: "+e.message); }
+    setSaving(false);
+  };
+
+  const types  = ["all",...[...new Set(rows.map(r=>r.type).filter(Boolean))].sort()];
+  const reps   = ["all",...[...new Set(rows.map(r=>r.salesRep).filter(Boolean))].sort()];
+  const months = ["all",...[...new Set(rows.map(r=>r.checkIn?.slice(0,7)).filter(Boolean))].sort()];
+
+  const filteredIdxs = rows.reduce((acc,r,i)=>{
+    if (statusF!=="all" && r.status!==statusF) return acc;
+    if (typeF!=="all"   && r.type!==typeF)     return acc;
+    if (repF!=="all"    && r.salesRep!==repF)  return acc;
+    if (monthF!=="all"  && r.checkIn?.slice(0,7)!==monthF) return acc;
     if (search) {
-      const q = search.toLowerCase();
+      const q=search.toLowerCase();
       if (!(r.name||"").toLowerCase().includes(q) &&
           !(r.salesRep||"").toLowerCase().includes(q) &&
-          !(r.type||"").toLowerCase().includes(q)) return false;
+          !(r.type||"").toLowerCase().includes(q) &&
+          !(r.property||"").toLowerCase().includes(q) &&
+          !(r.city||"").toLowerCase().includes(q)) return acc;
     }
-    return true;
-  }).sort((a,b) => {
-    const av = a[sortCol] ?? ""; const bv = b[sortCol] ?? "";
-    return av < bv ? -sortDir : av > bv ? sortDir : 0;
+    acc.push(i);
+    return acc;
+  },[]);
+
+  const sorted = [...filteredIdxs].sort((ai,bi)=>{
+    const a=rows[ai][sortCol]??"", b=rows[bi][sortCol]??"";
+    return a<b?-sortDir:a>b?sortDir:0;
   });
 
-  const confirmed = filtered.filter(r=>r.status==="Confirmed");
-  const totalRev  = confirmed.reduce((s,r)=>s+(r.total||0),0);
-  const totalComm = confirmed.reduce((s,r)=>s+(r.commission||0),0);
+  const confirmed = sorted.filter(i=>rows[i].status==="Confirmed");
+  const totalRev  = confirmed.reduce((s,i)=>s+(parseFloat(rows[i].total)||0),0);
+  const totalComm = confirmed.reduce((s,i)=>s+(parseFloat(rows[i].commission)||0),0);
+  const totalTax  = confirmed.reduce((s,i)=>s+(parseFloat(rows[i].tax)||0),0);
 
-  const thStyle = (col) => ({
-    padding:"10px 12px", textAlign:"left", fontWeight:600, color:DARK,
-    whiteSpace:"nowrap", fontSize:12, cursor:"pointer", userSelect:"none",
-    background: sortCol===col ? "#f0ece4" : BG,
+  const th = (col) => ({
+    padding:"9px 10px", textAlign:"left", fontWeight:600, color:DARK, whiteSpace:"nowrap",
+    fontSize:11, cursor:"pointer", userSelect:"none", position:"sticky", top:0, zIndex:1,
+    background: sortCol===col ? "#e8e0d4" : BG,
+    borderBottom:`1px solid ${BRD}`,
   });
-  const sort = (col) => { if(sortCol===col) setSortDir(d=>-d); else { setSortCol(col); setSortDir(1); } };
-  const arrow = (col) => sortCol===col ? (sortDir===1?"↑":"↓") : "";
-
-  const Sel = ({val,set,opts,label}) => (
-    <select value={val} onChange={e=>set(e.target.value)}
-      style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:120}}>
-      <option value="all">{label}</option>
-      {opts.filter(o=>o!=="all").map(o=><option key={o} value={o}>{o==="all"?label:(monthF==="all"&&opts===months?monthLabel(o):o)}</option>)}
-    </select>
-  );
+  const sortBy = (col) => { if(sortCol===col) setSortDir(d=>-d); else { setSortCol(col); setSortDir(1); } };
 
   return (
-    <Shell title="Reservaciones & Ventas" subtitle={`${filtered.length} de ${rows.length} registros`}>
+    <Shell title="Reservaciones & Ventas" subtitle={`${sorted.length} de ${rows.length} registros${saving?" · Guardando…":""}`}>
       {err&&<Err msg={err} onRetry={load} />}
 
       {/* KPIs */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
         <KPICard label="Confirmadas" val={confirmed.length} color="#065f46" />
         <KPICard label="Revenue total" val={fmt$(totalRev,"USD")} color={GOLD} />
         <KPICard label="Comisiones" val={fmt$(totalComm,"USD")} color="#1d4ed8" />
-        <KPICard label="Total registros" val={rows.length} />
+        <KPICard label="Tax total" val={fmt$(totalTax,"USD")} color={MUT} />
       </div>
 
-      {/* Filters */}
-      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16,alignItems:"center"}}>
-        <input value={search} onChange={e=>setSearch(e.target.value)}
-          placeholder="Buscar cliente, rep, tipo…"
-          style={{...INP,width:220,padding:"7px 12px",fontSize:12}} />
+      {/* Toolbar */}
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14,alignItems:"center"}}>
+        <button onClick={addRow}
+          style={{padding:"7px 14px",fontSize:12,fontWeight:600,background:GOLD,color:WHT,border:"none",borderRadius:8,cursor:"pointer",whiteSpace:"nowrap"}}>
+          + Nueva fila
+        </button>
 
-        {/* Status toggle */}
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="Buscar…"
+          style={{...INP,width:180,padding:"7px 12px",fontSize:12}} />
+
         <div style={{display:"flex",background:WHT,border:`1px solid ${BRD}`,borderRadius:8,overflow:"hidden"}}>
-          {[["Confirmed","✓ Confirmed"],["Cancelled","✗ Cancelled"],["all","Todos"]].map(([v,l])=>(
+          {[["all","Todos"],["Confirmed","✓"],["Cancelled","✗"]].map(([v,l])=>(
             <button key={v} onClick={()=>setStatusF(v)}
-              style={{padding:"7px 12px",fontSize:11,fontWeight:500,
+              style={{padding:"7px 10px",fontSize:11,fontWeight:500,
                 background:statusF===v?DARK:"transparent",
-                color:statusF===v?WHT:MUT,border:"none",cursor:"pointer",whiteSpace:"nowrap"}}>
+                color:statusF===v?WHT:MUT,border:"none",cursor:"pointer"}}>
               {l}
             </button>
           ))}
         </div>
 
         <select value={typeF} onChange={e=>setTypeF(e.target.value)}
-          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:130}}>
-          <option value="all">Todos los tipos</option>
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:120}}>
+          <option value="all">Tipo</option>
           {types.filter(t=>t!=="all").map(t=><option key={t} value={t}>{t}</option>)}
         </select>
 
         <select value={repF} onChange={e=>setRepF(e.target.value)}
-          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:130}}>
-          <option value="all">Todos los reps</option>
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:120}}>
+          <option value="all">Sales Rep</option>
           {reps.filter(r=>r!=="all").map(r=><option key={r} value={r}>{r}</option>)}
         </select>
 
         <select value={monthF} onChange={e=>setMonthF(e.target.value)}
-          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:140}}>
-          <option value="all">Todos los meses</option>
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:130}}>
+          <option value="all">Mes</option>
           {months.filter(m=>m!=="all").map(m=><option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
       </div>
 
       {/* Table */}
       <div style={{background:WHT,border:`1px solid ${BRD}`,borderRadius:12,overflow:"hidden"}}>
-        {loading ? <Spinner/> : filtered.length===0 ? <Empty text="Sin resultados para este filtro." /> : (
-          <div style={{overflowX:"auto"}}>
+        {loading ? <Spinner/> : sorted.length===0 ? <Empty text="Sin resultados." /> : (
+          <div style={{overflowX:"auto",maxHeight:"70vh",overflowY:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead>
-                <tr style={{background:BG,borderBottom:`1px solid ${BRD}`}}>
-                  {[
-                    ["name","Cliente"],["salesRep","Sales Rep"],["dealSource","Fuente"],
-                    ["type","Tipo"],["checkIn","Check In"],["checkOut","Check Out"],
-                    ["qty","Cant."],["rate","Rate"],["total","Total"],
-                    ["commission","Comisión"],["status","Estado"],
-                  ].map(([col,h])=>(
-                    <th key={col} onClick={()=>sort(col)} style={thStyle(col)}>
-                      {h} {arrow(col)}
+                <tr>
+                  {ALL_COLS.map(c=>(
+                    <th key={c.key} onClick={()=>sortBy(c.key)} style={{...th(c.key),minWidth:c.w}}>
+                      {c.label}{sortCol===c.key?(sortDir===1?" ↑":" ↓"):""}
                     </th>
                   ))}
+                  <th style={{...th(null),cursor:"default",minWidth:36}}></th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((r,i)=>(
-                  <tr key={i} style={{borderBottom:`1px solid rgba(26,24,20,.04)`,background:i%2===0?"transparent":"rgba(247,244,239,.4)"}}>
-                    <td style={{padding:"9px 12px",color:DARK,fontWeight:500,whiteSpace:"nowrap",maxWidth:200,overflow:"hidden",textOverflow:"ellipsis"}}>{r.name||"—"}</td>
-                    <td style={{padding:"9px 12px",color:MUT,whiteSpace:"nowrap"}}>{r.salesRep||"—"}</td>
-                    <td style={{padding:"9px 12px",color:MUT,whiteSpace:"nowrap",fontSize:11}}>{r.dealSource||"—"}</td>
-                    <td style={{padding:"9px 12px",whiteSpace:"nowrap"}}><TypeBadge type={r.type}/></td>
-                    <td style={{padding:"9px 12px",color:MUT,whiteSpace:"nowrap",fontVariantNumeric:"tabular-nums"}}>{fmtDate(r.checkIn)}</td>
-                    <td style={{padding:"9px 12px",color:MUT,whiteSpace:"nowrap",fontVariantNumeric:"tabular-nums"}}>{fmtDate(r.checkOut)}</td>
-                    <td style={{padding:"9px 12px",color:MUT,textAlign:"right",fontVariantNumeric:"tabular-nums"}}>{r.qty??"—"}</td>
-                    <td style={{padding:"9px 12px",color:MUT,textAlign:"right",fontVariantNumeric:"tabular-nums"}}>{r.rate!=null?fmt$(r.rate):"—"}</td>
-                    <td style={{padding:"9px 12px",color:DARK,textAlign:"right",fontWeight:600,fontVariantNumeric:"tabular-nums"}}>{r.total!=null?fmt$(r.total):"—"}</td>
-                    <td style={{padding:"9px 12px",color:"#1d4ed8",textAlign:"right",fontVariantNumeric:"tabular-nums"}}>{r.commission!=null?fmt$(r.commission):"—"}</td>
-                    <td style={{padding:"9px 12px",whiteSpace:"nowrap"}}><StatusDot status={r.status}/></td>
+                {sorted.map((rowIdx, vi) => (
+                  <tr key={rowIdx} style={{borderBottom:`1px solid rgba(26,24,20,.04)`,background:vi%2===0?"transparent":"rgba(247,244,239,.35)"}}>
+                    {ALL_COLS.map(c=>(
+                      <td key={c.key} style={{padding:"5px 8px",verticalAlign:"middle",maxWidth:c.w+40}}>
+                        <EditCell
+                          value={rows[rowIdx][c.key]}
+                          field={c.key}
+                          isNum={c.num}
+                          isDate={c.date}
+                          onSave={val=>patchRow(rowIdx, c.key, val)}
+                        />
+                      </td>
+                    ))}
+                    <td style={{padding:"5px 6px",textAlign:"center",verticalAlign:"middle"}}>
+                      <button onClick={()=>deleteRow(rowIdx)}
+                        style={{background:"none",border:"none",color:"#d1d5db",cursor:"pointer",fontSize:14,lineHeight:1,padding:2}}
+                        title="Eliminar fila">×</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr style={{background:BG,borderTop:`2px solid ${BRD}`}}>
-                  <td colSpan={8} style={{padding:"10px 12px",color:MUT,fontSize:11,fontWeight:600}}>TOTALES ({confirmed.length} confirmadas)</td>
-                  <td style={{padding:"10px 12px",color:DARK,textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums"}}>{fmt$(totalRev)}</td>
-                  <td style={{padding:"10px 12px",color:"#1d4ed8",textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums"}}>{fmt$(totalComm)}</td>
-                  <td/>
+                <tr style={{background:BG,borderTop:`2px solid ${BRD}`,position:"sticky",bottom:0}}>
+                  <td colSpan={9} style={{padding:"9px 10px",color:MUT,fontSize:11,fontWeight:600}}>
+                    TOTALES — {confirmed.length} confirmadas de {sorted.length} visibles
+                  </td>
+                  <td style={{padding:"9px 10px",color:DARK,textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap"}}>{fmt$(totalRev)}</td>
+                  <td style={{padding:"9px 10px",color:"#1d4ed8",textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap"}}>{fmt$(totalComm)}</td>
+                  <td style={{padding:"9px 10px",color:MUT,textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap"}}>{fmt$(totalTax)}</td>
+                  <td colSpan={5}/>
                 </tr>
               </tfoot>
             </table>
