@@ -170,6 +170,47 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 <div id="status-popup" class="status-popup" style="display:none"></div>
 <div id="person-popup" class="person-popup" style="display:none"></div>
 
+<!-- MODAL: Preview mensaje WhatsApp antes de cobrar -->
+<div class="overlay" id="cobro-modal" style="display:none" onclick="if(event.target===this)closeCobro()">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-head">
+      <span class="modal-title">Vista previa del mensaje</span>
+      <button class="modal-close" onclick="closeCobro()">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div id="cobro-client-info" style="background:var(--surface2);border-radius:6px;padding:10px 14px;font-size:12px;color:var(--ink2)"></div>
+      <div style="display:flex;gap:0;height:34px">
+        <button type="button" id="cobro-lang-es" onclick="setCobLang('es')"
+          style="flex:1;font-size:11px;font-family:Jost,sans-serif;border:1px solid var(--gold);background:var(--gold);color:#fff;cursor:pointer;border-radius:4px 0 0 4px">🇨🇴 Español</button>
+        <button type="button" id="cobro-lang-en" onclick="setCobLang('en')"
+          style="flex:1;font-size:11px;font-family:Jost,sans-serif;border:1px solid var(--border2);background:transparent;color:var(--ink2);cursor:pointer;border-radius:0 4px 4px 0;border-left:none">🇺🇸 English</button>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px">Plantilla</label>
+        <select id="cobro-tpl" onchange="refreshCobro()" class="form-select">
+          <option value="cobro_inicial_concierge">💬 Cobro inicial — Concierge</option>
+          <option value="cobro_inicial_wedding">💍 Cobro inicial — Bodas</option>
+          <option value="recordatorio_suave">🔔 Recordatorio suave</option>
+          <option value="recordatorio_urgente">⚠️ Recordatorio urgente</option>
+          <option value="confirmacion_pago">✅ Confirmación de pago recibido</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px">Mensaje <span style="font-size:9px;color:var(--ink3);font-weight:400">(puedes editar antes de enviar)</span></label>
+        <textarea id="cobro-msg" rows="10" class="form-textarea" style="font-size:11px;line-height:1.6;width:100%;box-sizing:border-box"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px">
+        <button type="button" onclick="closeCobro()" class="tbtn" style="font-size:12px">Cancelar</button>
+        <button type="button" onclick="sendCobro()" id="cobro-send-btn"
+          style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;font-size:12px;font-family:Jost,sans-serif;background:#25d366;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.523 5.845L0 24l6.335-1.493A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.368l-.36-.214-3.726.878.936-3.617-.235-.374A9.818 9.818 0 1112 21.818z"/></svg>
+          Enviar por WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Nueva solicitud -->
 <div class="overlay" id="new-modal" style="display:none" onclick="if(event.target===this)closeNewModal()">
   <div class="modal">
@@ -733,20 +774,11 @@ function renderRow(p){
     <td><div class="cell" style="justify-content:center;gap:4px;flex-direction:column;align-items:center">
       ${p.phone ? `
         <div style="display:flex;gap:3px;align-items:center">
-          <button onclick="cobrar('${p.id}')" title="Enviar cobro por WhatsApp"
+          <button onclick="previewCobro('${p.id}')" title="Ver plantilla y enviar cobro por WhatsApp"
             style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;font-size:10px;font-family:Jost,sans-serif;background:#25d366;color:#fff;border:none;border-radius:3px;cursor:pointer">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.523 5.845L0 24l6.335-1.493A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.368l-.36-.214-3.726.878.936-3.617-.235-.374A9.818 9.818 0 1112 21.818z"/></svg>
             ${p.cobroAt ? 'Recordar' : 'Cobrar'}
           </button>
-          <select onchange="cobrar('${p.id}',this.value);this.value=''" title="Elegir plantilla"
-            style="font-size:9px;padding:2px 4px;border:1px solid #ccc;border-radius:3px;font-family:Jost,sans-serif;cursor:pointer;max-width:22px;opacity:.6">
-            <option value="">▾</option>
-            <option value="cobro_inicial_concierge">💬 Cobro inicial</option>
-            <option value="cobro_inicial_wedding">💍 Cobro bodas</option>
-            <option value="recordatorio_suave">🔔 Recordatorio suave</option>
-            <option value="recordatorio_urgente">⚠️ Recordatorio urgente</option>
-            <option value="confirmacion_pago">✅ Confirmación pago</option>
-          </select>
         </div>
         ${p.cobroAt ? `<span style="font-size:9px;color:var(--ink3)" title="Enviado: ${p.cobroAt.slice(0,10)}">✓ ${p.cobroAt.slice(5,10)}</span>` : ''}
         ${p.reminderDate ? `<span style="font-size:9px;padding:1px 5px;border-radius:2px;background:${p.reminderDate<=new Date().toISOString().slice(0,10)?'#fef2f2':'#fef9ec'};color:${p.reminderDate<=new Date().toISOString().slice(0,10)?'#dc2626':'#92400e'}">🔔 ${p.reminderDate}</span>` : ''}
@@ -1002,6 +1034,96 @@ async function createPago(sendWa=false, addAnother=false){
   } else {
     closeNewModal();
   }
+}
+
+/* ── PREVIEW COBRO MODAL ── */
+let _cobroId = null;
+let _cobroLang = 'es';
+
+function previewCobro(id, tplKey) {
+  _cobroId = id;
+  const p = pagos.find(x => x.id === id);
+  if (!p) return;
+
+  const dept = p.dept || 'concierge';
+  const isReminder = !!p.cobroAt;
+  const defaultKey = isReminder ? 'recordatorio_suave' : (dept === 'wedding' ? 'cobro_inicial_wedding' : 'cobro_inicial_concierge');
+
+  // Client info header
+  const phone = p.phone ? `📱 ${p.phone}` : 'Sin teléfono';
+  document.getElementById('cobro-client-info').innerHTML =
+    `<strong>${p.client || 'Cliente'}</strong> &nbsp;·&nbsp; ${phone}` +
+    (p.amount ? `&nbsp;·&nbsp; ${p.currency||'USD'} $${parseFloat(p.amount).toLocaleString('es',{minimumFractionDigits:2})}` : '') +
+    (isReminder ? `&nbsp;&nbsp;<span style="background:#fef2f2;color:#dc2626;padding:2px 8px;border-radius:4px;font-size:10px">Recordatorio</span>` : '');
+
+  // Language
+  _cobroLang = 'es';
+  document.getElementById('cobro-lang-es').style.cssText = 'flex:1;font-size:11px;font-family:Jost,sans-serif;border:1px solid var(--gold);background:var(--gold);color:#fff;cursor:pointer;border-radius:4px 0 0 4px';
+  document.getElementById('cobro-lang-en').style.cssText = 'flex:1;font-size:11px;font-family:Jost,sans-serif;border:1px solid var(--border2);background:transparent;color:var(--ink2);cursor:pointer;border-radius:0 4px 4px 0;border-left:none';
+
+  // Template
+  document.getElementById('cobro-tpl').value = tplKey || defaultKey;
+
+  refreshCobro();
+  document.getElementById('cobro-modal').style.display = 'flex';
+}
+
+function setCobLang(lang) {
+  _cobroLang = lang;
+  const isES = lang === 'es';
+  document.getElementById('cobro-lang-es').style.cssText = `flex:1;font-size:11px;font-family:Jost,sans-serif;border:1px solid var(--gold);background:${isES?'var(--gold)':'transparent'};color:${isES?'#fff':'var(--ink2)'};cursor:pointer;border-radius:4px 0 0 4px`;
+  document.getElementById('cobro-lang-en').style.cssText = `flex:1;font-size:11px;font-family:Jost,sans-serif;border:1px solid var(--border2);background:${!isES?'var(--gold)':'transparent'};color:${!isES?'#fff':'var(--ink2)'};cursor:pointer;border-radius:0 4px 4px 0;border-left:none;${!isES?'border-color:var(--gold)':''}`;
+  refreshCobro();
+}
+
+function refreshCobro() {
+  const p = pagos.find(x => x.id === _cobroId);
+  if (!p) return;
+  const tplSet = _cobroLang === 'en' ? TEMPLATES_EN : TEMPLATES;
+  const key = document.getElementById('cobro-tpl').value;
+  const tpl = tplSet[key] || tplSet['cobro_inicial_concierge'] || TEMPLATES['cobro_inicial_concierge'];
+  const dept = p.dept || 'concierge';
+  const pdfLink = dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
+  const firstName = (p.client || '').split(/[\s,&]/)[0];
+  const montoStr = p.amount ? `${p.currency||'USD'} $${parseFloat(p.amount).toLocaleString('es',{minimumFractionDigits:2})}` : '';
+  const msg = tpl.build({ firstName, desc: p.desc || '', montoStr, pdfLink, facturaLink: p.factura || '' });
+  document.getElementById('cobro-msg').value = msg;
+}
+
+async function sendCobro() {
+  const p = pagos.find(x => x.id === _cobroId);
+  if (!p || !p.phone) { showToast('Sin número de WhatsApp'); return; }
+  const msg = document.getElementById('cobro-msg').value;
+  const isReminder = !!p.cobroAt;
+  const dept = p.dept || 'concierge';
+  const pdfLink = dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
+
+  document.getElementById('cobro-send-btn').disabled = true;
+  showToast('Enviando...');
+  try {
+    const body = { to: p.phone, message: msg, type: isReminder ? 'reminder' : 'cobro' };
+    if (pdfLink) body.mediaUrl = pdfLink;
+    if (p.factura) body.facturaUrl = p.factura;
+    const r = await fetch('/api/whatsapp', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    const d = await r.json();
+    if (d.ok) {
+      p.cobroAt = new Date().toISOString();
+      save(); render(); closeCobro();
+      showToast(`✅ ${isReminder?'Recordatorio':'Cobro'} enviado a ${p.client}`);
+    } else {
+      showToast('❌ Error: ' + (d.error || 'No se pudo enviar'));
+      document.getElementById('cobro-send-btn').disabled = false;
+    }
+  } catch(err) {
+    showToast('❌ Error de red: ' + err.message);
+    document.getElementById('cobro-send-btn').disabled = false;
+  }
+}
+
+function closeCobro() {
+  document.getElementById('cobro-modal').style.display = 'none';
+  document.getElementById('cobro-send-btn').disabled = false;
+  _cobroId = null;
 }
 
 /* ── COBRAR VIA WHATSAPP ── */
