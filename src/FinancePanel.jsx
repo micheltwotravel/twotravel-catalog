@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchKickoffsFromSheet, saveKickoffToSheet, updateKickoffInSheet } from "./sheetServices";
+import { supabase } from "./supabaseClient";
 
 // ─── BRAND ───────────────────────────────────────────────────────────────────
 const BG   = "#f7f4ef";
@@ -531,94 +532,202 @@ export function FinanceTemplates() {
 }
 
 // ─── RESERVACIONES & VENTAS ───────────────────────────────────────────────────
+async function loadReservations() {
+  const { data, error } = await supabase.from("kickoffs").select("data").eq("id", "finance_reservations_v1").single();
+  if (error) throw new Error(error.message);
+  const d = data?.data || {};
+  const notes = typeof d.internalNotes === "string" ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
+  return notes.reservations || [];
+}
+
+const TYPE_COLORS = {
+  Airbnb:             ["#fff7ed","#9a3412"],
+  VRBO:               ["#fdf4ff","#7e22ce"],
+  Concierge:          ["#eff6ff","#1d4ed8"],
+  "Boat / Concierge": ["#ecfeff","#0e7490"],
+  Boats:              ["#ecfeff","#0e7490"],
+  "House / Concierge":["#f0fdf4","#166534"],
+  "House / Weddings": ["#fdf4ff","#7e22ce"],
+  Weddings:           ["#fdf4ff","#9d174d"],
+  "Check In Only":    ["#f9fafb","#4b5563"],
+  Cancelled:          ["#fef2f2","#991b1b"],
+};
+function TypeBadge({ type }) {
+  const [bg, fg] = TYPE_COLORS[type] || ["#f3f4f6","#6b7280"];
+  return <span style={{fontSize:10,padding:"2px 8px",borderRadius:12,background:bg,color:fg,fontWeight:600,whiteSpace:"nowrap"}}>{type||"—"}</span>;
+}
+function StatusDot({ status }) {
+  const ok = status === "Confirmed";
+  return (
+    <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,color:ok?"#065f46":"#991b1b",fontWeight:500}}>
+      <span style={{width:7,height:7,borderRadius:"50%",background:ok?"#10b981":"#f87171",flexShrink:0,display:"inline-block"}}/>
+      {status||"—"}
+    </span>
+  );
+}
+
+const MONTH_NAMES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+function monthLabel(ym) {
+  const [y,m] = ym.split("-");
+  return `${MONTH_NAMES[parseInt(m,10)-1]} ${y}`;
+}
+
 export function FinanceReservaciones() {
-  const [kickoffs, setKickoffs] = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [err,      setErr]      = useState("");
-  const [filter,   setFilter]   = useState("upcoming");
-  const [search,   setSearch]   = useState("");
+  const [rows,    setRows]    = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err,     setErr]     = useState("");
+  const [search,  setSearch]  = useState("");
+  const [typeF,   setTypeF]   = useState("all");
+  const [repF,    setRepF]    = useState("all");
+  const [statusF, setStatusF] = useState("Confirmed");
+  const [monthF,  setMonthF]  = useState("all");
+  const [sortCol, setSortCol] = useState("checkIn");
+  const [sortDir, setSortDir] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true); setErr("");
-    try {
-      const all = await fetchKickoffsFromSheet({ forceRefresh: true });
-      // Exclude special kickoffs (bodas, financeData, etc.)
-      setKickoffs(all.filter(k => { try{ const t=JSON.parse(k.conciergeSummary||"{}").type; return !t; }catch{ return true; } }));
-    } catch(e) { setErr("Error cargando: "+e.message); }
+    try { setRows(await loadReservations()); }
+    catch(e) { setErr("Error cargando: "+e.message); }
     setLoading(false);
-  },[]);
+  }, []);
   useEffect(()=>{load();},[load]);
 
   const now = new Date().toISOString().slice(0,10);
 
-  const list = kickoffs
-    .filter(k => {
-      if(!k.arrivalDate) return filter==="all";
-      if(filter==="upcoming") return k.arrivalDate >= now;
-      if(filter==="past")     return k.arrivalDate <  now;
-      return true;
-    })
-    .filter(k => !search || (k.guestName||"").toLowerCase().includes(search.toLowerCase()) || (k.destination||k.city||"").toLowerCase().includes(search.toLowerCase()))
-    .sort((a,b)=>(a.arrivalDate||"").localeCompare(b.arrivalDate||""));
+  const types   = ["all",...[...new Set(rows.map(r=>r.type).filter(Boolean))].sort()];
+  const reps    = ["all",...[...new Set(rows.map(r=>r.salesRep).filter(Boolean))].sort()];
+  const months  = ["all",...[...new Set(rows.map(r=>r.checkIn?.slice(0,7)).filter(Boolean))].sort()];
 
-  // KPIs
-  const upcomingCount = kickoffs.filter(k=>k.arrivalDate&&k.arrivalDate>=now).length;
-  const thisMonth     = kickoffs.filter(k=>k.arrivalDate&&k.arrivalDate.slice(0,7)===now.slice(0,7)).length;
-  const statusOk      = kickoffs.filter(k=>k.status==="confirmed").length;
+  const filtered = rows.filter(r => {
+    if (statusF !== "all" && r.status !== statusF) return false;
+    if (typeF   !== "all" && r.type   !== typeF)   return false;
+    if (repF    !== "all" && r.salesRep !== repF)  return false;
+    if (monthF  !== "all" && r.checkIn?.slice(0,7) !== monthF) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (!(r.name||"").toLowerCase().includes(q) &&
+          !(r.salesRep||"").toLowerCase().includes(q) &&
+          !(r.type||"").toLowerCase().includes(q)) return false;
+    }
+    return true;
+  }).sort((a,b) => {
+    const av = a[sortCol] ?? ""; const bv = b[sortCol] ?? "";
+    return av < bv ? -sortDir : av > bv ? sortDir : 0;
+  });
+
+  const confirmed = filtered.filter(r=>r.status==="Confirmed");
+  const totalRev  = confirmed.reduce((s,r)=>s+(r.total||0),0);
+  const totalComm = confirmed.reduce((s,r)=>s+(r.commission||0),0);
+
+  const thStyle = (col) => ({
+    padding:"10px 12px", textAlign:"left", fontWeight:600, color:DARK,
+    whiteSpace:"nowrap", fontSize:12, cursor:"pointer", userSelect:"none",
+    background: sortCol===col ? "#f0ece4" : BG,
+  });
+  const sort = (col) => { if(sortCol===col) setSortDir(d=>-d); else { setSortCol(col); setSortDir(1); } };
+  const arrow = (col) => sortCol===col ? (sortDir===1?"↑":"↓") : "";
+
+  const Sel = ({val,set,opts,label}) => (
+    <select value={val} onChange={e=>set(e.target.value)}
+      style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:120}}>
+      <option value="all">{label}</option>
+      {opts.filter(o=>o!=="all").map(o=><option key={o} value={o}>{o==="all"?label:(monthF==="all"&&opts===months?monthLabel(o):o)}</option>)}
+    </select>
+  );
 
   return (
-    <Shell title="Reservaciones & Ventas">
+    <Shell title="Reservaciones & Ventas" subtitle={`${filtered.length} de ${rows.length} registros`}>
       {err&&<Err msg={err} onRetry={load} />}
 
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:24}}>
-        <KPICard label="Reservaciones totales" val={kickoffs.length} />
-        <KPICard label="Próximas"               val={upcomingCount}  color={GOLD} />
-        <KPICard label="Este mes"               val={thisMonth}      color="#059669" />
+      {/* KPIs */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}}>
+        <KPICard label="Confirmadas" val={confirmed.length} color="#065f46" />
+        <KPICard label="Revenue total" val={fmt$(totalRev,"USD")} color={GOLD} />
+        <KPICard label="Comisiones" val={fmt$(totalComm,"USD")} color="#1d4ed8" />
+        <KPICard label="Total registros" val={rows.length} />
       </div>
 
       {/* Filters */}
       <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16,alignItems:"center"}}>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="Buscar cliente, rep, tipo…"
+          style={{...INP,width:220,padding:"7px 12px",fontSize:12}} />
+
+        {/* Status toggle */}
         <div style={{display:"flex",background:WHT,border:`1px solid ${BRD}`,borderRadius:8,overflow:"hidden"}}>
-          {[["upcoming","Próximas"],["past","Pasadas"],["all","Todas"]].map(([v,l])=>(
-            <button key={v} onClick={()=>setFilter(v)} style={{padding:"8px 14px",fontSize:12,fontWeight:500,background:filter===v?DARK:"transparent",color:filter===v?WHT:MUT,border:"none",cursor:"pointer"}}>{l}</button>
+          {[["Confirmed","✓ Confirmed"],["Cancelled","✗ Cancelled"],["all","Todos"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setStatusF(v)}
+              style={{padding:"7px 12px",fontSize:11,fontWeight:500,
+                background:statusF===v?DARK:"transparent",
+                color:statusF===v?WHT:MUT,border:"none",cursor:"pointer",whiteSpace:"nowrap"}}>
+              {l}
+            </button>
           ))}
         </div>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente o destino..." style={{...INP,flex:1,minWidth:180,padding:"8px 12px"}} />
+
+        <select value={typeF} onChange={e=>setTypeF(e.target.value)}
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:130}}>
+          <option value="all">Todos los tipos</option>
+          {types.filter(t=>t!=="all").map(t=><option key={t} value={t}>{t}</option>)}
+        </select>
+
+        <select value={repF} onChange={e=>setRepF(e.target.value)}
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:130}}>
+          <option value="all">Todos los reps</option>
+          {reps.filter(r=>r!=="all").map(r=><option key={r} value={r}>{r}</option>)}
+        </select>
+
+        <select value={monthF} onChange={e=>setMonthF(e.target.value)}
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:140}}>
+          <option value="all">Todos los meses</option>
+          {months.filter(m=>m!=="all").map(m=><option key={m} value={m}>{monthLabel(m)}</option>)}
+        </select>
       </div>
 
       {/* Table */}
       <div style={{background:WHT,border:`1px solid ${BRD}`,borderRadius:12,overflow:"hidden"}}>
-        {loading?<Spinner/>:list.length===0?<Empty text="Sin reservaciones en este filtro." />:(
+        {loading ? <Spinner/> : filtered.length===0 ? <Empty text="Sin resultados para este filtro." /> : (
           <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead>
                 <tr style={{background:BG,borderBottom:`1px solid ${BRD}`}}>
-                  {["Cliente","Llegada","Salida","Destino","Concierge","Noches","Estado"].map(h=>(
-                    <th key={h} style={{padding:"10px 14px",textAlign:"left",fontWeight:600,color:DARK,whiteSpace:"nowrap"}}>{h}</th>
+                  {[
+                    ["name","Cliente"],["salesRep","Sales Rep"],["dealSource","Fuente"],
+                    ["type","Tipo"],["checkIn","Check In"],["checkOut","Check Out"],
+                    ["qty","Cant."],["rate","Rate"],["total","Total"],
+                    ["commission","Comisión"],["status","Estado"],
+                  ].map(([col,h])=>(
+                    <th key={col} onClick={()=>sort(col)} style={thStyle(col)}>
+                      {h} {arrow(col)}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {list.map(k=>{
-                  const nights=k.arrivalDate&&k.departureDate?Math.round((new Date(k.departureDate+"T12:00:00")-new Date(k.arrivalDate+"T12:00:00"))/86400000):null;
-                  const sc={confirmed:["#d1fae5","#065f46"],pending:["#fef3c7","#92400e"],cancelled:["#fee2e2","#991b1b"]};
-                  const [bg2,fg2]=sc[k.status]||["#f3f4f6","#6b7280"];
-                  const isPast=k.arrivalDate&&k.arrivalDate<now;
-                  return (
-                    <tr key={k.id} style={{borderBottom:`1px solid rgba(26,24,20,.04)`,opacity:isPast?.65:1}}>
-                      <td style={{padding:"10px 14px",color:DARK,fontWeight:500}}>{k.guestName||"—"}</td>
-                      <td style={{padding:"10px 14px",color:MUT,whiteSpace:"nowrap"}}>{fmtDate(k.arrivalDate)}</td>
-                      <td style={{padding:"10px 14px",color:MUT,whiteSpace:"nowrap"}}>{fmtDate(k.departureDate)}</td>
-                      <td style={{padding:"10px 14px",color:MUT}}>{k.destination||k.city||"—"}</td>
-                      <td style={{padding:"10px 14px",color:MUT}}>{k.assignedConciergeName||"—"}</td>
-                      <td style={{padding:"10px 14px",color:MUT,textAlign:"center"}}>{nights!==null?nights+"n":"—"}</td>
-                      <td style={{padding:"10px 14px"}}>
-                        <span style={{fontSize:11,padding:"2px 8px",borderRadius:12,background:bg2,color:fg2}}>{k.status||"—"}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {filtered.map((r,i)=>(
+                  <tr key={i} style={{borderBottom:`1px solid rgba(26,24,20,.04)`,background:i%2===0?"transparent":"rgba(247,244,239,.4)"}}>
+                    <td style={{padding:"9px 12px",color:DARK,fontWeight:500,whiteSpace:"nowrap",maxWidth:200,overflow:"hidden",textOverflow:"ellipsis"}}>{r.name||"—"}</td>
+                    <td style={{padding:"9px 12px",color:MUT,whiteSpace:"nowrap"}}>{r.salesRep||"—"}</td>
+                    <td style={{padding:"9px 12px",color:MUT,whiteSpace:"nowrap",fontSize:11}}>{r.dealSource||"—"}</td>
+                    <td style={{padding:"9px 12px",whiteSpace:"nowrap"}}><TypeBadge type={r.type}/></td>
+                    <td style={{padding:"9px 12px",color:MUT,whiteSpace:"nowrap",fontVariantNumeric:"tabular-nums"}}>{fmtDate(r.checkIn)}</td>
+                    <td style={{padding:"9px 12px",color:MUT,whiteSpace:"nowrap",fontVariantNumeric:"tabular-nums"}}>{fmtDate(r.checkOut)}</td>
+                    <td style={{padding:"9px 12px",color:MUT,textAlign:"right",fontVariantNumeric:"tabular-nums"}}>{r.qty??"—"}</td>
+                    <td style={{padding:"9px 12px",color:MUT,textAlign:"right",fontVariantNumeric:"tabular-nums"}}>{r.rate!=null?fmt$(r.rate):"—"}</td>
+                    <td style={{padding:"9px 12px",color:DARK,textAlign:"right",fontWeight:600,fontVariantNumeric:"tabular-nums"}}>{r.total!=null?fmt$(r.total):"—"}</td>
+                    <td style={{padding:"9px 12px",color:"#1d4ed8",textAlign:"right",fontVariantNumeric:"tabular-nums"}}>{r.commission!=null?fmt$(r.commission):"—"}</td>
+                    <td style={{padding:"9px 12px",whiteSpace:"nowrap"}}><StatusDot status={r.status}/></td>
+                  </tr>
+                ))}
               </tbody>
+              <tfoot>
+                <tr style={{background:BG,borderTop:`2px solid ${BRD}`}}>
+                  <td colSpan={8} style={{padding:"10px 12px",color:MUT,fontSize:11,fontWeight:600}}>TOTALES ({confirmed.length} confirmadas)</td>
+                  <td style={{padding:"10px 12px",color:DARK,textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums"}}>{fmt$(totalRev)}</td>
+                  <td style={{padding:"10px 12px",color:"#1d4ed8",textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums"}}>{fmt$(totalComm)}</td>
+                  <td/>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
