@@ -1339,3 +1339,344 @@ export function FinanceReservaciones() {
     </Shell>
   );
 }
+
+// ─── SOLICITUDES DE PAGO A PROVEEDORES ───────────────────────────────────────
+
+const PROV_ID = "finance_proveedores_v1";
+
+async function loadSolicitudes() {
+  const { data, error } = await supabase.from("kickoffs").select("data").eq("id", PROV_ID).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return [];
+  const notes = typeof data.data?.internalNotes === "string"
+    ? JSON.parse(data.data.internalNotes)
+    : (data.data?.internalNotes || {});
+  return notes.solicitudes || [];
+}
+
+async function saveSolicitudes(rows) {
+  const { data: existing } = await supabase.from("kickoffs").select("data").eq("id", PROV_ID).maybeSingle();
+  const d = existing?.data || {};
+  const notes = typeof d.internalNotes === "string" ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
+  const merged = { ...d, internalNotes: JSON.stringify({ ...notes, solicitudes: rows }) };
+  if (existing) {
+    const { error } = await supabase.from("kickoffs").update({ data: merged }).eq("id", PROV_ID);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase.from("kickoffs").insert({ id: PROV_ID, data: merged });
+    if (error) throw new Error(error.message);
+  }
+}
+
+const AREAS    = ["Concierge","Logistica","Marketing","HR","Sales","Finance","Property Management"];
+const CLASES   = ["Colombia: Cartagena","Colombia: Medellín","Mexico: Mexico City"];
+const PRIOS    = ["Alta","Media","Normal"];
+const TIPO_ID  = ["NIT","CC","CE","Pasaporte","RUT"];
+const BANCOS   = ["BANCOLOMBIA","DAVIVIENDA","BANCO DE BOGOTÁ","BBVA","NEQUI","SCOTIABANK COLPATRIA","BANCO POPULAR","AV VILLAS","ITAÚ","OTRO"];
+const TIPO_CTA = ["Cuenta de Ahorro","Cuenta Corriente"];
+const CATS     = ["A/P Casa Moneda:Cleaning Products","A/P Casa Moneda:Maintenance","A/P Casa Moneda:Services","Cartagena:Yachts","Cartagena:Tours","Cartagena:F&B","Medellín:Actividades","México:Actividades","Marketing","HR","Admin"];
+const FREQS    = ["Única","Mensual","Quincenal","Semanal","Eventual"];
+const STATUS_PROV = { pendiente:{label:"Pendiente",color:"#fef3c7",text:"#92400e"}, aprobada:{label:"Aprobada",color:"#dcfce7",text:"#166534"}, pagada:{label:"Pagada",color:"#dbeafe",text:"#1e3a8a"}, rechazada:{label:"Rechazada",color:"#fee2e2",text:"#991b1b"} };
+
+function emptyProvForm(today) {
+  return { concepto:"", provId:"", provNombre:"", provTipoId:"NIT", banco:"BANCOLOMBIA", tipoCuenta:"Cuenta de Ahorro", numeroCuenta:"", amount:"", currency:"COP", category:"", area:"Concierge", clase:"Colombia: Cartagena", priority:"Media", dueDate:today, client:"", notes:"", requestedBy:"", assignedTo:"", payFreq:"Única", invoiceUrl:"", prebill:false, lote:today };
+}
+
+function pFmt(n, cur) {
+  const v = parseFloat(n)||0;
+  if((cur||"COP")==="COP") return "$"+v.toLocaleString("es-CO",{minimumFractionDigits:0})+" COP";
+  return "$"+v.toLocaleString("en-US",{minimumFractionDigits:2})+" "+(cur||"USD");
+}
+
+const PINP = (extra={}) => ({ style:{width:"100%",padding:"7px 10px",border:`1px solid ${BRD}`,borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",background:WHT,color:DARK,boxSizing:"border-box",...extra} });
+const PSEL = () => ({ style:{width:"100%",padding:"7px 10px",border:`1px solid ${BRD}`,borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",background:WHT,color:DARK,boxSizing:"border-box"} });
+const FLbl = ({ children }) => <div style={{fontSize:10,fontWeight:700,color:MUT,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>{children}</div>;
+const FGrp = ({ label, children, half }) => (
+  <div style={{flex:half?"0 0 calc(50% - 6px)":"1 1 100%",minWidth:half?140:"auto"}}>
+    <FLbl>{label}</FLbl>
+    {children}
+  </div>
+);
+const SecHead = ({ children }) => <div style={{fontSize:11,fontWeight:700,color:GOLD,marginBottom:10,textTransform:"uppercase",letterSpacing:.6}}>{children}</div>;
+
+export function FinancePagosProveedores() {
+  const today = new Date().toISOString().slice(0,10);
+  const [rows, setRows]         = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [err, setErr]           = useState("");
+  const [saving, setSaving]     = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId]     = useState(null);
+  const [form, setForm]         = useState(emptyProvForm(today));
+  const [searchQ, setSearchQ]   = useState("");
+  const [fStatus, setFStatus]   = useState("");
+  const [fArea, setFArea]       = useState("");
+  const [fClase, setFClase]     = useState("");
+  const [toast, setToast]       = useState("");
+
+  useEffect(() => {
+    loadSolicitudes().then(r => { setRows(r); setLoading(false); }).catch(e => { setErr(e.message); setLoading(false); });
+  }, []);
+
+  function showToastMsg(msg) { setToast(msg); setTimeout(()=>setToast(""),3000); }
+  function openNew()   { setEditId(null); setForm(emptyProvForm(today)); setShowForm(true); }
+  function openEdit(id) {
+    const r = rows.find(x=>x.id===id);
+    if(!r) return;
+    setEditId(id); setForm({...emptyProvForm(today),...r}); setShowForm(true);
+  }
+  function upd(k,v)   { setForm(f=>({...f,[k]:v})); }
+
+  async function submitForm(e) {
+    e.preventDefault();
+    if(!form.concepto||!form.provNombre||!form.amount||!form.dueDate) { alert("Concepto, Proveedor, Monto y Fecha son requeridos."); return; }
+    setSaving(true);
+    const newId = editId || (Date.now().toString(36)+Math.random().toString(36).slice(2,5));
+    const entry = { ...form, amount:parseFloat(form.amount)||0, id:newId, createdAt:editId?(rows.find(x=>x.id===editId)?.createdAt||today):today, status:editId?(rows.find(x=>x.id===editId)?.status||"pendiente"):"pendiente" };
+    const updated = editId ? rows.map(r=>r.id===editId?entry:r) : [entry,...rows];
+    try { await saveSolicitudes(updated); setRows(updated); setShowForm(false); showToastMsg(editId?"✅ Actualizada":"✅ Solicitud creada"); }
+    catch(ex) { alert("Error: "+ex.message); }
+    setSaving(false);
+  }
+
+  async function setStatus(id, st) {
+    const updated = rows.map(r=>r.id===id?{...r,status:st}:r);
+    setRows(updated);
+    try { await saveSolicitudes(updated); showToastMsg("Estado actualizado"); }
+    catch(ex) { showToastMsg("Error: "+ex.message); }
+  }
+
+  async function deleteRow(id) {
+    if(!confirm("¿Eliminar esta solicitud?")) return;
+    const updated = rows.filter(r=>r.id!==id);
+    setRows(updated);
+    try { await saveSolicitudes(updated); showToastMsg("Eliminada"); }
+    catch(ex) { showToastMsg("Error: "+ex.message); }
+  }
+
+  function exportPayana() {
+    const visible = filtered.filter(r=>r.status==="aprobada"||r.status==="pendiente");
+    const headers = ["Número proveedor","PROVEEDOR Nombre","PROVEEDOR Tipo ID","Monto","Moneda","Concepto","Fecha emisión","Fecha vencimiento","Tipo cuenta","Número cuenta","Banco","Category / Service","Client","Clase","Área","Prioridad","Solicitado por"];
+    const rowData = visible.map(r=>[r.provId||"",r.provNombre||"",r.provTipoId||"",r.amount||0,r.currency||"COP",r.concepto||"",r.lote||today,r.dueDate||"",r.tipoCuenta||"",r.numeroCuenta||"",r.banco||"",r.category||"",r.client||"",r.clase||"",r.area||"",r.priority||"",r.requestedBy||""]);
+    downloadCSV(`payana-lote-${today}.csv`, headers, rowData);
+    showToastMsg("✅ CSV Payana descargado");
+  }
+
+  const filtered = rows.filter(r => {
+    if(fStatus && r.status!==fStatus) return false;
+    if(fArea && r.area!==fArea) return false;
+    if(fClase && r.clase!==fClase) return false;
+    if(searchQ) { const q=searchQ.toLowerCase(); if(!(r.concepto||"").toLowerCase().includes(q)&&!(r.provNombre||"").toLowerCase().includes(q)&&!(r.client||"").toLowerCase().includes(q)) return false; }
+    return true;
+  });
+
+  const lotes = {};
+  filtered.forEach(r => { const lk=r.lote||r.createdAt?.slice(0,10)||"Sin fecha"; if(!lotes[lk])lotes[lk]=[]; lotes[lk].push(r); });
+  const loteKeys = Object.keys(lotes).sort((a,b)=>b.localeCompare(a));
+
+  const totalPending  = filtered.filter(r=>r.status==="pendiente").reduce((s,r)=>s+toUSD(r.amount,r.currency),0);
+  const totalApproved = filtered.filter(r=>r.status==="aprobada").reduce((s,r)=>s+toUSD(r.amount,r.currency),0);
+
+  function fmtLote(lk) {
+    if(!lk||lk==="Sin fecha") return "Sin lote";
+    const [y,m,d] = lk.split("-");
+    return `Lote ${d||"?"}.${m||"?"}.${y||"?"}`;
+  }
+
+  return (
+    <Shell title="Pagos a Proveedores" subtitle="Solicitudes · Aprobaciones · Payana">
+      {loading ? (
+        <div style={{padding:40,textAlign:"center",color:MUT}}>Cargando solicitudes…</div>
+      ) : (
+        <>
+          {toast && <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:DARK,color:WHT,padding:"10px 22px",borderRadius:8,fontSize:13,zIndex:9999,pointerEvents:"none"}}>{toast}</div>}
+          {err && <div style={{padding:"10px 20px",background:"#fee2e2",color:"#991b1b",fontSize:12}}>{err}</div>}
+
+          {/* KPIs */}
+          <div style={{display:"flex",gap:12,padding:"16px 24px",background:WHT,borderBottom:`1px solid ${BRD}`,flexWrap:"wrap"}}>
+            {[
+              {label:"Total solicitudes",val:filtered.length,color:GOLD},
+              {label:"Pendientes (USD)",val:"~$"+Math.round(totalPending).toLocaleString(),color:"#f59e0b"},
+              {label:"Aprobadas (USD)",val:"~$"+Math.round(totalApproved).toLocaleString(),color:"#10b981"},
+              {label:"Lotes",val:loteKeys.length,color:"#6366f1"},
+            ].map(({label,val,color})=>(
+              <div key={label} style={{flex:"1 1 130px",background:BG,borderRadius:8,padding:"10px 14px",borderTop:`3px solid ${color}`}}>
+                <div style={{fontSize:10,color:MUT,fontWeight:600,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>{label}</div>
+                <div style={{fontSize:20,fontWeight:800,color:DARK,fontVariantNumeric:"tabular-nums"}}>{val}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Toolbar */}
+          <div style={{display:"flex",gap:8,padding:"12px 24px",alignItems:"center",flexWrap:"wrap",background:WHT,borderBottom:`1px solid ${BRD}`}}>
+            <input placeholder="Buscar proveedor, concepto, cliente…" value={searchQ} onChange={e=>setSearchQ(e.target.value)}
+              style={{flex:"1 1 200px",padding:"7px 12px",border:`1px solid ${BRD}`,borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",minWidth:160}}/>
+            {[
+              ["Estado",fStatus,setFStatus,Object.entries(STATUS_PROV).map(([k,v])=>({k,label:v.label}))],
+              ["Área",fArea,setFArea,AREAS.map(a=>({k:a,label:a}))],
+              ["Clase",fClase,setFClase,CLASES.map(c=>({k:c,label:c}))],
+            ].map(([name,val,set,opts])=>(
+              <select key={name} value={val} onChange={e=>set(e.target.value)}
+                style={{padding:"7px 10px",border:`1px solid ${BRD}`,borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",background:WHT}}>
+                <option value="">Todos</option>
+                {opts.map(o=><option key={o.k} value={o.k}>{o.label}</option>)}
+              </select>
+            ))}
+            <button onClick={exportPayana} style={{padding:"7px 14px",background:"#10b981",color:WHT,border:"none",borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",fontWeight:600}}>⬇ CSV Payana</button>
+            <button onClick={openNew} style={{padding:"7px 14px",background:GOLD,color:WHT,border:"none",borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",fontWeight:600}}>+ Nueva Solicitud</button>
+          </div>
+
+          {/* Lote groups */}
+          <div style={{padding:"20px 24px",display:"flex",flexDirection:"column",gap:24}}>
+            {loteKeys.length===0 && (
+              <div style={{textAlign:"center",padding:60,color:MUT}}>
+                <div style={{fontSize:32,marginBottom:12}}>📋</div>
+                <div style={{fontSize:15,fontWeight:600}}>No hay solicitudes</div>
+                <div style={{fontSize:12,marginTop:6}}>Haz clic en "Nueva Solicitud" para crear la primera.</div>
+              </div>
+            )}
+            {loteKeys.map(lk => {
+              const loteRows = lotes[lk];
+              const loteTotal = loteRows.reduce((s,r)=>s+(parseFloat(r.amount)||0),0);
+              const loteApproved = loteRows.filter(r=>r.status==="aprobada").length;
+              const cur = loteRows[0]?.currency||"COP";
+              return (
+                <div key={lk} style={{background:WHT,borderRadius:8,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,.07)"}}>
+                  <div style={{background:GOLD,padding:"10px 16px",display:"flex",alignItems:"center",gap:12}}>
+                    <span style={{fontSize:13,fontWeight:700,color:WHT}}>{fmtLote(lk)}</span>
+                    <span style={{fontSize:11,color:"rgba(255,255,255,.8)"}}>{loteRows.length} solicitudes · {loteApproved} aprobadas</span>
+                    <span style={{marginLeft:"auto",fontSize:12,fontWeight:700,color:WHT,fontVariantNumeric:"tabular-nums"}}>{pFmt(loteTotal,cur)}</span>
+                  </div>
+                  <div style={{overflowX:"auto"}}>
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                      <thead>
+                        <tr style={{background:BG,borderBottom:`1px solid ${BRD}`}}>
+                          {["Proveedor ID","Nombre","Monto","Concepto","Área","Clase","Prior.","Fecha Vcto","Estado",""].map(h=>(
+                            <th key={h} style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:MUT,fontSize:10,textTransform:"uppercase",letterSpacing:.4,whiteSpace:"nowrap"}}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loteRows.map((r,i) => {
+                          const st = STATUS_PROV[r.status] || STATUS_PROV.pendiente;
+                          return (
+                            <tr key={r.id} style={{borderBottom:`1px solid ${BRD}`,background:i%2===0?WHT:BG}}>
+                              <td style={{padding:"8px 10px",color:MUT,fontFamily:"monospace",fontSize:11,whiteSpace:"nowrap"}}>{r.provId||"—"}</td>
+                              <td style={{padding:"8px 10px",fontWeight:600,color:DARK,whiteSpace:"nowrap",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis"}}>{r.provNombre||"—"}</td>
+                              <td style={{padding:"8px 10px",fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontWeight:600}}>{pFmt(r.amount,r.currency)}</td>
+                              <td style={{padding:"8px 10px",color:DARK,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={r.concepto}>{r.concepto||"—"}</td>
+                              <td style={{padding:"8px 10px",color:MUT,whiteSpace:"nowrap"}}>{r.area||"—"}</td>
+                              <td style={{padding:"8px 10px",color:MUT,whiteSpace:"nowrap",fontSize:11}}>{(r.clase||"").replace("Colombia: ","CO:").replace("Mexico: ","MX:")}</td>
+                              <td style={{padding:"8px 10px"}}>
+                                <span style={{padding:"2px 7px",borderRadius:3,fontSize:10,fontWeight:700,background:r.priority==="Alta"?"#fee2e2":r.priority==="Media"?"#fef3c7":"#f0f9ff",color:r.priority==="Alta"?"#991b1b":r.priority==="Media"?"#92400e":"#0369a1"}}>{r.priority||"Normal"}</span>
+                              </td>
+                              <td style={{padding:"8px 10px",color:MUT,whiteSpace:"nowrap",fontSize:11}}>{r.dueDate||"—"}</td>
+                              <td style={{padding:"8px 10px"}}>
+                                <select value={r.status||"pendiente"} onChange={e=>setStatus(r.id,e.target.value)}
+                                  style={{padding:"2px 6px",border:`1px solid ${BRD}`,borderRadius:3,fontSize:11,fontFamily:"'Jost',sans-serif",background:st.color,color:st.text,fontWeight:600}}>
+                                  {Object.entries(STATUS_PROV).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+                                </select>
+                              </td>
+                              <td style={{padding:"8px 10px",whiteSpace:"nowrap"}}>
+                                <button onClick={()=>openEdit(r.id)} style={{fontSize:10,padding:"3px 8px",border:`1px solid ${BRD}`,borderRadius:3,background:WHT,cursor:"pointer",marginRight:4,fontFamily:"'Jost',sans-serif"}}>✏️</button>
+                                <button onClick={()=>deleteRow(r.id)} style={{fontSize:10,padding:"3px 8px",border:"1px solid #fca5a5",borderRadius:3,background:"#fff5f5",color:"#dc2626",cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>✕</button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Form modal */}
+          {showForm && (
+            <div onClick={e=>{if(e.target===e.currentTarget)setShowForm(false);}} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}}>
+              <div style={{background:WHT,borderRadius:12,width:"100%",maxWidth:680,maxHeight:"92vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}>
+                <div style={{padding:"16px 22px",borderBottom:`1px solid ${BRD}`,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,background:WHT,zIndex:1}}>
+                  <span style={{fontSize:15,fontWeight:700,color:DARK}}>{editId?"Editar Solicitud":"Nueva Solicitud de Pago"}</span>
+                  <button onClick={()=>setShowForm(false)} style={{fontSize:22,background:"none",border:"none",cursor:"pointer",color:MUT,lineHeight:1}}>×</button>
+                </div>
+                <form onSubmit={submitForm} style={{padding:"20px 22px",display:"flex",flexDirection:"column",gap:16}}>
+
+                  {/* Lote */}
+                  <div style={{background:"#fef9ec",border:"1px solid #fde68a",borderRadius:6,padding:"10px 14px",fontSize:12,color:"#92400e",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                    📦 <strong>Lote de pago:</strong> fecha del batch para Payana
+                    <input type="date" value={form.lote} onChange={e=>upd("lote",e.target.value)}
+                      style={{padding:"3px 8px",border:`1px solid #fde68a`,borderRadius:3,fontSize:12,fontFamily:"'Jost',sans-serif",background:WHT}}/>
+                  </div>
+
+                  <FGrp label="Concepto / Descripción del pago *">
+                    <input {...PINP()} value={form.concepto} onChange={e=>upd("concepto",e.target.value)} placeholder="Ej: Arreglo lavadora Casa Moneda" required/>
+                  </FGrp>
+
+                  <div style={{borderTop:`1px solid ${BRD}`,paddingTop:12}}>
+                    <SecHead>Proveedor</SecHead>
+                    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                      <FGrp label="Tipo ID" half><select {...PSEL()} value={form.provTipoId} onChange={e=>upd("provTipoId",e.target.value)}>{TIPO_ID.map(t=><option key={t}>{t}</option>)}</select></FGrp>
+                      <FGrp label="Número ID" half><input {...PINP()} value={form.provId} onChange={e=>upd("provId",e.target.value)} placeholder="890801748"/></FGrp>
+                      <FGrp label="Nombre Proveedor *"><input {...PINP()} value={form.provNombre} onChange={e=>upd("provNombre",e.target.value)} placeholder="MABE SERVICIOS" required/></FGrp>
+                    </div>
+                  </div>
+
+                  <div style={{borderTop:`1px solid ${BRD}`,paddingTop:12}}>
+                    <SecHead>Cuenta Bancaria</SecHead>
+                    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                      <FGrp label="Banco" half><select {...PSEL()} value={form.banco} onChange={e=>upd("banco",e.target.value)}>{BANCOS.map(b=><option key={b}>{b}</option>)}</select></FGrp>
+                      <FGrp label="Tipo de Cuenta" half><select {...PSEL()} value={form.tipoCuenta} onChange={e=>upd("tipoCuenta",e.target.value)}>{TIPO_CTA.map(t=><option key={t}>{t}</option>)}</select></FGrp>
+                      <FGrp label="Número de Cuenta"><input {...PINP()} value={form.numeroCuenta} onChange={e=>upd("numeroCuenta",e.target.value)} placeholder="07080174803"/></FGrp>
+                    </div>
+                  </div>
+
+                  <div style={{borderTop:`1px solid ${BRD}`,paddingTop:12}}>
+                    <SecHead>Monto</SecHead>
+                    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                      <FGrp label="Monto *" half><input {...PINP()} type="number" min="0" value={form.amount} onChange={e=>upd("amount",e.target.value)} placeholder="349000" required/></FGrp>
+                      <FGrp label="Moneda" half><select {...PSEL()} value={form.currency} onChange={e=>upd("currency",e.target.value)}>{["COP","USD","MXN"].map(c=><option key={c}>{c}</option>)}</select></FGrp>
+                    </div>
+                  </div>
+
+                  <div style={{borderTop:`1px solid ${BRD}`,paddingTop:12}}>
+                    <SecHead>Clasificación</SecHead>
+                    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                      <FGrp label="Área" half><select {...PSEL()} value={form.area} onChange={e=>upd("area",e.target.value)}>{AREAS.map(a=><option key={a}>{a}</option>)}</select></FGrp>
+                      <FGrp label="Clase" half><select {...PSEL()} value={form.clase} onChange={e=>upd("clase",e.target.value)}>{CLASES.map(c=><option key={c}>{c}</option>)}</select></FGrp>
+                      <FGrp label="Category / Service"><select {...PSEL()} value={form.category} onChange={e=>upd("category",e.target.value)}><option value="">— seleccionar —</option>{CATS.map(c=><option key={c}>{c}</option>)}</select></FGrp>
+                      <FGrp label="Prioridad" half><select {...PSEL()} value={form.priority} onChange={e=>upd("priority",e.target.value)}>{PRIOS.map(p=><option key={p}>{p}</option>)}</select></FGrp>
+                      <FGrp label="Fecha Vencimiento *" half><input {...PINP()} type="date" value={form.dueDate} onChange={e=>upd("dueDate",e.target.value)} required/></FGrp>
+                    </div>
+                  </div>
+
+                  <div style={{borderTop:`1px solid ${BRD}`,paddingTop:12}}>
+                    <SecHead>Info adicional</SecHead>
+                    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                      <FGrp label="Cliente - Centro de Costos"><input {...PINP()} value={form.client} onChange={e=>upd("client",e.target.value)} placeholder="Nombre del cliente de Slack"/></FGrp>
+                      <FGrp label="Solicitado por" half><input {...PINP()} value={form.requestedBy} onChange={e=>upd("requestedBy",e.target.value)}/></FGrp>
+                      <FGrp label="Asignado a" half><input {...PINP()} value={form.assignedTo} onChange={e=>upd("assignedTo",e.target.value)}/></FGrp>
+                      <FGrp label="Frecuencia de Pago" half><select {...PSEL()} value={form.payFreq} onChange={e=>upd("payFreq",e.target.value)}>{FREQS.map(f=><option key={f}>{f}</option>)}</select></FGrp>
+                      <FGrp label="Link Factura / Cuenta de cobro"><input {...PINP()} value={form.invoiceUrl} onChange={e=>upd("invoiceUrl",e.target.value)} placeholder="https://…"/></FGrp>
+                      <FGrp label="Notas / Observaciones"><textarea rows={2} {...PINP({resize:"vertical"})} value={form.notes} onChange={e=>upd("notes",e.target.value)}/></FGrp>
+                    </div>
+                    <label style={{fontSize:12,display:"flex",alignItems:"center",gap:6,cursor:"pointer",marginTop:10}}>
+                      <input type="checkbox" checked={!!form.prebill} onChange={e=>upd("prebill",e.target.checked)}/> ¿Pagó Prebill?
+                    </label>
+                  </div>
+
+                  <div style={{display:"flex",gap:10,justifyContent:"flex-end",paddingTop:8,borderTop:`1px solid ${BRD}`}}>
+                    <button type="button" onClick={()=>setShowForm(false)} style={{padding:"8px 18px",fontSize:12,fontFamily:"'Jost',sans-serif",border:`1px solid ${BRD}`,borderRadius:4,background:WHT,cursor:"pointer"}}>Cancelar</button>
+                    <button type="submit" disabled={saving} style={{padding:"8px 22px",fontSize:12,fontFamily:"'Jost',sans-serif",border:"none",borderRadius:4,background:GOLD,color:WHT,cursor:"pointer",fontWeight:700}}>
+                      {saving?"Guardando…":"Guardar solicitud"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </Shell>
+  );
+}
