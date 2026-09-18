@@ -273,9 +273,9 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Factura <span style="font-size:9px;color:var(--ink3)">(opcional)</span></label>
+          <label class="form-label">Link Stripe <span style="font-size:9px;color:var(--ink3)">(opcional)</span></label>
           <div style="display:flex;gap:6px;align-items:center">
-            <input class="form-input" id="n-factura" placeholder="URL Drive, Dropbox, imagen..." oninput="onFacturaInput(this.value);regenerateWaMsg()" style="flex:1">
+            <input class="form-input" id="n-factura" placeholder="https://buy.stripe.com/..." oninput="onFacturaInput(this.value);regenerateWaMsg()" style="flex:1">
             <label title="Subir imagen de factura" style="cursor:pointer;padding:6px 10px;border:1px solid var(--border2);font-size:11px;color:var(--ink3);white-space:nowrap;display:inline-flex;align-items:center;gap:4px">
               📎 <input type="file" accept="image/*,application/pdf" style="display:none" onchange="uploadFacturaFile(this)">
             </label>
@@ -443,7 +443,7 @@ const PDF_GENERAL  = BASE_URL + '/payment-options.pdf';
 const PDF_WEDDINGS = BASE_URL + '/payment-options-weddings.pdf';
 
 const TEMPLATES_EN = {
-  cobro_inicial_concierge: { build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [`Hi ${firstName}! 🌟`,``,`We hope you're excited for your upcoming Two Travel experience.`,``,desc?`Here's a summary of your pending payment:\n\n${desc}`:`Here's a summary of your pending payment:`,montoStr?`\n💰 Total: *${montoStr}*`:``,facturaLink?`\n🧾 Invoice: ${facturaLink}`:``,``,`You can complete the payment using any of the methods available here:`,pdfLink,``,`Any questions, we're happy to help. See you soon!`,`— Two Travel ✨`].filter(l=>l!==undefined).join('\n') },
+  cobro_inicial_concierge: { build: ({firstName, pdfLink, facturaLink}) => [`Hi ${firstName}!`,``,`We're excited to have you with us soon for your Two Travel experience!`,``,`• Attached is your invoice showing the balance for the house. It reflects the payments we've already received, and the 'Total' shows the amount still due.`,`• This balance must be paid prior to the trip.`,facturaLink?`• Here is the link to the invoice, in case you want to pay with a credit card (includes the 4% processing fee): ${facturaLink}`:undefined,``,`You can also complete your payment using any of the other methods available here: ${pdfLink}`,``,`If you have any questions, we're happy to help. See you soon! — Two Travel`].filter(l=>l!==undefined).join('\n') },
   cobro_inicial_wedding:   { build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [`Hi ${firstName}! 💍`,``,`We're so excited to be part of your special day.`,``,desc?`Here's a summary of your pending payment:\n\n${desc}`:`Here's a summary of your pending payment:`,montoStr?`\n💰 Total: *${montoStr}*`:``,facturaLink?`\n🧾 Invoice: ${facturaLink}`:``,``,`You can complete the payment using any of the methods available here:`,pdfLink,``,`With love,`,`— Two Lovers ✨`].filter(l=>l!==undefined).join('\n') },
   recordatorio_suave:      { build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [`Hi ${firstName}! 😊`,``,`Just a gentle reminder that you have a pending payment with us.`,desc?`\n${desc}`:``,montoStr?`\n💰 Total: *${montoStr}*`:``,facturaLink?`\n🧾 Invoice: ${facturaLink}`:``,``,`Payment methods available here:`,pdfLink,``,`Any questions, just let us know! — Two Travel ✨`].filter(l=>l!==undefined).join('\n') },
   recordatorio_urgente:    { build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [`Hi ${firstName},`,``,`We'd like to let you know that your payment is still pending and we need confirmation to proceed with your reservation.`,desc?`\n${desc}`:``,montoStr?`\n💰 Total pending: *${montoStr}*`:``,facturaLink?`\n🧾 Invoice: ${facturaLink}`:``,``,`Please complete the payment through one of our methods:`,pdfLink,``,`If you've already paid, please send us your receipt. Thank you!`,`— Two Travel`].filter(l=>l!==undefined).join('\n') },
@@ -453,20 +453,18 @@ const TEMPLATES_EN = {
 const TEMPLATES = {
   cobro_inicial_concierge: {
     label: '💬 Cobro inicial — Concierge',
-    build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [
-      `Hola ${firstName}! 🌟`,
+    build: ({firstName, pdfLink, facturaLink}) => [
+      `¡Hola ${firstName}!`,
       '',
-      `Esperamos que estés muy emocionado/a para tu próxima experiencia con Two Travel.`,
+      `Esperamos que estés muy emocionado/a para tu próxima experiencia con Two Travel!`,
       '',
-      desc ? `Aquí el resumen de tu pago pendiente:\n\n${desc}` : 'Aquí el resumen de tu pago pendiente:',
-      montoStr ? `\n💰 Total: *${montoStr}*` : '',
-      facturaLink ? `\n🧾 Factura: ${facturaLink}` : '',
+      `• Te adjuntamos tu factura con el balance de la casa. En ella verás reflejados los pagos que ya hemos recibido, y en el 'Total', el monto que queda pendiente.`,
+      `• Este balance debe estar pagado antes del viaje.`,
+      facturaLink ? `• Aquí tienes el link de la factura, por si deseas pagar con tarjeta de crédito (incluye el 4% por procesamiento): ${facturaLink}` : undefined,
       '',
-      `Puedes realizar el pago con cualquiera de los métodos disponibles aquí:`,
-      pdfLink,
+      `También puedes realizar el pago con cualquiera de los otros métodos disponibles aquí: ${pdfLink}`,
       '',
-      `Cualquier pregunta, con gusto te ayudamos. ¡Hasta pronto!`,
-      `— Two Travel ✨`,
+      `Cualquier pregunta, con gusto te ayudamos. ¡Hasta pronto! — Two Travel`,
     ].filter(l => l !== undefined).join('\n'),
   },
   cobro_inicial_wedding: {
