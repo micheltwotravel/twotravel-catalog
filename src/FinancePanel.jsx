@@ -815,78 +815,204 @@ function ReservationsCalendar({ rows }) {
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
-function ReservationsDashboard({ rows }) {
-  const confirmed = rows.filter(r=>r.status==="Confirmed");
-  const totalRev  = confirmed.reduce((s,r)=>s+(parseFloat(r.total)||0),0);
-  const totalComm = confirmed.reduce((s,r)=>s+(parseFloat(r.commission)||0),0);
-  const avgDeal   = confirmed.length ? totalRev/confirmed.length : 0;
+const REP_COLORS = ["#6366f1","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#f97316","#ec4899"];
 
+function ReservationsDashboard({ rows }) {
+  const thisYear = new Date().getFullYear();
+  const confirmed   = rows.filter(r=>r.status==="Confirmed");
+  const cancelled   = rows.filter(r=>r.status==="Cancelled");
+  const totalRev    = confirmed.reduce((s,r)=>s+(parseFloat(r.total)||0),0);
+  const totalComm   = confirmed.reduce((s,r)=>s+(parseFloat(r.commission)||0),0);
+  const avgDeal     = confirmed.length ? totalRev/confirmed.length : 0;
+  const convRate    = rows.length ? Math.round(confirmed.length/rows.length*100) : 0;
+
+  // By month (only years that look valid)
   const byMonth={}, byRep={}, byType={}, bySource={};
   confirmed.forEach(r=>{
-    const m=r.checkIn?.slice(0,7); if(m) byMonth[m]=(byMonth[m]||0)+(parseFloat(r.total)||0);
-    const rep=r.salesRep||"Sin asignar"; byRep[rep]=(byRep[rep]||0)+(parseFloat(r.total)||0);
+    const m=r.checkIn?.slice(0,7);
+    if(m) {
+      const y=parseInt(m.slice(0,4));
+      if(y>=2020&&y<=thisYear+3) byMonth[m]=(byMonth[m]||0)+(parseFloat(r.total)||0);
+    }
+    const rep=r.salesRep||"Sin asignar"; byRep[rep]=(byRep[rep]||{rev:0,cnt:0});
+    byRep[rep].rev+=(parseFloat(r.total)||0); byRep[rep].cnt++;
     const tp=r.type||"Sin tipo"; byType[tp]=(byType[tp]||0)+1;
     const src=r.dealSource||"Sin fuente"; bySource[src]=(bySource[src]||0)+1;
   });
 
   const monthEntries  = Object.entries(byMonth).sort((a,b)=>a[0].localeCompare(b[0]));
-  const repEntries    = Object.entries(byRep).sort((a,b)=>b[1]-a[1]);
+  const repEntries    = Object.entries(byRep).sort((a,b)=>b[1].rev-a[1].rev);
   const typeEntries   = Object.entries(byType).sort((a,b)=>b[1]-a[1]);
   const sourceEntries = Object.entries(bySource).sort((a,b)=>b[1]-a[1]);
+  const totalType     = typeEntries.reduce((s,[,v])=>s+v,0)||1;
+  const totalSrc      = sourceEntries.reduce((s,[,v])=>s+v,0)||1;
 
   const maxM = Math.max(1,...monthEntries.map(([,v])=>v));
-  const maxR = Math.max(1,...repEntries.map(([,v])=>v));
+  const maxR = Math.max(1,...repEntries.map(([,{rev}])=>rev));
 
-  const BarRow = ({label,val,max,color,fmt}) => (
-    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-      <div style={{width:110,fontSize:11,color:MUT,textAlign:"right",flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={label}>{label}</div>
-      <div style={{flex:1,height:18,background:"rgba(0,0,0,.06)",borderRadius:4,overflow:"hidden"}}>
-        <div style={{width:`${(val/max)*100}%`,height:"100%",background:color,borderRadius:4}}/>
-      </div>
-      <div style={{width:80,fontSize:11,fontWeight:600,color:DARK,textAlign:"right",flexShrink:0,fontVariantNumeric:"tabular-nums"}}>{fmt(val)}</div>
-    </div>
-  );
-
-  const Section = ({title,children}) => (
-    <div style={{background:WHT,border:`1px solid ${BRD}`,borderRadius:12,padding:20,marginBottom:16}}>
-      <div style={{fontWeight:700,fontSize:13,color:DARK,marginBottom:14}}>{title}</div>
+  const Card = ({children,style={}}) => (
+    <div style={{background:WHT,border:`1px solid ${BRD}`,borderRadius:14,padding:22,...style}}>
       {children}
     </div>
   );
-
-  const ListRow = ({label,val}) => (
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-      padding:"6px 0",borderBottom:`1px solid ${BRD}`,fontSize:12}}>
-      <span style={{color:MUT}}>{label}</span>
-      <span style={{fontWeight:700,color:DARK}}>{val}</span>
-    </div>
+  const CardTitle = ({children}) => (
+    <div style={{fontWeight:700,fontSize:12,color:MUT,letterSpacing:.5,
+      textTransform:"uppercase",marginBottom:16}}>{children}</div>
   );
 
+  const initials = name => (name||"?").split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase();
+
   return (
-    <div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
-        <KPICard label="Confirmadas" val={confirmed.length} color="#065f46"/>
-        <KPICard label="Revenue Total" val={fmt$(totalRev)} color={GOLD}/>
-        <KPICard label="Comisiones" val={fmt$(totalComm)} color="#1d4ed8"/>
-        <KPICard label="Deal Promedio" val={fmt$(avgDeal)} color={MUT}/>
+    <div style={{display:"grid",gap:16}}>
+      {/* Row 1: KPIs */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
+        {[
+          {label:"Confirmadas",  val:confirmed.length,          sub:`${convRate}% conversión`,  color:"#059669", bg:"#d1fae5"},
+          {label:"Revenue Total",val:fmt$(totalRev),             sub:`${confirmed.length} deals`, color:GOLD,      bg:"#fef3c7"},
+          {label:"Comisiones",   val:fmt$(totalComm),            sub:`${Math.round(totalComm/Math.max(totalRev,1)*100)}% del revenue`, color:"#6366f1", bg:"#ede9fe"},
+          {label:"Deal Promedio",val:fmt$(avgDeal),              sub:`${cancelled.length} canceladas`, color:"#0ea5e9", bg:"#e0f2fe"},
+        ].map(({label,val,sub,color,bg})=>(
+          <Card key={label} style={{borderTop:`4px solid ${color}`}}>
+            <div style={{fontSize:11,fontWeight:600,color:MUT,textTransform:"uppercase",letterSpacing:.4,marginBottom:8}}>{label}</div>
+            <div style={{fontSize:26,fontWeight:800,color:DARK,lineHeight:1,marginBottom:6,fontVariantNumeric:"tabular-nums"}}>{val}</div>
+            <div style={{fontSize:11,color:MUT}}>{sub}</div>
+          </Card>
+        ))}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-        <Section title="Revenue por Mes">
-          {monthEntries.length===0 ? <span style={{fontSize:12,color:MUT}}>Sin datos</span>
-            : monthEntries.map(([m,v])=><BarRow key={m} label={monthLabel(m)} val={v} max={maxM} color={GOLD} fmt={fmt$}/>)}
-        </Section>
-        <Section title="Revenue por Sales Rep">
-          {repEntries.length===0 ? <span style={{fontSize:12,color:MUT}}>Sin datos</span>
-            : repEntries.map(([k,v])=><BarRow key={k} label={k} val={v} max={maxR} color="#6366f1" fmt={fmt$}/>)}
-        </Section>
-        <Section title="Reservaciones por Customer Type">
-          {typeEntries.length===0 ? <span style={{fontSize:12,color:MUT}}>Sin datos</span>
-            : typeEntries.map(([k,v])=><ListRow key={k} label={k} val={v}/>)}
-        </Section>
-        <Section title="Reservaciones por Deal Source">
-          {sourceEntries.length===0 ? <span style={{fontSize:12,color:MUT}}>Sin datos</span>
-            : sourceEntries.map(([k,v])=><ListRow key={k} label={k} val={v}/>)}
-        </Section>
+
+      {/* Row 2: Month chart + Rep leaderboard */}
+      <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:16}}>
+        {/* Column chart: revenue by month */}
+        <Card>
+          <CardTitle>Revenue por Mes</CardTitle>
+          {monthEntries.length===0
+            ? <div style={{color:MUT,fontSize:12}}>Sin datos</div>
+            : (
+              <div style={{display:"flex",alignItems:"flex-end",gap:6,height:160,overflowX:"auto",paddingBottom:4}}>
+                {monthEntries.map(([m,v])=>{
+                  const pct = v/maxM;
+                  const isCurrentM = m===`${thisYear}-${String(new Date().getMonth()+1).padStart(2,"0")}`;
+                  return (
+                    <div key={m} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,minWidth:48,flex:"1 0 auto"}}>
+                      <div style={{fontSize:10,fontWeight:700,color:GOLD,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap"}}>
+                        {v>=1000?`$${Math.round(v/1000)}k`:fmt$(v)}
+                      </div>
+                      <div style={{width:"100%",maxWidth:52,borderRadius:"6px 6px 0 0",
+                        background:isCurrentM?GOLD:"rgba(154,125,82,.35)",
+                        height:`${Math.max(4,pct*120)}px`,transition:"height .3s"}}/>
+                      <div style={{fontSize:9,color:MUT,textAlign:"center",lineHeight:1.2}}>
+                        {MONTH_NAMES[parseInt(m.slice(5))-1].slice(0,3)}
+                        <br/><span style={{color:isCurrentM?GOLD:MUT}}>{m.slice(0,4)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          }
+        </Card>
+
+        {/* Status donut */}
+        <Card>
+          <CardTitle>Estado de Deals</CardTitle>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {[
+              {label:"Confirmed", count:confirmed.length,  color:"#10b981", bg:"#d1fae5"},
+              {label:"Cancelled", count:cancelled.length,  color:"#f87171", bg:"#fee2e2"},
+              {label:"Sin estado",count:rows.filter(r=>!r.status||r.status==="").length, color:"#d1d5db", bg:"#f3f4f6"},
+            ].map(({label,count,color,bg})=>{
+              const pct = rows.length ? Math.round(count/rows.length*100) : 0;
+              return (
+                <div key={label}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                    <span style={{fontSize:12,color:MUT}}>{label}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:DARK}}>{count} <span style={{color:MUT,fontWeight:400}}>({pct}%)</span></span>
+                  </div>
+                  <div style={{height:10,background:"rgba(0,0,0,.06)",borderRadius:6,overflow:"hidden"}}>
+                    <div style={{width:`${pct}%`,height:"100%",background:color,borderRadius:6}}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
+
+      {/* Row 3: Rep leaderboard + Type + Source */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16}}>
+        {/* Sales Rep */}
+        <Card>
+          <CardTitle>Sales Rep — Revenue</CardTitle>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {repEntries.map(([name,{rev,cnt}],idx)=>(
+              <div key={name}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                  <div style={{width:28,height:28,borderRadius:"50%",background:REP_COLORS[idx%REP_COLORS.length],
+                    color:WHT,fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    {initials(name)}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:11,fontWeight:600,color:DARK,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div>
+                    <div style={{fontSize:10,color:MUT}}>{cnt} deal{cnt!==1?"s":""}</div>
+                  </div>
+                  <div style={{fontSize:11,fontWeight:700,color:DARK,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap"}}>
+                    {rev>=1000?`$${Math.round(rev/1000)}k`:fmt$(rev)}
+                  </div>
+                </div>
+                <div style={{height:6,background:"rgba(0,0,0,.05)",borderRadius:4,overflow:"hidden"}}>
+                  <div style={{width:`${(rev/maxR)*100}%`,height:"100%",background:REP_COLORS[idx%REP_COLORS.length],borderRadius:4}}/>
+                </div>
+              </div>
+            ))}
+            {repEntries.length===0&&<div style={{fontSize:12,color:MUT}}>Sin datos</div>}
+          </div>
+        </Card>
+
+        {/* Customer Type */}
+        <Card>
+          <CardTitle>Customer Type</CardTitle>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {typeEntries.map(([k,v],i)=>{
+              const pct=Math.round(v/totalType*100);
+              const COLS=["#6366f1","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4"];
+              return (
+                <div key={k}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                    <span style={{fontSize:11,color:MUT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"65%"}}>{k}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:DARK}}>{v} <span style={{color:MUT,fontWeight:400,fontSize:10}}>({pct}%)</span></span>
+                  </div>
+                  <div style={{height:8,background:"rgba(0,0,0,.05)",borderRadius:4,overflow:"hidden"}}>
+                    <div style={{width:`${pct}%`,height:"100%",background:COLS[i%COLS.length],borderRadius:4}}/>
+                  </div>
+                </div>
+              );
+            })}
+            {typeEntries.length===0&&<div style={{fontSize:12,color:MUT}}>Sin datos</div>}
+          </div>
+        </Card>
+
+        {/* Deal Source */}
+        <Card>
+          <CardTitle>Deal Source</CardTitle>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {sourceEntries.map(([k,v],i)=>{
+              const pct=Math.round(v/totalSrc*100);
+              const COLS=["#f59e0b","#10b981","#6366f1","#ef4444","#8b5cf6","#06b6d4"];
+              return (
+                <div key={k}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                    <span style={{fontSize:11,color:MUT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"65%"}}>{k}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:DARK}}>{v} <span style={{color:MUT,fontWeight:400,fontSize:10}}>({pct}%)</span></span>
+                  </div>
+                  <div style={{height:8,background:"rgba(0,0,0,.05)",borderRadius:4,overflow:"hidden"}}>
+                    <div style={{width:`${pct}%`,height:"100%",background:COLS[i%COLS.length],borderRadius:4}}/>
+                  </div>
+                </div>
+              );
+            })}
+            {sourceEntries.length===0&&<div style={{fontSize:12,color:MUT}}>Sin datos</div>}
+          </div>
+        </Card>
       </div>
     </div>
   );
@@ -1028,6 +1154,19 @@ export function FinanceReservaciones() {
   return (
     <Shell title="Reservaciones & Ventas" subtitle={`${sorted.length} de ${rows.length} registros`}>
       {err&&<Err msg={err} onRetry={load} />}
+      {/* Bad-date warning */}
+      {(() => {
+        const badRows = rows.filter(r=>{ const y=parseInt((r.checkIn||r.checkOut||"").slice(0,4)); return y>new Date().getFullYear()+5; });
+        if(!badRows.length) return null;
+        return (
+          <div style={{background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:10,padding:"10px 14px",
+            marginBottom:14,fontSize:12,color:"#9a3412",display:"flex",gap:10,alignItems:"center"}}>
+            ⚠️ <strong>{badRows.length} fila{badRows.length!==1?"s":""} con año sospechoso</strong>
+            {" "}({badRows.map(r=>r.name||"?").slice(0,3).join(", ")}{badRows.length>3?", …":""}).
+            {" "}Busca y corrige la fecha en la tabla.
+          </div>
+        );
+      })()}
 
       {/* Tabs + Save */}
       <div style={{display:"flex",gap:8,marginBottom:16,alignItems:"center",flexWrap:"wrap"}}>
