@@ -650,11 +650,12 @@ function EditCell({ value, field, onSave, isNum, isDate, options }) {
   );
 }
 
-// ── Calendar (Gantt-style) ────────────────────────────────────────────────────
+// ── Calendar ─────────────────────────────────────────────────────────────────
 function ReservationsCalendar({ rows }) {
   const now = new Date();
   const [year,  setYear]  = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
+  const [calView, setCalView] = useState("lista"); // "gantt" | "lista"
 
   const daysInMonth = new Date(year, month+1, 0).getDate();
   const days = Array.from({length:daysInMonth},(_,i)=>i+1);
@@ -671,71 +672,144 @@ function ReservationsCalendar({ rows }) {
 
   const statusColor = s => s==="Confirmed"?"#2d6a4f":s==="Cancelled"?"#9b2335":"#b45309";
   const statusBg    = s => s==="Confirmed"?"#d1fae5":s==="Cancelled"?"#fee2e2":"#fef3c7";
+  const statusDot   = s => s==="Confirmed"?"#10b981":s==="Cancelled"?"#f87171":"#fbbf24";
+
+  const nights = (ci,co) => {
+    if (!ci||!co) return "—";
+    const d = (new Date(co+"T12:00:00")-new Date(ci+"T12:00:00"))/(1000*60*60*24);
+    return d>0 ? d+"n" : "—";
+  };
 
   return (
     <div>
-      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+      {/* Nav + view toggle */}
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,flexWrap:"wrap"}}>
         <button onClick={prev} style={{padding:"6px 12px",fontSize:13,background:"transparent",color:DARK,border:`1px solid ${BRD}`,borderRadius:8,cursor:"pointer"}}>‹</button>
         <span style={{fontWeight:700,fontSize:15,color:DARK,minWidth:180,textAlign:"center"}}>{MONTH_NAMES[month]} {year}</span>
         <button onClick={next} style={{padding:"6px 12px",fontSize:13,background:"transparent",color:DARK,border:`1px solid ${BRD}`,borderRadius:8,cursor:"pointer"}}>›</button>
+        <div style={{marginLeft:16,display:"flex",background:WHT,border:`1px solid ${BRD}`,borderRadius:8,overflow:"hidden"}}>
+          {[["lista","Lista"],["gantt","Gantt"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setCalView(v)}
+              style={{padding:"6px 14px",fontSize:11,fontWeight:600,
+                background:calView===v?DARK:"transparent",color:calView===v?WHT:MUT,
+                border:"none",cursor:"pointer"}}>{l}</button>
+          ))}
+        </div>
+        <span style={{fontSize:12,color:MUT,marginLeft:8}}>{visible.length} reservaciones</span>
       </div>
-      <div style={{overflowX:"auto"}}>
-        <div style={{minWidth:200+daysInMonth*30}}>
-          {/* Day header */}
-          <div style={{display:"flex",marginBottom:4}}>
-            <div style={{width:200,flexShrink:0}}/>
-            {days.map(d=>{
-              const dow=new Date(`${ym}-${String(d).padStart(2,"0")}T12:00:00`).getDay();
-              const isToday=d===now.getDate()&&month===now.getMonth()&&year===now.getFullYear();
-              return (
-                <div key={d} style={{width:30,flexShrink:0,textAlign:"center",fontSize:10,fontWeight:isToday?700:400,
-                  color:isToday?GOLD:dow===0||dow===6?"#9ca3af":MUT,padding:"3px 0",
-                  background:isToday?"rgba(192,160,98,.12)":"transparent",borderRadius:4}}>
-                  {d}
-                </div>
-              );
-            })}
-          </div>
-          {/* Reservation rows */}
-          {visible.length===0
-            ? <div style={{color:MUT,fontSize:13,padding:"20px 0"}}>No hay reservaciones en {MONTH_NAMES[month]} {year}.</div>
-            : visible.map((r,ri)=>(
-              <div key={ri} style={{display:"flex",alignItems:"center",marginBottom:3,minHeight:26}}>
-                <div style={{width:200,flexShrink:0,fontSize:11,fontWeight:600,color:DARK,
-                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:10}}>
-                  {r.name||"—"}
-                  <span style={{fontSize:10,fontWeight:400,color:MUT,marginLeft:4}}>{r.salesRep||""}</span>
-                </div>
+
+      {visible.length===0 && (
+        <div style={{color:MUT,fontSize:13,padding:"30px 0",textAlign:"center"}}>
+          No hay reservaciones en {MONTH_NAMES[month]} {year}.
+        </div>
+      )}
+
+      {/* ── Lista view ── */}
+      {calView==="lista" && visible.length>0 && (
+        <div style={{background:WHT,border:`1px solid ${BRD}`,borderRadius:12,overflow:"hidden"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+            <thead>
+              <tr style={{background:BG}}>
+                {["Cliente","Check In","Check Out","Noches","Property","Sales Rep","Status","Revenue"].map(h=>(
+                  <th key={h} style={{padding:"9px 12px",textAlign:"left",fontWeight:600,
+                    color:DARK,fontSize:11,borderBottom:`1px solid ${BRD}`,whiteSpace:"nowrap"}}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((r,i)=>(
+                <tr key={i} style={{borderBottom:`1px solid rgba(26,24,20,.05)`,background:i%2===0?"transparent":"rgba(247,244,239,.4)"}}>
+                  <td style={{padding:"8px 12px",fontWeight:600,color:DARK}}>{r.name||"—"}</td>
+                  <td style={{padding:"8px 12px",color:MUT,whiteSpace:"nowrap"}}>{fmtDate(r.checkIn)}</td>
+                  <td style={{padding:"8px 12px",color:MUT,whiteSpace:"nowrap"}}>{fmtDate(r.checkOut)}</td>
+                  <td style={{padding:"8px 12px",color:MUT,textAlign:"center"}}>{nights(r.checkIn,r.checkOut)}</td>
+                  <td style={{padding:"8px 12px",color:MUT}}>{r.property||"—"}</td>
+                  <td style={{padding:"8px 12px",color:MUT}}>{r.salesRep||"—"}</td>
+                  <td style={{padding:"8px 12px"}}>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:5,
+                      background:statusBg(r.status),color:statusColor(r.status),
+                      padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:600}}>
+                      <span style={{width:6,height:6,borderRadius:"50%",background:statusDot(r.status),display:"inline-block"}}/>
+                      {r.status||"—"}
+                    </span>
+                  </td>
+                  <td style={{padding:"8px 12px",textAlign:"right",fontWeight:700,color:DARK,fontVariantNumeric:"tabular-nums"}}>
+                    {r.total ? fmt$(parseFloat(r.total)) : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr style={{background:BG,borderTop:`2px solid ${BRD}`}}>
+                <td colSpan={7} style={{padding:"9px 12px",fontSize:11,fontWeight:600,color:MUT}}>
+                  TOTAL MES · {visible.filter(r=>r.status==="Confirmed").length} confirmadas
+                </td>
+                <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:DARK,fontVariantNumeric:"tabular-nums"}}>
+                  {fmt$(visible.filter(r=>r.status==="Confirmed").reduce((s,r)=>s+(parseFloat(r.total)||0),0))}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
+      {/* ── Gantt view ── */}
+      {calView==="gantt" && visible.length>0 && (
+        <>
+          <div style={{overflowX:"auto"}}>
+            <div style={{minWidth:200+daysInMonth*30}}>
+              <div style={{display:"flex",marginBottom:4}}>
+                <div style={{width:200,flexShrink:0}}/>
                 {days.map(d=>{
-                  const ds=`${ym}-${String(d).padStart(2,"0")}`;
-                  const inRange=r.checkIn&&r.checkOut&&ds>=r.checkIn.slice(0,10)&&ds<=r.checkOut.slice(0,10);
-                  const isStart=ds===r.checkIn?.slice(0,10);
-                  const isEnd  =ds===r.checkOut?.slice(0,10);
-                  const dow=new Date(ds+"T12:00:00").getDay();
+                  const dow=new Date(`${ym}-${String(d).padStart(2,"0")}T12:00:00`).getDay();
+                  const isToday=d===now.getDate()&&month===now.getMonth()&&year===now.getFullYear();
                   return (
-                    <div key={d} style={{width:30,flexShrink:0,height:22,
-                      background:inRange?statusBg(r.status):dow===0||dow===6?"rgba(0,0,0,.025)":"transparent",
-                      borderTop:inRange?`1px solid ${statusColor(r.status)}50`:undefined,
-                      borderBottom:inRange?`1px solid ${statusColor(r.status)}50`:undefined,
-                      borderLeft:isStart?`3px solid ${statusColor(r.status)}`:undefined,
-                      borderRight:isEnd?`3px solid ${statusColor(r.status)}`:undefined,
-                      borderRadius:isStart&&isEnd?6:isStart?"6px 0 0 6px":isEnd?"0 6px 6px 0":0,
-                    }}/>
+                    <div key={d} style={{width:30,flexShrink:0,textAlign:"center",fontSize:10,
+                      fontWeight:isToday?700:400,color:isToday?GOLD:dow===0||dow===6?"#9ca3af":MUT,
+                      padding:"3px 0",background:isToday?"rgba(192,160,98,.12)":"transparent",borderRadius:4}}>
+                      {d}
+                    </div>
                   );
                 })}
               </div>
-            ))
-          }
-        </div>
-      </div>
-      <div style={{display:"flex",gap:16,marginTop:16,flexWrap:"wrap"}}>
-        {[["Confirmed","#2d6a4f","#d1fae5"],["Cancelled","#9b2335","#fee2e2"],["Other","#b45309","#fef3c7"]].map(([l,c,bg])=>(
-          <span key={l} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:MUT}}>
-            <span style={{width:16,height:10,background:bg,border:`2px solid ${c}`,borderRadius:3,display:"inline-block"}}/>
-            {l}
-          </span>
-        ))}
-      </div>
+              {visible.map((r,ri)=>(
+                <div key={ri} style={{display:"flex",alignItems:"center",marginBottom:3,minHeight:26}}>
+                  <div style={{width:200,flexShrink:0,fontSize:11,fontWeight:600,color:DARK,
+                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:10}}>
+                    {r.name||"—"}
+                    <span style={{fontSize:10,fontWeight:400,color:MUT,marginLeft:4}}>{r.salesRep||""}</span>
+                  </div>
+                  {days.map(d=>{
+                    const ds=`${ym}-${String(d).padStart(2,"0")}`;
+                    const inRange=r.checkIn&&r.checkOut&&ds>=r.checkIn.slice(0,10)&&ds<=r.checkOut.slice(0,10);
+                    const isStart=ds===r.checkIn?.slice(0,10);
+                    const isEnd  =ds===r.checkOut?.slice(0,10);
+                    const dow=new Date(ds+"T12:00:00").getDay();
+                    return (
+                      <div key={d} style={{width:30,flexShrink:0,height:22,
+                        background:inRange?statusBg(r.status):dow===0||dow===6?"rgba(0,0,0,.025)":"transparent",
+                        borderTop:inRange?`1px solid ${statusColor(r.status)}50`:undefined,
+                        borderBottom:inRange?`1px solid ${statusColor(r.status)}50`:undefined,
+                        borderLeft:isStart?`3px solid ${statusColor(r.status)}`:undefined,
+                        borderRight:isEnd?`3px solid ${statusColor(r.status)}`:undefined,
+                        borderRadius:isStart&&isEnd?6:isStart?"6px 0 0 6px":isEnd?"0 6px 6px 0":0,
+                      }}/>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{display:"flex",gap:16,marginTop:12,flexWrap:"wrap"}}>
+            {[["Confirmed","#2d6a4f","#d1fae5"],["Cancelled","#9b2335","#fee2e2"],["Other","#b45309","#fef3c7"]].map(([l,c,bg])=>(
+              <span key={l} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:MUT}}>
+                <span style={{width:16,height:10,background:bg,border:`2px solid ${c}`,borderRadius:3,display:"inline-block"}}/>
+                {l}
+              </span>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -949,88 +1023,97 @@ export function FinanceReservaciones() {
     </button>
   );
 
+  const filteredRows = sorted.map(i => rows[i]);
+
   return (
     <Shell title="Reservaciones & Ventas" subtitle={`${sorted.length} de ${rows.length} registros`}>
       {err&&<Err msg={err} onRetry={load} />}
 
-      <div style={{display:"flex",gap:8,marginBottom:20,alignItems:"center",flexWrap:"wrap"}}>
+      {/* Tabs + Save */}
+      <div style={{display:"flex",gap:8,marginBottom:16,alignItems:"center",flexWrap:"wrap"}}>
         <TabBtn label="Tabla" k="tabla"/>
         <TabBtn label="Calendario" k="calendario"/>
         <TabBtn label="Dashboard" k="dashboard"/>
         <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
           {saved && <span style={{fontSize:12,color:"#059669",fontWeight:600}}>✓ Guardado</span>}
           {isDirty && !saving && <span style={{fontSize:11,color:GOLD}}>Cambios sin guardar</span>}
-          <button
-            onClick={handleSave}
-            disabled={saving || (!isDirty && !saved)}
-            style={{
-              padding:"8px 20px", fontSize:13, fontWeight:700,
-              background: saving ? MUT : isDirty ? "#059669" : saved ? "#d1fae5" : "#e5e7eb",
-              color: saving||isDirty ? WHT : saved ? "#065f46" : "#9ca3af",
-              border:"none", borderRadius:8, cursor: isDirty||saving?"pointer":"default",
-              transition:"background .2s", whiteSpace:"nowrap",
-            }}>
-            {saving ? "Guardando…" : saved ? "✓ Guardado" : isDirty ? "💾 Guardar cambios" : "Sin cambios"}
+          <button onClick={handleSave} disabled={saving||(!isDirty&&!saved)}
+            style={{padding:"8px 20px",fontSize:13,fontWeight:700,whiteSpace:"nowrap",border:"none",borderRadius:8,
+              cursor:isDirty||saving?"pointer":"default",transition:"background .2s",
+              background:saving?MUT:isDirty?"#059669":saved?"#d1fae5":"#e5e7eb",
+              color:saving||isDirty?WHT:saved?"#065f46":"#9ca3af"}}>
+            {saving?"Guardando…":saved?"✓ Guardado":isDirty?"💾 Guardar cambios":"Sin cambios"}
           </button>
         </div>
       </div>
 
-      {view==="calendario" && <ReservationsCalendar rows={rows}/>}
-      {view==="dashboard"  && <ReservationsDashboard rows={rows}/>}
+      {/* Shared filter bar */}
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16,alignItems:"center",
+        background:WHT,border:`1px solid ${BRD}`,borderRadius:10,padding:"10px 12px"}}>
+        {view==="tabla" && (
+          <button onClick={addRow}
+            style={{padding:"7px 14px",fontSize:12,fontWeight:600,background:GOLD,color:WHT,
+              border:"none",borderRadius:8,cursor:"pointer",whiteSpace:"nowrap"}}>
+            + Nueva fila
+          </button>
+        )}
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar…"
+          style={{...INP,width:150,padding:"7px 12px",fontSize:12}} />
+        <div style={{display:"flex",background:BG,border:`1px solid ${BRD}`,borderRadius:8,overflow:"hidden"}}>
+          {[["all","Todos"],["Confirmed","✓ Conf"],["Cancelled","✗ Canc"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setStatusF(v)}
+              style={{padding:"7px 10px",fontSize:11,fontWeight:500,whiteSpace:"nowrap",
+                background:statusF===v?DARK:"transparent",color:statusF===v?WHT:MUT,border:"none",cursor:"pointer"}}>
+              {l}
+            </button>
+          ))}
+        </div>
+        <select value={typeF} onChange={e=>setTypeF(e.target.value)}
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:130}}>
+          <option value="all">Customer Type</option>
+          {typeOpts.map(t=><option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={repF} onChange={e=>setRepF(e.target.value)}
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:120}}>
+          <option value="all">Sales Rep</option>
+          {repOpts.map(r=><option key={r} value={r}>{r}</option>)}
+        </select>
+        <select value={monthF} onChange={e=>setMonthF(e.target.value)}
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:130}}>
+          <option value="all">Mes</option>
+          {months.filter(m=>m!=="all").map(m=><option key={m} value={m}>{monthLabel(m)}</option>)}
+        </select>
+        <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:MUT,whiteSpace:"nowrap"}}>
+          <span>De</span>
+          <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
+            style={{...INP,padding:"6px 8px",fontSize:11,width:130}}/>
+          <span>a</span>
+          <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}
+            style={{...INP,padding:"6px 8px",fontSize:11,width:130}}/>
+          {(dateFrom||dateTo)&&<button onClick={()=>{setDateFrom("");setDateTo("");}}
+            style={{background:"none",border:"none",color:MUT,cursor:"pointer",fontSize:13,padding:"0 2px"}}>✕</button>}
+        </div>
+        {(search||statusF!=="all"||typeF!=="all"||repF!=="all"||monthF!=="all"||dateFrom||dateTo) && (
+          <button onClick={()=>{setSearch("");setStatusF("all");setTypeF("all");setRepF("all");setMonthF("all");setDateFrom("");setDateTo("");}}
+            style={{padding:"6px 12px",fontSize:11,background:"transparent",color:MUT,
+              border:`1px solid ${BRD}`,borderRadius:6,cursor:"pointer",whiteSpace:"nowrap"}}>
+            Limpiar filtros
+          </button>
+        )}
+        <span style={{marginLeft:"auto",fontSize:11,color:MUT,fontWeight:600}}>{sorted.length} resultados</span>
+      </div>
+
+      {view==="calendario" && <ReservationsCalendar rows={filteredRows}/>}
+      {view==="dashboard"  && <ReservationsDashboard rows={filteredRows}/>}
 
       {view==="tabla" && (
         <>
           {/* KPIs */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
             <KPICard label="Confirmadas" val={confirmed.length} color="#065f46" />
             <KPICard label="Revenue total" val={fmt$(totalRev)} color={GOLD} />
             <KPICard label="Comisiones" val={fmt$(totalComm)} color="#1d4ed8" />
             <KPICard label="Tax total" val={fmt$(totalTax)} color={MUT} />
-          </div>
-
-          {/* Toolbar */}
-          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14,alignItems:"center"}}>
-            <button onClick={addRow}
-              style={{padding:"7px 14px",fontSize:12,fontWeight:600,background:GOLD,color:WHT,border:"none",borderRadius:8,cursor:"pointer",whiteSpace:"nowrap"}}>
-              + Nueva fila
-            </button>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar…"
-              style={{...INP,width:160,padding:"7px 12px",fontSize:12}} />
-            <div style={{display:"flex",background:WHT,border:`1px solid ${BRD}`,borderRadius:8,overflow:"hidden"}}>
-              {[["all","Todos"],["Confirmed","✓ Conf"],["Cancelled","✗ Canc"]].map(([v,l])=>(
-                <button key={v} onClick={()=>setStatusF(v)}
-                  style={{padding:"7px 10px",fontSize:11,fontWeight:500,whiteSpace:"nowrap",
-                    background:statusF===v?DARK:"transparent",color:statusF===v?WHT:MUT,border:"none",cursor:"pointer"}}>
-                  {l}
-                </button>
-              ))}
-            </div>
-            <select value={typeF} onChange={e=>setTypeF(e.target.value)}
-              style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:130}}>
-              <option value="all">Customer Type</option>
-              {typeOpts.map(t=><option key={t} value={t}>{t}</option>)}
-            </select>
-            <select value={repF} onChange={e=>setRepF(e.target.value)}
-              style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:120}}>
-              <option value="all">Sales Rep</option>
-              {repOpts.map(r=><option key={r} value={r}>{r}</option>)}
-            </select>
-            <select value={monthF} onChange={e=>setMonthF(e.target.value)}
-              style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:130}}>
-              <option value="all">Mes</option>
-              {months.filter(m=>m!=="all").map(m=><option key={m} value={m}>{monthLabel(m)}</option>)}
-            </select>
-            {/* Date range */}
-            <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:MUT,whiteSpace:"nowrap"}}>
-              <span>De</span>
-              <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
-                style={{...INP,padding:"6px 8px",fontSize:11,width:130}}/>
-              <span>a</span>
-              <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}
-                style={{...INP,padding:"6px 8px",fontSize:11,width:130}}/>
-              {(dateFrom||dateTo)&&<button onClick={()=>{setDateFrom("");setDateTo("");}}
-                style={{background:"none",border:"none",color:MUT,cursor:"pointer",fontSize:13,padding:"0 2px"}}>✕</button>}
-            </div>
           </div>
 
           {/* Table */}
