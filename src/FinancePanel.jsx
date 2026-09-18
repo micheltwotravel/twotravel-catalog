@@ -891,7 +891,11 @@ export function FinanceReservaciones() {
 
   const months = ["all",...[...new Set(rows.map(r=>r.checkIn?.slice(0,7)).filter(Boolean))].sort()];
 
+  // Monday.com group-separator rows — no real client data
+  const isSeparator = r => /reservations?\s*[\/]\s*sales|two travel\s*:/i.test(r.name||"") && !r.checkIn && !r.total;
+
   const filteredIdxs = rows.reduce((acc,r,i)=>{
+    if (isSeparator(r)) return acc;  // skip Monday.com group headers
     if (statusF!=="all" && r.status!==statusF) return acc;
     if (typeF!=="all"   && r.type!==typeF)     return acc;
     if (repF!=="all"    && r.salesRep!==repF)  return acc;
@@ -1049,11 +1053,22 @@ export function FinanceReservaciones() {
                       <Fragment key={mk||"nodate"}>
                         {mk && (
                           <tr>
-                            <td colSpan={ALL_COLS.length+1}
-                              style={{padding:"10px 12px 6px",fontSize:11,fontWeight:700,
-                                color:GOLD,letterSpacing:.5,background:"rgba(192,160,98,.08)",
-                                borderTop:`2px solid ${BRD}`,textTransform:"uppercase"}}>
-                              {monthLabel(mk)} · {idxs.filter(i=>rows[i].status==="Confirmed").length} confirmadas
+                            <td colSpan={ALL_COLS.length+1} style={{padding:0,paddingTop:8}}>
+                              <div style={{
+                                display:"flex",alignItems:"center",gap:12,
+                                padding:"8px 14px",margin:"0 0 2px 0",
+                                background:GOLD,borderRadius:"8px 8px 0 0",
+                              }}>
+                                <span style={{fontSize:12,fontWeight:700,color:WHT,letterSpacing:.3}}>
+                                  {monthLabel(mk)}
+                                </span>
+                                <span style={{fontSize:11,color:"rgba(255,255,255,.75)"}}>
+                                  {idxs.length} reservaciones · {idxs.filter(i=>rows[i].status==="Confirmed").length} confirmadas
+                                </span>
+                                <span style={{marginLeft:"auto",fontSize:11,color:"rgba(255,255,255,.85)",fontWeight:600}}>
+                                  {fmt$(idxs.filter(i=>rows[i].status==="Confirmed").reduce((s,i)=>s+(parseFloat(rows[i].total)||0),0))}
+                                </span>
+                              </div>
                             </td>
                           </tr>
                         )}
@@ -1071,10 +1086,12 @@ export function FinanceReservaciones() {
                                 />
                               </td>
                             ))}
-                            <td style={{padding:"5px 6px",textAlign:"center",verticalAlign:"middle"}}>
+                            <td style={{padding:"5px 8px",textAlign:"center",verticalAlign:"middle"}}>
                               <button onClick={()=>deleteRow(rowIdx)}
-                                style={{background:"none",border:"none",color:"#d1d5db",cursor:"pointer",fontSize:14,lineHeight:1,padding:2}}
-                                title="Eliminar fila">×</button>
+                                style={{background:"#fee2e2",border:"1px solid #fca5a5",color:"#dc2626",
+                                  cursor:"pointer",fontSize:12,lineHeight:1,padding:"3px 7px",
+                                  borderRadius:6,fontWeight:700}}
+                                title="Eliminar fila">✕</button>
                             </td>
                           </tr>
                         ))}
