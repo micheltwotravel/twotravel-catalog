@@ -1039,25 +1039,32 @@ function onFacturaInput(val) {
     preview.style.display = 'block';
   }
 }
-function uploadFacturaFile(input) {
+async function uploadFacturaFile(input) {
   const file = input.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const dataUrl = ev.target.result;
-    document.getElementById('n-factura').value = dataUrl;
-    const preview = document.getElementById('factura-preview');
-    const img = document.getElementById('factura-img');
-    const tag = document.getElementById('factura-url-tag');
+  const tag = document.getElementById('factura-url-tag');
+  const preview = document.getElementById('factura-preview');
+  const img = document.getElementById('factura-img');
+  tag.textContent = '⏳ Subiendo…'; tag.style.display = 'block';
+  img.style.display = 'none'; preview.style.display = 'block';
+  try {
+    const res = await fetch('/api/upload-factura', {
+      method: 'POST',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    });
+    const d = await res.json();
+    if (!d.ok || !d.url) throw new Error(d.error || 'Upload failed');
+    document.getElementById('n-factura').value = d.url;
     if (file.type.startsWith('image/')) {
-      img.src = dataUrl; img.style.display = 'block'; tag.style.display = 'none';
+      img.src = d.url; img.style.display = 'block'; tag.style.display = 'none';
     } else {
-      img.style.display = 'none'; tag.style.display = 'block';
-      tag.textContent = '📄 ' + file.name;
+      tag.textContent = '📄 ' + file.name; tag.style.display = 'block';
     }
-    preview.style.display = 'block';
     regenerateWaMsg();
-  };
-  reader.readAsDataURL(file);
+  } catch(err) {
+    tag.textContent = '❌ Error subiendo: ' + err.message;
+    showToast('Error al subir archivo: ' + err.message, 5000);
+  }
 }
 function clearFactura() {
   document.getElementById('n-factura').value = '';

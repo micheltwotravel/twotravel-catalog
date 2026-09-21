@@ -448,7 +448,7 @@ export function FinanceCierre() {
 
 // ─── TEMPLATES ────────────────────────────────────────────────────────────────
 function downloadCSV(filename, headers, rows) {
-  const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n");
   const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"});
   const a=Object.assign(document.createElement("a"),{href:URL.createObjectURL(blob),download:filename});
   a.click(); URL.revokeObjectURL(a.href);
