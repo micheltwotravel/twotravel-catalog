@@ -4784,7 +4784,19 @@ function CheckinForm() {
             else dep.push(entry);
             updates.departures = JSON.stringify(dep);
           }
+          // Append this response to checkInResponses so the dashboard counter updates
+          const thisResponse = { ...form, submittedAt: new Date().toISOString() };
+          let existingResps = [];
+          try { existingResps = JSON.parse(latestKickoff?.checkInResponses || "[]"); } catch {}
+          const existingIdx = existingResps.findIndex(r => r.firstName === form.firstName && r.lastName === form.lastName);
+          if (existingIdx >= 0) existingResps[existingIdx] = thisResponse;
+          else existingResps.push(thisResponse);
+          updates.checkInResponses = JSON.stringify(existingResps);
+
           if (Object.keys(updates).length) {
+            // Write to Supabase so dashboard reads the updated counter + passport/diet info
+            updateKickoffInSheet(kickoffId, updates).catch(() => {});
+            // Also write to GAS/Sheets as backup
             fetch(GAS_URL, {
               method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
               body: JSON.stringify({ action: "updateKickoff", id: kickoffId, updates }),
