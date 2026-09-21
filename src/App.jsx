@@ -1058,6 +1058,16 @@ function DashboardImportModal({ kickoffId, guestName, onDone, onSaveField }) {
     </div>
   );
 }
+function InlineSelect({ initialValue, options, onSave, style = {} }) {
+  const [val, setVal] = React.useState(initialValue || "");
+  return (
+    <select value={val} onChange={e => { const v = e.target.value; setVal(v); onSave(v); }}
+      style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"2px 4px", background:"#fff", color:"#374151", cursor:"pointer", ...style }}>
+      {options.map(o => <option key={o} value={o}>{o || "— Sin asignar —"}</option>)}
+    </select>
+  );
+}
+
 function MarketingCell({ kickoffId, value, onSave, saving }) {
   const [text, setText] = React.useState(value);
   const [aiLoading, setAiLoading] = React.useState(false);
@@ -1558,36 +1568,31 @@ function ClientesTable({ kickoffs, loading }) {
                     <td style={{ ...tdStyle, textAlign:"center" }}>{r.pax || r.groupSize || "—"}</td>
                     {/* 5. Sr Concierge */}
                     <td style={tdStyle}>
-                      <select defaultValue={r.assignedConciergeName || r.concierge || ""}
-                        onChange={e => saveField(r.id, "assignedConciergeName", e.target.value)}
-                        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"2px 4px", background:"#fff", color:"#374151", cursor:"pointer", maxWidth:130 }}>
-                        <option value="">— Sin asignar —</option>
-                        {CONCIERGE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
-                      </select>
+                      <InlineSelect
+                        initialValue={r.assignedConciergeName || r.concierge || ""}
+                        options={["", ...CONCIERGE_NAMES]}
+                        onSave={v => saveField(r.id, "assignedConciergeName", v)}
+                        style={{ maxWidth:130 }}
+                      />
                     </td>
                     {/* 6. Jr Concierge */}
-                    <td style={tdStyle}>
-                      <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:4 }}>
-                          <span style={{ fontSize:9, color:"#6d28d9", fontWeight:700, minWidth:28 }}>Grp</span>
-                          <select defaultValue={r.juniorConcierge || ""}
-                            onChange={e => saveField(r.id, "juniorConcierge", e.target.value)}
-                            style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"2px 4px", background:"#fff", color:"#374151", cursor:"pointer", maxWidth:110 }}>
-                            <option value="">—</option>
-                            {(juniorListForCity(r._rowCity).length ? juniorListForCity(r._rowCity) : ["Juan David","Yosayro"]).map(n => <option key={n} value={n}>{n}</option>)}
-                          </select>
-                        </div>
-                        <div style={{ display:"flex", alignItems:"center", gap:4 }}>
-                          <span style={{ fontSize:9, color:"#0369a1", fontWeight:700, minWidth:28 }}>Bote</span>
-                          <select defaultValue={r.juniorBoat || ""}
-                            onChange={e => saveField(r.id, "juniorBoat", e.target.value)}
-                            style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"2px 4px", background:"#fff", color:"#374151", cursor:"pointer", maxWidth:110 }}>
-                            <option value="">—</option>
-                            {(juniorListForCity(r._rowCity).length ? juniorListForCity(r._rowCity) : ["Juan David","Yosayro"]).map(n => <option key={n} value={n}>{n}</option>)}
-                          </select>
-                        </div>
-                      </div>
-                    </td>
+                    {(() => {
+                      const jrOpts = ["", ...(juniorListForCity(r._rowCity).length ? juniorListForCity(r._rowCity) : ["Juan David","Yosayro"])];
+                      return (
+                        <td style={tdStyle}>
+                          <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                              <span style={{ fontSize:9, color:"#6d28d9", fontWeight:700, minWidth:28 }}>Grp</span>
+                              <InlineSelect initialValue={r.juniorConcierge || ""} options={jrOpts} onSave={v => saveField(r.id, "juniorConcierge", v)} style={{ maxWidth:110 }} />
+                            </div>
+                            <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                              <span style={{ fontSize:9, color:"#0369a1", fontWeight:700, minWidth:28 }}>Bote</span>
+                              <InlineSelect initialValue={r.juniorBoat || ""} options={jrOpts} onSave={v => saveField(r.id, "juniorBoat", v)} style={{ maxWidth:110 }} />
+                            </div>
+                          </div>
+                        </td>
+                      );
+                    })()}
                     {/* 7. Casa */}
                     <td style={{ ...tdStyle, fontSize:11, color:"#374151", maxWidth:120 }}>
                       {r._isCity2 ? (r.accommodationName2 || <span style={{ color:"#d1d5db" }}>—</span>) : (r.accommodationName || <span style={{ color:"#d1d5db" }}>—</span>)}
