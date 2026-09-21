@@ -1557,15 +1557,36 @@ function ClientesTable({ kickoffs, loading }) {
                     {/* 4. Pax */}
                     <td style={{ ...tdStyle, textAlign:"center" }}>{r.pax || r.groupSize || "—"}</td>
                     {/* 5. Sr Concierge */}
-                    <td style={{ ...tdStyle, color:"#374151" }}>{r.assignedConciergeName || r.concierge || "—"}</td>
+                    <td style={tdStyle}>
+                      <select defaultValue={r.assignedConciergeName || r.concierge || ""}
+                        onChange={e => saveField(r.id, "assignedConciergeName", e.target.value)}
+                        style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"2px 4px", background:"#fff", color:"#374151", cursor:"pointer", maxWidth:130 }}>
+                        <option value="">— Sin asignar —</option>
+                        {CONCIERGE_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </td>
                     {/* 6. Jr Concierge */}
                     <td style={tdStyle}>
-                      {(r.juniorConcierge || r.juniorBoat)
-                        ? <div style={{ fontSize:11, color:"#374151", lineHeight:1.5 }}>
-                            {r.juniorConcierge && <div><span style={{ color:"#6d28d9", fontWeight:600 }}>Grupo:</span> {r.juniorConcierge}</div>}
-                            {r.juniorBoat && <div><span style={{ color:"#0369a1", fontWeight:600 }}>Bote:</span> {r.juniorBoat}</div>}
-                          </div>
-                        : <span style={{ fontSize:11, color:"#d1d5db" }}>—</span>}
+                      <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                          <span style={{ fontSize:9, color:"#6d28d9", fontWeight:700, minWidth:28 }}>Grp</span>
+                          <select defaultValue={r.juniorConcierge || ""}
+                            onChange={e => saveField(r.id, "juniorConcierge", e.target.value)}
+                            style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"2px 4px", background:"#fff", color:"#374151", cursor:"pointer", maxWidth:110 }}>
+                            <option value="">—</option>
+                            {(juniorListForCity(r._rowCity).length ? juniorListForCity(r._rowCity) : ["Juan David","Yosayro"]).map(n => <option key={n} value={n}>{n}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                          <span style={{ fontSize:9, color:"#0369a1", fontWeight:700, minWidth:28 }}>Bote</span>
+                          <select defaultValue={r.juniorBoat || ""}
+                            onChange={e => saveField(r.id, "juniorBoat", e.target.value)}
+                            style={{ fontSize:11, border:"1px solid #e5e7eb", borderRadius:6, padding:"2px 4px", background:"#fff", color:"#374151", cursor:"pointer", maxWidth:110 }}>
+                            <option value="">—</option>
+                            {(juniorListForCity(r._rowCity).length ? juniorListForCity(r._rowCity) : ["Juan David","Yosayro"]).map(n => <option key={n} value={n}>{n}</option>)}
+                          </select>
+                        </div>
+                      </div>
                     </td>
                     {/* 7. Casa */}
                     <td style={{ ...tdStyle, fontSize:11, color:"#374151", maxWidth:120 }}>
