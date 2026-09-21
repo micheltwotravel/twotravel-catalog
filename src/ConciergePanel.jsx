@@ -2469,7 +2469,6 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
           timeLabel: "",
           description_en: `When you come out, make sure you turn to the **right** where you will find our representative waiting to direct you to the vehicle. Even if you arrive in separate groups, your reservation will always be under the group leader's name: **${guestName || "group leader"}**\n\n**Transport options:**\n${vehicleOptions.en}\n\n_All vehicles include A/C and luggage. Services between 19:00–6:00 generate a 10% night fee._`,
           description_es: `Al salir, gira a la **derecha** donde encontrarás a nuestro representante esperando para dirigirte al vehículo. Aunque lleguen en grupos separados, su reserva siempre estará a nombre de: **${guestName || "líder del grupo"}**\n\n**Opciones de transporte:**\n${vehicleOptions.es}\n\n_Todos los vehículos incluyen A/C y equipaje. Servicios entre 19:00–6:00 generan un recargo nocturno del 10%._`,
-          notes: vehicleOptions.note,
         });
         return items;
       })(),

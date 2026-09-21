@@ -511,10 +511,16 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
   const parseTime = t => { const m = String(t||"").match(/^(\d{1,2}):(\d{2})/); return m ? +m[1]*60 + +m[2] : Infinity; };
   return orderedLabels.map(label => {
     const dm = metaList.find(d => cl(d.label) === label);
-    // Sort by sortOrder only — concierge controls order via ↑↓ arrows.
-    // Time is displayed but does not drive position; timed and no-time items
-    // can be interleaved freely.
-    const items = (map.get(label) || []).sort((a, b) => a.sort - b.sort);
+    // Sort by time first (chronological); fall back to sortOrder as tiebreaker.
+    // Items without a time keep their relative sortOrder among themselves and
+    // are placed after any timed item that precedes them in sortOrder.
+    const items = (map.get(label) || []).sort((a, b) => {
+      const ta = parseTime(a.time), tb = parseTime(b.time);
+      if (ta !== Infinity && tb !== Infinity && ta !== tb) return ta - tb;
+      if (ta !== Infinity && tb === Infinity) return -1;
+      if (ta === Infinity && tb !== Infinity) return 1;
+      return a.sort - b.sort;
+    });
     // Day band shows label; subtitle shows the descriptive title if set
     return { label, title: dm?.title || "", date: dm?.date || "", items };
   });
@@ -2139,8 +2145,8 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
 
         {/* Concierge notes for this service */}
         {it.notes && (
-          <div style={{ fontSize:11, color:"#6b7280", fontStyle:"italic", marginBottom:8, background:"#f9fafb", borderLeft:"3px solid #e5e7eb", paddingLeft:8, paddingTop:4, paddingBottom:4, borderRadius:"0 4px 4px 0" }}>
-            💬 {it.notes}
+          <div style={{ fontSize:11, color:"#6b7280", marginBottom:8, background:"#f9fafb", borderLeft:"3px solid #d1d5db", paddingLeft:8, paddingTop:4, paddingBottom:4, borderRadius:"0 4px 4px 0" }}>
+            ✍️ {it.notes}
           </div>
         )}
 
@@ -2748,7 +2754,7 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
               </div>
             </div>
           ) : (
-            <div key={i} style={{ position: "relative" }}>
+            <div key={i} style={{ position: "relative", borderTop: i > 0 ? "1px solid #f0ece6" : "none" }}>
               {editMode && onMoveItem && (
                 <div className="no-print" style={{ position:"absolute", left:-30, top:"50%", transform:"translateY(-50%)", display:"flex", flexDirection:"column", gap:2, zIndex:10 }}>
                   <button
@@ -2891,7 +2897,11 @@ export default function ItineraryPrintView() {
             if (field === "title")       cartMirror.displayName = val;
             else if (field === "time")   cartMirror.timeLabel   = val;
             else if (field === "notes")  cartMirror.notes       = val;
-            else if (field === "description") cartMirror.description = val;
+            else if (field === "description") {
+              cartMirror.description    = val;
+              cartMirror.description_en = val;
+              cartMirror.description_es = val;
+            }
             else if (field === "confirmed")   cartMirror.confirmed   = val;
             else if (field === "price")       cartMirror.priceOverride_cop = val;
             if (Object.keys(cartMirror).length) {
