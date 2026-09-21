@@ -1511,7 +1511,7 @@ export function FinancePagosProveedores() {
   function exportPayana() {
     const visible = filtered.filter(r=>r.status==="aprobada"||r.status==="pendiente");
     const headers = ["Número proveedor","PROVEEDOR Nombre","PROVEEDOR Tipo ID","Monto","Moneda","Concepto","Fecha emisión","Fecha vencimiento","Tipo cuenta","Número cuenta","Banco","Category / Service","Client","Clase","Área","Prioridad","Solicitado por"];
-    const rowData = visible.map(r=>[r.provId||"",r.provNombre||"",r.provTipoId||"",r.amount||0,r.currency||"COP",r.concepto||"",r.lote||today,r.dueDate||"",r.tipoCuenta||"",r.numeroCuenta||"",r.banco||"",r.category||"",r.client||"",r.clase||"",r.area||"",r.priority||"",r.requestedBy||""]);
+    const rowData = visible.map(r=>[r.provId||"",r.provNombre||"",r.provTipoId||"",r.amount||0,r.currency||"COP",(r.concepto||"").slice(0,40),r.lote||today,r.dueDate||"",r.tipoCuenta||"",r.numeroCuenta||"",r.banco||"",r.category||"",r.client||"",r.clase||"",r.area||"",r.priority||"",r.requestedBy||""]);
     downloadCSV(`payana-lote-${today}.csv`, headers, rowData);
     showToastMsg("✅ CSV Payana descargado");
   }
@@ -1664,8 +1664,11 @@ export function FinancePagosProveedores() {
                       style={{padding:"3px 8px",border:`1px solid #fde68a`,borderRadius:3,fontSize:12,fontFamily:"'Jost',sans-serif",background:WHT}}/>
                   </div>
 
-                  <FGrp label="Concepto / Descripción del pago *">
-                    <input {...PINP()} value={form.concepto} onChange={e=>upd("concepto",e.target.value)} placeholder="Ej: Arreglo lavadora Casa Moneda" required/>
+                  <FGrp label={<span style={{display:"flex",justifyContent:"space-between",width:"100%"}}>
+                    <span>Concepto / Descripción del pago *</span>
+                    <span style={{fontWeight:400,color:form.concepto?.length>=38?"#e74c3c":"#aaa"}}>{(form.concepto||"").length} / 40</span>
+                  </span>}>
+                    <input {...PINP()} value={form.concepto} onChange={e=>upd("concepto",e.target.value.slice(0,40))} placeholder="Ej: Arreglo lavadora Casa Moneda" required maxLength={40}/>
                   </FGrp>
 
                   <div style={{borderTop:`1px solid ${BRD}`,paddingTop:12}}>

@@ -94,8 +94,12 @@ textarea{resize:vertical}
         <div class="card-body">
           <div class="field-row">
             <div class="field full">
-              <label>Concepto / Descripción <span class="req">*</span></label>
-              <input id="f-concepto" placeholder="Ej: Arreglo lavadora Casa Moneda" required>
+              <label style="display:flex;justify-content:space-between;align-items:baseline">
+                <span>Concepto / Descripción <span class="req">*</span></span>
+                <span id="f-concepto-count" style="font-size:11px;color:#aaa;font-weight:400">0 / 40</span>
+              </label>
+              <input id="f-concepto" placeholder="Ej: Arreglo lavadora Casa Moneda" required maxlength="40"
+                oninput="document.getElementById('f-concepto-count').textContent=this.value.length+' / 40';document.getElementById('f-concepto-count').style.color=this.value.length>=38?'#e74c3c':'#aaa'">
             </div>
           </div>
           <div class="field-row">
