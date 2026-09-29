@@ -16,7 +16,7 @@
   --gold:#9a7d52;
   --gold-dim:#b89a6a;
   --ink:#0d0b09;
-  /* ↓ swap this for any photo in /public/ e.g. url('/hero.jpg') */
+  /* ↓ To use a photo: place hero.jpg (1920×1080 px) in /public/ and change the line below to: url('/hero.jpg') */
   --hero-img: linear-gradient(160deg, #1a1410 0%, #2e2418 40%, #3a2e1c 70%, #1a1410 100%);
 }
 html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;overflow-x:hidden}
@@ -190,18 +190,19 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
       <img src="/logo.png" alt="Two Travel">
     </div>
     <div class="nav-links">
-      <a href="/?mode=concierge" class="nl">Clientes</a>
-      <a href="/?mode=pagos" class="nl">Pagos</a>
-      <a href="/tasks.html" class="nl">Tareas</a>
-      <a href="/?mode=bodas" class="nl">Bodas</a>
-      <a href="/agent.html" class="nl">Agente IA</a>
-      <a href="/?mode=users" class="nl">Usuarios</a>
+      <a href="/?mode=concierge" class="nl" data-es="Clientes" data-en="Clients">Clientes</a>
+      <a href="/?mode=pagos" class="nl" data-es="Pagos" data-en="Payments">Pagos</a>
+      <a href="/tasks.html" class="nl" data-es="Tareas" data-en="Tasks">Tareas</a>
+      <a href="/?mode=bodas" class="nl" data-es="Bodas" data-en="Weddings">Bodas</a>
+      <a href="/agent.html" class="nl" data-es="Agente IA" data-en="AI Agent">Agente IA</a>
+      <a href="/?mode=users" class="nl" data-es="Usuarios" data-en="Users">Usuarios</a>
+      <button id="lang-btn" onclick="toggleLang()" style="font-family:'DM Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.42);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);padding:5px 11px;border-radius:3px;cursor:pointer;margin-left:6px;transition:background .15s,color .15s">ES</button>
     </div>
   </nav>
 
   <!-- TITLE BOTTOM -->
   <div class="center-body">
-    <div class="hero-eyebrow">Panel interno</div>
+    <div class="hero-eyebrow" data-es="Panel interno" data-en="Internal Panel">Panel interno</div>
     <h1 class="hero-title"><em>Compass</em></h1>
     <div class="hero-date" id="dt"></div>
   </div>
@@ -211,7 +212,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 <!-- ═══ SCROLL CUE ═══ -->
 <div class="scroll-cue" id="cue">
   <svg width="12" height="18" viewBox="0 0 12 18" fill="none"><path d="M6 1v16M1 12l5 5 5-5" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  ver todo
+  <span data-es="ver todo" data-en="scroll">ver todo</span>
 </div>
 
 <!-- ═══ PRÓXIMAS ACTIVIDADES ═══ -->
@@ -219,16 +220,16 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
   <div class="pa-card">
     <div class="pa-head">
       <div style="display:flex;align-items:center">
-        <span class="pa-title">Próximas Actividades</span>
+        <span class="pa-title" data-es="Próximas Actividades" data-en="Upcoming Activities">Próximas Actividades</span>
         <span class="pa-badge" id="pa-count" style="display:none"></span>
       </div>
-      <a href="/?mode=tasks" class="pa-ver">Ver todas →</a>
+      <a href="/?mode=tasks" class="pa-ver" data-es="Ver todas →" data-en="View all →">Ver todas →</a>
     </div>
     <div class="pa-body" id="pa-body">
       <div class="pa-empty" id="pa-loading">Cargando...</div>
     </div>
     <div class="pa-foot">
-      <a href="/?mode=tasks" class="pa-btn">Ver todo el calendario</a>
+      <a href="/?mode=tasks" class="pa-btn" data-es="Ver todo el calendario" data-en="View full calendar">Ver todo el calendario</a>
     </div>
   </div>
 </div>
@@ -240,16 +241,16 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
   <div class="sec" id="concierge">
     <div class="sec-meta">
       <div class="sec-n">01</div>
-      <div class="sec-name">Concierge &amp;<br>Operaciones</div>
+      <div class="sec-name" data-es="Concierge &amp;<br>Operaciones" data-en="Concierge &amp;<br>Operations">Concierge &amp;<br>Operaciones</div>
       <div class="sec-bar"></div>
     </div>
     <div class="grid">
-      <a href="/?mode=concierge" class="card d c-gold"><div class="chip">Principal</div><div class="cn">Clientes</div><div class="cd">Kickoffs, itinerarios, PDFs y catálogo de servicios</div></a>
-      <a href="/?mode=dashboard" class="card d c-gold"><div class="chip">Principal</div><div class="cn">Dashboard</div><div class="cd">Métricas y rendimiento del equipo</div></a>
-      <a href="/handoffs.html" class="card c-gold"><div class="chip">Operaciones</div><div class="cn">Handoffs</div><div class="cd">Servicios confirmados por trip</div></a>
-      <a href="/tasks.html" class="card c-gold"><div class="chip">Operaciones</div><div class="cn">Tareas</div><div class="cd">Seguimiento de tareas del equipo</div></a>
-      <a href="/accesos.html" class="card c-gold"><div class="chip">Acceso</div><div class="cn">Calendarios</div><div class="cd">Links de reservas por concierge</div></a>
-      <a href="/?mode=soporte" class="card c-gold"><div class="chip">Soporte</div><div class="cn">Soporte</div><div class="cd">Solicitudes internas del equipo</div></a>
+      <a href="/?mode=concierge" class="card d c-gold"><div class="chip" data-es="Principal" data-en="Main">Principal</div><div class="cn" data-es="Clientes" data-en="Clients">Clientes</div><div class="cd" data-es="Kickoffs, itinerarios, PDFs y catálogo de servicios" data-en="Kickoffs, itineraries, PDFs and service catalog">Kickoffs, itinerarios, PDFs y catálogo de servicios</div></a>
+      <a href="/?mode=dashboard" class="card d c-gold"><div class="chip" data-es="Principal" data-en="Main">Principal</div><div class="cn">Dashboard</div><div class="cd" data-es="Métricas y rendimiento del equipo" data-en="Team metrics and performance">Métricas y rendimiento del equipo</div></a>
+      <a href="/handoffs.html" class="card c-gold"><div class="chip" data-es="Operaciones" data-en="Operations">Operaciones</div><div class="cn">Handoffs</div><div class="cd" data-es="Servicios confirmados por trip" data-en="Confirmed services by trip">Servicios confirmados por trip</div></a>
+      <a href="/tasks.html" class="card c-gold"><div class="chip" data-es="Operaciones" data-en="Operations">Operaciones</div><div class="cn" data-es="Tareas" data-en="Tasks">Tareas</div><div class="cd" data-es="Seguimiento de tareas del equipo" data-en="Team task tracking">Seguimiento de tareas del equipo</div></a>
+      <a href="/accesos.html" class="card c-gold"><div class="chip" data-es="Acceso" data-en="Access">Acceso</div><div class="cn" data-es="Calendarios" data-en="Calendars">Calendarios</div><div class="cd" data-es="Links de reservas por concierge" data-en="Booking links by concierge">Links de reservas por concierge</div></a>
+      <a href="/?mode=soporte" class="card c-gold"><div class="chip" data-es="Soporte" data-en="Support">Soporte</div><div class="cn" data-es="Soporte" data-en="Support">Soporte</div><div class="cd" data-es="Solicitudes internas del equipo" data-en="Internal team requests">Solicitudes internas del equipo</div></a>
     </div>
   </div>
 
@@ -259,13 +260,13 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
   <div class="sec" id="finanzas">
     <div class="sec-meta">
       <div class="sec-n">02</div>
-      <div class="sec-name">Finanzas<br>&amp; Pagos</div>
+      <div class="sec-name" data-es="Finanzas<br>&amp; Pagos" data-en="Finance<br>&amp; Payments">Finanzas<br>&amp; Pagos</div>
       <div class="sec-bar"></div>
     </div>
     <div class="grid">
-      <a href="/?mode=pagos" class="card d c-green"><div class="chip">Principal</div><div class="cn">Pagos</div><div class="cd">Tablero · Colombia y México</div></a>
-      <a href="/comisiones.html" class="card c-green"><div class="chip">Control</div><div class="cn">Comisiones</div><div class="cd">Cobros pendientes, vencidos y pagados</div></a>
-      <a href="/guia-pagos-lyna.html" class="card c-green"><div class="chip">Docs</div><div class="cn">Guía pagos</div><div class="cd">Manual de uso del tablero</div></a>
+      <a href="/?mode=pagos" class="card d c-green"><div class="chip" data-es="Principal" data-en="Main">Principal</div><div class="cn" data-es="Pagos" data-en="Payments">Pagos</div><div class="cd" data-es="Tablero · Colombia y México" data-en="Dashboard · Colombia and Mexico">Tablero · Colombia y México</div></a>
+      <a href="/comisiones.html" class="card c-green"><div class="chip" data-es="Control" data-en="Control">Control</div><div class="cn" data-es="Comisiones" data-en="Commissions">Comisiones</div><div class="cd" data-es="Cobros pendientes, vencidos y pagados" data-en="Pending, overdue and paid charges">Cobros pendientes, vencidos y pagados</div></a>
+      <a href="/guia-pagos-lyna.html" class="card c-green"><div class="chip">Docs</div><div class="cn" data-es="Guía pagos" data-en="Payments guide">Guía pagos</div><div class="cd" data-es="Manual de uso del tablero" data-en="Dashboard user manual">Manual de uso del tablero</div></a>
     </div>
   </div>
 
@@ -275,14 +276,14 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
   <div class="sec" id="ventas">
     <div class="sec-meta">
       <div class="sec-n">03</div>
-      <div class="sec-name">Ventas &amp;<br>Portafolio</div>
+      <div class="sec-name" data-es="Ventas &amp;<br>Portafolio" data-en="Sales &amp;<br>Portfolio">Ventas &amp;<br>Portafolio</div>
       <div class="sec-bar"></div>
     </div>
     <div class="grid">
-      <a href="/agent.html" class="card d c-blue"><div class="chip">IA</div><div class="cn">Agente IA</div><div class="cd">Chatbot para calificar y atender leads</div></a>
-      <a href="/estimates.html" class="card d c-blue"><div class="chip">Ventas</div><div class="cn">Estimados</div><div class="cd">708 servicios · Tier 1 y Tier 2</div></a>
-      <a href="/admin.html" class="card c-blue"><div class="chip">Portafolio</div><div class="cn">Propiedades</div><div class="cd">Catálogo · Portfolio Manager</div></a>
-      <a href="/pricing.html" class="card c-blue"><div class="chip">Precios</div><div class="cn">Tablas de precios</div><div class="cd">Desayuno · Bebidas · Mercado</div></a>
+      <a href="/agent.html" class="card d c-blue"><div class="chip">IA</div><div class="cn" data-es="Agente IA" data-en="AI Agent">Agente IA</div><div class="cd" data-es="Chatbot para calificar y atender leads" data-en="Chatbot to qualify and handle leads">Chatbot para calificar y atender leads</div></a>
+      <a href="/estimates.html" class="card d c-blue"><div class="chip" data-es="Ventas" data-en="Sales">Ventas</div><div class="cn" data-es="Estimados" data-en="Estimates">Estimados</div><div class="cd" data-es="708 servicios · Tier 1 y Tier 2" data-en="708 services · Tier 1 and Tier 2">708 servicios · Tier 1 y Tier 2</div></a>
+      <a href="/admin.html" class="card c-blue"><div class="chip" data-es="Portafolio" data-en="Portfolio">Portafolio</div><div class="cn" data-es="Propiedades" data-en="Properties">Propiedades</div><div class="cd" data-es="Catálogo · Portfolio Manager" data-en="Catalog · Portfolio Manager">Catálogo · Portfolio Manager</div></a>
+      <a href="/pricing.html" class="card c-blue"><div class="chip" data-es="Precios" data-en="Pricing">Precios</div><div class="cn" data-es="Tablas de precios" data-en="Pricing tables">Tablas de precios</div><div class="cd" data-es="Desayuno · Bebidas · Mercado" data-en="Breakfast · Drinks · Market">Desayuno · Bebidas · Mercado</div></a>
     </div>
   </div>
 
@@ -292,12 +293,12 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
   <div class="sec" id="bodas">
     <div class="sec-meta">
       <div class="sec-n">04</div>
-      <div class="sec-name">Two Lovers<br>&amp; Bodas</div>
+      <div class="sec-name" data-es="Two Lovers<br>&amp; Bodas" data-en="Two Lovers<br>&amp; Weddings">Two Lovers<br>&amp; Bodas</div>
       <div class="sec-bar"></div>
     </div>
     <div class="grid">
-      <a href="/?mode=bodas" class="card d c-rose"><div class="chip">Principal</div><div class="cn">Bodas</div><div class="cd">Gestión de bodas, fases y clientes Two Lovers</div></a>
-      <a href="/?mode=tareas-bodas" class="card c-rose"><div class="chip">Operaciones</div><div class="cn">Tareas</div><div class="cd">Atrasadas, hoy y próximas del equipo</div></a>
+      <a href="/?mode=bodas" class="card d c-rose"><div class="chip" data-es="Principal" data-en="Main">Principal</div><div class="cn" data-es="Bodas" data-en="Weddings">Bodas</div><div class="cd" data-es="Gestión de bodas, fases y clientes Two Lovers" data-en="Wedding management, phases and Two Lovers clients">Gestión de bodas, fases y clientes Two Lovers</div></a>
+      <a href="/?mode=tareas-bodas" class="card c-rose"><div class="chip" data-es="Operaciones" data-en="Operations">Operaciones</div><div class="cn" data-es="Tareas" data-en="Tasks">Tareas</div><div class="cd" data-es="Atrasadas, hoy y próximas del equipo" data-en="Overdue, today and upcoming for the team">Atrasadas, hoy y próximas del equipo</div></a>
     </div>
   </div>
 
@@ -307,11 +308,11 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
   <div class="sec" id="marketing">
     <div class="sec-meta">
       <div class="sec-n">05</div>
-      <div class="sec-name">Marketing<br>&amp; Contenido</div>
+      <div class="sec-name" data-es="Marketing<br>&amp; Contenido" data-en="Marketing<br>&amp; Content">Marketing<br>&amp; Contenido</div>
       <div class="sec-bar"></div>
     </div>
     <div class="grid">
-      <a href="/marketing.html" class="card d c-violet"><div class="chip">Board</div><div class="cn">Marketing Board</div><div class="cd">Filmación · Comportamiento · Calendario · Métricas</div></a>
+      <a href="/marketing.html" class="card d c-violet"><div class="chip">Board</div><div class="cn">Marketing Board</div><div class="cd" data-es="Filmación · Comportamiento · Calendario · Métricas" data-en="Filming · Behavior · Calendar · Metrics">Filmación · Comportamiento · Calendario · Métricas</div></a>
     </div>
   </div>
 
@@ -321,24 +322,45 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
   <div class="sec" id="config">
     <div class="sec-meta">
       <div class="sec-n">06</div>
-      <div class="sec-name">Recursos<br>&amp; Config</div>
+      <div class="sec-name" data-es="Recursos<br>&amp; Config" data-en="Resources<br>&amp; Config">Recursos<br>&amp; Config</div>
       <div class="sec-bar"></div>
     </div>
     <div class="grid">
-      <a href="/guia-plataforma.html" class="card c-gray"><div class="chip">Docs</div><div class="cn">Guía de la plataforma</div><div class="cd">Manual de uso completo</div></a>
-      <a href="/?mode=users" class="card c-gray"><div class="chip">Admin</div><div class="cn">Usuarios</div><div class="cd">Accesos y permisos del equipo</div></a>
+      <a href="/guia-plataforma.html" class="card c-gray"><div class="chip">Docs</div><div class="cn" data-es="Guía de la plataforma" data-en="Platform guide">Guía de la plataforma</div><div class="cd" data-es="Manual de uso completo" data-en="Full user manual">Manual de uso completo</div></a>
+      <a href="/?mode=users" class="card c-gray"><div class="chip">Admin</div><div class="cn" data-es="Usuarios" data-en="Users">Usuarios</div><div class="cd" data-es="Accesos y permisos del equipo" data-en="Team access and permissions">Accesos y permisos del equipo</div></a>
     </div>
   </div>
 
 </div>
 
 <script>
-const d = new Date();
-const fmt = {weekday:'long',day:'numeric',month:'long',year:'numeric'};
-const s = d.toLocaleDateString('es-CO', fmt);
-document.getElementById('dt').textContent = s.toUpperCase();
-const el2 = document.getElementById('dt2');
-if (el2) el2.textContent = s;
+// ── i18n ──────────────────────────────────────────────────────────────────────
+let _lang = (() => { try { return localStorage.getItem('tt_menu_lang') || 'es'; } catch(_) { return 'es'; } })();
+
+function applyLang(lang) {
+  _lang = lang;
+  try { localStorage.setItem('tt_menu_lang', lang); } catch(_) {}
+
+  document.querySelectorAll('[data-es][data-en]').forEach(el => {
+    const val = lang === 'en' ? el.dataset.en : el.dataset.es;
+    if (el.dataset.es.includes('<br>')) el.innerHTML = val;
+    else el.textContent = val;
+  });
+
+  const btn = document.getElementById('lang-btn');
+  if (btn) { btn.textContent = lang === 'en' ? 'EN' : 'ES'; }
+
+  const d = new Date();
+  const fmt = {weekday:'long',day:'numeric',month:'long',year:'numeric'};
+  const locale = lang === 'en' ? 'en-US' : 'es-CO';
+  const s = d.toLocaleDateString(locale, fmt);
+  const dtEl = document.getElementById('dt');
+  if (dtEl) dtEl.textContent = s.toUpperCase();
+}
+
+function toggleLang() { applyLang(_lang === 'es' ? 'en' : 'es'); }
+
+applyLang(_lang);
 
 // Hide scroll cue after user scrolls
 window.addEventListener('scroll', () => {
@@ -382,12 +404,12 @@ window.addEventListener('scroll', () => {
 
   const total = atrasadas.length + hoy.length + proximas.length;
   if (total === 0) {
-    body.innerHTML = '<div class="pa-empty">Sin tareas pendientes 🎉</div>';
+    body.innerHTML = `<div class="pa-empty">${_lang==='en'?'No pending tasks 🎉':'Sin tareas pendientes 🎉'}</div>`;
     return;
   }
   countEl.textContent = total; countEl.style.display = '';
 
-  const fmtD = d => new Date(d+'T12:00:00').toLocaleDateString('es-CO',{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
+  const fmtD = d => new Date(d+'T12:00:00').toLocaleDateString(_lang==='en'?'en-US':'es-CO',{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
 
   const renderTask = (t, cls) => {
     const isUrgent = cls === 'late' || t.priority === 'alta';
@@ -398,24 +420,28 @@ window.addEventListener('scroll', () => {
           ${t.dueDate ? `<div class="pa-date ${cls}">${fmtD(t.dueDate)}</div>` : ''}
           <div class="pa-row">
             <span class="pa-name">${t.taskName || ''}</span>
-            ${isUrgent ? '<span class="pa-badge-imp">IMPORTANTE</span>' : ''}
+            ${isUrgent ? `<span class="pa-badge-imp">${_lang==='en'?'URGENT':'IMPORTANTE'}</span>` : ''}
           </div>
           ${t.kickoffName ? `<div class="pa-sub">${t.kickoffName}</div>` : ''}
         </div>
       </div>`;
   };
 
+  const L = _lang === 'en'
+    ? { late:'Overdue', today:'Today', next:'Upcoming' }
+    : { late:'Atrasadas', today:'Hoy', next:'Próximas' };
+
   let html = '';
   if (atrasadas.length) {
-    html += `<div class="pa-group-label late">Atrasadas · ${atrasadas.length}</div>`;
+    html += `<div class="pa-group-label late">${L.late} · ${atrasadas.length}</div>`;
     html += atrasadas.map(t => renderTask(t,'late')).join('');
   }
   if (hoy.length) {
-    html += `<div class="pa-group-label today">Hoy · ${hoy.length}</div>`;
+    html += `<div class="pa-group-label today">${L.today} · ${hoy.length}</div>`;
     html += hoy.map(t => renderTask(t,'today')).join('');
   }
   if (proximas.length) {
-    html += `<div class="pa-group-label next">Próximas · ${proximas.length}</div>`;
+    html += `<div class="pa-group-label next">${L.next} · ${proximas.length}</div>`;
     html += proximas.slice(0,6).map(t => renderTask(t,'next')).join('');
   }
   body.innerHTML = html;
