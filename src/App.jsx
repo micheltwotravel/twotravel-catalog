@@ -3757,7 +3757,7 @@ function TaskTracker({ currentUser }) {
                 <TTaskGroup emoji="🔴" label="Atrasadas" tasks={atrasadas} onUpdate={updateTask} now={now} tmr={tmr}/>
                 <TTaskGroup emoji="🔥" label="Hoy" tasks={hoy} onUpdate={updateTask} now={now} tmr={tmr}/>
                 <TTaskGroup emoji="📅" label="Próximas 7 días" tasks={proximas} onUpdate={updateTask} now={now} tmr={tmr}/>
-                <TTaskGroup emoji="📋" label="Backlog" tasks={tasks.filter(t=>{
+                <TTaskGroup emoji="📋" label="Backlog" tasks={visible.filter(t=>{
                   const nm = normStatus(t.status);
                   if(isDone(nm)) return false;
                   if(nm==="backlog"||nm==="pendiente") return !atrasadas.includes(t)&&!hoy.includes(t)&&!proximas.includes(t);
