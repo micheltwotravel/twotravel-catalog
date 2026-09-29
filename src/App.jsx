@@ -6280,14 +6280,15 @@ function UserManagement({ currentUser, onBack }) {
       if (attempt < 4) await new Promise(r => setTimeout(r, 3000));
     }
     if (!d) { alert("No se pudo conectar con GAS después de 4 intentos. Intenta de nuevo en unos segundos."); setMigrating(false); return; }
-    let ok = 0;
+    let ok = 0; let firstErr = null;
     for (const u of d.data) {
       if (!u.email) continue;
       const { error } = await supabase.from("panel_users").upsert({ email: u.email.toLowerCase(), data: { name: u.name||"", pin: u.pin||"", role: u.role||"concierge", active: u.active??"true" } });
-      if (!error) ok++;
+      if (!error) ok++; else if (!firstErr) firstErr = error;
     }
     await load();
-    alert(`✅ ${ok} de ${d.data.length} usuarios guardados en Supabase`);
+    if (firstErr) alert(`⚠️ ${ok}/${d.data.length} guardados. Error: ${firstErr.message} (code: ${firstErr.code})`);
+    else alert(`✅ ${ok} de ${d.data.length} usuarios guardados en Supabase`);
     setMigrating(false);
   };
 
