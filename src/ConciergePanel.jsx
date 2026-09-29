@@ -2244,8 +2244,11 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
     const arrDate = kickoff?.arrivalDate;
     if (!arrDate) { alert("Necesitas configurar la fecha de llegada primero."); return; }
     autoFillDayTitles();
-    // After dates are filled, wait a tick then add presets on the right days
-    setTimeout(() => {
+    // Ensure the "no-catalog" itinerary items are loaded before applying presets so
+    // check-in/check-out descriptions from that sheet are used instead of the fallback.
+    const _applyPresets = (loadedItems) => {
+      if (loadedItems?.length) allItineraryItemsRef.current = loadedItems;
+      setTimeout(() => {
       setDayMeta(currentMeta => {
         const firstLabel = currentMeta[0]?.label;
         const lastLabel  = currentMeta[currentMeta.length - 1]?.label;
@@ -2306,7 +2309,14 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         }
         return currentMeta;
       });
-    }, 50);
+      }, 50);
+    };
+    // If items are already loaded, run immediately; otherwise fetch then run.
+    if (allItineraryItemsRef.current.length) {
+      _applyPresets(null);
+    } else {
+      fetchItineraryItems().then(_applyPresets).catch(() => _applyPresets(null));
+    }
   };
 
   const removeDay = (label) => {

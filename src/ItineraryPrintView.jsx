@@ -1591,7 +1591,12 @@ function WelcomePage({ kickoff, lang, page, total, editMode, localPreTrip, setLo
 function BoatDetailCard({ it, lang, editMode, onRemove, patchItem }) {
   const isEs = lang === "es";
   const bd = it._boatData || {};
-  const { title: boatTitle, departureTime, description, bullets, note, photos, addons } = bd;
+  const { title: boatTitle, departureTime, description, bullets, note, photos: bdPhotos, addons } = bd;
+  // Fall back to catalog/cart service images when no explicit boatPhotos are set
+  const photos = bdPhotos?.length ? bdPhotos : [
+    ...(Array.isArray(it.serviceImages) ? it.serviceImages : []),
+    ...(Array.isArray(it.cartImages)    ? it.cartImages    : []),
+  ].filter(Boolean);
   const displayNote = it.notes || note;
   const boatName = it.location || "";
   const dock = it.description || "";
@@ -1822,8 +1827,12 @@ function ChefMenuGroupCard({ it, lang, editMode, onRemove, patchItem }) {
 // Works for chef menus, boat food options, water activities menus, etc.
 // Only applied in view/print mode — edit mode shows them individually.
 function groupChefMenuItems(items) {
-  // Any item with a menuUrl and a " - " variant suffix is groupable
-  const isMenuGroup = it => !!it.menuUrl && (it.title || "").includes(" - ");
+  // Items are groupable if they share a "Base - Variant" title pattern AND are chef
+  // category (even without menuUrl) OR have a menuUrl. This covers catalog chef menus
+  // that don't yet have a menu_url column filled in.
+  const isMenuGroup = it =>
+    (it.title || "").includes(" - ") &&
+    (it.category === "chef" || !!it.menuUrl);
   const baseName = title => {
     const d = (title || "").lastIndexOf(" - ");
     return d > 0 ? title.slice(0, d).trim() : title;
@@ -3202,9 +3211,10 @@ export default function ItineraryPrintView() {
               style={{ ...ctrl, background: saving ? "rgba(255,255,255,.2)" : "#22c55e", color: "#fff", border: "none", fontWeight: 700, opacity: saving ? .7 : 1 }}>
               {saving ? "Guardando…" : "💾 Guardar"}
             </button>
-            <button onClick={() => setEditMode(false)}
-              style={{ ...ctrl, background: "rgba(255,255,255,.15)", color: "#fff", border: "1px solid rgba(255,255,255,.35)" }}>
-              ✓ Done
+            <button onClick={async () => { await saveSnapshot(); setEditMode(false); }}
+              disabled={saving}
+              style={{ ...ctrl, background: "rgba(255,255,255,.15)", color: "#fff", border: "1px solid rgba(255,255,255,.35)", opacity: saving ? .7 : 1 }}>
+              ✓ Guardar y Cerrar
             </button>
             <button onClick={() => window.print()}
               style={{ ...ctrl, background: "#fff", color: "#1d4ed8", border: "none", fontWeight: 700 }}>
