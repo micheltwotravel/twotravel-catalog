@@ -8188,7 +8188,7 @@ const loadKickoffs = async () => {
     <div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",flexDirection:"column"}}>
       <header className="tt-topbar">
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Concierge Panel</span>
+          <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Compass</span>
           <span style={{fontSize:11,color:"var(--text-3)",fontWeight:400}}>{filteredKickoffs.length} clientes</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6}}>

@@ -3346,11 +3346,13 @@ function TaskTracker({ currentUser }) {
   const tmr = new Date(now); tmr.setDate(tmr.getDate()+1);
   const nxt7 = new Date(now); nxt7.setDate(nxt7.getDate()+7);
 
-  const pendingTasks = tasks.filter(t=>!isDone(t.status));
+  const pendingTasks = tasks.filter(t=>!isDone(t.status)&&!isBodaTask(t));
   const visible = tasks.filter(t=>{
     if (filterArea!=="all") {
       if (isBodaTask(t)) { if (filterArea!=="bodas") return false; }
       else { if (t.area!==filterArea) return false; }
+    } else {
+      if (isBodaTask(t)) return false; // bodas have their own panel
     }
     if (filterPerson!=="all"&&t.assignedTo!==filterPerson) return false;
     if (filterKickoff!=="all"&&(t.kickoffName||t.kickoffId)!==filterKickoff) return false;
@@ -3361,10 +3363,12 @@ function TaskTracker({ currentUser }) {
   const proximas   = visible.filter(t=>!isDone(t.status)&&(!t.dueDate||new Date(t.dueDate)>=tmr));
   const terminadas = visible.filter(t=>isDone(t.status));
 
+  const pendingBodas = tasks.filter(t=>!isDone(t.status)&&isBodaTask(t));
+
   // Dashboard stats — respect filterArea so area chips filter the dashboard
   const dashBase = filterArea==="all" ? pendingTasks
-    : filterArea==="bodas" ? pendingTasks.filter(isBodaTask)
-    : pendingTasks.filter(t=>!isBodaTask(t)&&t.area===filterArea);
+    : filterArea==="bodas" ? pendingBodas
+    : pendingTasks.filter(t=>t.area===filterArea);
   const allAtrasadas  = dashBase.filter(t=>t.dueDate&&new Date(t.dueDate)<now);
   const allHoy        = dashBase.filter(t=>t.dueDate&&new Date(t.dueDate)>=now&&new Date(t.dueDate)<tmr);
   const allSemana     = dashBase.filter(t=>t.dueDate&&new Date(t.dueDate)>=now&&new Date(t.dueDate)<nxt7);
@@ -3708,8 +3712,8 @@ function TaskTracker({ currentUser }) {
                   {[{key:"all",label:"Todos",color:"#111"}, ...TEAM_AREAS].map(area => {
                     const active = filterArea === area.key;
                     const cnt = area.key==="all" ? pendingTasks.length
-                      : area.key==="bodas" ? pendingTasks.filter(isBodaTask).length
-                      : pendingTasks.filter(t=>!isBodaTask(t)&&t.area===area.key).length;
+                      : area.key==="bodas" ? pendingBodas.length
+                      : pendingTasks.filter(t=>t.area===area.key).length;
                     return (
                       <button key={area.key} onClick={()=>{ setFilterArea(area.key); setFilterPerson("all"); setFilterKickoff("all"); }}
                         style={{display:"flex",alignItems:"center",gap:5,fontSize:12,fontWeight:600,
