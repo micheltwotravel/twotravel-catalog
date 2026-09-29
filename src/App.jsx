@@ -5951,19 +5951,27 @@ function useAuth() {
 
   const login = async (email, pin) => {
     const normalEmail = email.toLowerCase().trim();
-    const { data, error } = await supabase
-      .from("panel_users")
-      .select("email, data")
-      .eq("email", normalEmail)
-      .single();
-    if (error || !data) return { ok: false, error: "Credenciales incorrectas" };
-    const ud = data.data || {};
-    if (String(ud.pin) !== String(pin)) return { ok: false, error: "Credenciales incorrectas" };
-    if (ud.active === "false" || ud.active === false) return { ok: false, error: "Cuenta inactiva. Contacta a un administrador." };
-    const u = { email: normalEmail, name: ud.name || "", role: ud.role || "concierge", exp: Date.now() + 30 * 24 * 3600_000 };
-    localStorage.setItem("tt_auth2", JSON.stringify(u));
-    setUser(u);
-    return { ok: true };
+    // Try Supabase first
+    const { data, error } = await supabase.from("panel_users").select("email, data").eq("email", normalEmail).single();
+    if (!error && data) {
+      const ud = data.data || {};
+      if (String(ud.pin) !== String(pin)) return { ok: false, error: "Credenciales incorrectas" };
+      if (ud.active === "false" || ud.active === false) return { ok: false, error: "Cuenta inactiva. Contacta a un administrador." };
+      const u = { email: normalEmail, name: ud.name || "", role: ud.role || "concierge", exp: Date.now() + 30 * 24 * 3600_000 };
+      localStorage.setItem("tt_auth2", JSON.stringify(u));
+      setUser(u);
+      return { ok: true };
+    }
+    // Fallback to GAS during migration period
+    try {
+      const res = await fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify({ action:"loginUser", payload:{ email: normalEmail, pin } }) });
+      const gd = await res.json();
+      if (!gd.ok) return { ok: false, error: gd.error || "Credenciales incorrectas" };
+      const u = { ...gd.user, exp: Date.now() + 30 * 24 * 3600_000 };
+      localStorage.setItem("tt_auth2", JSON.stringify(u));
+      setUser(u);
+      return { ok: true };
+    } catch { return { ok: false, error: "Credenciales incorrectas" }; }
   };
 
   const logout = () => { localStorage.removeItem("tt_auth2"); setUser(null); };
@@ -6242,6 +6250,7 @@ function UserManagement({ currentUser, onBack }) {
   const [showAdd, setShowAdd] = useState(false);
   const [newUser, setNewUser] = useState({ email:"", name:"", pin:"", role:"concierge" });
   const [addError, setAddError] = useState("");
+  const [migrating, setMigrating] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -6250,6 +6259,23 @@ function UserManagement({ currentUser, onBack }) {
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
+
+  const migrateFromGAS = async () => {
+    if (!window.confirm("¿Migrar todos los usuarios de GAS a Supabase? (no borra los existentes)")) return;
+    setMigrating(true);
+    try {
+      const res = await fetch(import.meta.env.VITE_GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify({ action:"listUsers", payload:{ adminEmail: currentUser.email } }) });
+      const d = await res.json();
+      if (!d.ok || !Array.isArray(d.data)) { alert("Error al obtener usuarios de GAS: " + (d.error||"respuesta inválida")); setMigrating(false); return; }
+      for (const u of d.data) {
+        if (!u.email) continue;
+        await supabase.from("panel_users").upsert({ email: u.email.toLowerCase(), data: { name: u.name||"", pin: u.pin||"", role: u.role||"concierge", active: u.active??"true" } });
+      }
+      await load();
+      alert(`✅ ${d.data.length} usuarios migrados a Supabase`);
+    } catch(e) { alert("Error: " + e.message); }
+    setMigrating(false);
+  };
 
   const update = async (email, field, value) => {
     setSaving(s => ({ ...s, [email+field]: true }));
@@ -6276,10 +6302,16 @@ function UserManagement({ currentUser, onBack }) {
           <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:"#6b7280"}}>← Volver</button>
           <span style={{fontSize:14,fontWeight:600,color:"#111"}}>Gestión de usuarios</span>
         </div>
-        <button onClick={() => setShowAdd(v => !v)}
-          style={{background:"#111",color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,cursor:"pointer",fontWeight:500}}>
-          + Agregar usuario
-        </button>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={migrateFromGAS} disabled={migrating}
+            style={{background:"#059669",color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,cursor:migrating?"wait":"pointer",fontWeight:500,opacity:migrating?0.6:1}}>
+            {migrating ? "Migrando…" : "⬇ Importar desde GAS"}
+          </button>
+          <button onClick={() => setShowAdd(v => !v)}
+            style={{background:"#111",color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,cursor:"pointer",fontWeight:500}}>
+            + Agregar usuario
+          </button>
+        </div>
       </div>
 
       <div style={{maxWidth:900,margin:"24px auto",padding:"0 24px"}}>
