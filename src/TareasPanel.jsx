@@ -386,7 +386,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
         .select("*")
         .order("created_at", { ascending: false });
       if (err) throw err;
-      const all = (data || []).map(flatRow);
+      const all = (data || []).filter(r=>r.id!=="__boda_template__").map(flatRow);
       setTasks(all);
       setUsers(BODAS_USERS);
       // derive bodas client names from tasks

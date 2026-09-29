@@ -3268,7 +3268,7 @@ function TaskTracker({ currentUser }) {
     if (tasksRes.error) setLoadError(tasksRes.error.message);
     else {
       const BODAS_FASES = new Set(["Onboarding","Planning","Pre-Wedding","Wedding Day","Post-Wedding"]);
-      setTasks((tasksRes.data||[]).map(r=>{
+      setTasks((tasksRes.data||[]).filter(r=>r.id!=="__boda_template__").map(r=>{
         const d = { id:r.id, ...(r.data||{}) };
         // bodas-source always wins regardless of stored area
         if (d.source==="bodas" || BODAS_FASES.has(d.fase)) {

@@ -2218,6 +2218,11 @@ export default function BodaPanel({ currentUser, onLogout }) {
   const [search,       setSearch]       = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [mainView,     setMainView]     = useState("dashboard");
+  const [showTemplate, setShowTemplate] = useState(false);
+  const [templateTasks, setTemplateTasks] = useState(
+    TMPL.map(t=>({taskName:t.taskName,fase:t.phase||t.fase||"Onboarding",assignedTo:t.assignedTo||"",mode:t.mode||"kickoff",offsetDays:t.offset??t.offsetDays??0,priority:t.priority||"media",notes:t.notes||""}))
+  );
+  const [templateSaving, setTemplateSaving] = useState(false);
 
   // Load users from GAS in background — never blocks bodas from showing.
   const loadUsers = useCallback(() => {
@@ -2263,12 +2268,58 @@ export default function BodaPanel({ currentUser, onLogout }) {
     try{ const list=await apiBodas(); setBodas(list); if(selected)setSelected(list.find(b=>b.id===selected.id)||null); }catch{}
   },[selected]);
 
+  const loadTemplate = async () => {
+    try {
+      const { data } = await supabase.from("tasks").select("data").eq("id","__boda_template__").single();
+      if (data?.data?.templateTasks?.length) setTemplateTasks(data.data.templateTasks);
+    } catch {}
+  };
+
+  const saveTemplate = async () => {
+    setTemplateSaving(true);
+    try {
+      await supabase.from("tasks").upsert({ id:"__boda_template__", data:{ isTemplate:true, templateTasks } });
+      setShowTemplate(false);
+    } catch(e) { alert("Error guardando plantilla: "+e.message); }
+    setTemplateSaving(false);
+  };
+
   const handleCreate=async(form)=>{
     setSaving(true);
     try{
-      const tasks=TMPL.map(t=>({id:uid(),taskName:t.taskName,phase:t.phase,assignedTo:form.responsable||"",dueDate:calcDate(t.mode,t.offset,form.weddingDate),status:"Pendiente",notes:""}));
+      // Load latest template from Supabase (fall back to local state)
+      let tmpl = templateTasks;
+      try {
+        const { data:tr } = await supabase.from("tasks").select("data").eq("id","__boda_template__").single();
+        if (tr?.data?.templateTasks?.length) tmpl = tr.data.templateTasks;
+      } catch {}
+
       const id=await apiSaveBoda(form);
-      await apiSaveNotes(id,{tasks,suppliers:[],songs:[],photos:[],calls:[]});
+
+      // Insert template tasks into Supabase tasks table
+      if (tmpl.length > 0) {
+        const rows = tmpl.map(t=>({
+          id: "boda_"+Date.now()+"_"+Math.random().toString(36).slice(2,6),
+          data: {
+            taskName: t.taskName,
+            fase: t.fase||"Onboarding",
+            assignedTo: t.assignedTo||form.responsable||"Alexandra",
+            dueDate: calcDate(t.mode, t.offsetDays??t.offset??0, form.weddingDate),
+            status: "pendiente",
+            priority: t.priority||"media",
+            notes: t.notes||"",
+            kickoffId: id,
+            kickoffName: form.clienteName,
+            source: "bodas",
+            createdAt: new Date().toISOString(),
+          }
+        }));
+        await supabase.from("tasks").insert(rows);
+      }
+
+      // Old format for BodaDetail internal task list
+      const oldTasks=tmpl.map(t=>({id:uid(),taskName:t.taskName,phase:t.fase||t.phase||"Onboarding",assignedTo:t.assignedTo||form.responsable||"",dueDate:calcDate(t.mode,t.offsetDays??t.offset??0,form.weddingDate),status:"Pendiente",notes:t.notes||""}));
+      await apiSaveNotes(id,{tasks:oldTasks,suppliers:[],songs:[],photos:[],calls:[]});
       setShowNew(false); await load();
     }catch(e){alert("Error al crear: "+e.message);}
     setSaving(false);
@@ -2332,6 +2383,8 @@ export default function BodaPanel({ currentUser, onLogout }) {
             </button>
           ))}
           <div style={{flex:1}} />
+          <button onClick={()=>{loadTemplate();setShowTemplate(true);}}
+            style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:10,padding:"7px 14px",fontSize:11,fontWeight:500,cursor:"pointer",flexShrink:0,fontFamily:"'Jost',sans-serif",marginBottom:2,letterSpacing:".03em",marginRight:8}}>✏️ Tareas automáticas</button>
           <button onClick={()=>setShowNew(v=>!v)} style={{background:`linear-gradient(135deg,${R.accent},${R.mid})`,color:"#fff",border:"none",borderRadius:10,padding:"8px 20px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"'Jost',sans-serif",marginBottom:2,letterSpacing:".03em",boxShadow:"0 2px 12px rgba(190,18,60,.3)"}}>+ Nueva boda</button>
         </div>
 
@@ -2446,6 +2499,74 @@ export default function BodaPanel({ currentUser, onLogout }) {
           </div>
         ))}
       </div>
+
+      {/* ── Template modal ── */}
+      {showTemplate&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(26,8,18,.6)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+          onClick={()=>setShowTemplate(false)}>
+          <div style={{background:"#fff",borderRadius:20,width:"100%",maxWidth:620,maxHeight:"85vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,.3)"}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{background:`linear-gradient(135deg,${R.dark},${R.mid})`,padding:"16px 20px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div>
+                <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,color:"#fff",margin:0,fontStyle:"italic"}}>Tareas automáticas</p>
+                <p style={{fontSize:10,color:R.gold,margin:"2px 0 0",letterSpacing:".08em",textTransform:"uppercase"}}>Se crean al crear una nueva boda</p>
+              </div>
+              <button onClick={()=>setShowTemplate(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,.5)",fontSize:20,cursor:"pointer",lineHeight:1}}>✕</button>
+            </div>
+            <div style={{height:3,background:`linear-gradient(90deg,transparent,${R.gold},transparent)`}}/>
+            <div style={{overflowY:"auto",flex:1,padding:"16px 20px",display:"flex",flexDirection:"column",gap:8}}>
+              {templateTasks.map((t,i)=>(
+                <div key={i} style={{background:"#fdf6f8",border:`1px solid ${R.border}`,borderRadius:12,padding:"10px 12px",display:"flex",flexDirection:"column",gap:6}}>
+                  <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                    <input value={t.taskName} onChange={e=>setTemplateTasks(p=>p.map((x,j)=>j===i?{...x,taskName:e.target.value}:x))}
+                      placeholder="Nombre de la tarea" style={{flex:1,border:"1px solid #e8c0ca",borderRadius:8,padding:"6px 10px",fontSize:12.5,fontFamily:"'Jost',sans-serif",background:"#fff"}}/>
+                    <button onClick={()=>setTemplateTasks(p=>p.filter((_,j)=>j!==i))}
+                      style={{background:"none",border:"none",color:"#dc2626",cursor:"pointer",fontSize:16,flexShrink:0,lineHeight:1,padding:"4px"}}>✕</button>
+                  </div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    <select value={t.fase} onChange={e=>setTemplateTasks(p=>p.map((x,j)=>j===i?{...x,fase:e.target.value}:x))}
+                      style={{fontSize:11,border:"1px solid #e8c0ca",borderRadius:7,padding:"4px 8px",fontFamily:"'Jost',sans-serif",background:"#fff",color:R.text2}}>
+                      {["Onboarding","Planning","Pre-Wedding","Wedding Day","Post-Wedding"].map(f=><option key={f}>{f}</option>)}
+                    </select>
+                    <select value={t.mode} onChange={e=>setTemplateTasks(p=>p.map((x,j)=>j===i?{...x,mode:e.target.value}:x))}
+                      style={{fontSize:11,border:"1px solid #e8c0ca",borderRadius:7,padding:"4px 8px",fontFamily:"'Jost',sans-serif",background:"#fff",color:R.text2}}>
+                      <option value="kickoff">Días desde kickoff</option>
+                      <option value="wedding_minus">Días antes de boda</option>
+                      <option value="wedding">Día de la boda</option>
+                      <option value="wedding_plus">Días después de boda</option>
+                    </select>
+                    {t.mode!=="wedding"&&(
+                      <input type="number" min={0} value={t.offsetDays??0} onChange={e=>setTemplateTasks(p=>p.map((x,j)=>j===i?{...x,offsetDays:Number(e.target.value)}:x))}
+                        style={{width:54,fontSize:11,border:"1px solid #e8c0ca",borderRadius:7,padding:"4px 8px",fontFamily:"'Jost',sans-serif",background:"#fff",textAlign:"center"}}/>
+                    )}
+                    <input value={t.assignedTo} onChange={e=>setTemplateTasks(p=>p.map((x,j)=>j===i?{...x,assignedTo:e.target.value}:x))}
+                      placeholder="Asignada (vacío = responsable)" style={{flex:1,minWidth:120,fontSize:11,border:"1px solid #e8c0ca",borderRadius:7,padding:"4px 8px",fontFamily:"'Jost',sans-serif",background:"#fff"}}/>
+                    <select value={t.priority||"media"} onChange={e=>setTemplateTasks(p=>p.map((x,j)=>j===i?{...x,priority:e.target.value}:x))}
+                      style={{fontSize:11,border:"1px solid #e8c0ca",borderRadius:7,padding:"4px 8px",fontFamily:"'Jost',sans-serif",background:"#fff",color:R.text2}}>
+                      <option value="urgente">🔴 Urgente</option>
+                      <option value="alta">🟠 Alta</option>
+                      <option value="media">🟡 Media</option>
+                      <option value="baja">⚪ Baja</option>
+                    </select>
+                  </div>
+                </div>
+              ))}
+              <button onClick={()=>setTemplateTasks(p=>[...p,{taskName:"",fase:"Onboarding",assignedTo:"",mode:"kickoff",offsetDays:0,priority:"media",notes:""}])}
+                style={{background:"transparent",border:`1px dashed ${R.border}`,borderRadius:12,padding:"10px",fontSize:12,color:R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif",textAlign:"center"}}>
+                + Agregar tarea
+              </button>
+            </div>
+            <div style={{borderTop:`1px solid ${R.border}`,padding:"12px 20px",display:"flex",gap:10,justifyContent:"flex-end",background:"#fdf6f8"}}>
+              <button onClick={()=>setShowTemplate(false)}
+                style={{background:"transparent",border:`1px solid ${R.border}`,borderRadius:10,padding:"8px 20px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",color:R.muted}}>Cancelar</button>
+              <button onClick={saveTemplate} disabled={templateSaving}
+                style={{background:`linear-gradient(135deg,${R.accent},${R.mid})`,color:"#fff",border:"none",borderRadius:10,padding:"8px 24px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Jost',sans-serif",opacity:templateSaving?.6:1}}>
+                {templateSaving?"Guardando...":"Guardar plantilla"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
