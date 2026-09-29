@@ -3149,40 +3149,26 @@ function exportKpiCsv(kickoffs, period = "all", conciergeFilter = "all", kpiType
 
 /* ════════════════════════════════════════════════════════
    TASK TRACKER  (?mode=tasks)
-   Tasks live in a "Tasks" sheet tab, managed via GAS.
+   Tasks stored in Supabase `tasks` table.
 ════════════════════════════════════════════════════════ */
-const TASK_API = import.meta.env.VITE_GAS_URL;
-
-const TASK_STATUS = {
-  pending:     { label: "Pendiente",   cls: "bg-amber-100 text-amber-700" },
-  in_progress: { label: "En progreso", cls: "bg-blue-100 text-blue-700" },
-  blocked:     { label: "Bloqueado",   cls: "bg-orange-100 text-orange-700" },
-  completed:   { label: "Completado",  cls: "bg-emerald-100 text-emerald-700" },
-  late:        { label: "Vencida",     cls: "bg-red-100 text-red-700" },
-};
-const TASK_PRIORITY = {
-  alta:  { label: "🔴 Alta",  cls: "text-red-600 bg-red-50 border-red-200" },
-  media: { label: "🟡 Media", cls: "text-amber-600 bg-amber-50 border-amber-200" },
-  baja:  { label: "⚪ Baja",  cls: "text-stone-500 bg-stone-50 border-stone-200" },
+const TASK_AVATAR_COLORS = ["#374151","#DC2626","#2563EB","#D97706","#059669","#7C3AED"];
+const taskInitials = name => (name||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+const taskAvatarColor = name => {
+  const i = CONCIERGE_NAMES.indexOf(name);
+  return i >= 0 ? TASK_AVATAR_COLORS[i % TASK_AVATAR_COLORS.length] : "#374151";
 };
 
 function TaskTracker() {
-  const [tasks, setTasks]       = useState([]);
+  const [tasks,    setTasks]    = useState([]);
   const [kickoffs, setKickoffs] = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [loading,  setLoading]  = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving]     = useState(false);
-  const [view, setView]         = useState("board"); // "board" | "table" | "calendar" | "cards"
-  const [filterUser, setFilterUser]         = useState("all");
-  const [filterStatus, setFilterStatus]     = useState("all");
-  const [filterKickoff, setFilterKickoff]   = useState("all");
-  const [filterPriority, setFilterPriority] = useState("all");
-  const [searchName, setSearchName]         = useState("");
-  const [showCompleted, setShowCompleted]   = useState(false);
-  const [loadError, setLoadError]           = useState("");
-  // Calendar state (must be at component level — hooks can't be inside render)
-  const [calYear,  setCalYear]  = useState(new Date().getFullYear());
-  const [calMonth, setCalMonth] = useState(new Date().getMonth());
+  const [saving,   setSaving]   = useState(false);
+  const [filterPerson, setFilterPerson] = useState("all");
+  const [showDone,  setShowDone]  = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [migrating, setMigrating] = useState(false);
+  const [migrateMsg, setMigrateMsg] = useState("");
   const [form, setForm] = useState({
     taskName:"", assignedTo:"", assignedEmail:"", dueDate:"",
     notes:"", kickoffId:"", kickoffName:"", priority:"media", imageUrl:"",
@@ -3191,214 +3177,190 @@ function TaskTracker() {
 
   const load = async () => {
     setLoading(true); setLoadError("");
-    try {
-      const res  = await fetch(`${TASK_API}?action=listTasks`);
-      const text = await res.text();
-      let json = {};
-      try { json = JSON.parse(text); } catch {
-        setLoadError("Respuesta inválida: " + text?.slice(0, 200));
-        setLoading(false); return;
-      }
-      if (json?.ok === false) { setLoadError("Error: " + (json.error||"desconocido")); setLoading(false); return; }
-      const now2 = new Date(); now2.setHours(0,0,0,0);
-      const loaded = (Array.isArray(json.data) ? json.data : []).map(t => ({
-        ...t,
-        status: t.status === "completed"  ? "completed"
-              : t.status === "in_progress" ? "in_progress"
-              : t.status === "blocked"     ? "blocked"
-              : (t.dueDate && new Date(t.dueDate) < now2) ? "late"
-              : t.status || "pending",
-      }));
-      setTasks(loaded);
-    } catch(err) { setLoadError("No se pudo conectar al script: " + err.message); }
+    const { data, error } = await supabase.from("tasks").select("*").order("created_at", { ascending: false });
+    if (error) { setLoadError(error.message); setLoading(false); return; }
+    setTasks((data||[]).map(row => ({ id: row.id, ...(row.data||{}) })));
     setLoading(false);
   };
 
   useEffect(() => {
     load();
     fetchKickoffsFromSheet()
-      .then(data => setKickoffs(
-        (Array.isArray(data) ? data : [])
-          .filter(k => k.status !== "done" && k.status !== "cerrado")
-          .sort((a,b) => (a.guestName||"").localeCompare(b.guestName||""))
+      .then(d => setKickoffs(
+        (Array.isArray(d)?d:[]).filter(k=>k.status!=="done"&&k.status!=="cerrado")
+          .sort((a,b)=>(a.guestName||"").localeCompare(b.guestName||""))
       )).catch(()=>{});
-    let bc;
-    try {
-      bc = new BroadcastChannel("tt_kickoffs");
-      bc.onmessage = (e) => {
-        if (e.data?.type === "updated" && e.data.id)
-          setKickoffs(prev => prev.map(k => k.id === e.data.id ? { ...k, ...e.data.updates } : k));
-      };
-    } catch {}
-    return () => { try { bc?.close(); } catch {} };
   }, []);
 
   const saveTask = async () => {
-    if (!form.taskName.trim() || !form.assignedTo || !form.dueDate)
+    if (!form.taskName.trim()||!form.assignedTo||!form.dueDate)
       return alert("Llena nombre, asignado y fecha.");
     setSaving(true);
-    try {
-      const payload = {
-        ...form,
-        assignedEmail: form.assignedEmail || CONCIERGE_EMAILS[form.assignedTo] || "",
-        status: "pending",
-        createdAt: new Date().toISOString(),
-      };
-      await fetch(TASK_API, { method:"POST", mode:"no-cors",
-        headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"saveTask", payload }),
-      });
-      setForm({ taskName:"", assignedTo:"", assignedEmail:"", dueDate:"", notes:"", kickoffId:"", kickoffName:"", priority:"media", imageUrl:"" });
-      setShowForm(false);
-      setTimeout(() => load(), 1500);
-    } catch(err) { alert("Error al guardar: " + err.message); }
+    const id = "task_"+Date.now().toString(36);
+    const payload = { ...form, id,
+      assignedEmail: form.assignedEmail||CONCIERGE_EMAILS[form.assignedTo]||"",
+      status:"pending", createdAt: new Date().toISOString(),
+    };
+    const { error } = await supabase.from("tasks").insert({ id, data: payload });
+    if (error) { alert("Error: "+error.message); setSaving(false); return; }
+    setForm({ taskName:"", assignedTo:"", assignedEmail:"", dueDate:"", notes:"", kickoffId:"", kickoffName:"", priority:"media", imageUrl:"" });
+    setShowForm(false);
+    setTasks(prev => [payload, ...prev]);
     setSaving(false);
   };
 
-  const updateTaskField = async (id, updates) => {
-    try {
-      await fetch(TASK_API, { method:"POST", mode:"no-cors",
-        headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body: JSON.stringify({ action:"updateTask", payload:{
-          id, ...updates,
-          ...(updates.status==="completed" ? { completedAt: new Date().toISOString() } : {}),
-        }}),
-      });
-      setTasks(prev => prev.map(t => t.id===id ? {...t,...updates} : t));
-    } catch {}
+  const updateTask = async (id, updates) => {
+    setTasks(prev => prev.map(t => t.id===id ? {...t,...updates} : t));
+    const { data: ex } = await supabase.from("tasks").select("data").eq("id",id).single();
+    const merged = { ...(ex?.data||{}), ...updates,
+      ...(updates.status==="completed" ? { completedAt: new Date().toISOString() } : {}),
+    };
+    await supabase.from("tasks").update({ data: merged }).eq("id",id);
   };
 
-  const now = new Date(); now.setHours(0,0,0,0);
-
-  const filtered = tasks.filter(t => {
-    if (!showCompleted && t.status === "completed") return false;
-    if (filterUser !== "all"     && t.assignedTo !== filterUser)   return false;
-    if (filterStatus !== "all"   && t.status !== filterStatus)     return false;
-    if (filterKickoff !== "all"  && t.kickoffId !== filterKickoff) return false;
-    if (filterPriority !== "all" && t.priority !== filterPriority) return false;
-    if (searchName.trim()) {
-      const q = searchName.trim().toLowerCase();
-      if (!String(t.assignedTo||"").toLowerCase().includes(q) &&
-          !String(t.taskName||"").toLowerCase().includes(q) &&
-          !String(t.kickoffName||"").toLowerCase().includes(q)) return false;
+  const migrateFromGAS = async () => {
+    setMigrating(true); setMigrateMsg("Conectando a GAS…");
+    const GAS_URL = import.meta.env.VITE_GAS_URL;
+    let json = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        if (attempt > 0) { setMigrateMsg(`Reintento ${attempt}…`); await new Promise(r=>setTimeout(r,3000)); }
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 12000);
+        const res = await fetch(`${GAS_URL}?action=listTasks`, { signal: ctrl.signal });
+        clearTimeout(tid);
+        const text = await res.text();
+        json = JSON.parse(text);
+        if (json?.ok !== false) break;
+      } catch { json = null; }
     }
-    return true;
-  });
-
-  // Group by trip for table view
-  const grouped = (() => {
-    const map = new Map();
-    filtered.forEach(t => {
-      const key  = t.kickoffId || "__none__";
-      const name = t.kickoffName || (t.kickoffId ? t.kickoffId : "Sin trip asignado");
-      if (!map.has(key)) map.set(key, { name, tasks:[] });
-      map.get(key).tasks.push(t);
-    });
-    return [...map.entries()].sort(([ka],[kb]) => {
-      if (ka==="__none__") return 1;
-      if (kb==="__none__") return -1;
-      return map.get(ka).name.localeCompare(map.get(kb).name);
-    });
-  })();
-
-  // Leaderboard
-  const leaderboard = {};
-  tasks.forEach(t => {
-    if (t.status==="completed") return;
-    const u = t.assignedTo || "?";
-    leaderboard[u] = (leaderboard[u]||0)+1;
-  });
-  const lbRows = Object.entries(leaderboard).sort((a,b)=>b[1]-a[1]);
-
-  const StatusSelect = ({ t }) => (
-    <select value={t.status==="late"?"pending":t.status}
-      onChange={e => updateTaskField(t.id, { status: e.target.value })}
-      className={`text-[11px] font-semibold border rounded-full px-2 py-0.5 cursor-pointer focus:outline-none ${(TASK_STATUS[t.status]||TASK_STATUS.pending).cls}`}>
-      {Object.entries(TASK_STATUS).filter(([k])=>k!=="late").map(([k,v])=>(
-        <option key={k} value={k}>{v.label}</option>
-      ))}
-    </select>
-  );
-
-  const PriorityBadge = ({ t }) => {
-    const p = TASK_PRIORITY[t.priority] || TASK_PRIORITY.media;
-    return (
-      <select value={t.priority||"media"}
-        onChange={e => updateTaskField(t.id, { priority: e.target.value })}
-        className={`text-[10px] border rounded px-1.5 py-0.5 cursor-pointer focus:outline-none ${p.cls}`}>
-        {Object.entries(TASK_PRIORITY).map(([k,v])=>(
-          <option key={k} value={k}>{v.label}</option>
-        ))}
-      </select>
-    );
+    if (!json || !Array.isArray(json.data)) {
+      setMigrateMsg("No se pudo conectar a GAS."); setMigrating(false); return;
+    }
+    setMigrateMsg(`${json.data.length} tareas encontradas. Guardando…`);
+    let saved = 0;
+    for (const t of json.data) {
+      const id = t.id || "task_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2);
+      const { error } = await supabase.from("tasks").upsert({ id, data: { ...t, id } });
+      if (!error) saved++;
+    }
+    setMigrateMsg(`✓ ${saved} de ${json.data.length} tareas importadas`);
+    setMigrating(false);
+    load();
   };
+
+  // Time buckets
+  const now = new Date(); now.setHours(0,0,0,0);
+  const tmr = new Date(now); tmr.setDate(tmr.getDate()+1);
+
+  const visible    = filterPerson === "all" ? tasks : tasks.filter(t => t.assignedTo === filterPerson);
+  const atrasadas  = visible.filter(t => t.status!=="completed" && t.dueDate && new Date(t.dueDate) < now);
+  const hoy        = visible.filter(t => t.status!=="completed" && t.dueDate && new Date(t.dueDate)>=now && new Date(t.dueDate)<tmr);
+  const proximas   = visible.filter(t => t.status!=="completed" && (!t.dueDate || new Date(t.dueDate)>=tmr));
+  const terminadas = visible.filter(t => t.status==="completed");
+
+  const todayCounts = {};
+  tasks.filter(t=>t.status!=="completed"&&t.dueDate&&new Date(t.dueDate)>=now&&new Date(t.dueDate)<tmr)
+    .forEach(t=>{ if(t.assignedTo) todayCounts[t.assignedTo]=(todayCounts[t.assignedTo]||0)+1; });
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg)"}}>
-      {/* Header */}
+      {/* ── Header ── */}
       <header className="tt-topbar">
         <div style={{display:"flex",alignItems:"center",gap:16}}>
           <a href="/?mode=concierge" style={{fontSize:12,color:"var(--text-3)",textDecoration:"none",fontWeight:500}}>← Panel</a>
           <span style={{width:1,height:14,background:"var(--border)",display:"inline-block"}}/>
-          <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Tasks</span>
+          <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Tareas</span>
           <span style={{fontSize:11,fontWeight:500,background:"var(--border-soft)",color:"var(--text-3)",padding:"2px 8px",borderRadius:3}}>
-            {tasks.filter(t=>t.status!=="completed").length} open
+            {tasks.filter(t=>t.status!=="completed").length} pendientes
           </span>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:6}}>
-          <div style={{display:"flex",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",overflow:"hidden"}}>
-            {[["board","Board"],["table","Table"],["calendar","Calendar"]].map(([v,lbl])=>(
-              <button key={v} onClick={()=>setView(v)}
-                style={{
-                  padding:"5px 12px",fontSize:11.5,fontWeight:500,border:"none",cursor:"pointer",
-                  background:view===v?"#111":"transparent",
-                  color:view===v?"#fff":"var(--text-2)",
-                  transition:"background .1s",
-                }}>
-                {lbl}
-              </button>
-            ))}
-          </div>
-          <button onClick={()=>setShowForm(v=>!v)} className="tt-btn-primary">
-            + New Task
-          </button>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <button onClick={load} style={{fontSize:12,color:"var(--text-3)",background:"none",border:"none",cursor:"pointer",padding:"4px 8px"}}>↻</button>
+          <button onClick={()=>setShowForm(v=>!v)} className="tt-btn-primary">+ Nueva tarea</button>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-6 py-6" style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div className="max-w-3xl mx-auto px-6 py-6" style={{display:"flex",flexDirection:"column",gap:16}}>
+
+        {/* ── Person filter chips ── */}
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          {["all", ...CONCIERGE_NAMES].map(name => {
+            const label  = name==="all" ? "Todas" : name.split(" ")[0];
+            const active = filterPerson===name;
+            const cnt    = name==="all"
+              ? tasks.filter(t=>t.status!=="completed").length
+              : tasks.filter(t=>t.assignedTo===name&&t.status!=="completed").length;
+            return (
+              <button key={name} onClick={()=>setFilterPerson(name)}
+                style={{
+                  display:"flex",alignItems:"center",gap:5,fontSize:12,fontWeight:500,
+                  padding:"5px 11px",borderRadius:999,cursor:"pointer",
+                  border: active?"1px solid #111":"1px solid var(--border)",
+                  background: active?"#111":"transparent",
+                  color: active?"#fff":"var(--text-2)",
+                  transition:"all .1s",
+                }}>
+                {name!=="all" && (
+                  <span style={{width:17,height:17,borderRadius:"50%",background:taskAvatarColor(name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700}}>
+                    {taskInitials(name)}
+                  </span>
+                )}
+                {label}
+                {cnt>0 && <span style={{fontSize:10,fontWeight:700,color:active?"#fff8":"var(--text-3)"}}>{cnt}</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Today's team mirror ── */}
+        {Object.keys(todayCounts).length > 0 && (
+          <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:"var(--radius-md)",padding:"10px 14px"}}>
+            <p style={{fontSize:10,fontWeight:600,color:"var(--text-3)",letterSpacing:".06em",textTransform:"uppercase",margin:"0 0 8px"}}>Hoy en el equipo</p>
+            <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
+              {CONCIERGE_NAMES.filter(n=>todayCounts[n]).map(n=>(
+                <div key={n} style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{width:24,height:24,borderRadius:"50%",background:taskAvatarColor(n),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700}}>
+                    {taskInitials(n)}
+                  </span>
+                  <span style={{fontSize:12,color:"var(--text-2)",fontWeight:500}}>{n.split(" ")[0]}</span>
+                  <span style={{fontSize:13,fontWeight:700,color:"#D97706"}}>{todayCounts[n]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Migration banner (shown only when table is empty) ── */}
+        {tasks.length === 0 && !loading && (
+          <div style={{background:"#FFFBEB",border:"1px solid #FDE68A",borderRadius:"var(--radius-md)",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+            <div>
+              <p style={{fontSize:12.5,fontWeight:600,color:"#92400E",margin:0}}>No hay tareas en Supabase</p>
+              <p style={{fontSize:11.5,color:"#B45309",margin:"3px 0 0"}}>¿Importar tareas existentes desde GAS?</p>
+              {migrateMsg && <p style={{fontSize:11,color:"#059669",margin:"4px 0 0",fontWeight:500}}>{migrateMsg}</p>}
+            </div>
+            <button onClick={migrateFromGAS} disabled={migrating}
+              style={{fontSize:12,fontWeight:600,background:"#F59E0B",color:"#fff",border:"none",borderRadius:"var(--radius-sm)",padding:"7px 14px",cursor:"pointer",opacity:migrating?.6:1,flexShrink:0}}>
+              {migrating ? "Importando…" : "Importar de GAS"}
+            </button>
+          </div>
+        )}
 
         {/* ── New task form ── */}
         {showForm && (
-          <div className="tt-card" style={{padding:20,display:"flex",flexDirection:"column",gap:16}}>
+          <div className="tt-card" style={{padding:20,display:"flex",flexDirection:"column",gap:14}}>
             <p style={{fontSize:12,fontWeight:600,color:"var(--text-1)",margin:0}}>Nueva tarea</p>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
               <div style={{gridColumn:"1/-1"}}>
-                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Trip / Deal</label>
-                <select value={form.kickoffId} onChange={e => {
-                  const k = kickoffs.find(k => k.id === e.target.value);
-                  setF("kickoffId", e.target.value);
-                  setF("kickoffName", k ? (k.guestName || k.tripName || "") : "");
-                }} style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,background:"var(--surface)",color:"var(--text-1)"}}>
-                  <option value="">Sin trip asignado</option>
-                  {kickoffs.map(k => (
-                    <option key={k.id} value={k.id}>
-                      {k.guestName || "—"}{k.tripName ? ` · ${k.tripName}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={{gridColumn:"1/-1"}}>
-                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Nombre de la tarea *</label>
+                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Nombre *</label>
                 <input value={form.taskName} onChange={e=>setF("taskName",e.target.value)}
                   style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,boxSizing:"border-box"}}
-                  placeholder="Ej: Confirmar reserva Celele para Martínez"/>
+                  placeholder="Ej: Confirmar reserva Celele"/>
               </div>
               <div>
                 <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Asignado a *</label>
-                <select value={form.assignedTo} onChange={e=>{
-                  setF("assignedTo", e.target.value);
-                  setF("assignedEmail", CONCIERGE_EMAILS[e.target.value]||"");
-                }} style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,background:"var(--surface)"}}>
+                <select value={form.assignedTo} onChange={e=>{setF("assignedTo",e.target.value);setF("assignedEmail",CONCIERGE_EMAILS[e.target.value]||"");}}
+                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,background:"var(--surface)",boxSizing:"border-box"}}>
                   <option value="">Seleccionar…</option>
                   {CONCIERGE_NAMES.map(c=><option key={c} value={c}>{c}</option>)}
                 </select>
@@ -3411,10 +3373,18 @@ function TaskTracker() {
               <div>
                 <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Prioridad</label>
                 <select value={form.priority} onChange={e=>setF("priority",e.target.value)}
-                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,background:"var(--surface)"}}>
+                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,background:"var(--surface)",boxSizing:"border-box"}}>
                   <option value="alta">Alta</option>
                   <option value="media">Media</option>
                   <option value="baja">Baja</option>
+                </select>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Trip / Deal</label>
+                <select value={form.kickoffId} onChange={e=>{const k=kickoffs.find(k=>k.id===e.target.value);setF("kickoffId",e.target.value);setF("kickoffName",k?(k.guestName||k.tripName||""):"");}}
+                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,background:"var(--surface)",boxSizing:"border-box"}}>
+                  <option value="">Sin trip</option>
+                  {kickoffs.map(k=><option key={k.id} value={k.id}>{k.guestName||"—"}{k.tripName?` · ${k.tripName}`:""}</option>)}
                 </select>
               </div>
               <div style={{gridColumn:"1/-1"}}>
@@ -3422,350 +3392,118 @@ function TaskTracker() {
                 <textarea value={form.notes} onChange={e=>setF("notes",e.target.value)} rows={2}
                   style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,resize:"none",boxSizing:"border-box"}}/>
               </div>
-              <div style={{gridColumn:"1/-1"}}>
-                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Imagen (URL)</label>
-                <input value={form.imageUrl} onChange={e=>setF("imageUrl",e.target.value)}
-                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,boxSizing:"border-box"}}
-                  placeholder="https://drive.google.com/file/d/..."/>
-                {form.imageUrl && (
-                  <img src={form.imageUrl} alt="preview" style={{marginTop:8,height:64,borderRadius:"var(--radius-sm)",objectFit:"cover",border:"1px solid var(--border)"}} onError={e=>e.target.style.display="none"}/>
-                )}
-              </div>
             </div>
             <div style={{display:"flex",gap:8}}>
               <button onClick={saveTask} disabled={saving} className="tt-btn-primary" style={{opacity:saving?.5:1}}>
-                {saving?"Guardando…":"Guardar tarea"}
+                {saving?"Guardando…":"Guardar"}
               </button>
-              <button onClick={()=>setShowForm(false)} className="tt-btn-ghost">
-                Cancelar
-              </button>
+              <button onClick={()=>setShowForm(false)} className="tt-btn-ghost">Cancelar</button>
             </div>
           </div>
         )}
 
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
-          {/* ── Main content ── */}
-          <div className={view === "board" ? "lg:col-span-4" : "lg:col-span-3"}>
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {loadError && (
+          <div style={{background:"#FEF2F2",border:"1px solid #FCA5A5",borderRadius:"var(--radius-md)",padding:"10px 14px",fontSize:12,color:"#B91C1C"}}>{loadError}</div>
+        )}
 
-            {/* Filters bar — hidden in board view to save space */}
-            {view !== "board" && (
-            <div style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"center",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:"var(--radius-md)",padding:"8px 12px"}}>
-              <input value={searchName} onChange={e=>setSearchName(e.target.value)}
-                placeholder="Search…"
-                style={{fontSize:12,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"5px 9px",background:"var(--bg)",width:120}}/>
-              <select value={filterKickoff} onChange={e=>setFilterKickoff(e.target.value)}
-                style={{fontSize:12,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"5px 9px",background:"var(--surface)",maxWidth:160}}>
-                <option value="all">All trips</option>
-                {kickoffs.map(k=>(
-                  <option key={k.id} value={k.id}>{k.guestName||k.tripName||k.id}</option>
-                ))}
-              </select>
-              <select value={filterUser} onChange={e=>setFilterUser(e.target.value)}
-                style={{fontSize:12,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"5px 9px",background:"var(--surface)"}}>
-                <option value="all">All</option>
-                {CONCIERGE_NAMES.map(u=><option key={u} value={u}>{u.split(" ")[0]}</option>)}
-              </select>
-              <select value={filterPriority} onChange={e=>setFilterPriority(e.target.value)}
-                style={{fontSize:12,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"5px 9px",background:"var(--surface)"}}>
-                <option value="all">Priority</option>
-                <option value="alta">High</option>
-                <option value="media">Medium</option>
-                <option value="baja">Low</option>
-              </select>
-              <button onClick={()=>setShowCompleted(v=>!v)}
-                style={{fontSize:11.5,padding:"5px 10px",borderRadius:"var(--radius-sm)",border:"1px solid var(--border)",background:showCompleted?"#111":"transparent",color:showCompleted?"#fff":"var(--text-3)",cursor:"pointer"}}>
-                {showCompleted ? `Hide done (${tasks.filter(t=>t.status==="completed").length})` : `Show done (${tasks.filter(t=>t.status==="completed").length})`}
+        {loading ? (
+          <div style={{textAlign:"center",padding:"48px 0",color:"var(--text-3)",fontSize:13}}>Cargando…</div>
+        ) : (
+          <>
+            <TTaskGroup emoji="🔴" label="Atrasadas" tasks={atrasadas} onUpdate={updateTask} now={now} tmr={tmr}/>
+            <TTaskGroup emoji="🔥" label="Hoy" tasks={hoy} onUpdate={updateTask} now={now} tmr={tmr}/>
+            <TTaskGroup emoji="📅" label="Próximas" tasks={proximas} onUpdate={updateTask} now={now} tmr={tmr}/>
+            <div>
+              <button onClick={()=>setShowDone(v=>!v)}
+                style={{display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:500,color:"var(--text-3)",background:"none",border:"none",cursor:"pointer",padding:"4px 0"}}>
+                <span>{showDone?"▼":"▶"}</span>
+                <span style={{color:"var(--text-2)",fontWeight:600}}>✅ Terminadas</span>
+                <span>({terminadas.length})</span>
               </button>
-              <button onClick={load} style={{marginLeft:"auto",fontSize:12,color:"var(--text-3)",background:"none",border:"none",cursor:"pointer"}}>↻</button>
-            </div>
-            )}
-
-            {loadError && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-xs text-red-700 font-mono break-all">
-                <p className="font-semibold mb-1">Error loading tasks:</p>{loadError}
-              </div>
-            )}
-
-            {loading ? (
-              <div className="text-center py-10 text-stone-400 text-sm">Loading…</div>
-            ) : view === "board" ? (() => {
-              /* ══ BOARD / KANBAN VIEW ══ */
-              const COLS = [
-                { id:"todo",        label:"TO DO",        statuses:["pending","late"],  dot:"bg-stone-400",   count: tasks.filter(t=>["pending","late"].includes(t.status)).length },
-                { id:"in_progress", label:"IN PROGRESS",  statuses:["in_progress"],     dot:"bg-blue-500",    count: tasks.filter(t=>t.status==="in_progress").length },
-                { id:"in_review",   label:"IN REVIEW",    statuses:["blocked"],         dot:"bg-violet-500",  count: tasks.filter(t=>t.status==="blocked").length },
-                { id:"done",        label:"DONE",         statuses:["completed"],       dot:"bg-emerald-500", count: tasks.filter(t=>t.status==="done"||t.status==="completed").length },
-              ];
-              const statusForCol = { todo:"pending", in_progress:"in_progress", in_review:"blocked", done:"completed" };
-              // Assignee color map
-              const AVATAR_COLORS = ["bg-stone-700","bg-rose-600","bg-blue-600","bg-amber-600","bg-emerald-600","bg-violet-600"];
-              const avatarColor = (() => {
-                const map = {};
-                CONCIERGE_NAMES.forEach((n,i) => { map[n] = AVATAR_COLORS[i % AVATAR_COLORS.length]; });
-                return (name) => map[name] || "bg-stone-500";
-              })();
-              const initials = (name) => (name||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
-              return (
-                <div className="flex gap-4 overflow-x-auto pb-4" style={{minHeight:"60vh"}}>
-                  {COLS.map(col => {
-                    const colTasks = tasks.filter(t => {
-                      if (!col.statuses.includes(t.status)) return false;
-                      if (filterUser !== "all" && t.assignedTo !== filterUser) return false;
-                      if (filterKickoff !== "all" && t.kickoffId !== filterKickoff) return false;
-                      if (searchName.trim()) {
-                        const q = searchName.trim().toLowerCase();
-                        if (!String(t.taskName||"").toLowerCase().includes(q) &&
-                            !String(t.kickoffName||"").toLowerCase().includes(q) &&
-                            !String(t.assignedTo||"").toLowerCase().includes(q)) return false;
-                      }
-                      return true;
-                    });
-                    return (
-                      <div key={col.id} style={{flexShrink:0,width:272,display:"flex",flexDirection:"column",gap:8}}>
-                        {/* Column header */}
-                        <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 4px"}}>
-                          <span style={{width:8,height:8,borderRadius:"50%",flexShrink:0,background:col.id==="todo"?"#9CA3AF":col.id==="in_progress"?"#3B82F6":col.id==="in_review"?"#8B5CF6":"#10B981"}}/>
-                          <span style={{fontSize:11,fontWeight:600,color:"var(--text-2)",letterSpacing:".04em"}}>{col.label}</span>
-                          <span style={{marginLeft:"auto",fontSize:10.5,fontWeight:500,color:"var(--text-3)",background:"var(--border-soft)",borderRadius:3,padding:"1px 6px"}}>{colTasks.length}</span>
-                        </div>
-                        {/* Cards */}
-                        <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                          {colTasks.map(t => {
-                            const due = t.dueDate ? new Date(t.dueDate) : null;
-                            const dl  = due ? Math.round((due-now)/86400000) : null;
-                            const isLate = t.status === "late" || (dl !== null && dl < 0 && t.status !== "completed");
-                            return (
-                              <div key={t.id} className="tt-card" style={{padding:12,cursor:"default",border:isLate?"1px solid #FCA5A5":undefined}}>
-                                <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,marginBottom:6}}>
-                                  <p style={{fontSize:12.5,fontWeight:500,color:"var(--text-1)",lineHeight:1.4,textDecoration:t.status==="completed"?"line-through":"none",opacity:t.status==="completed"?.5:1,margin:0}}>{t.taskName}</p>
-                                  {isLate && <span style={{fontSize:9,color:"#EF4444",fontWeight:600,background:"#FEF2F2",border:"1px solid #FCA5A5",borderRadius:3,padding:"2px 5px",flexShrink:0}}>LATE</span>}
-                                </div>
-                                {t.kickoffName && (
-                                  <p style={{fontSize:10.5,color:"var(--text-3)",marginBottom:6,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                                    {t.kickoffName}{t.city ? ` — ${t.city}` : ""}
-                                  </p>
-                                )}
-                                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginTop:6}}>
-                                  {t.assignedTo ? (
-                                    <span style={{fontSize:10,color:"#fff",fontWeight:700,borderRadius:3,padding:"2px 6px",background:"#374151"}}>
-                                      {initials(t.assignedTo)}
-                                    </span>
-                                  ) : <span/>}
-                                  <div style={{display:"flex",alignItems:"center",gap:8,marginLeft:"auto"}}>
-                                    {dl !== null && t.status !== "completed" && (
-                                      <span style={{fontSize:10,color:isLate?"#EF4444":dl<=2?"#D97706":"var(--text-3)"}}>
-                                        {isLate ? `${Math.abs(dl)}d ago` : dl===0 ? "Today" : `In ${dl}d`}
-                                      </span>
-                                    )}
-                                    <select
-                                      value={t.status==="late"?"pending":t.status}
-                                      onChange={e=>updateTaskField(t.id,{status:e.target.value})}
-                                      style={{fontSize:10,border:"1px solid var(--border)",borderRadius:3,padding:"2px 6px",background:"var(--surface)",color:"var(--text-2)",cursor:"pointer"}}
-                                      onClick={e=>e.stopPropagation()}
-                                    >
-                                      {Object.entries(TASK_STATUS).filter(([k])=>k!=="late").map(([k,v])=>(
-                                        <option key={k} value={k}>{v.label}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                          {/* Add task shortcut */}
-                          <button onClick={()=>setShowForm(v=>!v)}
-                            style={{width:"100%",textAlign:"left",fontSize:11.5,color:"var(--text-3)",padding:"8px 12px",borderRadius:"var(--radius-sm)",border:"1px dashed var(--border)",background:"transparent",cursor:"pointer"}}>
-                            + Add Task
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+              {showDone && (
+                <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
+                  {terminadas.map(t=><TTaskCard key={t.id} t={t} onUpdate={updateTask} now={now} tmr={tmr}/>)}
                 </div>
-              );
-            }) : view === "calendar" ? (() => {
-              /* ══ CALENDAR VIEW — uses component-level calYear/calMonth state ══ */
-              const cy = calYear, cm = calMonth;
-              const firstDay    = new Date(cy, cm, 1).getDay();
-              const daysInMonth = new Date(cy, cm+1, 0).getDate();
-              const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-              const tasksByDay = {};
-              tasks.filter(t=>t.status!=="completed").forEach(t => {
-                if (!t.dueDate) return;
-                const d = new Date(t.dueDate);
-                if (d.getFullYear()===cy && d.getMonth()===cm) {
-                  const k = d.getDate();
-                  if (!tasksByDay[k]) tasksByDay[k] = [];
-                  tasksByDay[k].push(t);
-                }
-              });
-              const AVATAR_COLORS = ["bg-stone-700","bg-rose-600","bg-blue-600","bg-amber-600","bg-emerald-600","bg-violet-600"];
-              const avatarColor = (name) => {
-                const idx = CONCIERGE_NAMES.indexOf(name);
-                return idx >= 0 ? AVATAR_COLORS[idx % AVATAR_COLORS.length] : "bg-stone-500";
-              };
-              const prevMonth = () => { if(cm===0){setCalMonth(11);setCalYear(y=>y-1);}else setCalMonth(m=>m-1); };
-              const nextMonth = () => { if(cm===11){setCalMonth(0);setCalYear(y=>y+1);}else setCalMonth(m=>m+1); };
-              return (
-                <div className="tt-card" style={{overflow:"hidden"}}>
-                  {/* Cal nav */}
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",borderBottom:"1px solid var(--border)"}}>
-                    <button onClick={prevMonth} style={{padding:"4px 8px",borderRadius:"var(--radius-sm)",border:"1px solid var(--border)",background:"transparent",cursor:"pointer",fontSize:16,color:"var(--text-2)"}}>‹</button>
-                    <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>{MONTHS[cm]} {cy}</span>
-                    <button onClick={nextMonth} style={{padding:"4px 8px",borderRadius:"var(--radius-sm)",border:"1px solid var(--border)",background:"transparent",cursor:"pointer",fontSize:16,color:"var(--text-2)"}}>›</button>
-                  </div>
-                  {/* Day headers */}
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"1px solid var(--border)",background:"var(--bg)"}}>
-                    {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=>(
-                      <div key={d} style={{textAlign:"center",fontSize:10,fontWeight:600,color:"var(--text-3)",padding:"8px 0",textTransform:"uppercase",letterSpacing:".04em"}}>{d}</div>
-                    ))}
-                  </div>
-                  {/* Grid */}
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)"}}>
-                    {Array.from({length: firstDay}).map((_,i)=>(
-                      <div key={"empty-"+i} style={{minHeight:88,borderBottom:"1px solid var(--border-soft)",borderRight:"1px solid var(--border-soft)",background:"var(--bg)"}}/>
-                    ))}
-                    {Array.from({length: daysInMonth}).map((_,i) => {
-                      const day = i+1;
-                      const dayTasks = tasksByDay[day] || [];
-                      const isToday = new Date().getDate()===day && new Date().getMonth()===cm && new Date().getFullYear()===cy;
-                      const hasLate  = dayTasks.some(t=>t.status==="late"||(t.dueDate&&new Date(t.dueDate)<new Date()&&t.status!=="completed"));
-                      return (
-                        <div key={day} style={{minHeight:88,borderBottom:"1px solid var(--border-soft)",borderRight:"1px solid var(--border-soft)",padding:6,background:hasLate?"#FFF8F8":"transparent"}}>
-                          <div style={{fontSize:11,fontWeight:600,marginBottom:4,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:"50%",background:isToday?"#111":"transparent",color:isToday?"#fff":"var(--text-3)"}}>{day}</div>
-                          <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                            {dayTasks.slice(0,3).map(t => (
-                              <div key={t.id} title={`${t.taskName} — ${t.assignedTo||"?"}`}
-                                style={{fontSize:9,color:"#fff",borderRadius:2,padding:"2px 5px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",background:"#374151"}}>
-                                {t.taskName}
-                              </div>
-                            ))}
-                            {dayTasks.length>3 && <div style={{fontSize:9,color:"var(--text-3)",paddingLeft:2}}>+{dayTasks.length-3} more</div>}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* Legend */}
-                  <div style={{padding:"10px 16px",borderTop:"1px solid var(--border)",display:"flex",flexWrap:"wrap",gap:12}}>
-                    {CONCIERGE_NAMES.map((n,i)=>(
-                      <span key={n} style={{display:"flex",alignItems:"center",gap:6,fontSize:10,color:"var(--text-3)"}}>
-                        <span style={{width:8,height:8,borderRadius:"50%",background:"#374151"}}/>
-                        {n.split(" ")[0]}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              );
-            })() : view === "table" ? (
-              /* ══ TABLE VIEW — grouped by trip ══ */
-              <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                {grouped.map(([key, group]) => (
-                  <div key={key} className="tt-card" style={{overflow:"hidden"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 16px",borderBottom:"1px solid var(--border)",background:"var(--bg)"}}>
-                      <span style={{fontSize:12,fontWeight:600,color:"var(--text-1)"}}>
-                        {key==="__none__" ? "No trip" : group.name}
-                      </span>
-                      <span style={{fontSize:10.5,color:"var(--text-3)",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:3,padding:"1px 7px"}}>
-                        {group.tasks.length} {group.tasks.length===1?"task":"tasks"}
-                      </span>
-                      <span style={{fontSize:10.5,color:"#059669",marginLeft:"auto"}}>
-                        {group.tasks.filter(t=>t.status==="completed").length}/{group.tasks.length} done
-                      </span>
-                    </div>
-                    <table className="tt-table" style={{width:"100%"}}>
-                      <thead>
-                        <tr>
-                          <th style={{textAlign:"left"}}>Task</th>
-                          <th style={{textAlign:"left"}}>Assigned</th>
-                          <th style={{textAlign:"left"}}>Due</th>
-                          <th style={{textAlign:"left"}}>Priority</th>
-                          <th style={{textAlign:"left"}}>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {group.tasks.map(t => {
-                          const due = t.dueDate ? new Date(t.dueDate) : null;
-                          const dl  = due ? Math.round((due-now)/86400000) : null;
-                          return (
-                            <tr key={t.id} style={{opacity:t.status==="completed"?.5:1}}>
-                              <td style={{maxWidth:200}}>
-                                <p style={{fontWeight:500,color:"var(--text-1)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.status==="completed"?"line-through":"none",margin:0}}>{t.taskName}</p>
-                                {t.notes && <p style={{color:"var(--text-3)",fontSize:10.5,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",margin:0}}>{t.notes}</p>}
-                              </td>
-                              <td style={{whiteSpace:"nowrap"}}>{t.assignedTo?.split(" ")[0]||"—"}</td>
-                              <td style={{whiteSpace:"nowrap"}}>
-                                <span style={{color:dl!==null&&dl<0&&t.status!=="completed"?"#EF4444":dl!==null&&dl<=2&&t.status!=="completed"?"#D97706":"var(--text-2)"}}>
-                                  {t.dueDate||"—"}
-                                  {dl!==null&&t.status!=="completed"&&dl<=2&&dl>=0&&(
-                                    <span style={{marginLeft:4,fontSize:10}}>{dl===0?"· today":`· ${dl}d`}</span>
-                                  )}
-                                </span>
-                              </td>
-                              <td><PriorityBadge t={t}/></td>
-                              <td><StatusSelect t={t}/></td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                ))}
-              </div>
-            ) : null}
+              )}
             </div>
-          </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
-          {/* ── Sidebar — hidden in board/calendar view ── */}
-          {(view === "table" || view === "cards") && <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div className="tt-card" style={{padding:16}}>
-              <p className="tt-section-title" style={{marginBottom:12}}>Carga por persona</p>
-              {lbRows.length===0 ? (
-                <p style={{fontSize:12,color:"var(--text-3)"}}>Sin pendientes</p>
-              ) : lbRows.map(([user,cnt],i) => (
-                <div key={user} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 0",borderBottom:i<lbRows.length-1?"1px solid var(--border-soft)":"none"}}>
-                  <span style={{fontSize:12,fontWeight:500,color:cnt>3?"#DC2626":"var(--text-1)"}}>{user.split(" ")[0]}</span>
-                  <span style={{fontSize:13,fontWeight:700,color:cnt>3?"#DC2626":"var(--text-1)"}}>{cnt}</span>
-                </div>
-              ))}
-            </div>
+function TTaskGroup({ emoji, label, tasks, onUpdate, now, tmr }) {
+  const [open, setOpen] = useState(true);
+  if (tasks.length === 0) return null;
+  return (
+    <div>
+      <button onClick={()=>setOpen(v=>!v)}
+        style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0",background:"none",border:"none",cursor:"pointer",width:"100%",textAlign:"left",marginBottom:open?8:0}}>
+        <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>{emoji} {label}</span>
+        <span style={{fontSize:11,fontWeight:600,color:"var(--text-3)",background:"var(--border-soft)",borderRadius:3,padding:"1px 7px"}}>{tasks.length}</span>
+        <span style={{fontSize:10,color:"var(--text-3)",marginLeft:"auto"}}>{open?"▲":"▼"}</span>
+      </button>
+      {open && (
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          {tasks.map(t=><TTaskCard key={t.id} t={t} onUpdate={onUpdate} now={now} tmr={tmr}/>)}
+        </div>
+      )}
+    </div>
+  );
+}
 
-            <div className="tt-card" style={{padding:16}}>
-              <p className="tt-section-title" style={{marginBottom:12}}>Resumen</p>
-              {[
-                { label:"Total",        value: tasks.length,                                                  color:"var(--text-1)" },
-                { label:"Pendientes",   value: tasks.filter(t=>t.status==="pending").length,     color:"#D97706" },
-                { label:"En progreso",  value: tasks.filter(t=>t.status==="in_progress").length, color:"#2563EB" },
-                { label:"Bloqueadas",   value: tasks.filter(t=>t.status==="blocked").length,     color:"#EA580C" },
-                { label:"Vencidas",     value: tasks.filter(t=>t.status==="late").length,        color:"#DC2626" },
-                { label:"Completadas",  value: tasks.filter(t=>t.status==="completed").length,   color:"#059669" },
-              ].map(r => (
-                <div key={r.label} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid var(--border-soft)"}}>
-                  <span style={{fontSize:12,color:"var(--text-2)"}}>{r.label}</span>
-                  <span style={{fontSize:13,fontWeight:700,color:r.color}}>{r.value}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="tt-card" style={{padding:16}}>
-              <p className="tt-section-title" style={{marginBottom:12}}>Por prioridad</p>
-              {[
-                { label:"Alta",  key:"alta",  color:"#DC2626" },
-                { label:"Media", key:"media", color:"#D97706" },
-                { label:"Baja",  key:"baja",  color:"var(--text-3)" },
-              ].map(r => (
-                <div key={r.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid var(--border-soft)"}}>
-                  <span style={{fontSize:12,color:"var(--text-2)"}}>{r.label}</span>
-                  <span style={{fontSize:13,fontWeight:700,color:r.color}}>
-                    {tasks.filter(t=>t.priority===r.key&&t.status!=="completed").length}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>}
+function TTaskCard({ t, onUpdate, now, tmr }) {
+  const due  = t.dueDate ? new Date(t.dueDate) : null;
+  const late = due && due < now && t.status !== "completed";
+  const today= due && due >= now && due < tmr;
+  const dl   = due ? Math.round((due - now)/86400000) : null;
+  const done = t.status === "completed";
+  const prioColor = t.priority==="alta"?"#DC2626":t.priority==="baja"?"#9CA3AF":"#D97706";
+  return (
+    <div className="tt-card" style={{
+      padding:"11px 14px",display:"flex",alignItems:"flex-start",gap:12,
+      border: late?"1px solid #FCA5A5":undefined,
+      opacity: done?.5:1,
+    }}>
+      <div style={{width:7,height:7,borderRadius:"50%",background:prioColor,flexShrink:0,marginTop:6}}/>
+      <div style={{flex:1,minWidth:0}}>
+        <p style={{fontSize:13,fontWeight:500,color:"var(--text-1)",textDecoration:done?"line-through":"none",margin:0,lineHeight:1.4}}>
+          {t.taskName}
+        </p>
+        {(t.kickoffName||t.notes) && (
+          <p style={{fontSize:11,color:"var(--text-3)",margin:"3px 0 0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+            {[t.kickoffName,t.notes].filter(Boolean).join(" · ")}
+          </p>
+        )}
+        <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
+          {t.assignedTo && (
+            <span style={{display:"flex",alignItems:"center",gap:4}}>
+              <span style={{width:17,height:17,borderRadius:"50%",background:taskAvatarColor(t.assignedTo),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700}}>
+                {taskInitials(t.assignedTo)}
+              </span>
+              <span style={{fontSize:11,color:"var(--text-3)"}}>{t.assignedTo.split(" ")[0]}</span>
+            </span>
+          )}
+          {due && !done && (
+            <span style={{fontSize:11,color:late?"#EF4444":today?"#D97706":"var(--text-3)"}}>
+              {late
+                ? `Venció hace ${Math.abs(dl)}d`
+                : dl===0 ? "Hoy"
+                : due.toLocaleDateString("es-CO",{month:"short",day:"numeric"})}
+            </span>
+          )}
         </div>
       </div>
+      <select
+        value={t.status==="late"?"pending":t.status}
+        onChange={e=>onUpdate(t.id,{status:e.target.value})}
+        onClick={e=>e.stopPropagation()}
+        style={{fontSize:11,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"4px 6px",background:"var(--surface)",color:"var(--text-2)",cursor:"pointer",flexShrink:0}}>
+        {[["pending","Pendiente"],["in_progress","En progreso"],["blocked","Bloqueado"],["completed","Completado"]].map(([v,l])=>(
+          <option key={v} value={v}>{l}</option>
+        ))}
+      </select>
     </div>
   );
 }
