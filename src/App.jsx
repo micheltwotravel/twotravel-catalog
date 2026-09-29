@@ -3722,21 +3722,6 @@ function TaskTracker({ currentUser }) {
                   );
                 })()}
 
-                {/* Cliente filter — visible when tasks with kickoffName exist in current view */}
-                {bodaClientes.length > 0 && (
-                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                    <span style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>👰 Cliente:</span>
-                    <select value={filterKickoff} onChange={e=>{setFilterKickoff(e.target.value);}}
-                      style={{fontSize:12,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"5px 10px",background:"var(--surface)",color:"var(--text-2)",cursor:"pointer"}}>
-                      <option value="all">Todos</option>
-                      {bodaClientes.map(c=><option key={c} value={c}>{c}</option>)}
-                    </select>
-                    {filterKickoff!=="all" && (
-                      <button onClick={()=>setFilterKickoff("all")} style={{fontSize:11,color:"var(--text-3)",background:"none",border:"none",cursor:"pointer"}}>✕ limpiar</button>
-                    )}
-                  </div>
-                )}
-
                 <TTaskGroup emoji="🔴" label="Atrasadas" tasks={atrasadas} onUpdate={updateTask} now={now} tmr={tmr}/>
                 <TTaskGroup emoji="🔥" label="Hoy" tasks={hoy} onUpdate={updateTask} now={now} tmr={tmr}/>
                 <TTaskGroup emoji="📅" label="Próximas 7 días" tasks={proximas} onUpdate={updateTask} now={now} tmr={tmr}/>
@@ -5950,7 +5935,7 @@ const ROLE_ACCESS = {
   junior:    ["concierge"],   // concierge panel but restricted to Operaciones drawer
   finance:   ["pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores"],
   marketing: ["dashboard"],
-  bodas:     ["bodas","tareas-bodas","dashboard"],
+  bodas:     ["bodas","tareas-bodas","tasks","dashboard"],
 };
 
 const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores"]);
