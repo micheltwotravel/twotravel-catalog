@@ -371,7 +371,8 @@ export default function TareasPanel({ currentUser, onLogout }) {
   const [filterCliente, setFilterCliente] = useState("");
   const [filterResp, setFilterResp]       = useState("");
   const [filterQ, setFilterQ]             = useState("");
-  const [showDone, setShowDone]   = useState(false);
+  const [showDone, setShowDone]       = useState(false);
+  const [showHistorico, setShowHistorico] = useState(false);
   const searchRef = useRef();
 
   const myName  = currentUser?.name  || "";
@@ -408,8 +409,11 @@ export default function TareasPanel({ currentUser, onLogout }) {
   }
 
   // Filtrado — solo tareas de bodas
+  const HIST_CUTOFF = "2025-01-01";
   const filtered = tasks.filter(t => {
     if (!isBoda(t)) return false;
+    // Hide old GAS-migrated tasks unless "Ver historial" is on
+    if (!showHistorico && t.dueDate && t.dueDate < HIST_CUTOFF) return false;
     if (scope === "mine") {
       const resp = (t.assignedTo||"").toLowerCase().trim();
       const myLower = myName.toLowerCase().trim();
@@ -423,7 +427,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
       const q = filterQ.toLowerCase();
       if (!((t.taskName||"").toLowerCase().includes(q) || clienteLabel(t).toLowerCase().includes(q) || (t.notes||"").toLowerCase().includes(q))) return false;
     }
-    if (!showDone && ["Terminado","Cancelado"].includes(t.status)) return false;
+    if (!showDone && ["Terminado","Cancelado","terminado","terminada","completed","done"].includes((t.status||"").toLowerCase())) return false;
     return true;
   });
 
@@ -549,6 +553,10 @@ export default function TareasPanel({ currentUser, onLogout }) {
               <button onClick={resetFiltros} style={{...inp, cursor:"pointer", padding:"7px 10px"}} title="Limpiar filtros">✕</button>
             )}
           </div>
+          <button onClick={()=>setShowHistorico(v=>!v)}
+            style={{...inp, cursor:"pointer", padding:"7px 10px", background:showHistorico?"#9a7d52":"transparent", color:showHistorico?"#fff":"#9a7d52", border:"1px solid #9a7d52", borderRadius:8, fontWeight:500, fontSize:12, whiteSpace:"nowrap"}}>
+            {showHistorico ? "📚 Historial ON" : "📚 Historial"}
+          </button>
         </div>
 
         {/* Error */}
