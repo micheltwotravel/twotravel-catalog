@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Two Travel · Panel</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -15,320 +15,383 @@
   --muted:#8a8279;
   --gold:#9a7d52;
   --gold-dim:#b89a6a;
-  --gold-light:#f5ede0;
   --ink:#0d0b09;
+  /* ↓ swap this for any photo in /public/ e.g. url('/hero.jpg') */
+  --hero-img: linear-gradient(160deg, #1a1410 0%, #2e2418 40%, #3a2e1c 70%, #1a1410 100%);
 }
-html,body{min-height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;overflow-x:hidden}
 
-/* ── HEADER ── */
-.header{
+/* ── HERO (full viewport) ── */
+.hero{
+  height:100svh;
+  min-height:560px;
+  display:grid;
+  grid-template-columns:260px 1fr 260px;
+}
+
+/* ── LEFT RAIL ── */
+.rail{
   background:var(--ink);
-  padding:0 40px;
-  height:54px;
-  display:flex;align-items:center;justify-content:space-between;
-  position:sticky;top:0;z-index:100;
+  display:flex;
+  flex-direction:column;
+  padding:28px 28px 32px;
+  position:relative;
+  z-index:2;
 }
-.h-left{display:flex;align-items:center;gap:20px}
-.header img{height:26px;filter:brightness(0) invert(1);opacity:.82;object-fit:contain}
-.h-tag{font-family:'DM Mono',monospace;font-size:9.5px;color:rgba(255,255,255,.28);letter-spacing:.1em;text-transform:uppercase}
-.h-nav{display:flex;align-items:center;gap:6px}
-.hn{font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,.35);letter-spacing:.1em;text-transform:uppercase;text-decoration:none;padding:5px 10px;border-radius:4px;transition:background .12s,color .12s}
-.hn:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.75)}
+.rail-logo{margin-bottom:auto}
+.rail-logo img{height:24px;filter:brightness(0) invert(1);opacity:.7;object-fit:contain}
 
-/* ── PAGE ── */
-.page{max-width:1120px;margin:0 auto;padding:52px 40px 96px}
+.rail-links{display:flex;flex-direction:column;gap:2px;margin-bottom:32px}
 
-/* ── MASTHEAD ── */
-.masthead{
-  display:flex;align-items:flex-end;justify-content:space-between;
-  padding-bottom:36px;
-  border-bottom:1px solid var(--border);
-  margin-bottom:52px;
+.rl{
+  display:flex;align-items:baseline;gap:12px;
+  text-decoration:none;
+  padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  transition:border-color .15s;
+  group:true;
 }
-.mh{
+.rl:last-child{border-bottom:none}
+.rl:hover .rl-name{color:#fff}
+.rl:hover .rl-num{color:var(--gold)}
+
+.rl-num{font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,.2);letter-spacing:.1em;min-width:20px;transition:color .15s}
+.rl-text{display:flex;flex-direction:column;gap:1px}
+.rl-name{font-size:13.5px;font-weight:500;color:rgba(255,255,255,.65);line-height:1.2;transition:color .15s}
+.rl-sub{font-family:'DM Mono',monospace;font-size:8.5px;color:rgba(255,255,255,.22);letter-spacing:.08em;margin-top:1px}
+
+.rail-foot{font-family:'DM Mono',monospace;font-size:8.5px;color:rgba(255,255,255,.2);letter-spacing:.08em;line-height:1.7}
+
+/* ── CENTER IMAGE ── */
+.center{
+  position:relative;
+  overflow:hidden;
+  background:var(--hero-img);
+  background-size:cover;
+  background-position:center;
+}
+/* If a real photo is set, this overlay ensures text is legible */
+.center::after{
+  content:'';
+  position:absolute;inset:0;
+  background:linear-gradient(to top, rgba(0,0,0,.72) 0%, rgba(0,0,0,.1) 50%, rgba(0,0,0,.18) 100%);
+  pointer-events:none;
+}
+.center-body{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:40px 44px;
+  z-index:1;
+}
+.hero-eyebrow{
+  font-family:'DM Mono',monospace;
+  font-size:9px;color:rgba(255,255,255,.4);
+  letter-spacing:.14em;text-transform:uppercase;
+  margin-bottom:10px;
+  display:flex;align-items:center;gap:8px;
+}
+.hero-eyebrow::before{content:'';width:24px;height:1px;background:var(--gold);opacity:.6}
+.hero-title{
   font-family:'Cormorant Garamond',serif;
-  font-size:clamp(44px,6vw,68px);
+  font-size:clamp(40px,5.5vw,72px);
   font-weight:500;
   font-style:italic;
-  color:var(--text);
+  color:#fff;
   line-height:.95;
   letter-spacing:-.01em;
 }
-.mh em{color:var(--gold);font-style:italic}
-.mh-date{font-family:'DM Mono',monospace;font-size:9.5px;color:var(--muted);letter-spacing:.09em;text-transform:uppercase;text-align:right;line-height:1.8}
+.hero-title em{color:var(--gold)}
+.hero-date{
+  font-family:'DM Mono',monospace;
+  font-size:9px;
+  color:rgba(255,255,255,.3);
+  letter-spacing:.1em;
+  margin-top:14px;
+  text-transform:uppercase;
+}
 
-/* ── SECTIONS ── */
-.sections{display:flex;flex-direction:column;gap:44px}
-.sec{display:grid;grid-template-columns:180px 1fr;gap:36px;align-items:start}
+/* ── RIGHT RAIL ── */
+.rail.right .rail-links{margin-bottom:32px}
+.rail-section-label{
+  font-family:'DM Mono',monospace;
+  font-size:8.5px;
+  color:rgba(255,255,255,.2);
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  margin-bottom:10px;
+  margin-top:6px;
+}
 
-.sec-meta{padding-top:4px;position:sticky;top:70px}
+/* ── SCROLL ARROW ── */
+.scroll-cue{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  font-family:'DM Mono',monospace;font-size:8px;
+  color:rgba(255,255,255,.3);letter-spacing:.12em;text-transform:uppercase;
+  z-index:10;
+  opacity:1;transition:opacity .4s;
+  pointer-events:none;
+}
+.scroll-cue svg{opacity:.35}
+
+/* ── SECTIONS BELOW ── */
+.below{background:var(--bg);padding:60px 40px 96px;max-width:1140px;margin:0 auto}
+
+.sec{display:grid;grid-template-columns:180px 1fr;gap:36px;align-items:start;margin-bottom:44px}
+.sep{height:1px;background:var(--border);margin-bottom:44px;opacity:.6}
+
+.sec-meta{padding-top:4px}
 .sec-n{font-family:'DM Mono',monospace;font-size:9px;color:var(--gold);letter-spacing:.14em;margin-bottom:6px}
 .sec-name{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:500;font-style:italic;color:var(--text);line-height:1.18}
 .sec-bar{width:28px;height:1.5px;background:var(--gold);margin-top:10px;opacity:.6}
 
-/* ── CARDS ── */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:9px}
 
 .card{
-  background:var(--surface);
-  border:1px solid var(--border);
-  border-radius:10px;
-  padding:17px 18px 16px;
-  text-decoration:none;
-  color:var(--text);
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:17px 18px 16px;text-decoration:none;color:var(--text);
   display:flex;flex-direction:column;gap:4px;
   transition:transform .13s,box-shadow .13s,border-color .13s;
-  position:relative;overflow:hidden;
 }
 .card:hover{transform:translateY(-2px);box-shadow:0 6px 22px rgba(0,0,0,.1);border-color:var(--gold-dim)}
 
-.chip{
-  font-family:'DM Mono',monospace;
-  font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--muted);
-  display:flex;align-items:center;gap:5px;
-  margin-bottom:7px;
-}
+.chip{font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:5px;margin-bottom:7px}
 .chip::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--c,var(--border));flex-shrink:0}
 
 .cn{font-size:13.5px;font-weight:600;color:var(--text);line-height:1.2}
 .cd{font-size:11px;color:var(--muted);line-height:1.55;margin-top:2px}
 
-/* DARK (featured) card */
 .card.d{background:var(--ink);border-color:transparent}
-.card.d .cn{color:#fff}
-.card.d .cd{color:rgba(255,255,255,.38)}
-.card.d .chip{color:rgba(255,255,255,.28)}
+.card.d .cn{color:#fff}.card.d .cd{color:rgba(255,255,255,.38)}.card.d .chip{color:rgba(255,255,255,.28)}
 .card.d .chip::before{background:var(--c,var(--gold))}
 .card.d:hover{border-color:rgba(154,125,82,.5);box-shadow:0 8px 28px rgba(0,0,0,.28)}
 
-/* GOLD (secondary featured) card */
-.card.g{background:var(--gold-light);border-color:#e8d8be}
-.card.g .chip::before{background:var(--gold)}
-.card.g:hover{border-color:var(--gold)}
+.c-gold{--c:#9a7d52}.c-green{--c:#2e7d50}.c-blue{--c:#2e527a}.c-rose{--c:#7d2e52}.c-violet{--c:#52327d}.c-gray{--c:#8a8279}
 
-/* dot colors */
-.c-gold{--c:#9a7d52}
-.c-green{--c:#2e7d50}
-.c-blue{--c:#2e527a}
-.c-rose{--c:#7d2e52}
-.c-violet{--c:#52327d}
-.c-gray{--c:#8a8279}
-
-/* section separator */
-.sep{height:1px;background:var(--border);margin:0 0 4px;opacity:.6}
-
-@media(max-width:720px){
-  .header{padding:0 16px}.h-nav{display:none}
-  .page{padding:32px 16px 72px}
-  .masthead{flex-direction:column;align-items:flex-start;gap:12px}
-  .mh{font-size:42px}
+@media(max-width:860px){
+  .hero{grid-template-columns:1fr}
+  .rail.left{display:none}
+  .rail.right{display:none}
+  .center{min-height:100svh}
+  .below{padding:40px 20px 72px}
   .sec{grid-template-columns:1fr}
-  .sec-meta{position:static}
-  .sec-meta{display:flex;align-items:center;gap:14px}
-  .sec-bar{margin-top:0;flex-grow:1}
 }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="h-left">
-    <img src="/logo.png" alt="Two Travel">
-    <span class="h-tag">Panel interno</span>
+<!-- ═══ HERO ═══ -->
+<div class="hero">
+
+  <!-- LEFT RAIL -->
+  <div class="rail left">
+    <div class="rail-logo">
+      <img src="/logo.png" alt="Two Travel">
+    </div>
+
+    <div style="margin-top:auto;margin-bottom:24px">
+      <div class="rail-section-label">Operaciones</div>
+      <div class="rail-links">
+        <a href="/?mode=concierge" class="rl">
+          <span class="rl-num">01</span>
+          <span class="rl-text"><span class="rl-name">Clientes</span><span class="rl-sub">Kickoffs · Itinerarios · PDFs</span></span>
+        </a>
+        <a href="/?mode=dashboard" class="rl">
+          <span class="rl-num">02</span>
+          <span class="rl-text"><span class="rl-name">Dashboard</span><span class="rl-sub">Métricas del equipo</span></span>
+        </a>
+        <a href="/handoffs.html" class="rl">
+          <span class="rl-num">03</span>
+          <span class="rl-text"><span class="rl-name">Handoffs</span><span class="rl-sub">Servicios por trip</span></span>
+        </a>
+        <a href="/tasks.html" class="rl">
+          <span class="rl-num">04</span>
+          <span class="rl-text"><span class="rl-name">Tareas</span><span class="rl-sub">Seguimiento del equipo</span></span>
+        </a>
+        <a href="/?mode=pagos" class="rl">
+          <span class="rl-num">05</span>
+          <span class="rl-text"><span class="rl-name">Pagos</span><span class="rl-sub">Colombia · México</span></span>
+        </a>
+        <a href="/comisiones.html" class="rl">
+          <span class="rl-num">06</span>
+          <span class="rl-text"><span class="rl-name">Comisiones</span><span class="rl-sub">Cobros del equipo</span></span>
+        </a>
+      </div>
+    </div>
+
+    <div class="rail-foot">
+      Panel interno<br>
+      Two Travel
+    </div>
   </div>
-  <nav class="h-nav">
-    <a href="#concierge" class="hn">Concierge</a>
-    <a href="#finanzas" class="hn">Finanzas</a>
-    <a href="#ventas" class="hn">Ventas</a>
-    <a href="#bodas" class="hn">Bodas</a>
-    <a href="#marketing" class="hn">Marketing</a>
-    <a href="#config" class="hn">Config</a>
-  </nav>
+
+  <!-- CENTER IMAGE -->
+  <div class="center" id="hero-center">
+    <div class="center-body">
+      <div class="hero-eyebrow">Panel interno</div>
+      <h1 class="hero-title">Portal<br><em>Two Travel</em></h1>
+      <div class="hero-date" id="dt"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT RAIL -->
+  <div class="rail right">
+    <div class="rail-logo" style="opacity:0;pointer-events:none">
+      <img src="/logo.png" alt="">
+    </div>
+
+    <div style="margin-top:auto;margin-bottom:24px">
+      <div class="rail-section-label">Otros</div>
+      <div class="rail-links">
+        <a href="/?mode=bodas" class="rl">
+          <span class="rl-num">07</span>
+          <span class="rl-text"><span class="rl-name">Bodas</span><span class="rl-sub">Two Lovers · Fases</span></span>
+        </a>
+        <a href="/?mode=tareas-bodas" class="rl">
+          <span class="rl-num">08</span>
+          <span class="rl-text"><span class="rl-name">Tareas Bodas</span><span class="rl-sub">Equipo Two Lovers</span></span>
+        </a>
+        <a href="/estimates.html" class="rl">
+          <span class="rl-num">09</span>
+          <span class="rl-text"><span class="rl-name">Estimados</span><span class="rl-sub">708 servicios · Tier 1/2</span></span>
+        </a>
+        <a href="/agent.html" class="rl">
+          <span class="rl-num">10</span>
+          <span class="rl-text"><span class="rl-name">Agente IA</span><span class="rl-sub">Chatbot de ventas</span></span>
+        </a>
+        <a href="/marketing.html" class="rl">
+          <span class="rl-num">11</span>
+          <span class="rl-text"><span class="rl-name">Marketing</span><span class="rl-sub">Board · Calendario</span></span>
+        </a>
+        <a href="/?mode=users" class="rl">
+          <span class="rl-num">12</span>
+          <span class="rl-text"><span class="rl-name">Usuarios</span><span class="rl-sub">Accesos y permisos</span></span>
+        </a>
+      </div>
+    </div>
+
+    <div class="rail-foot" id="dt2"></div>
+  </div>
+
 </div>
 
-<div class="page">
+<!-- ═══ SCROLL CUE ═══ -->
+<div class="scroll-cue" id="cue">
+  <svg width="12" height="18" viewBox="0 0 12 18" fill="none"><path d="M6 1v16M1 12l5 5 5-5" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  ver todo
+</div>
 
-  <div class="masthead">
-    <h1 class="mh">Portal<br><em>Two Travel</em></h1>
-    <div class="mh-date" id="dt"></div>
+<!-- ═══ SECTIONS BELOW ═══ -->
+<div class="below">
+
+  <!-- CONCIERGE -->
+  <div class="sec" id="concierge">
+    <div class="sec-meta">
+      <div class="sec-n">01</div>
+      <div class="sec-name">Concierge &amp;<br>Operaciones</div>
+      <div class="sec-bar"></div>
+    </div>
+    <div class="grid">
+      <a href="/?mode=concierge" class="card d c-gold"><div class="chip">Principal</div><div class="cn">Clientes</div><div class="cd">Kickoffs, itinerarios, PDFs y catálogo de servicios</div></a>
+      <a href="/?mode=dashboard" class="card d c-gold"><div class="chip">Principal</div><div class="cn">Dashboard</div><div class="cd">Métricas y rendimiento del equipo</div></a>
+      <a href="/handoffs.html" class="card c-gold"><div class="chip">Operaciones</div><div class="cn">Handoffs</div><div class="cd">Servicios confirmados por trip</div></a>
+      <a href="/tasks.html" class="card c-gold"><div class="chip">Operaciones</div><div class="cn">Tareas</div><div class="cd">Seguimiento de tareas del equipo</div></a>
+      <a href="/accesos.html" class="card c-gold"><div class="chip">Acceso</div><div class="cn">Calendarios</div><div class="cd">Links de reservas por concierge</div></a>
+      <a href="/?mode=soporte" class="card c-gold"><div class="chip">Soporte</div><div class="cn">Soporte</div><div class="cd">Solicitudes internas del equipo</div></a>
+    </div>
   </div>
 
-  <div class="sections">
+  <div class="sep"></div>
 
-    <!-- CONCIERGE -->
-    <div class="sec" id="concierge">
-      <div class="sec-meta">
-        <div class="sec-n">01</div>
-        <div class="sec-name">Concierge &amp;<br>Operaciones</div>
-        <div class="sec-bar"></div>
-      </div>
-      <div class="grid">
-        <a href="/?mode=concierge" class="card d c-gold">
-          <div class="chip">Principal</div>
-          <div class="cn">Clientes</div>
-          <div class="cd">Kickoffs, itinerarios, PDFs y catálogo de servicios</div>
-        </a>
-        <a href="/?mode=dashboard" class="card d c-gold">
-          <div class="chip">Principal</div>
-          <div class="cn">Dashboard</div>
-          <div class="cd">Métricas y rendimiento del equipo</div>
-        </a>
-        <a href="/handoffs.html" class="card c-gold">
-          <div class="chip">Operaciones</div>
-          <div class="cn">Handoffs</div>
-          <div class="cd">Servicios confirmados por trip</div>
-        </a>
-        <a href="/tasks.html" class="card c-gold">
-          <div class="chip">Operaciones</div>
-          <div class="cn">Tareas</div>
-          <div class="cd">Seguimiento de tareas del equipo</div>
-        </a>
-        <a href="/accesos.html" class="card c-gold">
-          <div class="chip">Acceso</div>
-          <div class="cn">Calendarios</div>
-          <div class="cd">Links de reservas por concierge</div>
-        </a>
-        <a href="/?mode=soporte" class="card c-gold">
-          <div class="chip">Soporte</div>
-          <div class="cn">Soporte</div>
-          <div class="cd">Solicitudes internas del equipo</div>
-        </a>
-      </div>
+  <!-- FINANZAS -->
+  <div class="sec" id="finanzas">
+    <div class="sec-meta">
+      <div class="sec-n">02</div>
+      <div class="sec-name">Finanzas<br>&amp; Pagos</div>
+      <div class="sec-bar"></div>
     </div>
-
-    <div class="sep"></div>
-
-    <!-- FINANZAS -->
-    <div class="sec" id="finanzas">
-      <div class="sec-meta">
-        <div class="sec-n">02</div>
-        <div class="sec-name">Finanzas<br>&amp; Pagos</div>
-        <div class="sec-bar"></div>
-      </div>
-      <div class="grid">
-        <a href="/?mode=pagos" class="card d c-green">
-          <div class="chip">Principal</div>
-          <div class="cn">Pagos</div>
-          <div class="cd">Tablero · Colombia y México</div>
-        </a>
-        <a href="/comisiones.html" class="card c-green">
-          <div class="chip">Control</div>
-          <div class="cn">Comisiones</div>
-          <div class="cd">Cobros pendientes, vencidos y pagados</div>
-        </a>
-        <a href="/guia-pagos-lyna.html" class="card c-green">
-          <div class="chip">Docs</div>
-          <div class="cn">Guía pagos</div>
-          <div class="cd">Manual de uso del tablero de pagos</div>
-        </a>
-      </div>
+    <div class="grid">
+      <a href="/?mode=pagos" class="card d c-green"><div class="chip">Principal</div><div class="cn">Pagos</div><div class="cd">Tablero · Colombia y México</div></a>
+      <a href="/comisiones.html" class="card c-green"><div class="chip">Control</div><div class="cn">Comisiones</div><div class="cd">Cobros pendientes, vencidos y pagados</div></a>
+      <a href="/guia-pagos-lyna.html" class="card c-green"><div class="chip">Docs</div><div class="cn">Guía pagos</div><div class="cd">Manual de uso del tablero</div></a>
     </div>
-
-    <div class="sep"></div>
-
-    <!-- VENTAS -->
-    <div class="sec" id="ventas">
-      <div class="sec-meta">
-        <div class="sec-n">03</div>
-        <div class="sec-name">Ventas &amp;<br>Portafolio</div>
-        <div class="sec-bar"></div>
-      </div>
-      <div class="grid">
-        <a href="/agent.html" class="card d c-blue">
-          <div class="chip">IA</div>
-          <div class="cn">Agente IA</div>
-          <div class="cd">Chatbot para calificar y atender leads</div>
-        </a>
-        <a href="/estimates.html" class="card d c-blue">
-          <div class="chip">Ventas</div>
-          <div class="cn">Estimados</div>
-          <div class="cd">708 servicios · Tier 1 y Tier 2</div>
-        </a>
-        <a href="/admin.html" class="card c-blue">
-          <div class="chip">Portafolio</div>
-          <div class="cn">Propiedades</div>
-          <div class="cd">Catálogo · Portfolio Manager</div>
-        </a>
-        <a href="/pricing.html" class="card c-blue">
-          <div class="chip">Precios</div>
-          <div class="cn">Tablas de precios</div>
-          <div class="cd">Desayuno · Bebidas · Mercado</div>
-        </a>
-      </div>
-    </div>
-
-    <div class="sep"></div>
-
-    <!-- BODAS -->
-    <div class="sec" id="bodas">
-      <div class="sec-meta">
-        <div class="sec-n">04</div>
-        <div class="sec-name">Two Lovers<br>&amp; Bodas</div>
-        <div class="sec-bar"></div>
-      </div>
-      <div class="grid">
-        <a href="/?mode=bodas" class="card d c-rose">
-          <div class="chip">Principal</div>
-          <div class="cn">Bodas</div>
-          <div class="cd">Gestión de bodas, fases y clientes Two Lovers</div>
-        </a>
-        <a href="/?mode=tareas-bodas" class="card c-rose">
-          <div class="chip">Operaciones</div>
-          <div class="cn">Tareas</div>
-          <div class="cd">Atrasadas, hoy y próximas del equipo</div>
-        </a>
-      </div>
-    </div>
-
-    <div class="sep"></div>
-
-    <!-- MARKETING -->
-    <div class="sec" id="marketing">
-      <div class="sec-meta">
-        <div class="sec-n">05</div>
-        <div class="sec-name">Marketing<br>&amp; Contenido</div>
-        <div class="sec-bar"></div>
-      </div>
-      <div class="grid">
-        <a href="/marketing.html" class="card d c-violet">
-          <div class="chip">Board</div>
-          <div class="cn">Marketing Board</div>
-          <div class="cd">Filmación · Comportamiento · Calendario · Métricas</div>
-        </a>
-      </div>
-    </div>
-
-    <div class="sep"></div>
-
-    <!-- CONFIG -->
-    <div class="sec" id="config">
-      <div class="sec-meta">
-        <div class="sec-n">06</div>
-        <div class="sec-name">Recursos<br>&amp; Config</div>
-        <div class="sec-bar"></div>
-      </div>
-      <div class="grid">
-        <a href="/guia-plataforma.html" class="card c-gray">
-          <div class="chip">Docs</div>
-          <div class="cn">Guía de la plataforma</div>
-          <div class="cd">Manual de uso completo para el equipo</div>
-        </a>
-        <a href="/?mode=users" class="card c-gray">
-          <div class="chip">Admin</div>
-          <div class="cn">Usuarios</div>
-          <div class="cd">Accesos y permisos del equipo</div>
-        </a>
-      </div>
-    </div>
-
   </div>
+
+  <div class="sep"></div>
+
+  <!-- VENTAS -->
+  <div class="sec" id="ventas">
+    <div class="sec-meta">
+      <div class="sec-n">03</div>
+      <div class="sec-name">Ventas &amp;<br>Portafolio</div>
+      <div class="sec-bar"></div>
+    </div>
+    <div class="grid">
+      <a href="/agent.html" class="card d c-blue"><div class="chip">IA</div><div class="cn">Agente IA</div><div class="cd">Chatbot para calificar y atender leads</div></a>
+      <a href="/estimates.html" class="card d c-blue"><div class="chip">Ventas</div><div class="cn">Estimados</div><div class="cd">708 servicios · Tier 1 y Tier 2</div></a>
+      <a href="/admin.html" class="card c-blue"><div class="chip">Portafolio</div><div class="cn">Propiedades</div><div class="cd">Catálogo · Portfolio Manager</div></a>
+      <a href="/pricing.html" class="card c-blue"><div class="chip">Precios</div><div class="cn">Tablas de precios</div><div class="cd">Desayuno · Bebidas · Mercado</div></a>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- BODAS -->
+  <div class="sec" id="bodas">
+    <div class="sec-meta">
+      <div class="sec-n">04</div>
+      <div class="sec-name">Two Lovers<br>&amp; Bodas</div>
+      <div class="sec-bar"></div>
+    </div>
+    <div class="grid">
+      <a href="/?mode=bodas" class="card d c-rose"><div class="chip">Principal</div><div class="cn">Bodas</div><div class="cd">Gestión de bodas, fases y clientes Two Lovers</div></a>
+      <a href="/?mode=tareas-bodas" class="card c-rose"><div class="chip">Operaciones</div><div class="cn">Tareas</div><div class="cd">Atrasadas, hoy y próximas del equipo</div></a>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- MARKETING -->
+  <div class="sec" id="marketing">
+    <div class="sec-meta">
+      <div class="sec-n">05</div>
+      <div class="sec-name">Marketing<br>&amp; Contenido</div>
+      <div class="sec-bar"></div>
+    </div>
+    <div class="grid">
+      <a href="/marketing.html" class="card d c-violet"><div class="chip">Board</div><div class="cn">Marketing Board</div><div class="cd">Filmación · Comportamiento · Calendario · Métricas</div></a>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- CONFIG -->
+  <div class="sec" id="config">
+    <div class="sec-meta">
+      <div class="sec-n">06</div>
+      <div class="sec-name">Recursos<br>&amp; Config</div>
+      <div class="sec-bar"></div>
+    </div>
+    <div class="grid">
+      <a href="/guia-plataforma.html" class="card c-gray"><div class="chip">Docs</div><div class="cn">Guía de la plataforma</div><div class="cd">Manual de uso completo</div></a>
+      <a href="/?mode=users" class="card c-gray"><div class="chip">Admin</div><div class="cn">Usuarios</div><div class="cd">Accesos y permisos del equipo</div></a>
+    </div>
+  </div>
+
 </div>
 
 <script>
 const d = new Date();
-const dia = d.toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-document.getElementById('dt').innerHTML = dia.replace(',','<br>');
+const fmt = {weekday:'long',day:'numeric',month:'long',year:'numeric'};
+const s = d.toLocaleDateString('es-CO', fmt);
+document.getElementById('dt').textContent = s.toUpperCase();
+const el2 = document.getElementById('dt2');
+if (el2) el2.textContent = s;
+
+// Hide scroll cue after user scrolls
+window.addEventListener('scroll', () => {
+  const cue = document.getElementById('cue');
+  if (cue) cue.style.opacity = window.scrollY > 60 ? '0' : '1';
+}, {passive:true});
 </script>
 </body>
 </html>
