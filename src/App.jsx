@@ -3196,7 +3196,12 @@ function exportKpiCsv(kickoffs, period = "all", conciergeFilter = "all", kpiType
 const taskInitials = name => (name||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
 const taskAvatarColor = name => teamMemberInfo(name)?.areaColor ?? "#374151";
 const BODAS_FASES_TT = new Set(["Onboarding","Planning","Pre-Wedding","Wedding Day","Post-Wedding"]);
-const isBodaTask = t => t.source==="bodas" || BODAS_FASES_TT.has(t.fase) || String(t.kickoffId||"").startsWith("boda_");
+const BODAS_MEMBER_SET = new Set((TEAM_AREAS.find(a=>a.key==="bodas")?.members||[]).map(m=>m.name));
+const isBodaTask = t =>
+  t.source==="bodas" ||
+  BODAS_FASES_TT.has(t.fase) ||
+  String(t.kickoffId||"").startsWith("boda_") ||
+  (t.assignedTo||"").split(/[,;]/).map(s=>s.trim()).some(n=>BODAS_MEMBER_SET.has(n));
 
 const TASK_STATUSES = [
   { value:"backlog",     label:"Backlog",      color:"#9CA3AF", bg:"#F3F4F6" },
