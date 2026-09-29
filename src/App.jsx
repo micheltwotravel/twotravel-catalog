@@ -3243,9 +3243,11 @@ function TaskTracker({ currentUser }) {
       const BODAS_FASES = new Set(["Onboarding","Planning","Pre-Wedding","Wedding Day","Post-Wedding"]);
       setTasks((tasksRes.data||[]).map(r=>{
         const d = { id:r.id, ...(r.data||{}) };
-        if (!d.area) {
-          if (d.source==="bodas" || BODAS_FASES.has(d.fase)) d.area = "bodas";
-          else d.area = teamMemberInfo(d.assignedTo)?.area || "";
+        // bodas-source always wins regardless of stored area
+        if (d.source==="bodas" || BODAS_FASES.has(d.fase)) {
+          d.area = "bodas";
+        } else if (!d.area) {
+          d.area = teamMemberInfo(d.assignedTo)?.area || "";
         }
         return d;
       }));
@@ -3673,10 +3675,9 @@ function TaskTracker({ currentUser }) {
                 <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                   {[{key:"all",label:"Todos",color:"#111"}, ...TEAM_AREAS].map(area => {
                     const active = filterArea === area.key;
-                    const aMembers = area.key==="all" ? [] : (TEAM_AREAS.find(a=>a.key===area.key)?.members.map(m=>m.name)||[]);
                     const cnt = area.key==="all"
                       ? pendingTasks.length
-                      : pendingTasks.filter(t=>aMembers.includes(t.assignedTo)).length;
+                      : pendingTasks.filter(t=>t.area===area.key).length;
                     return (
                       <button key={area.key} onClick={()=>{ setFilterArea(area.key); setFilterPerson("all"); setFilterKickoff("all"); }}
                         style={{display:"flex",alignItems:"center",gap:5,fontSize:12,fontWeight:600,
