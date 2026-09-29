@@ -25,74 +25,55 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 .hero{
   height:100svh;
   min-height:560px;
-  display:grid;
-  grid-template-columns:260px 1fr 260px;
-}
-
-/* ── LEFT RAIL ── */
-.rail{
-  background:var(--ink);
-  display:flex;
-  flex-direction:column;
-  padding:28px 28px 32px;
-  position:relative;
-  z-index:2;
-}
-.rail-logo{margin-bottom:auto}
-.rail-logo img{height:24px;filter:brightness(0) invert(1);opacity:.7;object-fit:contain}
-
-.rail-links{display:flex;flex-direction:column;gap:2px;margin-bottom:32px}
-
-.rl{
-  display:flex;align-items:baseline;gap:12px;
-  text-decoration:none;
-  padding:10px 0;
-  border-bottom:1px solid rgba(255,255,255,.06);
-  transition:border-color .15s;
-  group:true;
-}
-.rl:last-child{border-bottom:none}
-.rl:hover .rl-name{color:#fff}
-.rl:hover .rl-num{color:var(--gold)}
-
-.rl-num{font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,.2);letter-spacing:.1em;min-width:20px;transition:color .15s}
-.rl-text{display:flex;flex-direction:column;gap:1px}
-.rl-name{font-size:13.5px;font-weight:500;color:rgba(255,255,255,.65);line-height:1.2;transition:color .15s}
-.rl-sub{font-family:'DM Mono',monospace;font-size:8.5px;color:rgba(255,255,255,.22);letter-spacing:.08em;margin-top:1px}
-
-.rail-foot{font-family:'DM Mono',monospace;font-size:8.5px;color:rgba(255,255,255,.2);letter-spacing:.08em;line-height:1.7}
-
-/* ── CENTER IMAGE ── */
-.center{
   position:relative;
   overflow:hidden;
   background:var(--hero-img);
   background-size:cover;
   background-position:center;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
 }
-/* If a real photo is set, this overlay ensures text is legible */
-.center::after{
+.hero::after{
   content:'';
   position:absolute;inset:0;
-  background:linear-gradient(to top, rgba(0,0,0,.72) 0%, rgba(0,0,0,.1) 50%, rgba(0,0,0,.18) 100%);
+  background:linear-gradient(to top, rgba(0,0,0,.72) 0%, rgba(0,0,0,.05) 50%, rgba(0,0,0,.28) 100%);
   pointer-events:none;
 }
+
+/* ── HERO NAV (top) ── */
+.hero-nav{
+  position:relative;z-index:2;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:28px 40px;
+}
+.nav-logo img{height:22px;filter:brightness(0) invert(1);opacity:.75;object-fit:contain}
+.nav-links{display:flex;align-items:center;gap:4px}
+.nl{
+  font-family:'DM Mono',monospace;font-size:9.5px;font-weight:500;
+  letter-spacing:.08em;text-transform:uppercase;
+  color:rgba(255,255,255,.42);text-decoration:none;
+  padding:6px 11px;border-radius:3px;
+  transition:background .15s,color .15s;
+}
+.nl:hover{background:rgba(255,255,255,.09);color:rgba(255,255,255,.85)}
+
+/* ── HERO TITLE (bottom) ── */
 .center-body{
-  position:absolute;bottom:0;left:0;right:0;
+  position:relative;z-index:2;
   padding:40px 44px;
-  z-index:1;
 }
 .hero-eyebrow{
   font-family:'DM Mono',monospace;
-  font-size:9px;color:rgba(255,255,255,.4);
+  font-size:9px;color:rgba(255,255,255,.35);
   letter-spacing:.14em;text-transform:uppercase;
-  margin-bottom:10px;
+  margin-bottom:12px;
   display:flex;align-items:center;gap:8px;
 }
 .hero-eyebrow::before{content:'';width:24px;height:1px;background:var(--gold);opacity:.6}
 .hero-title{
   font-family:'Cormorant Garamond',serif;
-  font-size:clamp(40px,5.5vw,72px);
+  font-size:clamp(44px,6vw,80px);
   font-weight:500;
   font-style:italic;
   color:#fff;
@@ -103,22 +84,10 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 .hero-date{
   font-family:'DM Mono',monospace;
   font-size:9px;
-  color:rgba(255,255,255,.3);
+  color:rgba(255,255,255,.28);
   letter-spacing:.1em;
-  margin-top:14px;
+  margin-top:16px;
   text-transform:uppercase;
-}
-
-/* ── RIGHT RAIL ── */
-.rail.right .rail-links{margin-bottom:32px}
-.rail-section-label{
-  font-family:'DM Mono',monospace;
-  font-size:8.5px;
-  color:rgba(255,255,255,.2);
-  letter-spacing:.14em;
-  text-transform:uppercase;
-  margin-bottom:10px;
-  margin-top:6px;
 }
 
 /* ── SCROLL ARROW ── */
@@ -167,11 +136,10 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 
 .c-gold{--c:#9a7d52}.c-green{--c:#2e7d50}.c-blue{--c:#2e527a}.c-rose{--c:#7d2e52}.c-violet{--c:#52327d}.c-gray{--c:#8a8279}
 
-@media(max-width:860px){
-  .hero{grid-template-columns:1fr}
-  .rail.left{display:none}
-  .rail.right{display:none}
-  .center{min-height:100svh}
+@media(max-width:680px){
+  .hero-nav{padding:20px 20px}
+  .nav-links{display:none}
+  .center-body{padding:32px 22px}
   .below{padding:40px 20px 72px}
   .sec{grid-template-columns:1fr}
 }
@@ -182,94 +150,26 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 <!-- ═══ HERO ═══ -->
 <div class="hero">
 
-  <!-- LEFT RAIL -->
-  <div class="rail left">
-    <div class="rail-logo">
+  <!-- NAV TOP -->
+  <nav class="hero-nav">
+    <div class="nav-logo">
       <img src="/logo.png" alt="Two Travel">
     </div>
-
-    <div style="margin-top:auto;margin-bottom:24px">
-      <div class="rail-section-label">Operaciones</div>
-      <div class="rail-links">
-        <a href="/?mode=concierge" class="rl">
-          <span class="rl-num">01</span>
-          <span class="rl-text"><span class="rl-name">Clientes</span><span class="rl-sub">Kickoffs · Itinerarios · PDFs</span></span>
-        </a>
-        <a href="/?mode=dashboard" class="rl">
-          <span class="rl-num">02</span>
-          <span class="rl-text"><span class="rl-name">Dashboard</span><span class="rl-sub">Métricas del equipo</span></span>
-        </a>
-        <a href="/handoffs.html" class="rl">
-          <span class="rl-num">03</span>
-          <span class="rl-text"><span class="rl-name">Handoffs</span><span class="rl-sub">Servicios por trip</span></span>
-        </a>
-        <a href="/tasks.html" class="rl">
-          <span class="rl-num">04</span>
-          <span class="rl-text"><span class="rl-name">Tareas</span><span class="rl-sub">Seguimiento del equipo</span></span>
-        </a>
-        <a href="/?mode=pagos" class="rl">
-          <span class="rl-num">05</span>
-          <span class="rl-text"><span class="rl-name">Pagos</span><span class="rl-sub">Colombia · México</span></span>
-        </a>
-        <a href="/comisiones.html" class="rl">
-          <span class="rl-num">06</span>
-          <span class="rl-text"><span class="rl-name">Comisiones</span><span class="rl-sub">Cobros del equipo</span></span>
-        </a>
-      </div>
+    <div class="nav-links">
+      <a href="/?mode=concierge" class="nl">Clientes</a>
+      <a href="/?mode=pagos" class="nl">Pagos</a>
+      <a href="/tasks.html" class="nl">Tareas</a>
+      <a href="/?mode=bodas" class="nl">Bodas</a>
+      <a href="/agent.html" class="nl">Agente IA</a>
+      <a href="/?mode=users" class="nl">Usuarios</a>
     </div>
+  </nav>
 
-    <div class="rail-foot">
-      Panel interno<br>
-      Two Travel
-    </div>
-  </div>
-
-  <!-- CENTER IMAGE -->
-  <div class="center" id="hero-center">
-    <div class="center-body">
-      <div class="hero-eyebrow">Panel interno</div>
-      <h1 class="hero-title">Portal<br><em>Two Travel</em></h1>
-      <div class="hero-date" id="dt"></div>
-    </div>
-  </div>
-
-  <!-- RIGHT RAIL -->
-  <div class="rail right">
-    <div class="rail-logo" style="opacity:0;pointer-events:none">
-      <img src="/logo.png" alt="">
-    </div>
-
-    <div style="margin-top:auto;margin-bottom:24px">
-      <div class="rail-section-label">Otros</div>
-      <div class="rail-links">
-        <a href="/?mode=bodas" class="rl">
-          <span class="rl-num">07</span>
-          <span class="rl-text"><span class="rl-name">Bodas</span><span class="rl-sub">Two Lovers · Fases</span></span>
-        </a>
-        <a href="/?mode=tareas-bodas" class="rl">
-          <span class="rl-num">08</span>
-          <span class="rl-text"><span class="rl-name">Tareas Bodas</span><span class="rl-sub">Equipo Two Lovers</span></span>
-        </a>
-        <a href="/estimates.html" class="rl">
-          <span class="rl-num">09</span>
-          <span class="rl-text"><span class="rl-name">Estimados</span><span class="rl-sub">708 servicios · Tier 1/2</span></span>
-        </a>
-        <a href="/agent.html" class="rl">
-          <span class="rl-num">10</span>
-          <span class="rl-text"><span class="rl-name">Agente IA</span><span class="rl-sub">Chatbot de ventas</span></span>
-        </a>
-        <a href="/marketing.html" class="rl">
-          <span class="rl-num">11</span>
-          <span class="rl-text"><span class="rl-name">Marketing</span><span class="rl-sub">Board · Calendario</span></span>
-        </a>
-        <a href="/?mode=users" class="rl">
-          <span class="rl-num">12</span>
-          <span class="rl-text"><span class="rl-name">Usuarios</span><span class="rl-sub">Accesos y permisos</span></span>
-        </a>
-      </div>
-    </div>
-
-    <div class="rail-foot" id="dt2"></div>
+  <!-- TITLE BOTTOM -->
+  <div class="center-body">
+    <div class="hero-eyebrow">Panel interno</div>
+    <h1 class="hero-title">Portal<br><em>Two Travel</em></h1>
+    <div class="hero-date" id="dt"></div>
   </div>
 
 </div>
