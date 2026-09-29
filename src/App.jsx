@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, Component, Suspense } from "react";
 import { DRINK_CATEGORIES as DRINK_CATEGORIES_DEFAULT, GROCERY_CATEGORIES as GROCERY_CATEGORIES_DEFAULT, applyMenuOverrides } from "./menuData";
+import { supabase } from "./supabaseClient.js";
 
 // Wraps React.lazy to auto-reload the page on chunk-not-found errors (e.g. after a Vercel deploy)
 const lazyWithReload = (fn) =>
@@ -5949,13 +5950,17 @@ function useAuth() {
   });
 
   const login = async (email, pin) => {
-    const res = await fetch(GAS_URL, {
-      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "loginUser", payload: { email: email.toLowerCase().trim(), pin } }),
-    });
-    const data = await res.json();
-    if (!data.ok) return { ok: false, error: data.error || "Credenciales incorrectas" };
-    const u = { ...data.user, exp: Date.now() + 30 * 24 * 3600_000 };
+    const normalEmail = email.toLowerCase().trim();
+    const { data, error } = await supabase
+      .from("panel_users")
+      .select("email, data")
+      .eq("email", normalEmail)
+      .single();
+    if (error || !data) return { ok: false, error: "Credenciales incorrectas" };
+    const ud = data.data || {};
+    if (String(ud.pin) !== String(pin)) return { ok: false, error: "Credenciales incorrectas" };
+    if (ud.active === "false" || ud.active === false) return { ok: false, error: "Cuenta inactiva. Contacta a un administrador." };
+    const u = { email: normalEmail, name: ud.name || "", role: ud.role || "concierge", exp: Date.now() + 30 * 24 * 3600_000 };
     localStorage.setItem("tt_auth2", JSON.stringify(u));
     setUser(u);
     return { ok: true };
@@ -6030,13 +6035,12 @@ function RegisterScreen() {
     if (pin.length < 4) { setError("PIN mínimo 4 dígitos"); return; }
     if (pin !== pin2)   { setError("Los PINs no coinciden"); return; }
     setLoading(true);
-    const res = await fetch(GAS_URL, {
-      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "registerUser", payload: { email: email.toLowerCase().trim(), pin } }),
-    });
-    const d = await res.json();
+    const normalEmail = email.toLowerCase().trim();
+    const { error: existErr } = await supabase.from("panel_users").select("email").eq("email", normalEmail).single();
+    if (!existErr) { setLoading(false); setError("Este email ya está registrado"); return; }
+    const { error } = await supabase.from("panel_users").insert({ email: normalEmail, data: { name: "", pin, role: "pending", active: "false" } });
     setLoading(false);
-    if (!d.ok) { setError(d.error || "Error al registrar"); return; }
+    if (error) { setError(error.message || "Error al registrar"); return; }
     setDone(true);
   };
 
@@ -6092,21 +6096,13 @@ function ChangePinScreen({ user, onDone }) {
     if (next.length < 4)   { setError("PIN mínimo 4 dígitos"); return; }
     if (next !== next2)    { setError("Los PINs no coinciden"); return; }
     setLoading(true);
-    // Verify current PIN first
-    const verify = await fetch(GAS_URL, {
-      method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body: JSON.stringify({ action:"loginUser", payload:{ email: user.email, pin: current } }),
-    });
-    const vd = await verify.json();
-    if (!vd.ok) { setLoading(false); setError("PIN actual incorrecto"); return; }
-    // Update PIN
-    const res = await fetch(GAS_URL, {
-      method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body: JSON.stringify({ action:"updateUser", payload:{ email: user.email, pin: next } }),
-    });
-    const d = await res.json();
+    const { data: existing } = await supabase.from("panel_users").select("data").eq("email", user.email).single();
+    const ud = existing?.data || {};
+    if (String(ud.pin) !== String(current)) { setLoading(false); setError("PIN actual incorrecto"); return; }
+    const merged = { ...ud, pin: next };
+    const { error } = await supabase.from("panel_users").update({ data: merged }).eq("email", user.email);
     setLoading(false);
-    if (!d.ok) { setError(d.error || "Error al guardar"); return; }
+    if (error) { setError(error.message || "Error al guardar"); return; }
     setDone(true);
   };
 
@@ -6247,19 +6243,19 @@ function UserManagement({ currentUser, onBack }) {
   const [newUser, setNewUser] = useState({ email:"", name:"", pin:"", role:"concierge" });
   const [addError, setAddError] = useState("");
 
-  const load = () => {
+  const load = async () => {
     setLoading(true);
-    fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body: JSON.stringify({ action:"listUsers", payload:{ adminEmail: currentUser.email } }) })
-      .then(r => r.json()).then(d => { if (d.ok) setUsers(d.data || []); })
-      .finally(() => setLoading(false));
+    const { data, error } = await supabase.from("panel_users").select("email, data").order("email");
+    if (!error) setUsers((data || []).map(row => ({ email: row.email, ...(row.data || {}) })));
+    setLoading(false);
   };
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   const update = async (email, field, value) => {
     setSaving(s => ({ ...s, [email+field]: true }));
-    await fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body: JSON.stringify({ action:"updateUser", payload:{ adminEmail: currentUser.email, email, [field]: value } }) });
+    const { data: existing } = await supabase.from("panel_users").select("data").eq("email", email).single();
+    const merged = { ...(existing?.data || {}), [field]: value };
+    await supabase.from("panel_users").update({ data: merged }).eq("email", email);
     setSaving(s => ({ ...s, [email+field]: false }));
     setUsers(us => us.map(u => u.email === email ? { ...u, [field]: value } : u));
   };
@@ -6267,10 +6263,9 @@ function UserManagement({ currentUser, onBack }) {
   const addUser = async (e) => {
     e.preventDefault(); setAddError("");
     if (!newUser.email || !newUser.name || !newUser.pin) { setAddError("Completa todos los campos"); return; }
-    const res = await fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body: JSON.stringify({ action:"upsertUser", payload:{ adminEmail: currentUser.email, ...newUser, email: newUser.email.toLowerCase() } }) });
-    const d = await res.json();
-    if (!d.ok) { setAddError(d.error || "Error"); return; }
+    const email = newUser.email.toLowerCase();
+    const { error } = await supabase.from("panel_users").upsert({ email, data: { name: newUser.name, pin: newUser.pin, role: newUser.role, active: "true" } });
+    if (error) { setAddError(error.message || "Error"); return; }
     setShowAdd(false); setNewUser({ email:"", name:"", pin:"", role:"concierge" }); load();
   };
 
