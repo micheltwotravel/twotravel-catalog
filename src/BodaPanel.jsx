@@ -159,25 +159,6 @@ async function apiDeleteBoda(id) {
   if (error) throw new Error(error.message);
 }
 
-// One-time migration: pulls all rows from GAS and writes them to Supabase.
-// Safe to run multiple times (upsert by id).
-async function migrateBodas() {
-  const r = await fetch(`${GAS_URL}?${new URLSearchParams({ action: "listBodas" })}`);
-  const text = await r.text();
-  const d = JSON.parse(text);
-  const rows = Array.isArray(d.data) ? d.data : [];
-  if (!rows.length) return 0;
-  let count = 0;
-  for (const row of rows) {
-    const boda = rowToBoda(row);
-    if (!boda.id) continue;
-    const payload = { ...boda };
-    await supabase.from("bodas").upsert({ id: boda.id, data: payload }, { onConflict: "id" });
-    count++;
-  }
-  clearBodasCache();
-  return count;
-}
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const INP    = { width:"100%",border:`1px solid ${R.border}`,borderRadius:10,padding:"8px 12px",  fontSize:13,fontFamily:"'Jost',sans-serif",outline:"none",color:R.text,background:R.white,boxSizing:"border-box" };
@@ -2237,7 +2218,6 @@ export default function BodaPanel({ currentUser, onLogout }) {
   const [search,       setSearch]       = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [mainView,     setMainView]     = useState("dashboard");
-  const [migrating,    setMigrating]    = useState(false);
 
   const load=useCallback(async(force=false)=>{
     // Show cached bodas immediately — no loading spinner if we have data
@@ -2333,19 +2313,6 @@ export default function BodaPanel({ currentUser, onLogout }) {
             <button onClick={forceRefresh} disabled={refreshing} title="Recargar desde Supabase"
               style={{background:"rgba(255,255,255,.07)",color:refreshing?"rgba(255,255,255,.25)":"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 10px",fontSize:14,cursor:"pointer",transition:"opacity .15s",lineHeight:1}}>
               {refreshing?"⏳":"🔄"}
-            </button>
-            <button onClick={async()=>{
-              if(!window.confirm("¿Migrar todas las bodas de Google Sheets a Supabase?\n\nEsto es seguro — no borra nada, solo importa.")) return;
-              setMigrating(true);
-              try{
-                const n=await migrateBodas();
-                await load(true);
-                alert(`✅ ${n} bodas migradas a Supabase.`);
-              }catch(e){alert("Error en migración: "+e.message);}
-              setMigrating(false);
-            }} disabled={migrating} title="Migración one-time: importar de Google Sheets"
-              style={{background:"rgba(201,169,110,.15)",color:migrating?"rgba(255,255,255,.25)":"#c9a96e",border:"1px solid rgba(201,169,110,.3)",borderRadius:8,padding:"5px 10px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".03em",whiteSpace:"nowrap"}}>
-              {migrating?"Migrando…":"📥 Migrar GS"}
             </button>
             <a href="/?mode=tareas-bodas" style={{background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",textDecoration:"none"}}>📋 Tareas</a>
             <a href="/?mode=concierge" style={{background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",textDecoration:"none"}}>← Panel</a>
