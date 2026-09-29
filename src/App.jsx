@@ -3854,20 +3854,6 @@ function TaskTracker({ currentUser }) {
                             <span style={{fontSize:11,fontWeight:isToday?700:400,color:isToday?"#2563EB":isPast?"var(--text-3)":"var(--text-1)"}}>{dn}</span>
                             {cnt>0&&<span style={{fontSize:9,fontWeight:700,background:isPast?"#EF4444":"#2563EB",color:"#fff",borderRadius:9,padding:"1px 5px",lineHeight:1.6}}>{cnt}</span>}
                           </div>
-                          {cnt>0&&(
-                            <div style={{marginTop:2,display:"flex",flexDirection:"column",gap:1}}>
-                              {dts.slice(0,2).map(t=>{
-                                const info=teamMemberInfo(t.assignedTo);
-                                return (
-                                  <div key={t.id} style={{display:"flex",alignItems:"center",gap:2,overflow:"hidden"}}>
-                                    <span style={{width:6,height:6,borderRadius:"50%",background:info?.areaColor||"#6B7280",flexShrink:0}}/>
-                                    <span style={{fontSize:9.5,color:"var(--text-2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",lineHeight:1.35}}>{t.taskName}</span>
-                                  </div>
-                                );
-                              })}
-                              {cnt>2&&<span style={{fontSize:9,color:"var(--text-3)"}}>+{cnt-2} más</span>}
-                            </div>
-                          )}
                         </div>
                       );
                     })}
