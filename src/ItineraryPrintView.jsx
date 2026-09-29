@@ -442,8 +442,8 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       return;
     }
     const desc = lang === "es"
-      ? (service.description?.es || service.descriptionEs || service.description?.en || service.descriptionEn || "")
-      : (service.description?.en || service.descriptionEn || service.description?.es || service.descriptionEs || "");
+      ? (cartItem.description_es || service.description?.es || service.descriptionEs || service.description?.en || service.descriptionEn || "")
+      : (cartItem.description_en || service.description?.en || service.descriptionEn || service.description?.es || service.descriptionEs || "");
     const rawLoc = lang === "es" ? (service.location_es || service.location || "") : (service.location || "");
     const locLower = rawLoc.toLowerCase();
     const locMentionsOtherCity = Object.values(CITY_FULL).some(cn => locLower.includes(cn) && !tripCities.includes(cn));
@@ -511,15 +511,16 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
   const parseTime = t => { const m = String(t||"").match(/^(\d{1,2}):(\d{2})/); return m ? +m[1]*60 + +m[2] : Infinity; };
   return orderedLabels.map(label => {
     const dm = metaList.find(d => cl(d.label) === label);
-    // Sort by time first (chronological); fall back to sortOrder as tiebreaker.
-    // Items without a time keep their relative sortOrder among themselves and
-    // are placed after any timed item that precedes them in sortOrder.
+    // Sort by sortOrder first so manual reordering (via ↑↓ buttons) is respected
+    // on reload. Time is used only as a tiebreaker when two items share the same
+    // sortOrder (e.g. items that haven't been explicitly reordered yet).
     const items = (map.get(label) || []).sort((a, b) => {
+      if (a.sort !== b.sort) return a.sort - b.sort;
       const ta = parseTime(a.time), tb = parseTime(b.time);
-      if (ta !== Infinity && tb !== Infinity && ta !== tb) return ta - tb;
-      if (ta !== Infinity && tb === Infinity) return -1;
-      if (ta === Infinity && tb !== Infinity) return 1;
-      return a.sort - b.sort;
+      if (ta === Infinity && tb === Infinity) return 0;
+      if (ta === Infinity) return 1;
+      if (tb === Infinity) return -1;
+      return ta - tb;
     });
     // Day band shows label; subtitle shows the descriptive title if set
     return { label, title: dm?.title || "", date: dm?.date || "", items };
@@ -1425,7 +1426,7 @@ function SummaryPage({ kickoff, days, page, total, lang, editMode }) {
               <div key={i} className="sum-svc-row" style={it.confirmed === false ? { opacity: 0.55 } : {}}>
                 <span className="sum-svc-time">{it.time || "—"}</span>
                 <Editable
-                  value={it.confirmed === false ? `📌 ${it.title}` : it.title}
+                  value={it.confirmed === false ? `○ ${it.title}` : it.title}
                   tag="span" className="sum-svc-name" editMode={editMode}
                 />
                 {it.location && (
@@ -1972,7 +1973,7 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
             </div>
           ) : (
             <div className="ev-rec-badge">
-              📌 {isEs ? "Recomendación" : "Recommendation"}
+              🔖 {isEs ? "Recomendación" : "Recommendation"}
             </div>
           )
         )}
