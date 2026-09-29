@@ -3070,19 +3070,24 @@ const TEAM_AREAS = [
     { name:"Laura Ospina", email:"laura@two.travel" },
   ]},
   { key:"finanzas",  label:"Finanzas",   color:"#059669", members:[
-    { name:"Lyna",  email:"lyna@two.travel" },
-    { name:"Mario", email:"mario@two.travel" },
+    { name:"Lyna Atencio",         email:"lyna@two.travel" },
+    { name:"Mario Padilla",        email:"mario@two.travel" },
+    { name:"Mariangel De la Rosa", email:"mariangel@two.travel" },
+    { name:"Sebastian Anibal",     email:"sebastian@two.travel" },
+  ]},
+  { key:"ventas",    label:"Ventas",     color:"#0891B2", members:[
+    { name:"Ross Neely", email:"ross@two.travel" },
   ]},
   { key:"marketing", label:"Marketing",  color:"#7C3AED", members:[
-    { name:"Juan",           email:"juan@two.travel" },
-    { name:"Valeria Bedoya", email:"valeria@two.travel" },
+    { name:"Juan Arenas",       email:"juan@two.travel" },
+    { name:"Valentina Bedoya",  email:"valeria@two.travel" },
   ]},
   { key:"logistica", label:"Logística",  color:"#D97706", members:[
     { name:"Xile", email:"xile@two.travel" },
   ]},
   { key:"admin",     label:"Admin",      color:"#374151", members:[
-    { name:"Ray",    email:"ray@two.travel" },
-    { name:"Michel", email:"michel@two.travel" },
+    { name:"Ray Kanevsky",  email:"ray@two.travel" },
+    { name:"Michel Sanchez",email:"michel@two.travel" },
   ]},
 ];
 const TEAM_ALL = TEAM_AREAS.flatMap(a => a.members.map(m => ({ ...m, area:a.key, areaLabel:a.label, areaColor:a.color })));
