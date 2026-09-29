@@ -196,7 +196,6 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
       <a href="/?mode=bodas" class="nl" data-es="Bodas" data-en="Weddings">Bodas</a>
       <a href="/agent.html" class="nl" data-es="Agente IA" data-en="AI Agent">Agente IA</a>
       <a href="/?mode=users" class="nl" data-es="Usuarios" data-en="Users">Usuarios</a>
-      <button id="lang-btn" onclick="toggleLang()" style="font-family:'DM Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.42);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);padding:5px 11px;border-radius:3px;cursor:pointer;margin-left:6px;transition:background .15s,color .15s">ES</button>
     </div>
   </nav>
 
@@ -334,34 +333,6 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 </div>
 
 <script>
-// ── i18n ──────────────────────────────────────────────────────────────────────
-let _lang = (() => { try { return localStorage.getItem('tt_menu_lang') || 'es'; } catch(_) { return 'es'; } })();
-
-function applyLang(lang) {
-  _lang = lang;
-  try { localStorage.setItem('tt_menu_lang', lang); } catch(_) {}
-
-  document.querySelectorAll('[data-es][data-en]').forEach(el => {
-    const val = lang === 'en' ? el.dataset.en : el.dataset.es;
-    if (el.dataset.es.includes('<br>')) el.innerHTML = val;
-    else el.textContent = val;
-  });
-
-  const btn = document.getElementById('lang-btn');
-  if (btn) { btn.textContent = lang === 'en' ? 'EN' : 'ES'; }
-
-  const d = new Date();
-  const fmt = {weekday:'long',day:'numeric',month:'long',year:'numeric'};
-  const locale = lang === 'en' ? 'en-US' : 'es-CO';
-  const s = d.toLocaleDateString(locale, fmt);
-  const dtEl = document.getElementById('dt');
-  if (dtEl) dtEl.textContent = s.toUpperCase();
-}
-
-function toggleLang() { applyLang(_lang === 'es' ? 'en' : 'es'); }
-
-applyLang(_lang);
-
 // Hide scroll cue after user scrolls
 window.addEventListener('scroll', () => {
   const cue = document.getElementById('cue');
@@ -402,14 +373,15 @@ window.addEventListener('scroll', () => {
       return new Date(a.dueDate) - new Date(b.dueDate);
     });
 
+  const pg_lang = (() => { try { return localStorage.getItem('tt_menu_lang') || 'es'; } catch(_) { return 'es'; } })();
   const total = atrasadas.length + hoy.length + proximas.length;
   if (total === 0) {
-    body.innerHTML = `<div class="pa-empty">${_lang==='en'?'No pending tasks 🎉':'Sin tareas pendientes 🎉'}</div>`;
+    body.innerHTML = `<div class="pa-empty">${pg_lang==='en'?'No pending tasks 🎉':'Sin tareas pendientes 🎉'}</div>`;
     return;
   }
   countEl.textContent = total; countEl.style.display = '';
 
-  const fmtD = d => new Date(d+'T12:00:00').toLocaleDateString(_lang==='en'?'en-US':'es-CO',{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
+  const fmtD = d => new Date(d+'T12:00:00').toLocaleDateString(pg_lang==='en'?'en-US':'es-CO',{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
 
   const renderTask = (t, cls) => {
     const isUrgent = cls === 'late' || t.priority === 'alta';
@@ -420,14 +392,14 @@ window.addEventListener('scroll', () => {
           ${t.dueDate ? `<div class="pa-date ${cls}">${fmtD(t.dueDate)}</div>` : ''}
           <div class="pa-row">
             <span class="pa-name">${t.taskName || ''}</span>
-            ${isUrgent ? `<span class="pa-badge-imp">${_lang==='en'?'URGENT':'IMPORTANTE'}</span>` : ''}
+            ${isUrgent ? `<span class="pa-badge-imp">${pg_lang==='en'?'URGENT':'IMPORTANTE'}</span>` : ''}
           </div>
           ${t.kickoffName ? `<div class="pa-sub">${t.kickoffName}</div>` : ''}
         </div>
       </div>`;
   };
 
-  const L = _lang === 'en'
+  const L = pg_lang === 'en'
     ? { late:'Overdue', today:'Today', next:'Upcoming' }
     : { late:'Atrasadas', today:'Hoy', next:'Próximas' };
 
@@ -447,5 +419,6 @@ window.addEventListener('scroll', () => {
   body.innerHTML = html;
 })();
 </script>
+<script src="/lang.js"></script>
 </body>
 </html>
