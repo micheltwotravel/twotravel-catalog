@@ -3196,29 +3196,49 @@ function exportKpiCsv(kickoffs, period = "all", conciergeFilter = "all", kpiType
 const taskInitials = name => (name||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
 const taskAvatarColor = name => teamMemberInfo(name)?.areaColor ?? "#374151";
 
-function TaskTracker() {
+const TASK_STATUSES = [
+  { value:"backlog",     label:"Backlog",      color:"#9CA3AF", bg:"#F3F4F6" },
+  { value:"pendiente",   label:"Pendiente",    color:"#6B7280", bg:"#F9FAFB" },
+  { value:"en_proceso",  label:"En proceso",   color:"#2563EB", bg:"#EFF6FF" },
+  { value:"esperando",   label:"Esperando",    color:"#D97706", bg:"#FFFBEB" },
+  { value:"en_revision", label:"En revisión",  color:"#7C3AED", bg:"#F5F3FF" },
+  { value:"completado",  label:"Completado",   color:"#059669", bg:"#ECFDF5" },
+];
+const normStatus = s => ({ pending:"pendiente", in_progress:"en_proceso", blocked:"esperando", completed:"completado", late:"pendiente" }[s] || s || "pendiente");
+const isDone = s => s==="completado" || s==="completed";
+const statusMeta = s => TASK_STATUSES.find(x=>x.value===normStatus(s)) || TASK_STATUSES[1];
+
+function TaskTracker({ currentUser }) {
   const [tasks,    setTasks]    = useState([]);
+  const [projects, setProjects] = useState([]);
   const [kickoffs, setKickoffs] = useState([]);
   const [loading,  setLoading]  = useState(true);
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [showForm, setShowForm] = useState(false);
+  const [showProjectForm, setShowProjectForm] = useState(false);
   const [saving,   setSaving]   = useState(false);
   const [filterArea,   setFilterArea]   = useState("all");
   const [filterPerson, setFilterPerson] = useState("all");
   const [showDone,  setShowDone]  = useState(false);
   const [loadError, setLoadError] = useState("");
-  const [migrating, setMigrating] = useState(false);
-  const [migrateMsg, setMigrateMsg] = useState("");
   const [form, setForm] = useState({
-    taskName:"", assignedTo:"", assignedEmail:"", dueDate:"",
-    notes:"", kickoffId:"", kickoffName:"", priority:"media", imageUrl:"",
+    taskName:"", description:"", assignedTo:"", assignedEmail:"",
+    dueDate:"", status:"pendiente", priority:"media",
+    projectId:"", projectName:"", area:"", notes:"", kickoffId:"", kickoffName:"",
   });
+  const [pForm, setPForm] = useState({ name:"", description:"", area:"", responsable:"", targetDate:"", progress:0 });
   const setF = (k,v) => setForm(p=>({...p,[k]:v}));
+  const setPF = (k,v) => setPForm(p=>({...p,[k]:v}));
 
   const load = async () => {
     setLoading(true); setLoadError("");
-    const { data, error } = await supabase.from("tasks").select("*").order("created_at", { ascending: false });
-    if (error) { setLoadError(error.message); setLoading(false); return; }
-    setTasks((data||[]).map(row => ({ id: row.id, ...(row.data||{}) })));
+    const [tasksRes, projRes] = await Promise.all([
+      supabase.from("tasks").select("*").order("created_at",{ascending:false}),
+      supabase.from("projects").select("*").order("created_at",{ascending:false}),
+    ]);
+    if (tasksRes.error) setLoadError(tasksRes.error.message);
+    else setTasks((tasksRes.data||[]).map(r=>({id:r.id,...(r.data||{})})));
+    if (!projRes.error) setProjects((projRes.data||[]).map(r=>({id:r.id,...(r.data||{})})));
     setLoading(false);
   };
 
@@ -3232,80 +3252,103 @@ function TaskTracker() {
   }, []);
 
   const saveTask = async () => {
-    if (!form.taskName.trim()||!form.assignedTo||!form.dueDate)
-      return alert("Llena nombre, asignado y fecha.");
+    if (!form.taskName.trim()||!form.assignedTo) return alert("Llena nombre y asignado.");
     setSaving(true);
     const id = "task_"+Date.now().toString(36);
+    const areaInfo = teamMemberInfo(form.assignedTo);
     const payload = { ...form, id,
       assignedEmail: form.assignedEmail||TEAM_EMAIL_MAP[form.assignedTo]||"",
-      status:"pending", createdAt: new Date().toISOString(),
+      area: form.area||areaInfo?.area||"",
+      status: form.status||"pendiente",
+      createdAt: new Date().toISOString(),
+      createdBy: currentUser?.name||"",
     };
     const { error } = await supabase.from("tasks").insert({ id, data: payload });
     if (error) { alert("Error: "+error.message); setSaving(false); return; }
-    setForm({ taskName:"", assignedTo:"", assignedEmail:"", dueDate:"", notes:"", kickoffId:"", kickoffName:"", priority:"media", imageUrl:"" });
+    setForm({ taskName:"", description:"", assignedTo:"", assignedEmail:"", dueDate:"", status:"pendiente", priority:"media", projectId:"", projectName:"", area:"", notes:"", kickoffId:"", kickoffName:"" });
     setShowForm(false);
-    setTasks(prev => [payload, ...prev]);
+    setTasks(prev=>[payload,...prev]);
+    setSaving(false);
+  };
+
+  const saveProject = async () => {
+    if (!pForm.name.trim()) return alert("Llena el nombre del proyecto.");
+    setSaving(true);
+    const id = "proj_"+Date.now().toString(36);
+    const payload = { ...pForm, id, status:"en_proceso", createdAt:new Date().toISOString(), createdBy:currentUser?.name||"" };
+    const { error } = await supabase.from("projects").insert({ id, data: payload });
+    if (error) { alert("Error: "+error.message); setSaving(false); return; }
+    setProjects(prev=>[payload,...prev]);
+    setPForm({ name:"", description:"", area:"", responsable:"", targetDate:"", progress:0 });
+    setShowProjectForm(false);
     setSaving(false);
   };
 
   const updateTask = async (id, updates) => {
-    setTasks(prev => prev.map(t => t.id===id ? {...t,...updates} : t));
-    const { data: ex } = await supabase.from("tasks").select("data").eq("id",id).single();
+    setTasks(prev=>prev.map(t=>t.id===id?{...t,...updates}:t));
+    const { data:ex } = await supabase.from("tasks").select("data").eq("id",id).single();
     const merged = { ...(ex?.data||{}), ...updates,
-      ...(updates.status==="completed" ? { completedAt: new Date().toISOString() } : {}),
+      ...(isDone(updates.status)?{completedAt:new Date().toISOString()}:{}),
     };
-    await supabase.from("tasks").update({ data: merged }).eq("id",id);
+    await supabase.from("tasks").update({data:merged}).eq("id",id);
   };
 
-  const migrateFromGAS = async () => {
-    setMigrating(true); setMigrateMsg("Conectando a GAS…");
-    const GAS_URL = import.meta.env.VITE_GAS_URL;
-    let json = null;
-    for (let attempt = 0; attempt < 4; attempt++) {
-      try {
-        if (attempt > 0) { setMigrateMsg(`Reintento ${attempt}…`); await new Promise(r=>setTimeout(r,3000)); }
-        const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 12000);
-        const res = await fetch(`${GAS_URL}?action=listTasks`, { signal: ctrl.signal });
-        clearTimeout(tid);
-        const text = await res.text();
-        json = JSON.parse(text);
-        if (json?.ok !== false) break;
-      } catch { json = null; }
-    }
-    if (!json || !Array.isArray(json.data)) {
-      setMigrateMsg("No se pudo conectar a GAS."); setMigrating(false); return;
-    }
-    setMigrateMsg(`${json.data.length} tareas encontradas. Guardando…`);
-    let saved = 0;
-    for (const t of json.data) {
-      const id = t.id || "task_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2);
-      const { error } = await supabase.from("tasks").upsert({ id, data: { ...t, id } });
-      if (!error) saved++;
-    }
-    setMigrateMsg(`✓ ${saved} de ${json.data.length} tareas importadas`);
-    setMigrating(false);
-    load();
+  const updateProject = async (id, updates) => {
+    setProjects(prev=>prev.map(p=>p.id===id?{...p,...updates}:p));
+    const { data:ex } = await supabase.from("projects").select("data").eq("id",id).single();
+    await supabase.from("projects").update({data:{...(ex?.data||{}),...updates}}).eq("id",id);
   };
 
   // Time buckets
   const now = new Date(); now.setHours(0,0,0,0);
   const tmr = new Date(now); tmr.setDate(tmr.getDate()+1);
+  const nxt7 = new Date(now); nxt7.setDate(nxt7.getDate()+7);
 
-  const areaMembers = filterArea === "all" ? null : (TEAM_AREAS.find(a=>a.key===filterArea)?.members.map(m=>m.name) ?? null);
-  const visible    = tasks.filter(t => {
-    if (areaMembers && !areaMembers.includes(t.assignedTo)) return false;
-    if (filterPerson !== "all" && t.assignedTo !== filterPerson) return false;
+  const pendingTasks = tasks.filter(t=>!isDone(t.status));
+  const areaMembers = filterArea==="all"?null:(TEAM_AREAS.find(a=>a.key===filterArea)?.members.map(m=>m.name)??null);
+  const visible = tasks.filter(t=>{
+    if (areaMembers&&!areaMembers.includes(t.assignedTo)) return false;
+    if (filterPerson!=="all"&&t.assignedTo!==filterPerson) return false;
     return true;
   });
-  const atrasadas  = visible.filter(t => t.status!=="completed" && t.dueDate && new Date(t.dueDate) < now);
-  const hoy        = visible.filter(t => t.status!=="completed" && t.dueDate && new Date(t.dueDate)>=now && new Date(t.dueDate)<tmr);
-  const proximas   = visible.filter(t => t.status!=="completed" && (!t.dueDate || new Date(t.dueDate)>=tmr));
-  const terminadas = visible.filter(t => t.status==="completed");
+  const atrasadas  = visible.filter(t=>!isDone(t.status)&&t.dueDate&&new Date(t.dueDate)<now);
+  const hoy        = visible.filter(t=>!isDone(t.status)&&t.dueDate&&new Date(t.dueDate)>=now&&new Date(t.dueDate)<tmr);
+  const proximas   = visible.filter(t=>!isDone(t.status)&&(!t.dueDate||new Date(t.dueDate)>=tmr));
+  const terminadas = visible.filter(t=>isDone(t.status));
+
+  // Dashboard stats
+  const allAtrasadas  = pendingTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<now);
+  const allHoy        = pendingTasks.filter(t=>t.dueDate&&new Date(t.dueDate)>=now&&new Date(t.dueDate)<tmr);
+  const allSemana     = pendingTasks.filter(t=>t.dueDate&&new Date(t.dueDate)>=now&&new Date(t.dueDate)<nxt7);
+  const allBloqueadas = pendingTasks.filter(t=>normStatus(t.status)==="esperando");
+
+  const workloadMap = {};
+  pendingTasks.forEach(t=>{if(t.assignedTo) workloadMap[t.assignedTo]=(workloadMap[t.assignedTo]||0)+1;});
+  const workload = TEAM_ALL.filter(m=>workloadMap[m.name]).map(m=>({name:m.name,color:m.areaColor,count:workloadMap[m.name]})).sort((a,b)=>b.count-a.count);
 
   const todayCounts = {};
-  tasks.filter(t=>t.status!=="completed"&&t.dueDate&&new Date(t.dueDate)>=now&&new Date(t.dueDate)<tmr)
-    .forEach(t=>{ if(t.assignedTo) todayCounts[t.assignedTo]=(todayCounts[t.assignedTo]||0)+1; });
+  allHoy.forEach(t=>{if(t.assignedTo) todayCounts[t.assignedTo]=(todayCounts[t.assignedTo]||0)+1;});
+
+  // Mis tareas
+  const myName = currentUser?.name;
+  const misTareas = myName ? tasks.filter(t=>t.assignedTo===myName) : [];
+  const misAtrasadas = misTareas.filter(t=>!isDone(t.status)&&t.dueDate&&new Date(t.dueDate)<now);
+  const misHoy       = misTareas.filter(t=>!isDone(t.status)&&t.dueDate&&new Date(t.dueDate)>=now&&new Date(t.dueDate)<tmr);
+  const misSemana    = misTareas.filter(t=>!isDone(t.status)&&t.dueDate&&new Date(t.dueDate)>=tmr&&new Date(t.dueDate)<nxt7);
+  const misProximas  = misTareas.filter(t=>!isDone(t.status)&&(!t.dueDate||new Date(t.dueDate)>=nxt7));
+
+  const projectTaskCount = pid => tasks.filter(t=>t.projectId===pid).length;
+  const projectDoneCount = pid => tasks.filter(t=>t.projectId===pid&&isDone(t.status)).length;
+
+  const TABS = [
+    { key:"dashboard", label:"Dashboard" },
+    { key:"projects",  label:"Proyectos" },
+    { key:"all",       label:"Todas" },
+    { key:"mine",      label:"Mis tareas" },
+  ];
+
+  const inp = { marginTop:4, width:"100%", border:"1px solid var(--border)", borderRadius:"var(--radius-sm)", padding:"7px 10px", fontSize:12.5, background:"var(--surface)", boxSizing:"border-box" };
+  const lbl = { fontSize:11, color:"var(--text-3)", fontWeight:500 };
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg)"}}>
@@ -3314,159 +3357,101 @@ function TaskTracker() {
         <div style={{display:"flex",alignItems:"center",gap:16}}>
           <a href="/?mode=concierge" style={{fontSize:12,color:"var(--text-3)",textDecoration:"none",fontWeight:500}}>← Panel</a>
           <span style={{width:1,height:14,background:"var(--border)",display:"inline-block"}}/>
-          <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Tareas</span>
+          <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Two Travel HQ</span>
           <span style={{fontSize:11,fontWeight:500,background:"var(--border-soft)",color:"var(--text-3)",padding:"2px 8px",borderRadius:3}}>
-            {tasks.filter(t=>t.status!=="completed").length} pendientes
+            {pendingTasks.length} activas
           </span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <button onClick={load} style={{fontSize:12,color:"var(--text-3)",background:"none",border:"none",cursor:"pointer",padding:"4px 8px"}}>↻</button>
-          <button onClick={()=>setShowForm(v=>!v)} className="tt-btn-primary">+ Nueva tarea</button>
+          {activeTab==="projects"
+            ? <button onClick={()=>setShowProjectForm(v=>!v)} className="tt-btn-primary">+ Proyecto</button>
+            : <button onClick={()=>setShowForm(v=>!v)} className="tt-btn-primary">+ Tarea</button>}
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto px-6 py-6" style={{display:"flex",flexDirection:"column",gap:16}}>
-
-        {/* ── Area tabs ── */}
-        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-          {[{key:"all",label:"Todos",color:"#111"}, ...TEAM_AREAS].map(area => {
-            const active = filterArea === area.key;
-            const cnt = area.key==="all"
-              ? tasks.filter(t=>t.status!=="completed").length
-              : tasks.filter(t=>t.status!=="completed" && (TEAM_AREAS.find(a=>a.key===area.key)?.members.map(m=>m.name)||[]).includes(t.assignedTo)).length;
-            return (
-              <button key={area.key} onClick={()=>{ setFilterArea(area.key); setFilterPerson("all"); }}
-                style={{
-                  display:"flex",alignItems:"center",gap:5,fontSize:12,fontWeight:600,
-                  padding:"5px 12px",borderRadius:999,cursor:"pointer",transition:"all .12s",
-                  border: active?`1px solid ${area.color}`:"1px solid var(--border)",
-                  background: active?area.color:"transparent",
-                  color: active?"#fff":"var(--text-2)",
-                }}>
-                {area.label}
-                {cnt>0 && <span style={{fontSize:10,fontWeight:700,opacity:.75}}>{cnt}</span>}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ── Person chips for selected area ── */}
-        {filterArea !== "all" && (() => {
-          const area = TEAM_AREAS.find(a=>a.key===filterArea);
-          if (!area) return null;
-          return (
-            <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:-4}}>
-              <button onClick={()=>setFilterPerson("all")}
-                style={{fontSize:11.5,fontWeight:500,padding:"4px 10px",borderRadius:999,cursor:"pointer",transition:"all .1s",
-                  border: filterPerson==="all"?`1px solid ${area.color}`:"1px solid var(--border)",
-                  background: filterPerson==="all"?area.color+"18":"transparent",
-                  color: filterPerson==="all"?area.color:"var(--text-3)"}}>
-                Todos
-              </button>
-              {area.members.map(m => {
-                const active = filterPerson===m.name;
-                const cnt = tasks.filter(t=>t.assignedTo===m.name&&t.status!=="completed").length;
-                return (
-                  <button key={m.name} onClick={()=>setFilterPerson(m.name)}
-                    style={{display:"flex",alignItems:"center",gap:5,fontSize:11.5,fontWeight:500,
-                      padding:"4px 10px",borderRadius:999,cursor:"pointer",transition:"all .1s",
-                      border: active?`1px solid ${area.color}`:"1px solid var(--border)",
-                      background: active?area.color:"transparent",
-                      color: active?"#fff":"var(--text-2)"}}>
-                    <span style={{width:16,height:16,borderRadius:"50%",background:area.color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,flexShrink:0}}>
-                      {taskInitials(m.name)}
-                    </span>
-                    {m.name.split(" ")[0]}
-                    {cnt>0 && <span style={{fontSize:10,fontWeight:700,opacity:.7}}>{cnt}</span>}
-                  </button>
-                );
-              })}
-            </div>
-          );
-        })()}
-
-        {/* ── Today's team mirror ── */}
-        {Object.keys(todayCounts).length > 0 && (
-          <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:"var(--radius-md)",padding:"10px 14px"}}>
-            <p style={{fontSize:10,fontWeight:600,color:"var(--text-3)",letterSpacing:".06em",textTransform:"uppercase",margin:"0 0 8px"}}>Hoy en el equipo</p>
-            <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
-              {TEAM_ALL.filter(m=>todayCounts[m.name]).map(m=>(
-                <div key={m.name} style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{width:24,height:24,borderRadius:"50%",background:m.areaColor,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700}}>
-                    {taskInitials(m.name)}
-                  </span>
-                  <span style={{fontSize:12,color:"var(--text-2)",fontWeight:500}}>{m.name.split(" ")[0]}</span>
-                  <span style={{fontSize:13,fontWeight:700,color:"#D97706"}}>{todayCounts[m.name]}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Migration banner (shown only when table is empty) ── */}
-        {tasks.length === 0 && !loading && (
-          <div style={{background:"#FFFBEB",border:"1px solid #FDE68A",borderRadius:"var(--radius-md)",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
-            <div>
-              <p style={{fontSize:12.5,fontWeight:600,color:"#92400E",margin:0}}>No hay tareas en Supabase</p>
-              <p style={{fontSize:11.5,color:"#B45309",margin:"3px 0 0"}}>¿Importar tareas existentes desde GAS?</p>
-              {migrateMsg && <p style={{fontSize:11,color:"#059669",margin:"4px 0 0",fontWeight:500}}>{migrateMsg}</p>}
-            </div>
-            <button onClick={migrateFromGAS} disabled={migrating}
-              style={{fontSize:12,fontWeight:600,background:"#F59E0B",color:"#fff",border:"none",borderRadius:"var(--radius-sm)",padding:"7px 14px",cursor:"pointer",opacity:migrating?.6:1,flexShrink:0}}>
-              {migrating ? "Importando…" : "Importar de GAS"}
+      {/* ── Tab bar ── */}
+      <div style={{borderBottom:"1px solid var(--border)",background:"var(--surface)"}}>
+        <div className="max-w-5xl mx-auto" style={{display:"flex",paddingLeft:24,paddingRight:24}}>
+          {TABS.map(tab=>(
+            <button key={tab.key} onClick={()=>setActiveTab(tab.key)}
+              style={{padding:"11px 16px",fontSize:12.5,fontWeight:activeTab===tab.key?600:500,
+                color:activeTab===tab.key?"var(--text-1)":"var(--text-3)",
+                background:"none",border:"none",cursor:"pointer",whiteSpace:"nowrap",
+                borderBottom:activeTab===tab.key?"2px solid #111":"2px solid transparent",transition:"all .12s"}}>
+              {tab.label}
+              {tab.key==="mine"&&myName&&misTareas.filter(t=>!isDone(t.status)).length>0&&(
+                <span style={{marginLeft:5,fontSize:10,fontWeight:700,background:"#DC2626",color:"#fff",borderRadius:10,padding:"1px 6px"}}>
+                  {misAtrasadas.length+misHoy.length}
+                </span>
+              )}
             </button>
-          </div>
-        )}
+          ))}
+        </div>
+      </div>
 
-        {/* ── New task form ── */}
+      <div className="max-w-5xl mx-auto px-6 py-6" style={{display:"flex",flexDirection:"column",gap:14}}>
+
+        {loadError && <div style={{background:"#FEF2F2",border:"1px solid #FCA5A5",borderRadius:"var(--radius-md)",padding:"10px 14px",fontSize:12,color:"#B91C1C"}}>{loadError}</div>}
+
+        {/* ── New Task Form ── */}
         {showForm && (
           <div className="tt-card" style={{padding:20,display:"flex",flexDirection:"column",gap:14}}>
             <p style={{fontSize:12,fontWeight:600,color:"var(--text-1)",margin:0}}>Nueva tarea</p>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
               <div style={{gridColumn:"1/-1"}}>
-                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Nombre *</label>
-                <input value={form.taskName} onChange={e=>setF("taskName",e.target.value)}
-                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,boxSizing:"border-box"}}
-                  placeholder="Ej: Confirmar reserva Celele"/>
+                <label style={lbl}>Nombre *</label>
+                <input value={form.taskName} onChange={e=>setF("taskName",e.target.value)} style={inp} placeholder="Ej: Confirmar reserva Celele"/>
+              </div>
+              <div style={{gridColumn:"1/-1"}}>
+                <label style={lbl}>Descripción</label>
+                <textarea value={form.description} onChange={e=>setF("description",e.target.value)} rows={2}
+                  style={{...inp,resize:"none"}} placeholder="Detalles, contexto, links…"/>
               </div>
               <div>
-                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Asignado a *</label>
-                <select value={form.assignedTo} onChange={e=>{setF("assignedTo",e.target.value);setF("assignedEmail",TEAM_EMAIL_MAP[e.target.value]||"");}}
-                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,background:"var(--surface)",boxSizing:"border-box"}}>
+                <label style={lbl}>Asignado a *</label>
+                <select value={form.assignedTo} onChange={e=>{const info=teamMemberInfo(e.target.value);setF("assignedTo",e.target.value);setF("assignedEmail",TEAM_EMAIL_MAP[e.target.value]||"");setF("area",info?.area||"");}} style={inp}>
                   <option value="">Seleccionar…</option>
-                  {TEAM_AREAS.map(area=>(
-                    <optgroup key={area.key} label={area.label}>
-                      {area.members.map(m=><option key={m.name} value={m.name}>{m.name}</option>)}
-                    </optgroup>
-                  ))}
+                  {TEAM_AREAS.map(a=><optgroup key={a.key} label={a.label}>{a.members.map(m=><option key={m.name} value={m.name}>{m.name}</option>)}</optgroup>)}
                 </select>
               </div>
               <div>
-                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Fecha límite *</label>
-                <input type="date" value={form.dueDate} onChange={e=>setF("dueDate",e.target.value)}
-                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,boxSizing:"border-box"}}/>
+                <label style={lbl}>Estado</label>
+                <select value={form.status} onChange={e=>setF("status",e.target.value)} style={inp}>
+                  {TASK_STATUSES.map(s=><option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
               </div>
               <div>
-                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Prioridad</label>
-                <select value={form.priority} onChange={e=>setF("priority",e.target.value)}
-                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,background:"var(--surface)",boxSizing:"border-box"}}>
+                <label style={lbl}>Fecha límite</label>
+                <input type="date" value={form.dueDate} onChange={e=>setF("dueDate",e.target.value)} style={{...inp,background:"var(--surface)"}}/>
+              </div>
+              <div>
+                <label style={lbl}>Prioridad</label>
+                <select value={form.priority} onChange={e=>setF("priority",e.target.value)} style={inp}>
+                  <option value="urgente">🔴 Urgente</option>
                   <option value="alta">Alta</option>
                   <option value="media">Media</option>
                   <option value="baja">Baja</option>
                 </select>
               </div>
               <div>
-                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Trip / Deal</label>
-                <select value={form.kickoffId} onChange={e=>{const k=kickoffs.find(k=>k.id===e.target.value);setF("kickoffId",e.target.value);setF("kickoffName",k?(k.guestName||k.tripName||""):"");}}
-                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,background:"var(--surface)",boxSizing:"border-box"}}>
+                <label style={lbl}>Proyecto</label>
+                <select value={form.projectId} onChange={e=>{const p=projects.find(p=>p.id===e.target.value);setF("projectId",e.target.value);setF("projectName",p?.name||"");}} style={inp}>
+                  <option value="">Sin proyecto</option>
+                  {projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={lbl}>Trip / Deal</label>
+                <select value={form.kickoffId} onChange={e=>{const k=kickoffs.find(k=>k.id===e.target.value);setF("kickoffId",e.target.value);setF("kickoffName",k?(k.guestName||k.tripName||""):"");}} style={inp}>
                   <option value="">Sin trip</option>
                   {kickoffs.map(k=><option key={k.id} value={k.id}>{k.guestName||"—"}{k.tripName?` · ${k.tripName}`:""}</option>)}
                 </select>
               </div>
               <div style={{gridColumn:"1/-1"}}>
-                <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Notas</label>
+                <label style={lbl}>Notas</label>
                 <textarea value={form.notes} onChange={e=>setF("notes",e.target.value)} rows={2}
-                  style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,resize:"none",boxSizing:"border-box"}}/>
+                  style={{...inp,resize:"none"}}/>
               </div>
             </div>
             <div style={{display:"flex",gap:8}}>
@@ -3478,30 +3463,313 @@ function TaskTracker() {
           </div>
         )}
 
-        {loadError && (
-          <div style={{background:"#FEF2F2",border:"1px solid #FCA5A5",borderRadius:"var(--radius-md)",padding:"10px 14px",fontSize:12,color:"#B91C1C"}}>{loadError}</div>
+        {/* ── New Project Form ── */}
+        {showProjectForm && (
+          <div className="tt-card" style={{padding:20,display:"flex",flexDirection:"column",gap:14}}>
+            <p style={{fontSize:12,fontWeight:600,color:"var(--text-1)",margin:0}}>Nuevo proyecto</p>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div style={{gridColumn:"1/-1"}}>
+                <label style={lbl}>Nombre *</label>
+                <input value={pForm.name} onChange={e=>setPF("name",e.target.value)} style={inp} placeholder="Ej: Lanzamiento App Mobile"/>
+              </div>
+              <div style={{gridColumn:"1/-1"}}>
+                <label style={lbl}>Descripción</label>
+                <textarea value={pForm.description} onChange={e=>setPF("description",e.target.value)} rows={2} style={{...inp,resize:"none"}}/>
+              </div>
+              <div>
+                <label style={lbl}>Área</label>
+                <select value={pForm.area} onChange={e=>setPF("area",e.target.value)} style={inp}>
+                  <option value="">Sin área</option>
+                  {TEAM_AREAS.map(a=><option key={a.key} value={a.key}>{a.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={lbl}>Responsable</label>
+                <select value={pForm.responsable} onChange={e=>setPF("responsable",e.target.value)} style={inp}>
+                  <option value="">Ninguno</option>
+                  {TEAM_AREAS.map(a=><optgroup key={a.key} label={a.label}>{a.members.map(m=><option key={m.name} value={m.name}>{m.name}</option>)}</optgroup>)}
+                </select>
+              </div>
+              <div>
+                <label style={lbl}>Fecha objetivo</label>
+                <input type="date" value={pForm.targetDate} onChange={e=>setPF("targetDate",e.target.value)} style={{...inp,background:"var(--surface)"}}/>
+              </div>
+              <div>
+                <label style={lbl}>Progreso inicial %</label>
+                <input type="number" min={0} max={100} value={pForm.progress} onChange={e=>setPF("progress",Number(e.target.value))} style={inp}/>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={saveProject} disabled={saving} className="tt-btn-primary" style={{opacity:saving?.5:1}}>
+                {saving?"Guardando…":"Crear proyecto"}
+              </button>
+              <button onClick={()=>setShowProjectForm(false)} className="tt-btn-ghost">Cancelar</button>
+            </div>
+          </div>
         )}
 
         {loading ? (
           <div style={{textAlign:"center",padding:"48px 0",color:"var(--text-3)",fontSize:13}}>Cargando…</div>
         ) : (
           <>
-            <TTaskGroup emoji="🔴" label="Atrasadas" tasks={atrasadas} onUpdate={updateTask} now={now} tmr={tmr}/>
-            <TTaskGroup emoji="🔥" label="Hoy" tasks={hoy} onUpdate={updateTask} now={now} tmr={tmr}/>
-            <TTaskGroup emoji="📅" label="Próximas" tasks={proximas} onUpdate={updateTask} now={now} tmr={tmr}/>
-            <div>
-              <button onClick={()=>setShowDone(v=>!v)}
-                style={{display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:500,color:"var(--text-3)",background:"none",border:"none",cursor:"pointer",padding:"4px 0"}}>
-                <span>{showDone?"▼":"▶"}</span>
-                <span style={{color:"var(--text-2)",fontWeight:600}}>✅ Terminadas</span>
-                <span>({terminadas.length})</span>
-              </button>
-              {showDone && (
-                <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
-                  {terminadas.map(t=><TTaskCard key={t.id} t={t} onUpdate={updateTask} now={now} tmr={tmr}/>)}
+            {/* ══════════ DASHBOARD TAB ══════════ */}
+            {activeTab==="dashboard" && (
+              <div style={{display:"flex",flexDirection:"column",gap:16}}>
+                {/* Stat cards */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:10}}>
+                  {[
+                    {label:"Vencidas",   value:allAtrasadas.length,  color:"#DC2626", bg:"#FEF2F2"},
+                    {label:"Hoy",        value:allHoy.length,        color:"#D97706", bg:"#FFFBEB"},
+                    {label:"Esta semana",value:allSemana.length,     color:"#2563EB", bg:"#EFF6FF"},
+                    {label:"Esperando",  value:allBloqueadas.length, color:"#7C3AED", bg:"#F5F3FF"},
+                    {label:"Proyectos",  value:projects.length,      color:"#059669", bg:"#ECFDF5"},
+                    {label:"Total activas",value:pendingTasks.length,color:"#374151", bg:"#F9FAFB"},
+                  ].map(c=>(
+                    <div key={c.label} style={{background:c.bg,border:`1px solid ${c.color}22`,borderRadius:"var(--radius-md)",padding:"12px 14px"}}>
+                      <p style={{fontSize:24,fontWeight:700,color:c.color,margin:0,lineHeight:1}}>{c.value}</p>
+                      <p style={{fontSize:11,color:c.color,margin:"4px 0 0",fontWeight:500,opacity:.8}}>{c.label}</p>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
+
+                {/* Workload bar */}
+                {workload.length > 0 && (
+                  <div className="tt-card" style={{padding:"14px 16px"}}>
+                    <p style={{fontSize:11,fontWeight:600,color:"var(--text-3)",letterSpacing:".06em",textTransform:"uppercase",margin:"0 0 12px"}}>Carga por persona</p>
+                    {workload.slice(0,12).map(w=>(
+                      <div key={w.name} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                        <span style={{width:22,height:22,borderRadius:"50%",background:w.color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,flexShrink:0}}>
+                          {taskInitials(w.name)}
+                        </span>
+                        <span style={{fontSize:11.5,fontWeight:500,color:"var(--text-2)",width:90,flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{w.name.split(" ")[0]}</span>
+                        <div style={{flex:1,height:8,background:"var(--border-soft)",borderRadius:4,overflow:"hidden"}}>
+                          <div style={{height:"100%",background:w.color,width:`${Math.min(100,(w.count/Math.max(...workload.map(x=>x.count)))*100)}%`,borderRadius:4,transition:"width .3s"}}/>
+                        </div>
+                        <span style={{fontSize:12,fontWeight:700,color:w.color,width:22,textAlign:"right",flexShrink:0}}>{w.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Today's team */}
+                {Object.keys(todayCounts).length > 0 && (
+                  <div className="tt-card" style={{padding:"14px 16px"}}>
+                    <p style={{fontSize:11,fontWeight:600,color:"var(--text-3)",letterSpacing:".06em",textTransform:"uppercase",margin:"0 0 10px"}}>Hoy en el equipo</p>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
+                      {TEAM_ALL.filter(m=>todayCounts[m.name]).map(m=>(
+                        <div key={m.name} style={{display:"flex",alignItems:"center",gap:7}}>
+                          <span style={{width:26,height:26,borderRadius:"50%",background:m.areaColor,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700}}>{taskInitials(m.name)}</span>
+                          <span style={{fontSize:12,color:"var(--text-2)",fontWeight:500}}>{m.name.split(" ")[0]}</span>
+                          <span style={{fontSize:14,fontWeight:700,color:"#D97706"}}>{todayCounts[m.name]}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Vencidas quick list */}
+                {allAtrasadas.length > 0 && (
+                  <div>
+                    <p style={{fontSize:11,fontWeight:600,color:"#DC2626",letterSpacing:".06em",textTransform:"uppercase",margin:"0 0 8px"}}>Vencidas ({allAtrasadas.length})</p>
+                    <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                      {allAtrasadas.slice(0,5).map(t=><TTaskCard key={t.id} t={t} onUpdate={updateTask} now={now} tmr={tmr}/>)}
+                      {allAtrasadas.length>5 && <p style={{fontSize:11,color:"var(--text-3)",textAlign:"center",margin:"4px 0 0"}}>+{allAtrasadas.length-5} más — ver en Todas</p>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ══════════ PROYECTOS TAB ══════════ */}
+            {activeTab==="projects" && (
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                {projects.length===0 && (
+                  <div style={{textAlign:"center",padding:"48px 0",color:"var(--text-3)",fontSize:13}}>
+                    No hay proyectos aún. Haz clic en "+ Proyecto" para crear uno.
+                  </div>
+                )}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
+                  {projects.map(p=>{
+                    const areaInfo = TEAM_AREAS.find(a=>a.key===p.area);
+                    const done = projectDoneCount(p.id)||0;
+                    const total = projectTaskCount(p.id)||0;
+                    const pct = total>0 ? Math.round((done/total)*100) : (p.progress||0);
+                    return (
+                      <div key={p.id} className="tt-card" style={{padding:"16px 18px"}}>
+                        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,marginBottom:8}}>
+                          <p style={{fontSize:13.5,fontWeight:600,color:"var(--text-1)",margin:0,lineHeight:1.3}}>{p.name}</p>
+                          {areaInfo && <span style={{fontSize:10,fontWeight:600,background:areaInfo.color+"18",color:areaInfo.color,padding:"2px 8px",borderRadius:999,whiteSpace:"nowrap"}}>{areaInfo.label}</span>}
+                        </div>
+                        {p.description && <p style={{fontSize:11.5,color:"var(--text-3)",margin:"0 0 10px",lineHeight:1.4}}>{p.description}</p>}
+                        <div style={{marginBottom:8}}>
+                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                            <span style={{fontSize:10,color:"var(--text-3)",fontWeight:500}}>{done}/{total} tareas</span>
+                            <span style={{fontSize:10,fontWeight:700,color:pct>=100?"#059669":"var(--text-2)"}}>{pct}%</span>
+                          </div>
+                          <div style={{height:6,background:"var(--border-soft)",borderRadius:3,overflow:"hidden"}}>
+                            <div style={{height:"100%",background:pct>=100?"#059669":"#2563EB",width:`${pct}%`,borderRadius:3,transition:"width .3s"}}/>
+                          </div>
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                          {p.responsable && (
+                            <span style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"var(--text-3)"}}>
+                              <span style={{width:18,height:18,borderRadius:"50%",background:taskAvatarColor(p.responsable),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700}}>{taskInitials(p.responsable)}</span>
+                              {p.responsable.split(" ")[0]}
+                            </span>
+                          )}
+                          {p.targetDate && (
+                            <span style={{fontSize:10,color:"var(--text-3)"}}>
+                              {new Date(p.targetDate).toLocaleDateString("es-CO",{month:"short",day:"numeric"})}
+                            </span>
+                          )}
+                          <input type="range" min={0} max={100} value={pct}
+                            onChange={e=>updateProject(p.id,{progress:Number(e.target.value)})}
+                            style={{width:60,cursor:"pointer"}} title="Ajustar progreso"/>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ══════════ TODAS TAB ══════════ */}
+            {activeTab==="all" && (
+              <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                {/* Area tabs */}
+                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                  {[{key:"all",label:"Todos",color:"#111"}, ...TEAM_AREAS].map(area => {
+                    const active = filterArea === area.key;
+                    const aMembers = area.key==="all" ? [] : (TEAM_AREAS.find(a=>a.key===area.key)?.members.map(m=>m.name)||[]);
+                    const cnt = area.key==="all"
+                      ? pendingTasks.length
+                      : pendingTasks.filter(t=>aMembers.includes(t.assignedTo)).length;
+                    return (
+                      <button key={area.key} onClick={()=>{ setFilterArea(area.key); setFilterPerson("all"); }}
+                        style={{display:"flex",alignItems:"center",gap:5,fontSize:12,fontWeight:600,
+                          padding:"5px 12px",borderRadius:999,cursor:"pointer",transition:"all .12s",
+                          border:active?`1px solid ${area.color}`:"1px solid var(--border)",
+                          background:active?area.color:"transparent",
+                          color:active?"#fff":"var(--text-2)"}}>
+                        {area.label}
+                        {cnt>0 && <span style={{fontSize:10,fontWeight:700,opacity:.75}}>{cnt}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Person chips */}
+                {filterArea !== "all" && (() => {
+                  const area = TEAM_AREAS.find(a=>a.key===filterArea);
+                  if (!area) return null;
+                  return (
+                    <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:-4}}>
+                      <button onClick={()=>setFilterPerson("all")}
+                        style={{fontSize:11.5,fontWeight:500,padding:"4px 10px",borderRadius:999,cursor:"pointer",
+                          border:filterPerson==="all"?`1px solid ${area.color}`:"1px solid var(--border)",
+                          background:filterPerson==="all"?area.color+"18":"transparent",
+                          color:filterPerson==="all"?area.color:"var(--text-3)"}}>Todos</button>
+                      {area.members.map(m=>{
+                        const active = filterPerson===m.name;
+                        const cnt = pendingTasks.filter(t=>t.assignedTo===m.name).length;
+                        return (
+                          <button key={m.name} onClick={()=>setFilterPerson(m.name)}
+                            style={{display:"flex",alignItems:"center",gap:5,fontSize:11.5,fontWeight:500,
+                              padding:"4px 10px",borderRadius:999,cursor:"pointer",
+                              border:active?`1px solid ${area.color}`:"1px solid var(--border)",
+                              background:active?area.color:"transparent",
+                              color:active?"#fff":"var(--text-2)"}}>
+                            <span style={{width:16,height:16,borderRadius:"50%",background:area.color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,flexShrink:0}}>{taskInitials(m.name)}</span>
+                            {m.name.split(" ")[0]}
+                            {cnt>0 && <span style={{fontSize:10,fontWeight:700,opacity:.7}}>{cnt}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+
+                <TTaskGroup emoji="🔴" label="Atrasadas" tasks={atrasadas} onUpdate={updateTask} now={now} tmr={tmr}/>
+                <TTaskGroup emoji="🔥" label="Hoy" tasks={hoy} onUpdate={updateTask} now={now} tmr={tmr}/>
+                <TTaskGroup emoji="📅" label="Próximas 7 días" tasks={proximas} onUpdate={updateTask} now={now} tmr={tmr}/>
+                <TTaskGroup emoji="📋" label="Backlog" tasks={tasks.filter(t=>{
+                  const nm = normStatus(t.status);
+                  if(isDone(nm)) return false;
+                  if(nm==="backlog"||nm==="pendiente") return !atrasadas.includes(t)&&!hoy.includes(t)&&!proximas.includes(t);
+                  return false;
+                })} onUpdate={updateTask} now={now} tmr={tmr}/>
+                <TTaskGroup emoji="⏳" label="Esperando" tasks={allBloqueadas.filter(t=>{
+                  if(filterArea==="all") return true;
+                  const aMembers = TEAM_AREAS.find(a=>a.key===filterArea)?.members.map(m=>m.name)||[];
+                  if(filterPerson!=="all") return t.assignedTo===filterPerson;
+                  return aMembers.includes(t.assignedTo);
+                })} onUpdate={updateTask} now={now} tmr={tmr}/>
+                <div>
+                  <button onClick={()=>setShowDone(v=>!v)}
+                    style={{display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:500,color:"var(--text-3)",background:"none",border:"none",cursor:"pointer",padding:"4px 0"}}>
+                    <span>{showDone?"▼":"▶"}</span>
+                    <span style={{color:"var(--text-2)",fontWeight:600}}>✅ Completadas</span>
+                    <span>({terminadas.length})</span>
+                  </button>
+                  {showDone && (
+                    <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
+                      {terminadas.map(t=><TTaskCard key={t.id} t={t} onUpdate={updateTask} now={now} tmr={tmr}/>)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ══════════ MIS TAREAS TAB ══════════ */}
+            {activeTab==="mine" && (
+              <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                {!myName ? (
+                  <div style={{textAlign:"center",padding:"48px 0",color:"var(--text-3)",fontSize:13}}>Inicia sesión para ver tus tareas.</div>
+                ) : (
+                  <>
+                    <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:"var(--radius-md)"}}>
+                      {(() => {
+                        const info = teamMemberInfo(myName);
+                        return (
+                          <>
+                            <span style={{width:36,height:36,borderRadius:"50%",background:info?.areaColor||"#374151",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>
+                              {taskInitials(myName)}
+                            </span>
+                            <div>
+                              <p style={{fontSize:13,fontWeight:600,color:"var(--text-1)",margin:0}}>{myName}</p>
+                              <p style={{fontSize:11,color:"var(--text-3)",margin:"2px 0 0"}}>{info?.areaLabel||""}</p>
+                            </div>
+                            <div style={{marginLeft:"auto",display:"flex",gap:16}}>
+                              {misAtrasadas.length>0 && <div style={{textAlign:"center"}}><p style={{fontSize:18,fontWeight:700,color:"#DC2626",margin:0}}>{misAtrasadas.length}</p><p style={{fontSize:10,color:"#DC2626",margin:0}}>Vencidas</p></div>}
+                              {misHoy.length>0 && <div style={{textAlign:"center"}}><p style={{fontSize:18,fontWeight:700,color:"#D97706",margin:0}}>{misHoy.length}</p><p style={{fontSize:10,color:"#D97706",margin:0}}>Hoy</p></div>}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                    <TTaskGroup emoji="🔴" label="Vencidas" tasks={misAtrasadas} onUpdate={updateTask} now={now} tmr={tmr}/>
+                    <TTaskGroup emoji="🔥" label="Hoy" tasks={misHoy} onUpdate={updateTask} now={now} tmr={tmr}/>
+                    <TTaskGroup emoji="📅" label="Esta semana" tasks={misSemana} onUpdate={updateTask} now={now} tmr={tmr}/>
+                    <TTaskGroup emoji="🔭" label="Próximas" tasks={misProximas} onUpdate={updateTask} now={now} tmr={tmr}/>
+                    {misTareas.filter(t=>isDone(t.status)).length > 0 && (
+                      <div>
+                        <button onClick={()=>setShowDone(v=>!v)}
+                          style={{display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:500,color:"var(--text-3)",background:"none",border:"none",cursor:"pointer",padding:"4px 0"}}>
+                          <span>{showDone?"▼":"▶"}</span>
+                          <span style={{color:"var(--text-2)",fontWeight:600}}>✅ Completadas</span>
+                          <span>({misTareas.filter(t=>isDone(t.status)).length})</span>
+                        </button>
+                        {showDone && (
+                          <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
+                            {misTareas.filter(t=>isDone(t.status)).map(t=><TTaskCard key={t.id} t={t} onUpdate={updateTask} now={now} tmr={tmr}/>)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -3530,55 +3798,43 @@ function TTaskGroup({ emoji, label, tasks, onUpdate, now, tmr }) {
 }
 
 function TTaskCard({ t, onUpdate, now, tmr }) {
-  const due  = t.dueDate ? new Date(t.dueDate) : null;
-  const late = due && due < now && t.status !== "completed";
-  const today= due && due >= now && due < tmr;
-  const dl   = due ? Math.round((due - now)/86400000) : null;
-  const done = t.status === "completed";
-  const prioColor = t.priority==="alta"?"#DC2626":t.priority==="baja"?"#9CA3AF":"#D97706";
+  const sm    = statusMeta(t.status);
+  const due   = t.dueDate ? new Date(t.dueDate) : null;
+  const late  = due && due < now && !isDone(t.status);
+  const today = due && due >= now && due < tmr;
+  const dl    = due ? Math.round((due - now)/86400000) : null;
+  const done  = isDone(t.status);
+  const prioColor = t.priority==="urgente"?"#DC2626":t.priority==="alta"?"#F97316":t.priority==="baja"?"#9CA3AF":"#D97706";
+  const info  = teamMemberInfo(t.assignedTo);
   return (
-    <div className="tt-card" style={{
-      padding:"11px 14px",display:"flex",alignItems:"flex-start",gap:12,
-      border: late?"1px solid #FCA5A5":undefined,
-      opacity: done?.5:1,
-    }}>
+    <div className="tt-card" style={{padding:"11px 14px",display:"flex",alignItems:"flex-start",gap:12,border:late?"1px solid #FCA5A5":undefined,opacity:done?.55:1}}>
       <div style={{width:7,height:7,borderRadius:"50%",background:prioColor,flexShrink:0,marginTop:6}}/>
       <div style={{flex:1,minWidth:0}}>
-        <p style={{fontSize:13,fontWeight:500,color:"var(--text-1)",textDecoration:done?"line-through":"none",margin:0,lineHeight:1.4}}>
-          {t.taskName}
-        </p>
-        {(t.kickoffName||t.notes) && (
-          <p style={{fontSize:11,color:"var(--text-3)",margin:"3px 0 0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-            {[t.kickoffName,t.notes].filter(Boolean).join(" · ")}
+        <p style={{fontSize:13,fontWeight:500,color:"var(--text-1)",textDecoration:done?"line-through":"none",margin:0,lineHeight:1.4}}>{t.taskName}</p>
+        {t.description && <p style={{fontSize:11,color:"var(--text-3)",margin:"2px 0 0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.description}</p>}
+        {(t.projectName||t.kickoffName||t.notes) && !t.description && (
+          <p style={{fontSize:11,color:"var(--text-3)",margin:"2px 0 0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+            {[t.projectName&&`📁 ${t.projectName}`,t.kickoffName,t.notes].filter(Boolean).join(" · ")}
           </p>
         )}
         <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
           {t.assignedTo && (
             <span style={{display:"flex",alignItems:"center",gap:4}}>
-              <span style={{width:17,height:17,borderRadius:"50%",background:taskAvatarColor(t.assignedTo),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700}}>
-                {taskInitials(t.assignedTo)}
-              </span>
+              <span style={{width:17,height:17,borderRadius:"50%",background:info?.areaColor||"#374151",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700}}>{taskInitials(t.assignedTo)}</span>
               <span style={{fontSize:11,color:"var(--text-3)"}}>{t.assignedTo.split(" ")[0]}</span>
             </span>
           )}
           {due && !done && (
             <span style={{fontSize:11,color:late?"#EF4444":today?"#D97706":"var(--text-3)"}}>
-              {late
-                ? `Venció hace ${Math.abs(dl)}d`
-                : dl===0 ? "Hoy"
-                : due.toLocaleDateString("es-CO",{month:"short",day:"numeric"})}
+              {late ? `Venció hace ${Math.abs(dl)}d` : dl===0 ? "Hoy" : due.toLocaleDateString("es-CO",{month:"short",day:"numeric"})}
             </span>
           )}
+          <span style={{fontSize:10,fontWeight:600,color:sm.color,background:sm.bg,padding:"1px 7px",borderRadius:999}}>{sm.label}</span>
         </div>
       </div>
-      <select
-        value={t.status==="late"?"pending":t.status}
-        onChange={e=>onUpdate(t.id,{status:e.target.value})}
-        onClick={e=>e.stopPropagation()}
-        style={{fontSize:11,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"4px 6px",background:"var(--surface)",color:"var(--text-2)",cursor:"pointer",flexShrink:0}}>
-        {[["pending","Pendiente"],["in_progress","En progreso"],["blocked","Bloqueado"],["completed","Completado"]].map(([v,l])=>(
-          <option key={v} value={v}>{l}</option>
-        ))}
+      <select value={normStatus(t.status)} onChange={e=>onUpdate(t.id,{status:e.target.value})} onClick={e=>e.stopPropagation()}
+        style={{fontSize:11,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"4px 6px",background:sm.bg,color:sm.color,fontWeight:600,cursor:"pointer",flexShrink:0}}>
+        {TASK_STATUSES.map(s=><option key={s.value} value={s.value}>{s.label}</option>)}
       </select>
     </div>
   );
@@ -6275,7 +6531,7 @@ function App() {
     if (mode === "tareas-bodas") return <S><ErrorBoundary><TareasPanel currentUser={user} onLogout={logout} /></ErrorBoundary></S>;
     if (mode === "soporte")   return <ErrorBoundary><SoportePage /></ErrorBoundary>;
     if (mode === "soporte-dashboard") return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
-    if (mode === "tasks")     return <ErrorBoundary><TaskTracker /></ErrorBoundary>;
+    if (mode === "tasks")     return <ErrorBoundary><TaskTracker currentUser={user} /></ErrorBoundary>;
     if (mode === "reuniones") return <S><ErrorBoundary><ReunionesPage currentUser={user} initialKickoffId={params.get("kickoffId") || ""} /></ErrorBoundary></S>;
     if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard currentUser={user} onLogout={logout} /></ErrorBoundary>;
   }
