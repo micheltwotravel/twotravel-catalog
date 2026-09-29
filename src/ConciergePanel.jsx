@@ -33,6 +33,7 @@ import {
   Clock,
   X,
 } from "lucide-react";
+import { supabase } from "./supabaseClient";
 
 
 
@@ -7748,6 +7749,137 @@ export function MenuAdminPanel() {
   );
 }
 
+function ProximasActividadesWidget({ currentUser }) {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!currentUser?.name) { setLoading(false); return; }
+    supabase.from("tasks").select("*")
+      .eq("data->>assignedTo", currentUser.name)
+      .neq("data->>status", "completed")
+      .then(({ data }) => {
+        setTasks((data || []).map(r => ({ id: r.id, ...r.data })));
+        setLoading(false);
+      });
+  }, [currentUser?.name]);
+
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const tmr = new Date(now); tmr.setDate(tmr.getDate() + 1);
+  const nxt7 = new Date(now); nxt7.setDate(nxt7.getDate() + 7);
+
+  const atrasadas = tasks.filter(t => t.dueDate && new Date(t.dueDate) < now);
+  const hoy       = tasks.filter(t => t.dueDate && new Date(t.dueDate) >= now && new Date(t.dueDate) < tmr);
+  const proximas  = tasks.filter(t => !t.dueDate || new Date(t.dueDate) >= tmr).sort((a,b)=>{
+    if (!a.dueDate && !b.dueDate) return 0;
+    if (!a.dueDate) return 1;
+    if (!b.dueDate) return -1;
+    return new Date(a.dueDate) - new Date(b.dueDate);
+  });
+
+  const total = atrasadas.length + hoy.length + proximas.length;
+
+  const fmtDate = (d) => {
+    const dt = new Date(d + "T12:00:00");
+    return dt.toLocaleDateString("es-CO", { weekday: "short", month: "short", day: "numeric" }).toUpperCase();
+  };
+
+  const dotColor = (t, group) => {
+    if (group === "atrasadas" || t.priority === "alta") return "#DC2626";
+    if (group === "hoy") return "#D97706";
+    return "#10B981";
+  };
+
+  const renderTask = (t, group) => (
+    <div key={t.id} style={{display:"flex",gap:10,padding:"10px 0",borderBottom:"1px solid var(--border)"}}>
+      <div style={{width:8,height:8,borderRadius:"50%",background:dotColor(t,group),flexShrink:0,marginTop:5}} />
+      <div style={{flex:1,minWidth:0}}>
+        {t.dueDate && (
+          <div style={{fontSize:10,fontWeight:600,color:group==="atrasadas"?"#DC2626":group==="hoy"?"#D97706":"var(--text-3)",letterSpacing:".04em",marginBottom:2}}>
+            {fmtDate(t.dueDate)}
+          </div>
+        )}
+        <div style={{display:"flex",alignItems:"flex-start",gap:6,flexWrap:"wrap"}}>
+          <span style={{fontSize:12.5,fontWeight:600,color:"var(--text-1)",lineHeight:1.3,flex:1}}>{t.taskName}</span>
+          {(group==="atrasadas"||t.priority==="alta") && (
+            <span style={{fontSize:9,fontWeight:700,letterSpacing:".06em",padding:"1px 6px",borderRadius:3,background:"#FEE2E2",color:"#DC2626",flexShrink:0,whiteSpace:"nowrap"}}>IMPORTANTE</span>
+          )}
+        </div>
+        {t.kickoffName && (
+          <div style={{fontSize:10.5,color:"var(--text-3)",marginTop:2,letterSpacing:".01em"}}>{t.kickoffName}</div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{
+      width:280,flexShrink:0,
+      background:"var(--surface)",
+      border:"1px solid var(--border)",
+      borderRadius:"var(--radius-md)",
+      overflow:"hidden",
+      position:"sticky",top:12,
+      maxHeight:"calc(100vh - 100px)",
+      display:"flex",flexDirection:"column",
+    }}>
+      {/* Header */}
+      <div style={{padding:"12px 14px 10px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Próximas Actividades</span>
+          {total > 0 && (
+            <span style={{fontSize:10,fontWeight:700,background:"var(--accent-bg,#111)",color:"var(--accent-fg,#fff)",borderRadius:10,padding:"1px 7px"}}>{total}</span>
+          )}
+        </div>
+        <a href="/?mode=tasks" style={{fontSize:10.5,color:"var(--text-3)",textDecoration:"none",fontWeight:500}} onClick={e=>{e.preventDefault();window.dispatchEvent(new CustomEvent("navigate",{detail:"tasks"}));}}>Ver todas</a>
+      </div>
+
+      {/* Body */}
+      <div style={{flex:1,overflowY:"auto",padding:"0 14px"}}>
+        {loading ? (
+          <div style={{padding:"24px 0",textAlign:"center",fontSize:12,color:"var(--text-3)"}}>Cargando...</div>
+        ) : total === 0 ? (
+          <div style={{padding:"24px 0",textAlign:"center",fontSize:12,color:"var(--text-3)"}}>Sin tareas pendientes</div>
+        ) : (
+          <>
+            {atrasadas.length > 0 && (
+              <div>
+                <div style={{fontSize:9,fontWeight:700,letterSpacing:".1em",color:"#DC2626",padding:"10px 0 2px",textTransform:"uppercase"}}>Atrasadas · {atrasadas.length}</div>
+                {atrasadas.map(t => renderTask(t,"atrasadas"))}
+              </div>
+            )}
+            {hoy.length > 0 && (
+              <div>
+                <div style={{fontSize:9,fontWeight:700,letterSpacing:".1em",color:"#D97706",padding:"10px 0 2px",textTransform:"uppercase"}}>Hoy · {hoy.length}</div>
+                {hoy.map(t => renderTask(t,"hoy"))}
+              </div>
+            )}
+            {proximas.length > 0 && (
+              <div>
+                <div style={{fontSize:9,fontWeight:700,letterSpacing:".1em",color:"var(--text-3)",padding:"10px 0 2px",textTransform:"uppercase"}}>Próximas · {proximas.length}</div>
+                {proximas.slice(0,6).map(t => renderTask(t,"proximas"))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div style={{padding:"10px 14px",borderTop:"1px solid var(--border)",flexShrink:0}}>
+        <a
+          href="/?mode=tasks"
+          onClick={e=>{e.preventDefault();window.dispatchEvent(new CustomEvent("navigate",{detail:"tasks"}));}}
+          style={{display:"block",textAlign:"center",fontSize:11.5,fontWeight:500,color:"var(--text-2)",background:"var(--bg)",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px",textDecoration:"none",transition:"background .15s"}}
+          onMouseEnter={e=>e.currentTarget.style.background="var(--border)"}
+          onMouseLeave={e=>e.currentTarget.style.background="var(--bg)"}
+        >
+          Ver todo el calendario
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default function ConciergePanel({ onLogout, currentUser }) {
 
   const [kickoffs, setKickoffs] = useState([]);
@@ -8266,7 +8398,8 @@ const loadKickoffs = async () => {
 </div>
       </header>
 
-      <main style={{flex:1,maxWidth:1680,width:"100%",margin:"0 auto",padding:"16px 24px",display:"flex",flexDirection:"column",gap:12}}>
+      <main style={{flex:1,maxWidth:1680,width:"100%",margin:"0 auto",padding:"16px 24px",display:"flex",flexDirection:"row",alignItems:"flex-start",gap:16}}>
+        <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:12}}>
         <div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",justifyContent:"space-between"}}>
           <div style={{position:"relative",width:260}}>
             <Search style={{width:14,height:14,color:"var(--text-3)",position:"absolute",left:9,top:"50%",transform:"translateY(-50%)"}} />
@@ -8814,6 +8947,8 @@ const loadKickoffs = async () => {
             </table>
           </div>
         </div>
+        </div>{/* end main-content column */}
+        <ProximasActividadesWidget currentUser={currentUser} />
       </main>
 
       {selectedForSummary && (
