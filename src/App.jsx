@@ -6264,19 +6264,30 @@ function UserManagement({ currentUser, onBack }) {
   useEffect(() => { load(); }, []);
 
   const migrateFromGAS = async () => {
-    if (!window.confirm("¿Migrar todos los usuarios de GAS a Supabase? (no borra los existentes)")) return;
+    if (!window.confirm("¿Migrar todos los usuarios de GAS a Supabase?")) return;
     setMigrating(true);
-    try {
-      const res = await fetch(import.meta.env.VITE_GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify({ action:"listUsers", payload:{ adminEmail: currentUser.email } }) });
-      const d = await res.json();
-      if (!d.ok || !Array.isArray(d.data)) { alert("Error al obtener usuarios de GAS: " + (d.error||"respuesta inválida")); setMigrating(false); return; }
-      for (const u of d.data) {
-        if (!u.email) continue;
-        await supabase.from("panel_users").upsert({ email: u.email.toLowerCase(), data: { name: u.name||"", pin: u.pin||"", role: u.role||"concierge", active: u.active??"true" } });
-      }
-      await load();
-      alert(`✅ ${d.data.length} usuarios migrados a Supabase`);
-    } catch(e) { alert("Error: " + e.message); }
+    let d = null;
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 12000);
+        const res = await fetch(import.meta.env.VITE_GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify({ action:"listUsers", payload:{ adminEmail: currentUser.email } }), signal: ctrl.signal });
+        clearTimeout(tid);
+        const text = await res.text();
+        const parsed = JSON.parse(text);
+        if (parsed.ok && Array.isArray(parsed.data)) { d = parsed; break; }
+      } catch {}
+      if (attempt < 4) await new Promise(r => setTimeout(r, 3000));
+    }
+    if (!d) { alert("No se pudo conectar con GAS después de 4 intentos. Intenta de nuevo en unos segundos."); setMigrating(false); return; }
+    let ok = 0;
+    for (const u of d.data) {
+      if (!u.email) continue;
+      const { error } = await supabase.from("panel_users").upsert({ email: u.email.toLowerCase(), data: { name: u.name||"", pin: u.pin||"", role: u.role||"concierge", active: u.active??"true" } });
+      if (!error) ok++;
+    }
+    await load();
+    alert(`✅ ${ok} de ${d.data.length} usuarios guardados en Supabase`);
     setMigrating(false);
   };
 
