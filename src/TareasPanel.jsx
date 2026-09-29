@@ -409,11 +409,11 @@ export default function TareasPanel({ currentUser, onLogout }) {
   }
 
   // Filtrado — solo tareas de bodas
-  const HIST_CUTOFF = "2025-01-01";
   const filtered = tasks.filter(t => {
     if (!isBoda(t)) return false;
-    // Hide old GAS-migrated tasks unless "Ver historial" is on
-    if (!showHistorico && t.dueDate && t.dueDate < HIST_CUTOFF) return false;
+    // Hide old GAS-migrated tasks (they have old alphanumeric IDs like "mr3vlh4l8nai6")
+    // New tasks created through the app have IDs starting with "boda_"
+    if (!showHistorico && !t.id.startsWith("boda_")) return false;
     if (scope === "mine") {
       const resp = (t.assignedTo||"").toLowerCase().trim();
       const myLower = myName.toLowerCase().trim();
