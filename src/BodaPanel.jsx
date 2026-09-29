@@ -2219,6 +2219,14 @@ export default function BodaPanel({ currentUser, onLogout }) {
   const [filterStatus, setFilterStatus] = useState("all");
   const [mainView,     setMainView]     = useState("dashboard");
 
+  // Load users from GAS in background — never blocks bodas from showing.
+  const loadUsers = useCallback(() => {
+    fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({action:"listUsers"}) })
+      .then(r => r.json())
+      .then(uRes => { setUsers(Array.isArray(uRes?.data) ? uRes.data.filter(u => u.active !== "false") : []); })
+      .catch(() => {});
+  }, []);
+
   const load=useCallback(async(force=false)=>{
     // Show cached bodas immediately — no loading spinner if we have data
     if (!force) {
@@ -2226,30 +2234,23 @@ export default function BodaPanel({ currentUser, onLogout }) {
       if (cached) {
         setBodas(cached.data);
         setLoading(false);
-        // Refresh users in background always; bodas only if stale
-        fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"listUsers"})}).then(r=>r.json()).then(uRes=>{
-          setUsers(Array.isArray(uRes?.data)?uRes.data.filter(u=>u.active!=="false"):[]);
-        }).catch(()=>{});
-        if (cached.stale) {
-          fetchFreshBodas().then(fresh => setBodas(fresh)).catch(()=>{});
-        }
+        loadUsers();
+        if (cached.stale) fetchFreshBodas().then(fresh => setBodas(fresh)).catch(()=>{});
         return;
       }
     }
     setLoading(true); setErr("");
+    // Load bodas from Supabase (fast); users from GAS in background (slow — don't await).
+    loadUsers();
     try{
-      const [list,uRes]=await Promise.all([
-        apiBodas(force),
-        fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"listUsers"})}).then(r=>r.json()).catch(()=>({})),
-      ]);
+      const list = await apiBodas(force);
       setBodas(list);
-      setUsers(Array.isArray(uRes?.data)?uRes.data.filter(u=>u.active!=="false"):[]);
     }catch(e){
       const m=e.message||"";
-      setErr(m.includes("<")?"Error de conexión con el servidor.":"Error cargando datos: "+m);
+      setErr("Error cargando datos: "+m);
     }
     setLoading(false);
-  },[]);
+  },[loadUsers]);
   useEffect(()=>{load();},[load]);
 
   const forceRefresh=useCallback(async()=>{
