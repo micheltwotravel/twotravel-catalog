@@ -6253,7 +6253,6 @@ function UserManagement({ currentUser, onBack }) {
   const [showAdd, setShowAdd] = useState(false);
   const [newUser, setNewUser] = useState({ email:"", name:"", pin:"", role:"concierge" });
   const [addError, setAddError] = useState("");
-  const [migrating, setMigrating] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -6262,35 +6261,6 @@ function UserManagement({ currentUser, onBack }) {
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
-
-  const migrateFromGAS = async () => {
-    if (!window.confirm("¿Migrar todos los usuarios de GAS a Supabase?")) return;
-    setMigrating(true);
-    let d = null;
-    for (let attempt = 1; attempt <= 4; attempt++) {
-      try {
-        const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 12000);
-        const res = await fetch(import.meta.env.VITE_GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify({ action:"listUsers", payload:{ adminEmail: currentUser.email } }), signal: ctrl.signal });
-        clearTimeout(tid);
-        const text = await res.text();
-        const parsed = JSON.parse(text);
-        if (parsed.ok && Array.isArray(parsed.data)) { d = parsed; break; }
-      } catch {}
-      if (attempt < 4) await new Promise(r => setTimeout(r, 3000));
-    }
-    if (!d) { alert("No se pudo conectar con GAS después de 4 intentos. Intenta de nuevo en unos segundos."); setMigrating(false); return; }
-    let ok = 0; let firstErr = null;
-    for (const u of d.data) {
-      if (!u.email) continue;
-      const { error } = await supabase.from("panel_users").upsert({ email: u.email.toLowerCase(), data: { name: u.name||"", pin: u.pin||"", role: u.role||"concierge", active: u.active??"true" } });
-      if (!error) ok++; else if (!firstErr) firstErr = error;
-    }
-    await load();
-    if (firstErr) alert(`⚠️ ${ok}/${d.data.length} guardados. Error: ${firstErr.message} (code: ${firstErr.code})`);
-    else alert(`✅ ${ok} de ${d.data.length} usuarios guardados en Supabase`);
-    setMigrating(false);
-  };
 
   const update = async (email, field, value) => {
     setSaving(s => ({ ...s, [email+field]: true }));
@@ -6317,16 +6287,10 @@ function UserManagement({ currentUser, onBack }) {
           <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:"#6b7280"}}>← Volver</button>
           <span style={{fontSize:14,fontWeight:600,color:"#111"}}>Gestión de usuarios</span>
         </div>
-        <div style={{display:"flex",gap:8}}>
-          <button onClick={migrateFromGAS} disabled={migrating}
-            style={{background:"#059669",color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,cursor:migrating?"wait":"pointer",fontWeight:500,opacity:migrating?0.6:1}}>
-            {migrating ? "Migrando…" : "⬇ Importar desde GAS"}
-          </button>
-          <button onClick={() => setShowAdd(v => !v)}
-            style={{background:"#111",color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,cursor:"pointer",fontWeight:500}}>
-            + Agregar usuario
-          </button>
-        </div>
+        <button onClick={() => setShowAdd(v => !v)}
+          style={{background:"#111",color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,cursor:"pointer",fontWeight:500}}>
+          + Agregar usuario
+        </button>
       </div>
 
       <div style={{maxWidth:900,margin:"24px auto",padding:"0 24px"}}>
