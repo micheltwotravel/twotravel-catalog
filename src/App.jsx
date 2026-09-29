@@ -2128,7 +2128,7 @@ function UnifiedDashboard({ currentUser, onLogout }) {
       {/* ── Header ── */}
       <header className="tt-topbar">
         <div style={{display:"flex",alignItems:"center",gap:16}}>
-          <a href="/?mode=concierge" style={{fontSize:12,color:"var(--text-3)",textDecoration:"none",fontWeight:500}}>← Panel</a>
+          <a href="/menu.html" style={{fontSize:12,color:"var(--text-3)",textDecoration:"none",fontWeight:500}}>← Menú</a>
           <span style={{width:1,height:14,background:"var(--border)",display:"inline-block"}}/>
           <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Dashboard</span>
         </div>
@@ -2916,7 +2916,7 @@ function SoporteDashboard() {
       {/* Header */}
       <div className="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <a href="/?mode=concierge" className="text-stone-400 hover:text-stone-700 text-sm">← Panel</a>
+          <a href="/menu.html" className="text-stone-400 hover:text-stone-700 text-sm">← Menú</a>
           <span className="text-stone-300">|</span>
           <h1 className="text-base font-semibold text-stone-800">🛠 Soporte Técnico</h1>
         </div>
@@ -3238,6 +3238,7 @@ function TaskTracker({ currentUser }) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
   const [dayModal,    setDayModal]    = useState(null);
+  const [editTask,    setEditTask]    = useState(null);
   const [todayPlan,   setTodayPlan]   = useState(() => {
     try {
       const d = new Date();
@@ -3406,7 +3407,7 @@ function TaskTracker({ currentUser }) {
       {/* ── Header ── */}
       <header className="tt-topbar">
         <div style={{display:"flex",alignItems:"center",gap:16}}>
-          <a href="/?mode=concierge" style={{fontSize:12,color:"var(--text-3)",textDecoration:"none",fontWeight:500}}>← Panel</a>
+          <a href="/menu.html" style={{fontSize:12,color:"var(--text-3)",textDecoration:"none",fontWeight:500}}>← Menú</a>
           <span style={{width:1,height:14,background:"var(--border)",display:"inline-block"}}/>
           <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Two Travel HQ</span>
           <span style={{fontSize:11,fontWeight:500,background:"var(--border-soft)",color:"var(--text-3)",padding:"2px 8px",borderRadius:3}}>
@@ -3638,7 +3639,7 @@ function TaskTracker({ currentUser }) {
                   <div>
                     <p style={{fontSize:11,fontWeight:600,color:"#DC2626",letterSpacing:".06em",textTransform:"uppercase",margin:"0 0 8px"}}>Vencidas ({allAtrasadas.length})</p>
                     <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                      {allAtrasadas.slice(0,5).map(t=><TTaskCard key={t.id} t={t} onUpdate={updateTask} now={now} tmr={tmr}/>)}
+                      {allAtrasadas.slice(0,5).map(t=><TTaskCard key={t.id} t={t} onUpdate={updateTask} now={now} tmr={tmr} onEdit={t=>setEditTask(t)}/>)}
                       {allAtrasadas.length>5 && <p style={{fontSize:11,color:"var(--text-3)",textAlign:"center",margin:"4px 0 0"}}>+{allAtrasadas.length-5} más — ver en Todas</p>}
                     </div>
                   </div>
@@ -3754,21 +3755,21 @@ function TaskTracker({ currentUser }) {
                   );
                 })()}
 
-                <TTaskGroup emoji="🔴" label="Atrasadas" tasks={atrasadas} onUpdate={updateTask} now={now} tmr={tmr}/>
-                <TTaskGroup emoji="🔥" label="Hoy" tasks={hoy} onUpdate={updateTask} now={now} tmr={tmr}/>
-                <TTaskGroup emoji="📅" label="Próximas 7 días" tasks={proximas} onUpdate={updateTask} now={now} tmr={tmr}/>
+                <TTaskGroup emoji="🔴" label="Atrasadas" tasks={atrasadas} onUpdate={updateTask} now={now} tmr={tmr} onEdit={t=>setEditTask(t)}/>
+                <TTaskGroup emoji="🔥" label="Hoy" tasks={hoy} onUpdate={updateTask} now={now} tmr={tmr} onEdit={t=>setEditTask(t)}/>
+                <TTaskGroup emoji="📅" label="Próximas 7 días" tasks={proximas} onUpdate={updateTask} now={now} tmr={tmr} onEdit={t=>setEditTask(t)}/>
                 <TTaskGroup emoji="📋" label="Backlog" tasks={visible.filter(t=>{
                   const nm = normStatus(t.status);
                   if(isDone(nm)) return false;
                   if(nm==="backlog"||nm==="pendiente") return !atrasadas.includes(t)&&!hoy.includes(t)&&!proximas.includes(t);
                   return false;
-                })} onUpdate={updateTask} now={now} tmr={tmr}/>
+                })} onUpdate={updateTask} now={now} tmr={tmr} onEdit={t=>setEditTask(t)}/>
                 <TTaskGroup emoji="⏳" label="Esperando" tasks={allBloqueadas.filter(t=>{
                   if(filterArea==="all") return true;
                   const aMembers = TEAM_AREAS.find(a=>a.key===filterArea)?.members.map(m=>m.name)||[];
                   if(filterPerson!=="all") return t.assignedTo===filterPerson;
                   return aMembers.includes(t.assignedTo);
-                })} onUpdate={updateTask} now={now} tmr={tmr}/>
+                })} onUpdate={updateTask} now={now} tmr={tmr} onEdit={t=>setEditTask(t)}/>
                 <div>
                   <button onClick={()=>setShowDone(v=>!v)}
                     style={{display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:500,color:"var(--text-3)",background:"none",border:"none",cursor:"pointer",padding:"4px 0"}}>
@@ -3778,7 +3779,7 @@ function TaskTracker({ currentUser }) {
                   </button>
                   {showDone && (
                     <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
-                      {terminadas.map(t=><TTaskCard key={t.id} t={t} onUpdate={updateTask} now={now} tmr={tmr}/>)}
+                      {terminadas.map(t=><TTaskCard key={t.id} t={t} onUpdate={updateTask} now={now} tmr={tmr} onEdit={t=>setEditTask(t)}/>)}
                     </div>
                   )}
                 </div>
@@ -3918,16 +3919,16 @@ function TaskTracker({ currentUser }) {
                             <p style={{fontSize:12,color:"#A16207",margin:0}}>Toca ☆ en cualquier tarea para armar tu día</p>
                           ) : (
                             <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                              {misPlan.map(t=><TTaskCard key={t.id} t={t} onUpdate={updateTask} now={now} tmr={tmr} todayPlan={todayPlan} onTogglePlan={toggleTodayPlan}/>)}
+                              {misPlan.map(t=><TTaskCard key={t.id} t={t} onUpdate={updateTask} now={now} tmr={tmr} todayPlan={todayPlan} onTogglePlan={toggleTodayPlan} onEdit={t=>setEditTask(t)}/>)}
                             </div>
                           )}
                         </div>
                       );
                     })()}
-                    <TTaskGroup emoji="🔴" label="Vencidas" tasks={misAtrasadas} onUpdate={updateTask} now={now} tmr={tmr} todayPlan={todayPlan} onTogglePlan={toggleTodayPlan}/>
-                    <TTaskGroup emoji="🔥" label="Hoy" tasks={misHoy} onUpdate={updateTask} now={now} tmr={tmr} todayPlan={todayPlan} onTogglePlan={toggleTodayPlan}/>
-                    <TTaskGroup emoji="📅" label="Esta semana" tasks={misSemana} onUpdate={updateTask} now={now} tmr={tmr} todayPlan={todayPlan} onTogglePlan={toggleTodayPlan}/>
-                    <TTaskGroup emoji="🔭" label="Próximas" tasks={misProximas} onUpdate={updateTask} now={now} tmr={tmr} todayPlan={todayPlan} onTogglePlan={toggleTodayPlan}/>
+                    <TTaskGroup emoji="🔴" label="Vencidas" tasks={misAtrasadas} onUpdate={updateTask} now={now} tmr={tmr} todayPlan={todayPlan} onTogglePlan={toggleTodayPlan} onEdit={t=>setEditTask(t)}/>
+                    <TTaskGroup emoji="🔥" label="Hoy" tasks={misHoy} onUpdate={updateTask} now={now} tmr={tmr} todayPlan={todayPlan} onTogglePlan={toggleTodayPlan} onEdit={t=>setEditTask(t)}/>
+                    <TTaskGroup emoji="📅" label="Esta semana" tasks={misSemana} onUpdate={updateTask} now={now} tmr={tmr} todayPlan={todayPlan} onTogglePlan={toggleTodayPlan} onEdit={t=>setEditTask(t)}/>
+                    <TTaskGroup emoji="🔭" label="Próximas" tasks={misProximas} onUpdate={updateTask} now={now} tmr={tmr} todayPlan={todayPlan} onTogglePlan={toggleTodayPlan} onEdit={t=>setEditTask(t)}/>
                     {misTareas.filter(t=>isDone(t.status)).length > 0 && (
                       <div>
                         <button onClick={()=>setShowDone(v=>!v)}
@@ -3938,7 +3939,7 @@ function TaskTracker({ currentUser }) {
                         </button>
                         {showDone && (
                           <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
-                            {misTareas.filter(t=>isDone(t.status)).map(t=><TTaskCard key={t.id} t={t} onUpdate={updateTask} now={now} tmr={tmr}/>)}
+                            {misTareas.filter(t=>isDone(t.status)).map(t=><TTaskCard key={t.id} t={t} onUpdate={updateTask} now={now} tmr={tmr} onEdit={t=>setEditTask(t)}/>)}
                           </div>
                         )}
                       </div>
@@ -3961,16 +3962,92 @@ function TaskTracker({ currentUser }) {
             <button onClick={()=>setDayModal(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:"var(--text-3)",lineHeight:1,padding:0}}>✕</button>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            {dayModal.tasks.map(t=><TTaskCard key={t.id} t={t} onUpdate={updateTask} now={now} tmr={tmr}/>)}
+            {dayModal.tasks.map(t=><TTaskCard key={t.id} t={t} onUpdate={updateTask} now={now} tmr={tmr} onEdit={t=>{setDayModal(null);setEditTask(t);}}/>)}
           </div>
         </div>
       </div>
+    )}
+    {/* Task edit modal */}
+    {editTask&&(
+      <TTaskEditModal task={editTask} onClose={()=>setEditTask(null)}
+        onSave={async(updates)=>{ await updateTask(editTask.id,updates); setEditTask(null); }}/>
     )}
     </div>
   );
 }
 
-function TTaskGroup({ emoji, label, tasks, onUpdate, now, tmr, todayPlan, onTogglePlan }) {
+function TTaskEditModal({ task, onClose, onSave }) {
+  const [f, setF] = React.useState({
+    taskName:   task.taskName   || "",
+    description:task.description|| "",
+    assignedTo: task.assignedTo || "",
+    dueDate:    task.dueDate    ? task.dueDate.slice(0,10) : "",
+    status:     normStatus(task.status),
+    priority:   task.priority   || "media",
+    notes:      task.notes      || "",
+    fase:       task.fase       || "",
+  });
+  const [saving, setSaving] = React.useState(false);
+  const up = (k,v) => setF(p=>({...p,[k]:v}));
+  const handle = async e => {
+    e.preventDefault();
+    setSaving(true);
+    try { await onSave(f); } finally { setSaving(false); }
+  };
+  const row = (label, children) => (
+    <div style={{display:"flex",flexDirection:"column",gap:4}}>
+      <label style={{fontSize:11,fontWeight:600,color:"var(--text-3)",textTransform:"uppercase",letterSpacing:".04em"}}>{label}</label>
+      {children}
+    </div>
+  );
+  const inp = {style:{fontSize:13,padding:"7px 10px",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",background:"var(--surface)",color:"var(--text-1)",width:"100%",boxSizing:"border-box"}};
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+      onClick={onClose}>
+      <div style={{background:"var(--surface)",borderRadius:12,width:"100%",maxWidth:440,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 8px 32px rgba(0,0,0,.2)"}}
+        onClick={e=>e.stopPropagation()}>
+        <div style={{padding:"16px 18px 0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span style={{fontSize:14,fontWeight:700,color:"var(--text-1)"}}>Editar tarea</span>
+          <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"var(--text-3)",lineHeight:1}}>✕</button>
+        </div>
+        <form onSubmit={handle} style={{padding:18,display:"flex",flexDirection:"column",gap:14}}>
+          {row("Nombre", <input {...inp} value={f.taskName} onChange={e=>up("taskName",e.target.value)} required/>)}
+          {row("Descripción", <textarea {...inp} value={f.description} onChange={e=>up("description",e.target.value)} rows={2} style={{...inp.style,resize:"vertical"}}/>)}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+            {row("Asignado a", <input {...inp} value={f.assignedTo} onChange={e=>up("assignedTo",e.target.value)} placeholder="Nombre"/>)}
+            {row("Fecha límite", <input {...inp} type="date" value={f.dueDate} onChange={e=>up("dueDate",e.target.value)}/>)}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+            {row("Estado", (
+              <select {...inp} value={f.status} onChange={e=>up("status",e.target.value)}>
+                {TASK_STATUSES.map(s=><option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            ))}
+            {row("Prioridad", (
+              <select {...inp} value={f.priority} onChange={e=>up("priority",e.target.value)}>
+                {["urgente","alta","media","baja"].map(p=><option key={p} value={p}>{p.charAt(0).toUpperCase()+p.slice(1)}</option>)}
+              </select>
+            ))}
+          </div>
+          {task.fase && row("Fase", <input {...inp} value={f.fase} onChange={e=>up("fase",e.target.value)}/>)}
+          {row("Notas", <textarea {...inp} value={f.notes} onChange={e=>up("notes",e.target.value)} rows={2} style={{...inp.style,resize:"vertical"}}/>)}
+          <div style={{display:"flex",gap:10,marginTop:4}}>
+            <button type="button" onClick={onClose}
+              style={{flex:1,padding:"9px",fontSize:13,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",background:"var(--surface)",color:"var(--text-2)",cursor:"pointer",fontWeight:500}}>
+              Cancelar
+            </button>
+            <button type="submit" disabled={saving}
+              style={{flex:1,padding:"9px",fontSize:13,border:"none",borderRadius:"var(--radius-sm)",background:"#1d4ed8",color:"#fff",cursor:saving?"not-allowed":"pointer",fontWeight:600,opacity:saving?.7:1}}>
+              {saving?"Guardando…":"Guardar"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function TTaskGroup({ emoji, label, tasks, onUpdate, now, tmr, todayPlan, onTogglePlan, onEdit }) {
   const [open, setOpen] = useState(true);
   if (tasks.length === 0) return null;
   return (
@@ -3983,14 +4060,14 @@ function TTaskGroup({ emoji, label, tasks, onUpdate, now, tmr, todayPlan, onTogg
       </button>
       {open && (
         <div style={{display:"flex",flexDirection:"column",gap:6}}>
-          {tasks.map(t=><TTaskCard key={t.id} t={t} onUpdate={onUpdate} now={now} tmr={tmr} todayPlan={todayPlan} onTogglePlan={onTogglePlan}/>)}
+          {tasks.map(t=><TTaskCard key={t.id} t={t} onUpdate={onUpdate} now={now} tmr={tmr} todayPlan={todayPlan} onTogglePlan={onTogglePlan} onEdit={onEdit}/>)}
         </div>
       )}
     </div>
   );
 }
 
-function TTaskCard({ t, onUpdate, now, tmr, todayPlan, onTogglePlan }) {
+function TTaskCard({ t, onUpdate, now, tmr, todayPlan, onTogglePlan, onEdit }) {
   const sm    = statusMeta(t.status);
   const due   = t.dueDate ? new Date(t.dueDate) : null;
   const late  = due && due < now && !isDone(t.status);
@@ -4001,7 +4078,8 @@ function TTaskCard({ t, onUpdate, now, tmr, todayPlan, onTogglePlan }) {
   const prioColor = t.priority==="urgente"?"#DC2626":t.priority==="alta"?"#F97316":t.priority==="baja"?"#9CA3AF":"#D97706";
   const info  = teamMemberInfo(t.assignedTo);
   return (
-    <div className="tt-card" style={{padding:"11px 14px",display:"flex",alignItems:"flex-start",gap:10,border:late?"1px solid #FCA5A5":undefined,opacity:done?.55:1}}>
+    <div className="tt-card" onClick={()=>onEdit&&onEdit(t)}
+      style={{padding:"11px 14px",display:"flex",alignItems:"flex-start",gap:10,border:late?"1px solid #FCA5A5":undefined,opacity:done?.55:1,cursor:onEdit?"pointer":undefined}}>
       <div style={{width:7,height:7,borderRadius:"50%",background:prioColor,flexShrink:0,marginTop:6}}/>
       <div style={{flex:1,minWidth:0}}>
         <p style={{fontSize:13,fontWeight:500,color:"var(--text-1)",textDecoration:done?"line-through":"none",margin:0,lineHeight:1.4}}>{t.taskName}</p>
