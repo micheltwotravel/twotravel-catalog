@@ -7986,6 +7986,7 @@ const loadKickoffs = async () => {
 
     return (kickoffs || [])
       .filter((k) => {
+        if (String(k.id || "").toLowerCase().startsWith("financ")) return false;
         if (statusFilter !== "all" && k.status !== statusFilter) return false;
         if (conciergeFilter !== "all" && !String(k.assignedConcierge || "").split(",").map(s => s.trim()).includes(conciergeFilter)) return false;
         if (filterCity !== "all") {
