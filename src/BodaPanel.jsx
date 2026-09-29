@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { supabase } from "./supabaseClient.js";
 
 // ─── BRAND ───────────────────────────────────────────────────────────────────
 const R = {
@@ -33,11 +34,16 @@ const FASE_COLORS  = { "Onboarding":{"bg":"#eff6ff","color":"#1e40af"}, "Plannin
 
 const GAS_URL = import.meta.env.VITE_GAS_URL;
 
-// ─── DATA LAYER ──────────────────────────────────────────────────────────────
+// ─── DATA LAYER (Supabase) ────────────────────────────────────────────────────
 const BODAS_CACHE_KEY = "tt_bodas_cache";
 const BODAS_CACHE_TTL = 5 * 60 * 1000; // 5 min
 
-function parseJ(v, fallback) { try { return v ? JSON.parse(v) : fallback; } catch { return fallback; } }
+// parseJ handles both already-parsed arrays/objects (from Supabase JSONB) and
+// JSON strings (from legacy GAS data during migration).
+function parseJ(v, fallback) {
+  if (Array.isArray(v) || (v !== null && typeof v === "object")) return v ?? fallback;
+  try { return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+}
 
 function rowToBoda(row) {
   return {
@@ -47,19 +53,20 @@ function rowToBoda(row) {
     venue:       row.venue       || "",
     responsable: row.responsable || "",
     contact:     row.contact     || "",
+    coupleEmail: row.coupleEmail || "",
     phase:       row.phase       || "Onboarding",
     status:      row.status      || "Activa",
     guestCount:  row.guestCount  || "",
     budget:      row.budget      || "",
     notes:       row.notes       || "",
     coverPhoto:  row.coverPhoto  || "",
-    tasks:     parseJ(row.tasks,     []),
-    suppliers: parseJ(row.suppliers, []),
-    songs:     parseJ(row.songs,     []),
-    photos:    parseJ(row.photos,    []),
-    calls:     parseJ(row.calls,     []),
-    guests:    parseJ(row.guests,    []),
-    palette:   parseJ(row.palette,   []),
+    tasks:       parseJ(row.tasks,       []),
+    suppliers:   parseJ(row.suppliers,   []),
+    songs:       parseJ(row.songs,       []),
+    photos:      parseJ(row.photos,      []),
+    calls:       parseJ(row.calls,       []),
+    guests:      parseJ(row.guests,      []),
+    palette:     parseJ(row.palette,     []),
     schedule:    parseJ(row.schedule,    []),
     budgetItems: parseJ(row.budgetItems, []),
     payments:    parseJ(row.payments,    []),
@@ -79,13 +86,7 @@ function clearBodasCache() {
   try { sessionStorage.removeItem(BODAS_CACHE_KEY); } catch {}
 }
 
-async function gasGet(action, params = {}) {
-  const qs = new URLSearchParams({ action, ...params }).toString();
-  const r = await fetch(`${GAS_URL}?${qs}`);
-  const text = await r.text();
-  if (text.trimStart().startsWith("<")) throw new Error("Error de conexión con el servidor.");
-  return JSON.parse(text);
-}
+// GAS kept only for email and user listing
 async function gasPost(body) {
   const r = await fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) });
   const text = await r.text();
@@ -94,8 +95,12 @@ async function gasPost(body) {
 }
 
 async function fetchFreshBodas() {
-  const d = await gasGet("listBodas");
-  const bodas = (Array.isArray(d.data) ? d.data : []).map(rowToBoda);
+  const { data, error } = await supabase
+    .from("bodas")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  const bodas = (data || []).map(row => rowToBoda(row.data || row));
   setBodasCache(bodas);
   return bodas;
 }
@@ -107,46 +112,71 @@ async function apiBodas(forceRefresh = false) {
 }
 async function apiSaveBoda(f) {
   clearBodasCache();
-  const d = await gasPost({ action: "saveBoda", payload: {
-    clienteName: f.clienteName, weddingDate: f.weddingDate, venue: f.venue,
-    responsable: f.responsable, contact: f.contact, coupleEmail: f.coupleEmail || "", phase: f.phase,
-    status: f.status, guestCount: f.guestCount, budget: f.budget,
+  const id = "boda_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const payload = {
+    id, clienteName: f.clienteName, weddingDate: f.weddingDate, venue: f.venue,
+    responsable: f.responsable, contact: f.contact, coupleEmail: f.coupleEmail || "",
+    phase: f.phase, status: f.status, guestCount: f.guestCount, budget: f.budget,
     notes: f.notes, coverPhoto: f.coverPhoto || "",
-    tasks: "[]", suppliers: "[]", songs: "[]",
-    photos: "[]", calls: "[]", guests: "[]", palette: "[]", schedule: "[]",
-    budgetItems: "[]", payments: "[]", contracts: "[]", seating: "[]", studio: "[]",
-  }});
-  return d.id;
+    tasks: [], suppliers: [], songs: [], photos: [], calls: [], guests: [], palette: [],
+    schedule: [], budgetItems: [], payments: [], contracts: [], seating: [], studio: [],
+  };
+  const { error } = await supabase.from("bodas").insert({ id, data: payload });
+  if (error) throw new Error(error.message);
+  return id;
 }
 async function apiUpdateBoda(id, f) {
   clearBodasCache();
-  await gasPost({ action: "updateBoda", id, updates: {
-    clienteName: f.clienteName, weddingDate: f.weddingDate, venue: f.venue,
-    responsable: f.responsable, contact: f.contact, coupleEmail: f.coupleEmail || "", phase: f.phase,
-    status: f.status, guestCount: f.guestCount, budget: f.budget,
-    notes: f.notes, coverPhoto: f.coverPhoto || "",
-  }});
+  const { data: existing } = await supabase.from("bodas").select("data").eq("id", id).single();
+  const merged = { ...(existing?.data || {}), ...f };
+  const { error } = await supabase.from("bodas").update({ data: merged }).eq("id", id);
+  if (error) throw new Error(error.message);
 }
 async function apiSaveNotes(id, boda) {
   clearBodasCache();
-  await gasPost({ action: "updateBoda", id, updates: {
-    tasks:     JSON.stringify(boda.tasks     || []),
-    suppliers: JSON.stringify(boda.suppliers || []),
-    songs:     JSON.stringify(boda.songs     || []),
-    photos:    JSON.stringify(boda.photos    || []),
-    calls:     JSON.stringify(boda.calls     || []),
-    guests:    JSON.stringify(boda.guests    || []),
-    palette:     JSON.stringify(boda.palette     || []),
-    budgetItems: JSON.stringify(boda.budgetItems || []),
-    payments:    JSON.stringify(boda.payments    || []),
-    contracts:   JSON.stringify(boda.contracts   || []),
-    seating:     JSON.stringify(boda.seating     || []),
-    studio:      JSON.stringify(boda.studio      || []),
-  }});
+  const { data: existing } = await supabase.from("bodas").select("data").eq("id", id).single();
+  const updates = {
+    tasks: boda.tasks || [], suppliers: boda.suppliers || [], songs: boda.songs || [],
+    photos: boda.photos || [], calls: boda.calls || [], guests: boda.guests || [],
+    palette: boda.palette || [], budgetItems: boda.budgetItems || [],
+    payments: boda.payments || [], contracts: boda.contracts || [],
+    seating: boda.seating || [], studio: boda.studio || [],
+  };
+  const merged = { ...(existing?.data || {}), ...updates };
+  const { error } = await supabase.from("bodas").update({ data: merged }).eq("id", id);
+  if (error) throw new Error(error.message);
 }
 async function apiUpdateSchedule(id, sc) {
   clearBodasCache();
-  await gasPost({ action: "updateBoda", id, updates: { schedule: JSON.stringify(sc) } });
+  const { data: existing } = await supabase.from("bodas").select("data").eq("id", id).single();
+  const merged = { ...(existing?.data || {}), schedule: sc };
+  const { error } = await supabase.from("bodas").update({ data: merged }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+async function apiDeleteBoda(id) {
+  clearBodasCache();
+  const { error } = await supabase.from("bodas").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+// One-time migration: pulls all rows from GAS and writes them to Supabase.
+// Safe to run multiple times (upsert by id).
+async function migrateBodas() {
+  const r = await fetch(`${GAS_URL}?${new URLSearchParams({ action: "listBodas" })}`);
+  const text = await r.text();
+  const d = JSON.parse(text);
+  const rows = Array.isArray(d.data) ? d.data : [];
+  if (!rows.length) return 0;
+  let count = 0;
+  for (const row of rows) {
+    const boda = rowToBoda(row);
+    if (!boda.id) continue;
+    const payload = { ...boda };
+    await supabase.from("bodas").upsert({ id: boda.id, data: payload }, { onConflict: "id" });
+    count++;
+  }
+  clearBodasCache();
+  return count;
 }
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
@@ -2207,6 +2237,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
   const [search,       setSearch]       = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [mainView,     setMainView]     = useState("dashboard");
+  const [migrating,    setMigrating]    = useState(false);
 
   const load=useCallback(async(force=false)=>{
     // Show cached bodas immediately — no loading spinner if we have data
@@ -2265,7 +2296,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
   const handleDelete=async(e,boda)=>{
     e.stopPropagation();
     if(!window.confirm(`¿Eliminar "${boda.clienteName}"?`)) return;
-    try{clearBodasCache(); await gasPost({action:"deleteBoda",id:boda.id}); setBodas(p=>p.filter(b=>b.id!==boda.id));}catch(e){alert("Error: "+e.message);}
+    try{await apiDeleteBoda(boda.id); setBodas(p=>p.filter(b=>b.id!==boda.id));}catch(e){alert("Error: "+e.message);}
   };
 
   const today=new Date(); today.setHours(0,0,0,0);
@@ -2299,9 +2330,22 @@ export default function BodaPanel({ currentUser, onLogout }) {
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:11,color:"rgba(255,255,255,.4)",letterSpacing:".03em"}}>{currentUser?.name||currentUser?.email}</span>
-            <button onClick={forceRefresh} disabled={refreshing} title="Forzar recarga desde la hoja"
+            <button onClick={forceRefresh} disabled={refreshing} title="Recargar desde Supabase"
               style={{background:"rgba(255,255,255,.07)",color:refreshing?"rgba(255,255,255,.25)":"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 10px",fontSize:14,cursor:"pointer",transition:"opacity .15s",lineHeight:1}}>
               {refreshing?"⏳":"🔄"}
+            </button>
+            <button onClick={async()=>{
+              if(!window.confirm("¿Migrar todas las bodas de Google Sheets a Supabase?\n\nEsto es seguro — no borra nada, solo importa.")) return;
+              setMigrating(true);
+              try{
+                const n=await migrateBodas();
+                await load(true);
+                alert(`✅ ${n} bodas migradas a Supabase.`);
+              }catch(e){alert("Error en migración: "+e.message);}
+              setMigrating(false);
+            }} disabled={migrating} title="Migración one-time: importar de Google Sheets"
+              style={{background:"rgba(201,169,110,.15)",color:migrating?"rgba(255,255,255,.25)":"#c9a96e",border:"1px solid rgba(201,169,110,.3)",borderRadius:8,padding:"5px 10px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".03em",whiteSpace:"nowrap"}}>
+              {migrating?"Migrando…":"📥 Migrar GS"}
             </button>
             <a href="/?mode=tareas-bodas" style={{background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",textDecoration:"none"}}>📋 Tareas</a>
             <a href="/?mode=concierge" style={{background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",textDecoration:"none"}}>← Panel</a>
