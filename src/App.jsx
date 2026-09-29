@@ -5962,9 +5962,12 @@ function useAuth() {
       setUser(u);
       return { ok: true };
     }
-    // Fallback to GAS during migration period
+    // Fallback to GAS during migration period (10s timeout)
     try {
-      const res = await fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify({ action:"loginUser", payload:{ email: normalEmail, pin } }) });
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 10000);
+      const res = await fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify({ action:"loginUser", payload:{ email: normalEmail, pin } }), signal: ctrl.signal });
+      clearTimeout(tid);
       const gd = await res.json();
       if (!gd.ok) return { ok: false, error: gd.error || "Credenciales incorrectas" };
       const u = { ...gd.user, exp: Date.now() + 30 * 24 * 3600_000 };
