@@ -367,7 +367,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
   const [error, setError]         = useState("");
   const [modal, setModal]         = useState(null);
   const [vista, setVista]         = useState("lista"); // "lista" | "calendario"
-  const [scope, setScope]         = useState("all"); // "all" | "mine"
+  const [scope, setScope]         = useState("mine"); // "all" | "mine"
   const [filterCliente, setFilterCliente] = useState("");
   const [filterResp, setFilterResp]       = useState("");
   const [filterQ, setFilterQ]             = useState("");
