@@ -3051,6 +3051,43 @@ const CONCIERGE_EMAILS = {
   "Giulia Lorini Serrato": "giulia@two.travel",
   "Natalia Peniche":       "natalia@two.travel",
 };
+
+// ── Full team organized by area ───────────────────────────────────────────────
+const TEAM_AREAS = [
+  { key:"concierge", label:"Concierge",  color:"#2563EB", members:[
+    { name:"Alia Jadad",            email:"alia@two.travel" },
+    { name:"Carolina Lopez",        email:"caro@two.travel" },
+    { name:"Daniela Becerra",       email:"daniela@two.travel" },
+    { name:"Nataly Cruz",           email:"nataly@two.travel" },
+    { name:"Giulia Lorini Serrato", email:"giulia@two.travel" },
+    { name:"Natalia Peniche",       email:"natalia@two.travel" },
+    { name:"Juan David",            email:"juandavid@two.travel" },
+    { name:"Yoyaro",                email:"yoyaro@two.travel" },
+  ]},
+  { key:"bodas",     label:"Bodas",      color:"#DB2777", members:[
+    { name:"Alexandra",    email:"alexandra@two.travel" },
+    { name:"Angelica",     email:"angelica@two.travel" },
+    { name:"Laura Ospina", email:"laura@two.travel" },
+  ]},
+  { key:"finanzas",  label:"Finanzas",   color:"#059669", members:[
+    { name:"Lyna",  email:"lyna@two.travel" },
+    { name:"Mario", email:"mario@two.travel" },
+  ]},
+  { key:"marketing", label:"Marketing",  color:"#7C3AED", members:[
+    { name:"Juan",           email:"juan@two.travel" },
+    { name:"Valeria Bedoya", email:"valeria@two.travel" },
+  ]},
+  { key:"logistica", label:"Logística",  color:"#D97706", members:[
+    { name:"Xile", email:"xile@two.travel" },
+  ]},
+  { key:"admin",     label:"Admin",      color:"#374151", members:[
+    { name:"Ray",    email:"ray@two.travel" },
+    { name:"Michel", email:"michel@two.travel" },
+  ]},
+];
+const TEAM_ALL = TEAM_AREAS.flatMap(a => a.members.map(m => ({ ...m, area:a.key, areaLabel:a.label, areaColor:a.color })));
+const TEAM_EMAIL_MAP = Object.fromEntries(TEAM_ALL.map(m => [m.name, m.email]));
+const teamMemberInfo = name => TEAM_ALL.find(m => m.name === name);
 // City map for KPI breakdown
 const CONCIERGE_CITIES = {
   "Alia Jadad":            "CTG",
@@ -3151,12 +3188,8 @@ function exportKpiCsv(kickoffs, period = "all", conciergeFilter = "all", kpiType
    TASK TRACKER  (?mode=tasks)
    Tasks stored in Supabase `tasks` table.
 ════════════════════════════════════════════════════════ */
-const TASK_AVATAR_COLORS = ["#374151","#DC2626","#2563EB","#D97706","#059669","#7C3AED"];
 const taskInitials = name => (name||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
-const taskAvatarColor = name => {
-  const i = CONCIERGE_NAMES.indexOf(name);
-  return i >= 0 ? TASK_AVATAR_COLORS[i % TASK_AVATAR_COLORS.length] : "#374151";
-};
+const taskAvatarColor = name => teamMemberInfo(name)?.areaColor ?? "#374151";
 
 function TaskTracker() {
   const [tasks,    setTasks]    = useState([]);
@@ -3164,6 +3197,7 @@ function TaskTracker() {
   const [loading,  setLoading]  = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving,   setSaving]   = useState(false);
+  const [filterArea,   setFilterArea]   = useState("all");
   const [filterPerson, setFilterPerson] = useState("all");
   const [showDone,  setShowDone]  = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -3198,7 +3232,7 @@ function TaskTracker() {
     setSaving(true);
     const id = "task_"+Date.now().toString(36);
     const payload = { ...form, id,
-      assignedEmail: form.assignedEmail||CONCIERGE_EMAILS[form.assignedTo]||"",
+      assignedEmail: form.assignedEmail||TEAM_EMAIL_MAP[form.assignedTo]||"",
       status:"pending", createdAt: new Date().toISOString(),
     };
     const { error } = await supabase.from("tasks").insert({ id, data: payload });
@@ -3253,7 +3287,12 @@ function TaskTracker() {
   const now = new Date(); now.setHours(0,0,0,0);
   const tmr = new Date(now); tmr.setDate(tmr.getDate()+1);
 
-  const visible    = filterPerson === "all" ? tasks : tasks.filter(t => t.assignedTo === filterPerson);
+  const areaMembers = filterArea === "all" ? null : (TEAM_AREAS.find(a=>a.key===filterArea)?.members.map(m=>m.name) ?? null);
+  const visible    = tasks.filter(t => {
+    if (areaMembers && !areaMembers.includes(t.assignedTo)) return false;
+    if (filterPerson !== "all" && t.assignedTo !== filterPerson) return false;
+    return true;
+  });
   const atrasadas  = visible.filter(t => t.status!=="completed" && t.dueDate && new Date(t.dueDate) < now);
   const hoy        = visible.filter(t => t.status!=="completed" && t.dueDate && new Date(t.dueDate)>=now && new Date(t.dueDate)<tmr);
   const proximas   = visible.filter(t => t.status!=="completed" && (!t.dueDate || new Date(t.dueDate)>=tmr));
@@ -3283,48 +3322,76 @@ function TaskTracker() {
 
       <div className="max-w-3xl mx-auto px-6 py-6" style={{display:"flex",flexDirection:"column",gap:16}}>
 
-        {/* ── Person filter chips ── */}
+        {/* ── Area tabs ── */}
         <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-          {["all", ...CONCIERGE_NAMES].map(name => {
-            const label  = name==="all" ? "Todas" : name.split(" ")[0];
-            const active = filterPerson===name;
-            const cnt    = name==="all"
+          {[{key:"all",label:"Todos",color:"#111"}, ...TEAM_AREAS].map(area => {
+            const active = filterArea === area.key;
+            const cnt = area.key==="all"
               ? tasks.filter(t=>t.status!=="completed").length
-              : tasks.filter(t=>t.assignedTo===name&&t.status!=="completed").length;
+              : tasks.filter(t=>t.status!=="completed" && (TEAM_AREAS.find(a=>a.key===area.key)?.members.map(m=>m.name)||[]).includes(t.assignedTo)).length;
             return (
-              <button key={name} onClick={()=>setFilterPerson(name)}
+              <button key={area.key} onClick={()=>{ setFilterArea(area.key); setFilterPerson("all"); }}
                 style={{
-                  display:"flex",alignItems:"center",gap:5,fontSize:12,fontWeight:500,
-                  padding:"5px 11px",borderRadius:999,cursor:"pointer",
-                  border: active?"1px solid #111":"1px solid var(--border)",
-                  background: active?"#111":"transparent",
+                  display:"flex",alignItems:"center",gap:5,fontSize:12,fontWeight:600,
+                  padding:"5px 12px",borderRadius:999,cursor:"pointer",transition:"all .12s",
+                  border: active?`1px solid ${area.color}`:"1px solid var(--border)",
+                  background: active?area.color:"transparent",
                   color: active?"#fff":"var(--text-2)",
-                  transition:"all .1s",
                 }}>
-                {name!=="all" && (
-                  <span style={{width:17,height:17,borderRadius:"50%",background:taskAvatarColor(name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700}}>
-                    {taskInitials(name)}
-                  </span>
-                )}
-                {label}
-                {cnt>0 && <span style={{fontSize:10,fontWeight:700,color:active?"#fff8":"var(--text-3)"}}>{cnt}</span>}
+                {area.label}
+                {cnt>0 && <span style={{fontSize:10,fontWeight:700,opacity:.75}}>{cnt}</span>}
               </button>
             );
           })}
         </div>
+
+        {/* ── Person chips for selected area ── */}
+        {filterArea !== "all" && (() => {
+          const area = TEAM_AREAS.find(a=>a.key===filterArea);
+          if (!area) return null;
+          return (
+            <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:-4}}>
+              <button onClick={()=>setFilterPerson("all")}
+                style={{fontSize:11.5,fontWeight:500,padding:"4px 10px",borderRadius:999,cursor:"pointer",transition:"all .1s",
+                  border: filterPerson==="all"?`1px solid ${area.color}`:"1px solid var(--border)",
+                  background: filterPerson==="all"?area.color+"18":"transparent",
+                  color: filterPerson==="all"?area.color:"var(--text-3)"}}>
+                Todos
+              </button>
+              {area.members.map(m => {
+                const active = filterPerson===m.name;
+                const cnt = tasks.filter(t=>t.assignedTo===m.name&&t.status!=="completed").length;
+                return (
+                  <button key={m.name} onClick={()=>setFilterPerson(m.name)}
+                    style={{display:"flex",alignItems:"center",gap:5,fontSize:11.5,fontWeight:500,
+                      padding:"4px 10px",borderRadius:999,cursor:"pointer",transition:"all .1s",
+                      border: active?`1px solid ${area.color}`:"1px solid var(--border)",
+                      background: active?area.color:"transparent",
+                      color: active?"#fff":"var(--text-2)"}}>
+                    <span style={{width:16,height:16,borderRadius:"50%",background:area.color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,flexShrink:0}}>
+                      {taskInitials(m.name)}
+                    </span>
+                    {m.name.split(" ")[0]}
+                    {cnt>0 && <span style={{fontSize:10,fontWeight:700,opacity:.7}}>{cnt}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* ── Today's team mirror ── */}
         {Object.keys(todayCounts).length > 0 && (
           <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:"var(--radius-md)",padding:"10px 14px"}}>
             <p style={{fontSize:10,fontWeight:600,color:"var(--text-3)",letterSpacing:".06em",textTransform:"uppercase",margin:"0 0 8px"}}>Hoy en el equipo</p>
             <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
-              {CONCIERGE_NAMES.filter(n=>todayCounts[n]).map(n=>(
-                <div key={n} style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{width:24,height:24,borderRadius:"50%",background:taskAvatarColor(n),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700}}>
-                    {taskInitials(n)}
+              {TEAM_ALL.filter(m=>todayCounts[m.name]).map(m=>(
+                <div key={m.name} style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{width:24,height:24,borderRadius:"50%",background:m.areaColor,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700}}>
+                    {taskInitials(m.name)}
                   </span>
-                  <span style={{fontSize:12,color:"var(--text-2)",fontWeight:500}}>{n.split(" ")[0]}</span>
-                  <span style={{fontSize:13,fontWeight:700,color:"#D97706"}}>{todayCounts[n]}</span>
+                  <span style={{fontSize:12,color:"var(--text-2)",fontWeight:500}}>{m.name.split(" ")[0]}</span>
+                  <span style={{fontSize:13,fontWeight:700,color:"#D97706"}}>{todayCounts[m.name]}</span>
                 </div>
               ))}
             </div>
@@ -3359,10 +3426,14 @@ function TaskTracker() {
               </div>
               <div>
                 <label style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>Asignado a *</label>
-                <select value={form.assignedTo} onChange={e=>{setF("assignedTo",e.target.value);setF("assignedEmail",CONCIERGE_EMAILS[e.target.value]||"");}}
+                <select value={form.assignedTo} onChange={e=>{setF("assignedTo",e.target.value);setF("assignedEmail",TEAM_EMAIL_MAP[e.target.value]||"");}}
                   style={{marginTop:4,width:"100%",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"7px 10px",fontSize:12.5,background:"var(--surface)",boxSizing:"border-box"}}>
                   <option value="">Seleccionar…</option>
-                  {CONCIERGE_NAMES.map(c=><option key={c} value={c}>{c}</option>)}
+                  {TEAM_AREAS.map(area=>(
+                    <optgroup key={area.key} label={area.label}>
+                      {area.members.map(m=><option key={m.name} value={m.name}>{m.name}</option>)}
+                    </optgroup>
+                  ))}
                 </select>
               </div>
               <div>
