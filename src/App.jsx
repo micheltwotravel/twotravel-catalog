@@ -3228,6 +3228,7 @@ function TaskTracker({ currentUser }) {
     projectId:"", projectName:"", area:"", notes:"", kickoffId:"", kickoffName:"",
   });
   const [pForm, setPForm] = useState({ name:"", description:"", area:"", responsable:"", targetDate:"", progress:0 });
+  const [weekOffset, setWeekOffset] = useState(0);
   const setF = (k,v) => setForm(p=>({...p,[k]:v}));
   const setPF = (k,v) => setPForm(p=>({...p,[k]:v}));
 
@@ -3238,7 +3239,17 @@ function TaskTracker({ currentUser }) {
       supabase.from("projects").select("*").order("created_at",{ascending:false}),
     ]);
     if (tasksRes.error) setLoadError(tasksRes.error.message);
-    else setTasks((tasksRes.data||[]).map(r=>({id:r.id,...(r.data||{})})));
+    else {
+      const BODAS_FASES = new Set(["Onboarding","Planning","Pre-Wedding","Wedding Day","Post-Wedding"]);
+      setTasks((tasksRes.data||[]).map(r=>{
+        const d = { id:r.id, ...(r.data||{}) };
+        if (!d.area) {
+          if (d.source==="bodas" || BODAS_FASES.has(d.fase)) d.area = "bodas";
+          else d.area = teamMemberInfo(d.assignedTo)?.area || "";
+        }
+        return d;
+      }));
+    }
     if (!projRes.error) setProjects((projRes.data||[]).map(r=>({id:r.id,...(r.data||{})})));
     setLoading(false);
   };
@@ -3308,7 +3319,7 @@ function TaskTracker({ currentUser }) {
   const pendingTasks = tasks.filter(t=>!isDone(t.status));
   const areaMembers = filterArea==="all"?null:(TEAM_AREAS.find(a=>a.key===filterArea)?.members.map(m=>m.name)??null);
   const visible = tasks.filter(t=>{
-    if (areaMembers&&!areaMembers.includes(t.assignedTo)) return false;
+    if (filterArea!=="all" && t.area !== filterArea) return false;
     if (filterPerson!=="all"&&t.assignedTo!==filterPerson) return false;
     if (filterKickoff!=="all"&&(t.kickoffName||t.kickoffId)!==filterKickoff) return false;
     return true;
@@ -3319,7 +3330,7 @@ function TaskTracker({ currentUser }) {
   const terminadas = visible.filter(t=>isDone(t.status));
 
   // Dashboard stats — respect filterArea so area chips filter the dashboard
-  const dashBase = filterArea==="all" ? pendingTasks : pendingTasks.filter(t=>areaMembers?.includes(t.assignedTo));
+  const dashBase = filterArea==="all" ? pendingTasks : pendingTasks.filter(t=>t.area===filterArea);
   const allAtrasadas  = dashBase.filter(t=>t.dueDate&&new Date(t.dueDate)<now);
   const allHoy        = dashBase.filter(t=>t.dueDate&&new Date(t.dueDate)>=now&&new Date(t.dueDate)<tmr);
   const allSemana     = dashBase.filter(t=>t.dueDate&&new Date(t.dueDate)>=now&&new Date(t.dueDate)<nxt7);
@@ -3350,6 +3361,7 @@ function TaskTracker({ currentUser }) {
     { key:"dashboard", label:"Dashboard" },
     { key:"projects",  label:"Proyectos" },
     { key:"all",       label:"Todas" },
+    { key:"week",      label:"Semana" },
     { key:"mine",      label:"Mis tareas" },
   ];
 
@@ -3755,6 +3767,116 @@ function TaskTracker({ currentUser }) {
                 </div>
               </div>
             )}
+
+            {/* ══════════ SEMANA TAB ══════════ */}
+            {activeTab==="week" && (() => {
+              // Build the 7-day window
+              const weekStart = new Date(now);
+              weekStart.setDate(weekStart.getDate() + weekOffset * 7);
+              const days = Array.from({length:7}, (_,i) => {
+                const d = new Date(weekStart); d.setDate(d.getDate()+i); return d;
+              });
+              const pad = n=>String(n).padStart(2,"0");
+              const toKey = d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+              const todayKey = toKey(new Date());
+              // Index pending tasks by due date
+              const byDay = {};
+              pendingTasks.forEach(t=>{
+                if (!t.dueDate) return;
+                const k = t.dueDate.slice(0,10);
+                if (!byDay[k]) byDay[k] = [];
+                byDay[k].push(t);
+              });
+              const DOW = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+              const MES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+              return (
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  {/* Week nav */}
+                  <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                    <button onClick={()=>setWeekOffset(v=>v-1)}
+                      style={{border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"5px 12px",background:"var(--surface)",cursor:"pointer",fontSize:13}}>‹ Anterior</button>
+                    <button onClick={()=>setWeekOffset(0)}
+                      style={{border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"5px 10px",background:"var(--surface)",cursor:"pointer",fontSize:12,color:"var(--text-3)"}}>Hoy</button>
+                    <button onClick={()=>setWeekOffset(v=>v+1)}
+                      style={{border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"5px 12px",background:"var(--surface)",cursor:"pointer",fontSize:13}}>Siguiente ›</button>
+                    <span style={{fontSize:12,color:"var(--text-3)",fontWeight:500}}>
+                      {days[0].getDate()} {MES[days[0].getMonth()]} – {days[6].getDate()} {MES[days[6].getMonth()]} {days[6].getFullYear()}
+                    </span>
+                    {/* area filter */}
+                    <div style={{marginLeft:"auto",display:"flex",gap:6,flexWrap:"wrap"}}>
+                      {[{key:"all",label:"Todos",color:"#374151"}, ...TEAM_AREAS].map(a=>{
+                        const act = filterArea===a.key;
+                        return <button key={a.key} onClick={()=>setFilterArea(a.key)}
+                          style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:999,cursor:"pointer",
+                            border:act?`1px solid ${a.color}`:"1px solid var(--border)",
+                            background:act?a.color:"transparent",color:act?"#fff":"var(--text-2)"}}>
+                          {a.label}
+                        </button>;
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 7-column grid */}
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:6,overflowX:"auto"}}>
+                    {days.map((day,i)=>{
+                      const key = toKey(day);
+                      const isToday = key===todayKey;
+                      const isPast = key<todayKey;
+                      const dayTasks = (byDay[key]||[]).filter(t=>filterArea==="all"||t.area===filterArea);
+                      return (
+                        <div key={key} style={{minHeight:100,borderRadius:"var(--radius-md)",
+                          border: isToday?"2px solid #2563EB":"1px solid var(--border)",
+                          background: isToday?"#EFF6FF":"var(--surface)",
+                          padding:"8px 7px",opacity:isPast?.8:1}}>
+                          <div style={{marginBottom:6}}>
+                            <span style={{fontSize:10,fontWeight:600,color:isToday?"#2563EB":"var(--text-3)",textTransform:"uppercase"}}>{DOW[i]}</span>
+                            <span style={{fontSize:14,fontWeight:700,color:isToday?"#2563EB":"var(--text-1)",marginLeft:5}}>{day.getDate()}</span>
+                            {dayTasks.length>0&&<span style={{float:"right",fontSize:10,fontWeight:700,background:isPast?"#DC2626":"#2563EB",color:"#fff",borderRadius:10,padding:"1px 6px"}}>{dayTasks.length}</span>}
+                          </div>
+                          <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                            {dayTasks.map(t=>{
+                              const info = teamMemberInfo(t.assignedTo);
+                              const sm = statusMeta(t.status);
+                              return (
+                                <div key={t.id} style={{fontSize:10.5,lineHeight:1.3,padding:"4px 6px",borderRadius:5,
+                                  background:isPast?"#FEF2F2":"var(--bg)",border:`1px solid ${isPast?"#FCA5A5":"var(--border)"}`,
+                                  cursor:"pointer"}}
+                                  onClick={()=>{}}>
+                                  <div style={{fontWeight:500,color:"var(--text-1)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.taskName}</div>
+                                  <div style={{display:"flex",alignItems:"center",gap:4,marginTop:2}}>
+                                    {t.assignedTo&&<span style={{width:14,height:14,borderRadius:"50%",background:info?.areaColor||"#374151",color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:6,fontWeight:700,flexShrink:0}}>{taskInitials(t.assignedTo)}</span>}
+                                    <span style={{fontSize:9.5,color:"var(--text-3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.assignedTo?.split(" ")[0]||""}</span>
+                                    <span style={{marginLeft:"auto",fontSize:9,fontWeight:600,color:sm.color,background:sm.bg,padding:"0 4px",borderRadius:3,flexShrink:0,whiteSpace:"nowrap"}}>{sm.label}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Unscheduled — tasks with no dueDate */}
+                  {pendingTasks.filter(t=>!t.dueDate&&(filterArea==="all"||t.area===filterArea)).length > 0 && (
+                    <div className="tt-card" style={{padding:"12px 14px"}}>
+                      <p style={{fontSize:11,fontWeight:600,color:"var(--text-3)",letterSpacing:".06em",textTransform:"uppercase",margin:"0 0 8px"}}>Sin fecha ({pendingTasks.filter(t=>!t.dueDate&&(filterArea==="all"||t.area===filterArea)).length})</p>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                        {pendingTasks.filter(t=>!t.dueDate&&(filterArea==="all"||t.area===filterArea)).slice(0,20).map(t=>{
+                          const info = teamMemberInfo(t.assignedTo);
+                          return (
+                            <span key={t.id} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,background:"var(--bg)",border:"1px solid var(--border)",borderRadius:6,padding:"3px 8px"}}>
+                              {t.assignedTo&&<span style={{width:14,height:14,borderRadius:"50%",background:info?.areaColor||"#374151",color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:6,fontWeight:700}}>{taskInitials(t.assignedTo)}</span>}
+                              <span style={{color:"var(--text-2)"}}>{t.taskName}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* ══════════ MIS TAREAS TAB ══════════ */}
             {activeTab==="mine" && (
