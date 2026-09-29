@@ -3217,8 +3217,9 @@ function TaskTracker({ currentUser }) {
   const [showForm, setShowForm] = useState(false);
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [saving,   setSaving]   = useState(false);
-  const [filterArea,   setFilterArea]   = useState("all");
-  const [filterPerson, setFilterPerson] = useState("all");
+  const [filterArea,    setFilterArea]    = useState("all");
+  const [filterPerson,  setFilterPerson]  = useState("all");
+  const [filterKickoff, setFilterKickoff] = useState("all");
   const [showDone,  setShowDone]  = useState(false);
   const [loadError, setLoadError] = useState("");
   const [form, setForm] = useState({
@@ -3309,6 +3310,7 @@ function TaskTracker({ currentUser }) {
   const visible = tasks.filter(t=>{
     if (areaMembers&&!areaMembers.includes(t.assignedTo)) return false;
     if (filterPerson!=="all"&&t.assignedTo!==filterPerson) return false;
+    if (filterKickoff!=="all"&&(t.kickoffName||t.kickoffId)!==filterKickoff) return false;
     return true;
   });
   const atrasadas  = visible.filter(t=>!isDone(t.status)&&t.dueDate&&new Date(t.dueDate)<now);
@@ -3316,14 +3318,18 @@ function TaskTracker({ currentUser }) {
   const proximas   = visible.filter(t=>!isDone(t.status)&&(!t.dueDate||new Date(t.dueDate)>=tmr));
   const terminadas = visible.filter(t=>isDone(t.status));
 
-  // Dashboard stats
-  const allAtrasadas  = pendingTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<now);
-  const allHoy        = pendingTasks.filter(t=>t.dueDate&&new Date(t.dueDate)>=now&&new Date(t.dueDate)<tmr);
-  const allSemana     = pendingTasks.filter(t=>t.dueDate&&new Date(t.dueDate)>=now&&new Date(t.dueDate)<nxt7);
-  const allBloqueadas = pendingTasks.filter(t=>normStatus(t.status)==="esperando");
+  // Dashboard stats — respect filterArea so area chips filter the dashboard
+  const dashBase = filterArea==="all" ? pendingTasks : pendingTasks.filter(t=>areaMembers?.includes(t.assignedTo));
+  const allAtrasadas  = dashBase.filter(t=>t.dueDate&&new Date(t.dueDate)<now);
+  const allHoy        = dashBase.filter(t=>t.dueDate&&new Date(t.dueDate)>=now&&new Date(t.dueDate)<tmr);
+  const allSemana     = dashBase.filter(t=>t.dueDate&&new Date(t.dueDate)>=now&&new Date(t.dueDate)<nxt7);
+  const allBloqueadas = dashBase.filter(t=>normStatus(t.status)==="esperando");
+
+  // Bodas clientes for kickoff filter (tasks with kickoffName)
+  const bodaClientes = [...new Set(tasks.filter(t=>t.kickoffName||t.kickoffId).map(t=>t.kickoffName||t.kickoffId).filter(Boolean))].sort();
 
   const workloadMap = {};
-  pendingTasks.forEach(t=>{if(t.assignedTo) workloadMap[t.assignedTo]=(workloadMap[t.assignedTo]||0)+1;});
+  dashBase.forEach(t=>{if(t.assignedTo) workloadMap[t.assignedTo]=(workloadMap[t.assignedTo]||0)+1;});
   const workload = TEAM_ALL.filter(m=>workloadMap[m.name]).map(m=>({name:m.name,color:m.areaColor,count:workloadMap[m.name]})).sort((a,b)=>b.count-a.count);
 
   const todayCounts = {};
@@ -3515,6 +3521,21 @@ function TaskTracker({ currentUser }) {
             {/* ══════════ DASHBOARD TAB ══════════ */}
             {activeTab==="dashboard" && (
               <div style={{display:"flex",flexDirection:"column",gap:16}}>
+                {/* Area filter chips */}
+                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                  {[{key:"all",label:"Todas las áreas",color:"#374151"}, ...TEAM_AREAS].map(area=>{
+                    const active = filterArea===area.key;
+                    return (
+                      <button key={area.key} onClick={()=>setFilterArea(area.key)}
+                        style={{fontSize:11.5,fontWeight:600,padding:"5px 12px",borderRadius:999,cursor:"pointer",
+                          border:active?`1px solid ${area.color}`:"1px solid var(--border)",
+                          background:active?area.color:"transparent",
+                          color:active?"#fff":"var(--text-2)",transition:"all .12s"}}>
+                        {area.label}
+                      </button>
+                    );
+                  })}
+                </div>
                 {/* Stat cards */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:10}}>
                   {[
@@ -3645,7 +3666,7 @@ function TaskTracker({ currentUser }) {
                       ? pendingTasks.length
                       : pendingTasks.filter(t=>aMembers.includes(t.assignedTo)).length;
                     return (
-                      <button key={area.key} onClick={()=>{ setFilterArea(area.key); setFilterPerson("all"); }}
+                      <button key={area.key} onClick={()=>{ setFilterArea(area.key); setFilterPerson("all"); setFilterKickoff("all"); }}
                         style={{display:"flex",alignItems:"center",gap:5,fontSize:12,fontWeight:600,
                           padding:"5px 12px",borderRadius:999,cursor:"pointer",transition:"all .12s",
                           border:active?`1px solid ${area.color}`:"1px solid var(--border)",
@@ -3688,6 +3709,21 @@ function TaskTracker({ currentUser }) {
                     </div>
                   );
                 })()}
+
+                {/* Cliente filter — visible when tasks with kickoffName exist in current view */}
+                {bodaClientes.length > 0 && (
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    <span style={{fontSize:11,color:"var(--text-3)",fontWeight:500}}>👰 Cliente:</span>
+                    <select value={filterKickoff} onChange={e=>{setFilterKickoff(e.target.value);}}
+                      style={{fontSize:12,border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"5px 10px",background:"var(--surface)",color:"var(--text-2)",cursor:"pointer"}}>
+                      <option value="all">Todos</option>
+                      {bodaClientes.map(c=><option key={c} value={c}>{c}</option>)}
+                    </select>
+                    {filterKickoff!=="all" && (
+                      <button onClick={()=>setFilterKickoff("all")} style={{fontSize:11,color:"var(--text-3)",background:"none",border:"none",cursor:"pointer"}}>✕ limpiar</button>
+                    )}
+                  </div>
+                )}
 
                 <TTaskGroup emoji="🔴" label="Atrasadas" tasks={atrasadas} onUpdate={updateTask} now={now} tmr={tmr}/>
                 <TTaskGroup emoji="🔥" label="Hoy" tasks={hoy} onUpdate={updateTask} now={now} tmr={tmr}/>
