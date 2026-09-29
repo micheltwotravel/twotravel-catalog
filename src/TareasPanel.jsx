@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-
-const GAS = import.meta.env.VITE_GAS_URL;
+import { supabase } from "./supabaseClient.js";
 
 const FASES       = ["General","Onboarding","Planning","Pre-Wedding","Wedding Day","Post-Wedding"];
 const BODAS_FASES = new Set(["Onboarding","Planning","Pre-Wedding","Wedding Day","Post-Wedding"]);
@@ -8,24 +7,18 @@ const ESTADOS     = ["Pendiente","En curso","Terminado","Cancelado"];
 const TIPOS       = ["Task","Meeting"];
 const COLORS      = { overdue:"#f4c7c3", today:"#ffe599", upcoming:"#c9daf8", done:"#d9ead3" };
 
-async function gas(action, payload = {}) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 25000); // 25s timeout
-  try {
-    const r = await fetch(GAS, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action, payload }),
-      signal: ctrl.signal,
-    });
-    const text = await r.text();
-    return text.trimStart().startsWith("<") ? { ok: false, error: "Error de conexión" } : JSON.parse(text);
-  } catch (e) {
-    if (e.name === "AbortError") throw new Error("Tiempo de espera agotado. El servidor tardó demasiado, intenta de nuevo.");
-    throw e;
-  } finally {
-    clearTimeout(timer);
-  }
+const BODAS_USERS = [
+  { name:"Alexandra",    email:"alexandra@two.travel" },
+  { name:"Angelica",     email:"angelica@two.travel" },
+  { name:"Laura Ospina", email:"laura@two.travel" },
+];
+
+function flatRow(row) {
+  return { id: row.id, ...(row.data || {}) };
+}
+
+function newId() {
+  return "boda_" + Date.now() + "_" + Math.random().toString(36).slice(2,7);
 }
 
 function isBoda(t) {
@@ -384,54 +377,25 @@ export default function TareasPanel({ currentUser, onLogout }) {
   const myName  = currentUser?.name  || "";
   const myEmail = currentUser?.email || "";
 
-  const CACHE_KEY   = "tareas_cache";
-  const CACHE_TTL   = 5 * 60 * 1000; // 5 min
-
-  const load = useCallback(async (background = false) => {
-    // Load from cache instantly on first open
-    if (!background) {
-      try {
-        const raw = sessionStorage.getItem(CACHE_KEY);
-        if (raw) {
-          const { tasks: ct, users: cu, bodas: cb, ts } = JSON.parse(raw);
-          if (Date.now() - ts < CACHE_TTL) {
-            setTasks(ct); setUsers(cu); if (cb) setBodas(cb); setLoading(false);
-            // Still refresh in background
-            load(true);
-            return;
-          }
-        }
-      } catch {}
-      setLoading(true);
-    }
+  const load = useCallback(async () => {
+    setLoading(true);
     setError("");
     try {
-      const [tasksRes, usersRes, bodasRes] = await Promise.all([
-        gas("listTasks"),
-        gas("listUsers"),
-        gas("listBodas"),
-      ]);
-      const newTasks = tasksRes.ok ? (tasksRes.data||[]) : null;
-      const newUsers = usersRes.ok ? (usersRes.data||[]).filter(u => u.active !== "false" && u.name) : null;
-      const newBodas = bodasRes.ok ? (bodasRes.data||[]) : null;
-      if (newTasks) { setTasks(newTasks); setError(""); }
-      else if (!background) setError(tasksRes.error || "Error al cargar");
-      if (newUsers) setUsers(newUsers);
-      if (newBodas) setBodas(newBodas);
-      // Cache whatever succeeded — tasks and users independently
-      try {
-        const prev = JSON.parse(sessionStorage.getItem(CACHE_KEY) || "{}");
-        sessionStorage.setItem(CACHE_KEY, JSON.stringify({
-          tasks: newTasks ?? prev.tasks ?? [],
-          users: newUsers ?? prev.users ?? [],
-          bodas: newBodas ?? prev.bodas ?? [],
-          ts: Date.now(),
-        }));
-      } catch {}
-    } catch {
-      if (!background) setError("No se pudo conectar. Intenta de nuevo.");
+      const { data, error: err } = await supabase
+        .from("tasks")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (err) throw err;
+      const all = (data || []).map(flatRow);
+      setTasks(all);
+      setUsers(BODAS_USERS);
+      // derive bodas client names from tasks
+      const names = [...new Set(all.filter(isBoda).map(t => clienteLabel(t)).filter(Boolean))].sort();
+      setBodas(names.map(n => ({ clienteName: n })));
+    } catch (e) {
+      setError("Error al cargar tareas: " + (e.message || e));
     }
-    if (!background) setLoading(false);
+    setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -476,17 +440,25 @@ export default function TareasPanel({ currentUser, onLogout }) {
 
   async function handleStatusChange(task, newStatus) {
     setTasks(prev => prev.map(t => t.id===task.id ? {...t,status:newStatus} : t));
-    await gas("updateTask", { id:task.id, status:newStatus });
+    const existing = tasks.find(t => t.id === task.id);
+    const { id, ...rest } = existing || task;
+    await supabase.from("tasks").upsert({ id, data: { ...rest, status: newStatus } });
   }
 
   async function handleSave(form) {
     try {
-      if (form.id) {
-        await gas("updateTask", form);
-        setTasks(prev => prev.map(t => t.id===form.id ? {...t,...form} : t));
+      const { id, ...data } = form;
+      if (id) {
+        const existing = tasks.find(t => t.id === id) || {};
+        const merged = { ...existing, ...data, source:"bodas" };
+        const { id: _id2, ...mergedData } = merged;
+        await supabase.from("tasks").update({ data: mergedData }).eq("id", id);
+        setTasks(prev => prev.map(t => t.id===id ? { id, ...mergedData } : t));
       } else {
-        await gas("saveTask", { ...form, source:"bodas" });
-        await load();
+        const newTask = { ...data, source:"bodas", createdAt: new Date().toISOString() };
+        const newTaskId = newId();
+        await supabase.from("tasks").insert({ id: newTaskId, data: newTask });
+        setTasks(prev => [{ id: newTaskId, ...newTask }, ...prev]);
       }
       setModal(null);
     } catch(e) {
@@ -495,7 +467,11 @@ export default function TareasPanel({ currentUser, onLogout }) {
   }
 
   async function handleDelete(id) {
-    await gas("updateTask", { id, status:"Cancelado" });
+    const existing = tasks.find(t => t.id === id);
+    if (existing) {
+      const { id: _id, ...rest } = existing;
+      await supabase.from("tasks").update({ data: { ...rest, status:"Cancelado" } }).eq("id", id);
+    }
     setTasks(prev => prev.map(t => t.id===id ? {...t,status:"Cancelado"} : t));
     setModal(null);
   }
