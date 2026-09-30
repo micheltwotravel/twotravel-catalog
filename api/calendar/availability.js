@@ -67,15 +67,18 @@ async function getCalendarBusy(accessToken, email, date) {
   const data = await res.json();
   const periods = data?.calendars?.primary?.busy || [];
   // Convert UTC ISO times → Colombia local minutes
+  // If e <= s the event spans past midnight (e.g. all-day OOO) → block until end of day
   return periods.map(p => {
     const toColMin = iso => {
       const d = new Date(iso);
-      // Colombia UTC-5
       const h = (d.getUTCHours() - 5 + 24) % 24;
       const m = d.getUTCMinutes();
       return h * 60 + m;
     };
-    return { s: toColMin(p.start), e: toColMin(p.end) };
+    const s = toColMin(p.start);
+    let e = toColMin(p.end);
+    if (e <= s) e = 1440;
+    return { s, e };
   });
 }
 

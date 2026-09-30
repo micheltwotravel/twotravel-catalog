@@ -101,7 +101,10 @@ function hasAvailableSlot(date, schedule, blocked, bookings, calBusyPeriods, slo
         const h = (d.getUTCHours() - 5 + 24) % 24;
         return h * 60 + d.getUTCMinutes();
       };
-      busy.push({ s: toColMin(p.s), e: toColMin(p.e) });
+      const s = toColMin(p.s);
+      let e = toColMin(p.e);
+      if (e <= s) e = 1440; // all-day OOO or cross-midnight event → block until end of day
+      busy.push({ s, e });
     }
   });
 
