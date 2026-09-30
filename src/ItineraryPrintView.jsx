@@ -511,16 +511,13 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
   const parseTime = t => { const m = String(t||"").match(/^(\d{1,2}):(\d{2})/); return m ? +m[1]*60 + +m[2] : Infinity; };
   return orderedLabels.map(label => {
     const dm = metaList.find(d => cl(d.label) === label);
-    // Sort by sortOrder first so manual reordering (via ↑↓ buttons) is respected
-    // on reload. Time is used only as a tiebreaker when two items share the same
-    // sortOrder (e.g. items that haven't been explicitly reordered yet).
+    // Sort by TIME first so items appear in chronological order by default.
+    // sortOrder is a tiebreaker for items that share the same time (or have no time).
     const items = (map.get(label) || []).sort((a, b) => {
-      if (a.sort !== b.sort) return a.sort - b.sort;
       const ta = parseTime(a.time), tb = parseTime(b.time);
-      if (ta === Infinity && tb === Infinity) return 0;
-      if (ta === Infinity) return 1;
-      if (tb === Infinity) return -1;
-      return ta - tb;
+      const timeDiff = ta - tb;
+      if (timeDiff !== 0) return timeDiff;
+      return a.sort - b.sort;
     });
     // Day band shows label; subtitle shows the descriptive title if set
     return { label, title: dm?.title || "", date: dm?.date || "", items };
