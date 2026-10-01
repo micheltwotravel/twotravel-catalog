@@ -3,21 +3,21 @@ import { supabase } from "./supabaseClient.js";
 
 // ─── BRAND ───────────────────────────────────────────────────────────────────
 const R = {
-  dark:   "#1a0812",
-  mid:    "#7f1d3a",
-  accent: "#be123c",
-  light:  "#fff0f3",
-  cream:  "#fdf6f8",
-  gold:   "#c9a96e",
-  muted:  "#8b4a62",
-  text:   "#1a0812",
-  text2:  "#6b3550",
-  border: "#f0c0ce",
-  white:  "#ffffff",
+  dark:   "#1A1814",
+  mid:    "#3D3A35",
+  accent: "#9A7D52",
+  light:  "#FAF8F5",
+  cream:  "#F7F4EF",
+  gold:   "#C4A272",
+  muted:  "#7A7570",
+  text:   "#1A1814",
+  text2:  "#3D3A35",
+  border: "rgba(26,24,20,0.10)",
+  white:  "#FFFFFF",
 };
-const HDR = { background:`linear-gradient(135deg,${R.dark} 0%,#2d0a1a 60%,${R.mid} 100%)`, padding:"20px 26px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 };
-const GOLD_BAR = { height:3, background:`linear-gradient(90deg,transparent,${R.gold} 30%,#e8c97a 50%,${R.gold} 70%,transparent)`, flexShrink:0 };
-const CARD = { background:R.white, border:`1px solid ${R.border}`, borderRadius:20, overflow:"hidden" };
+const HDR = { background: R.dark, padding:"20px 26px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, borderBottom:`1px solid rgba(255,255,255,0.07)` };
+const GOLD_BAR = { height:2, background:`linear-gradient(90deg,transparent,${R.accent} 30%,${R.gold} 50%,${R.accent} 70%,transparent)`, flexShrink:0 };
+const CARD = { background:R.white, border:`1px solid rgba(26,24,20,0.09)`, borderRadius:0, overflow:"hidden" };
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function parseDate(d) { if(!d) return null; const dt=new Date(typeof d==="string"&&d.length===10?d+"T12:00:00":d); return isNaN(dt)?null:dt; }
@@ -30,7 +30,7 @@ function fmt$(n) { const v=parseFloat(String(n).replace(/,/g,".")); return isNaN
 const FASES        = ["Onboarding","Planning","Pre-Wedding","Wedding Day","Post-Wedding"];
 const ESTADOS_BODA = ["Activa","En pausa","Terminada","Cancelada"];
 const ESTADOS_TASK = ["Pendiente","En curso","Terminado","Cancelado"];
-const FASE_COLORS  = { "Onboarding":{"bg":"#eff6ff","color":"#1e40af"}, "Planning":{"bg":"#f5f3ff","color":"#6d28d9"}, "Pre-Wedding":{"bg":"#fffbeb","color":"#b45309"}, "Wedding Day":{"bg":"#fff0f3","color":"#be123c"}, "Post-Wedding":{"bg":"#f0fdf4","color":"#166534"} };
+const FASE_COLORS  = { "Onboarding":{"bg":"#eff6ff","color":"#1e40af"}, "Planning":{"bg":"#f5f3ff","color":"#6d28d9"}, "Pre-Wedding":{"bg":"#fffbeb","color":"#b45309"}, "Wedding Day":{"bg":"#f7f4ef","color":"#9A7D52"}, "Post-Wedding":{"bg":"#f0fdf4","color":"#166534"} };
 
 const GAS_URL = import.meta.env.VITE_GAS_URL;
 
@@ -161,7 +161,7 @@ async function apiDeleteBoda(id) {
 
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
-const INP    = { width:"100%",border:`1px solid ${R.border}`,borderRadius:10,padding:"8px 12px",  fontSize:13,fontFamily:"'Jost',sans-serif",outline:"none",color:R.text,background:R.white,boxSizing:"border-box" };
+const INP    = { width:"100%",border:`1px solid ${R.border}`,borderRadius:2,padding:"8px 12px",  fontSize:13,fontFamily:"'Jost',sans-serif",outline:"none",color:R.text,background:R.white,boxSizing:"border-box" };
 const INP_SM = {...INP,padding:"6px 10px",fontSize:12};
 
 // ─── BODA FORM ───────────────────────────────────────────────────────────────
@@ -184,8 +184,8 @@ function BodaForm({ boda, onSave, onCancel, saving, users=[] }) {
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Presupuesto (USD)</label><input type="number" style={INP} value={f.budget} onChange={e=>set("budget",e.target.value)} placeholder="25000" /></div>
       <div style={{gridColumn:"span 2"}}><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Notas internas</label><textarea style={{...INP,resize:"vertical"}} rows={3} value={f.notes} onChange={e=>set("notes",e.target.value)} placeholder="Detalles, preferencias, pendientes..." /></div>
       <div style={{gridColumn:"span 2",display:"flex",gap:8,paddingTop:4}}>
-        <button onClick={()=>onSave(f)} disabled={saving||!f.clienteName.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:10,padding:"9px 20px",fontSize:13,fontWeight:600,cursor:"pointer",opacity:(saving||!f.clienteName.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"Guardando...":boda?"Guardar cambios":"Crear boda"}</button>
-        <button onClick={onCancel} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:10,padding:"9px 20px",fontSize:13,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+        <button onClick={()=>onSave(f)} disabled={saving||!f.clienteName.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:2,padding:"9px 20px",fontSize:13,fontWeight:600,cursor:"pointer",opacity:(saving||!f.clienteName.trim())?.5:1,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>{saving?"Guardando...":boda?"Guardar cambios":"Crear boda"}</button>
+        <button onClick={onCancel} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:2,padding:"9px 20px",fontSize:13,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
       </div>
     </div>
   );
@@ -618,7 +618,7 @@ function TimelineTab({ boda, onScheduleChange }) {
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
         <div style={{display:"flex",gap:6}}>
           {[["interno","🔐 Interno"],["cliente","👤 Cliente"]].map(([v,l])=>(
-            <button key={v} onClick={()=>setView(v)} style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${view===v?R.accent:R.border}`,background:view===v?R.accent:"transparent",color:view===v?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600}}>
+            <button key={v} onClick={()=>setView(v)} style={{padding:"4px 12px",borderRadius:2,border:`1px solid ${view===v?R.accent:R.border}`,background:view===v?R.accent:"transparent",color:view===v?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".03em"}}>
               {l}
             </button>
           ))}
@@ -852,7 +852,7 @@ function GuestTab({ boda, onPatch }) {
       {view==="lista"&&(
         <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
           {["todos","Confirmado","Pendiente","No asiste"].map(f=>(
-            <button key={f} onClick={()=>setFilter(f)} style={{padding:"3px 10px",borderRadius:20,border:`1px solid ${filter===f?R.accent:R.border}`,background:filter===f?R.accent:"transparent",color:filter===f?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+            <button key={f} onClick={()=>setFilter(f)} style={{padding:"3px 10px",borderRadius:2,border:`1px solid ${filter===f?R.accent:R.border}`,background:filter===f?R.accent:"transparent",color:filter===f?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
               {f==="todos"?"Todos":f}
             </button>
           ))}
@@ -1236,7 +1236,7 @@ function DesignStudioTab({ boda, onPatch }) {
       {cats.length>0&&(
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
           {["todos",...cats].map(c=>(
-            <button key={c} onClick={()=>setFilter(c)} style={{padding:"3px 10px",borderRadius:20,border:`1px solid ${filter===c?R.accent:R.border}`,background:filter===c?R.accent:"transparent",color:filter===c?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+            <button key={c} onClick={()=>setFilter(c)} style={{padding:"3px 10px",borderRadius:2,border:`1px solid ${filter===c?R.accent:R.border}`,background:filter===c?R.accent:"transparent",color:filter===c?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
               {c==="todos"?"Todos":c}
             </button>
           ))}
@@ -1445,7 +1445,7 @@ function SeatingTab({ boda, onPatch }) {
         <div style={{flex:1}}/>
         <button onClick={()=>setShowFloor(v=>!v)} style={BTN_SM}>Plano personalizado</button>
         <button onClick={()=>{setShowNew(v=>!v);setSelected(null);setPendingGuest(null);}}
-          style={{background:`linear-gradient(135deg,${R.accent},${R.mid})`,color:"#fff",border:"none",borderRadius:8,padding:"6px 16px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,boxShadow:"0 2px 8px rgba(190,18,60,.25)"}}>+ Mesa</button>
+          style={{background:R.accent,color:"#fff",border:"none",borderRadius:2,padding:"6px 16px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".04em"}}>+ Mesa</button>
       </div>
 
       {/* Floor plan upload */}
@@ -1482,7 +1482,7 @@ function SeatingTab({ boda, onPatch }) {
         {/* Canvas */}
         <div
           ref={canvasRef}
-          style={{flex:1,position:"relative",minHeight:500,background:"#faf5f7",borderRadius:16,border:`1px solid ${R.border}`,overflow:"hidden",cursor:drag?"grabbing":"default",userSelect:"none",boxShadow:"inset 0 2px 12px rgba(127,29,58,.04)"}}
+          style={{flex:1,position:"relative",minHeight:500,background:"#FAF8F5",borderRadius:0,border:`1px solid ${R.border}`,overflow:"hidden",cursor:drag?"grabbing":"default",userSelect:"none"}}
           onMouseMove={onCanvasMove}
           onMouseUp={onCanvasUp}
           onMouseLeave={onCanvasUp}
@@ -1549,8 +1549,8 @@ function SeatingTab({ boda, onPatch }) {
         {/* Side panel */}
         <div style={{width:210,flexShrink:0,display:"flex",flexDirection:"column",gap:10}}>
           {selTable?(
-            <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:16,overflow:"hidden"}}>
-              <div style={{background:`linear-gradient(135deg,${R.dark},#2d0a1a)`,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:0,overflow:"hidden"}}>
+              <div style={{background:R.dark,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div>
                   <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:16,fontWeight:400,fontStyle:"italic",color:R.white,margin:0}}>{selTable.name}</p>
                   <p style={{fontSize:9,color:R.gold,margin:"2px 0 0",textTransform:"uppercase",letterSpacing:".07em"}}>{selTable.shape} · {selGuests.length}/{selTable.seats} puestos</p>
@@ -1595,7 +1595,7 @@ function SeatingTab({ boda, onPatch }) {
               </div>
             </div>
           ):(
-            <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:16,overflow:"hidden"}}>
+            <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:0,overflow:"hidden"}}>
               <div style={{padding:"12px 14px",borderBottom:`1px solid ${R.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <p style={{fontSize:11,fontWeight:600,color:R.text,margin:0,letterSpacing:".02em"}}>Sin mesa <span style={{color:R.muted,fontWeight:400}}>({unassigned.length})</span></p>
                 {pendingGuest&&<button onClick={()=>setPendingGuest(null)} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:11,fontFamily:"'Jost',sans-serif"}}>Cancelar</button>}
@@ -1680,17 +1680,17 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
           </div>
           <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10,flexShrink:0,marginLeft:16}}>
             <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
-              <span style={{fontSize:10,fontWeight:700,padding:"4px 12px",borderRadius:99,background:ph.bg,color:ph.color,letterSpacing:".05em",textTransform:"uppercase"}}>{boda.phase}</span>
+              <span style={{fontSize:10,fontWeight:700,padding:"4px 12px",borderRadius:2,background:ph.bg,color:ph.color,letterSpacing:".07em",textTransform:"uppercase"}}>{boda.phase}</span>
               {days!==null&&(
-                <div style={{background:days<0?"rgba(0,0,0,.35)":days<=30?"rgba(190,18,60,.7)":"rgba(201,169,110,.25)",border:`1px solid ${days<=30&&days>=0?"rgba(252,165,165,.5)":"rgba(201,169,110,.4)"}`,borderRadius:10,padding:"4px 12px",textAlign:"center",backdropFilter:"blur(4px)"}}>
-                  <p style={{fontSize:10,color:"rgba(255,255,255,.65)",margin:0,textTransform:"uppercase",letterSpacing:".06em",lineHeight:1}}>{days<0?"celebrada":"faltan"}</p>
-                  <p style={{fontSize:18,fontWeight:700,color:days<0?"rgba(255,255,255,.45)":days<=30?"#fca5a5":R.gold,margin:0,fontVariantNumeric:"tabular-nums",lineHeight:1.2}}>{days<0?`${Math.abs(days)}d`:`${days}d`}</p>
+                <div style={{background:"rgba(26,24,20,.5)",border:`1px solid rgba(196,162,114,.35)`,borderRadius:2,padding:"4px 12px",textAlign:"center",backdropFilter:"blur(4px)"}}>
+                  <p style={{fontSize:10,color:"rgba(255,255,255,.55)",margin:0,textTransform:"uppercase",letterSpacing:".08em",lineHeight:1}}>{days<0?"celebrada":"faltan"}</p>
+                  <p style={{fontSize:18,fontWeight:700,color:days<=30&&days>=0?"#E8C96A":R.gold,margin:0,fontVariantNumeric:"tabular-nums",lineHeight:1.2}}>{days<0?`${Math.abs(days)}d`:`${days}d`}</p>
                 </div>
               )}
             </div>
             <div style={{display:"flex",gap:8}}>
-              <button onClick={shareLink} style={{background:"rgba(255,255,255,.1)",color:copied?"#86efac":R.gold,border:`1px solid ${copied?"rgba(134,239,172,.4)":"rgba(201,169,110,.35)"}`,borderRadius:8,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".03em",transition:"all .2s"}}>{copied?"✓ Copiado":"🔗 Compartir"}</button>
-              <button onClick={()=>setEditing(v=>!v)} style={{background:editing?"rgba(255,255,255,.18)":"rgba(255,255,255,.1)",color:R.white,border:"1px solid rgba(255,255,255,.2)",borderRadius:8,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".03em"}}>{editing?"Cancelar":"✏️ Editar"}</button>
+              <button onClick={shareLink} style={{background:"rgba(255,255,255,.08)",color:copied?"#86efac":R.gold,border:`1px solid ${copied?"rgba(134,239,172,.35)":"rgba(196,162,114,.30)"}`,borderRadius:2,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",transition:"all .2s"}}>{copied?"✓ Copiado":"🔗 Compartir"}</button>
+              <button onClick={()=>setEditing(v=>!v)} style={{background:editing?"rgba(255,255,255,.15)":"rgba(255,255,255,.08)",color:R.white,border:"1px solid rgba(255,255,255,.18)",borderRadius:2,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>{editing?"Cancelar":"✏️ Editar"}</button>
             </div>
           </div>
         </div>
@@ -2005,7 +2005,7 @@ function CalendarioView({ bodas, onSelectBoda }) {
               const isToday = day===todayDate&&month===todayMonth&&year===todayYear;
               const bodaHere = bodaByDate[day]||[];
               return (
-                <div key={day} style={{minHeight:64,border:`1px solid ${bodaHere.length>0?R.mid:R.border}`,borderRadius:8,padding:"4px 6px",background:isToday?R.light:bodaHere.length>0?"#fff0f3":R.white,position:"relative"}}>
+                <div key={day} style={{minHeight:64,border:`1px solid ${bodaHere.length>0?R.accent:R.border}`,borderRadius:0,padding:"4px 6px",background:isToday?R.light:bodaHere.length>0?R.cream:R.white,position:"relative"}}>
                   <p style={{fontSize:11,fontWeight:isToday?700:400,color:isToday?R.accent:R.muted,margin:"0 0 4px"}}>{day}</p>
                   {bodaHere.map(b=>(
                     <button key={b.id} onClick={()=>onSelectBoda(b)}
@@ -2020,7 +2020,7 @@ function CalendarioView({ bodas, onSelectBoda }) {
         </div>
 
         {/* Sidebar: this month's bodas */}
-        <div style={{width:200,border:`1px solid ${R.border}`,borderRadius:12,overflow:"hidden",background:R.white,flexShrink:0}}>
+        <div style={{width:200,border:`1px solid ${R.border}`,borderRadius:0,overflow:"hidden",background:R.white,flexShrink:0}}>
           <div style={{padding:"10px 14px",borderBottom:`1px solid ${R.border}`,background:R.dark}}>
             <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.7)",margin:0,textTransform:"uppercase",letterSpacing:".06em"}}>💍 Este mes ({thisMonth.length})</p>
           </div>
@@ -2350,7 +2350,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
 
   return (
     <div style={{minHeight:"100vh",background:R.cream,fontFamily:"'Jost',sans-serif"}}>
-      <div style={{background:`linear-gradient(135deg,${R.dark} 0%,#280b18 60%,${R.mid} 100%)`,padding:"0 24px"}}>
+      <div style={{background:R.dark,padding:"0 24px",borderBottom:"1px solid rgba(255,255,255,0.07)"}}>
         <div style={GOLD_BAR} />
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 0"}}>
           <div style={{display:"flex",alignItems:"center",gap:16}}>
@@ -2384,14 +2384,14 @@ export default function BodaPanel({ currentUser, onLogout }) {
           ))}
           <div style={{flex:1}} />
           <button onClick={()=>{loadTemplate();setShowTemplate(true);}}
-            style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:10,padding:"7px 14px",fontSize:11,fontWeight:500,cursor:"pointer",flexShrink:0,fontFamily:"'Jost',sans-serif",marginBottom:2,letterSpacing:".03em",marginRight:8}}>✏️ Tareas automáticas</button>
-          <button onClick={()=>setShowNew(v=>!v)} style={{background:`linear-gradient(135deg,${R.accent},${R.mid})`,color:"#fff",border:"none",borderRadius:10,padding:"8px 20px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"'Jost',sans-serif",marginBottom:2,letterSpacing:".03em",boxShadow:"0 2px 12px rgba(190,18,60,.3)"}}>+ Nueva boda</button>
+            style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:2,padding:"7px 14px",fontSize:11,fontWeight:500,cursor:"pointer",flexShrink:0,fontFamily:"'Jost',sans-serif",marginBottom:2,letterSpacing:".04em",marginRight:8}}>✏️ Tareas automáticas</button>
+          <button onClick={()=>setShowNew(v=>!v)} style={{background:R.accent,color:"#fff",border:"none",borderRadius:2,padding:"8px 20px",fontSize:12,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"'Jost',sans-serif",marginBottom:2,letterSpacing:".06em",textTransform:"uppercase"}}>+ Nueva boda</button>
         </div>
 
         {/* Lista filters — only in lista view */}
         {mainView==="lista"&&bodas.length>0&&(
         <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:20}}>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar boda, venue, responsable..." style={{...INP,flex:1,minWidth:200,borderRadius:10}} />
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar boda, venue, responsable..." style={{...INP,flex:1,minWidth:200}} />
           <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={{...INP,width:"auto",flex:"0 0 auto"}}><option value="all">Todos los estados</option>{ESTADOS_BODA.map(s=><option key={s}>{s}</option>)}</select>
         </div>
         )}
@@ -2404,7 +2404,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
           </div>
         )}
 
-        {err&&<div style={{background:"#fff5f5",border:"1px solid #fca5a5",borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:13,color:"#b91c1c"}}>{err}</span><button onClick={load} style={{background:"none",border:"none",color:R.accent,cursor:"pointer",fontSize:13,textDecoration:"underline",fontFamily:"'Jost',sans-serif"}}>Reintentar</button></div>}
+        {err&&<div style={{background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:2,padding:"12px 16px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:13,color:"#b91c1c"}}>{err}</span><button onClick={load} style={{background:"none",border:"none",color:R.accent,cursor:"pointer",fontSize:13,textDecoration:"underline",fontFamily:"'Jost',sans-serif"}}>Reintentar</button></div>}
 
         {/* Dashboard view */}
         {mainView==="dashboard"&&!loading&&<GlobalDashboard bodas={bodas} onSelectBoda={b=>{setSelected(b);}} />}
@@ -2439,11 +2439,11 @@ export default function BodaPanel({ currentUser, onLogout }) {
               const initials=boda.clienteName.split(/[&,\/\s]+/).filter(Boolean).map(w=>w[0]?.toUpperCase()||"").slice(0,2).join("");
               return (
                 <div key={boda.id} onClick={()=>setSelected(boda)}
-                  style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:24,overflow:"hidden",cursor:"pointer",transition:"transform .2s cubic-bezier(.25,.46,.45,.94),box-shadow .2s,border-color .2s",display:"flex",flexDirection:"column"}}
-                  onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow=`0 16px 48px rgba(127,29,58,.16),0 0 0 1px rgba(201,169,110,.25)`;e.currentTarget.style.borderColor="rgba(201,169,110,.4)";}}
+                  style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:0,overflow:"hidden",cursor:"pointer",transition:"transform .2s ease,box-shadow .2s,border-color .2s",display:"flex",flexDirection:"column"}}
+                  onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow=`0 12px 40px rgba(26,24,20,.10),0 0 0 1px rgba(154,125,82,.30)`;e.currentTarget.style.borderColor="rgba(154,125,82,.35)";}}
                   onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";e.currentTarget.style.borderColor=R.border;}}>
                   {/* Photo / cover area */}
-                  <div style={{position:"relative",height:175,background:`linear-gradient(145deg,${R.dark} 0%,#2d0a1a 50%,${R.mid} 100%)`,flexShrink:0}}>
+                  <div style={{position:"relative",height:175,background:`linear-gradient(145deg,${R.dark} 0%,#252220 100%)`,flexShrink:0}}>
                     {boda.coverPhoto?(
                       <img src={boda.coverPhoto} alt={boda.clienteName} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} onError={e=>{e.target.style.display="none";}} />
                     ):(
@@ -2454,21 +2454,21 @@ export default function BodaPanel({ currentUser, onLogout }) {
                       </div>
                     )}
                     {/* Subtle bottom gradient overlay */}
-                    <div style={{position:"absolute",bottom:0,left:0,right:0,height:50,background:"linear-gradient(transparent,rgba(26,8,18,.4))",pointerEvents:"none"}} />
+                    <div style={{position:"absolute",bottom:0,left:0,right:0,height:50,background:"linear-gradient(transparent,rgba(26,24,20,.5))",pointerEvents:"none"}} />
                     {/* Days badge */}
                     {days!==null&&(
-                      <div style={{position:"absolute",top:12,right:12,background:days<0?"rgba(0,0,0,.5)":days<=30?"rgba(190,18,60,.8)":"rgba(26,8,18,.7)",backdropFilter:"blur(8px)",borderRadius:10,padding:"5px 11px",textAlign:"center",border:"1px solid rgba(255,255,255,.12)"}}>
-                        <p style={{fontSize:9,color:"rgba(255,255,255,.65)",margin:0,textTransform:"uppercase",letterSpacing:".07em",lineHeight:1}}>{days<0?"celebrada":"faltan"}</p>
-                        <p style={{fontSize:16,fontWeight:700,color:days<=30&&days>=0?"#fca5a5":R.gold,margin:"2px 0 0",fontVariantNumeric:"tabular-nums",lineHeight:1}}>{days<0?`${Math.abs(days)}d`:`${days}d`}</p>
+                      <div style={{position:"absolute",top:12,right:12,background:"rgba(26,24,20,.65)",backdropFilter:"blur(8px)",borderRadius:2,padding:"5px 11px",textAlign:"center",border:"1px solid rgba(255,255,255,.10)"}}>
+                        <p style={{fontSize:9,color:"rgba(255,255,255,.55)",margin:0,textTransform:"uppercase",letterSpacing:".08em",lineHeight:1}}>{days<0?"celebrada":"faltan"}</p>
+                        <p style={{fontSize:16,fontWeight:700,color:days<=30&&days>=0?"#E8C96A":R.gold,margin:"2px 0 0",fontVariantNumeric:"tabular-nums",lineHeight:1}}>{days<0?`${Math.abs(days)}d`:`${days}d`}</p>
                       </div>
                     )}
                     {/* Phase badge */}
-                    <div style={{position:"absolute",top:12,left:12,background:"rgba(255,255,255,.92)",backdropFilter:"blur(4px)",borderRadius:99,padding:"3px 11px"}}>
-                      <span style={{fontSize:9,fontWeight:700,color:ph.color,textTransform:"uppercase",letterSpacing:".06em"}}>{boda.phase}</span>
+                    <div style={{position:"absolute",top:12,left:12,background:"rgba(255,255,255,.90)",backdropFilter:"blur(4px)",borderRadius:2,padding:"3px 10px"}}>
+                      <span style={{fontSize:9,fontWeight:700,color:ph.color,textTransform:"uppercase",letterSpacing:".08em"}}>{boda.phase}</span>
                     </div>
                     {/* Late tasks warning */}
                     {late.length>0&&(
-                      <div style={{position:"absolute",bottom:10,left:12,background:"rgba(190,18,60,.88)",backdropFilter:"blur(4px)",borderRadius:99,padding:"3px 10px",border:"1px solid rgba(255,255,255,.15)"}}>
+                      <div style={{position:"absolute",bottom:10,left:12,background:"rgba(180,83,9,.88)",backdropFilter:"blur(4px)",borderRadius:2,padding:"3px 10px",border:"1px solid rgba(255,255,255,.12)"}}>
                         <span style={{fontSize:9,fontWeight:700,color:"#fff"}}>⚠️ {late.length} atrasada{late.length>1?"s":""}</span>
                       </div>
                     )}
@@ -2487,10 +2487,10 @@ export default function BodaPanel({ currentUser, onLogout }) {
                       {boda.responsable&&<span>👤 {boda.responsable}</span>}
                     </div>
                     <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:"auto",paddingTop:10,borderTop:`1px solid ${R.border}`}}>
-                      {active.length>0&&<span style={{fontSize:10,fontWeight:600,padding:"3px 9px",borderRadius:99,background:R.light,color:R.accent}}>{active.length} tarea{active.length>1?"s":""}</span>}
-                      {confirmed>0&&<span style={{fontSize:10,fontWeight:600,padding:"3px 9px",borderRadius:99,background:"#f0fdf4",color:"#15803d"}}>✓ {confirmed}</span>}
-                      {boda.guestCount&&!confirmed&&<span style={{fontSize:10,padding:"3px 9px",borderRadius:99,background:R.cream,color:R.muted}}>👥 {boda.guestCount}</span>}
-                      <span style={{fontSize:10,fontWeight:600,padding:"3px 9px",borderRadius:99,marginLeft:"auto",background:boda.status==="Activa"?"#f0fdf4":boda.status==="En pausa"?"#fffbeb":"#f5f5f4",color:boda.status==="Activa"?"#15803d":boda.status==="En pausa"?"#b45309":"#57534e"}}>{boda.status}</span>
+                      {active.length>0&&<span style={{fontSize:10,fontWeight:600,padding:"3px 9px",borderRadius:2,background:R.light,color:R.accent,letterSpacing:".04em"}}>{active.length} tarea{active.length>1?"s":""}</span>}
+                      {confirmed>0&&<span style={{fontSize:10,fontWeight:600,padding:"3px 9px",borderRadius:2,background:"#f0fdf4",color:"#15803d"}}>✓ {confirmed}</span>}
+                      {boda.guestCount&&!confirmed&&<span style={{fontSize:10,padding:"3px 9px",borderRadius:2,background:R.cream,color:R.muted}}>👥 {boda.guestCount}</span>}
+                      <span style={{fontSize:10,fontWeight:600,padding:"3px 9px",borderRadius:2,marginLeft:"auto",background:boda.status==="Activa"?"#f0fdf4":boda.status==="En pausa"?"#fffbeb":"#f5f5f4",color:boda.status==="Activa"?"#15803d":boda.status==="En pausa"?"#b45309":"#57534e"}}>{boda.status}</span>
                     </div>
                   </div>
                 </div>
@@ -2502,11 +2502,11 @@ export default function BodaPanel({ currentUser, onLogout }) {
 
       {/* ── Template modal ── */}
       {showTemplate&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(26,8,18,.6)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+        <div style={{position:"fixed",inset:0,background:"rgba(26,24,20,.65)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
           onClick={()=>setShowTemplate(false)}>
-          <div style={{background:"#fff",borderRadius:20,width:"100%",maxWidth:620,maxHeight:"85vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,.3)"}}
+          <div style={{background:"#fff",borderRadius:0,width:"100%",maxWidth:620,maxHeight:"85vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}
             onClick={e=>e.stopPropagation()}>
-            <div style={{background:`linear-gradient(135deg,${R.dark},${R.mid})`,padding:"16px 20px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{background:R.dark,padding:"16px 20px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
               <div>
                 <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,color:"#fff",margin:0,fontStyle:"italic"}}>Tareas automáticas</p>
                 <p style={{fontSize:10,color:R.gold,margin:"2px 0 0",letterSpacing:".08em",textTransform:"uppercase"}}>Se crean al crear una nueva boda</p>
@@ -2516,20 +2516,20 @@ export default function BodaPanel({ currentUser, onLogout }) {
             <div style={{height:3,background:`linear-gradient(90deg,transparent,${R.gold},transparent)`}}/>
             <div style={{overflowY:"auto",flex:1,padding:"16px 20px",display:"flex",flexDirection:"column",gap:8}}>
               {templateTasks.map((t,i)=>(
-                <div key={i} style={{background:"#fdf6f8",border:`1px solid ${R.border}`,borderRadius:12,padding:"10px 12px",display:"flex",flexDirection:"column",gap:6}}>
+                <div key={i} style={{background:R.cream,border:`1px solid ${R.border}`,borderRadius:0,padding:"10px 12px",display:"flex",flexDirection:"column",gap:6}}>
                   <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
                     <input value={t.taskName} onChange={e=>setTemplateTasks(p=>p.map((x,j)=>j===i?{...x,taskName:e.target.value}:x))}
-                      placeholder="Nombre de la tarea" style={{flex:1,border:"1px solid #e8c0ca",borderRadius:8,padding:"6px 10px",fontSize:12.5,fontFamily:"'Jost',sans-serif",background:"#fff"}}/>
+                      placeholder="Nombre de la tarea" style={{flex:1,border:`1px solid ${R.border}`,borderRadius:2,padding:"6px 10px",fontSize:12.5,fontFamily:"'Jost',sans-serif",background:"#fff",outline:"none"}}/>
                     <button onClick={()=>setTemplateTasks(p=>p.filter((_,j)=>j!==i))}
-                      style={{background:"none",border:"none",color:"#dc2626",cursor:"pointer",fontSize:16,flexShrink:0,lineHeight:1,padding:"4px"}}>✕</button>
+                      style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:16,flexShrink:0,lineHeight:1,padding:"4px"}}>✕</button>
                   </div>
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                     <select value={t.fase} onChange={e=>setTemplateTasks(p=>p.map((x,j)=>j===i?{...x,fase:e.target.value}:x))}
-                      style={{fontSize:11,border:"1px solid #e8c0ca",borderRadius:7,padding:"4px 8px",fontFamily:"'Jost',sans-serif",background:"#fff",color:R.text2}}>
+                      style={{fontSize:11,border:`1px solid ${R.border}`,borderRadius:2,padding:"4px 8px",fontFamily:"'Jost',sans-serif",background:"#fff",color:R.text2,outline:"none"}}>
                       {["Onboarding","Planning","Pre-Wedding","Wedding Day","Post-Wedding"].map(f=><option key={f}>{f}</option>)}
                     </select>
                     <select value={t.mode} onChange={e=>setTemplateTasks(p=>p.map((x,j)=>j===i?{...x,mode:e.target.value}:x))}
-                      style={{fontSize:11,border:"1px solid #e8c0ca",borderRadius:7,padding:"4px 8px",fontFamily:"'Jost',sans-serif",background:"#fff",color:R.text2}}>
+                      style={{fontSize:11,border:`1px solid ${R.border}`,borderRadius:2,padding:"4px 8px",fontFamily:"'Jost',sans-serif",background:"#fff",color:R.text2,outline:"none"}}>
                       <option value="kickoff">Días desde kickoff</option>
                       <option value="wedding_minus">Días antes de boda</option>
                       <option value="wedding">Día de la boda</option>
@@ -2537,12 +2537,12 @@ export default function BodaPanel({ currentUser, onLogout }) {
                     </select>
                     {t.mode!=="wedding"&&(
                       <input type="number" min={0} value={t.offsetDays??0} onChange={e=>setTemplateTasks(p=>p.map((x,j)=>j===i?{...x,offsetDays:Number(e.target.value)}:x))}
-                        style={{width:54,fontSize:11,border:"1px solid #e8c0ca",borderRadius:7,padding:"4px 8px",fontFamily:"'Jost',sans-serif",background:"#fff",textAlign:"center"}}/>
+                        style={{width:54,fontSize:11,border:`1px solid ${R.border}`,borderRadius:2,padding:"4px 8px",fontFamily:"'Jost',sans-serif",background:"#fff",textAlign:"center",outline:"none"}}/>
                     )}
                     <input value={t.assignedTo} onChange={e=>setTemplateTasks(p=>p.map((x,j)=>j===i?{...x,assignedTo:e.target.value}:x))}
-                      placeholder="Asignada (vacío = responsable)" style={{flex:1,minWidth:120,fontSize:11,border:"1px solid #e8c0ca",borderRadius:7,padding:"4px 8px",fontFamily:"'Jost',sans-serif",background:"#fff"}}/>
+                      placeholder="Asignada (vacío = responsable)" style={{flex:1,minWidth:120,fontSize:11,border:`1px solid ${R.border}`,borderRadius:2,padding:"4px 8px",fontFamily:"'Jost',sans-serif",background:"#fff",outline:"none"}}/>
                     <select value={t.priority||"media"} onChange={e=>setTemplateTasks(p=>p.map((x,j)=>j===i?{...x,priority:e.target.value}:x))}
-                      style={{fontSize:11,border:"1px solid #e8c0ca",borderRadius:7,padding:"4px 8px",fontFamily:"'Jost',sans-serif",background:"#fff",color:R.text2}}>
+                      style={{fontSize:11,border:`1px solid ${R.border}`,borderRadius:2,padding:"4px 8px",fontFamily:"'Jost',sans-serif",background:"#fff",color:R.text2,outline:"none"}}>
                       <option value="urgente">🔴 Urgente</option>
                       <option value="alta">🟠 Alta</option>
                       <option value="media">🟡 Media</option>
@@ -2552,15 +2552,15 @@ export default function BodaPanel({ currentUser, onLogout }) {
                 </div>
               ))}
               <button onClick={()=>setTemplateTasks(p=>[...p,{taskName:"",fase:"Onboarding",assignedTo:"",mode:"kickoff",offsetDays:0,priority:"media",notes:""}])}
-                style={{background:"transparent",border:`1px dashed ${R.border}`,borderRadius:12,padding:"10px",fontSize:12,color:R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif",textAlign:"center"}}>
+                style={{background:"transparent",border:`1px dashed ${R.border}`,borderRadius:2,padding:"10px",fontSize:12,color:R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif",textAlign:"center"}}>
                 + Agregar tarea
               </button>
             </div>
-            <div style={{borderTop:`1px solid ${R.border}`,padding:"12px 20px",display:"flex",gap:10,justifyContent:"flex-end",background:"#fdf6f8"}}>
+            <div style={{borderTop:`1px solid ${R.border}`,padding:"12px 20px",display:"flex",gap:10,justifyContent:"flex-end",background:R.cream}}>
               <button onClick={()=>setShowTemplate(false)}
-                style={{background:"transparent",border:`1px solid ${R.border}`,borderRadius:10,padding:"8px 20px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",color:R.muted}}>Cancelar</button>
+                style={{background:"transparent",border:`1px solid ${R.border}`,borderRadius:2,padding:"8px 20px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",color:R.muted}}>Cancelar</button>
               <button onClick={saveTemplate} disabled={templateSaving}
-                style={{background:`linear-gradient(135deg,${R.accent},${R.mid})`,color:"#fff",border:"none",borderRadius:10,padding:"8px 24px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Jost',sans-serif",opacity:templateSaving?.6:1}}>
+                style={{background:R.accent,color:"#fff",border:"none",borderRadius:2,padding:"8px 24px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Jost',sans-serif",opacity:templateSaving?.6:1,letterSpacing:".04em"}}>
                 {templateSaving?"Guardando...":"Guardar plantilla"}
               </button>
             </div>
