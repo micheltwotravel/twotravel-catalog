@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Two Travel · Comisiones de Proveedores</title>
+<title>Two Travel · Comisiones</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -30,7 +30,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 .tab-link.active{background:var(--ink);color:#fff;border-color:var(--ink)}
 .tab-link+.tab-link{border-left:none}
 
-.toolbar{position:fixed;top:54px;left:0;right:0;height:46px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:10px;z-index:99;overflow-x:auto}
+.toolbar{position:fixed;top:57px;left:0;right:0;height:46px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:10px;z-index:99;overflow-x:auto}
 .tbtn{display:flex;align-items:center;gap:5px;padding:5px 12px;font-size:11px;letter-spacing:.05em;border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--ink2);font-family:'Jost',sans-serif;transition:all .12s;white-space:nowrap;flex-shrink:0}
 .tbtn:hover{border-color:var(--gold);color:var(--gold)}
 .tbtn.primary{background:var(--gold);color:var(--white);border-color:var(--gold)}
@@ -40,7 +40,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 .filter-sel{font-size:11px;padding:4px 8px;border:1px solid var(--border2);background:var(--white);font-family:'Jost',sans-serif;color:var(--ink2);outline:none;cursor:pointer;flex-shrink:0}
 .sync-info{margin-left:auto;font-size:10px;color:var(--ink3);letter-spacing:.04em;flex-shrink:0}
 
-.main{position:fixed;top:100px;left:0;right:0;bottom:0;overflow:auto;padding:20px 22px}
+.main{position:fixed;top:103px;left:0;right:0;bottom:0;overflow:auto;padding:20px 22px}
 
 .stats-bar{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap}
 .stat-card{background:var(--white);border:1px solid var(--border);padding:12px 18px;flex:1;min-width:120px}
@@ -107,16 +107,18 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 </head>
 <body>
 
-<div class="header">
+<div id="country-strip" style="position:fixed;top:0;left:0;right:0;height:3px;z-index:101;background:#4a7c3f"></div>
+<div class="header" style="top:3px">
   <a href="/" class="logo">Two Travel</a>
   <div class="hdiv"></div>
-  <span class="hls">Finanzas</span>
-  <div class="tab-nav">
-    <a href="/pagos.html" class="tab-link">Cobro a Clientes</a>
-    <a href="/comisiones.html" class="tab-link active">Comisiones</a>
+  <span class="hls">Comisiones</span>
+  <span id="country-badge" style="font-size:11px;padding:2px 9px;margin-left:8px;font-weight:500;color:#fff;letter-spacing:.04em"></span>
+  <div class="tab-nav" style="margin-left:18px">
+    <a id="nav-co" href="/comisiones.html" class="tab-link">🇨🇴 Colombia</a>
+    <a id="nav-mx" href="/comisiones.html?country=mx" class="tab-link">🇲🇽 México</a>
   </div>
   <div class="hright">
-    <a href="/menu.html" class="back-btn">← Menú</a>
+    <a href="/menu.html#finanzas" class="back-btn">← Menú</a>
   </div>
 </div>
 
@@ -302,6 +304,11 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec';
+
+const COUNTRY_MODE     = new URLSearchParams(location.search).get('country') === 'mx' ? 'mx' : 'co';
+const COMIS_KEY        = COUNTRY_MODE === 'mx' ? 'tt_comisiones_mx' : 'tt_comisiones';
+const COUNTRY_CURRENCY = COUNTRY_MODE === 'mx' ? 'MXN' : 'USD';
+const COUNTRY_LABEL    = COUNTRY_MODE === 'mx' ? '🇲🇽 México' : '🇨🇴 Colombia';
 
 /* ── PROVIDER DATABASE ── */
 const PROVIDERS = [{"n":"Daniel Morillo","c":"Jr Concierge Assitant.","ci":"Colombia: Medellín"},{"n":"Mangata","c":"Beach Club","p":10,"ci":"Colombia: Cartagena"},{"n":"Palenque Tours","c":"Tours","ci":"Colombia: Cartagena"},{"n":"Corona Tours","c":"Transport","ci":"Colombia: Cartagena"},{"n":"Magic Hands","c":"Massage","ci":"Colombia: Medellín"},{"n":"Agua de Leon","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Salon Tropical","c":"Restaurant","p":10,"w":"3246227092","ci":"Colombia: Cartagena"},{"n":"Alma","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Amare","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Amasa","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Andres Carne de Res","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Arabe Internacional","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Buena Vida Marisqueria","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Cafe del Mar","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Candé","c":"Restaurant","p":10,"w":"3145374833","ci":"Colombia: Cartagena"},{"n":"Carmen Cartagena 5%","c":"Restaurant","p":5,"w":"3143614826","ci":"Colombia: Cartagena"},{"n":"Celele","c":"Restaurant","w":"3017420389","ci":"Colombia: Cartagena"},{"n":"Club de Pesca","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Cuzco","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Don Ignazio","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Don Juan","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"El Baron","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"El Gobernador","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Los Tacos del Gordo","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Ely Cafe","c":"Restaurant","p":10,"w":"3004602059","ci":"Colombia: Cartagena"},{"n":"Gente de Mar","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Harrys","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Juan del Mar","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"La Cevicheria","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"La Cocina de Pepina","c":"Restaurant","p":5,"w":"3013632817","ci":"Colombia: Cartagena"},{"n":"La Perla","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"La Unica 10%","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"La Vitrola","c":"Restaurant","p":10,"w":"3156649676","ci":"Colombia: Cartagena"},{"n":"Lobo de Mar","c":"Restaurant","p":5,"w":"3043923397","ci":"Colombia: Cartagena"},{"n":"M Cocina","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Marea","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Members only","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Nena Beach","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Pascal","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Porthos","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Quebracho","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Restaurante o chef","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"San Pedro de Majagua","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Santa Clara","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Taquería Puerto Vallarta","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Blue Apple","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Bora Bora","c":"Beach Club","p":100,"w":"3242382750","ci":"Colombia: Cartagena"},{"n":"Majagua","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Makani","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Namasté","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Alquimico","c":"Bar","ci":"Colombia: Cartagena"},{"n":"Casa Cruxada","c":"Bar","ci":"Colombia: Cartagena"},{"n":"Delirium","c":"Bar","ci":"Colombia: Cartagena"},{"n":"Dolce Vita","c":"Bar","ci":"Colombia: Cartagena"},{"n":"La Jugada","c":"Bar","ci":"Colombia: Cartagena"},{"n":"La Movida","c":"Bar","ci":"Colombia: Cartagena"},{"n":"Seven 7 Times","c":"Bar","ci":"Colombia: Cartagena"},{"n":"The City Club","c":"Bar","ci":"Colombia: Cartagena"},{"n":"Ana","c":"Restaurant","p":10,"w":"3126676309","ci":"Colombia: Cartagena"},{"n":"Apogeo","c":"Restaurant","p":10,"w":"3184527625","ci":"Colombia: Cartagena"},{"n":"Casa del Tunel","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Casa Pura","c":"Restaurant","p":10,"w":"3245564787","ci":"Colombia: Cartagena"},{"n":"Discos y Mariscos","c":"Restaurant","p":10,"w":"3246227092","ci":"Colombia: Cartagena"},{"n":"El Beso","c":"Restaurant","p":10,"w":"3004602059","ci":"Colombia: Cartagena"},{"n":"Harry's Restaurant","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Hotel San Pedro Majagua","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Jardin Santa Clara","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Kanuu","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"King Curry","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"La Magnolia","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Manglar","c":"Restaurant","p":10,"w":"3042156309","ci":"Colombia: Cartagena"},{"n":"Mar y Zielo","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Miador Gastro Bar","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Morena","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Pa'ue Beach Club","c":"Beach Club","p":100,"w":"3004602059","ci":"Colombia: Cartagena"},{"n":"Pezetarian","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Restaurante 1621","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"Sala despecho","c":"Restaurant","ci":"Colombia: Cartagena"},{"n":"San Pascual de baylon","c":"Restaurant","p":100,"ci":"Colombia: Cartagena"},{"n":"Tierra","c":"Restaurant","p":10,"w":"3215236922","ci":"Colombia: Cartagena"},{"n":"Townhouse","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Viva La Vida","c":"Restaurant","p":10,"w":"3113356638","ci":"Colombia: Cartagena"},{"n":"Mar y Miel Two Travel","c":"Chef Two Travel","ci":"Colombia: Cartagena"},{"n":"Atolon","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Banana","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Capri","c":"Beach Club","p":100,"ci":"Colombia: Cartagena"},{"n":"Corona Island","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Morena","c":"Beach Club","ci":"Colombia: Cartagena"},{"n":"Rabo de Pez","c":"Restaurant","p":7,"ci":"Colombia: Cartagena"},{"n":"Norma","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Relato","c":"Restaurant","p":8,"ci":"Colombia: Medellín"},{"n":"Test Kitchen Lab","c":"Restaurant","p":8,"ci":"Colombia: Medellín"},{"n":"Mamba Negra","c":"Restaurant","p":10,"w":"3244203857","ci":"Colombia: Medellín"},{"n":"Teatro Victoria","c":"Restaurant","p":10,"ci":"Colombia: Medellín"},{"n":"Coralina Island","c":"Beach Club","p":10,"w":"3143590253","ci":"Colombia: Cartagena"},{"n":"Mirador Gastro Bar","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Hi I'm Sci","c":"Restaurant","p":10,"w":"3244203857","ci":"Colombia: Medellín"},{"n":"Casa Curanto","c":"Restaurant","p":10,"w":"3126915403","ci":"Colombia: Cartagena"},{"n":"Baroca","c":"Restaurant","p":10,"w":"3012324142","ci":"Colombia: Cartagena"},{"n":"1811 Gastro Bar","c":"Restaurant","p":10,"w":"3117771203","ci":"Colombia: Cartagena"},{"n":"Wala Beach Club","c":"Beach Club","p":100,"ci":"Colombia: Cartagena"},{"n":"X.O","c":"Restaurant"},{"n":"Hookah Master","c":"Hookah Services","ci":"Colombia: Medellín"},{"n":"Jaider Pemberthy","c":"Bodyguard","ci":"Colombia: Medellín"},{"n":"Alambique","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"La Isla","c":"Club","ci":"Colombia: Medellín"},{"n":"Carmen Medellín","c":"Restaurant","p":8,"ci":"Colombia: Medellín"},{"n":"Chef Manuel","c":"Chef","ci":"Colombia: Medellín"},{"n":"Carmen Cleaning","c":"Cleaning","ci":"Colombia: Medellín"},{"n":"Maoke Tours","c":"Tours","ci":"Colombia: Medellín"},{"n":"Vaquero","c":"Dj","ci":"Colombia: Medellín"},{"n":"El Candombe","c":"Dance Class","ci":"Colombia: Medellín"},{"n":"Maoke Transport","c":"Transport","ci":"Colombia: Medellín"},{"n":"Uzima Massage","c":"Massage","ci":"Colombia: Cartagena"},{"n":"Miguel Cruz","c":"Chef Two Travel","ci":"Colombia: Cartagena"},{"n":"LeoTours","c":"Transport","ci":"Colombia: Medellín"},{"n":"La Cabrera","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Iokanan Photographer","c":"Photographer","ci":"Colombia: Cartagena"},{"n":"Denis Spa","c":"Massage","ci":"Colombia: Cartagena"},{"n":"Jairo Security","c":"Bodyguard","ci":"Colombia: Cartagena"},{"n":"Corona tours","c":""},{"n":"Sions tours","c":"Tours","ci":"Colombia: Cartagena"},{"n":"A&E Frias - Dimensions tours","c":""},{"n":"EC Transportes","c":""},{"n":"Body Guard - Almario","c":"Bodyguard","ci":"Colombia: Cartagena"},{"n":"Jr Concierge","c":"Jr Concierge Assitant.","ci":"Colombia: Cartagena"},{"n":"Santa Cattleya","c":"Club","p":100,"ci":"Colombia: Cartagena"},{"n":"Aura Hotel","c":"Beach Club","p":10,"ci":"Colombia: Cartagena"},{"n":"Bloom Saloon","c":"Hair and Make up","ci":"Colombia: Medellín"},{"n":"Serenity Yacht","c":"Party","ci":"Colombia: Medellín"},{"n":"IV's Medellin","c":"IV Service","ci":"Colombia: Medellín"},{"n":"Ritwal","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"Jr Concierge","c":"Jr Concierge Assitant.","ci":"Colombia: Medellín"},{"n":"903 by Maluma","c":"Club","ci":"Colombia: Medellín"},{"n":"El Rodeo Golf","c":"Club","ci":"Colombia: Medellín"},{"n":"Simah","c":"Restaurant","p":8,"ci":"Colombia: Medellín"},{"n":"Buxury","c":"Tours","ci":"Colombia: Medellín"},{"n":"Fernando cepeda","c":"Snorkel","ci":"Colombia: Cartagena"},{"n":"Carmen Cartagena 7%","c":"Restaurant","p":7},{"n":"Carmen Cartagena 8%","c":"Restaurant","p":8},{"n":"IV's Cartagena","c":"IV Service","ci":"Colombia: Cartagena"},{"n":"La Unica 8%","c":"Restaurant","p":8,"ci":"Colombia: Cartagena"},{"n":"Picnic Cartagena","c":"Decoracion","ci":"Colombia: Cartagena"},{"n":"Rosita Benedetti","c":"Bakery","ci":"Colombia: Cartagena"},{"n":"Shala","c":"Massage","ci":"Colombia: Medellín"},{"n":"Niku 3%","c":"Restaurant","p":3,"ci":"Colombia: Cartagena"},{"n":"Niku 6%","c":"Restaurant","p":6,"ci":"Colombia: Cartagena"},{"n":"Niku 8%","c":"Restaurant","p":8,"ci":"Colombia: Cartagena"},{"n":"Niku 10%","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"El Pasquin de Joaco","c":"Bar","p":100,"ci":"Colombia: Cartagena"},{"n":"Gusto","c":"Bar","ci":"Colombia: Medellín"},{"n":"Superbowling","c":"Restaurant","p":10,"ci":"Colombia: Medellín"},{"n":"Kristy Tours","c":"Tours","ci":"Colombia: Cartagena"},{"n":"Peluqueria Bloom","c":"Hair and Make up","ci":"Colombia: Medellín"},{"n":"Transportes Medellín Travel","c":"Tours","ci":"Colombia: Medellín"},{"n":"Carmen Cartagena 6%","c":"Restaurant","p":6,"ci":"Colombia: Cartagena"},{"n":"Casa El Ramal","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"Monkey Bar","c":"Bar","ci":"Colombia: Cartagena"},{"n":"Barbaro Cocina Primitiva","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"Dulcinea","c":"Club","ci":"Colombia: Medellín"},{"n":"Alfonso Horseback","c":"Tours","ci":"Colombia: Cartagena"},{"n":"Sambombi","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"Bar Tropical","c":"Bartender","ci":"Colombia: Cartagena"},{"n":"Christian DJ","c":"Dj","ci":"Colombia: Cartagena"},{"n":"Mal de Ojo","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"Salon Amador","c":"Club","ci":"Colombia: Medellín"},{"n":"Pablo Surf","c":"Activity","ci":"Colombia: Cartagena"},{"n":"Camilo Blanco","c":"Lunch in Cholon, Jetsky","p":20,"ci":"Colombia: Cartagena"},{"n":"Chiva Tours","c":"Tours","p":100,"ci":"Colombia: Cartagena"},{"n":"Runico","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"The Rum Box (Arsenal)","c":"Activity","ci":"Colombia: Cartagena"},{"n":"Della Nonna","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"La Hacienda","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"La Matriarca","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"Mar de las Antillas","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Al Alma","c":"Restaurant","p":10,"ci":"Colombia: Cartagena"},{"n":"Andres DC","c":"Restaurant","ci":"Colombia: Bogotá"},{"n":"Astoria Rooftop","c":"Restaurant","ci":"Colombia: Bogotá"},{"n":"Casa Santa Clara Monserrate","c":"Restaurant","ci":"Colombia: Bogotá"},{"n":"Chato","c":"Restaurant","ci":"Colombia: Bogotá"},{"n":"El Cielo","c":"Restaurant","ci":"Colombia: Medellín"},{"n":"Carlos","c":"Tours","ci":"Colombia: Medellín"},{"n":"Premium Medical Care","c":"IV Service","ci":"Colombia: Cartagena"},{"n":"ATV Cartagena","c":"Activity","ci":"Colombia: Cartagena"},{"n":"Aurum Spa","c":"Massage","p":10,"ci":"Colombia: Cartagena"},{"n":"Bomba Tours","c":"Activity","ci":"Colombia: Cartagena"}];
@@ -561,27 +568,28 @@ let currentView = 'lista';
 
 /* ── STORAGE ── */
 function save(){
-  localStorage.setItem('tt_comisiones', JSON.stringify(comisiones));
+  localStorage.setItem(COMIS_KEY, JSON.stringify(comisiones));
   syncToGAS();
 }
 function load(){
-  const saved = localStorage.getItem('tt_comisiones');
+  const saved = localStorage.getItem(COMIS_KEY);
   if(saved){ try{ comisiones = JSON.parse(saved); }catch{} }
 }
 async function syncToGAS(){
+  const action = COUNTRY_MODE === 'mx' ? 'saveComisionesMX' : 'saveComisiones';
   try{
     await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({action:'saveComisiones',payload:{comisiones}})});
+      body:JSON.stringify({action, payload:{comisiones}})});
   }catch{}
 }
 async function loadFromGAS(){
   setSyncInfo('Sincronizando...');
+  const getAction = COUNTRY_MODE === 'mx' ? 'getComisionesMX' : 'getComisiones';
   try{
     const r = await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({action:'getComisiones'})});
+      body:JSON.stringify({action:getAction})});
     const d = await r.json();
     if(d.ok && d.data?.length && d.data.some(x => x.vendor || x.amount || x.proveedor)){
-      // Migrate old field names if needed
       comisiones = d.data.map(x => ({
         ...x,
         vendor: x.vendor || x.proveedor || '',
@@ -589,7 +597,7 @@ async function loadFromGAS(){
         status: x.status || x.estado || 'pend',
         dueDate: x.dueDate || x.fechaVencimiento || '',
       }));
-      localStorage.setItem('tt_comisiones', JSON.stringify(comisiones));
+      localStorage.setItem(COMIS_KEY, JSON.stringify(comisiones));
       setSyncInfo('Sincronizado · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
     } else {
       setSyncInfo('Local');
@@ -653,14 +661,14 @@ function render(){
   const pend      = comisiones.filter(c=>c.status==='pend').length;
   const vencidas  = comisiones.filter(c=>c.status==='vencida').length;
   const cobradas  = comisiones.filter(c=>c.status==='cobrado').length;
-  const totalCobrado = comisiones.filter(c=>c.status==='cobrado' && c.currency==='USD')
+  const totalCobrado = comisiones.filter(c=>c.status==='cobrado' && c.currency===COUNTRY_CURRENCY)
     .reduce((s,c)=>s+(parseFloat(c.amount)||0),0);
 
   let html = `<div class="stats-bar">
     <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val">${total}</div><div class="stat-sub">comisiones</div></div>
     <div class="stat-card"><div class="stat-label">Pendientes</div><div class="stat-val" style="color:#aaa">${pend}</div><div class="stat-sub">por cobrar</div></div>
     <div class="stat-card"><div class="stat-label">Vencidas</div><div class="stat-val" style="color:#e05c5c">${vencidas}</div><div class="stat-sub">urgente</div></div>
-    <div class="stat-card"><div class="stat-label">Cobradas</div><div class="stat-val" style="color:#5cb87a">${cobradas}</div><div class="stat-sub">USD $${totalCobrado.toLocaleString('es',{minimumFractionDigits:2})}</div></div>
+    <div class="stat-card"><div class="stat-label">Cobradas</div><div class="stat-val" style="color:#5cb87a">${cobradas}</div><div class="stat-sub">${COUNTRY_CURRENCY} $${totalCobrado.toLocaleString('es',{minimumFractionDigits:2})}</div></div>
   </div>`;
 
   if(!items.length){
@@ -853,7 +861,7 @@ function openNewModal(){
   document.getElementById('n-total').value = '';
   document.getElementById('n-pct').value = '';
   document.getElementById('n-amount').value = '';
-  document.getElementById('n-currency').value = 'USD';
+  document.getElementById('n-currency').value = COUNTRY_CURRENCY;
   document.getElementById('n-phone').value = '';
   document.getElementById('n-person').value = '';
   document.getElementById('n-due').value = '';
@@ -1151,6 +1159,21 @@ function loadDemo(){
   setSyncInfo('Modo demo');
   render();
 }
+
+/* ── INIT: apply country mode ── */
+(function initCountry(){
+  const isMX = COUNTRY_MODE === 'mx';
+  const color = isMX ? '#c0392b' : '#2e7d32';
+  document.getElementById('country-strip').style.background = color;
+  const badge = document.getElementById('country-badge');
+  badge.textContent = COUNTRY_LABEL;
+  badge.style.background = color;
+  const navActive = isMX ? 'nav-mx' : 'nav-co';
+  const navInactive = isMX ? 'nav-co' : 'nav-mx';
+  const active = document.getElementById(navActive);
+  active.style.background = color; active.style.color = '#fff'; active.style.borderColor = color;
+  document.title = 'Two Travel · Comisiones ' + (isMX ? 'México' : 'Colombia');
+})();
 
 /* ── INIT ── */
 
