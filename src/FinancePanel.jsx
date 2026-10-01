@@ -58,7 +58,7 @@ function Shell({ title, subtitle, children }) {
   return (
     <div style={{minHeight:"100vh",background:BG,fontFamily:"'Jost',sans-serif"}}>
       <header style={{background:WHT,borderBottom:`1px solid ${BRD}`,padding:"14px 28px",display:"flex",alignItems:"center",gap:16}}>
-        <a href="/?mode=pagos" style={{fontSize:18,color:GOLD,textDecoration:"none",padding:"4px 8px",borderRadius:4,lineHeight:1}}>←</a>
+        <a href="/menu.html#finanzas" style={{fontSize:18,color:GOLD,textDecoration:"none",padding:"4px 8px",borderRadius:4,lineHeight:1}}>←</a>
         <div>
           <div style={{fontSize:10,letterSpacing:".15em",textTransform:"uppercase",color:GOLD}}>Two Travel · Finanzas</div>
           <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:18,fontWeight:500,color:DARK}}>{title}</div>
