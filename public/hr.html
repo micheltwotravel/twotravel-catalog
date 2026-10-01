@@ -402,7 +402,8 @@ function renderHiring() {
             <td style="color:var(--ink3)">${c.city||"—"}</td>
             <td>${pill(c.status, CAND_STATUS, `event.stopPropagation();cycleCandStatus('${c.id}')`)}</td>
             <td class="date-cell">${lastUpdate ? timeSince(lastUpdate.at) : fmtDate(c.createdAt)}</td>
-            <td style="text-align:right">
+            <td style="text-align:right;white-space:nowrap">
+              <button class="icon-btn" onclick="event.stopPropagation();openModal('candidate','${c.id}')">✏️</button>
               <button class="icon-btn" onclick="event.stopPropagation();deleteCand('${c.id}')">🗑</button>
             </td>
           </tr>`;
@@ -532,9 +533,14 @@ function renderAttendance() {
       <button onclick="nextWeek()">▶</button>
     </div>
     <div class="ml" style="display:flex;gap:12px;align-items:center;font-size:11px;color:var(--ink3)">
-      <span><span style="color:var(--green)">✓</span> Presente</span>
-      <span><span style="color:var(--red)">✗</span> Ausente</span>
-      <span><span style="color:var(--orange)">~</span> Tarde</span>
+      ${attendSubTab === 'standup' ? `
+        <span><span style="color:var(--green)">✓</span> Presente</span>
+        <span><span style="color:var(--red)">✗</span> Ausente</span>
+        <span><span style="color:var(--orange)">~</span> Tarde</span>
+      ` : `
+        <span><span style="color:var(--green)">✓</span> Asistió</span>
+        <span style="color:var(--ink3)">· = no fue (normal)</span>
+      `}
     </div>`;
 
   const type = attendSubTab;
@@ -551,9 +557,9 @@ function renderAttendance() {
 
   let html = `<div class="month-summary">
     <div class="month-stat"><div class="val">${staff.length}</div><div class="lbl">Personas</div></div>
-    <div class="month-stat"><div class="val">${presents}</div><div class="lbl">Presencias</div></div>
-    <div class="month-stat"><div class="val">${absents}</div><div class="lbl">Ausencias</div></div>
-    <div class="month-stat"><div class="val">${totalPossible ? Math.round(presents/totalPossible*100) : 0}%</div><div class="lbl">Asistencia</div></div>
+    <div class="month-stat"><div class="val">${presents}</div><div class="lbl">${type==="office"?"Días en oficina":"Presencias"}</div></div>
+    ${type==="standup" ? `<div class="month-stat"><div class="val">${absents}</div><div class="lbl">Ausencias</div></div>
+    <div class="month-stat"><div class="val">${totalPossible ? Math.round(presents/totalPossible*100) : 0}%</div><div class="lbl">Asistencia</div></div>` : ""}
   </div>`;
 
   html += `<div class="attend-grid">
@@ -590,7 +596,7 @@ function renderAttendance() {
           const cls  = st ? `attend-cell ${st}` : "attend-cell empty";
           return `<td><span class="${cls}" onclick="cycleAttend('${s.id}','${iso}','${type}')" title="${ATTEND_LABELS[st]||'Sin registro'}">${icon}</span></td>`;
         }).join("")}
-        <td style="font-size:11px;color:var(--ink3);font-weight:400">${weekPresent}/5</td>
+        <td style="font-size:11px;color:var(--ink3);font-weight:400">${type==="office" ? weekPresent+"d" : weekPresent+"/5"}</td>
       </tr>`;
     });
   });
@@ -623,11 +629,13 @@ function renderAttendance() {
 
 function cycleAttend(personId, date, type) {
   const idx = attendance.findIndex(r => r.personId === personId && r.date === date && r.type === type);
+  // Office: toggle present ↔ empty only (absence is normal, not tracked)
+  const states = type === "office" ? ["","present"] : ATTEND_STATES;
   if (idx === -1) {
     attendance.push({ personId, date, type, status: "present" });
   } else {
     const cur = attendance[idx].status;
-    const next = ATTEND_STATES[(ATTEND_STATES.indexOf(cur) + 1) % ATTEND_STATES.length];
+    const next = states[(states.indexOf(cur) + 1) % states.length];
     if (!next) attendance.splice(idx, 1);
     else attendance[idx].status = next;
   }
@@ -692,18 +700,20 @@ function openPanel(type, id) {
     const c = candidates.find(x => x.id === id);
     if (!c) return;
     document.getElementById("panelName").textContent = c.name;
-    document.getElementById("panelSub").textContent = [c.position, c.city].filter(Boolean).join(" · ");
+    document.getElementById("panelSub").innerHTML = `${[c.position, c.city].filter(Boolean).join(" · ")} &nbsp;<button class="tbtn" style="font-size:10px;padding:2px 8px;margin-left:4px" onclick="openModal('candidate','${id}')">Editar</button>`;
     document.getElementById("panelFooter").style.display = "";
     document.getElementById("updateInput").value = "";
 
     const updates = c.updates || [];
     document.getElementById("panelBody").innerHTML = `
-      <div class="panel-section">
-        <div class="panel-label">Status</div>
-        ${pill(c.status, CAND_STATUS)}
+      <div class="panel-section" style="display:flex;align-items:center;gap:10px">
+        <div>
+          <div class="panel-label">Status</div>
+          ${pill(c.status, CAND_STATUS, `cycleCandStatus('${id}')`)}
+        </div>
       </div>
       ${c.notes ? `<div class="panel-section">
-        <div class="panel-label">Notas</div>
+        <div class="panel-label">Notas iniciales</div>
         <div class="panel-field">${c.notes}</div>
       </div>` : ""}
       <div class="panel-section">
