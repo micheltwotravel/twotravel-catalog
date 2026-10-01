@@ -1974,19 +1974,15 @@ export default function TwoTravelCatalog() {
     if (!currencyManuallySet) setCurrency(lang === "es" ? "COP" : "USD");
   }, [lang]);
 
-  // ── Live exchange rate: tasa oficial COP/USD - 2% ──────────────
-  // Frankfurter is free, no key needed, updates daily from ECB data.
-  // We apply -2% so quoted USD prices have a small buffer above market.
-  // Example: official 4100 → we use 4018 → $100k COP = $24.89 USD
+  // ── Live exchange rate: tasa oficial COP/USD ──────────────
   const [fxRate, setFxRate] = useState(FX_FALLBACK);
   useEffect(() => {
-    fetch("https://api.frankfurter.app/latest?from=USD&to=COP")
+    fetch("https://open.er-api.com/v6/latest/USD")
       .then(r => r.json())
       .then(data => {
         const official = data?.rates?.COP;
         if (official && official > 500) {
-          // official rate minus 2% = divide by smaller number = slightly higher USD
-          setFxRate(Math.round(official * 0.98));
+          setFxRate(Math.round(official));
         }
       })
       .catch(() => {/* silently keep fallback */});

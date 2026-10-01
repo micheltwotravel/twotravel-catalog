@@ -4285,9 +4285,9 @@ function DrinksCatalog() {
 
   // Fetch live exchange rate + menu overrides
   React.useEffect(() => {
-    fetch("https://api.frankfurter.app/latest?from=USD&to=COP")
+    fetch("https://open.er-api.com/v6/latest/USD")
       .then(r => r.json())
-      .then(d => { if (d?.rates?.COP > 500) setFxRate(Math.round(d.rates.COP * 0.98)); })
+      .then(d => { const cop = d?.rates?.COP; if (cop > 500) setFxRate(Math.round(cop)); })
       .catch(() => {});
     fetch(`${GAS_URL}?action=getMenuConfig`)
       .then(r => r.json()).then(d => {
@@ -5476,9 +5476,9 @@ function BreakfastCatalog() {
   const autosaveRef = React.useRef(null);
 
   React.useEffect(() => {
-    fetch("https://api.frankfurter.app/latest?from=USD&to=COP")
+    fetch("https://open.er-api.com/v6/latest/USD")
       .then(r => r.json())
-      .then(d => { if (d?.rates?.COP > 500) setFxRate(Math.round(d.rates.COP * 0.98)); })
+      .then(d => { const cop = d?.rates?.COP; if (cop > 500) setFxRate(Math.round(cop)); })
       .catch(() => {});
   }, []);
 

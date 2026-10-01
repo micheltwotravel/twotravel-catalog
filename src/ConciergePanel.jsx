@@ -1568,22 +1568,25 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
           <button
             type="button"
             onClick={() => {
-              if (item.confirmed !== false) {
+              if (item.confirmed === true) {
                 // confirmed → TBC
                 onUpdate(item._uid, { confirmed: false, tbc: true });
               } else if (item.tbc) {
                 // TBC → recommendation
                 onUpdate(item._uid, { confirmed: false, tbc: false });
+              } else if (item.confirmed === false) {
+                // recommendation → draft (neutral)
+                onUpdate(item._uid, { confirmed: null, tbc: false });
               } else {
-                // recommendation → confirmed
+                // draft → confirmed
                 onUpdate(item._uid, { confirmed: true, tbc: false });
                 setShowNotes(true);
               }
             }}
-            title={item.confirmed !== false ? "Click: → Por confirmar" : item.tbc ? "Click: → Recomendación" : "Click: → Confirmado"}
+            title={item.confirmed === true ? "Click: → Por confirmar" : item.tbc ? "Click: → Recomendación" : item.confirmed === false ? "Click: → Borrador" : "Click: → Confirmado"}
             className="text-lg leading-none opacity-70 hover:opacity-100 transition-opacity"
           >
-            {item.confirmed !== false ? "✅" : item.tbc ? "⏳" : "📌"}
+            {item.confirmed === true ? "✅" : item.tbc ? "⏳" : item.confirmed === false ? "📌" : "⬜"}
           </button>
           <button
             type="button"
@@ -4459,9 +4462,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const canvasDayMetaRef = useRef(Array.isArray(kickoff?.dayMeta) ? kickoff.dayMeta : []);
   const [liveFxRate, setLiveFxRate] = useState(3013); // TRM agosto 2026 - 2%
   useEffect(() => {
-    fetch("https://api.frankfurter.app/latest?from=USD&to=COP")
+    fetch("https://open.er-api.com/v6/latest/USD")
       .then(r => r.json())
-      .then(d => { const r = d?.rates?.COP; if (r > 500) setLiveFxRate(Math.round(r * 0.98)); })
+      .then(d => { const cop = d?.rates?.COP; if (cop > 500) setLiveFxRate(Math.round(cop)); })
       .catch(() => {});
   }, []);
 
@@ -4654,9 +4657,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
   const handleSave = async () => {
   try {
-  // Auto-advance status when concierge saves from "new" or "client_submitted"
+  // Auto-advance status when concierge saves from "new", "active", or "client_submitted"
   const autoStatus =
-    status === "new" || status === "client_submitted"
+    status === "new" || status === "active" || status === "client_submitted"
       ? "concierge_editing"
       : status;
 
@@ -7431,6 +7434,16 @@ export function MenuAdminPanel() {
     setSaved(false);
   };
 
+  const updateExtraItem = (catId, idx, field, value) => {
+    const key = `_extra__${catId}`;
+    setOverrides(prev => {
+      const arr = [...(prev[key] || [])];
+      arr[idx] = { ...arr[idx], [field]: value };
+      return { ...prev, [key]: arr };
+    });
+    setSaved(false);
+  };
+
   const addCategory = (type, fields) => {
     const key = `_newcats__${type}`;
     const id = fields.label.trim().toLowerCase().replace(/[^a-z0-9]/g, "_");
@@ -7665,15 +7678,21 @@ export function MenuAdminPanel() {
               );
             })}
 
-            {/* Custom (added) items */}
+            {/* Custom (added) items — editable inline */}
             {(overrides[`_extra__${cat?.id}`] || []).map((item, idx) => (
-              <div key={idx} style={{ display: "flex", gap: 14, alignItems: "center", background: "#f0fdf4", borderRadius: 10, padding: "10px 14px", border: "1px solid #bbf7d0" }}>
-                <span style={{ fontSize: 24 }}>{item.emoji || "🍽️"}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>{item.name}</div>
-                  {isDrink && item.priceCOP ? <div style={{ fontSize: 11, color: "#6b7280" }}>COP {item.priceCOP.toLocaleString()}</div> : null}
+              <div key={idx} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#f0fdf4", borderRadius: 10, padding: "12px 14px", border: "1px solid #bbf7d0" }}>
+                <span style={{ fontSize: 24, marginTop: 4 }}>{item.emoji || "🍽️"}</span>
+                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Nombre</label>
+                  <input value={item.name || ""} onChange={e => updateExtraItem(cat.id, idx, "name", e.target.value)} style={{ width: "100%", border: "1px solid #bbf7d0", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }} />
+                  <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>URL foto</label>
+                  <input value={item.img || ""} onChange={e => updateExtraItem(cat.id, idx, "img", e.target.value)} placeholder="https://…" style={{ width: "100%", border: "1px solid #bbf7d0", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }} />
+                  {isDrink && (<>
+                    <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Precio (COP)</label>
+                    <input type="number" value={item.priceCOP || ""} onChange={e => updateExtraItem(cat.id, idx, "priceCOP", parseInt(e.target.value) || 0)} placeholder="0" style={{ width: 160, border: "1px solid #bbf7d0", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }} />
+                  </>)}
                 </div>
-                <button onClick={() => removeExtraItem(cat.id, idx)} style={{ color: "#dc2626", background: "none", border: "none", cursor: "pointer", fontSize: 16, flexShrink: 0 }}>✕</button>
+                <button onClick={() => removeExtraItem(cat.id, idx)} title="Eliminar item" style={{ color: "#dc2626", background: "none", border: "none", cursor: "pointer", fontSize: 16, flexShrink: 0, marginTop: 4 }}>✕</button>
               </div>
             ))}
 

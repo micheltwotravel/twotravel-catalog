@@ -490,7 +490,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       dressCode    : cl(lang === "en"
         ? (cartItem.dressCode_en || service.dressCode_en || service.dress_code_en || "")
         : (cartItem.dressCode || service.dressCode || service.dress_code || "")),
-      confirmed    : cartItem.confirmed !== false,
+      confirmed    : cartItem.confirmed === true ? true : cartItem.confirmed === false ? false : null,
       tbc          : cartItem.tbc === true,
       confirmation : cartItem.confirmation || "",
       priceTiers      : cartItem.priceTiers || (lang === "en" ? (service.priceTiers_en || service.priceTiers) : (service.priceTiers || service.priceTiers_en)) || service.price_tiers || "",
@@ -1893,8 +1893,9 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
     return <BoatDetailCard it={boatIt} lang={lang} editMode={editMode} onRemove={onRemove} patchItem={patchItem} />;
   }
 
-  const isConfirmed = it.confirmed !== false;
-  const isTBC       = !isConfirmed && it.tbc === true;
+  const isConfirmed = it.confirmed !== false; // null (draft) and true both count as "not rejected"
+  const isDraft     = it.confirmed === null || it.confirmed === undefined;
+  const isTBC       = it.confirmed === false && it.tbc === true;
   const showPrice = isConfirmed && (
     it.priceIsOverride ||
     !HIDE_PRICE_CATS.has(String(it.category || "").trim().toLowerCase()) ||
@@ -1971,17 +1972,21 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
           </div>
         )}
 
-        {/* State badge: TBC (amber) or Recommendation (grey) */}
-        {!isConfirmed && (
-          isTBC ? (
-            <div style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:9,fontWeight:700,color:"#92400e",background:"#fef3c7",border:"1px solid #fcd34d",borderRadius:4,padding:"2px 8px",letterSpacing:"0.3px",marginBottom:6}}>
-              ⏳ {isEs ? "Por confirmar" : "To Be Confirmed"}
-            </div>
-          ) : (
-            <div className="ev-rec-badge">
-              🔖 {isEs ? "Recomendación" : "Recommendation"}
-            </div>
-          )
+        {/* State badges */}
+        {it.confirmed === true && (
+          <div style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:9,fontWeight:700,color:"#15803d",background:"#dcfce7",border:"1px solid #86efac",borderRadius:4,padding:"2px 8px",letterSpacing:"0.3px",marginBottom:6}}>
+            ✓ {isEs ? "Confirmado" : "Confirmed"}
+          </div>
+        )}
+        {isTBC && (
+          <div style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:9,fontWeight:700,color:"#92400e",background:"#fef3c7",border:"1px solid #fcd34d",borderRadius:4,padding:"2px 8px",letterSpacing:"0.3px",marginBottom:6}}>
+            ⏳ {isEs ? "Por confirmar" : "To Be Confirmed"}
+          </div>
+        )}
+        {it.confirmed === false && !it.tbc && (
+          <div className="ev-rec-badge">
+            🔖 {isEs ? "Recomendación" : "Recommendation"}
+          </div>
         )}
 
         {/* Informative badge for logistical items */}
