@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Two Travel · HR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sand:#f7f4ef;--sand2:#efe9e0;--sand3:#e5ddd3;
+  --ink:#1a1814;--ink2:#3d3a35;--ink3:#7a7570;
+  --gold:#9a7d52;--gold2:#c4a272;--gold3:#e8d5b7;
+  --white:#ffffff;
+  --border:rgba(26,24,20,0.09);--border2:rgba(26,24,20,0.15);
+  --green:#16a34a;--green-bg:#dcfce7;
+  --red:#dc2626;--red-bg:#fee2e2;
+  --blue:#2563eb;--blue-bg:#dbeafe;
+  --purple:#7c3aed;--purple-bg:#ede9fe;
+  --orange:#ea580c;--orange-bg:#ffedd5;
+  --gray:#6b7280;--gray-bg:#f3f4f6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color:var(--ink);font-weight:300}
+button,input,select,textarea{font-family:'Jost',sans-serif}
+
+/* ── HEADER ── */
+.hdr{height:52px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:0;position:sticky;top:0;z-index:200}
+.logo{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:500;letter-spacing:.04em;color:var(--ink);text-decoration:none}
+.hdiv{width:1px;height:13px;background:var(--border2);margin:0 12px}
+.hls{font-size:10px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase}
+.back{margin-left:auto;font-size:11px;color:var(--ink3);text-decoration:none;border:1px solid var(--border2);padding:4px 11px;transition:.12s}
+.back:hover{color:var(--ink);border-color:var(--gold)}
+
+/* ── TABS ── */
+.tabs{background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;position:sticky;top:52px;z-index:199}
+.tab{padding:13px 16px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;border:none;background:transparent;cursor:pointer;color:var(--ink3);border-bottom:2px solid transparent;transition:.12s;display:flex;align-items:center;gap:6px}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.tab:hover:not(.active){color:var(--ink2)}
+
+/* ── TOOLBAR ── */
+.toolbar{background:var(--white);border-bottom:1px solid var(--border);padding:8px 20px;display:flex;align-items:center;gap:10px;position:sticky;top:103px;z-index:198}
+.tbtn{padding:5px 13px;font-size:11px;letter-spacing:.05em;border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--ink2);transition:.12s;display:flex;align-items:center;gap:5px}
+.tbtn:hover{border-color:var(--gold);color:var(--gold)}
+.tbtn.primary{background:var(--gold);color:var(--white);border-color:var(--gold)}
+.tbtn.primary:hover{background:var(--gold2);border-color:var(--gold2)}
+.search{display:flex;align-items:center;gap:7px;padding:5px 11px;border:1px solid var(--border2);background:var(--sand);font-size:11px;color:var(--ink3)}
+.search input{border:none;background:transparent;outline:none;font-size:11px;color:var(--ink);width:160px}
+.ml{margin-left:auto}
+.sub-tabs{display:flex;gap:2px}
+.stab{padding:5px 13px;font-size:11px;border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--ink3);transition:.12s}
+.stab.active{background:var(--sand2);color:var(--ink2);border-color:var(--border2)}
+.stab:hover:not(.active){color:var(--gold);border-color:var(--gold)}
+
+/* ── CONTENT ── */
+.content{padding:20px;max-width:1400px}
+.section-wrap{margin-bottom:20px}
+.section-hdr{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--white);border:1px solid var(--border);cursor:pointer;user-select:none}
+.section-hdr:hover{background:var(--sand)}
+.section-name{font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase}
+.section-count{font-size:11px;color:var(--ink3);margin-left:6px}
+.chevron{font-size:10px;color:var(--ink3);transition:.15s;margin-left:auto}
+.collapsed .chevron{transform:rotate(-90deg)}
+
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--border);border-top:none;font-size:12px}
+.tbl th{padding:7px 12px;text-align:left;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);background:var(--sand);border-bottom:1px solid var(--border);white-space:nowrap}
+.tbl td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--sand)}
+.tbl tr.selected td{background:var(--gold3)!important}
+
+/* ── STATUS PILLS ── */
+.pill{display:inline-block;padding:2px 9px;border-radius:3px;font-size:10px;font-weight:500;letter-spacing:.06em;cursor:pointer;white-space:nowrap}
+.pill-open{background:var(--blue-bg);color:var(--blue)}
+.pill-interview{background:var(--purple-bg);color:var(--purple)}
+.pill-offer{background:var(--orange-bg);color:var(--orange)}
+.pill-hired{background:var(--green-bg);color:var(--green)}
+.pill-rejected{background:var(--gray-bg);color:var(--gray)}
+.pill-not_started{background:var(--gray-bg);color:var(--gray)}
+.pill-in_progress{background:var(--blue-bg);color:var(--blue)}
+.pill-done{background:var(--green-bg);color:var(--green)}
+.pill-stuck{background:var(--red-bg);color:var(--red)}
+.pill-review{background:var(--purple-bg);color:var(--purple)}
+.pill-present{background:var(--green-bg);color:var(--green)}
+.pill-absent{background:var(--red-bg);color:var(--red)}
+.pill-late{background:var(--orange-bg);color:var(--orange)}
+
+/* ── ATTEND GRID ── */
+.attend-grid{background:var(--white);border:1px solid var(--border)}
+.attend-grid table{width:100%;border-collapse:collapse;font-size:12px}
+.attend-grid th{padding:8px 12px;text-align:center;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);border-bottom:1px solid var(--border);background:var(--sand)}
+.attend-grid th.name-col{text-align:left;width:180px}
+.attend-grid td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:center}
+.attend-grid td.name-col{text-align:left;font-weight:400}
+.attend-grid tr:last-child td{border-bottom:none}
+.attend-cell{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;transition:.1s}
+.attend-cell:hover{background:var(--sand2)}
+.attend-cell.present{background:var(--green-bg);color:var(--green)}
+.attend-cell.absent{background:var(--red-bg);color:var(--red)}
+.attend-cell.late{background:var(--orange-bg);color:var(--orange)}
+.attend-cell.empty{color:var(--ink3)}
+
+/* ── WEEK NAV ── */
+.week-nav{display:flex;align-items:center;gap:12px}
+.week-nav button{background:none;border:1px solid var(--border2);padding:4px 10px;cursor:pointer;font-size:12px;color:var(--ink2);transition:.12s}
+.week-nav button:hover{border-color:var(--gold);color:var(--gold)}
+.week-label{font-size:12px;color:var(--ink2);font-weight:400;min-width:210px;text-align:center}
+
+/* ── SIDE PANEL ── */
+.panel-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:300}
+.panel-overlay.open{display:block}
+.side-panel{position:fixed;right:0;top:0;bottom:0;width:440px;background:var(--white);border-left:1px solid var(--border);z-index:301;display:flex;flex-direction:column;overflow:hidden}
+.panel-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.panel-title{font-size:15px;font-weight:400}
+.panel-close{margin-left:auto;background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink3);padding:0 4px}
+.panel-close:hover{color:var(--ink)}
+.panel-body{flex:1;overflow-y:auto;padding:20px}
+.panel-section{margin-bottom:20px}
+.panel-label{font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
+.panel-field{font-size:12px;color:var(--ink2);line-height:1.5;background:var(--sand);padding:8px 10px;white-space:pre-wrap}
+.update-item{border-bottom:1px solid var(--border);padding:10px 0}
+.update-item:last-child{border-bottom:none}
+.update-meta{font-size:10px;color:var(--ink3);margin-bottom:4px}
+.update-text{font-size:12px;color:var(--ink2);line-height:1.5}
+.panel-footer{padding:14px 20px;border-top:1px solid var(--border)}
+.panel-footer textarea{width:100%;border:1px solid var(--border2);padding:8px 10px;font-size:12px;color:var(--ink);resize:none;outline:none;background:var(--sand);height:72px;font-family:'Jost',sans-serif}
+.panel-footer textarea:focus{border-color:var(--gold)}
+.panel-actions{display:flex;justify-content:flex-end;margin-top:8px}
+
+/* ── MODAL ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:400;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--white);width:min(520px,95vw);border-radius:2px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center}
+.modal-title{font-size:14px;font-weight:400;letter-spacing:.03em}
+.modal-x{margin-left:auto;background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink3)}
+.modal-x:hover{color:var(--ink)}
+.modal-body{padding:20px}
+.field-row{margin-bottom:14px}
+.field-row label{display:block;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:5px}
+.field-row input,.field-row select,.field-row textarea{width:100%;border:1px solid var(--border2);padding:8px 10px;font-size:12px;color:var(--ink);outline:none;background:var(--sand);font-family:'Jost',sans-serif}
+.field-row input:focus,.field-row select:focus,.field-row textarea:focus{border-color:var(--gold)}
+.field-row select{appearance:none;cursor:pointer}
+.field-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:48px 20px;color:var(--ink3);font-size:13px}
+.empty-icon{font-size:28px;margin-bottom:8px}
+
+/* ── MISC ── */
+.icon-btn{background:none;border:none;cursor:pointer;color:var(--ink3);font-size:14px;padding:3px 5px;transition:.1s}
+.icon-btn:hover{color:var(--gold)}
+.row-click{cursor:pointer}
+.date-cell{color:var(--ink3);font-size:11px;white-space:nowrap}
+.month-summary{background:var(--white);border:1px solid var(--border);padding:16px 20px;margin-bottom:16px;display:flex;gap:20px;flex-wrap:wrap}
+.month-stat{text-align:center}
+.month-stat .val{font-size:22px;font-weight:400;color:var(--ink)}
+.month-stat .lbl{font-size:10px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
+.staff-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;background:var(--sand2);border:1px solid var(--border2);font-size:11px;color:var(--ink2);margin:3px}
+.staff-chip button{background:none;border:none;cursor:pointer;color:var(--ink3);font-size:12px;line-height:1}
+.staff-chip button:hover{color:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <a href="/menu.html" class="logo">Two Travel</a>
+  <div class="hdiv"></div>
+  <span class="hls">HR</span>
+  <a href="/menu.html" class="back">← Menú</a>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('hiring')">👥 Hiring</button>
+  <button class="tab" onclick="switchTab('projects')">📋 Proyectos</button>
+  <button class="tab" onclick="switchTab('attendance')">📅 Asistencia</button>
+  <button class="tab" onclick="switchTab('staff')">⚙️ Equipo</button>
+</div>
+
+<!-- TOOLBAR (dynamic) -->
+<div class="toolbar" id="toolbar"></div>
+
+<!-- CONTENT -->
+<div class="content" id="content"></div>
+
+<!-- SIDE PANEL (candidate detail) -->
+<div class="panel-overlay" id="panelOverlay" onclick="closePanel()">
+  <div class="side-panel" onclick="e=>e.stopPropagation()">
+    <div class="panel-hdr">
+      <div>
+        <div class="panel-title" id="panelName">—</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:2px" id="panelSub"></div>
+      </div>
+      <button class="panel-close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body" id="panelBody"></div>
+    <div class="panel-footer" id="panelFooter" style="display:none">
+      <textarea id="updateInput" placeholder="Agregar actualización…"></textarea>
+      <div class="panel-actions">
+        <button class="tbtn primary" onclick="addUpdate()">Agregar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: add/edit item -->
+<div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title" id="modalTitle">Nuevo item</span>
+      <button class="modal-x" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="tbtn" onclick="closeModal()">Cancelar</button>
+      <button class="tbtn primary" id="modalSave" onclick="saveModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────
+const KEY = { candidates: "hr_candidates", projects: "hr_projects", attendance: "hr_attendance", staff: "hr_staff" };
+
+function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+function load(k) { try { return JSON.parse(lsGet(k) || "null") || []; } catch { return []; } }
+function save(k, v) { lsSet(k, JSON.stringify(v)); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+let candidates = load(KEY.candidates);
+let projects   = load(KEY.projects);
+let attendance = load(KEY.attendance); // [{ personId, date, type, status }]
+let staff      = load(KEY.staff);
+
+// Default staff if empty
+if (!staff.length) {
+  staff = [
+    { id:"s1", name:"Alia", team:"Concierge" },
+    { id:"s2", name:"Carolina", team:"Concierge" },
+    { id:"s3", name:"Daniela", team:"Concierge" },
+    { id:"s4", name:"Nataly", team:"Concierge" },
+    { id:"s5", name:"Giulia", team:"Concierge" },
+    { id:"s6", name:"Natalia", team:"Concierge" },
+    { id:"s7", name:"Michel", team:"Dirección" },
+    { id:"s8", name:"Valentina", team:"Finance" },
+    { id:"s9", name:"Crystal", team:"Finance" },
+    { id:"s10", name:"Armando", team:"Operations" },
+  ];
+  save(KEY.staff, staff);
+}
+
+// ── STATE ──────────────────────────────────────────────────
+let currentTab = "hiring";
+let attendSubTab = "standup";
+let searchQ = "";
+let panelId = null;
+let modalMode = null; // { type, id? }
+let currentWeek = getMonday(new Date());
+
+// ── HELPERS ──────────────────────────────────────────────
+function getMonday(d) {
+  const copy = new Date(d);
+  const day = copy.getDay() || 7;
+  copy.setDate(copy.getDate() - day + 1);
+  copy.setHours(0,0,0,0);
+  return copy;
+}
+function addDays(d, n) { const copy = new Date(d); copy.setDate(copy.getDate() + n); return copy; }
+function isoDate(d) { return d.toISOString().slice(0,10); }
+function fmtDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso + "T12:00:00");
+  return d.toLocaleDateString("es-CO", { day:"numeric", month:"short", year:"numeric" });
+}
+function fmtDateShort(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso + "T12:00:00");
+  return d.toLocaleDateString("es-CO", { weekday:"short", day:"numeric", month:"short" });
+}
+function timeSince(iso) {
+  if (!iso) return "";
+  const diff = Date.now() - new Date(iso);
+  const mins = Math.floor(diff/60000);
+  if (mins < 2) return "ahora";
+  if (mins < 60) return `hace ${mins}m`;
+  const hrs = Math.floor(mins/60);
+  if (hrs < 24) return `hace ${hrs}h`;
+  const days = Math.floor(hrs/24);
+  return `hace ${days}d`;
+}
+
+const CAND_STATUS = {
+  open:      { label:"Contactado",  cls:"pill-open" },
+  interview: { label:"Entrevista",  cls:"pill-interview" },
+  offer:     { label:"Oferta",      cls:"pill-offer" },
+  hired:     { label:"Contratado",  cls:"pill-hired" },
+  rejected:  { label:"Rechazado",   cls:"pill-rejected" },
+};
+const PROJ_STATUS = {
+  not_started: { label:"No iniciado", cls:"pill-not_started" },
+  in_progress: { label:"En curso",    cls:"pill-in_progress" },
+  done:        { label:"Terminado",   cls:"pill-done" },
+  stuck:       { label:"Bloqueado",   cls:"pill-stuck" },
+  review:      { label:"En revisión", cls:"pill-review" },
+};
+const PROJ_SECTIONS = ["Backlog","Planning","En Curso","Completado"];
+const ATTEND_STATES = ["","present","absent","late"];
+const ATTEND_ICONS  = { present:"✓", absent:"✗", late:"~", "":"·" };
+const ATTEND_LABELS = { present:"Presente", absent:"Ausente", late:"Tarde", "":"" };
+
+function pill(status, map, onclick) {
+  const s = map[status] || { label: status, cls: "pill-not_started" };
+  return `<span class="pill ${s.cls}" ${onclick ? `onclick="${onclick}"` : ""}>${s.label}</span>`;
+}
+
+// ── TAB SWITCHING ──────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll(".tab").forEach((t,i) => {
+    t.classList.toggle("active", ["hiring","projects","attendance","staff"][i] === tab);
+  });
+  render();
+}
+
+// ── RENDER DISPATCHER ──────────────────────────────────────
+function render() {
+  if (currentTab === "hiring")     renderHiring();
+  else if (currentTab === "projects") renderProjects();
+  else if (currentTab === "attendance") renderAttendance();
+  else if (currentTab === "staff") renderStaff();
+}
+
+// ══════════════════════════════════════════════
+// HIRING
+// ══════════════════════════════════════════════
+function renderHiring() {
+  const tb = document.getElementById("toolbar");
+  const ct = document.getElementById("content");
+
+  tb.innerHTML = `
+    <button class="tbtn primary" onclick="openModal('candidate')">+ Agregar candidato</button>
+    <div class="search"><span style="color:var(--ink3);font-size:13px">🔍</span>
+      <input placeholder="Buscar candidato…" value="${searchQ}" oninput="searchQ=this.value;renderHiring()"></div>
+    <div class="ml" style="display:flex;gap:8px;align-items:center">
+      <span style="font-size:11px;color:var(--ink3)">Filtrar:</span>
+      ${Object.entries(CAND_STATUS).map(([k,v]) => {
+        const count = candidates.filter(c => c.status === k).length;
+        return count ? `<span class="pill ${v.cls}" style="cursor:pointer" onclick="filterStatus('${k}')">${v.label} ${count}</span>` : "";
+      }).join("")}
+    </div>`;
+
+  // Group by status order
+  const order = ["open","interview","offer","hired","rejected"];
+  const filtered = candidates.filter(c => {
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      return (c.name||"").toLowerCase().includes(q) || (c.position||"").toLowerCase().includes(q) || (c.city||"").toLowerCase().includes(q);
+    }
+    return true;
+  });
+
+  if (!filtered.length) {
+    ct.innerHTML = `<div class="empty"><div class="empty-icon">👥</div>Sin candidatos aún. Agrega el primero.</div>`;
+    return;
+  }
+
+  const groups = {};
+  order.forEach(s => { groups[s] = []; });
+  filtered.forEach(c => { (groups[c.status] = groups[c.status] || []).push(c); });
+
+  let html = "";
+  order.forEach(s => {
+    const list = groups[s] || [];
+    if (!list.length) return;
+    const { label } = CAND_STATUS[s];
+    html += `<div class="section-wrap">
+      <div class="section-hdr" onclick="toggleSection(this)">
+        <span class="section-name" style="color:var(--ink)">${label}</span>
+        <span class="section-count">${list.length}</span>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+      <table class="tbl">
+        <thead><tr>
+          <th style="width:200px">Candidato</th>
+          <th>Cargo buscado</th>
+          <th>Ciudad</th>
+          <th>Status</th>
+          <th>Última actualización</th>
+          <th></th>
+        </tr></thead>
+        <tbody>
+        ${list.map(c => {
+          const lastUpdate = c.updates?.slice(-1)[0];
+          return `<tr class="row-click ${panelId===c.id?'selected':''}" onclick="openPanel('candidate','${c.id}')">
+            <td style="font-weight:400">${c.name}</td>
+            <td style="color:var(--ink2)">${c.position||"—"}</td>
+            <td style="color:var(--ink3)">${c.city||"—"}</td>
+            <td>${pill(c.status, CAND_STATUS, `event.stopPropagation();cycleCandStatus('${c.id}')`)}</td>
+            <td class="date-cell">${lastUpdate ? timeSince(lastUpdate.at) : fmtDate(c.createdAt)}</td>
+            <td style="text-align:right">
+              <button class="icon-btn" onclick="event.stopPropagation();deleteCand('${c.id}')">🗑</button>
+            </td>
+          </tr>`;
+        }).join("")}
+        </tbody>
+      </table>
+      </div>
+    </div>`;
+  });
+
+  ct.innerHTML = html;
+}
+
+function cycleCandStatus(id) {
+  const order = ["open","interview","offer","hired","rejected"];
+  const c = candidates.find(x => x.id === id);
+  if (!c) return;
+  const idx = order.indexOf(c.status);
+  c.status = order[(idx + 1) % order.length];
+  save(KEY.candidates, candidates);
+  render();
+  if (panelId === id) openPanel("candidate", id);
+}
+
+function deleteCand(id) {
+  if (!confirm("¿Eliminar candidato?")) return;
+  candidates = candidates.filter(c => c.id !== id);
+  save(KEY.candidates, candidates);
+  if (panelId === id) closePanel();
+  render();
+}
+
+// ══════════════════════════════════════════════
+// PROJECTS
+// ══════════════════════════════════════════════
+function renderProjects() {
+  const tb = document.getElementById("toolbar");
+  const ct = document.getElementById("content");
+
+  tb.innerHTML = `
+    <button class="tbtn primary" onclick="openModal('project')">+ Agregar iniciativa</button>
+    <div class="search"><span style="color:var(--ink3);font-size:13px">🔍</span>
+      <input placeholder="Buscar iniciativa…" value="${searchQ}" oninput="searchQ=this.value;renderProjects()"></div>`;
+
+  const filtered = projects.filter(p =>
+    !searchQ || (p.title||"").toLowerCase().includes(searchQ.toLowerCase())
+  );
+
+  let html = "";
+  PROJ_SECTIONS.forEach(section => {
+    const list = filtered.filter(p => p.section === section);
+    if (!list.length) return;
+    html += `<div class="section-wrap">
+      <div class="section-hdr" onclick="toggleSection(this)">
+        <span class="section-name">${section}</span>
+        <span class="section-count">${list.length} initiative${list.length!==1?'s':''}</span>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+      <table class="tbl">
+        <thead><tr>
+          <th>Iniciativa</th>
+          <th>Owner</th>
+          <th>Fecha límite</th>
+          <th>Revisor</th>
+          <th>Status</th>
+          <th></th>
+        </tr></thead>
+        <tbody>
+        ${list.map(p => `<tr class="row-click ${panelId===p.id?'selected':''}" onclick="openPanel('project','${p.id}')">
+          <td style="font-weight:400">${p.title}</td>
+          <td style="color:var(--ink3)">${p.owner||"—"}</td>
+          <td class="date-cell">${fmtDate(p.dueDate)}</td>
+          <td style="color:var(--ink3)">${p.reviewer||"—"}</td>
+          <td>${pill(p.status, PROJ_STATUS, `event.stopPropagation();cycleProjStatus('${p.id}')`)}</td>
+          <td style="text-align:right">
+            <button class="icon-btn" onclick="event.stopPropagation();openModal('project','${p.id}')">✏️</button>
+            <button class="icon-btn" onclick="event.stopPropagation();deleteProj('${p.id}')">🗑</button>
+          </td>
+        </tr>`).join("")}
+        </tbody>
+      </table>
+      </div>
+    </div>`;
+  });
+
+  if (!html) html = `<div class="empty"><div class="empty-icon">📋</div>Sin iniciativas. Agrega la primera.</div>`;
+  ct.innerHTML = html;
+}
+
+function cycleProjStatus(id) {
+  const order = ["not_started","in_progress","review","done","stuck"];
+  const p = projects.find(x => x.id === id);
+  if (!p) return;
+  const idx = order.indexOf(p.status);
+  p.status = order[(idx + 1) % order.length];
+  save(KEY.projects, projects);
+  render();
+}
+
+function deleteProj(id) {
+  if (!confirm("¿Eliminar iniciativa?")) return;
+  projects = projects.filter(p => p.id !== id);
+  save(KEY.projects, projects);
+  if (panelId === id) closePanel();
+  render();
+}
+
+// ══════════════════════════════════════════════
+// ATTENDANCE
+// ══════════════════════════════════════════════
+function renderAttendance() {
+  const tb = document.getElementById("toolbar");
+  const ct = document.getElementById("content");
+
+  const mondayIso = isoDate(currentWeek);
+  const days = [0,1,2,3,4].map(i => addDays(currentWeek, i));
+
+  tb.innerHTML = `
+    <div class="sub-tabs">
+      <button class="stab ${attendSubTab==='standup'?'active':''}" onclick="attendSubTab='standup';renderAttendance()">📺 Standups</button>
+      <button class="stab ${attendSubTab==='office'?'active':''}" onclick="attendSubTab='office';renderAttendance()">🏢 Oficina</button>
+    </div>
+    <div class="week-nav" style="margin-left:20px">
+      <button onclick="prevWeek()">◀</button>
+      <span class="week-label">${fmtDateShort(mondayIso)} — ${fmtDateShort(isoDate(addDays(currentWeek,4)))}</span>
+      <button onclick="nextWeek()">▶</button>
+    </div>
+    <div class="ml" style="display:flex;gap:12px;align-items:center;font-size:11px;color:var(--ink3)">
+      <span><span style="color:var(--green)">✓</span> Presente</span>
+      <span><span style="color:var(--red)">✗</span> Ausente</span>
+      <span><span style="color:var(--orange)">~</span> Tarde</span>
+    </div>`;
+
+  const type = attendSubTab;
+  const weekStaff = staff.filter(s => true); // all staff
+
+  // Compute stats
+  const weekRecords = attendance.filter(r => {
+    const d = new Date(r.date + "T12:00:00");
+    return r.type === type && d >= currentWeek && d <= addDays(currentWeek, 4);
+  });
+  const totalPossible = weekStaff.length * 5;
+  const presents = weekRecords.filter(r => r.status === "present").length;
+  const absents  = weekRecords.filter(r => r.status === "absent").length;
+
+  let html = `<div class="month-summary">
+    <div class="month-stat"><div class="val">${staff.length}</div><div class="lbl">Personas</div></div>
+    <div class="month-stat"><div class="val">${presents}</div><div class="lbl">Presencias</div></div>
+    <div class="month-stat"><div class="val">${absents}</div><div class="lbl">Ausencias</div></div>
+    <div class="month-stat"><div class="val">${totalPossible ? Math.round(presents/totalPossible*100) : 0}%</div><div class="lbl">Asistencia</div></div>
+  </div>`;
+
+  html += `<div class="attend-grid">
+    <table>
+      <thead><tr>
+        <th class="name-col">Persona · Equipo</th>
+        ${days.map(d => `<th>${new Date(d).toLocaleDateString("es-CO",{weekday:"short"}).toUpperCase()}<br><span style="font-weight:300;font-size:10px">${new Date(d).getDate()} ${new Date(d).toLocaleDateString("es-CO",{month:"short"})}</span></th>`).join("")}
+        <th>Total</th>
+      </tr></thead>
+      <tbody>`;
+
+  // Group by team
+  const teams = [...new Set(staff.map(s => s.team))].sort();
+  teams.forEach(team => {
+    const members = staff.filter(s => s.team === team);
+    members.forEach((s, si) => {
+      const rowRecords = attendance.filter(r => r.personId === s.id && r.type === type);
+      const weekPresent = days.filter(d => {
+        const iso = isoDate(d);
+        const rec = rowRecords.find(r => r.date === iso);
+        return rec?.status === "present";
+      }).length;
+
+      html += `<tr>
+        <td class="name-col">
+          <span style="font-weight:400">${s.name}</span>
+          ${si === 0 ? `<span style="font-size:9px;color:var(--ink3);display:block;margin-top:1px;letter-spacing:.06em;text-transform:uppercase">${team}</span>` : ""}
+        </td>
+        ${days.map(d => {
+          const iso = isoDate(d);
+          const rec = rowRecords.find(r => r.date === iso);
+          const st  = rec?.status || "";
+          const icon = ATTEND_ICONS[st];
+          const cls  = st ? `attend-cell ${st}` : "attend-cell empty";
+          return `<td><span class="${cls}" onclick="cycleAttend('${s.id}','${iso}','${type}')" title="${ATTEND_LABELS[st]||'Sin registro'}">${icon}</span></td>`;
+        }).join("")}
+        <td style="font-size:11px;color:var(--ink3);font-weight:400">${weekPresent}/5</td>
+      </tr>`;
+    });
+  });
+
+  html += `</tbody></table></div>`;
+
+  // Novedades / notes per day
+  html += `<div style="margin-top:16px;background:var(--white);border:1px solid var(--border);padding:16px 20px">
+    <div style="font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:12px">📝 Novedades de la semana</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
+    ${days.map(d => {
+      const iso = isoDate(d);
+      const key = `hr_nov_${type}_${iso}`;
+      const saved = lsGet(key) || "";
+      return `<div>
+        <div style="font-size:10px;color:var(--ink3);margin-bottom:4px">${new Date(d).toLocaleDateString("es-CO",{weekday:"long",day:"numeric"})}</div>
+        <textarea style="width:100%;height:72px;border:1px solid var(--border2);padding:6px 8px;font-size:11px;resize:none;font-family:'Jost',sans-serif;color:var(--ink2);background:var(--sand);outline:none"
+          placeholder="Novedades…"
+          oninput="lsSet('hr_nov_${type}_${iso}',this.value)"
+          onblur="this.style.borderColor='var(--border2)'"
+          onfocus="this.style.borderColor='var(--gold)'"
+        >${saved}</textarea>
+      </div>`;
+    }).join("")}
+    </div>
+  </div>`;
+
+  ct.innerHTML = html;
+}
+
+function cycleAttend(personId, date, type) {
+  const idx = attendance.findIndex(r => r.personId === personId && r.date === date && r.type === type);
+  if (idx === -1) {
+    attendance.push({ personId, date, type, status: "present" });
+  } else {
+    const cur = attendance[idx].status;
+    const next = ATTEND_STATES[(ATTEND_STATES.indexOf(cur) + 1) % ATTEND_STATES.length];
+    if (!next) attendance.splice(idx, 1);
+    else attendance[idx].status = next;
+  }
+  save(KEY.attendance, attendance);
+  renderAttendance();
+}
+
+function prevWeek() { currentWeek = addDays(currentWeek, -7); renderAttendance(); }
+function nextWeek() { currentWeek = addDays(currentWeek,  7); renderAttendance(); }
+
+// ══════════════════════════════════════════════
+// STAFF SETTINGS
+// ══════════════════════════════════════════════
+function renderStaff() {
+  const tb = document.getElementById("toolbar");
+  const ct = document.getElementById("content");
+
+  tb.innerHTML = `<button class="tbtn primary" onclick="openModal('staff')">+ Agregar persona</button>`;
+
+  const teams = [...new Set(staff.map(s => s.team))].sort();
+
+  let html = "";
+  teams.forEach(team => {
+    const members = staff.filter(s => s.team === team);
+    html += `<div style="margin-bottom:20px;background:var(--white);border:1px solid var(--border);padding:16px 20px">
+      <div style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px">${team}</div>
+      <div>
+        ${members.map(s => `<span class="staff-chip">
+          ${s.name}
+          <button onclick="deleteStaff('${s.id}')" title="Eliminar">✕</button>
+        </span>`).join("")}
+      </div>
+    </div>`;
+  });
+
+  if (!html) html = `<div class="empty"><div class="empty-icon">⚙️</div>Sin personas configuradas.</div>`;
+  ct.innerHTML = html;
+}
+
+function deleteStaff(id) {
+  if (!confirm("¿Eliminar persona del equipo?")) return;
+  staff = staff.filter(s => s.id !== id);
+  save(KEY.staff, staff);
+  render();
+}
+
+// ── SECTION TOGGLE ──────────────────────────────────────────
+function toggleSection(hdr) {
+  const wrap = hdr.closest(".section-wrap");
+  wrap.classList.toggle("collapsed");
+  const body = wrap.querySelector(".section-body");
+  if (body) body.style.display = wrap.classList.contains("collapsed") ? "none" : "";
+}
+
+// ── SIDE PANEL ──────────────────────────────────────────────
+function openPanel(type, id) {
+  panelId = id;
+  const overlay = document.getElementById("panelOverlay");
+  overlay.classList.add("open");
+
+  if (type === "candidate") {
+    const c = candidates.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById("panelName").textContent = c.name;
+    document.getElementById("panelSub").textContent = [c.position, c.city].filter(Boolean).join(" · ");
+    document.getElementById("panelFooter").style.display = "";
+    document.getElementById("updateInput").value = "";
+
+    const updates = c.updates || [];
+    document.getElementById("panelBody").innerHTML = `
+      <div class="panel-section">
+        <div class="panel-label">Status</div>
+        ${pill(c.status, CAND_STATUS)}
+      </div>
+      ${c.notes ? `<div class="panel-section">
+        <div class="panel-label">Notas</div>
+        <div class="panel-field">${c.notes}</div>
+      </div>` : ""}
+      <div class="panel-section">
+        <div class="panel-label">Actualizaciones (${updates.length})</div>
+        ${updates.length ? updates.slice().reverse().map(u => `
+          <div class="update-item">
+            <div class="update-meta">${new Date(u.at).toLocaleString("es-CO", {dateStyle:"medium", timeStyle:"short"})}</div>
+            <div class="update-text">${u.text}</div>
+          </div>`).join("") : '<div style="font-size:12px;color:var(--ink3)">Sin actualizaciones aún.</div>'}
+      </div>
+    `;
+  } else if (type === "project") {
+    const p = projects.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById("panelName").textContent = p.title;
+    document.getElementById("panelSub").textContent = p.section;
+    document.getElementById("panelFooter").style.display = "";
+    document.getElementById("updateInput").value = "";
+
+    const updates = p.updates || [];
+    document.getElementById("panelBody").innerHTML = `
+      <div class="panel-section" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <div class="panel-label">Owner</div>
+          <div style="font-size:12px">${p.owner||"—"}</div>
+        </div>
+        <div>
+          <div class="panel-label">Revisor</div>
+          <div style="font-size:12px">${p.reviewer||"—"}</div>
+        </div>
+        <div>
+          <div class="panel-label">Fecha límite</div>
+          <div style="font-size:12px">${fmtDate(p.dueDate)}</div>
+        </div>
+        <div>
+          <div class="panel-label">Status</div>
+          ${pill(p.status, PROJ_STATUS)}
+        </div>
+      </div>
+      ${p.description ? `<div class="panel-section">
+        <div class="panel-label">Descripción</div>
+        <div class="panel-field">${p.description}</div>
+      </div>` : ""}
+      <div class="panel-section">
+        <div class="panel-label">Actualizaciones (${updates.length})</div>
+        ${updates.length ? updates.slice().reverse().map(u => `
+          <div class="update-item">
+            <div class="update-meta">${new Date(u.at).toLocaleString("es-CO", {dateStyle:"medium", timeStyle:"short"})}</div>
+            <div class="update-text">${u.text}</div>
+          </div>`).join("") : '<div style="font-size:12px;color:var(--ink3)">Sin actualizaciones aún.</div>'}
+      </div>
+    `;
+  }
+
+  render(); // refresh row highlight
+}
+
+function closePanel() {
+  panelId = null;
+  document.getElementById("panelOverlay").classList.remove("open");
+  render();
+}
+
+function addUpdate() {
+  const text = document.getElementById("updateInput").value.trim();
+  if (!text || !panelId) return;
+
+  const isCand = candidates.find(x => x.id === panelId);
+  const isProj = projects.find(x => x.id === panelId);
+  const target = isCand || isProj;
+  if (!target) return;
+
+  if (!target.updates) target.updates = [];
+  target.updates.push({ text, at: new Date().toISOString() });
+
+  if (isCand) save(KEY.candidates, candidates);
+  if (isProj) save(KEY.projects, projects);
+
+  openPanel(isCand ? "candidate" : "project", panelId);
+}
+
+// ── MODAL ───────────────────────────────────────────────────
+function openModal(type, id) {
+  modalMode = { type, id };
+  const modal = document.getElementById("modal");
+  const body  = document.getElementById("modalBody");
+  const title = document.getElementById("modalTitle");
+
+  if (type === "candidate") {
+    const c = id ? candidates.find(x => x.id === id) : null;
+    title.textContent = c ? "Editar candidato" : "Nuevo candidato";
+    body.innerHTML = `
+      <div class="field-row"><label>Nombre completo</label>
+        <input id="fName" value="${c?.name||""}" placeholder="Nombre Apellido"></div>
+      <div class="field-cols">
+        <div class="field-row"><label>Cargo buscado</label>
+          <input id="fPosition" value="${c?.position||""}" placeholder="Wedding Logistics…"></div>
+        <div class="field-row"><label>Ciudad</label>
+          <input id="fCity" value="${c?.city||""}" placeholder="Medellín, Bogotá…"></div>
+      </div>
+      <div class="field-row"><label>Status</label>
+        <select id="fStatus">
+          ${Object.entries(CAND_STATUS).map(([k,v]) => `<option value="${k}" ${(c?.status||"open")===k?"selected":""}>${v.label}</option>`).join("")}
+        </select></div>
+      <div class="field-row"><label>Notas iniciales</label>
+        <textarea id="fNotes" rows="4" placeholder="Experiencia, referencias, contexto…">${c?.notes||""}</textarea></div>`;
+  } else if (type === "project") {
+    const p = id ? projects.find(x => x.id === id) : null;
+    title.textContent = p ? "Editar iniciativa" : "Nueva iniciativa";
+    const ownerOpts = staff.map(s => s.name);
+    body.innerHTML = `
+      <div class="field-row"><label>Título</label>
+        <input id="fTitle" value="${p?.title||""}" placeholder="Descripción de la iniciativa"></div>
+      <div class="field-cols">
+        <div class="field-row"><label>Sección</label>
+          <select id="fSection">
+            ${PROJ_SECTIONS.map(s => `<option ${(p?.section||"Planning")===s?"selected":""}>${s}</option>`).join("")}
+          </select></div>
+        <div class="field-row"><label>Status</label>
+          <select id="fPStatus">
+            ${Object.entries(PROJ_STATUS).map(([k,v]) => `<option value="${k}" ${(p?.status||"not_started")===k?"selected":""}>${v.label}</option>`).join("")}
+          </select></div>
+      </div>
+      <div class="field-cols">
+        <div class="field-row"><label>Owner</label>
+          <input id="fOwner" value="${p?.owner||""}" placeholder="Michel…" list="staff-list"></div>
+        <div class="field-row"><label>Revisor</label>
+          <input id="fReviewer" value="${p?.reviewer||""}" placeholder="Caro…" list="staff-list"></div>
+      </div>
+      <datalist id="staff-list">${staff.map(s=>`<option>${s.name}</option>`).join("")}</datalist>
+      <div class="field-row"><label>Fecha límite</label>
+        <input type="date" id="fDue" value="${p?.dueDate||""}"></div>
+      <div class="field-row"><label>Descripción</label>
+        <textarea id="fDesc" rows="3" placeholder="Contexto, objetivos…">${p?.description||""}</textarea></div>`;
+  } else if (type === "staff") {
+    title.textContent = "Agregar persona al equipo";
+    body.innerHTML = `
+      <div class="field-row"><label>Nombre</label>
+        <input id="fSName" placeholder="Nombre Apellido"></div>
+      <div class="field-row"><label>Equipo</label>
+        <input id="fSTeam" placeholder="Concierge, Finance, Operations…" list="team-list">
+        <datalist id="team-list">${[...new Set(staff.map(s=>s.team))].map(t=>`<option>${t}</option>`).join("")}</datalist></div>`;
+  }
+
+  modal.classList.add("open");
+}
+
+function closeModal() {
+  document.getElementById("modal").classList.remove("open");
+  modalMode = null;
+}
+
+function saveModal() {
+  const { type, id } = modalMode || {};
+  if (type === "candidate") {
+    const name     = document.getElementById("fName").value.trim();
+    const position = document.getElementById("fPosition").value.trim();
+    const city     = document.getElementById("fCity").value.trim();
+    const status   = document.getElementById("fStatus").value;
+    const notes    = document.getElementById("fNotes").value.trim();
+    if (!name) { alert("El nombre es obligatorio."); return; }
+    if (id) {
+      const c = candidates.find(x => x.id === id);
+      if (c) Object.assign(c, { name, position, city, status, notes });
+    } else {
+      candidates.push({ id: uid(), name, position, city, status, notes, updates: [], createdAt: new Date().toISOString() });
+    }
+    save(KEY.candidates, candidates);
+  } else if (type === "project") {
+    const title       = document.getElementById("fTitle").value.trim();
+    const section     = document.getElementById("fSection").value;
+    const status      = document.getElementById("fPStatus").value;
+    const owner       = document.getElementById("fOwner").value.trim();
+    const reviewer    = document.getElementById("fReviewer").value.trim();
+    const dueDate     = document.getElementById("fDue").value;
+    const description = document.getElementById("fDesc").value.trim();
+    if (!title) { alert("El título es obligatorio."); return; }
+    if (id) {
+      const p = projects.find(x => x.id === id);
+      if (p) Object.assign(p, { title, section, status, owner, reviewer, dueDate, description });
+    } else {
+      projects.push({ id: uid(), title, section, status, owner, reviewer, dueDate, description, updates: [], createdAt: new Date().toISOString() });
+    }
+    save(KEY.projects, projects);
+  } else if (type === "staff") {
+    const name = document.getElementById("fSName").value.trim();
+    const team = document.getElementById("fSTeam").value.trim();
+    if (!name) { alert("El nombre es obligatorio."); return; }
+    staff.push({ id: uid(), name, team: team || "Sin equipo" });
+    save(KEY.staff, staff);
+  }
+  closeModal();
+  render();
+}
+
+// ── INIT ────────────────────────────────────────────────────
+// Seed demo data if completely empty
+if (!candidates.length && !projects.length) {
+  candidates = [
+    { id:"c1", name:"Jhordan Caro",       position:"Wedding Logistics Medellín",   city:"Medellín",   status:"interview", notes:"", updates:[], createdAt:"2026-09-01T00:00:00Z" },
+    { id:"c2", name:"Marcela Rendón",     position:"Wedding Logistics Medellín",   city:"Medellín",   status:"interview", notes:"", updates:[], createdAt:"2026-09-01T00:00:00Z" },
+    { id:"c3", name:"Samuel Ortiz",       position:"Junior Web Developer",         city:"Bogotá",     status:"open",      notes:"", updates:[], createdAt:"2026-09-15T00:00:00Z" },
+    { id:"c4", name:"Gilberto Santamaría",position:"Junior Web Developer",         city:"Bogotá",     status:"open",      notes:"", updates:[{ text:"Revisó portafolio. Interesante background.", at:"2026-09-20T10:00:00Z" }], createdAt:"2026-09-15T00:00:00Z" },
+    { id:"c5", name:"Samantha Diaz",      position:"Wedding Logistics Medellín",   city:"Medellín",   status:"interview", notes:"Comunicadora Social - Project manager - 10 años en eventos. Kurao: agencia propia.", updates:[], createdAt:"2026-09-20T00:00:00Z" },
+    { id:"c6", name:"Oskalia Valencia",   position:"HR Assistant México",          city:"Ciudad de México", status:"open",  notes:"", updates:[], createdAt:"2026-09-25T00:00:00Z" },
+    { id:"c7", name:"Estefanía Delgado",  position:"HR Assistant México",          city:"Ciudad de México", status:"open",  notes:"", updates:[], createdAt:"2026-09-25T00:00:00Z" },
+  ];
+  projects = [
+    { id:"p1", title:"Compra de Tickets Alexandra - Medellín", section:"Planning", status:"not_started", owner:"Michel", reviewer:"Michel", dueDate:"2026-10-01", description:"", updates:[], createdAt:"2026-09-28T00:00:00Z" },
+    { id:"p2", title:"Reunión SST",                            section:"Planning", status:"not_started", owner:"Michel", reviewer:"Michel", dueDate:"2026-10-01", description:"", updates:[], createdAt:"2026-09-28T00:00:00Z" },
+    { id:"p3", title:"Capacitación - 20/10/2026 - 4Pm . Prevención de desórdenes alimentarios", section:"Planning", status:"not_started", owner:"Michel", reviewer:"Michel", dueDate:"2026-10-02", description:"", updates:[], createdAt:"2026-09-29T00:00:00Z" },
+    { id:"p4", title:"Two Travel News Septiembre 2026",        section:"Planning", status:"not_started", owner:"Michel", reviewer:"Michel", dueDate:"2026-10-02", description:"", updates:[], createdAt:"2026-09-29T00:00:00Z" },
+    { id:"p5", title:"Nómina 1 Octubre 2026",                 section:"Planning", status:"not_started", owner:"Michel", reviewer:"Michel", dueDate:"2026-10-09", description:"", updates:[], createdAt:"2026-09-30T00:00:00Z" },
+  ];
+  save(KEY.candidates, candidates);
+  save(KEY.projects, projects);
+}
+
+render();
+</script>
+</body>
+</html>
