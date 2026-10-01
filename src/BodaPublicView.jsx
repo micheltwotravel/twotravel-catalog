@@ -1,22 +1,46 @@
 import React, { useState, useEffect } from "react";
 import { fetchKickoffsFromSheet } from "./sheetServices";
 
-const R = {
-  dark:   "#1a0812",
-  mid:    "#7f1d3a",
-  accent: "#be123c",
-  light:  "#fff0f3",
-  cream:  "#fdf6f8",
-  gold:   "#c9a96e",
-  muted:  "#8b4a62",
-  text:   "#1a0812",
-  border: "#f0c0ce",
-  white:  "#ffffff",
+/* ── Venue floor-plan registry ─────────────────────────── */
+const VENUE_PLANS = {
+  "Casa de la Estrella": [
+    { label: "Planta Segundo Piso",  file: "/venues/casa-estrella-piso2.pdf" },
+    { label: "Layouts de Espacios",  file: "/venues/casa-estrella-layouts.pdf" },
+  ],
 };
 
-function parseDate(d) { if(!d) return null; const dt=new Date(typeof d==="string"&&d.length===10?d+"T12:00:00":d); return isNaN(dt)?null:dt; }
-function fmtDate(d) { const dt=parseDate(d); if(!dt) return d?String(d):""; return dt.toLocaleDateString("es-CO",{day:"numeric",month:"long",year:"numeric"}); }
-function daysUntil(d) { const dt=parseDate(d); if(!dt) return null; const t=new Date(); t.setHours(0,0,0,0); return Math.ceil((dt-t)/86400000); }
+/* ── Palette ────────────────────────────────────────────── */
+const T = {
+  bg:      "#FAF8F5",
+  ink:     "#1A1814",
+  ink2:    "#3D3A35",
+  muted:   "#8B8580",
+  gold:    "#9A7D52",
+  gold2:   "#C4A272",
+  gold3:   "#E8D5B7",
+  border:  "rgba(26,24,20,0.09)",
+  border2: "rgba(26,24,20,0.15)",
+  white:   "#FFFFFF",
+  rose:    "#7D2B45",
+};
+
+/* ── Helpers ─────────────────────────────────────────────── */
+function parseDate(d) {
+  if (!d) return null;
+  const dt = new Date(typeof d === "string" && d.length === 10 ? d + "T12:00:00" : d);
+  return isNaN(dt) ? null : dt;
+}
+function fmtDate(d) {
+  const dt = parseDate(d);
+  if (!dt) return d ? String(d) : "";
+  return dt.toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
+}
+function daysUntil(d) {
+  const dt = parseDate(d);
+  if (!dt) return null;
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  return Math.ceil((dt - t) / 86400000);
+}
 
 function parseBoda(k) {
   try {
@@ -24,54 +48,167 @@ function parseBoda(k) {
     if (meta.type !== "boda") return null;
     const notes = JSON.parse(k.internalNotes || "{}");
     return {
-      id:         k.id,
-      clienteName: String(k.guestName||"").replace(/^Boda:\s*/i,""),
-      weddingDate: meta.weddingDate||"",
-      venue:       meta.venue      ||"",
-      phase:       meta.phase      ||"Onboarding",
-      status:      meta.status     ||"Activa",
-      guestCount:  meta.guestCount ||"",
-      tasks:     notes.tasks     ||[],
-      schedule: JSON.parse(k.travifyText||"[]"),
+      id:          k.id,
+      clienteName: String(k.guestName || "").replace(/^Boda:\s*/i, ""),
+      weddingDate: meta.weddingDate || "",
+      venue:       meta.venue       || "",
+      phase:       meta.phase       || "Onboarding",
+      status:      meta.status      || "Activa",
+      guestCount:  meta.guestCount  || "",
+      tasks:       notes.tasks      || [],
+      schedule:    JSON.parse(k.travifyText || "[]"),
     };
   } catch { return null; }
 }
 
-const TASK_PHASES = ["Onboarding","Planning","Pre-Wedding","Wedding Day","Post-Wedding"];
-const FASE_COLORS = {
-  "Onboarding":  {bg:"#eff6ff",color:"#1e40af"},
-  "Planning":    {bg:"#f5f3ff",color:"#6d28d9"},
-  "Pre-Wedding": {bg:"#fffbeb",color:"#b45309"},
-  "Wedding Day": {bg:"#fff0f3",color:"#be123c"},
-  "Post-Wedding":{bg:"#f0fdf4",color:"#166534"},
+const TASK_PHASES = ["Onboarding", "Planning", "Pre-Wedding", "Wedding Day", "Post-Wedding"];
+
+const PHASE_META = {
+  "Onboarding":  { color: "#4A6FA5", dot: "#4A6FA5" },
+  "Planning":    { color: "#7B5EA7", dot: "#7B5EA7" },
+  "Pre-Wedding": { color: "#B08D57", dot: "#B08D57" },
+  "Wedding Day": { color: "#7D2B45", dot: "#7D2B45" },
+  "Post-Wedding":{ color: "#3D7A52", dot: "#3D7A52" },
 };
 
-function ProgressRing({ pct }) {
-  const r = 44, c = 2*Math.PI*r;
-  const dash = (pct/100)*c;
+/* ── Thin gold rule ─────────────────────────────────────── */
+function GoldRule({ width = 120 }) {
   return (
-    <svg width={110} height={110} viewBox="0 0 110 110">
-      <circle cx={55} cy={55} r={r} fill="none" stroke={R.border} strokeWidth={8} />
-      <circle cx={55} cy={55} r={r} fill="none" stroke={R.accent} strokeWidth={8}
-        strokeDasharray={`${dash} ${c}`} strokeLinecap="round"
-        transform="rotate(-90 55 55)" style={{transition:"stroke-dasharray .6s ease"}} />
-      <text x={55} y={55} textAnchor="middle" dominantBaseline="middle"
-        style={{fontSize:20,fontWeight:700,fill:R.accent,fontFamily:"'Cormorant Garamond',serif"}}>
-        {pct}%
-      </text>
-    </svg>
+    <div style={{ margin: "0 auto", width, height: 1,
+      background: `linear-gradient(90deg, transparent, ${T.gold}, transparent)` }} />
   );
 }
 
+/* ── Section heading ────────────────────────────────────── */
+function SectionHead({ children }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <p style={{ margin: "0 0 10px", fontSize: 9, letterSpacing: ".18em",
+        textTransform: "uppercase", color: T.gold, fontFamily: "'Jost',sans-serif" }}>
+        {children}
+      </p>
+      <div style={{ height: 1, background: T.border }} />
+    </div>
+  );
+}
+
+/* ── Card wrapper ───────────────────────────────────────── */
+function Card({ children, style }) {
+  return (
+    <div style={{
+      background: T.white,
+      border: `1px solid ${T.border}`,
+      padding: "28px 28px",
+      marginBottom: 16,
+      ...style,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+/* ── Progress bar ───────────────────────────────────────── */
+function ProgressBar({ pct }) {
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
+        <span style={{ fontSize: 11, color: T.muted, letterSpacing: ".06em" }}>PROGRESO</span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: T.gold }}>{pct}%</span>
+      </div>
+      <div style={{ height: 2, background: T.gold3, position: "relative" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, height: "100%",
+          width: `${pct}%`, background: T.gold, transition: "width .8s ease" }} />
+      </div>
+    </div>
+  );
+}
+
+/* ── Task item ──────────────────────────────────────────── */
+function TaskItem({ task, done }) {
+  const pm = PHASE_META[task.phase] || { dot: T.muted };
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 14,
+      padding: "13px 0", borderBottom: `1px solid ${T.border}` }}>
+      <div style={{
+        width: 16, height: 16, border: done ? "none" : `1.5px solid ${T.border2}`,
+        background: done ? T.gold3 : T.white,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0, marginTop: 2,
+      }}>
+        {done && <span style={{ fontSize: 9, color: T.gold }}>✓</span>}
+      </div>
+      <div style={{ flex: 1 }}>
+        <p style={{ margin: 0, fontSize: 13, color: done ? T.muted : T.ink,
+          fontWeight: 400, textDecoration: done ? "line-through" : "none",
+          fontFamily: "'Jost',sans-serif" }}>
+          {task.taskName}
+        </p>
+        {task.dueDate && !done && (
+          <p style={{ margin: "3px 0 0", fontSize: 10, color: T.muted, letterSpacing: ".04em" }}>
+            {fmtDate(task.dueDate)}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Venue floor plans ──────────────────────────────────── */
+function VenuePlans({ venue }) {
+  const plans = VENUE_PLANS[venue];
+  if (!plans) return null;
+  return (
+    <Card>
+      <SectionHead>Planos del Espacio</SectionHead>
+      <p style={{ fontSize: 12, color: T.muted, marginBottom: 18, lineHeight: 1.6 }}>
+        Planos arquitectónicos de <strong style={{ color: T.ink }}>{venue}</strong> para
+        planificar la disposición y logística de su evento.
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {plans.map((p, i) => (
+          <a key={i} href={p.file} target="_blank" rel="noopener noreferrer"
+            style={{
+              display: "flex", alignItems: "center", gap: 14,
+              padding: "14px 18px", border: `1px solid ${T.border2}`,
+              textDecoration: "none", background: T.bg,
+              transition: "border-color .15s, background .15s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = T.gold; e.currentTarget.style.background = T.white; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = T.border2; e.currentTarget.style.background = T.bg; }}
+          >
+            <svg width={18} height={18} viewBox="0 0 24 24" fill="none"
+              stroke={T.gold} strokeWidth={1.5} strokeLinecap="round">
+              <rect x={3} y={3} width={18} height={18} rx={0} />
+              <line x1={9} y1={3} x2={9} y2={21} />
+              <line x1={3} y1={9} x2={21} y2={9} />
+              <line x1={3} y1={15} x2={21} y2={15} />
+            </svg>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontSize: 13, color: T.ink, fontFamily: "'Jost',sans-serif" }}>
+                {p.label}
+              </p>
+              <p style={{ margin: "2px 0 0", fontSize: 10, color: T.muted, letterSpacing: ".06em", textTransform: "uppercase" }}>
+                Ver plano →
+              </p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+/* ── Main component ─────────────────────────────────────── */
 export default function BodaPublicView() {
   const params = new URLSearchParams(window.location.search);
-  const id     = params.get("id");
-  const [boda, setBoda]   = useState(null);
+  const id = params.get("id");
+  const [boda, setBoda]     = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
+  const [showDone, setShowDone] = useState(false);
 
   useEffect(() => {
-    if (!id) { setError("Link inválido — falta el ID de la boda."); setLoading(false); return; }
+    if (!id) { setError("Link inválido — falta el ID."); setLoading(false); return; }
     fetchKickoffsFromSheet({ forceRefresh: false })
       .then(all => {
         const k = all.find(x => String(x.id) === String(id));
@@ -85,157 +222,205 @@ export default function BodaPublicView() {
   }, [id]);
 
   if (loading) return (
-    <div style={{minHeight:"100vh",background:R.light,display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <div style={{textAlign:"center"}}>
-        <div style={{fontSize:32,marginBottom:12}}>💍</div>
-        <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,color:R.mid}}>Cargando...</p>
+    <div style={{ minHeight: "100vh", background: T.bg, display: "flex",
+      alignItems: "center", justifyContent: "center" }}>
+      <div style={{ textAlign: "center" }}>
+        <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20,
+          color: T.gold, letterSpacing: ".12em" }}>Two Lovers</p>
+        <p style={{ fontSize: 11, color: T.muted, letterSpacing: ".14em",
+          textTransform: "uppercase", marginTop: 8 }}>Cargando preparativos...</p>
       </div>
     </div>
   );
 
   if (error) return (
-    <div style={{minHeight:"100vh",background:R.light,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
-      <div style={{textAlign:"center",maxWidth:400}}>
-        <div style={{fontSize:32,marginBottom:12}}>💔</div>
-        <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,color:R.mid,marginBottom:8}}>{error}</p>
-        <p style={{fontSize:13,color:R.muted}}>Contacta a tu coordinadora de Two Lovers.</p>
+    <div style={{ minHeight: "100vh", background: T.bg, display: "flex",
+      alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ textAlign: "center", maxWidth: 400 }}>
+        <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22,
+          color: T.ink, marginBottom: 10 }}>{error}</p>
+        <p style={{ fontSize: 12, color: T.muted }}>Contacta a tu coordinadora de Two Lovers.</p>
       </div>
     </div>
   );
 
-  const tasks     = boda.tasks || [];
-  const done      = tasks.filter(t => ["Terminado","Cancelado"].includes(t.status));
-  const pct       = tasks.length ? Math.round((done.length / tasks.length) * 100) : 0;
-  const days      = daysUntil(boda.weddingDate);
-  const pending   = tasks.filter(t => !["Terminado","Cancelado"].includes(t.status));
-  const schedule  = boda.schedule || [];
-  const phaseColor = FASE_COLORS[boda.phase] || {bg:"#f5f5f4",color:"#57534e"};
+  const tasks    = boda.tasks || [];
+  const done     = tasks.filter(t => ["Terminado", "Cancelado"].includes(t.status));
+  const pending  = tasks.filter(t => !["Terminado", "Cancelado"].includes(t.status));
+  const pct      = tasks.length ? Math.round((done.length / tasks.length) * 100) : 0;
+  const days     = daysUntil(boda.weddingDate);
+  const schedule = boda.schedule || [];
+  const pm       = PHASE_META[boda.phase] || { color: T.muted };
 
   return (
-    <div style={{minHeight:"100vh",background:R.cream,fontFamily:"'Jost',sans-serif"}}>
-      {/* Header */}
-      <div style={{background:R.dark,padding:"32px 24px 28px",textAlign:"center"}}>
-        <p style={{fontSize:11,letterSpacing:".18em",textTransform:"uppercase",color:R.gold,margin:"0 0 10px"}}>Two Lovers · Bodas</p>
-        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:34,fontWeight:500,color:R.white,margin:"0 0 8px",letterSpacing:".02em"}}>{boda.clienteName}</h1>
+    <div style={{ minHeight: "100vh", background: T.bg,
+      fontFamily: "'Jost',sans-serif", fontWeight: 300 }}>
+
+      {/* ── Hero header ── */}
+      <div style={{ background: T.ink, padding: "48px 24px 44px", textAlign: "center" }}>
+        <p style={{ fontSize: 9, letterSpacing: ".22em", textTransform: "uppercase",
+          color: T.gold, margin: "0 0 20px", fontFamily: "'Jost',sans-serif" }}>
+          Two Lovers · Bodas de Destino
+        </p>
+
+        <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "clamp(32px,8vw,54px)",
+          fontWeight: 400, color: T.white, margin: "0 0 6px", letterSpacing: ".03em",
+          lineHeight: 1.1 }}>
+          {boda.clienteName}
+        </h1>
+
         {boda.weddingDate && (
-          <p style={{fontSize:14,color:"rgba(255,255,255,.7)",margin:0}}>
-            💍 {fmtDate(boda.weddingDate)}
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,.55)", margin: "14px 0 0",
+            letterSpacing: ".06em" }}>
+            {fmtDate(boda.weddingDate)}
             {days !== null && (
-              <span style={{marginLeft:10,fontWeight:600,color:days<0?"rgba(255,255,255,.4)":days<=30?"#fca5a5":"rgba(255,255,255,.8)"}}>
-                {days<0 ? `(hace ${Math.abs(days)} días)` : days===0 ? "(¡hoy!)" : `(faltan ${days} días)`}
+              <span style={{ marginLeft: 12, color: days < 0 ? "rgba(255,255,255,.3)"
+                : days <= 30 ? "#f9a8a8" : T.gold2, fontWeight: 500 }}>
+                {days < 0 ? `· ya pasó (hace ${Math.abs(days)} días)`
+                  : days === 0 ? "· ¡Es hoy!" : `· ${days} días`}
               </span>
             )}
           </p>
         )}
-        <div style={{height:2,background:`linear-gradient(90deg,transparent,${R.gold},transparent)`,margin:"20px auto 0",maxWidth:260}} />
-      </div>
 
-      <div style={{maxWidth:600,margin:"0 auto",padding:"28px 20px 60px"}}>
-
-        {/* Info chips */}
-        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:24,justifyContent:"center"}}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 10,
+          flexWrap: "wrap", marginTop: 22 }}>
           {boda.venue && (
-            <span style={{fontSize:13,color:R.mid,background:R.white,border:`1px solid ${R.border}`,borderRadius:99,padding:"5px 14px"}}>
-              📍 {boda.venue}
+            <span style={{ fontSize: 11, letterSpacing: ".08em", color: "rgba(255,255,255,.65)",
+              padding: "5px 14px", border: "1px solid rgba(255,255,255,.15)" }}>
+              {boda.venue}
             </span>
           )}
           {boda.guestCount && (
-            <span style={{fontSize:13,color:R.mid,background:R.white,border:`1px solid ${R.border}`,borderRadius:99,padding:"5px 14px"}}>
-              👥 {boda.guestCount} invitados
+            <span style={{ fontSize: 11, letterSpacing: ".08em", color: "rgba(255,255,255,.65)",
+              padding: "5px 14px", border: "1px solid rgba(255,255,255,.15)" }}>
+              {boda.guestCount} invitados
             </span>
           )}
-          <span style={{fontSize:13,fontWeight:600,padding:"5px 14px",borderRadius:99,background:phaseColor.bg,color:phaseColor.color}}>
+          <span style={{ fontSize: 11, letterSpacing: ".08em", padding: "5px 14px",
+            border: `1px solid ${pm.color}`, color: pm.color }}>
             {boda.phase}
           </span>
         </div>
 
+        <div style={{ marginTop: 32 }}>
+          <GoldRule width={180} />
+        </div>
+      </div>
+
+      {/* ── Content ── */}
+      <div style={{ maxWidth: 640, margin: "0 auto", padding: "36px 20px 80px" }}>
+
         {/* Progress */}
         {tasks.length > 0 && (
-          <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:20,padding:"28px 24px",marginBottom:20,textAlign:"center"}}>
-            <p style={{fontSize:11,letterSpacing:".1em",textTransform:"uppercase",color:R.muted,margin:"0 0 16px"}}>Progreso de preparativos</p>
-            <ProgressRing pct={pct} />
-            <p style={{margin:"14px 0 0",fontSize:14,color:R.text2}}>
-              <strong style={{color:R.accent}}>{done.length}</strong> de <strong>{tasks.length}</strong> tareas completadas
-            </p>
-          </div>
+          <Card>
+            <SectionHead>Estado de preparativos</SectionHead>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 32, fontFamily: "'Cormorant Garamond',serif",
+                  fontWeight: 400, color: T.ink }}>
+                  {done.length}<span style={{ fontSize: 16, color: T.muted }}>/{tasks.length}</span>
+                </p>
+                <p style={{ margin: "4px 0 0", fontSize: 11, color: T.muted,
+                  letterSpacing: ".08em", textTransform: "uppercase" }}>
+                  tareas completadas
+                </p>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <p style={{ margin: 0, fontSize: 32, fontFamily: "'Cormorant Garamond',serif",
+                  fontWeight: 400, color: T.gold }}>
+                  {pending.length}
+                </p>
+                <p style={{ margin: "4px 0 0", fontSize: 11, color: T.muted,
+                  letterSpacing: ".08em", textTransform: "uppercase" }}>
+                  pendientes
+                </p>
+              </div>
+            </div>
+            <ProgressBar pct={pct} />
+          </Card>
         )}
 
         {/* Pending tasks by phase */}
         {pending.length > 0 && (
-          <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:20,overflow:"hidden",marginBottom:20}}>
-            <div style={{padding:"16px 20px",borderBottom:`1px solid ${R.border}`}}>
-              <p style={{margin:0,fontSize:13,fontWeight:600,color:R.text}}>Tareas en proceso</p>
-              <p style={{margin:"2px 0 0",fontSize:12,color:R.muted}}>{pending.length} pendiente{pending.length!==1?"s":""}</p>
-            </div>
+          <Card>
+            <SectionHead>Tareas en proceso</SectionHead>
             {TASK_PHASES.map(ph => {
-              const group = pending.filter(t => (t.phase||"General") === ph || (ph==="General"&&!(TASK_PHASES.includes(t.phase))));
               const inPhase = pending.filter(t => t.phase === ph);
               if (!inPhase.length) return null;
-              const fc = FASE_COLORS[ph]||{bg:"#f5f5f4",color:"#57534e"};
+              const phm = PHASE_META[ph] || { color: T.muted };
               return (
-                <div key={ph}>
-                  <div style={{padding:"10px 20px",background:fc.bg,borderBottom:`1px solid ${R.border}`}}>
-                    <span style={{fontSize:11,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",color:fc.color}}>{ph}</span>
-                  </div>
-                  {inPhase.map(t => (
-                    <div key={t.id} style={{display:"flex",alignItems:"flex-start",gap:12,padding:"12px 20px",borderBottom:`1px solid ${R.light}`}}>
-                      <div style={{width:18,height:18,borderRadius:5,border:`2px solid ${R.border}`,background:R.white,flexShrink:0,marginTop:2}} />
-                      <div>
-                        <p style={{margin:0,fontSize:13,color:R.text,fontWeight:500}}>{t.taskName}</p>
-                        {t.dueDate && <p style={{margin:"2px 0 0",fontSize:11,color:R.muted}}>Fecha: {fmtDate(t.dueDate)}</p>}
-                      </div>
-                    </div>
-                  ))}
+                <div key={ph} style={{ marginBottom: 20 }}>
+                  <p style={{ margin: "0 0 2px", fontSize: 9, letterSpacing: ".14em",
+                    textTransform: "uppercase", color: phm.color, fontWeight: 600 }}>
+                    {ph}
+                  </p>
+                  {inPhase.map(t => <TaskItem key={t.id} task={t} done={false} />)}
                 </div>
               );
             })}
-          </div>
+          </Card>
         )}
 
-        {/* Completed tasks */}
+        {/* Completed tasks (collapsible) */}
         {done.length > 0 && (
-          <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:20,overflow:"hidden",marginBottom:20}}>
-            <div style={{padding:"16px 20px",borderBottom:`1px solid ${R.border}`}}>
-              <p style={{margin:0,fontSize:13,fontWeight:600,color:"#166534"}}>Completadas ✓</p>
-              <p style={{margin:"2px 0 0",fontSize:12,color:R.muted}}>{done.length} tarea{done.length!==1?"s":""}</p>
+          <Card>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+              marginBottom: showDone ? 16 : 0 }}>
+              <SectionHead>Completadas · {done.length}</SectionHead>
+              <button onClick={() => setShowDone(s => !s)}
+                style={{ background: "none", border: `1px solid ${T.border2}`, cursor: "pointer",
+                  fontSize: 10, letterSpacing: ".08em", textTransform: "uppercase",
+                  color: T.muted, padding: "4px 12px", fontFamily: "'Jost',sans-serif",
+                  marginBottom: 20 }}>
+                {showDone ? "Ocultar" : "Ver"}
+              </button>
             </div>
-            {done.map(t => (
-              <div key={t.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 20px",borderBottom:`1px solid ${R.light}`}}>
-                <div style={{width:18,height:18,borderRadius:5,background:"#dcfce7",border:"2px solid #86efac",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <span style={{fontSize:10,color:"#166534",lineHeight:1}}>✓</span>
-                </div>
-                <span style={{fontSize:13,color:R.muted,textDecoration:"line-through"}}>{t.taskName}</span>
-              </div>
-            ))}
-          </div>
+            {showDone && done.map(t => <TaskItem key={t.id} task={t} done={true} />)}
+          </Card>
         )}
 
         {/* Minuto a Minuto */}
         {schedule.length > 0 && (
-          <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:20,overflow:"hidden",marginBottom:20}}>
-            <div style={{padding:"16px 20px",borderBottom:`1px solid ${R.border}`}}>
-              <p style={{margin:0,fontSize:13,fontWeight:600,color:R.text}}>Minuto a Minuto</p>
-              <p style={{margin:"2px 0 0",fontSize:12,color:R.muted}}>Programa del día</p>
-            </div>
-            <div style={{padding:"8px 0"}}>
-              {schedule.map((ev,i) => (
-                <div key={i} style={{display:"flex",gap:16,padding:"10px 20px",borderBottom:i<schedule.length-1?`1px solid ${R.light}`:"none"}}>
-                  <span style={{fontFamily:"'Jost',sans-serif",fontWeight:600,fontSize:13,color:R.accent,minWidth:48,flexShrink:0}}>{ev.time||"--:--"}</span>
-                  <div>
-                    <p style={{margin:0,fontSize:13,color:R.text,fontWeight:500}}>{ev.event||ev.title||""}</p>
-                    {ev.notes&&<p style={{margin:"2px 0 0",fontSize:12,color:R.muted}}>{ev.notes}</p>}
-                  </div>
+          <Card>
+            <SectionHead>Programa del Día</SectionHead>
+            <div style={{ position: "relative", paddingLeft: 20 }}>
+              <div style={{ position: "absolute", top: 0, left: 7, bottom: 0,
+                width: 1, background: T.border }} />
+              {schedule.map((ev, i) => (
+                <div key={i} style={{ position: "relative", paddingBottom: 20 }}>
+                  <div style={{ position: "absolute", left: -20, top: 4, width: 8, height: 8,
+                    borderRadius: "50%", background: T.gold, border: `2px solid ${T.bg}` }} />
+                  <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: T.gold,
+                    letterSpacing: ".08em", fontFamily: "'Jost',sans-serif" }}>
+                    {ev.time || "--:--"}
+                  </p>
+                  <p style={{ margin: "3px 0 0", fontSize: 13, color: T.ink }}>
+                    {ev.event || ev.title || ""}
+                  </p>
+                  {ev.notes && (
+                    <p style={{ margin: "3px 0 0", fontSize: 11, color: T.muted }}>{ev.notes}</p>
+                  )}
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         )}
 
+        {/* Venue floor plans */}
+        <VenuePlans venue={boda.venue} />
+
         {/* Footer */}
-        <div style={{textAlign:"center",marginTop:32}}>
-          <div style={{height:2,background:`linear-gradient(90deg,transparent,${R.gold},transparent)`,maxWidth:160,margin:"0 auto 20px"}} />
-          <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:16,color:R.mid,margin:0}}>Two Lovers · Bodas</p>
-          <p style={{fontSize:12,color:R.muted,margin:"4px 0 0"}}>Coordinación de bodas íntimas y destinos especiales</p>
+        <div style={{ textAlign: "center", marginTop: 48 }}>
+          <GoldRule width={120} />
+          <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, color: T.ink,
+            margin: "20px 0 4px", letterSpacing: ".06em" }}>
+            Two Lovers
+          </p>
+          <p style={{ fontSize: 10, color: T.muted, letterSpacing: ".14em",
+            textTransform: "uppercase", margin: 0 }}>
+            Bodas de destino · Cartagena · Colombia
+          </p>
         </div>
       </div>
     </div>
