@@ -177,6 +177,7 @@ button,input,select,textarea{font-family:'Jost',sans-serif}
   <button class="tab active" onclick="switchTab('hiring')">👥 Hiring</button>
   <button class="tab" onclick="switchTab('projects')">📋 Proyectos</button>
   <button class="tab" onclick="switchTab('attendance')">📅 Asistencia</button>
+  <button class="tab" onclick="switchTab('cultura')">🌟 Cultura</button>
   <button class="tab" onclick="switchTab('staff')">⚙️ Equipo</button>
 </div>
 
@@ -223,7 +224,7 @@ button,input,select,textarea{font-family:'Jost',sans-serif}
 
 <script>
 // ── DATA ──────────────────────────────────────────────────
-const KEY = { candidates: "hr_candidates", projects: "hr_projects", attendance: "hr_attendance", staff: "hr_staff" };
+const KEY = { candidates: "hr_candidates", projects: "hr_projects", attendance: "hr_attendance", staff: "hr_staff", cultura: "hr_cultura" };
 
 function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
@@ -235,6 +236,9 @@ let candidates = load(KEY.candidates);
 let projects   = load(KEY.projects);
 let attendance = load(KEY.attendance); // [{ personId, date, type, status }]
 let staff      = load(KEY.staff);
+let cultura    = load(KEY.cultura) || { empMonth: null, gallery: [], posts: [] };
+// ensure estructura
+if (!cultura.empMonth && !cultura.gallery) cultura = { empMonth: null, gallery: [], posts: [] };
 
 // Default staff if empty
 if (!staff.length) {
@@ -321,7 +325,7 @@ function pill(status, map, onclick) {
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll(".tab").forEach((t,i) => {
-    t.classList.toggle("active", ["hiring","projects","attendance","staff"][i] === tab);
+    t.classList.toggle("active", ["hiring","projects","attendance","cultura","staff"][i] === tab);
   });
   render();
 }
@@ -331,6 +335,7 @@ function render() {
   if (currentTab === "hiring")     renderHiring();
   else if (currentTab === "projects") renderProjects();
   else if (currentTab === "attendance") renderAttendance();
+  else if (currentTab === "cultura") renderCultura();
   else if (currentTab === "staff") renderStaff();
 }
 
@@ -647,6 +652,98 @@ function prevWeek() { currentWeek = addDays(currentWeek, -7); renderAttendance()
 function nextWeek() { currentWeek = addDays(currentWeek,  7); renderAttendance(); }
 
 // ══════════════════════════════════════════════
+// CULTURA
+// ══════════════════════════════════════════════
+function saveCultura() { save(KEY.cultura, cultura); }
+
+function renderCultura() {
+  const tb = document.getElementById("toolbar");
+  const ct = document.getElementById("content");
+
+  tb.innerHTML = `
+    <button class="tbtn primary" onclick="openModal('cultura_post')">+ Publicar novedad</button>
+    <button class="tbtn" onclick="openModal('cultura_emp')">🌟 Empleado del mes</button>
+    <button class="tbtn" onclick="openModal('cultura_img')">🖼 Agregar imagen</button>`;
+
+  const em = cultura.empMonth;
+  const gallery = cultura.gallery || [];
+  const posts = cultura.posts || [];
+
+  // Build hero: employee of month + gallery
+  let html = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">`;
+
+  // Employee of Month
+  html += `<div style="background:var(--white);border:1px solid var(--border);padding:20px;display:flex;flex-direction:column;gap:10px">
+    <div style="font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)">🌟 Empleado del mes</div>
+    ${em ? `
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:56px;height:56px;border-radius:50%;overflow:hidden;background:var(--sand2);flex-shrink:0;display:flex;align-items:center;justify-content:center">
+          ${em.photo ? `<img src="${em.photo}" style="width:100%;height:100%;object-fit:cover">` : `<span style="font-size:22px">${(em.name||"?").charAt(0).toUpperCase()}</span>`}
+        </div>
+        <div>
+          <div style="font-size:16px;font-weight:400">${em.name}</div>
+          <div style="font-size:11px;color:var(--ink3)">${em.role||""}</div>
+          <div style="font-size:12px;color:var(--gold2);margin-top:2px">${em.month||""}</div>
+        </div>
+        <button class="icon-btn" style="margin-left:auto;align-self:flex-start" onclick="openModal('cultura_emp')">✏️</button>
+      </div>
+      ${em.message ? `<div style="font-size:12px;color:var(--ink2);line-height:1.6;border-left:2px solid var(--gold3);padding-left:10px;font-style:italic">${em.message}</div>` : ""}
+    ` : `<div style="text-align:center;padding:20px 0;color:var(--ink3);font-size:12px">Sin empleado del mes aún.<br><button class="tbtn" style="margin-top:8px" onclick="openModal('cultura_emp')">Asignar</button></div>`}
+  </div>`;
+
+  // Gallery
+  html += `<div style="background:var(--white);border:1px solid var(--border);padding:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)">📸 Galería</div>
+    </div>
+    ${gallery.length ? `
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px">
+        ${gallery.map((g,i) => `<div style="position:relative;aspect-ratio:1;overflow:hidden;background:var(--sand2)">
+          <img src="${g.url}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
+          ${g.caption ? `<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.5);color:#fff;font-size:9px;padding:3px 5px;line-height:1.2">${g.caption}</div>` : ""}
+          <button onclick="deleteGalleryImg(${i})" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.4);border:none;color:#fff;cursor:pointer;font-size:10px;padding:1px 4px;line-height:1">✕</button>
+        </div>`).join("")}
+      </div>
+    ` : `<div style="text-align:center;padding:20px 0;color:var(--ink3);font-size:12px">Sin imágenes aún.<br><button class="tbtn" style="margin-top:8px" onclick="openModal('cultura_img')">Agregar imagen</button></div>`}
+  </div>`;
+
+  html += `</div>`;
+
+  // Posts / novedades
+  html += `<div style="background:var(--white);border:1px solid var(--border);padding:20px">
+    <div style="font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px">📢 Novedades Two Travel</div>
+    ${posts.length ? posts.slice().reverse().map((p,ri) => {
+      const i = posts.length - 1 - ri;
+      return `<div style="border-bottom:1px solid var(--border);padding:14px 0;display:flex;gap:12px;align-items:flex-start">
+        <div style="font-size:20px;flex-shrink:0">${p.emoji||"📌"}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:400">${p.title}</div>
+          ${p.body ? `<div style="font-size:12px;color:var(--ink2);margin-top:4px;line-height:1.5">${p.body}</div>` : ""}
+          <div style="font-size:10px;color:var(--ink3);margin-top:6px">${new Date(p.at).toLocaleDateString("es-CO",{day:"numeric",month:"long",year:"numeric"})}</div>
+        </div>
+        <button class="icon-btn" onclick="deletePost(${i})">🗑</button>
+      </div>`;
+    }).join("") : `<div style="text-align:center;padding:28px 0;color:var(--ink3);font-size:12px">Sin novedades publicadas.</div>`}
+  </div>`;
+
+  ct.innerHTML = html;
+}
+
+function deleteGalleryImg(i) {
+  if (!confirm("¿Eliminar imagen?")) return;
+  cultura.gallery.splice(i, 1);
+  saveCultura();
+  renderCultura();
+}
+
+function deletePost(i) {
+  if (!confirm("¿Eliminar novedad?")) return;
+  cultura.posts.splice(i, 1);
+  saveCultura();
+  renderCultura();
+}
+
+// ══════════════════════════════════════════════
 // STAFF SETTINGS
 // ══════════════════════════════════════════════
 function renderStaff() {
@@ -856,6 +953,42 @@ function openModal(type, id) {
       <div class="field-row"><label>Equipo</label>
         <input id="fSTeam" placeholder="Concierge, Finance, Operations…" list="team-list">
         <datalist id="team-list">${[...new Set(staff.map(s=>s.team))].map(t=>`<option>${t}</option>`).join("")}</datalist></div>`;
+  } else if (type === "cultura_emp") {
+    const em = cultura.empMonth || {};
+    title.textContent = "Empleado del mes";
+    body.innerHTML = `
+      <div class="field-row"><label>Nombre</label>
+        <input id="fEName" value="${em.name||""}" placeholder="Alia, Nataly…" list="staff-list2">
+        <datalist id="staff-list2">${staff.map(s=>`<option>${s.name}</option>`).join("")}</datalist></div>
+      <div class="field-cols">
+        <div class="field-row"><label>Cargo / Equipo</label>
+          <input id="fERole" value="${em.role||""}" placeholder="Concierge"></div>
+        <div class="field-row"><label>Mes</label>
+          <input id="fEMonth" value="${em.month||""}" placeholder="Septiembre 2026"></div>
+      </div>
+      <div class="field-row"><label>URL de foto (opcional)</label>
+        <input id="fEPhoto" value="${em.photo||""}" placeholder="https://…"></div>
+      <div class="field-row"><label>Mensaje de reconocimiento</label>
+        <textarea id="fEMsg" rows="3" placeholder="Descripción de sus logros…">${em.message||""}</textarea></div>`;
+  } else if (type === "cultura_post") {
+    title.textContent = "Nueva novedad";
+    body.innerHTML = `
+      <div class="field-cols">
+        <div class="field-row"><label>Emoji</label>
+          <input id="fPEmoji" value="📌" placeholder="📌 🎉 🏆 📣"></div>
+        <div class="field-row" style="grid-column:span 1"><label>&nbsp;</label></div>
+      </div>
+      <div class="field-row"><label>Título</label>
+        <input id="fPTitle" placeholder="Bienvenida a…, Actualización de…"></div>
+      <div class="field-row"><label>Contenido</label>
+        <textarea id="fPBody" rows="4" placeholder="Detalles de la novedad…"></textarea></div>`;
+  } else if (type === "cultura_img") {
+    title.textContent = "Agregar imagen a galería";
+    body.innerHTML = `
+      <div class="field-row"><label>URL de la imagen</label>
+        <input id="fIUrl" placeholder="https://… (link directo a la imagen)"></div>
+      <div class="field-row"><label>Caption (opcional)</label>
+        <input id="fICaption" placeholder="Cartagena · Diciembre 2026"></div>`;
   }
 
   modal.classList.add("open");
@@ -904,6 +1037,30 @@ function saveModal() {
     if (!name) { alert("El nombre es obligatorio."); return; }
     staff.push({ id: uid(), name, team: team || "Sin equipo" });
     save(KEY.staff, staff);
+  } else if (type === "cultura_emp") {
+    const name    = document.getElementById("fEName").value.trim();
+    const role    = document.getElementById("fERole").value.trim();
+    const month   = document.getElementById("fEMonth").value.trim();
+    const photo   = document.getElementById("fEPhoto").value.trim();
+    const message = document.getElementById("fEMsg").value.trim();
+    if (!name) { alert("El nombre es obligatorio."); return; }
+    cultura.empMonth = { name, role, month, photo, message };
+    saveCultura();
+  } else if (type === "cultura_post") {
+    const emoji = document.getElementById("fPEmoji").value.trim() || "📌";
+    const title = document.getElementById("fPTitle").value.trim();
+    const body  = document.getElementById("fPBody").value.trim();
+    if (!title) { alert("El título es obligatorio."); return; }
+    if (!cultura.posts) cultura.posts = [];
+    cultura.posts.push({ emoji, title, body, at: new Date().toISOString() });
+    saveCultura();
+  } else if (type === "cultura_img") {
+    const url     = document.getElementById("fIUrl").value.trim();
+    const caption = document.getElementById("fICaption").value.trim();
+    if (!url) { alert("La URL es obligatoria."); return; }
+    if (!cultura.gallery) cultura.gallery = [];
+    cultura.gallery.push({ url, caption });
+    saveCultura();
   }
   closeModal();
   render();
