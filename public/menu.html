@@ -102,8 +102,8 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 .scroll-cue svg{opacity:.35}
 
 /* ── PRÓXIMAS ACTIVIDADES ── */
-.pa-wrap{background:var(--bg);padding:32px 40px 0;max-width:1140px;margin:0 auto;display:none}
-.pa-wrap.visible{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+.pa-wrap{background:var(--bg);padding:32px 40px 0;max-width:1140px;margin:0 auto;display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+.pa-wrap.visible{display:flex}
 .pa-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;max-width:520px}
 .pa-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
 .pa-title{font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--text)}
@@ -230,7 +230,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
       <a href="/?mode=tasks" class="pa-btn" data-es="Ver todo el calendario" data-en="View full calendar">Ver todo el calendario</a>
     </div>
   </div>
-  <div class="pa-card" id="noticias-card" style="flex:1;min-width:280px;display:none">
+  <div class="pa-card" id="noticias-card" style="flex:1;min-width:280px">
     <div class="pa-head">
       <span class="pa-title" data-es="Novedades del Equipo" data-en="Team News">Novedades del Equipo</span>
       <a href="/hr.html" class="pa-ver" data-es="HR Panel →" data-en="HR Panel →">HR Panel →</a>
@@ -372,7 +372,10 @@ window.addEventListener('scroll', () => {
 (async () => {
   let user = null;
   try { user = JSON.parse(localStorage.getItem('tt_auth2') || 'null'); } catch(_) {}
-  if (!user?.name) return;
+  if (!user?.name) {
+    document.getElementById('pa-body').innerHTML = '<div class="pa-empty">Inicia sesión para ver tus tareas.</div>';
+    return;
+  }
 
   const SB_URL = 'https://zcgisoigfzytpanoaomq.supabase.co';
   const SB_KEY = 'sb_publishable_7k9A4WP1x7hDQdrsHY52jQ_Rpj3ASjU';
@@ -450,42 +453,47 @@ window.addEventListener('scroll', () => {
 
 // ── Novedades del Equipo widget ─────────────────────────────────────────────
 (function loadNoticias(){
+  const body = document.getElementById('noticias-body');
+  const pg_lang = (() => { try { return localStorage.getItem('tt_menu_lang') || 'es'; } catch(_) { return 'es'; } })();
+
+  let posts = [], empMonth = null;
   try {
     const raw = localStorage.getItem('hr_cultura');
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    const posts = (data.posts || []).slice().reverse().slice(0, 5);
-    const empMonth = data.empMonth;
-    if (!posts.length && !empMonth) return;
-
-    const card = document.getElementById('noticias-card');
-    const body = document.getElementById('noticias-body');
-    card.style.display = '';
-
-    let html = '';
-    if (empMonth && empMonth.name) {
-      html += `<div class="pa-item" style="gap:10px">
-        <div class="pa-dot next" style="background:#d4a853"></div>
-        <div class="pa-meta">
-          <div class="pa-date next">EMPLEADO DEL MES</div>
-          <div class="pa-row"><span class="pa-name">${empMonth.name}</span></div>
-          ${empMonth.role ? `<div class="pa-sub">${empMonth.role}${empMonth.month ? ' · ' + empMonth.month : ''}</div>` : ''}
-        </div>
-      </div>`;
+    if (raw) {
+      const data = JSON.parse(raw);
+      posts = (data.posts || []).slice().reverse().slice(0, 5);
+      empMonth = data.empMonth;
     }
-    posts.forEach(p => {
-      const dateStr = p.at ? new Date(p.at).toLocaleDateString('es-CO',{day:'numeric',month:'short'}).toUpperCase() : '';
-      html += `<div class="pa-item">
-        <div style="font-size:15px;flex-shrink:0;margin-top:2px">${p.emoji || '📌'}</div>
-        <div class="pa-meta">
-          ${dateStr ? `<div class="pa-date next">${dateStr}</div>` : ''}
-          <div class="pa-row"><span class="pa-name">${p.title || ''}</span></div>
-          ${p.body ? `<div class="pa-sub" style="white-space:pre-line">${p.body.slice(0,80)}${p.body.length>80?'…':''}</div>` : ''}
-        </div>
-      </div>`;
-    });
-    body.innerHTML = html || `<div class="pa-empty">Sin novedades aún.</div>`;
   } catch(_) {}
+
+  if (!posts.length && !empMonth) {
+    body.innerHTML = `<div class="pa-empty">${pg_lang==='en'?'No team news yet 🎉':'Sin novedades del equipo 🎉'}</div>`;
+    return;
+  }
+
+  let html = '';
+  if (empMonth && empMonth.name) {
+    html += `<div class="pa-item">
+      <div class="pa-dot next" style="background:#d4a853;margin-top:5px"></div>
+      <div class="pa-meta">
+        <div class="pa-date next">EMPLEADO DEL MES</div>
+        <div class="pa-row"><span class="pa-name">${empMonth.name}</span></div>
+        ${empMonth.role ? `<div class="pa-sub">${empMonth.role}${empMonth.month ? ' · ' + empMonth.month : ''}</div>` : ''}
+      </div>
+    </div>`;
+  }
+  posts.forEach(p => {
+    const dateStr = p.at ? new Date(p.at).toLocaleDateString('es-CO',{day:'numeric',month:'short'}).toUpperCase() : '';
+    html += `<div class="pa-item">
+      <div style="font-size:15px;flex-shrink:0;margin-top:2px">${p.emoji || '📌'}</div>
+      <div class="pa-meta">
+        ${dateStr ? `<div class="pa-date next">${dateStr}</div>` : ''}
+        <div class="pa-row"><span class="pa-name">${p.title || ''}</span></div>
+        ${p.body ? `<div class="pa-sub">${p.body.slice(0,80)}${p.body.length>80?'…':''}</div>` : ''}
+      </div>
+    </div>`;
+  });
+  body.innerHTML = html;
 })();
 </script>
 <script src="/lang.js"></script>
