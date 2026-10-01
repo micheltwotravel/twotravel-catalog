@@ -2523,8 +2523,9 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
 
   const handleGenerateTasks = async (selectedItems) => {
     const concierge = kickoff?.assignedConciergeName || kickoff?.assignedConcierge || "";
-    const email     = CONCIERGE_LIST.find(c => c.name === concierge)?.email || kickoff?.assignedConciergeEmail || "";
+    const conciergeFirst = concierge.split(" ")[0] || concierge;
     const guestName = kickoff?.guestName || kickoff?.tripName || "";
+    const city = kickoff?.city || "";
     const arrival   = kickoff?.arrivalDate || kickoff?.checkIn || "";
     const dueDate = (() => {
       if (!arrival) return "";
@@ -2535,38 +2536,55 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
     })();
     const priorityFor = (cat) => {
       const c = String(cat||"").toLowerCase();
-      if (/restauran|chef|food|dining/.test(c)) return "alta";
-      if (/tour|activit|excursion/.test(c))     return "media";
-      return "media";
+      if (/restauran|chef|food|dining/.test(c)) return "high";
+      if (/tour|activit|excursion/.test(c))     return "medium";
+      return "medium";
     };
     setTaskModal(null);
     setGenerating(true);
+
+    // Load existing tasks from GAS first, then append new ones
+    let existing = [];
+    try {
+      const res = await fetch(TASK_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "getTasks" }),
+      });
+      const d = await res.json();
+      if (Array.isArray(d.data)) existing = d.data;
+    } catch { /* proceed without existing */ }
+
+    const newTasks = selectedItems
+      .map(item => item.name || item.serviceName || "")
+      .filter(Boolean)
+      .map(name => ({
+        id: "tt_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+        title:    `Confirmar: ${name}`,
+        status:   "todo",
+        priority: priorityFor(selectedItems.find(i => (i.name||i.serviceName) === name)?.category),
+        assignee: conciergeFirst,
+        client:   guestName + (city ? ` — ${city}` : ""),
+        due:      dueDate,
+        notes:    selectedItems.find(i => (i.name||i.serviceName) === name)?.dayLabel
+                    ? `Día: ${selectedItems.find(i => (i.name||i.serviceName) === name).dayLabel}` : "",
+        category: "handoff",
+        activity: [],
+        kickoffId: kickoff?.id || "",
+      }));
+
     let count = 0;
-    for (const item of selectedItems) {
-      const name = item.name || item.serviceName || "";
-      if (!name) continue;
-      const payload = {
-        taskName:     `Confirmar: ${name}`,
-        assignedTo:   concierge,
-        assignedEmail: email,
-        dueDate,
-        status:       "pending",
-        priority:     priorityFor(item.category),
-        notes:        item.dayLabel ? `Día: ${item.dayLabel}` : "",
-        kickoffId:    kickoff?.id   || "",
-        kickoffName:  guestName,
-        createdAt:    new Date().toISOString(),
-      };
+    if (newTasks.length) {
       try {
         await fetch(TASK_API_URL, {
           method: "POST",
-          mode: "no-cors",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "saveTask", payload }),
+          body: JSON.stringify({ action: "saveTasks", data: { tasks: [...existing, ...newTasks] } }),
         });
-        count++;
-      } catch { /* network error — skip */ }
+        count = newTasks.length;
+      } catch { /* network error */ }
     }
+
     setGenerating(false);
     alert(`✅ ${count} tarea${count!==1?"s":""} generada${count!==1?"s":""} en el Task Tracker.`);
   };
@@ -4981,6 +4999,36 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                 placeholder="Senior Concierge Cartagena"
               />
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 sm:col-span-2">
+              <div>
+                <label className="text-[11px] text-neutral-500">Jr. grupo</label>
+                <input
+                  value={juniorConcierge}
+                  onChange={e => setJuniorConcierge(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="Nombre…"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] text-neutral-500">Jr. bote</label>
+                <input
+                  value={juniorBoat}
+                  onChange={e => setJuniorBoat(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="Nombre…"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] text-neutral-500">Jr. beach club</label>
+                <input
+                  value={juniorBeachClub}
+                  onChange={e => setJuniorBeachClub(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="Nombre…"
+                />
+              </div>
             </div>
 
             <div className="sm:col-span-2">

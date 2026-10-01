@@ -4201,7 +4201,7 @@ function DrinkSummaryBox({ houseItems, boatItems, catLabel, itemName, houseCOP, 
         <div className="flex flex-wrap gap-1.5 mb-2">
           {selected.map((it, i) => (
             <span key={i} className="bg-white/10 text-white text-xs px-2.5 py-1 rounded-full">
-              <strong>{Number(it.qty)}</strong>× {itemName(it)}
+              {itemName(it)} <strong>x {Number(it.qty)}</strong>
             </span>
           ))}
         </div>
