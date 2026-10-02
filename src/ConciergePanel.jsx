@@ -7729,7 +7729,10 @@ export function MenuAdminPanel() {
             {/* Custom (added) items — editable inline */}
             {(overrides[`_extra__${cat?.id}`] || []).map((item, idx) => (
               <div key={idx} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#f0fdf4", borderRadius: 10, padding: "12px 14px", border: "1px solid #bbf7d0" }}>
-                <span style={{ fontSize: 24, marginTop: 4 }}>{item.emoji || "🍽️"}</span>
+                {item.img ? (
+                  <img src={driveImgUrl(item.img)} alt="" style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 6, flexShrink: 0, marginTop: 2 }} onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "inline"; }} />
+                ) : null}
+                <span style={{ fontSize: 24, marginTop: 4, display: item.img ? "none" : "inline" }}>{item.emoji || "🍽️"}</span>
                 <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                   <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Nombre</label>
                   <input value={item.name || ""} onChange={e => updateExtraItem(cat.id, idx, "name", e.target.value)} style={{ width: "100%", border: "1px solid #bbf7d0", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }} />
