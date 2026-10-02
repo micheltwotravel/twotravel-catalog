@@ -508,15 +508,30 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
   const extraLabels = [...map.keys()].filter(k => !metaLabels.includes(k));
   const orderedLabels = [...metaLabels.filter(l => map.has(l)), ...extraLabels];
 
-  const parseTime = t => { const m = String(t||"").match(/^(\d{1,2}):(\d{2})/); return m ? +m[1]*60 + +m[2] : Infinity; };
+  const parseTime = t => {
+    const s = String(t || "").trim();
+    const m24 = s.match(/^(\d{1,2}):(\d{2})(?:\s*(?:AM|PM))?/i);
+    if (!m24) return Infinity;
+    let h = +m24[1], min = +m24[2];
+    const ampm = s.match(/(\d{1,2}:\d{2})\s*(AM|PM)/i);
+    if (ampm) {
+      const pm = ampm[2].toUpperCase() === "PM";
+      if (pm && h !== 12) h += 12;
+      if (!pm && h === 12) h = 0;
+    }
+    return h * 60 + min;
+  };
   return orderedLabels.map(label => {
     const dm = metaList.find(d => cl(d.label) === label);
     // Sort by TIME first so items appear in chronological order by default.
     // sortOrder is a tiebreaker for items that share the same time (or have no time).
     const items = (map.get(label) || []).sort((a, b) => {
-      const ta = parseTime(a.time), tb = parseTime(b.time);
-      const timeDiff = ta - tb;
-      if (timeDiff !== 0) return timeDiff;
+      const rawA = a.time || (a.isBlock ? cl(a.cartItem?.timeLabel || a.cartItem?.time || "") : "");
+      const rawB = b.time || (b.isBlock ? cl(b.cartItem?.timeLabel || b.cartItem?.time || "") : "");
+      const ta = parseTime(rawA), tb = parseTime(rawB);
+      if (ta !== Infinity && tb !== Infinity && ta !== tb) return ta - tb;
+      if (ta !== Infinity && tb === Infinity) return -1;
+      if (ta === Infinity && tb !== Infinity) return 1;
       return a.sort - b.sort;
     });
     // Day band shows label; subtitle shows the descriptive title if set
@@ -2705,7 +2720,15 @@ function BillingPage({ kickoff }) {
    DAY PAGE
 ═══════════════════════════════════════════════════════════ */
 function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onAddItem, billingBlock, hasFamilies, patchDay, patchItemFn, dayFlights, onMoveItem }) {
-  const parseTime = t => { const m = String(t||"").match(/^(\d{1,2}):(\d{2})/); return m ? +m[1]*60 + +m[2] : Infinity; };
+  const parseTime = t => {
+    const s = String(t || "").trim();
+    const m24 = s.match(/^(\d{1,2}):(\d{2})/i);
+    if (!m24) return Infinity;
+    let h = +m24[1], min = +m24[2];
+    const ampm = s.match(/\d:\d{2}\s*(AM|PM)/i);
+    if (ampm) { const pm = ampm[1].toUpperCase()==="PM"; if (pm&&h!==12) h+=12; if (!pm&&h===12) h=0; }
+    return h * 60 + min;
+  };
   const displayItems = groupChefMenuItems(day.items);
   // Always show items in array order (concierge controls order via ↑↓).
   // Flights are inserted by time between items so they appear at the right moment.
