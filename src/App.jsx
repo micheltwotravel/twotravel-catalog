@@ -6602,15 +6602,17 @@ function FinanceLanding({ user, onLogout }) {
 function UserManagement({ currentUser, onBack }) {
   const [users, setUsers]   = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [saving, setSaving]   = useState({});
   const [showAdd, setShowAdd] = useState(false);
   const [newUser, setNewUser] = useState({ email:"", name:"", pin:"", role:"concierge" });
   const [addError, setAddError] = useState("");
 
   const load = async () => {
-    setLoading(true);
+    setLoading(true); setLoadError("");
     const { data, error } = await supabase.from("panel_users").select("email, data").order("email");
-    if (!error) setUsers((data || []).map(row => ({ email: row.email, ...(row.data || {}) })));
+    if (error) { setLoadError(error.message || "Error cargando usuarios"); }
+    else { setUsers((data || []).map(row => ({ email: row.email, ...(row.data || {}) }))); }
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -6691,6 +6693,7 @@ function UserManagement({ currentUser, onBack }) {
           </div>
         )}
 
+        {loadError && <p style={{color:"#b91c1c",fontSize:13,textAlign:"center",padding:16,background:"#fee2e2",borderRadius:8,marginBottom:12}}>{loadError}</p>}
         {loading ? <p style={{color:"#9ca3af",fontSize:13,textAlign:"center",padding:32}}>Cargando usuarios…</p> : (
           <div style={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:12,overflow:"hidden"}}>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
@@ -6702,6 +6705,9 @@ function UserManagement({ currentUser, onBack }) {
                 </tr>
               </thead>
               <tbody>
+                {users.length === 0 && !loadError && (
+                  <tr><td colSpan={5} style={{padding:32,textAlign:"center",color:"#9ca3af",fontSize:13}}>No hay usuarios. Agrega el primero con el botón de arriba.</td></tr>
+                )}
                 {users.map((u, i) => (
                   <tr key={u.email} style={{background:i%2===0?"#fff":"#fafafa",opacity:u.active==="false"||u.active===false?0.45:1}}>
                     <td style={{padding:"10px 16px",fontSize:13,fontWeight:500,color:"#111"}}>{u.name}</td>
