@@ -865,6 +865,13 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     return doc.output("bloburl");
   }
 
+  // ── download: save file directly to user's machine ────────────────────
+  if (mode === "download") {
+    const name = se(`TT_${kickoff.tripName || kickoff.id || "itinerary"}.pdf`).replace(/\s+/g,"_");
+    doc.save(name);
+    return;
+  }
+
   // ── slack: upload via GAS ────────────────────────────────────
   const pdfBlob   = doc.output("blob");
   const pdfSize   = pdfBlob.size;
@@ -5895,9 +5902,39 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     setBillingSending(false);
                   }
                 }}
-                className="px-3 py-2 rounded-r-lg border border-indigo-300 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50"
+                className="px-3 py-2 border-t border-b border-indigo-300 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50"
               >
                 {billingSending ? "Enviando…" : "💰 Facturar"}
+              </button>
+              <button
+                type="button"
+                disabled={billingSending}
+                onClick={async () => {
+                  setBillingSending(true);
+                  try {
+                    await sendItineraryPdfToSlack({
+                      ...kickoff,
+                      cart:    canvasCartRef.current    != null ? canvasCartRef.current    : kickoff.cart,
+                      dayMeta: canvasDayMetaRef.current != null ? canvasDayMetaRef.current : kickoff.dayMeta,
+                      email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
+                      city: cityFullName(city) || city || kickoff.city || "",
+                      tripDates, tripDates2, groupSize, arrivalDate, departureDate,
+                      arrivalDate2, departureDate2,
+                      accommodationName, accommodationAddr, accommodationUrl,
+                      accommodationName2, accommodationAddr2, accommodationUrl2,
+                      tripName: tripName || kickoff.tripName || "",
+                      checkIn, checkOut, conciergeTitle,
+                    }, kickoff.lang || "en", billingCurrency, "download", liveFxRate);
+                  } catch (e) {
+                    alert("❌ " + e.message);
+                  } finally {
+                    setBillingSending(false);
+                  }
+                }}
+                className="px-3 py-2 rounded-r-lg border border-indigo-300 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50"
+                title="Descargar PDF"
+              >
+                {billingSending ? "…" : "⬇"}
               </button>
             </div>
           )}
