@@ -790,48 +790,56 @@ let activePopup = null;
 let editingId = null;
 
 
-/* ── STORAGE ── */
+/* ── STORAGE (Supabase) ── */
+const SB_TABLE = 'pagos_data';
+
 function save(){
   localStorage.setItem(PAGOS_KEY, JSON.stringify(pagos));
-  localStorage.setItem(PAGOS_KEY + '_ts', Date.now().toString());
-  syncToGAS();
+  syncToSupabase();
 }
-function load(){
+function loadLocal(){
   const saved = localStorage.getItem(PAGOS_KEY);
   if(saved){ try{ pagos = JSON.parse(saved); }catch{} }
 }
-async function syncToGAS(){
+async function syncToSupabase(){
   try{
-    const action = COUNTRY_MODE === 'mx' ? 'savePagosMX' : 'savePagos';
-    await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({action, payload:{pagos}})});
-  }catch{}
+    await fetch(`${SUPABASE_URL}/rest/v1/${SB_TABLE}`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify({ id: COUNTRY_MODE, data: { pagos }, updated_at: new Date().toISOString() })
+    });
+  }catch(e){ console.error('syncToSupabase:', e); }
 }
-async function loadFromGAS(){
+async function loadFromSupabase(){
   setSyncInfo('Sincronizando...');
   try{
-    const action = COUNTRY_MODE === 'mx' ? 'getPagosMX' : 'getPagos';
-    const r = await fetch(GAS_URL + '?action=' + action);
-    const d = await r.json();
-    if(d.ok && d.data?.length){
-      // Don't overwrite if we saved locally in the last 10 minutes
-      const localTs = parseInt(localStorage.getItem(PAGOS_KEY + '_ts') || '0');
-      const recentlySaved = Date.now() - localTs < 10 * 60 * 1000;
-      if(!recentlySaved){
-        // Merge: GAS data + any local entries not in GAS (added offline)
-        const gasIds = new Set(d.data.map(p => p.id));
-        const localOnly = pagos.filter(p => !gasIds.has(p.id));
-        pagos = [...d.data, ...localOnly];
-        localStorage.setItem(PAGOS_KEY, JSON.stringify(pagos));
-        localStorage.setItem(PAGOS_KEY + '_ts', Date.now().toString());
-        if(localOnly.length) syncToGAS();
-      }
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${SB_TABLE}?id=eq.${COUNTRY_MODE}&select=data,updated_at`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    });
+    const rows = await r.json();
+    if(rows && rows.length > 0 && rows[0].data?.pagos?.length){
+      pagos = rows[0].data.pagos;
+      localStorage.setItem(PAGOS_KEY, JSON.stringify(pagos));
       setSyncInfo('Sincronizado · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
     } else {
-      setSyncInfo('Local');
+      // First run: migrate any local data up to Supabase
+      const local = localStorage.getItem(PAGOS_KEY);
+      if(local){ try{ pagos = JSON.parse(local); }catch{} }
+      if(pagos.length > 0){
+        await syncToSupabase();
+        setSyncInfo('Migrado ✓ · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
+      } else {
+        setSyncInfo('Sin datos');
+      }
     }
-  }catch{
+  }catch(e){
     setSyncInfo('Local (sin conexión)');
+    console.error('loadFromSupabase:', e);
   }
   render();
 }
@@ -1465,6 +1473,7 @@ function showToast(msg, duration=3000){
 }
 
 /* ── SLACK NOTIFICATIONS ── */
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec';
 function slackMsg(text){
   fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify({ action:'sendSlackMessage', payload:{ text } })
@@ -1551,10 +1560,10 @@ function exportCSV(){
 })();
 
 /* ── INIT ── */
-load();
+loadLocal();
 render();
 setSyncInfo('Cargando...');
-loadFromGAS().then(() => {
+loadFromSupabase().then(() => {
   const due = getRemindersDue();
   if (due.length) {
     document.getElementById('btn-reminders').textContent = `🔔 Recordatorios (${due.length})`;
