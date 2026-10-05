@@ -793,6 +793,7 @@ let editingId = null;
 /* ── STORAGE ── */
 function save(){
   localStorage.setItem(PAGOS_KEY, JSON.stringify(pagos));
+  localStorage.setItem(PAGOS_KEY + '_ts', Date.now().toString());
   syncToGAS();
 }
 function load(){
@@ -813,8 +814,18 @@ async function loadFromGAS(){
     const r = await fetch(GAS_URL + '?action=' + action);
     const d = await r.json();
     if(d.ok && d.data?.length){
-      pagos = d.data;
-      localStorage.setItem(PAGOS_KEY, JSON.stringify(pagos));
+      // Don't overwrite if we saved locally in the last 10 minutes
+      const localTs = parseInt(localStorage.getItem(PAGOS_KEY + '_ts') || '0');
+      const recentlySaved = Date.now() - localTs < 10 * 60 * 1000;
+      if(!recentlySaved){
+        // Merge: GAS data + any local entries not in GAS (added offline)
+        const gasIds = new Set(d.data.map(p => p.id));
+        const localOnly = pagos.filter(p => !gasIds.has(p.id));
+        pagos = [...d.data, ...localOnly];
+        localStorage.setItem(PAGOS_KEY, JSON.stringify(pagos));
+        localStorage.setItem(PAGOS_KEY + '_ts', Date.now().toString());
+        if(localOnly.length) syncToGAS();
+      }
       setSyncInfo('Sincronizado · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
     } else {
       setSyncInfo('Local');
@@ -1157,13 +1168,16 @@ function closeNewModal(){
   document.getElementById('new-modal').style.display = 'none';
   editingId = null;
 }
+let _creating = false;
 async function createPago(sendWa=false, addAnother=false){
+  if(_creating) return;
   const client = document.getElementById('n-client').value.trim();
   const desc   = document.getElementById('n-desc').value.trim();
   const amount = document.getElementById('n-amount').value;
   if(!client){ showToast('Ingresa el nombre del cliente'); return; }
   if(!desc)  { showToast('Agrega una descripción de servicios'); return; }
   if(!amount){ showToast('Ingresa el monto'); return; }
+  _creating = true;
 
   const dept = document.getElementById('n-dept').value;
   const p = {
@@ -1208,6 +1222,7 @@ async function createPago(sendWa=false, addAnother=false){
   } else {
     closeNewModal();
   }
+  _creating = false;
 }
 
 /* ── PREVIEW COBRO MODAL ── */
