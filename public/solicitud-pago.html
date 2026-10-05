@@ -251,15 +251,15 @@ textarea{resize:vertical}
             <div class="field half">
               <label>Cuenta de cobro / Factura</label>
               <div style="display:flex;gap:6px;align-items:center">
-                <select id="f-invoice" style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;background:#fff;color:var(--ink)">
-                  <option value="">— Sin factura —</option>
-                  <option value="https://twotravelvip.com/payment-options.pdf">PDF Métodos de pago — Concierge</option>
-                  <option value="https://twotravelvip.com/payment-options-weddings.pdf">PDF Métodos de pago — Bodas</option>
-                  <option value="custom">Otro link (pegar abajo)…</option>
-                </select>
-                <button type="button" id="f-invoice-open" onclick="openInvoicePdf()" title="Abrir PDF" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:16px;display:none">↗</button>
+                <label id="f-invoice-label" style="flex:1;display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--ink2);background:#fff">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <span id="f-invoice-name">Subir PDF o imagen…</span>
+                  <input type="file" accept="application/pdf,image/*" style="display:none" onchange="uploadInvoiceFile(this)">
+                </label>
+                <button type="button" id="f-invoice-open" onclick="openInvoicePdf()" title="Ver archivo" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:16px;display:none">↗</button>
               </div>
-              <input id="f-invoice-custom" placeholder="https://…" type="url" style="display:none;margin-top:6px;width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;box-sizing:border-box">
+              <input id="f-invoice" type="hidden" value="">
+              <div id="f-invoice-status" style="font-size:11px;color:var(--ink3);margin-top:4px;display:none"></div>
             </div>
           </div>
           <div class="field-row">
@@ -302,21 +302,37 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 function getInvoiceUrl() {
-  const sel = document.getElementById('f-invoice').value;
-  return sel === 'custom' ? document.getElementById('f-invoice-custom').value : sel;
+  return document.getElementById('f-invoice').value;
 }
 function openInvoicePdf() {
   const url = getInvoiceUrl();
   if (url) window.open(url, '_blank');
 }
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('f-invoice').addEventListener('change', function() {
-    const isCustom = this.value === 'custom';
-    const hasUrl = this.value && this.value !== 'custom';
-    document.getElementById('f-invoice-custom').style.display = isCustom ? 'block' : 'none';
-    document.getElementById('f-invoice-open').style.display = hasUrl ? 'inline-block' : 'none';
-  });
-});
+async function uploadInvoiceFile(input) {
+  const file = input.files[0]; if (!file) return;
+  const status = document.getElementById('f-invoice-status');
+  const nameEl = document.getElementById('f-invoice-name');
+  const openBtn = document.getElementById('f-invoice-open');
+  status.textContent = '⏳ Subiendo…'; status.style.display = 'block'; status.style.color = 'var(--ink3)';
+  nameEl.textContent = file.name;
+  try {
+    const res = await fetch('/api/upload-factura', {
+      method: 'POST',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    });
+    const d = await res.json();
+    if (!d.ok || !d.url) throw new Error(d.error || 'Error subiendo');
+    document.getElementById('f-invoice').value = d.url;
+    status.textContent = '✅ Archivo subido correctamente';
+    status.style.color = '#16a34a';
+    openBtn.style.display = 'inline-block';
+  } catch(err) {
+    status.textContent = '❌ Error: ' + err.message;
+    status.style.color = '#dc2626';
+    nameEl.textContent = 'Subir PDF o imagen…';
+  }
+}
 
 function setDefaultDueDate() {
   const priority = document.getElementById('f-priority').value;
