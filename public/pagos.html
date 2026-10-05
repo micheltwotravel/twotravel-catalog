@@ -1240,40 +1240,16 @@ function refreshCobro() {
   document.getElementById('cobro-msg').value = msg;
 }
 
-async function sendCobro() {
+function sendCobro() {
   const p = pagos.find(x => x.id === _cobroId);
   if (!p || !p.phone) { showToast('Sin número de WhatsApp'); return; }
   const msg = document.getElementById('cobro-msg').value;
   const isReminder = !!p.cobroAt;
-  const dept = p.dept || 'concierge';
-  const pdfLink = dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
-
-  document.getElementById('cobro-send-btn').disabled = true;
-  showToast('Enviando...');
-  try {
-    const body = { to: p.phone, message: msg, type: isReminder ? 'reminder' : 'cobro' };
-    if (pdfLink) body.mediaUrl = pdfLink;
-    if (p.factura) body.facturaUrl = p.factura;
-    const r = await fetch('/api/whatsapp', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-    const d = await r.json();
-    if (d.ok) {
-      p.cobroAt = new Date().toISOString();
-      save(); render(); closeCobro();
-      showToast(`✅ ${isReminder?'Recordatorio':'Cobro'} enviado a ${p.client}`);
-    } else {
-      document.getElementById('cobro-send-btn').disabled = false;
-      const waFallback = 'https://wa.me/' + p.phone.replace(/\D/g,'') + '?text=' + encodeURIComponent(msg);
-      if (confirm('❌ Error: ' + (d.error || 'No se pudo enviar') + '\n\n¿Abrir WhatsApp manualmente?')) {
-        window.open(waFallback, '_blank');
-      }
-    }
-  } catch(err) {
-    document.getElementById('cobro-send-btn').disabled = false;
-    const waFallback = 'https://wa.me/' + p.phone.replace(/\D/g,'') + '?text=' + encodeURIComponent(msg);
-    if (confirm('❌ Error de red: ' + err.message + '\n\n¿Abrir WhatsApp manualmente?')) {
-      window.open(waFallback, '_blank');
-    }
-  }
+  const waUrl = 'https://wa.me/' + p.phone.replace(/\D/g,'') + '?text=' + encodeURIComponent(msg);
+  window.open(waUrl, '_blank');
+  p.cobroAt = new Date().toISOString();
+  save(); render(); closeCobro();
+  showToast(`✅ ${isReminder ? 'Recordatorio' : 'Cobro'} marcado — WhatsApp abierto`);
 }
 
 function closeCobro() {
@@ -1301,38 +1277,12 @@ async function cobrar(id, tplKey) {
   const montoStr  = p.amount ? `${p.currency} $${parseFloat(p.amount).toLocaleString('es',{minimumFractionDigits:2})}` : '';
   const msg = tpl.build({ firstName, desc: p.desc || '', montoStr, pdfLink, facturaLink: p.factura || '' });
 
-  if (!confirm(`¿Enviar ${label} por WhatsApp a ${p.client}?`)) return;
-
-  showToast('Enviando...');
-  try {
-    const body = { to: p.phone, message: msg, type: isReminder ? 'reminder' : 'cobro' };
-    // Attach PDF as media if possible
-    if (pdfLink) body.mediaUrl = pdfLink;
-    if (p.factura) body.facturaUrl = p.factura;
-
-    const r = await fetch('/api/whatsapp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const d = await r.json();
-    if (d.ok) {
-      p.cobroAt = new Date().toISOString();
-      save();
-      render();
-      showToast(`✅ ${isReminder ? 'Recordatorio' : 'Cobro'} enviado a ${p.client}`);
-    } else {
-      const waFallback = 'https://wa.me/' + p.phone.replace(/\D/g,'') + '?text=' + encodeURIComponent(msg);
-      if (confirm('❌ Error API: ' + (d.error || 'No se pudo enviar') + '\n\n¿Abrir WhatsApp manualmente?')) {
-        window.open(waFallback, '_blank');
-      }
-    }
-  } catch(err) {
-    const waFallback = 'https://wa.me/' + p.phone.replace(/\D/g,'') + '?text=' + encodeURIComponent(msg);
-    if (confirm('❌ Error de red: ' + err.message + '\n\n¿Abrir WhatsApp manualmente?')) {
-      window.open(waFallback, '_blank');
-    }
-  }
+  const waUrl = 'https://wa.me/' + p.phone.replace(/\D/g,'') + '?text=' + encodeURIComponent(msg);
+  window.open(waUrl, '_blank');
+  p.cobroAt = new Date().toISOString();
+  save();
+  render();
+  showToast(`✅ ${isReminder ? 'Recordatorio' : 'Cobro'} marcado — WhatsApp abierto`);
 }
 
 /* ── RECORDATORIO PROGRAMADO ── */
