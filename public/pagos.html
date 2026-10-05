@@ -176,6 +176,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 <div class="toolbar">
   <button class="tbtn primary" onclick="openNewModal()">+ Nuevo cobro</button>
   <button class="tbtn" id="btn-reminders" onclick="checkReminders()" style="border-color:#d97706;color:#d97706">🔔 Recordatorios</button>
+  <button class="tbtn" id="btn-bulk-delete" onclick="openBulkDeleteModal()" style="display:none;border-color:#dc2626;color:#dc2626">🗑 Borrar seleccionados (<span id="bulk-count">0</span>)</button>
   <div class="search-box">
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
     <input type="text" placeholder="Buscar..." oninput="searchQ=this.value;render()" id="search-input">
@@ -484,6 +485,24 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
   </div>
 </div>
 
+<!-- MODAL: Borrar seleccionados -->
+<div class="overlay" id="bulk-delete-modal" style="display:none" onclick="if(event.target===this)closeBulkDeleteModal()">
+  <div class="modal-box" style="max-width:480px;width:95%">
+    <div class="modal-head">
+      <span style="font-size:14px;font-weight:700;color:#dc2626">🗑 Borrar cobros seleccionados</span>
+      <button onclick="closeBulkDeleteModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--ink3)">×</button>
+    </div>
+    <div class="modal-body" style="padding:16px">
+      <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">Se borrarán los siguientes cobros. <strong>Esta acción no se puede deshacer.</strong></p>
+      <div id="bulk-delete-list" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto"></div>
+    </div>
+    <div class="modal-foot" style="gap:8px">
+      <button class="tbtn" onclick="closeBulkDeleteModal()">Cancelar</button>
+      <button class="tbtn" onclick="confirmBulkDelete()" style="margin-left:auto;background:#dc2626;color:#fff;border-color:#dc2626">Borrar todos</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = 'https://zcgisoigfzytpanoaomq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_7k9A4WP1x7hDQdrsHY52jQ_Rpj3ASjU';
@@ -764,6 +783,7 @@ function updateWaLink(el) {
 let pagos = [];
 let searchQ = '';
 let filterStatus = '';
+let selectedIds = new Set();
 let filterPerson = '';
 let filterDept = '';
 let activePopup = null;
@@ -846,6 +866,7 @@ function render(){
 
   html += `<div class="table-wrap"><table class="ptable">
     <thead><tr>
+      <th style="width:32px;text-align:center"><input type="checkbox" id="select-all-cb" title="Seleccionar todos" onchange="toggleSelectAll(this.checked)" style="cursor:pointer"></th>
       <th>Fecha</th>
       <th>Depto.</th>
       <th>Categoría</th>
@@ -865,11 +886,12 @@ function render(){
   items.forEach(p => { html += renderRow(p); });
 
   html += `<tr class="add-row" onclick="openNewModal()">
-    <td colspan="13">+ Agregar solicitud</td>
+    <td colspan="14">+ Agregar solicitud</td>
   </tr>`;
   html += `</tbody></table></div>`;
 
   main.innerHTML = html;
+  updateBulkBar();
 }
 
 function renderRow(p){
@@ -915,6 +937,7 @@ function renderRow(p){
   const waHref = 'https://wa.me/?text=' + encodeURIComponent(waMsg);
 
   return `<tr data-id="${p.id}">
+    <td style="text-align:center;padding:0 6px"><input type="checkbox" data-sel="${p.id}" ${selectedIds.has(p.id)?'checked':''} onchange="toggleSelect('${p.id}',this.checked)" style="cursor:pointer"></td>
     <td><div class="cell editable" ondblclick="editField('${p.id}','date')">${fmtDate(p.date)}</div></td>
     <td><div class="cell" style="justify-content:center">${deptBadge}</div></td>
     <td><div class="cell" style="font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(p.category||'')}">${esc(p.category||'—')}</div></td>
@@ -1171,27 +1194,11 @@ async function createPago(sendWa=false, addAnother=false){
 
   if(sendWa && p.phone){
     const msg = document.getElementById('n-wamsg').value || buildWaMsg();
-    const pdfLink = dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
-    showToast('Enviando WhatsApp...', 6000);
-    try{
-      const body = { to: p.phone, message: msg };
-      if(pdfLink) body.mediaUrl = pdfLink;
-      if(p.factura) body.facturaUrl = p.factura;
-      const r = await fetch('/api/whatsapp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      const d = await r.json();
-      if(d.ok){
-        p.cobroAt = new Date().toISOString();
-        save();
-        showToast('✅ WhatsApp enviado a ' + p.client);
-      } else {
-        const waFallback = 'https://wa.me/' + p.phone.replace(/\D/g,'') + '?text=' + encodeURIComponent(msg);
-        if (confirm('❌ Error WA: ' + (d.error||'revisa la configuración') + '\n\n¿Abrir WhatsApp manualmente?')) window.open(waFallback,'_blank');
-      }
-    }catch(err){
-      const msg2 = document.getElementById('n-wamsg')?.value || '';
-      const waFallback = 'https://wa.me/' + p.phone.replace(/\D/g,'') + '?text=' + encodeURIComponent(msg2);
-      if (confirm('❌ Error de red: ' + err.message + '\n\n¿Abrir WhatsApp manualmente?')) window.open(waFallback,'_blank');
-    }
+    const waUrl = 'https://wa.me/' + p.phone.replace(/\D/g,'') + '?text=' + encodeURIComponent(msg);
+    window.open(waUrl, '_blank');
+    p.cobroAt = new Date().toISOString();
+    save();
+    showToast('✅ WhatsApp abierto — ' + p.client);
   } else if(!sendWa){
     showToast('Solicitud creada ✓');
   }
@@ -1341,9 +1348,73 @@ function deletePago(id) {
   if (!p) return;
   if (!confirm(`¿Borrar el cobro de "${p.client}"? Esta acción no se puede deshacer.`)) return;
   pagos = pagos.filter(x => x.id !== id);
+  selectedIds.delete(id);
   save();
   render();
   showToast('Cobro borrado');
+}
+
+function toggleSelect(id, checked) {
+  if (checked) selectedIds.add(id); else selectedIds.delete(id);
+  updateBulkBar();
+}
+
+function toggleSelectAll(checked) {
+  const visible = getFiltered().map(p => p.id);
+  visible.forEach(id => { if (checked) selectedIds.add(id); else selectedIds.delete(id); });
+  updateBulkBar();
+  render();
+}
+
+function updateBulkBar() {
+  const n = selectedIds.size;
+  const btn = document.getElementById('btn-bulk-delete');
+  const countEl = document.getElementById('bulk-count');
+  if (btn) { btn.style.display = n > 0 ? 'inline-flex' : 'none'; }
+  if (countEl) countEl.textContent = n;
+  const allCb = document.getElementById('select-all-cb');
+  if (allCb) {
+    const visibleIds = getFiltered().map(p => p.id);
+    allCb.checked = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
+    allCb.indeterminate = !allCb.checked && visibleIds.some(id => selectedIds.has(id));
+  }
+}
+
+function getFiltered() {
+  return pagos.filter(p => {
+    const q = searchQ.toLowerCase();
+    const matchQ = !q || [p.client,p.desc,p.vendor,p.category,p.notes].some(f=>(f||'').toLowerCase().includes(q));
+    const matchS = !filterStatus || p.status === filterStatus;
+    return matchQ && matchS;
+  });
+}
+
+function openBulkDeleteModal() {
+  if (selectedIds.size === 0) return;
+  const list = document.getElementById('bulk-delete-list');
+  list.innerHTML = [...selectedIds].map(id => {
+    const p = pagos.find(x => x.id === id);
+    if (!p) return '';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--sand);border:1px solid var(--border);border-radius:3px;font-size:12px">
+      <span style="font-weight:500">${p.client||'Sin cliente'}</span>
+      <span style="color:var(--ink3)">${p.desc ? p.desc.slice(0,40) + (p.desc.length>40?'…':'') : ''}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('bulk-delete-modal').style.display = 'flex';
+}
+
+function closeBulkDeleteModal() {
+  document.getElementById('bulk-delete-modal').style.display = 'none';
+}
+
+function confirmBulkDelete() {
+  pagos = pagos.filter(p => !selectedIds.has(p.id));
+  const n = selectedIds.size;
+  selectedIds.clear();
+  save();
+  render();
+  closeBulkDeleteModal();
+  showToast(`${n} cobro${n>1?'s':''} borrado${n>1?'s':''}`);
 }
 
 /* ── WHATSAPP DIAGNOSTICO ── */

@@ -249,11 +249,17 @@ textarea{resize:vertical}
               </select>
             </div>
             <div class="field half">
-              <label>Cuenta de cobro / Factura</label>
+              <label>Link Stripe (opcional)</label>
+              <input id="f-stripe-link" type="url" placeholder="https://invoice.stripe.com/…">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field full">
+              <label>Factura QuickBooks (PDF opcional)</label>
               <div style="display:flex;gap:6px;align-items:center">
                 <label id="f-invoice-label" style="flex:1;display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--ink2);background:#fff">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  <span id="f-invoice-name">Subir PDF o imagen…</span>
+                  <span id="f-invoice-name">Subir PDF de QuickBooks…</span>
                   <input type="file" accept="application/pdf,image/*" style="display:none" onchange="uploadInvoiceFile(this)">
                 </label>
                 <button type="button" id="f-invoice-open" onclick="openInvoicePdf()" title="Ver archivo" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:16px;display:none">↗</button>
@@ -439,6 +445,7 @@ async function submitForm(e) {
     requestedBy:  document.getElementById('f-requested-by').value,
     assignedTo:   document.getElementById('f-assigned-to').value,
     payFreq:      document.getElementById('f-freq').value,
+    stripeLink:   document.getElementById('f-stripe-link').value.trim(),
     invoiceUrl:   getInvoiceUrl(),
     notes:        document.getElementById('f-notes').value,
     prebill:      document.getElementById('f-prebill').checked,
