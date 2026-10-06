@@ -1591,7 +1591,7 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
               }
             }}
             title={item.confirmed === true ? "Click: → Por confirmar" : item.tbc ? "Click: → Recomendación" : item.confirmed === false ? "Click: → Borrador" : "Click: → Confirmado"}
-            className="text-lg leading-none opacity-70 hover:opacity-100 transition-opacity"
+            className="text-xl leading-none opacity-70 hover:opacity-100 transition-opacity"
           >
             {item.confirmed === true ? "✅" : item.tbc ? "⏳" : item.confirmed === false ? "📌" : "⬜"}
           </button>
@@ -1599,7 +1599,7 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
             type="button"
             onClick={() => onUpdate(item._uid, { ghost: !item.ghost })}
             title={item.ghost ? "Visible al cliente (click para ocultar)" : "Ocultar al cliente (fantasma)"}
-            className={`text-lg leading-none transition-opacity ${item.ghost ? "opacity-100" : "opacity-25 hover:opacity-70"}`}
+            className={`text-xl leading-none transition-opacity ${item.ghost ? "opacity-100" : "opacity-25 hover:opacity-70"}`}
           >
             👻
           </button>
@@ -5622,7 +5622,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       onBlur={e => {
                         const raw = e.target.value.replace(/\s/g,"");
                         const m = raw.match(/^([A-Z]{2,3})(\d{1,4}[A-Z]?)$/);
-                        if (m) patchArrival(i,{flightNumber: m[1]+" "+m[2]});
+                        if (m) patchArrival(i,{flightNumber: m[1]+m[2]});
                       }}
                       placeholder="AA2173"
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono font-bold" />
@@ -5689,7 +5689,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       onBlur={e => {
                         const raw = e.target.value.replace(/\s/g,"");
                         const m = raw.match(/^([A-Z]{2,3})(\d{1,4}[A-Z]?)$/);
-                        if (m) patchDeparture(i,{flightNumber: m[1]+" "+m[2]});
+                        if (m) patchDeparture(i,{flightNumber: m[1]+m[2]});
                       }}
                       placeholder="AA1144"
                       className="w-full text-xs border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300 font-mono font-bold" />
@@ -7708,16 +7708,22 @@ export function MenuAdminPanel() {
               const hiddenList = overrides[`_hidden__${cat.id}`] || [];
               const isHidden = hiddenList.includes(item.name);
               const ov = overrides[item.name] || {};
-              const currentImg   = ov.img      !== undefined ? ov.img      : item.img;
-              const currentPrice = ov.priceCOP !== undefined ? ov.priceCOP : item.priceCOP;
+              const currentImg   = ov.img          !== undefined ? ov.img          : item.img;
+              const currentPrice = ov.priceCOP     !== undefined ? ov.priceCOP     : item.priceCOP;
+              const currentName  = ov.nameOverride !== undefined ? ov.nameOverride  : item.name;
               return (
                 <div key={item.name} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: isHidden ? "#fef2f2" : "#fafafa", borderRadius: 10, padding: "12px 14px", border: `1px solid ${isHidden ? "#fecaca" : "#f0f0f0"}`, opacity: isHidden ? 0.65 : 1 }}>
                   <div style={{ width: 64, height: 64, flexShrink: 0, borderRadius: 8, overflow: "hidden", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>
-                    {currentImg && !isHidden ? <img src={currentImg} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.display = "none"; }} /> : null}
-                    {(!currentImg || isHidden) && <span>{item.emoji || "🍽️"}</span>}
+                    {currentImg && !isHidden ? <img src={driveImgUrl(currentImg)} alt={currentName} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.display = "none"; e.target.nextSibling && (e.target.nextSibling.style.display = "inline"); }} /> : null}
+                    <span style={{ display: (!currentImg || isHidden) ? "inline" : "none" }}>{item.emoji || "🍽️"}</span>
                   </div>
                   <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#111", textDecoration: isHidden ? "line-through" : "none" }}>{item.name}</div>
+                    {!isHidden ? (
+                      <input value={currentName} onChange={e => patch(item.name, "nameOverride", e.target.value)}
+                        style={{ fontSize: 13, fontWeight: 600, color: "#111", border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 7px", background: "#fff", width: "100%", boxSizing: "border-box" }} />
+                    ) : (
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "#111", textDecoration: "line-through" }}>{currentName}</div>
+                    )}
                     {item.name_en && item.name_en !== item.name && <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_en}</div>}
                     {item.name_es && <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_es}</div>}
                     {!isHidden && (<>

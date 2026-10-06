@@ -1437,10 +1437,7 @@ function ClientesTable({ kickoffs, loading }) {
   async function saveField(kickoffId, field, value) {
     setSaving(s => ({ ...s, [kickoffId + field]: true }));
     try {
-      await fetch(GAS_URL, {
-        method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "updateKickoff", id: kickoffId, updates: { [field]: value } }),
-      });
+      await updateKickoffInSheet(kickoffId, { [field]: value });
     } catch(e) { console.error(e); }
     setSaving(s => ({ ...s, [kickoffId + field]: false }));
   }
@@ -1448,8 +1445,8 @@ function ClientesTable({ kickoffs, loading }) {
   const CITY_BG   = { cartagena:"#dbeafe", medellin:"#dcfce7", cdmx:"#ffedd5", tulum:"#ccfbf1", "los cabos":"#fce7f3", bogota:"#f3e8ff" };
   const CITY_FG   = { cartagena:"#1d4ed8", medellin:"#16a34a", cdmx:"#ea580c", tulum:"#0f766e", "los cabos":"#9d174d", bogota:"#7c3aed" };
 
-  const thStyle = { fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", color:"#6b7280", padding:"5px 7px", background:"#f9fafb", borderBottom:"1px solid #e5e7eb", whiteSpace:"nowrap", textAlign:"left" };
-  const tdStyle = { fontSize:11, padding:"5px 7px", borderBottom:"1px solid #f3f4f6", verticalAlign:"middle" };
+  const thStyle = { fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", color:"#6b7280", padding:"4px 6px", background:"#f9fafb", borderBottom:"1px solid #e5e7eb", whiteSpace:"nowrap", textAlign:"left" };
+  const tdStyle = { fontSize:11, padding:"4px 6px", borderBottom:"1px solid #f3f4f6", verticalAlign:"middle" };
 
   const pillStyle = (active, norm) => ({
     fontSize:11, padding:"4px 10px", borderRadius:99, border:"1px solid", cursor:"pointer",
@@ -1487,7 +1484,7 @@ function ClientesTable({ kickoffs, loading }) {
               background: conciergeFilter===c ? "#111" : "#fff",
               color: conciergeFilter===c ? "#fff" : "#555",
               borderColor: conciergeFilter===c ? "#111" : "#ddd" }}>
-            {c === "all" ? "Todas" : c}
+            {c === "all" ? "Todas" : c.split(" ")[0]}
           </button>
         ))}
         <input
@@ -2149,7 +2146,7 @@ function UnifiedDashboard({ currentUser, onLogout }) {
         </div>
       </header>
 
-      <div style={{maxWidth:1680,width:"100%",margin:"0 auto",padding:"0 24px 24px"}}>
+      <div style={{width:"100%",padding:"0 16px 24px"}}>
         {/* ── Tabs ── */}
         <div style={{display:"flex",gap:6,marginBottom:24,borderBottom:"1px solid var(--border)",paddingBottom:0}}>
           {[

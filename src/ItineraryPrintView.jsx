@@ -45,10 +45,12 @@ function Editable({ value, tag: Tag = "span", className = "", editMode, style, o
           lineHeight: "inherit",
           background: "rgba(255,255,255,0.6)",
           outline: "none",
-          minHeight: 64,
+          minHeight: 90,
           boxSizing: "border-box",
           display: "block",
+          overflow: "hidden",
         }}
+        onInput={e => { e.target.style.height = "auto"; e.target.style.height = (e.target.scrollHeight + 4) + "px"; }}
         onBlur={e => onChange?.(e.target.value)}
       />
     );
@@ -175,11 +177,21 @@ function FlightRow({ flight, lang, type }) {
       </div>
       {/* Passenger */}
       <div>
-        <div style={{ fontSize:13, color:"#374151", fontWeight:500 }}>
-          {flight.name ? flight.name : <span style={{ color:"#d1d5db" }}>—</span>}
-        </div>
+        {(() => {
+          const names = flight.name ? flight.name.split(/\s*\+\s*/).map(n=>n.trim()).filter(Boolean) : [];
+          const typeLabel = type === "arrival" ? (isEs ? "llegada" : "arrival") : (isEs ? "salida" : "departure");
+          const subtitle = names.length > 1
+            ? `x${names.length} ${isEs ? "pax" : "people"}`
+            : names.length === 1 ? `x1 ${isEs ? "pax" : "person"}` : null;
+          return (<>
+            {subtitle && <div style={{ fontSize:9, color:"#6b7280", marginBottom:2 }}>{subtitle}</div>}
+            <div style={{ fontSize:12, color:"#374151", fontWeight:500 }}>
+              {names.length ? names.join(" · ") : <span style={{ color:"#d1d5db" }}>—</span>}
+            </div>
+          </>);
+        })()}
         {data?.depIata && data?.arrIata && (
-          <div style={{ fontSize:9, color:"#9ca3af" }}>{data.depIata} → {data.arrIata}</div>
+          <div style={{ fontSize:9, color:"#9ca3af", marginTop:2 }}>{data.depIata} → {data.arrIata}</div>
         )}
       </div>
       {/* Date */}
@@ -206,10 +218,23 @@ function FlightRow({ flight, lang, type }) {
 }
 
 function FlightBlock({ kickoff, lang, type }) {
-  let flights = [];
+  let raw = [];
   const key = type === "arrival" ? "arrivals" : "departures";
-  try { flights = JSON.parse(kickoff[key] || "[]").filter(f => f.flightNumber).sort((a,b) => (a.date||"").localeCompare(b.date||"")); } catch {}
-  if (!flights.length) return null;
+  try { raw = JSON.parse(kickoff[key] || "[]").filter(f => f.flightNumber); } catch {}
+  if (!raw.length) return null;
+
+  // Group pax on the same flight + date into one entry (items 23 + 24)
+  const normFn = s => (s || "").toUpperCase().replace(/\s/g, "");
+  const grouped = {};
+  raw.forEach(f => {
+    const k = `${normFn(f.flightNumber)}_${f.date || ""}`;
+    if (!grouped[k]) grouped[k] = { ...f, flightNumber: normFn(f.flightNumber), names: [] };
+    if (f.name) f.name.split(/\s*\+\s*/).forEach(n => { const t = n.trim(); if (t && !grouped[k].names.includes(t)) grouped[k].names.push(t); });
+  });
+  const flights = Object.values(grouped)
+    .map(g => ({ ...g, name: g.names.join(" + ") }))
+    .sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.time || "").localeCompare(b.time || ""));
+
   const isEs = lang === "es";
   const label = type === "arrival"
     ? (isEs ? "Vuelos de llegada" : "Arrival Flights")
