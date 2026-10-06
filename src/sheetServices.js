@@ -385,6 +385,32 @@ export async function updateKickoffInSheet(id, updates) {
   return true;
 }
 
+const ERROR_LOG_ID = "__kpi_error_log__";
+
+export async function fetchErrorLog() {
+  const { data } = await supabase.from("kickoffs").select("data").eq("id", ERROR_LOG_ID).single();
+  if (!data) return [];
+  try { return JSON.parse(data.data?.entries || "[]"); } catch { return []; }
+}
+
+export async function appendErrorLogEntry(entry) {
+  const existing = await fetchErrorLog();
+  const newEntries = [...existing, { ...entry, _id: Date.now().toString(36), createdAt: new Date().toISOString() }];
+  const payload = { id: ERROR_LOG_ID, data: { entries: JSON.stringify(newEntries) } };
+  const { error } = await supabase.from("kickoffs").upsert(payload, { onConflict: "id" });
+  if (error) throw new Error(error.message);
+  return newEntries;
+}
+
+export async function deleteErrorLogEntry(entryId) {
+  const existing = await fetchErrorLog();
+  const newEntries = existing.filter(e => e._id !== entryId);
+  const payload = { id: ERROR_LOG_ID, data: { entries: JSON.stringify(newEntries) } };
+  const { error } = await supabase.from("kickoffs").upsert(payload, { onConflict: "id" });
+  if (error) throw new Error(error.message);
+  return newEntries;
+}
+
 // "Itinerary (no catalog)" sheet — same catalog spreadsheet, gid 1985577388
 const ITINERARY_ITEMS_CSV_URL =
   "https://docs.google.com/spreadsheets/d/1r_QvYqNLBybjL1iZYuW4mp3D3vde5rqSDBqTnEbDePk/export?format=csv&gid=1985577388";

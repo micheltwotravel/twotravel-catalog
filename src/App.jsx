@@ -65,7 +65,7 @@ class ErrorBoundary extends Component {
   }
 }
 
-import { updateKickoffInSheet, fetchKickoffsFromSheet, saveKickoffToSheet, fetchKickoffById } from "./sheetServices";
+import { updateKickoffInSheet, fetchKickoffsFromSheet, saveKickoffToSheet, fetchKickoffById, fetchErrorLog, appendErrorLogEntry, deleteErrorLogEntry } from "./sheetServices";
 
 async function getKickoffByIdFromSheet(id) {
   return fetchKickoffById(id);
@@ -1734,6 +1734,11 @@ function UnifiedDashboard({ currentUser, onLogout }) {
   const [kpiPeriod, setKpiPeriod]           = useState("all");
   const [kpiConcierge, setKpiConcierge]     = useState("all");
   const [kpiExportType, setKpiExportType]   = useState("all");
+  // KPI 4 – Error Log
+  const [errorLog,        setErrorLog]        = useState([]);
+  const [errorLogLoading, setErrorLogLoading] = useState(false);
+  const [errorLogForm, setErrorLogForm] = useState({ date: new Date().toISOString().slice(0,10), city: "CTG", category: "", severity: "medium", description: "" });
+  const [errorLogSaving, setErrorLogSaving] = useState(false);
 
   // Derive feedback rows from kickoffs (no external sheet fetch needed)
   useEffect(() => {
@@ -1770,6 +1775,13 @@ function UnifiedDashboard({ currentUser, onLogout }) {
       })
       .finally(() => setKLoading(false));
   }, []);
+
+  // Load error log when KPI tab is opened
+  useEffect(() => {
+    if (tab !== "kpis") return;
+    setErrorLogLoading(true);
+    fetchErrorLog().then(setErrorLog).catch(() => setErrorLog([])).finally(() => setErrorLogLoading(false));
+  }, [tab]);
 
   // Sync when another tab/component saves a kickoff
   useEffect(() => {
@@ -2087,6 +2099,34 @@ function UnifiedDashboard({ currentUser, onLogout }) {
     })
     .sort((a, b) => b.revenue - a.revenue);
 
+  // ── KPI 3: Google / TripAdvisor reviews ──────────────────────
+  const kpiGoogleRatings = kpiFiltered.map(k => Number(k.googleReviewStars) || 0).filter(v => v > 0);
+  const kpiTARatings     = kpiFiltered.map(k => Number(k.tripAdvisorReviewStars) || 0).filter(v => v > 0);
+  const kpiAvgGoogle     = kpiGoogleRatings.length ? (kpiGoogleRatings.reduce((a,b)=>a+b,0)/kpiGoogleRatings.length).toFixed(1) : "—";
+  const kpiAvgTA         = kpiTARatings.length     ? (kpiTARatings.reduce((a,b)=>a+b,0)/kpiTARatings.length).toFixed(1)         : "—";
+
+  // ── KPI 5: Billing timeliness ─────────────────────────────────
+  const kpiBillingRows = kpiFiltered
+    .filter(k => k.preBillSentAt || k.lynaInvoiceSentAt || k.preBillSent)
+    .map(k => {
+      const arrival  = k.arrivalDate || k.checkIn || "";
+      const sentAt   = k.preBillSentAt || "";
+      let daysEarly  = null;
+      if (sentAt && arrival) daysEarly = daysBetween(sentAt, arrival);
+      return {
+        name:         k.guestName || k.tripName || k.id,
+        arrival,
+        preBillSentAt:  sentAt,
+        lynaInvoiceSentAt: k.lynaInvoiceSentAt || "",
+        daysEarly,
+        onTime:       daysEarly !== null ? daysEarly >= 7 : null,
+      };
+    })
+    .sort((a,b) => (a.arrival||"").localeCompare(b.arrival||""));
+  const kpiBillingOnTime   = kpiBillingRows.filter(r => r.onTime === true).length;
+  const kpiBillingLate     = kpiBillingRows.filter(r => r.onTime === false).length;
+  const kpiBillingPending  = kpiFiltered.filter(k => !k.preBillSentAt && !k.preBillSent).length;
+
   // ── Pending tasks per concierge ──────────────────────────────
   const pendingByConcierge = {};
   kpiFiltered.forEach(k => {
@@ -2153,6 +2193,7 @@ function UnifiedDashboard({ currentUser, onLogout }) {
             { id: "clientes", label: "Clientes" },
             { id: "feedback", label: "Feedback" },
             ...( ["admin","concierge"].includes(currentUser?.role) ? [{ id: "menus", label: "🍹 Menús" }] : [] ),
+            ...( isSuperAdmin(currentUser) ? [{ id: "kpis", label: "📊 KPIs" }] : [] ),
           ].map(({ id, label }) => (
             <button key={id} onClick={() => setTab(id)}
               style={{
@@ -2226,6 +2267,11 @@ function UnifiedDashboard({ currentUser, onLogout }) {
                   </div>
                 </div>
 
+                {/* ── KPI 1 · Revenue & Services ── */}
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-0.5">KPI 1</span>
+                  <span className="text-sm font-semibold text-neutral-800">Revenue & Services</span>
+                </div>
                 {/* Main KPI cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                   <KpiCard label="Clientes en período" value={kpiFiltered.length} />
@@ -2239,11 +2285,25 @@ function UnifiedDashboard({ currentUser, onLogout }) {
                   <KpiCard label="Total servicios" value={kpiServiceCounts.reduce((a,b)=>a+b,0)} sub="en todos los kickoffs filtrados"/>
                 </div>
 
-                {/* ── Timing metrics ── */}
+                {/* ── KPI 2 · Planning Efficiency ── */}
+                <div className="flex items-center gap-2 mb-3 mt-2">
+                  <span className="text-[10px] font-bold text-blue-700 uppercase tracking-widest bg-blue-50 border border-blue-200 rounded-full px-2.5 py-0.5">KPI 2</span>
+                  <span className="text-sm font-semibold text-neutral-800">Planning Efficiency · Meta: itinerario en ≤7 días</span>
+                </div>
                 <div className="tt-card" style={{padding:20,marginBottom:12}}>
                   <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:12}}>
                     <span className="tt-section-title">Tiempos promedio del proceso</span>
                     <span style={{fontSize:11,color:"var(--text-3)"}}>desde creación del link hasta cada etapa</span>
+                    {avgDaysToSend !== "—" && (
+                      <span style={{
+                        marginLeft:"auto", fontSize:11, fontWeight:600, padding:"2px 10px", borderRadius:99,
+                        background: Number(avgDaysToSend) <= 7 ? "#f0fdf4" : "#fff7ed",
+                        color: Number(avgDaysToSend) <= 7 ? "#15803d" : "#c2410c",
+                        border: "1px solid " + (Number(avgDaysToSend) <= 7 ? "#bbf7d0" : "#fed7aa"),
+                      }}>
+                        {Number(avgDaysToSend) <= 7 ? "✓ En meta" : "↑ Por encima de meta"}
+                      </span>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
@@ -2434,6 +2494,238 @@ function UnifiedDashboard({ currentUser, onLogout }) {
                     </div>
                   </div>
                 )}
+
+                {/* ── KPI 3 · Guest Satisfaction (Google / TripAdvisor) ── */}
+                <div className="flex items-center gap-2 mb-3 mt-4">
+                  <span className="text-[10px] font-bold text-amber-700 uppercase tracking-widest bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">KPI 3</span>
+                  <span className="text-sm font-semibold text-neutral-800">Guest Satisfaction · Reseñas Google & TripAdvisor</span>
+                </div>
+                <div className="bg-white rounded-2xl border border-amber-200 overflow-hidden mb-4">
+                  <div className="px-5 py-3 border-b border-amber-100 bg-amber-50 flex items-center gap-2">
+                    <span className="text-sm font-semibold text-amber-800">⭐ Reseñas externas</span>
+                    <span className="ml-auto text-[11px] text-amber-500">Se registran en el panel de cada cliente</span>
+                  </div>
+                  <div className="p-5">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="bg-amber-50 rounded-xl border border-amber-100 p-4">
+                        <div className="text-2xl font-bold text-amber-700">{kpiAvgGoogle} <span className="text-sm font-normal text-stone-400">/ 5</span></div>
+                        <div className="text-xs text-stone-500 mt-1">Google · promedio</div>
+                        <div className="text-[10px] text-stone-400 mt-0.5">{kpiGoogleRatings.length} reseñas registradas</div>
+                      </div>
+                      <div className="bg-emerald-50 rounded-xl border border-emerald-100 p-4">
+                        <div className="text-2xl font-bold text-emerald-700">{kpiAvgTA} <span className="text-sm font-normal text-stone-400">/ 5</span></div>
+                        <div className="text-xs text-stone-500 mt-1">TripAdvisor · promedio</div>
+                        <div className="text-[10px] text-stone-400 mt-0.5">{kpiTARatings.length} reseñas registradas</div>
+                      </div>
+                      <div className="bg-stone-50 rounded-xl border border-stone-100 p-4">
+                        <div className="text-2xl font-bold text-stone-700">{kpiFiltered.filter(k=>Number(k.googleReviewStars)>=4||Number(k.tripAdvisorReviewStars)>=4).length}</div>
+                        <div className="text-xs text-stone-500 mt-1">Reseñas 4–5 ⭐</div>
+                        <div className="text-[10px] text-stone-400 mt-0.5">alta satisfacción</div>
+                      </div>
+                      <div className="bg-stone-50 rounded-xl border border-stone-100 p-4">
+                        <div className="text-2xl font-bold text-stone-400">{kpiFiltered.filter(k=>!k.googleReviewStars && !k.tripAdvisorReviewStars).length}</div>
+                        <div className="text-xs text-stone-500 mt-1">Sin reseña registrada</div>
+                        <div className="text-[10px] text-stone-400 mt-0.5">de {kpiFiltered.length} clientes</div>
+                      </div>
+                    </div>
+                    {kpiGoogleRatings.length === 0 && kpiTARatings.length === 0 && (
+                      <p className="text-sm text-stone-400 mt-4 italic">Registra las reseñas de Google y TripAdvisor en el panel de cada cliente (sección 📊 KPIs) para ver los promedios acá.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── KPI 4 · Execution Quality · Error Log ── */}
+                <div className="flex items-center gap-2 mb-3 mt-4">
+                  <span className="text-[10px] font-bold text-red-700 uppercase tracking-widest bg-red-50 border border-red-200 rounded-full px-2.5 py-0.5">KPI 4</span>
+                  <span className="text-sm font-semibold text-neutral-800">Execution Quality · Error Log</span>
+                </div>
+                <div className="bg-white rounded-2xl border border-red-100 overflow-hidden mb-4">
+                  <div className="px-5 py-3 border-b border-red-50 bg-red-50 flex items-center gap-2">
+                    <span className="text-sm font-semibold text-red-800">🛠️ Registro de errores</span>
+                    <span className="ml-auto text-[11px] text-red-400">Diligenciar después de cada reunión semanal</span>
+                  </div>
+                  <div className="p-5 space-y-4">
+                    {/* New error form */}
+                    <div className="bg-stone-50 rounded-xl border border-stone-200 p-4 space-y-3">
+                      <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider">+ Nuevo error</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div>
+                          <label className="text-[11px] text-stone-500 block mb-1">Fecha</label>
+                          <input type="date" value={errorLogForm.date}
+                            onChange={e => setErrorLogForm(f => ({...f, date: e.target.value}))}
+                            className="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-sm" />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-stone-500 block mb-1">Ciudad</label>
+                          <select value={errorLogForm.city}
+                            onChange={e => setErrorLogForm(f => ({...f, city: e.target.value}))}
+                            className="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-sm bg-white">
+                            <option value="CTG">Cartagena</option>
+                            <option value="MDE">Medellín</option>
+                            <option value="CDMX">Ciudad de México</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-stone-500 block mb-1">Categoría</label>
+                          <select value={errorLogForm.category}
+                            onChange={e => setErrorLogForm(f => ({...f, category: e.target.value}))}
+                            className="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-sm bg-white">
+                            <option value="">— Categoría —</option>
+                            <option value="transporte">Transporte</option>
+                            <option value="comunicacion">Comunicación</option>
+                            <option value="proveedor">Proveedor</option>
+                            <option value="itinerario">Itinerario</option>
+                            <option value="facturacion">Facturación</option>
+                            <option value="otro">Otro</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-stone-500 block mb-1">Severidad</label>
+                          <select value={errorLogForm.severity}
+                            onChange={e => setErrorLogForm(f => ({...f, severity: e.target.value}))}
+                            className="w-full border border-stone-200 rounded-lg px-2 py-1.5 text-sm bg-white">
+                            <option value="low">Baja</option>
+                            <option value="medium">Media</option>
+                            <option value="high">Alta</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-stone-500 block mb-1">Descripción del error</label>
+                        <textarea value={errorLogForm.description} rows={2}
+                          onChange={e => setErrorLogForm(f => ({...f, description: e.target.value}))}
+                          placeholder="¿Qué pasó? ¿Cómo se resolvió?"
+                          className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm resize-none" />
+                      </div>
+                      <button
+                        disabled={!errorLogForm.description.trim() || !errorLogForm.category || errorLogSaving}
+                        onClick={async () => {
+                          if (!errorLogForm.description.trim() || !errorLogForm.category) return;
+                          setErrorLogSaving(true);
+                          try {
+                            const updated = await appendErrorLogEntry({ ...errorLogForm, author: currentUser?.name || "" });
+                            setErrorLog(updated);
+                            setErrorLogForm(f => ({ ...f, description: "", category: "" }));
+                          } catch(e) { alert("Error al guardar: " + e.message); }
+                          setErrorLogSaving(false);
+                        }}
+                        className="px-4 py-2 rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-800 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                      >
+                        {errorLogSaving ? "Guardando…" : "Registrar error"}
+                      </button>
+                    </div>
+                    {/* Error log table */}
+                    {errorLogLoading ? (
+                      <p className="text-sm text-stone-400">Cargando log…</p>
+                    ) : errorLog.length === 0 ? (
+                      <p className="text-sm text-stone-400 italic">No hay errores registrados en este período.</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                          <thead className="bg-stone-50 text-[11px] text-stone-400 uppercase tracking-wide">
+                            <tr>
+                              <th className="px-4 py-2 text-left">Fecha</th>
+                              <th className="px-4 py-2 text-left">Ciudad</th>
+                              <th className="px-4 py-2 text-left">Categoría</th>
+                              <th className="px-4 py-2 text-left">Sev.</th>
+                              <th className="px-4 py-2 text-left">Descripción</th>
+                              <th className="px-4 py-2 text-left">Autor</th>
+                              <th className="px-4 py-2"></th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-stone-50">
+                            {[...errorLog].reverse().map(entry => (
+                              <tr key={entry._id} className="hover:bg-stone-50">
+                                <td className="px-4 py-2 text-stone-600 whitespace-nowrap">{entry.date}</td>
+                                <td className="px-4 py-2">
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-stone-100 text-stone-600">{entry.city}</span>
+                                </td>
+                                <td className="px-4 py-2 text-stone-600 capitalize">{entry.category}</td>
+                                <td className="px-4 py-2">
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${entry.severity==="high"?"bg-red-100 text-red-700":entry.severity==="medium"?"bg-amber-100 text-amber-700":"bg-stone-100 text-stone-500"}`}>
+                                    {entry.severity==="high"?"Alta":entry.severity==="medium"?"Media":"Baja"}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-2 text-stone-700 max-w-xs truncate">{entry.description}</td>
+                                <td className="px-4 py-2 text-stone-400 text-xs">{entry.author}</td>
+                                <td className="px-4 py-2">
+                                  <button onClick={async () => {
+                                    const updated = await deleteErrorLogEntry(entry._id);
+                                    setErrorLog(updated);
+                                  }} className="text-stone-300 hover:text-red-500 text-xs px-1">✕</button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── KPI 5 · Billing Timeliness ── */}
+                <div className="flex items-center gap-2 mb-3 mt-4">
+                  <span className="text-[10px] font-bold text-violet-700 uppercase tracking-widest bg-violet-50 border border-violet-200 rounded-full px-2.5 py-0.5">KPI 5</span>
+                  <span className="text-sm font-semibold text-neutral-800">Billing Timeliness · Pre-Bill a Lyna · Meta: 7+ días antes del arrival</span>
+                </div>
+                <div className="bg-white rounded-2xl border border-violet-100 overflow-hidden mb-6">
+                  <div className="px-5 py-3 border-b border-violet-50 bg-violet-50 flex items-center gap-2">
+                    <span className="text-sm font-semibold text-violet-800">🧾 Facturación oportuna</span>
+                    <span className="ml-auto text-[11px] text-violet-400">Se registra en el panel de cada cliente (📊 KPIs)</span>
+                  </div>
+                  <div className="p-5">
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      <div className="bg-emerald-50 rounded-xl border border-emerald-100 p-4">
+                        <div className="text-2xl font-bold text-emerald-700">{kpiBillingOnTime}</div>
+                        <div className="text-xs text-stone-500 mt-1">A tiempo (7+ días)</div>
+                      </div>
+                      <div className="bg-red-50 rounded-xl border border-red-100 p-4">
+                        <div className="text-2xl font-bold text-red-700">{kpiBillingLate}</div>
+                        <div className="text-xs text-stone-500 mt-1">Tarde (&lt;7 días)</div>
+                      </div>
+                      <div className="bg-stone-50 rounded-xl border border-stone-100 p-4">
+                        <div className="text-2xl font-bold text-stone-400">{kpiBillingPending}</div>
+                        <div className="text-xs text-stone-500 mt-1">Sin Pre-Bill registrado</div>
+                      </div>
+                    </div>
+                    {kpiBillingRows.length > 0 && (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                          <thead className="bg-stone-50 text-[11px] text-stone-400 uppercase tracking-wide">
+                            <tr>
+                              <th className="px-4 py-2 text-left">Cliente</th>
+                              <th className="px-4 py-2 text-left">Arrival</th>
+                              <th className="px-4 py-2 text-left">Pre-Bill enviado</th>
+                              <th className="px-4 py-2 text-left">Factura Lyna</th>
+                              <th className="px-4 py-2 text-center">Días de anticipación</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-stone-50">
+                            {kpiBillingRows.map((row, i) => (
+                              <tr key={i} className="hover:bg-stone-50">
+                                <td className="px-4 py-2 font-medium text-stone-800 max-w-[140px] truncate">{row.name}</td>
+                                <td className="px-4 py-2 text-stone-600 whitespace-nowrap">{row.arrival || "—"}</td>
+                                <td className="px-4 py-2 text-stone-600 whitespace-nowrap">{row.preBillSentAt || "—"}</td>
+                                <td className="px-4 py-2 text-stone-600 whitespace-nowrap">{row.lynaInvoiceSentAt || "—"}</td>
+                                <td className="px-4 py-2 text-center">
+                                  {row.daysEarly !== null ? (
+                                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${row.onTime ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                                      {row.daysEarly}d {row.onTime ? "✓" : "⚠"}
+                                    </span>
+                                  ) : "—"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                    {kpiBillingRows.length === 0 && (
+                      <p className="text-sm text-stone-400 italic">Registra las fechas de Pre-Bill en el panel de cada cliente (📊 KPIs) para ver el seguimiento acá.</p>
+                    )}
+                  </div>
+                </div>
+
               </>
             )}
           </>

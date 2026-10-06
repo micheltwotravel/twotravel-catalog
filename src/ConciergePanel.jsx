@@ -4477,6 +4477,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [listSentToBoatOwner,    setListSentToBoatOwner]     = useState(!!(kickoff?.listSentToBoatOwner));
   const [foodRestrictionsShared, setFoodRestrictionsShared]  = useState(!!(kickoff?.foodRestrictionsShared));
   const [passportOk,             setPassportOk]              = useState(!!(kickoff?.passportOk));
+  const [googleReviewStars,      setGoogleReviewStars]       = useState(Number(kickoff?.googleReviewStars) || 0);
+  const [tripAdvisorReviewStars, setTripAdvisorReviewStars]  = useState(Number(kickoff?.tripAdvisorReviewStars) || 0);
+  const [preBillSentAt,          setPreBillSentAt]           = useState(kickoff?.preBillSentAt || "");
+  const [lynaInvoiceSentAt,      setLynaInvoiceSentAt]       = useState(kickoff?.lynaInvoiceSentAt || "");
   const drinkOrder = kickoff?.drinkOrder || "";
   const [billingCurrency, setBillingCurrency] = useState("USD");
   const [billingSending, setBillingSending] = useState(false);
@@ -4799,6 +4803,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   updates.listSentToBoatOwner    = listSentToBoatOwner;
   updates.foodRestrictionsShared = foodRestrictionsShared;
   updates.passportOk             = passportOk;
+  updates.googleReviewStars      = googleReviewStars;
+  updates.tripAdvisorReviewStars = tripAdvisorReviewStars;
+  updates.preBillSentAt          = preBillSentAt;
+  updates.lynaInvoiceSentAt      = lynaInvoiceSentAt;
 
   // Trip-level / itinerary fields
   updates.arrivalDate            = arrivalDate;
@@ -5546,6 +5554,47 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 />
               </div>
             ))}
+          </DrawerSection>
+
+          {/* ── KPIs: reseñas + facturación ─────────────────────────────── */}
+          <DrawerSection title="📊 KPIs" accent="neutral">
+            <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-2">Reseñas externas · KPI 3</p>
+            <div className="space-y-3 mb-4">
+              {[
+                { label: "Google Review", val: googleReviewStars, set: setGoogleReviewStars },
+                { label: "TripAdvisor Review", val: tripAdvisorReviewStars, set: setTripAdvisorReviewStars },
+              ].map(({ label, val, set }) => (
+                <div key={label}>
+                  <span className="text-[11px] text-neutral-500 block mb-1">{label}</span>
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => set(0)}
+                      className={`text-[10px] px-2 py-0.5 rounded border transition ${val === 0 ? "bg-neutral-900 text-white border-neutral-900" : "border-neutral-300 text-neutral-400 hover:border-neutral-500"}`}>
+                      Sin reseña
+                    </button>
+                    {[1,2,3,4,5].map(n => (
+                      <button key={n} type="button" onClick={() => set(val === n ? 0 : n)}
+                        className={`w-7 h-7 rounded-full text-sm font-semibold transition border ${val >= n ? "bg-amber-400 border-amber-400 text-white" : "bg-white border-neutral-200 text-neutral-300 hover:border-amber-300"}`}>
+                        ★
+                      </button>
+                    ))}
+                    {val > 0 && <span className="ml-1 text-[11px] text-amber-700 font-medium">{val}/5</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-2">Facturación · KPI 5</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] text-neutral-500 block mb-1">Pre-Bill enviado a Lyna</label>
+                <input type="date" value={preBillSentAt} onChange={e => setPreBillSentAt(e.target.value)}
+                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white outline-none" />
+              </div>
+              <div>
+                <label className="text-[11px] text-neutral-500 block mb-1">Lyna envió factura</label>
+                <input type="date" value={lynaInvoiceSentAt} onChange={e => setLynaInvoiceSentAt(e.target.value)}
+                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white outline-none" />
+              </div>
+            </div>
           </DrawerSection>
 
           {/* ── LLEGADAS Y SALIDAS DEL GRUPO ─────────────────────────────── */}
