@@ -4721,8 +4721,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     meetingNotes:      JSON.stringify(meetings),
     pdfNotes:          pdfNotes.trim(),
     // Multiple arrivals
-    arrivals: JSON.stringify(arrivals.filter(a => a.name || a.date || a.flight || a.flightNumber)),
-    departures: JSON.stringify(departures.filter(d => d.name || d.date || d.flightNumber)),
+    arrivals: JSON.stringify([...arrivals.filter(a => a.name || a.date || a.flight || a.flightNumber)].sort((a,b) => (a.date||"").localeCompare(b.date||""))),
+    departures: JSON.stringify([...departures.filter(d => d.name || d.date || d.flightNumber)].sort((a,b) => (a.date||"").localeCompare(b.date||""))),
     // Per-city ratings
     cityRatings: JSON.stringify(cityRatings.filter(r => r.city || r.rating > 0)),
     // Stay dates (set by concierge)
@@ -5556,37 +5556,30 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               try { ciResps = JSON.parse(kickoff.checkInResponses || "[]"); } catch {}
               const hasFlightData = ciResps.some(r => r.arrivalFlight || r.arrivalDate || r.departureFlight || r.departureDate);
               if (!hasFlightData) return null;
+              const normFlight = f => (f||"").toUpperCase().replace(/\s/g,"");
+              const nameInList = (list, name) => list.some(e =>
+                (e.name||"").toLowerCase().split(/\s*[+,&]\s*/).some(n => n.trim().toLowerCase() === name.toLowerCase())
+              );
               const importFromCheckin = () => {
-                // Group arrivals by flight+date
-                const arrMap = {};
-                const depMap = {};
+                const newArr = [];
+                const newDep = [];
                 ciResps.forEach(r => {
                   const name = [r.firstName, r.lastName].filter(Boolean).join(" ");
                   if (r.arrivalFlight || r.arrivalDate) {
-                    const key = `${(r.arrivalFlight||"").toUpperCase()}_${r.arrivalDate||""}`;
-                    if (!arrMap[key]) arrMap[key] = { flightNumber: r.arrivalFlight||"", date: r.arrivalDate||"", time: r.arrivalTime||"", names: [] };
-                    if (name) arrMap[key].names.push(name);
+                    newArr.push({ _id:_arrUid(), flightNumber: normFlight(r.arrivalFlight), date: r.arrivalDate||"", time: r.arrivalTime||"", name, city: "" });
                   }
                   if (r.departureFlight || r.departureDate) {
-                    const key = `${(r.departureFlight||"").toUpperCase()}_${r.departureDate||""}`;
-                    if (!depMap[key]) depMap[key] = { flightNumber: r.departureFlight||"", date: r.departureDate||"", time: r.departureTime||"", names: [] };
-                    if (name) depMap[key].names.push(name);
+                    newDep.push({ _id:_arrUid(), flightNumber: normFlight(r.departureFlight), date: r.departureDate||"", time: r.departureTime||"", name, city: "" });
                   }
                 });
-                const newArr = Object.values(arrMap).map(a => ({ _id:_arrUid(), flightNumber: a.flightNumber, date: a.date, time: a.time, name: a.names.join(" + "), city: "" }));
-                const newDep = Object.values(depMap).map(d => ({ _id:_arrUid(), flightNumber: d.flightNumber, date: d.date, time: d.time, name: d.names.join(" + "), city: "" }));
                 if (newArr.length) setArrivals(prev => {
                   const merged = [...prev];
-                  newArr.forEach(na => {
-                    if (!merged.some(e => e.flightNumber === na.flightNumber && e.date === na.date)) merged.push(na);
-                  });
+                  newArr.forEach(na => { if (na.name && !nameInList(merged, na.name)) merged.push(na); });
                   return merged.sort((a,b) => (a.date||"").localeCompare(b.date||""));
                 });
                 if (newDep.length) setDepartures(prev => {
                   const merged = [...prev];
-                  newDep.forEach(nd => {
-                    if (!merged.some(e => e.flightNumber === nd.flightNumber && e.date === nd.date)) merged.push(nd);
-                  });
+                  newDep.forEach(nd => { if (nd.name && !nameInList(merged, nd.name)) merged.push(nd); });
                   return merged.sort((a,b) => (a.date||"").localeCompare(b.date||""));
                 });
               };
@@ -5606,18 +5599,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             {/* Llegadas */}
             <div className="flex items-center justify-between">
               <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">🛬 Llegadas</p>
-              <div className="flex gap-1">
-                {arrivals.length > 1 && (
-                  <button type="button" onClick={() => setArrivals(prev => [...prev].sort((a,b) => (a.date||"").localeCompare(b.date||"")))}
-                    className="text-[11px] px-2.5 py-1 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800">
-                    ↑ Ordenar
-                  </button>
-                )}
-                <button type="button" onClick={addArrival}
-                  className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-900 text-white hover:bg-neutral-700">
-                  + Agregar llegada
-                </button>
-              </div>
+              <button type="button" onClick={addArrival}
+                className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-900 text-white hover:bg-neutral-700">
+                + Agregar llegada
+              </button>
             </div>
             {arrivals.length === 0 && (
               <p className="text-[11px] text-neutral-400">Sin llegadas. Úsalo cuando el grupo llega en vuelos distintos.</p>
@@ -5681,18 +5666,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             {/* Salidas */}
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-neutral-100">
               <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">🛫 Salidas</p>
-              <div className="flex gap-1">
-                {departures.length > 1 && (
-                  <button type="button" onClick={() => setDepartures(prev => [...prev].sort((a,b) => (a.date||"").localeCompare(b.date||"")))}
-                    className="text-[11px] px-2.5 py-1 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800">
-                    ↑ Ordenar
-                  </button>
-                )}
-                <button type="button" onClick={addDeparture}
-                  className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-900 text-white hover:bg-neutral-700">
-                  + Agregar salida
-                </button>
-              </div>
+              <button type="button" onClick={addDeparture}
+                className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-900 text-white hover:bg-neutral-700">
+                + Agregar salida
+              </button>
             </div>
             {departures.length === 0 && (
               <p className="text-[11px] text-neutral-400">Sin salidas registradas.</p>
