@@ -160,6 +160,16 @@ button,input,select,textarea{font-family:'Jost',sans-serif}
 .staff-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;background:var(--sand2);border:1px solid var(--border2);font-size:11px;color:var(--ink2);margin:3px}
 .staff-chip button{background:none;border:none;cursor:pointer;color:var(--ink3);font-size:12px;line-height:1}
 .staff-chip button:hover{color:var(--red)}
+/* mentions in updates */
+.mention-bar{display:flex;flex-wrap:wrap;gap:5px;padding:8px 0 4px;border-top:1px solid var(--border);margin-top:8px;align-items:center}
+.mention-bar-label{font-size:10px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase;margin-right:4px;white-space:nowrap}
+.mtag{padding:3px 9px;font-size:11px;border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--ink3);border-radius:20px;transition:.12s;line-height:1.4}
+.mtag.sel{background:var(--purple-bg);color:var(--purple);border-color:var(--purple)}
+.mtag:hover:not(.sel){border-color:var(--gold);color:var(--gold)}
+.mention-chip{display:inline-block;background:var(--purple-bg);color:var(--purple);padding:1px 7px;border-radius:20px;font-size:10px;font-weight:500;margin-left:4px}
+/* done section */
+.section-done .section-hdr{background:var(--green-bg);border-color:rgba(22,163,74,.2)}
+.section-done .section-name{color:var(--green)}
 </style>
 </head>
 <body>
@@ -200,6 +210,7 @@ button,input,select,textarea{font-family:'Jost',sans-serif}
     <div class="panel-body" id="panelBody"></div>
     <div class="panel-footer" id="panelFooter" style="display:none">
       <textarea id="updateInput" placeholder="Agregar actualización…"></textarea>
+      <div class="mention-bar" id="mentionBar" style="display:none"></div>
       <div class="panel-actions">
         <button class="tbtn primary" onclick="addUpdate()">Agregar</button>
       </div>
@@ -262,6 +273,7 @@ let currentTab = "hiring";
 let attendSubTab = "standup";
 let searchQ = "";
 let panelId = null;
+let panelType = null;
 let modalMode = null; // { type, id? }
 let currentWeek = getMonday(new Date());
 
@@ -457,9 +469,36 @@ function renderProjects() {
     !searchQ || (p.title||"").toLowerCase().includes(searchQ.toLowerCase())
   );
 
+  const projTable = (list) => `
+    <table class="tbl">
+      <thead><tr>
+        <th>Iniciativa</th>
+        <th>Owner</th>
+        <th>Fecha límite</th>
+        <th>Revisor</th>
+        <th>Status</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+      ${list.map(p => `<tr class="row-click ${panelId===p.id?'selected':''}" onclick="openPanel('project','${p.id}')">
+        <td style="font-weight:400">${p.title}</td>
+        <td style="color:var(--ink3)">${p.owner||"—"}</td>
+        <td class="date-cell">${fmtDate(p.dueDate)}</td>
+        <td style="color:var(--ink3)">${p.reviewer||"—"}</td>
+        <td>${pill(p.status, PROJ_STATUS, `event.stopPropagation();cycleProjStatus('${p.id}')`)}</td>
+        <td style="text-align:right">
+          <button class="icon-btn" onclick="event.stopPropagation();openModal('project','${p.id}')">✏️</button>
+          <button class="icon-btn" onclick="event.stopPropagation();deleteProj('${p.id}')">🗑</button>
+        </td>
+      </tr>`).join("")}
+      </tbody>
+    </table>`;
+
   let html = "";
+
+  // Active sections — exclude done projects
   PROJ_SECTIONS.forEach(section => {
-    const list = filtered.filter(p => p.section === section);
+    const list = filtered.filter(p => p.section === section && p.status !== 'done');
     if (!list.length) return;
     html += `<div class="section-wrap">
       <div class="section-hdr" onclick="toggleSection(this)">
@@ -467,33 +506,22 @@ function renderProjects() {
         <span class="section-count">${list.length} initiative${list.length!==1?'s':''}</span>
         <span class="chevron">▼</span>
       </div>
-      <div class="section-body">
-      <table class="tbl">
-        <thead><tr>
-          <th>Iniciativa</th>
-          <th>Owner</th>
-          <th>Fecha límite</th>
-          <th>Revisor</th>
-          <th>Status</th>
-          <th></th>
-        </tr></thead>
-        <tbody>
-        ${list.map(p => `<tr class="row-click ${panelId===p.id?'selected':''}" onclick="openPanel('project','${p.id}')">
-          <td style="font-weight:400">${p.title}</td>
-          <td style="color:var(--ink3)">${p.owner||"—"}</td>
-          <td class="date-cell">${fmtDate(p.dueDate)}</td>
-          <td style="color:var(--ink3)">${p.reviewer||"—"}</td>
-          <td>${pill(p.status, PROJ_STATUS, `event.stopPropagation();cycleProjStatus('${p.id}')`)}</td>
-          <td style="text-align:right">
-            <button class="icon-btn" onclick="event.stopPropagation();openModal('project','${p.id}')">✏️</button>
-            <button class="icon-btn" onclick="event.stopPropagation();deleteProj('${p.id}')">🗑</button>
-          </td>
-        </tr>`).join("")}
-        </tbody>
-      </table>
-      </div>
+      <div class="section-body">${projTable(list)}</div>
     </div>`;
   });
+
+  // DONE section — auto-populated from all sections
+  const done = filtered.filter(p => p.status === 'done');
+  if (done.length) {
+    html += `<div class="section-wrap section-done collapsed">
+      <div class="section-hdr" onclick="toggleSection(this)">
+        <span class="section-name">✓ Terminado</span>
+        <span class="section-count">${done.length} initiative${done.length!==1?'s':''}</span>
+        <span class="chevron" style="transform:rotate(-90deg)">▼</span>
+      </div>
+      <div class="section-body" style="display:none">${projTable(done)}</div>
+    </div>`;
+  }
 
   if (!html) html = `<div class="empty"><div class="empty-icon">📋</div>Sin iniciativas. Agrega la primera.</div>`;
   ct.innerHTML = html;
@@ -787,11 +815,39 @@ function toggleSection(hdr) {
   if (body) body.style.display = wrap.classList.contains("collapsed") ? "none" : "";
 }
 
+// ── MENTION BAR ──────────────────────────────────────────────
+let selectedMentions = new Set();
+
+function renderMentionBar() {
+  const bar = document.getElementById("mentionBar");
+  if (!bar) return;
+  bar.innerHTML = `<span class="mention-bar-label">Etiquetar</span>` +
+    staff.map(s => `<button class="mtag${selectedMentions.has(s.id) ? ' sel' : ''}" onclick="toggleMention('${s.id}')">${s.name}</button>`).join("");
+}
+function toggleMention(sid) {
+  if (selectedMentions.has(sid)) selectedMentions.delete(sid);
+  else selectedMentions.add(sid);
+  renderMentionBar();
+}
+
 // ── SIDE PANEL ──────────────────────────────────────────────
 function openPanel(type, id) {
   panelId = id;
+  panelType = type;
   const overlay = document.getElementById("panelOverlay");
   overlay.classList.add("open");
+
+  // show/hide mention bar — only for candidate panels
+  const mBar = document.getElementById("mentionBar");
+  if (mBar) {
+    if (type === "candidate") {
+      selectedMentions = new Set();
+      mBar.style.display = "";
+      renderMentionBar();
+    } else {
+      mBar.style.display = "none";
+    }
+  }
 
   if (type === "candidate") {
     const c = candidates.find(x => x.id === id);
@@ -815,11 +871,16 @@ function openPanel(type, id) {
       </div>` : ""}
       <div class="panel-section">
         <div class="panel-label">Actualizaciones (${updates.length})</div>
-        ${updates.length ? updates.slice().reverse().map(u => `
-          <div class="update-item">
-            <div class="update-meta">${new Date(u.at).toLocaleString("es-CO", {dateStyle:"medium", timeStyle:"short"})}</div>
+        ${updates.length ? updates.slice().reverse().map(u => {
+          const mentionNames = (u.mentions||[]).map(mid => {
+            const m = staff.find(s => s.id === mid);
+            return m ? `<span class="mention-chip">@${m.name}</span>` : '';
+          }).join('');
+          return `<div class="update-item">
+            <div class="update-meta">${new Date(u.at).toLocaleString("es-CO", {dateStyle:"medium", timeStyle:"short"})}${mentionNames ? ' · '+mentionNames : ''}</div>
             <div class="update-text">${u.text}</div>
-          </div>`).join("") : '<div style="font-size:12px;color:var(--ink3)">Sin actualizaciones aún.</div>'}
+          </div>`;
+        }).join("") : '<div style="font-size:12px;color:var(--ink3)">Sin actualizaciones aún.</div>'}
       </div>
     `;
   } else if (type === "project") {
@@ -884,11 +945,14 @@ function addUpdate() {
   if (!target) return;
 
   if (!target.updates) target.updates = [];
-  target.updates.push({ text, at: new Date().toISOString() });
+  const update = { text, at: new Date().toISOString() };
+  if (isCand && selectedMentions.size > 0) update.mentions = [...selectedMentions];
+  target.updates.push(update);
 
   if (isCand) save(KEY.candidates, candidates);
   if (isProj) save(KEY.projects, projects);
 
+  selectedMentions = new Set();
   openPanel(isCand ? "candidate" : "project", panelId);
 }
 
