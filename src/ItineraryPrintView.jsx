@@ -280,8 +280,11 @@ function DepartureTracker({ kickoff, lang }) {
 }
 
 // Compact flight entry rendered inline within a day's item list
+const normFlightNum = s => (s || "").toUpperCase().replace(/\s+/g, "");
+
 function InlineFlightRow({ flight, lang, type }) {
-  const { data, loading } = useFlightData(flight.flightNumber, flight.date);
+  const flightNum = normFlightNum(flight.flightNumber);
+  const { data, loading } = useFlightData(flightNum, flight.date);
   const isEs = lang === "es";
   const fmtTime = iso => iso
     ? new Date(iso).toLocaleTimeString("es-CO", { hour:"2-digit", minute:"2-digit", timeZone:"America/Bogota" })
@@ -299,7 +302,7 @@ function InlineFlightRow({ flight, lang, type }) {
       </div>
       <div style={{ flex:1 }}>
         <div style={{ fontSize:12, fontWeight:600, color:"#374151" }}>
-          {flight.flightNumber} — {label}
+          {flightNum} — {label}
           {data?.depIata && data?.arrIata ? ` · ${data.depIata}→${data.arrIata}` : ""}
         </div>
         {flight.name && <div style={{ fontSize:11, color:"#9ca3af", marginTop:1 }}>{flight.name}</div>}
@@ -3334,6 +3337,8 @@ export default function ItineraryPrintView() {
 
       
 
+      <FlightTracker kickoff={kickoff} lang={lang} />
+
       {(() => {
         let arrivals = [];
         let departures = [];
@@ -3346,11 +3351,20 @@ export default function ItineraryPrintView() {
           d.setDate(d.getDate() + di);
           return d.toISOString().slice(0, 10);
         };
+        const groupByFlight = (list) => {
+          const grouped = {};
+          list.forEach(f => {
+            const k = `${normFlightNum(f.flightNumber)}_${f.date || ""}`;
+            if (!grouped[k]) grouped[k] = { ...f, flightNumber: normFlightNum(f.flightNumber), names: [] };
+            if (f.name) f.name.split(/\s*\+\s*/).forEach(n => { const t = n.trim(); if (t && !grouped[k].names.includes(t)) grouped[k].names.push(t); });
+          });
+          return Object.values(grouped).map(g => ({ ...g, name: g.names.join(" + ") }));
+        };
         return activeDays.map((day, di) => {
           const dateStr = day.date || isoForDay(di);
           const dayFlights = dateStr ? [
-            ...arrivals.filter(f => f.date === dateStr).map(f => ({ flight:f, type:"arrival" })),
-            ...departures.filter(f => f.date === dateStr).map(f => ({ flight:f, type:"departure" })),
+            ...groupByFlight(arrivals.filter(f => f.date === dateStr)).map(f => ({ flight:f, type:"arrival" })),
+            ...groupByFlight(departures.filter(f => f.date === dateStr)).map(f => ({ flight:f, type:"departure" })),
           ] : [];
           return (
             <DayPage
@@ -3374,6 +3388,8 @@ export default function ItineraryPrintView() {
           );
         });
       })()}
+
+      <DepartureTracker kickoff={kickoff} lang={lang} />
 
       {/* ── PDF notes block (printable) ── */}
       {pdfNotes.trim() && (
