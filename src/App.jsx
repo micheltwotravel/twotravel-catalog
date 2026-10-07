@@ -6689,7 +6689,7 @@ function LoginScreen({ onLogin }) {
   );
 }
 
-const SUPER_ADMINS = ["michel@two.travel","caro@two.travel","ray@two.travel"];
+const SUPER_ADMINS = ["michel@two.travel","caro@two.travel","ray@two.travel","giulia@two.travel"];
 
 function RegisterScreen() {
   const [email, setEmail]     = useState("");

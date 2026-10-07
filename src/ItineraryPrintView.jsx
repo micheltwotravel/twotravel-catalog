@@ -152,7 +152,7 @@ const STATUS_STYLE = {
   unknown:   { bg: "#f9fafb", color: "#9ca3af", label_es: "Sin datos",  label_en: "Unknown" },
 };
 
-function FlightRow({ flight, lang, type }) {
+function FlightRow({ flight, lang, type, editMode, onPatchTime }) {
   const { data, loading } = useFlightData(flight.flightNumber, flight.date);
   const isEs = lang === "es";
   const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString("es-CO", { hour:"2-digit", minute:"2-digit", timeZone:"America/Bogota" }) : "—";
@@ -164,6 +164,10 @@ function FlightRow({ flight, lang, type }) {
   const depTime = data ? fmtTime(data.depActual || data.depScheduled) : (flight.time || "—");
   const arrTime = data ? fmtTime(data.arrActual || data.arrEstimated || data.arrScheduled) : "—";
   const timeValue = type === "arrival" ? arrTime : depTime;
+  const hasLiveTime = data && (type === "arrival"
+    ? !!(data.arrActual || data.arrEstimated || data.arrScheduled)
+    : !!(data.depActual || data.depScheduled));
+  const canEditTime = editMode && onPatchTime && !hasLiveTime;
 
   return (
     <div style={{ display:"grid", gridTemplateColumns:"90px 1fr 90px 90px", alignItems:"center", gap:12,
@@ -204,7 +208,17 @@ function FlightRow({ flight, lang, type }) {
         <div style={{ fontSize:10, color:"#9ca3af", textTransform:"uppercase", letterSpacing:".06em", marginBottom:2 }}>
           {type === "arrival" ? (isEs ? "Llega" : "Arr") : (isEs ? "Sale" : "Dep")}
         </div>
-        <div style={{ fontSize:13, fontWeight:600, color:"#111" }}>{loading ? "…" : timeValue}</div>
+        {canEditTime ? (
+          <input
+            type="time"
+            defaultValue={flight.time || ""}
+            onBlur={e => { if (e.target.value !== flight.time) onPatchTime(e.target.value); }}
+            className="no-print"
+            style={{ width:"80px", fontSize:12, fontWeight:600, color:"#111", border:"1px solid #d1d5db", borderRadius:4, padding:"2px 4px", textAlign:"center", background:"#fffde7" }}
+          />
+        ) : (
+          <div style={{ fontSize:13, fontWeight:600, color:"#111" }}>{loading ? "…" : timeValue}</div>
+        )}
         {data?.gate && type === "departure" && <div style={{ fontSize:9, color:"#9ca3af" }}>Gate {data.gate}</div>}
         {st && (
           <span style={{ fontSize:8, fontWeight:700, padding:"1px 6px", borderRadius:99,
@@ -217,7 +231,7 @@ function FlightRow({ flight, lang, type }) {
   );
 }
 
-function FlightBlock({ kickoff, lang, type }) {
+function FlightBlock({ kickoff, lang, type, editMode, onPatchFlight }) {
   let raw = [];
   const key = type === "arrival" ? "arrivals" : "departures";
   try { raw = JSON.parse(kickoff[key] || "[]").filter(f => f.flightNumber); } catch {}
@@ -228,7 +242,7 @@ function FlightBlock({ kickoff, lang, type }) {
   const grouped = {};
   raw.forEach(f => {
     const k = `${normFn(f.flightNumber)}_${f.date || ""}`;
-    if (!grouped[k]) grouped[k] = { ...f, flightNumber: normFn(f.flightNumber), names: [] };
+    if (!grouped[k]) grouped[k] = { ...f, flightNumber: normFn(f.flightNumber), names: [], _groupKey: k };
     if (f.name) f.name.split(/\s*\+\s*/).forEach(n => { const t = n.trim(); if (t && !grouped[k].names.includes(t)) grouped[k].names.push(t); });
   });
   const flights = Object.values(grouped)
@@ -259,7 +273,16 @@ function FlightBlock({ kickoff, lang, type }) {
           </div>
           {/* Rows */}
           <div style={{ padding:"0 20px" }}>
-            {flights.map((f, i) => <FlightRow key={i} flight={f} lang={lang} type={type} />)}
+            {flights.map((f, i) => (
+              <FlightRow
+                key={i}
+                flight={f}
+                lang={lang}
+                type={type}
+                editMode={editMode}
+                onPatchTime={onPatchFlight ? (val) => onPatchFlight(f._groupKey, val) : undefined}
+              />
+            ))}
           </div>
           <div style={{ padding:"8px 20px 12px", textAlign:"right" }}>
             <span style={{ fontSize:9, color:"#d1d5db" }}>
@@ -273,12 +296,12 @@ function FlightBlock({ kickoff, lang, type }) {
 }
 
 // Keep old name for arrival block placed at top
-function FlightTracker({ kickoff, lang }) {
-  return <FlightBlock kickoff={kickoff} lang={lang} type="arrival" />;
+function FlightTracker({ kickoff, lang, editMode, onPatchFlight }) {
+  return <FlightBlock kickoff={kickoff} lang={lang} type="arrival" editMode={editMode} onPatchFlight={onPatchFlight} />;
 }
 // Departure block placed at end
-function DepartureTracker({ kickoff, lang }) {
-  return <FlightBlock kickoff={kickoff} lang={lang} type="departure" />;
+function DepartureTracker({ kickoff, lang, editMode, onPatchFlight }) {
+  return <FlightBlock kickoff={kickoff} lang={lang} type="departure" editMode={editMode} onPatchFlight={onPatchFlight} />;
 }
 
 // Compact flight entry rendered inline within a day's item list
@@ -3024,6 +3047,21 @@ export default function ItineraryPrintView() {
       return { ...day, items };
     }));
 
+  const patchFlightTime = async (flightKey, flightType, timeVal) => {
+    if (!kickoffId) return;
+    const arrKey = flightType === "arrival" ? "arrivals" : "departures";
+    let list = [];
+    try { list = JSON.parse(kickoff[arrKey] || "[]"); } catch {}
+    const normFn = s => (s || "").toUpperCase().replace(/\s/g, "");
+    const updated = list.map(f => {
+      const k = `${normFn(f.flightNumber)}_${f.date || ""}`;
+      return k === flightKey ? { ...f, time: timeVal } : f;
+    });
+    const patch = { [arrKey]: JSON.stringify(updated) };
+    setKickoff(prev => ({ ...prev, [arrKey]: JSON.stringify(updated) }));
+    try { await updateKickoffInSheet(kickoffId, patch); } catch {}
+  };
+
   const saveSnapshot = async () => {
     // Use ref to get the latest editDays synchronously — avoids losing an inline
     // edit that triggered setEditDays just before the save button click (React
@@ -3375,7 +3413,7 @@ export default function ItineraryPrintView() {
 
       
 
-      <FlightTracker kickoff={kickoff} lang={lang} />
+      <FlightTracker kickoff={kickoff} lang={lang} editMode={editMode} onPatchFlight={(key, val) => patchFlightTime(key, "arrival", val)} />
 
       {(() => {
         let arrivals = [];
@@ -3428,7 +3466,7 @@ export default function ItineraryPrintView() {
         });
       })()}
 
-      <DepartureTracker kickoff={kickoff} lang={lang} />
+      <DepartureTracker kickoff={kickoff} lang={lang} editMode={editMode} onPatchFlight={(key, val) => patchFlightTime(key, "departure", val)} />
 
       {/* ── PDF notes block (printable) ── */}
       {pdfNotes.trim() && (

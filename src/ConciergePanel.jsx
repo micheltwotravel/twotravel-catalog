@@ -1306,7 +1306,7 @@ function mapServiceToCartItem(service, clientType = 1, groupSizeNum = 1) {
   dayLabel: "",
   timeLabel: "",
   notes: "",
-  confirmed: false,
+  confirmed: null,
   confirmation: "",
   dressCode: "",
   passengers: "",
