@@ -307,7 +307,21 @@ function DepartureTracker({ kickoff, lang, editMode, onPatchFlight }) {
 // Compact flight entry rendered inline within a day's item list
 const normFlightNum = s => (s || "").toUpperCase().replace(/\s+/g, "");
 
-function InlineFlightRow({ flight, lang, type }) {
+// Convert simple markdown markers to HTML for note display
+function noteToHtml(text) {
+  if (!text) return "";
+  return text
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/\*\*(.+?)\*\*/gs, "<strong>$1</strong>")
+    .replace(/__(.+?)__/gs, "<u>$1</u>")
+    .replace(/_(.+?)_/gs, "<em>$1</em>")
+    .replace(/~~(.+?)~~/gs, '<mark style="background:#fef08a;padding:0 2px;">$1</mark>');
+}
+const NoteText = ({ text, style }) => (
+  <span dangerouslySetInnerHTML={{ __html: noteToHtml(text) }} style={style} />
+);
+
+function InlineFlightRow({ flight, lang, type, editMode, onMoveUp, onMoveDown }) {
   const flightNum = normFlightNum(flight.flightNumber);
   const { data, loading } = useFlightData(flightNum, flight.date);
   const isEs = lang === "es";
@@ -318,9 +332,20 @@ function InlineFlightRow({ flight, lang, type }) {
     ? (data ? fmtTime(data.arrActual || data.arrEstimated || data.arrScheduled) : (flight.time || ""))
     : (data ? fmtTime(data.depActual || data.depScheduled) : (flight.time || ""));
   const label = type === "arrival" ? (isEs ? "Llegada" : "Arrival") : (isEs ? "Salida" : "Departure");
+  const btnStyle = (disabled) => ({
+    border:"1px solid #d1d5db", borderRadius:3, background:"#fff",
+    color: disabled ? "#d1d5db" : "#374151", cursor: disabled ? "default" : "pointer",
+    fontSize:10, padding:"1px 5px", lineHeight:1.2,
+  });
 
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 40px", borderBottom:"1px solid #f3f4f6", background:"#fafafa" }}>
+    <div style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 40px", borderBottom:"1px solid #f3f4f6", background:"#fafafa", position:"relative" }}>
+      {editMode && (
+        <div className="no-print" style={{ position:"absolute", left:6, top:"50%", transform:"translateY(-50%)", display:"flex", flexDirection:"column", gap:2 }}>
+          <button onClick={onMoveUp} disabled={!onMoveUp} style={btnStyle(!onMoveUp)}>↑</button>
+          <button onClick={onMoveDown} disabled={!onMoveDown} style={btnStyle(!onMoveDown)}>↓</button>
+        </div>
+      )}
       <span style={{ fontSize:18, flexShrink:0 }}>{type === "arrival" ? "🛬" : "🛫"}</span>
       <div style={{ minWidth:52, fontFamily:"monospace", fontWeight:700, fontSize:13, color:"#111" }}>
         {loading ? "…" : (displayTime || "—")}
@@ -1877,7 +1902,7 @@ function ChefMenuGroupCard({ it, lang, editMode, onRemove, patchItem }) {
       </div>
       {/* Notes */}
       {it.notes && (
-        <div style={{ marginTop: 10, fontSize: 11, color: "#374151", fontStyle: "italic" }}>💬 {it.notes}</div>
+        <div style={{ marginTop: 10, fontSize: 11, color: "#374151", fontStyle: "italic" }}>💬 <NoteText text={it.notes} /></div>
       )}
       {/* Remove button (edit mode) */}
       {editMode && onRemove && (
@@ -2179,7 +2204,7 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
             {it.notes && (
               <div>
                 <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>{isEs?"Notas":"Notes"}</div>
-                <div style={{fontSize:11,fontWeight:600,color:"#374151"}}>{it.notes}</div>
+                <div style={{fontSize:11,fontWeight:600,color:"#374151"}}><NoteText text={it.notes} /></div>
               </div>
             )}
             {price && (
@@ -2252,7 +2277,7 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         {/* Concierge notes for this service */}
         {it.notes && (
           <div style={{ fontSize:11, color:"#6b7280", marginBottom:8, background:"#f9fafb", borderLeft:"3px solid #d1d5db", paddingLeft:8, paddingTop:4, paddingBottom:4, borderRadius:"0 4px 4px 0" }}>
-            ✍️ {it.notes}
+            ✍️ <NoteText text={it.notes} />
           </div>
         )}
 
@@ -2798,7 +2823,8 @@ function BillingPage({ kickoff }) {
 /* ═══════════════════════════════════════════════════════════
    DAY PAGE
 ═══════════════════════════════════════════════════════════ */
-function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onDuplicateItem, onAddItem, billingBlock, hasFamilies, patchDay, patchItemFn, dayFlights, onMoveItem }) {
+function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onDuplicateItem, onAddItem, billingBlock, hasFamilies, patchDay, patchItemFn, dayFlights, onMoveItem, patchDayFlight }) {
+  const minutesToHHMM = m => { const h = Math.floor(m / 60); const min = m % 60; return `${String(h).padStart(2,"0")}:${String(min).padStart(2,"0")}`; };
   const parseTime = t => {
     const s = String(t || "").trim();
     const m24 = s.match(/^(\d{1,2}):(\d{2})/i);
@@ -2856,7 +2882,22 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
 
       <div style={{ flex: 1 }}>
         {allEntries.map((entry, i) => entry.kind === "flight"
-          ? <InlineFlightRow key={`fl-${i}`} flight={entry.flight} lang={lang} type={entry.type} />
+          ? (() => {
+              const prevEntry = allEntries[i - 1];
+              const nextEntry = allEntries[i + 1];
+              const canUp   = editMode && patchDayFlight && prevEntry && prevEntry.sortTime !== Infinity;
+              const canDown = editMode && patchDayFlight && nextEntry && nextEntry.sortTime !== Infinity;
+              const flightKey = `${normFlightNum(entry.flight.flightNumber)}_${entry.flight.date || ""}`;
+              return (
+                <InlineFlightRow
+                  key={`fl-${i}`}
+                  flight={entry.flight} lang={lang} type={entry.type}
+                  editMode={editMode}
+                  onMoveUp={canUp ? () => patchDayFlight(flightKey, entry.type, minutesToHHMM(prevEntry.sortTime - 1)) : null}
+                  onMoveDown={canDown ? () => patchDayFlight(flightKey, entry.type, minutesToHHMM(nextEntry.sortTime + 1)) : null}
+                />
+              );
+            })()
           : entry.it.isBlock
           ? (
             <div key={i} style={{ margin: "10px 0", position: "relative", display:"flex", borderLeft:"3px solid #d1c4a8", borderBottom:"1px solid #f0f0f0", background:"#faf9f7" }}>
@@ -3461,6 +3502,7 @@ export default function ItineraryPrintView() {
               patchDay={editMode ? (field, val) => patchDay(di, field, val) : undefined}
               patchItemFn={editMode ? (ii, field, val) => patchItem(di, ii, field, val) : undefined}
               dayFlights={dayFlights}
+              patchDayFlight={editMode ? (flightKey, type, newTime) => patchFlightTime(flightKey, type, newTime) : undefined}
             />
           );
         });

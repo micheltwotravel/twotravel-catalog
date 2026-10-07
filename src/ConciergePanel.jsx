@@ -1493,6 +1493,18 @@ function VideosField({ item, onUpdate }) {
 
 function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], groupSize = 1, lang = "en" }) {
   const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation || item.confirmed));
+  const notesRef = useRef(null);
+  const applyFormat = (marker) => {
+    const el = notesRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end   = el.selectionEnd;
+    const sel   = el.value.slice(start, end) || "texto";
+    const wrap  = { b: `**${sel}**`, i: `_${sel}_`, u: `__${sel}__`, c: `~~${sel}~~` };
+    const newVal = el.value.slice(0, start) + wrap[marker] + el.value.slice(end);
+    onUpdate(item._uid, { notes: newVal });
+    setTimeout(() => { el.focus(); el.setSelectionRange(start + wrap[marker].length, start + wrap[marker].length); }, 0);
+  };
   return (
     <div className={`px-4 py-2.5 hover:bg-neutral-50 transition-colors${item.ghost ? " opacity-40 bg-neutral-50" : ""}`}
          title={item.ghost ? "👻 Fantasma — no visible al cliente" : undefined}>
@@ -1733,14 +1745,28 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
               )}
             </>
           )}
-          <div className="flex items-center gap-2">
-            <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Notas</span>
-            <input
-              value={item.notes || ""}
-              onChange={e => onUpdate(item._uid, { notes: e.target.value })}
-              placeholder="Mesa, alergias, instrucciones…"
-              className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
-            />
+          <div className="flex items-start gap-2">
+            <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0 pt-1">Notas</span>
+            <div className="flex-1 flex flex-col gap-1">
+              <div className="flex gap-1">
+                {[["b","B","font-bold"],["i","I","italic"],["u","U","underline"],["c","◈","text-amber-500 bg-amber-50"]].map(([m,lbl,cls]) => (
+                  <button key={m} type="button"
+                    onMouseDown={e => { e.preventDefault(); applyFormat(m); }}
+                    className={`text-[10px] px-1.5 py-0.5 rounded border border-neutral-200 text-neutral-500 hover:bg-neutral-100 leading-none ${cls}`}
+                    title={{ b:"Negrita (**texto**)", i:"Cursiva (_texto_)", u:"Subrayado (__texto__)", c:"Resaltado (~~texto~~)" }[m]}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                ref={notesRef}
+                value={item.notes || ""}
+                onChange={e => onUpdate(item._uid, { notes: e.target.value })}
+                placeholder="Mesa, alergias, instrucciones…"
+                rows={2}
+                className="text-xs text-neutral-500 border border-dashed border-neutral-200 rounded focus:outline-none p-1 bg-transparent placeholder-neutral-300 resize-y"
+              />
+            </div>
           </div>
           <ImagesField item={item} onUpdate={onUpdate} />
           <VideosField item={item} onUpdate={onUpdate} />
