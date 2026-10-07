@@ -6361,7 +6361,7 @@ const ROLE_META = {
 const ROLE_ACCESS = {
   admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores"],
   concierge: ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones"],
-  junior:    ["concierge"],   // concierge panel but restricted to Operaciones drawer
+  junior:    ["dashboard"],   // dashboard overview only — no client edit panel
   finance:   ["pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores"],
   marketing: ["dashboard"],
   bodas:     ["bodas","tareas-bodas","tasks","dashboard"],
