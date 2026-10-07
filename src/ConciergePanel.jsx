@@ -4497,6 +4497,26 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
       .catch(() => {});
   }, []);
 
+  const [boatList, setBoatList] = useState([]);
+  useEffect(() => {
+    const GAS = import.meta.env.VITE_GAS_URL;
+    fetch(GAS, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "property_get", data: { id: "all", limit: 600 } }) })
+      .then(r => r.json()).then(d => {
+        const raw = kickoff?.city || "";
+        const codeToCity = { CTG:"CARTAGENA", MDE:"MEDELLÍN", MEDELLIN:"MEDELLÍN", CDMX:"MEXICO CITY", TUL:"TULUM", BOG:"BOGOTÁ" };
+        const cityFull = (codeToCity[raw.toUpperCase()] || raw).toUpperCase();
+        const boats = (d.data || d.properties || []).filter(p => {
+          const pType = (p["Item Type"] || p["item type"] || p.Type || p.type || "").toUpperCase();
+          const pCity = (p.City || p.city || "").toUpperCase();
+          const isBoat = pType.includes("BOAT") || pType.includes("YACHT") || pType.includes("CATAMARAN");
+          const cityMatch = !cityFull || pCity.includes(cityFull) || cityFull.includes(pCity);
+          return isBoat && cityMatch;
+        });
+        setBoatList(boats);
+      }).catch(() => {});
+  }, []);
+
   // Auto-open client web itinerary in side panel when drawer mounts
   const iframeRef = useRef(null);
   useEffect(() => {
@@ -5778,6 +5798,55 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 ) : null; })()}
               </div>
             ))}
+          </DrawerSection>
+
+          {/* ── OPERACIÓN — BOTE & MUELLE ─────────────────────────────── */}
+          <DrawerSection title="⛵ Operación — Bote & Muelle" accent="neutral">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="text-[11px] text-neutral-500 block mb-1">Nombre del bote <span className="text-neutral-400">(del portafolio)</span></label>
+                <input value={boatName} onChange={e => {
+                  const val = e.target.value;
+                  setBoatName(val);
+                  const match = boatList.find(p => p.Name === val);
+                  if (match) {
+                    const dockVal = match["Dock Location"] || match.dockLocation || match.Location || match.location || "";
+                    if (dockVal) setDock(dockVal);
+                  }
+                }} placeholder="Nombre del bote…" list="edit-drawer-boat-datalist"
+                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white outline-none" />
+                <datalist id="edit-drawer-boat-datalist">
+                  {boatList.map(p => <option key={p.id || p.Name} value={p.Name}>{p.Name}{p["Dock Location"] ? ` — ${p["Dock Location"]}` : ""}</option>)}
+                </datalist>
+              </div>
+              <div>
+                <label className="text-[11px] text-neutral-500 block mb-1">Muelle / Dock</label>
+                <input value={dock} onChange={e => setDock(e.target.value)} placeholder="Club Náutico, La Bodeguita…"
+                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white outline-none" />
+              </div>
+              <div>
+                <label className="text-[11px] text-neutral-500 block mb-1">Fecha del bote</label>
+                <input type="date" value={boatDay} onChange={e => setBoatDay(e.target.value)}
+                  min={kickoff?.arrivalDate || ""} max={kickoff?.departureDate || ""}
+                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white outline-none" />
+              </div>
+              <div>
+                <label className="text-[11px] text-neutral-500 block mb-1">Hora de salida</label>
+                <input value={boatDepartureTime} onChange={e => setBoatDepartureTime(e.target.value)} placeholder="10:00 AM"
+                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white outline-none" />
+              </div>
+              <div>
+                <label className="text-[11px] text-neutral-500 block mb-1">Modalidad</label>
+                <div className="flex gap-1 flex-wrap mt-0.5">
+                  {["Privado","Day Pass"].map(v => (
+                    <button key={v} type="button" onClick={() => setBoatDayType(boatDayType === v ? "" : v)}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${boatDayType === v ? "bg-sky-600 text-white border-sky-600" : "bg-white text-neutral-600 border-neutral-300 hover:border-sky-400"}`}>
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </DrawerSection>
 
           {/* ITINERARIO — canvas con edición inline por día */}
