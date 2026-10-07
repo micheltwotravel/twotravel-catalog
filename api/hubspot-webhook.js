@@ -125,7 +125,7 @@ export default async function handler(req, res) {
             briefNotes:         notes,
             arrivalDate,
             departureDate,
-            internalNotes:      briefingParts.join("\n"),
+            internalNotes:      "",
             createdAt:          new Date().toISOString(),
           },
         }),

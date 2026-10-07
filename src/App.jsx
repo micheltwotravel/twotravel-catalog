@@ -1530,7 +1530,7 @@ function ClientesTable({ kickoffs, loading }) {
               )}
               {filtered.map((r, i) => {
                 const { drinkSummary, grocerySummary, breakfastSummary, breakfastAt } = orderStatus(r);
-                const itinLink = `/?mode=itinerary&kickoffId=${r.id}`;
+                const itinLink = `https://twotravelvip.com/?mode=itinerary&kickoffId=${r.id}`;
                 const reunLink = `/?mode=reuniones&kickoffId=${r.id}`;
                 const isSaving = (f) => saving[r.id + f];
                 return (
@@ -1564,14 +1564,11 @@ function ClientesTable({ kickoffs, loading }) {
                     </td>
                     {/* 4. Pax */}
                     <td style={{ ...tdStyle, textAlign:"center" }}>{r.pax || r.groupSize || "—"}</td>
-                    {/* 5. Sr Concierge */}
+                    {/* 5. Sr Concierge — read-only; set from edit panel */}
                     <td style={tdStyle}>
-                      <InlineSelect
-                        initialValue={r.assignedConciergeName || r.concierge || ""}
-                        options={["", ...CONCIERGE_NAMES]}
-                        onSave={v => saveField(r.id, "assignedConciergeName", v)}
-                        style={{ maxWidth:130 }}
-                      />
+                      <span style={{ fontSize:11, color: (r.assignedConciergeName || r.concierge) ? "#374151" : "#d1d5db" }}>
+                        {r.assignedConciergeName || r.concierge || "—"}
+                      </span>
                     </td>
                     {/* 6. Jr Concierge */}
                     {(() => {

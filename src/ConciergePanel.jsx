@@ -5036,36 +5036,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-2 sm:col-span-2">
-              <div>
-                <label className="text-[11px] text-neutral-500">Jr. grupo</label>
-                <input
-                  value={juniorConcierge}
-                  onChange={e => setJuniorConcierge(e.target.value)}
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="Nombre…"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] text-neutral-500">Jr. bote</label>
-                <input
-                  value={juniorBoat}
-                  onChange={e => setJuniorBoat(e.target.value)}
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="Nombre…"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] text-neutral-500">Jr. beach club</label>
-                <input
-                  value={juniorBeachClub}
-                  onChange={e => setJuniorBeachClub(e.target.value)}
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="Nombre…"
-                />
-              </div>
-            </div>
-
             <div className="sm:col-span-2">
               <label className="text-[11px] text-neutral-500">Estado</label>
               <select

@@ -251,7 +251,7 @@ function FlightBlock({ kickoff, lang, type }) {
         {/* Column headers */}
         <div style={{ display:"grid", gridTemplateColumns:"90px 1fr 90px 90px", gap:12,
           padding:"8px 20px", background:"#f9fafb", borderBottom:"1px solid #e5e7eb" }}>
-          {["Vuelo", isEs?"Pasajero":"Passenger", "Fecha", type==="arrival"?(isEs?"Llega":"Arr"):(isEs?"Sale":"Dep")].map(h => (
+          {[isEs?"Vuelo":"Flight", isEs?"Pasajero":"Passenger", isEs?"Fecha":"Date", type==="arrival"?(isEs?"Llega":"Arr"):(isEs?"Sale":"Dep")].map(h => (
             <div key={h} style={{ fontSize:9, fontWeight:600, color:"#9ca3af", textTransform:"uppercase", letterSpacing:".08em",
               textAlign: h === "Vuelo" || h === (isEs?"Pasajero":"Passenger") ? "left" : "center" }}>{h}</div>
           ))}
@@ -2059,7 +2059,7 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
               {(() => {
                 const unit = String(it.priceUnit || "").toLowerCase();
                 const isPerPerson  = unit.includes("person");
-                const isPerVehicle = unit.includes("vehicle") || unit.includes("vehículo") || unit.includes("vehiculo");
+                const isPerVehicle = it.category === "transportation" || unit.includes("vehicle") || unit.includes("vehículo") || unit.includes("vehiculo");
                 if (!price) return null;
                 if (isPerVehicle) {
                   return (
