@@ -1035,6 +1035,7 @@ Clock Tower (Torre del Reloj) — The main entrance to the Walled City. Great ph
 
 const STATUS_LABELS = {
   new:                { es: "Nuevo",                    en: "New" },
+  active:             { es: "Activo",                   en: "Active" },
   client_submitted:   { es: "Cliente llenó selección",  en: "Client submitted" },
   concierge_editing:  { es: "Concierge editando",       en: "Concierge editing" },
   sent_to_preview:    { es: "Enviado a preview",        en: "Sent to preview" },
@@ -2692,10 +2693,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
               </div>
             </div>
           )}
-          <button type="button" onClick={handleSave} disabled={saving}
-            className="px-3 py-1.5 rounded-lg bg-neutral-900 text-white text-xs hover:bg-neutral-800 disabled:opacity-50">
-            {saving ? "Guardando…" : "Guardar itinerario"}
-          </button>
+          {/* Save handled by main EditDrawer "Guardar" button above — canvas state syncs via onCartChange */}
         </div>
       </div>
 
@@ -5044,6 +5042,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
               >
                 <option value="new">{STATUS_LABELS.new.es}</option>
+                <option value="active">{STATUS_LABELS.active.es}</option>
                 <option value="client_submitted">{STATUS_LABELS.client_submitted.es}</option>
                 <option value="concierge_editing">{STATUS_LABELS.concierge_editing.es}</option>
                 <option value="sent_to_preview">{STATUS_LABELS.sent_to_preview.es}</option>
@@ -7871,11 +7870,25 @@ export function MenuAdminPanel() {
           onClick={() => setNewItemForm(null)}>
           <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, boxShadow: "0 16px 48px rgba(0,0,0,.25)", width: "min(480px,96vw)", padding: 24 }}>
             <h3 style={{ fontSize: 15, fontWeight: 700, color: "#111", marginBottom: 16 }}>＋ Nuevo item</h3>
+            {newItemForm.fields.img && (
+              <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+                <img
+                  src={driveImgUrl(newItemForm.fields.img)}
+                  alt="preview"
+                  style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8, border: "1px solid #e5e7eb", flexShrink: 0 }}
+                  onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
+                />
+                <div style={{ display: "none", width: 56, height: 56, borderRadius: 8, background: "#f3f4f6", border: "1px solid #e5e7eb", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#9ca3af", textAlign: "center", flexShrink: 0, padding: 4 }}>
+                  Sin imagen
+                </div>
+                <span style={{ fontSize: 11, color: "#6b7280" }}>Vista previa</span>
+              </div>
+            )}
             {[
               { key: "name", label: "Nombre (ES)", required: true },
               { key: newItemForm.type === "drink" ? "name_en" : "name_es", label: newItemForm.type === "drink" ? "Nombre (EN)" : "Nombre alternativo" },
               { key: "emoji", label: "Emoji (ej: 🥃)" },
-              { key: "img", label: "URL foto" },
+              { key: "img", label: "URL foto (Google Drive o directa)" },
               ...(newItemForm.type === "drink" ? [{ key: "priceCOP", label: "Precio COP", type: "number" }] : []),
             ].map(f => (
               <div key={f.key} style={{ marginBottom: 12 }}>
@@ -8475,6 +8488,7 @@ const loadKickoffs = async () => {
             >
               <option value="all">Todos los estados</option>
               <option value="new">{statusLabel("new", portalLang)}</option>
+              <option value="active">{statusLabel("active", portalLang)}</option>
               <option value="client_submitted">{statusLabel("client_submitted", portalLang)}</option>
               <option value="concierge_editing">{statusLabel("concierge_editing", portalLang)}</option>
               <option value="sent_to_preview">{statusLabel("sent_to_preview", portalLang)}</option>

@@ -1503,30 +1503,32 @@ function ClientesTable({ kickoffs, loading }) {
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead>
               <tr>
-                <th style={thStyle}>Cliente</th>
-                <th style={thStyle}>Ciudad</th>
-                <th style={thStyle}>Fechas</th>
-                <th style={thStyle}>Pax</th>
-                <th style={thStyle}>Sr Concierge</th>
-                <th style={thStyle}>Jr Concierge</th>
-                <th style={thStyle}>Casa</th>
-                <th style={thStyle}>Check-in/out</th>
-                <th style={thStyle}>🛥 Boat Day</th>
-                <th style={thStyle}>Itinerario</th>
-                <th style={thStyle}>Reuniones</th>
+                <th style={{ ...thStyle, minWidth:130 }}>Cliente</th>
+                <th style={{ ...thStyle, minWidth:80 }}>Ciudad</th>
+                <th style={{ ...thStyle, minWidth:120 }}>Fechas</th>
+                <th style={{ ...thStyle, minWidth:40 }}>Pax</th>
+                <th style={{ ...thStyle, minWidth:110 }}>Sr Concierge</th>
+                <th style={{ ...thStyle, minWidth:110 }}>Jr Concierge</th>
+                <th style={{ ...thStyle, minWidth:100 }}>Casa</th>
+                <th style={{ ...thStyle, minWidth:90 }}>Check-in/out</th>
+                <th style={{ ...thStyle, minWidth:120 }}>🛥 Boat Day</th>
+                <th style={{ ...thStyle, minWidth:60 }}>Itinerario</th>
+                <th style={{ ...thStyle, minWidth:80 }}>Reuniones</th>
                 <th style={{ ...thStyle, minWidth:160 }}>📝 Notas</th>
-                <th style={thStyle}>🛂 Pasaporte</th>
-                <th style={thStyle}>🥗 Dieta</th>
-                <th style={thStyle}>🛒 Grocery $</th>
-                <th style={thStyle}>☕ Desayuno</th>
-                <th style={thStyle}>🍹 Bebidas</th>
-                <th style={thStyle}>Compras</th>
-                <th style={thStyle}>Último pedido</th>
+                <th style={{ ...thStyle, minWidth:60 }}>🛂 Pasaporte</th>
+                <th style={{ ...thStyle, minWidth:60 }}>🥗 Dieta</th>
+                <th style={{ ...thStyle, minWidth:80 }}>🛒 Grocery $</th>
+                <th style={{ ...thStyle, minWidth:80 }}>☕ Desayuno</th>
+                <th style={{ ...thStyle, minWidth:80 }}>🍹 Bebidas</th>
+                <th style={{ ...thStyle, minWidth:80 }}>Compras</th>
+                <th style={{ ...thStyle, minWidth:110 }}>Último pedido</th>
+                <th style={{ ...thStyle, minWidth:80 }}>Grocery Process</th>
+                <th style={{ ...thStyle, minWidth:80 }}>Invoice Process</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={19} style={{ ...tdStyle, textAlign:"center", color:"#9ca3af", padding:32 }}>Sin clientes para este filtro.</td></tr>
+                <tr><td colSpan={21} style={{ ...tdStyle, textAlign:"center", color:"#9ca3af", padding:32 }}>Sin clientes para este filtro.</td></tr>
               )}
               {filtered.map((r, i) => {
                 const { drinkSummary, grocerySummary, breakfastSummary, breakfastAt } = orderStatus(r);
@@ -1703,6 +1705,24 @@ function ClientesTable({ kickoffs, loading }) {
                         </div>
                       );
                     })()}</td>
+                    {/* 20. Grocery Process */}
+                    <td style={tdStyle}>
+                      <InlineSelect
+                        initialValue={r.groceryProcess || ""}
+                        options={["", "NEW", "OLD"]}
+                        onSave={v => saveField(r.id, "groceryProcess", v)}
+                        style={{ width:60 }}
+                      />
+                    </td>
+                    {/* 21. Invoice Process */}
+                    <td style={tdStyle}>
+                      <InlineSelect
+                        initialValue={r.invoiceProcess || ""}
+                        options={["", "NEW", "OLD"]}
+                        onSave={v => saveField(r.id, "invoiceProcess", v)}
+                        style={{ width:60 }}
+                      />
+                    </td>
                   </tr>
                 );
               })}
@@ -2167,7 +2187,7 @@ function UnifiedDashboard({ currentUser, onLogout }) {
           <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Dashboard</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <a href={sheetUrl} target="_blank" rel="noreferrer" className="tt-btn-ghost" style={{textDecoration:"none"}}>Ver Sheet ↗</a>
+          <a href={sheetUrl} target="_blank" rel="noreferrer" className="tt-btn-ghost" style={{textDecoration:"none",whiteSpace:"nowrap"}}>Ver Sheet ↗</a>
           {isSuperAdmin(currentUser) && (
             <a href="/?mode=users" className="tt-btn-ghost" style={{textDecoration:"none"}}>👥 Usuarios</a>
           )}

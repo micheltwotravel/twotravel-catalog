@@ -241,29 +241,31 @@ function FlightBlock({ kickoff, lang, type }) {
     : (isEs ? "Vuelos de salida" : "Departure Flights");
 
   return (
-    <div style={{ maxWidth:780, margin:"0 auto 24px", padding:"0 24px" }}>
-      <div style={{ background:"#fff", border:"1px solid #e5e7eb", borderRadius:16, overflow:"hidden" }}>
-        {/* Header */}
-        <div style={{ background:"#1a1814", padding:"14px 20px", display:"flex", alignItems:"center", gap:10 }}>
-          <span style={{ fontSize:16 }}>{type === "arrival" ? "🛬" : "🛫"}</span>
-          <span style={{ color:"#fff", fontWeight:700, fontSize:12, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</span>
-        </div>
-        {/* Column headers */}
-        <div style={{ display:"grid", gridTemplateColumns:"90px 1fr 90px 90px", gap:12,
-          padding:"8px 20px", background:"#f9fafb", borderBottom:"1px solid #e5e7eb" }}>
-          {[isEs?"Vuelo":"Flight", isEs?"Pasajero":"Passenger", isEs?"Fecha":"Date", type==="arrival"?(isEs?"Llega":"Arr"):(isEs?"Sale":"Dep")].map(h => (
-            <div key={h} style={{ fontSize:9, fontWeight:600, color:"#9ca3af", textTransform:"uppercase", letterSpacing:".08em",
-              textAlign: h === "Vuelo" || h === (isEs?"Pasajero":"Passenger") ? "left" : "center" }}>{h}</div>
-          ))}
-        </div>
-        {/* Rows */}
-        <div style={{ padding:"0 20px" }}>
-          {flights.map((f, i) => <FlightRow key={i} flight={f} lang={lang} type={type} />)}
-        </div>
-        <div style={{ padding:"8px 20px 12px", textAlign:"right" }}>
-          <span style={{ fontSize:9, color:"#d1d5db" }}>
-            {isEs ? "Actualiza la página para refrescar datos en tiempo real" : "Refresh page for live data"}
-          </span>
+    <div style={{ maxWidth:780, margin:"0 auto 24px", padding:"0 16px" }}>
+      <div style={{ overflowX:"auto", borderRadius:16 }}>
+        <div style={{ background:"#fff", border:"1px solid #e5e7eb", borderRadius:16, overflow:"hidden", minWidth:360 }}>
+          {/* Header */}
+          <div style={{ background:"#1a1814", padding:"14px 20px", display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ fontSize:16 }}>{type === "arrival" ? "🛬" : "🛫"}</span>
+            <span style={{ color:"#fff", fontWeight:700, fontSize:12, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</span>
+          </div>
+          {/* Column headers */}
+          <div style={{ display:"grid", gridTemplateColumns:"90px 1fr 90px 90px", gap:12,
+            padding:"8px 20px", background:"#f9fafb", borderBottom:"1px solid #e5e7eb" }}>
+            {[isEs?"Vuelo":"Flight", isEs?"Pasajero":"Passenger", isEs?"Fecha":"Date", type==="arrival"?(isEs?"Llega":"Arr"):(isEs?"Sale":"Dep")].map(h => (
+              <div key={h} style={{ fontSize:9, fontWeight:600, color:"#9ca3af", textTransform:"uppercase", letterSpacing:".08em",
+                textAlign: h === "Vuelo" || h === (isEs?"Pasajero":"Passenger") ? "left" : "center" }}>{h}</div>
+            ))}
+          </div>
+          {/* Rows */}
+          <div style={{ padding:"0 20px" }}>
+            {flights.map((f, i) => <FlightRow key={i} flight={f} lang={lang} type={type} />)}
+          </div>
+          <div style={{ padding:"8px 20px 12px", textAlign:"right" }}>
+            <span style={{ fontSize:9, color:"#d1d5db" }}>
+              {isEs ? "Actualiza la página para refrescar datos en tiempo real" : "Refresh page for live data"}
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -1914,7 +1916,7 @@ function groupChefMenuItems(items) {
   return result;
 }
 
-function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
+function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, patchItem }) {
   // Boat Details gets its own rich card layout.
   // Also check description/title for old snapshots saved before _boatBadge existed.
   const _descText = it.description || "";
@@ -1957,21 +1959,36 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
 
   return (
     <div className={`ev${isConfirmed ? "" : " ev-recommendation"}`} style={{ position: "relative" }}>
-      {/* ── Remove button (edit mode only) ── */}
-      {editMode && onRemove && (
-        <button
-          onClick={onRemove}
-          className="no-print"
-          title="Remove this service"
-          style={{
-            position: "absolute", top: 8, right: 8, zIndex: 10,
-            background: "#ef4444", color: "#fff", border: "none",
-            borderRadius: "50%", width: 22, height: 22,
-            fontSize: 13, fontWeight: 700, cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            lineHeight: 1, boxShadow: "0 1px 4px rgba(0,0,0,.25)",
-          }}
-        >×</button>
+      {/* ── Edit mode controls ── */}
+      {editMode && (onRemove || onDuplicate) && (
+        <div className="no-print" style={{ position: "absolute", top: 8, right: 8, zIndex: 10, display: "flex", gap: 4 }}>
+          {onDuplicate && (
+            <button
+              onClick={onDuplicate}
+              title="Duplicate this service"
+              style={{
+                background: "#2563eb", color: "#fff", border: "none",
+                borderRadius: "50%", width: 22, height: 22,
+                fontSize: 11, fontWeight: 700, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                lineHeight: 1, boxShadow: "0 1px 4px rgba(0,0,0,.25)",
+              }}
+            >⎘</button>
+          )}
+          {onRemove && (
+            <button
+              onClick={onRemove}
+              title="Remove this service"
+              style={{
+                background: "#ef4444", color: "#fff", border: "none",
+                borderRadius: "50%", width: 22, height: 22,
+                fontSize: 13, fontWeight: 700, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                lineHeight: 1, boxShadow: "0 1px 4px rgba(0,0,0,.25)",
+              }}
+            >×</button>
+          )}
+        </div>
       )}
       {/* ── Left: image grid (Travisify style) ── */}
       {(() => {
@@ -2016,6 +2033,11 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
         )}
 
         {/* State badges */}
+        {isDraft && (
+          <div style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:9,fontWeight:600,color:"#6b7280",background:"#f3f4f6",border:"1px solid #d1d5db",borderRadius:4,padding:"2px 8px",letterSpacing:"0.3px",marginBottom:6}}>
+            ◯ {isEs ? "Borrador" : "Draft"}
+          </div>
+        )}
         {it.confirmed === true && (
           <div style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:9,fontWeight:700,color:"#15803d",background:"#dcfce7",border:"1px solid #86efac",borderRadius:4,padding:"2px 8px",letterSpacing:"0.3px",marginBottom:6}}>
             ✓ {isEs ? "Confirmado" : "Confirmed"}
@@ -2098,8 +2120,8 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
               ) : null}
               {it.confirmation && (
                 <div style={{marginTop:6}}>
-                  <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:10,fontWeight:600,color:"#15803d",background:"#dcfce7",border:"1px solid #86efac",borderRadius:4,padding:"2px 7px",letterSpacing:"0.2px"}}>
-                    ✓ {isEs ? "Confirmado por" : "Confirmed by"} {it.confirmation}
+                  <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:10,fontWeight:600,color:"#1d4ed8",background:"#dbeafe",border:"1px solid #93c5fd",borderRadius:4,padding:"2px 7px",letterSpacing:"0.2px"}}>
+                    ✉ {isEs ? "Conf. por" : "Conf. by"} {it.confirmation}
                   </span>
                 </div>
               )}
@@ -2110,30 +2132,36 @@ function EventBlock({ it, lang, editMode, onRemove, hasFamilies, patchItem }) {
         {/* Confirmation (when no price shown) */}
         {it.confirmation && !price && !it.priceTiers && it.category !== "transportation" && (
           <div style={{marginBottom:6}}>
-            <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:10,fontWeight:600,color:"#15803d",background:"#dcfce7",border:"1px solid #86efac",borderRadius:4,padding:"2px 7px",letterSpacing:"0.2px"}}>
-              ✓ {isEs ? "Confirmado por" : "Confirmed by"} {it.confirmation}
+            <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:10,fontWeight:600,color:"#1d4ed8",background:"#dbeafe",border:"1px solid #93c5fd",borderRadius:4,padding:"2px 7px",letterSpacing:"0.2px"}}>
+              ✉ {isEs ? "Conf. por" : "Conf. by"} {it.confirmation}
             </span>
           </div>
         )}
 
         {/* Transport details grid — like TripIt style */}
-        {it.category === "transportation" && (it.confirmation || it.notes || price) && (
+        {it.category === "transportation" && (it.confirmation || it.notes || it.passengers || price) && (
           <div style={{display:"flex",gap:16,marginBottom:10,marginTop:4,flexWrap:"wrap"}}>
             {it.confirmation && (
               <div>
-                <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>{isEs?"Confirmado por":"Confirmed by"}</div>
+                <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>{isEs?"Conf. por":"Conf. by"}</div>
                 <div style={{fontSize:11,fontWeight:600,color:"#374151"}}>{it.confirmation}</div>
+              </div>
+            )}
+            {it.passengers && (
+              <div>
+                <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>{isEs?"Pasajeros":"Passengers"}</div>
+                <div style={{fontSize:11,fontWeight:600,color:"#374151"}}>{it.passengers}</div>
               </div>
             )}
             {it.notes && (
               <div>
-                <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>Carrier</div>
+                <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>{isEs?"Notas":"Notes"}</div>
                 <div style={{fontSize:11,fontWeight:600,color:"#374151"}}>{it.notes}</div>
               </div>
             )}
             {price && (
               <div>
-                <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>Price</div>
+                <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>{isEs?"Precio":"Price"}</div>
                 <div style={{fontSize:11,fontWeight:600,color:"#374151"}}>{price}</div>
               </div>
             )}
@@ -2747,7 +2775,7 @@ function BillingPage({ kickoff }) {
 /* ═══════════════════════════════════════════════════════════
    DAY PAGE
 ═══════════════════════════════════════════════════════════ */
-function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onAddItem, billingBlock, hasFamilies, patchDay, patchItemFn, dayFlights, onMoveItem }) {
+function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onDuplicateItem, onAddItem, billingBlock, hasFamilies, patchDay, patchItemFn, dayFlights, onMoveItem }) {
   const parseTime = t => {
     const s = String(t || "").trim();
     const m24 = s.match(/^(\d{1,2}):(\d{2})/i);
@@ -2840,6 +2868,7 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
                     editMode={editMode}
                     hasFamilies={hasFamilies}
                     onRemove={onRemoveItem ? () => onRemoveItem(entry.itemIdx ?? i) : undefined}
+                    onDuplicate={onDuplicateItem ? () => onDuplicateItem(entry.itemIdx ?? i) : undefined}
                     patchItem={patchItemFn ? (field, val) => patchItemFn(entry.itemIdx ?? i, field, val) : undefined}
                   />
               }
@@ -2983,6 +3012,15 @@ export default function ItineraryPrintView() {
       const j = ii + dir;
       if (j < 0 || j >= items.length) return day;
       [items[ii], items[j]] = [items[j], items[ii]];
+      return { ...day, items };
+    }));
+
+  const duplicateItem = (di, ii) =>
+    _upd(prev => prev.map((day, i) => {
+      if (i !== di) return day;
+      const items = [...day.items];
+      const copy = { ...items[ii] };
+      items.splice(ii + 1, 0, copy);
       return { ...day, items };
     }));
 
@@ -3377,6 +3415,7 @@ export default function ItineraryPrintView() {
               editMode={editMode}
               onRemoveDay={editMode ? () => removeDay(di) : undefined}
               onRemoveItem={editMode ? (ii) => removeItem(di, ii) : undefined}
+              onDuplicateItem={editMode ? (ii) => duplicateItem(di, ii) : undefined}
               onMoveItem={editMode ? (ii, dir) => moveItem(di, ii, dir) : undefined}
               onAddItem={editMode ? () => openPickerForDay(di) : undefined}
               billingBlock={null}
