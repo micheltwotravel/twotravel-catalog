@@ -122,6 +122,29 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .toast.gone{opacity:0;transform:translateY(6px)}
 .spin{display:inline-block;width:11px;height:11px;border:1.5px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:4px}
 @keyframes sp{to{transform:rotate(360deg)}}
+
+/* Section switcher */
+.snav{display:flex;border-bottom:1px solid var(--border);margin-bottom:10px;gap:0}
+.snav-btn{flex:1;padding:7px 4px;font-family:'Jost',sans-serif;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);background:none;border:none;cursor:pointer;transition:color .1s;border-bottom:2px solid transparent;margin-bottom:-1px}
+.snav-btn:hover{color:var(--ink)}
+.snav-btn.on{color:var(--gold);border-bottom-color:var(--gold);font-weight:500}
+
+/* Proveedores table in main */
+.prov-wrap{padding:24px 28px 48px}
+.prov-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:400;margin-bottom:4px}
+.prov-sub{font-size:11px;color:var(--ink3);margin-bottom:20px}
+.prov-search{padding:7px 11px;background:var(--white);border:1px solid var(--border2);font-family:'Jost',sans-serif;font-size:12px;color:var(--ink);outline:none;width:100%;max-width:360px;margin-bottom:16px}
+.prov-search:focus{border-color:var(--gold)}
+.ptable{width:100%;border-collapse:collapse;font-size:12px}
+.ptable th{text-align:left;padding:8px 12px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);border-bottom:2px solid var(--border2);white-space:nowrap}
+.ptable td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--ink2);vertical-align:top}
+.ptable tr:hover td{background:var(--sand)}
+.ptable td.name-cell{font-weight:400;color:var(--ink);font-size:12.5px}
+.ptable .mono{font-family:monospace;font-size:11px;color:var(--ink3)}
+.ppage{display:flex;align-items:center;gap:10px;margin-top:16px;font-size:11px;color:var(--ink3)}
+.ppage button{padding:4px 12px;border:1px solid var(--border2);background:none;font-family:'Jost',sans-serif;font-size:11px;color:var(--ink3);cursor:pointer}
+.ppage button:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+.ppage button:disabled{opacity:.35;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -139,18 +162,29 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 <div class="layout">
   <div class="sidebar">
     <div class="sb-top">
-      <div class="sb-sec">Portfolio</div>
-      <input class="sb-search" id="sb-q" placeholder="Search name, neighborhood…" oninput="renderList()">
-      <div class="pills" id="city-pills"></div>
-      <div class="pills" id="type-pills"></div>
-      <button class="add-btn" onclick="openNew()">
-        <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add property / experience
-      </button>
+      <div class="snav">
+        <button class="snav-btn on" id="snav-portfolio" onclick="setSection('portfolio')">🏠 Portafolio</button>
+        <button class="snav-btn" id="snav-proveedores" onclick="setSection('proveedores')">👥 Proveedores</button>
+      </div>
+      <!-- Portfolio filters -->
+      <div id="portfolio-filters">
+        <input class="sb-search" id="sb-q" placeholder="Search name, neighborhood…" oninput="renderList()">
+        <div class="pills" id="city-pills"></div>
+        <div class="pills" id="type-pills"></div>
+        <button class="add-btn" onclick="openNew()">
+          <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add property / experience
+        </button>
+      </div>
+      <!-- Proveedores search -->
+      <div id="prov-filters" style="display:none">
+        <input class="sb-search" id="prov-q" placeholder="Buscar proveedor, banco…" oninput="renderProvList()">
+      </div>
     </div>
     <div class="plist" id="plist">
       <div style="padding:28px;text-align:center;font-size:11px;color:var(--ink3)"><span class="spin"></span>Loading…</div>
     </div>
+    <div class="plist" id="prov-list" style="display:none"></div>
   </div>
 
   <div class="main" id="main">
@@ -677,6 +711,172 @@ function toast(msg,type="ok"){
   const t=document.getElementById("toast");
   t.textContent=msg; t.className="toast "+type;
   setTimeout(()=>{t.className="toast gone";},3400);
+}
+
+// ── Section switcher ──────────────────────────────────────────────────────────
+const SUPABASE_URL = "https://zcgisoigfzytpanoaomq.supabase.co";
+const SUPABASE_ANON = "sb_publishable_7k9A4WP1x7hDQdrsHY52jQ_Rpj3ASjU";
+
+let currentSection = "portfolio";
+let allProveedores  = [];
+let provPage        = 0;
+const PROV_PER_PAGE = 50;
+
+function setSection(s) {
+  currentSection = s;
+  document.getElementById("snav-portfolio").classList.toggle("on", s === "portfolio");
+  document.getElementById("snav-proveedores").classList.toggle("on", s === "proveedores");
+  document.getElementById("portfolio-filters").style.display = s === "portfolio" ? "" : "none";
+  document.getElementById("prov-filters").style.display      = s === "proveedores" ? "" : "none";
+  document.getElementById("plist").style.display             = s === "portfolio" ? "" : "none";
+  document.getElementById("prov-list").style.display         = s === "proveedores" ? "" : "none";
+  hide("main-content");
+  if (s === "portfolio") {
+    show("empty-state");
+  } else {
+    hide("empty-state");
+    document.getElementById("main").innerHTML = '<div id="prov-main"><div class="prov-wrap"><p style="font-size:11px;color:var(--ink3)"><span class="spin"></span> Cargando proveedores…</p></div></div>';
+    if (!allProveedores.length) loadProveedores();
+    else renderProvMain();
+  }
+}
+
+async function loadProveedores() {
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/kickoffs?id=eq.finance_maestro_proveedores_v1&select=data`;
+    const r = await fetch(url, { headers:{ apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } });
+    const d = await r.json();
+    const notes = d[0]?.data?.internalNotes;
+    const parsed = typeof notes === "string" ? JSON.parse(notes) : (notes || {});
+    allProveedores = parsed.rows || [];
+    provPage = 0;
+    renderProvList();
+    renderProvMain();
+  } catch(e) {
+    document.getElementById("main").innerHTML = `<div class="prov-wrap"><p style="color:var(--red);font-size:12px">Error cargando proveedores: ${e.message}</p></div>`;
+  }
+}
+
+function renderProvList() {
+  const q = (document.getElementById("prov-q")?.value || "").toLowerCase();
+  const filtered = allProveedores.filter(p => {
+    if (!q) return true;
+    return (p["Name"]||"").toLowerCase().includes(q)
+        || (p["Banco"]||"").toLowerCase().includes(q)
+        || (p["NIT/Cédula"]||"").toLowerCase().includes(q)
+        || (p["Proveedor"]||"").toLowerCase().includes(q);
+  });
+
+  const list = document.getElementById("prov-list");
+  if (!filtered.length) { list.innerHTML = '<div style="padding:20px;text-align:center;font-size:11px;color:var(--ink3)">Sin resultados</div>'; return; }
+  list.innerHTML = "";
+  filtered.slice(0, 200).forEach((p, i) => {
+    const bank = p["Banco"] || "";
+    const nit  = p["NIT/Cédula"] || "";
+    const el   = document.createElement("div");
+    el.className = "pi";
+    el.onclick = () => showProvDetail(p);
+    el.innerHTML = `<div class="pi-name">${esc(p["Name"]||"Sin nombre")}</div><div class="pi-sub">${[bank, nit].filter(Boolean).join(" · ")}</div>`;
+    list.appendChild(el);
+  });
+}
+
+function renderProvMain() {
+  const q = (document.getElementById("prov-q")?.value || "").toLowerCase();
+  const filtered = allProveedores.filter(p => {
+    if (!q) return true;
+    return (p["Name"]||"").toLowerCase().includes(q)
+        || (p["Banco"]||"").toLowerCase().includes(q)
+        || (p["NIT/Cédula"]||"").toLowerCase().includes(q);
+  });
+
+  const total = filtered.length;
+  const start = provPage * PROV_PER_PAGE;
+  const page  = filtered.slice(start, start + PROV_PER_PAGE);
+
+  const prevDis = provPage === 0 ? "disabled" : "";
+  const nextDis = start + PROV_PER_PAGE >= total ? "disabled" : "";
+
+  const rows = page.map(p => `
+    <tr>
+      <td class="name-cell">${esc(p["Name"]||"—")}</td>
+      <td class="mono">${esc(p["NIT/Cédula"]||"—")}</td>
+      <td>${esc(p["Tipo de identificación"]||"")}</td>
+      <td>${esc(p["Proveedor"]||"")}</td>
+      <td>${esc(p["Banco"]||"")}</td>
+      <td class="mono">${esc(p["Número de cuenta"]||"")}</td>
+      <td>${esc(p["Tipo de cuenta"]||"")}</td>
+      <td>${p["WhatsApp (sin prefijo)"] ? `<a href="https://wa.me/${(p["Prefijo país (WA)"]||"57").replace("+","")}${p["WhatsApp (sin prefijo)"]}" target="_blank" style="color:var(--gold)">${esc(p["WhatsApp (sin prefijo)"])}</a>` : "—"}</td>
+      <td>${esc(p["Correo electrónico"]||"")}</td>
+    </tr>`).join("");
+
+  const mainEl = document.getElementById("main");
+  mainEl.innerHTML = `
+    <div id="prov-main" class="prov-wrap">
+      <div class="prov-title">Proveedores</div>
+      <div class="prov-sub">Maestro de proveedores — ${total} registros</div>
+      <div style="overflow-x:auto">
+        <table class="ptable">
+          <thead><tr>
+            <th>Nombre</th><th>NIT / Cédula</th><th>Tipo ID</th><th>Proveedor</th>
+            <th>Banco</th><th>Cuenta</th><th>Tipo cuenta</th><th>WhatsApp</th><th>Correo</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div class="ppage">
+        <button onclick="setProvPage(${provPage-1})" ${prevDis}>← Anterior</button>
+        <span>${start+1}–${Math.min(start+PROV_PER_PAGE,total)} de ${total}</span>
+        <button onclick="setProvPage(${provPage+1})" ${nextDis}>Siguiente →</button>
+      </div>
+    </div>`;
+}
+
+function setProvPage(p) {
+  provPage = p;
+  renderProvMain();
+  document.getElementById("main").scrollTop = 0;
+}
+
+function showProvDetail(p) {
+  document.querySelectorAll("#prov-list .pi").forEach(el => {
+    el.classList.toggle("active", el.querySelector(".pi-name")?.textContent === (p["Name"]||"Sin nombre"));
+  });
+  const mainEl = document.getElementById("main");
+  const wa = p["WhatsApp (sin prefijo)"];
+  const prefix = (p["Prefijo país (WA)"]||"57").replace("+","");
+  mainEl.innerHTML = `
+    <div class="det">
+      <div class="det-head">
+        <div>
+          <div class="det-name">${esc(p["Name"]||"Sin nombre")}</div>
+          <div class="det-sub">${esc(p["Proveedor"]||"")} ${p["Tipo de identificación"]?"· "+esc(p["Tipo de identificación"]):""}</div>
+        </div>
+        <div class="det-acts">
+          ${wa ? `<a class="da" href="https://wa.me/${prefix}${wa}" target="_blank">WhatsApp</a>` : ""}
+          ${p["Correo electrónico"] ? `<a class="da" href="mailto:${esc(p["Correo electrónico"])}">${esc(p["Correo electrónico"])}</a>` : ""}
+        </div>
+      </div>
+      <div class="dg">
+        <div class="dsec">Identificación</div>
+        <div class="df"><span class="dl">NIT / Cédula</span><span class="dv">${esc(p["NIT/Cédula"]||"—")}</span></div>
+        <div class="df"><span class="dl">Tipo</span><span class="dv">${esc(p["Tipo de identificación"]||"—")}</span></div>
+        <div class="df"><span class="dl">Categoría</span><span class="dv">${esc(p["Proveedor"]||"—")}</span></div>
+
+        <div class="dsec">Datos bancarios</div>
+        <div class="df"><span class="dl">Banco</span><span class="dv">${esc(p["Banco"]||"—")}</span></div>
+        <div class="df"><span class="dl">Número de cuenta</span><span class="dv mono" style="font-size:13px">${esc(p["Número de cuenta"]||"—")}</span></div>
+        <div class="df"><span class="dl">Tipo de cuenta</span><span class="dv">${esc(p["Tipo de cuenta"]||"—")}</span></div>
+
+        <div class="dsec">Contacto</div>
+        <div class="df"><span class="dl">WhatsApp</span><span class="dv">${wa ? `<a href="https://wa.me/${prefix}${wa}" target="_blank" style="color:var(--gold)">+${prefix} ${esc(wa)}</a>` : "—"}</span></div>
+        <div class="df half"><span class="dl">Correo electrónico</span><span class="dv">${p["Correo electrónico"]?`<a href="mailto:${esc(p["Correo electrónico"])}" style="color:#1d4ed8">${esc(p["Correo electrónico"])}</a>`:"—"}</span></div>
+
+        <div class="dsec">Retenciones</div>
+        <div class="df"><span class="dl">Retención ICA</span><span class="dv">${esc(p["Retención ICA"]||"—")}</span></div>
+        <div class="df"><span class="dl">Retención RENTA</span><span class="dv">${esc(p["Retención RENTA"]||"—")}</span></div>
+      </div>
+    </div>`;
 }
 
 load();
