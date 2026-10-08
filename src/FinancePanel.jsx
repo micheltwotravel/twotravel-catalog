@@ -899,7 +899,12 @@ function ReservationsCalendar({ rows }) {
                     <td style={{padding:"0 0 0 4px",width:4}}>
                       <div style={{width:4,height:"100%",minHeight:38,background:tc.border,borderRadius:2}}/>
                     </td>
-                    <td style={{padding:"8px 12px",fontWeight:600,color:DARK}}>{r.name||"—"}</td>
+                    <td style={{padding:"8px 12px",fontWeight:600,color:DARK}}>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:6}}>
+                        {r.name||"—"}
+                        {r.needsReview && <span style={{fontSize:9,fontWeight:700,letterSpacing:".06em",background:"#fef3c7",color:"#92400e",border:"1px solid #fcd34d",padding:"1px 6px",borderRadius:10,flexShrink:0}}>HS NUEVO</span>}
+                      </span>
+                    </td>
                     <td style={{padding:"8px 12px"}}>
                       {r.type ? (
                         <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,
@@ -1280,7 +1285,8 @@ export function FinanceReservaciones() {
 
   const filteredIdxs = rows.reduce((acc,r,i)=>{
     if (isSeparator(r)) return acc;  // skip Monday.com group headers
-    if (statusF!=="all" && r.status!==statusF) return acc;
+    if (statusF==="hs_pending") { if (!r.needsReview) return acc; }
+    else if (statusF!=="all" && r.status!==statusF) return acc;
     if (typeF!=="all"   && r.type!==typeF)     return acc;
     if (repF!=="all"    && r.salesRep!==repF)  return acc;
     if (monthF!=="all"  && r.checkIn?.slice(0,7)!==monthF) return acc;
@@ -1383,10 +1389,11 @@ export function FinanceReservaciones() {
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar…"
           style={{...INP,width:150,padding:"7px 12px",fontSize:12}} />
         <div style={{display:"flex",background:BG,border:`1px solid ${BRD}`,borderRadius:8,overflow:"hidden"}}>
-          {[["all","Todos"],["Confirmed","✓ Conf"],["Cancelled","✗ Canc"]].map(([v,l])=>(
+          {[["all","Todos"],["Confirmed","✓ Conf"],["Cancelled","✗ Canc"],["hs_pending","⚡ HS"]].map(([v,l])=>(
             <button key={v} onClick={()=>setStatusF(v)}
               style={{padding:"7px 10px",fontSize:11,fontWeight:500,whiteSpace:"nowrap",
-                background:statusF===v?DARK:"transparent",color:statusF===v?WHT:MUT,border:"none",cursor:"pointer"}}>
+                background:statusF===v?(v==="hs_pending"?"#fcd34d":DARK):"transparent",
+                color:statusF===v?(v==="hs_pending"?"#78350f":WHT):MUT,border:"none",cursor:"pointer"}}>
               {l}
             </button>
           ))}
