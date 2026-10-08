@@ -1946,3 +1946,280 @@ export function FinancePagosProveedores() {
     </Shell>
   );
 }
+
+// ─── DATA LAYER: CHECK-IN / CONCIERGE ─────────────────────────────────────────
+async function loadCheckin() {
+  const { data, error } = await supabase.from("kickoffs").select("data").eq("id", "finance_checkin_v1").single();
+  if (error) throw new Error(error.message);
+  const d = data?.data || {};
+  const notes = typeof d.internalNotes === "string" ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
+  return notes.rows || [];
+}
+async function saveCheckin(rows) {
+  const { data: existing, error: fetchErr } = await supabase.from("kickoffs").select("data").eq("id", "finance_checkin_v1").single();
+  if (fetchErr) throw new Error(fetchErr.message);
+  const d = existing?.data || {};
+  const notes = typeof d.internalNotes === "string" ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
+  const merged = { ...d, internalNotes: JSON.stringify({ ...notes, rows }) };
+  const { error } = await supabase.from("kickoffs").update({ data: merged }).eq("id", "finance_checkin_v1");
+  if (error) throw new Error(error.message);
+}
+
+const CHECKIN_COLS = [
+  { key:"client",        label:"Cliente",        w:160, num:false },
+  { key:"conciergeRep",  label:"Concierge",      w:110, num:false },
+  { key:"logisticRep",   label:"Logística",      w:110, num:false },
+  { key:"date",          label:"Fecha",          w:100, num:false, date:true },
+  { key:"hour",          label:"Hora",           w:80,  num:false },
+  { key:"city",          label:"Ciudad",         w:130, num:false },
+  { key:"category",      label:"Categoría",      w:110, num:false },
+  { key:"description",   label:"Descripción",    w:180, num:false },
+  { key:"type",          label:"Tipo",           w:110, num:false },
+  { key:"people",        label:"Pax",            w:55,  num:true  },
+  { key:"provider",      label:"Proveedor",      w:130, num:false },
+  { key:"precioCliente", label:"$ Cliente",      w:110, num:true  },
+  { key:"precioProv",    label:"$ Prov",         w:100, num:true  },
+  { key:"ganancia",      label:"Ganancia",       w:100, num:true  },
+  { key:"margen",        label:"Margen",         w:80,  num:true  },
+];
+
+export function FinanceCheckin() {
+  const [rows,    setRows]    = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving,  setSaving]  = useState(false);
+  const [saved,   setSaved]   = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [err,     setErr]     = useState("");
+  const [search,  setSearch]  = useState("");
+  const [cityF,   setCityF]   = useState("all");
+  const [catF,    setCatF]    = useState("all");
+  const [repF,    setRepF]    = useState("all");
+  const [monthF,  setMonthF]  = useState("all");
+  const [sortCol, setSortCol] = useState("date");
+  const [sortDir, setSortDir] = useState(1);
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+
+  const load = useCallback(async () => {
+    setLoading(true); setErr(""); setIsDirty(false);
+    try { setRows(await loadCheckin()); }
+    catch(e) { setErr("Error cargando: "+e.message); }
+    setLoading(false);
+  }, []);
+  useEffect(()=>{ load(); }, [load]);
+
+  useEffect(()=>{
+    const h = e => { if(isDirty){ e.preventDefault(); e.returnValue=""; } };
+    window.addEventListener("beforeunload", h);
+    return ()=>window.removeEventListener("beforeunload", h);
+  },[isDirty]);
+
+  const handleSave = async () => {
+    setSaving(true); setErr("");
+    try {
+      await saveCheckin(rowsRef.current);
+      setIsDirty(false); setSaved(true);
+      setTimeout(()=>setSaved(false), 2500);
+    } catch(e) { setErr("Error guardando: "+e.message); }
+    setSaving(false);
+  };
+
+  const patchRow = useCallback((idx, field, val) => {
+    setRows(prev => prev.map((r,i) => i===idx ? {...r,[field]:val} : r));
+    setIsDirty(true);
+  }, []);
+
+  const addRow = () => {
+    const blank = { client:"", conciergeRep:"", logisticRep:"", date:"", hour:"",
+      city:"", category:"", description:"", type:"", people:"", provider:"",
+      precioCliente:"", precioProv:"", ganancia:"", margen:"" };
+    setRows(prev => [blank, ...prev]);
+    setIsDirty(true);
+  };
+
+  const deleteRow = (idx) => {
+    if (!confirm("¿Eliminar esta fila?")) return;
+    setRows(prev => prev.filter((_,i)=>i!==idx));
+    setIsDirty(true);
+  };
+
+  const cityOpts = ["all",...[...new Set(rows.map(r=>r.city).filter(Boolean))].sort()];
+  const catOpts  = ["all",...[...new Set(rows.map(r=>r.category).filter(Boolean))].sort()];
+  const repOpts  = ["all",...[...new Set([...rows.map(r=>r.conciergeRep),...rows.map(r=>r.logisticRep)].filter(Boolean))].sort()];
+  const months   = ["all",...[...new Set(rows.map(r=>r.date?.slice(0,7)).filter(Boolean))].sort()];
+
+  const filteredIdxs = rows.reduce((acc,r,i)=>{
+    if (cityF!=="all"  && r.city!==cityF)   return acc;
+    if (catF!=="all"   && r.category!==catF) return acc;
+    if (repF!=="all"   && r.conciergeRep!==repF && r.logisticRep!==repF) return acc;
+    if (monthF!=="all" && r.date?.slice(0,7)!==monthF) return acc;
+    if (search) {
+      const q=search.toLowerCase();
+      if (!(r.client||"").toLowerCase().includes(q) &&
+          !(r.description||"").toLowerCase().includes(q) &&
+          !(r.provider||"").toLowerCase().includes(q) &&
+          !(r.city||"").toLowerCase().includes(q)) return acc;
+    }
+    acc.push(i);
+    return acc;
+  },[]);
+
+  const sorted = [...filteredIdxs].sort((ai,bi)=>{
+    const a=rows[ai][sortCol]??"", b=rows[bi][sortCol]??"";
+    return a<b?-sortDir:a>b?sortDir:0;
+  });
+
+  const totalCliente = sorted.reduce((s,i)=>s+(parseFloat(rows[i].precioCliente)||0),0);
+  const totalProv    = sorted.reduce((s,i)=>s+(parseFloat(rows[i].precioProv)||0),0);
+  const totalGan     = sorted.reduce((s,i)=>s+(parseFloat(rows[i].ganancia)||0),0);
+  const avgMargen    = sorted.length ? sorted.reduce((s,i)=>s+(parseFloat(rows[i].margen)||0),0)/sorted.length : 0;
+
+  const fmtCOP = n => { const v=Math.abs(parseFloat(n)||0); return "$"+Math.round(v).toLocaleString("es-CO")+" COP"; };
+  const fmtPct = n => (parseFloat(n)*100).toFixed(0)+"%";
+
+  const thStyle = (col) => ({
+    padding:"8px 10px", textAlign:"left", fontWeight:600, color:DARK, whiteSpace:"nowrap",
+    fontSize:11, cursor:"pointer", userSelect:"none", position:"sticky", top:0, zIndex:1,
+    background: sortCol===col ? "#e8e0d4" : BG, borderBottom:`1px solid ${BRD}`,
+  });
+  const sortBy = (col) => { if(sortCol===col) setSortDir(d=>-d); else { setSortCol(col); setSortDir(1); } };
+
+  // Group rows by client for visual clarity
+  const groups = [];
+  let curClient = null;
+  sorted.forEach(rowIdx => {
+    const cl = rows[rowIdx].client || "";
+    if (cl !== curClient) { curClient = cl; groups.push({client:cl, idxs:[]}); }
+    groups[groups.length-1].idxs.push(rowIdx);
+  });
+
+  return (
+    <Shell title="Check-In & Concierge" subtitle={`${sorted.length} de ${rows.length} servicios`}>
+      {err && <Err msg={err} onRetry={load} />}
+
+      {/* KPIs */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:20}}>
+        <KPICard label="Servicios" val={sorted.length} sub="en vista actual" />
+        <KPICard label="Total Cliente" val={fmtCOP(totalCliente)} sub="ingresos brutos" color={GOLD} />
+        <KPICard label="Total Proveedor" val={fmtCOP(totalProv)} sub="costo proveedor" />
+        <KPICard label="Ganancia" val={fmtCOP(totalGan)} sub={`Margen prom: ${fmtPct(avgMargen)}`} color="#059669" />
+      </div>
+
+      {/* Toolbar */}
+      <div style={{display:"flex",gap:8,marginBottom:16,alignItems:"center",flexWrap:"wrap",
+        background:WHT,border:`1px solid ${BRD}`,borderRadius:10,padding:"10px 12px"}}>
+        <button onClick={addRow}
+          style={{padding:"7px 14px",fontSize:12,fontWeight:600,background:GOLD,color:WHT,
+            border:"none",borderRadius:8,cursor:"pointer",whiteSpace:"nowrap"}}>
+          + Nueva fila
+        </button>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar…"
+          style={{...INP,width:150,padding:"7px 12px",fontSize:12}} />
+        <select value={cityF} onChange={e=>setCityF(e.target.value)}
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:130}}>
+          {cityOpts.map(c=><option key={c} value={c}>{c==="all"?"Ciudad":c}</option>)}
+        </select>
+        <select value={catF} onChange={e=>setCatF(e.target.value)}
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:110}}>
+          {catOpts.map(c=><option key={c} value={c}>{c==="all"?"Categoría":c}</option>)}
+        </select>
+        <select value={repF} onChange={e=>setRepF(e.target.value)}
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:120}}>
+          {repOpts.map(r=><option key={r} value={r}>{r==="all"?"Rep":r}</option>)}
+        </select>
+        <select value={monthF} onChange={e=>setMonthF(e.target.value)}
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:120}}>
+          {months.map(m=><option key={m} value={m}>{m==="all"?"Mes":monthLabel(m)}</option>)}
+        </select>
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
+          {saved && <span style={{fontSize:12,color:"#059669",fontWeight:600}}>✓ Guardado</span>}
+          {isDirty && !saving && <span style={{fontSize:11,color:GOLD}}>Cambios sin guardar</span>}
+          <button onClick={handleSave} disabled={saving||(!isDirty&&!saved)}
+            style={{padding:"8px 20px",fontSize:13,fontWeight:700,whiteSpace:"nowrap",border:"none",borderRadius:8,
+              cursor:isDirty||saving?"pointer":"default",transition:"background .2s",
+              background:saving?MUT:isDirty?"#059669":saved?"#d1fae5":"#e5e7eb",
+              color:saving||isDirty?WHT:saved?"#065f46":"#9ca3af"}}>
+            {saving?"Guardando…":saved?"✓ Guardado":isDirty?"💾 Guardar cambios":"Sin cambios"}
+          </button>
+        </div>
+      </div>
+
+      {/* Table */}
+      {loading ? <Spinner /> : (
+        <div style={{background:WHT,border:`1px solid ${BRD}`,borderRadius:12,overflow:"hidden"}}>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,tableLayout:"fixed"}}>
+              <colgroup>
+                {CHECKIN_COLS.map(c=><col key={c.key} style={{width:c.w}}/>)}
+                <col style={{width:40}}/>
+              </colgroup>
+              <thead>
+                <tr style={{background:BG}}>
+                  {CHECKIN_COLS.map(c=>(
+                    <th key={c.key} style={thStyle(c.key)} onClick={()=>sortBy(c.key)}>
+                      {c.label}{sortCol===c.key ? (sortDir>0?" ↑":" ↓") : ""}
+                    </th>
+                  ))}
+                  <th style={{...thStyle("_del"),cursor:"default"}}/>
+                </tr>
+              </thead>
+              <tbody>
+                {groups.length === 0 && (
+                  <tr><td colSpan={CHECKIN_COLS.length+1} style={{padding:40,textAlign:"center",color:MUT}}>Sin resultados</td></tr>
+                )}
+                {groups.map((grp,gi) => (
+                  <Fragment key={gi}>
+                    {/* Client group header */}
+                    <tr style={{background:"#f0ebe3"}}>
+                      <td colSpan={CHECKIN_COLS.length+1}
+                        style={{padding:"5px 12px",fontSize:11,fontWeight:700,color:DARK,letterSpacing:".04em"}}>
+                        {grp.client || "—"}
+                        <span style={{marginLeft:10,fontWeight:400,color:MUT}}>
+                          {grp.idxs.length} servicio{grp.idxs.length!==1?"s":""}
+                        </span>
+                      </td>
+                    </tr>
+                    {grp.idxs.map((rowIdx,ri) => {
+                      const r = rows[rowIdx];
+                      const isEven = ri%2===0;
+                      return (
+                        <tr key={rowIdx} style={{background:isEven?WHT:"#faf9f7",borderBottom:`1px solid ${BRD}`}}>
+                          {CHECKIN_COLS.map(col => {
+                            const val = r[col.key] ?? "";
+                            const isMargen = col.key==="margen";
+                            const isGan   = col.key==="ganancia";
+                            const isMoney = ["precioCliente","precioProv","ganancia"].includes(col.key);
+                            const display = isMargen ? fmtPct(val) : isMoney ? fmtCOP(val) : (col.date?fmtDate(val):(val||""));
+                            return (
+                              <td key={col.key} style={{padding:"6px 10px",verticalAlign:"middle",
+                                color: isGan&&parseFloat(val)>0?"#059669":isGan&&parseFloat(val)<0?"#dc2626":DARK,
+                                fontWeight: isMoney&&col.key==="ganancia"?600:400}}>
+                                <EditCell
+                                  value={val}
+                                  field={col.key}
+                                  isNum={col.num}
+                                  isDate={col.date}
+                                  onSave={v=>patchRow(rowIdx,col.key,v)}
+                                />
+                              </td>
+                            );
+                          })}
+                          <td style={{padding:"4px 6px",textAlign:"center"}}>
+                            <button onClick={()=>deleteRow(rowIdx)}
+                              style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:14,padding:2}}>
+                              ×
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </Shell>
+  );
+}

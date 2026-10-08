@@ -29,6 +29,7 @@ const FinanceCierre        = lazyWithReload(() => import("./FinancePanel").then(
 const FinanceTemplates     = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinanceTemplates })));
 const FinanceReservaciones    = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinanceReservaciones })));
 const FinancePagosProveedores = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinancePagosProveedores })));
+const FinanceCheckin          = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinanceCheckin })));
 const MenuAdminPanel          = lazyWithReload(() => import("./ConciergePanel").then(m => ({ default: m.MenuAdminPanel })));
 
 function PageLoader() {
@@ -6483,15 +6484,15 @@ const ROLE_META = {
 
 // Modes each role can access
 const ROLE_ACCESS = {
-  admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores"],
-  concierge: ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones"],
+  admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin"],
+  concierge: ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","f-checkin"],
   junior:    ["dashboard"],   // dashboard overview only — no client edit panel
-  finance:   ["pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores"],
+  finance:   ["pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin"],
   marketing: ["dashboard"],
   bodas:     ["bodas","tareas-bodas","tasks","dashboard"],
 };
 
-const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores"]);
+const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin"]);
 
 // ─── ITINERARY CATALOG (client-facing viewer) ─────────────────────
 const GAS_URL_IC = import.meta.env.VITE_GAS_URL;
@@ -6946,6 +6947,7 @@ function FinanceLanding({ user, onLogout }) {
       group: "Operaciones",
       items: [
         { icon:"📈", label:"Reservaciones & Ventas", desc:"Ingresos esperados y comisiones de ventas", href:"/?mode=f-reservaciones", live:true },
+        { icon:"🤝", label:"Check-In & Concierge",   desc:"Servicios de check-in y concierge con margen", href:"/?mode=f-checkin",   live:true },
         { icon:"💰", label:"Estimados",               desc:"Herramienta de cotizaciones para ventas",   href:"/estimates.html",        live:true },
         { icon:"✅", label:"Cierre Mensual",          desc:"Checklist de cierre por mes",               href:"/?mode=f-cierre",        live:false },
         { icon:"🏢", label:"Pagos a Proveedores",     desc:"Solicitudes de pago · Lotes Payana · Aprobaciones", href:"/?mode=f-proveedores", live:true },
@@ -7228,6 +7230,7 @@ function App() {
     if (mode === "f-cierre")        return <S><ErrorBoundary><FinanceCierre /></ErrorBoundary></S>;
     if (mode === "f-templates")     return <S><ErrorBoundary><FinanceTemplates /></ErrorBoundary></S>;
     if (mode === "f-proveedores")   return <S><ErrorBoundary><FinancePagosProveedores /></ErrorBoundary></S>;
+    if (mode === "f-checkin")       return <S><ErrorBoundary><FinanceCheckin /></ErrorBoundary></S>;
     if (mode === "concierge") return <S><ErrorBoundary><ConciergePanel onLogout={logout} currentUser={user} /></ErrorBoundary></S>;
     if (mode === "bodas")        return <S><ErrorBoundary><BodaPanel currentUser={user} onLogout={logout} /></ErrorBoundary></S>;
     if (mode === "tareas-bodas") return <S><ErrorBoundary><TareasPanel currentUser={user} onLogout={logout} /></ErrorBoundary></S>;
