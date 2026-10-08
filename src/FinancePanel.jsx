@@ -556,6 +556,26 @@ function monthLabel(ym) {
   return `${MONTH_NAMES[parseInt(m,10)-1]} ${y}`;
 }
 
+// Deterministic color per Customer Type string
+const TYPE_PALETTE = [
+  { bg:"#dbeafe", border:"#60a5fa", text:"#1e40af" }, // blue
+  { bg:"#d1fae5", border:"#34d399", text:"#065f46" }, // green
+  { bg:"#fef3c7", border:"#fbbf24", text:"#92400e" }, // amber
+  { bg:"#ede9fe", border:"#a78bfa", text:"#5b21b6" }, // purple
+  { bg:"#fee2e2", border:"#f87171", text:"#991b1b" }, // red
+  { bg:"#e0f2fe", border:"#38bdf8", text:"#0c4a6e" }, // sky
+  { bg:"#fce7f3", border:"#f472b6", text:"#9d174d" }, // pink
+  { bg:"#fff7ed", border:"#fb923c", text:"#7c2d12" }, // orange
+  { bg:"#f0fdf4", border:"#86efac", text:"#14532d" }, // lime
+  { bg:"#f1f5f9", border:"#94a3b8", text:"#334155" }, // slate
+];
+function typeColor(type) {
+  if (!type) return { bg:"#f3f4f6", border:"#d1d5db", text:"#6b7280" };
+  let h = 0;
+  for (let i = 0; i < type.length; i++) h = (h * 31 + type.charCodeAt(i)) & 0xffff;
+  return TYPE_PALETTE[h % TYPE_PALETTE.length];
+}
+
 const ALL_COLS = [
   { key:"name",        label:"Cliente",         w:160, num:false },
   { key:"salesRep",    label:"Sales Rep",        w:110, num:false, optKey:"salesRep" },
@@ -655,7 +675,7 @@ function ReservationsCalendar({ rows }) {
   const now = new Date();
   const [year,  setYear]  = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
-  const [calView, setCalView] = useState("lista"); // "gantt" | "lista"
+  const [calView, setCalView] = useState("mes"); // "mes" | "gantt" | "lista"
 
   const daysInMonth = new Date(year, month+1, 0).getDate();
   const days = Array.from({length:daysInMonth},(_,i)=>i+1);
@@ -670,15 +690,16 @@ function ReservationsCalendar({ rows }) {
     return ci <= ym && (!co || co >= ym);
   }).sort((a,b)=>(a.checkIn||"").localeCompare(b.checkIn||""));
 
-  const statusColor = s => s==="Confirmed"?"#2d6a4f":s==="Cancelled"?"#9b2335":"#b45309";
-  const statusBg    = s => s==="Confirmed"?"#d1fae5":s==="Cancelled"?"#fee2e2":"#fef3c7";
-  const statusDot   = s => s==="Confirmed"?"#10b981":s==="Cancelled"?"#f87171":"#fbbf24";
+  const statusDot = s => s==="Confirmed"?"#10b981":s==="Cancelled"?"#f87171":"#fbbf24";
 
   const nights = (ci,co) => {
     if (!ci||!co) return "—";
     const d = (new Date(co+"T12:00:00")-new Date(ci+"T12:00:00"))/(1000*60*60*24);
     return d>0 ? d+"n" : "—";
   };
+
+  // All unique types in visible rows — for legend
+  const allTypes = [...new Set(rows.map(r=>r.type).filter(Boolean))].sort();
 
   return (
     <div>
@@ -688,7 +709,7 @@ function ReservationsCalendar({ rows }) {
         <span style={{fontWeight:700,fontSize:15,color:DARK,minWidth:180,textAlign:"center"}}>{MONTH_NAMES[month]} {year}</span>
         <button onClick={next} style={{padding:"6px 12px",fontSize:13,background:"transparent",color:DARK,border:`1px solid ${BRD}`,borderRadius:8,cursor:"pointer"}}>›</button>
         <div style={{marginLeft:16,display:"flex",background:WHT,border:`1px solid ${BRD}`,borderRadius:8,overflow:"hidden"}}>
-          {[["lista","Lista"],["gantt","Gantt"]].map(([v,l])=>(
+          {[["mes","Mes"],["lista","Lista"],["gantt","Gantt"]].map(([v,l])=>(
             <button key={v} onClick={()=>setCalView(v)}
               style={{padding:"6px 14px",fontSize:11,fontWeight:600,
                 background:calView===v?DARK:"transparent",color:calView===v?WHT:MUT,
@@ -698,9 +719,96 @@ function ReservationsCalendar({ rows }) {
         <span style={{fontSize:12,color:MUT,marginLeft:8}}>{visible.length} reservaciones</span>
       </div>
 
+      {/* Legend by Customer Type */}
+      {allTypes.length > 0 && (
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:14}}>
+          {allTypes.map(t => {
+            const tc = typeColor(t);
+            return (
+              <span key={t} style={{display:"inline-flex",alignItems:"center",gap:5,
+                fontSize:11,fontWeight:600,color:tc.text,background:tc.bg,
+                border:`1px solid ${tc.border}`,padding:"3px 10px",borderRadius:20}}>
+                {t}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {visible.length===0 && (
         <div style={{color:MUT,fontSize:13,padding:"30px 0",textAlign:"center"}}>
           No hay reservaciones en {MONTH_NAMES[month]} {year}.
+        </div>
+      )}
+
+      {/* ── Mes (grid calendar) view ── */}
+      {calView==="mes" && (
+        <div style={{background:WHT,border:`1px solid ${BRD}`,borderRadius:12,overflow:"hidden"}}>
+          {/* Day-of-week header */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:`2px solid ${BRD}`}}>
+            {["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"].map(d=>(
+              <div key={d} style={{padding:"8px 0",textAlign:"center",fontSize:10,fontWeight:700,
+                letterSpacing:".06em",textTransform:"uppercase",color:MUT}}>
+                {d}
+              </div>
+            ))}
+          </div>
+          {/* Weeks */}
+          {(() => {
+            const firstDow = new Date(`${ym}-01T12:00:00`).getDay(); // 0=Sun
+            const totalCells = Math.ceil((firstDow + daysInMonth) / 7) * 7;
+            const cells = Array.from({length:totalCells},(_,i)=>{
+              const dayNum = i - firstDow + 1;
+              return dayNum >= 1 && dayNum <= daysInMonth ? dayNum : null;
+            });
+            const weeks = [];
+            for (let i=0;i<cells.length;i+=7) weeks.push(cells.slice(i,i+7));
+            return weeks.map((week,wi)=>(
+              <div key={wi} style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",
+                borderBottom:wi<weeks.length-1?`1px solid ${BRD}`:"none"}}>
+                {week.map((dayNum,di)=>{
+                  if (!dayNum) return <div key={di} style={{minHeight:80,background:"rgba(0,0,0,.015)",borderRight:`1px solid ${BRD}`}}/>;
+                  const ds = `${ym}-${String(dayNum).padStart(2,"0")}`;
+                  const isToday = dayNum===now.getDate()&&month===now.getMonth()&&year===now.getFullYear();
+                  const dow = (firstDow + dayNum - 1) % 7;
+                  const isWeekend = dow===0||dow===6;
+                  const dayRows = visible.filter(r=>r.checkIn&&r.checkOut&&ds>=r.checkIn.slice(0,10)&&ds<r.checkOut.slice(0,10));
+                  return (
+                    <div key={di} style={{
+                      minHeight:80, padding:"4px 5px",
+                      borderRight:di<6?`1px solid ${BRD}`:"none",
+                      background:isToday?"rgba(192,160,98,.07)":isWeekend?"rgba(0,0,0,.015)":"transparent",
+                    }}>
+                      <div style={{fontSize:11,fontWeight:isToday?800:500,
+                        color:isToday?GOLD:MUT,marginBottom:3,textAlign:"right",lineHeight:1.4}}>
+                        {dayNum}
+                      </div>
+                      <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                        {dayRows.map((r,ri)=>{
+                          const tc = typeColor(r.type);
+                          const isStart = ds===r.checkIn?.slice(0,10);
+                          return (
+                            <div key={ri} title={`${r.name} · ${r.type||""} · ${r.status||""}`}
+                              style={{
+                                fontSize:9,fontWeight:600,lineHeight:1.3,
+                                padding:"2px 5px",
+                                background:tc.bg,color:tc.text,
+                                borderLeft:`3px solid ${tc.border}`,
+                                borderRadius:3,
+                                opacity:r.status==="Cancelled"?0.5:1,
+                                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                              }}>
+                              {isStart ? (r.name||"?") : "·"}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ));
+          })()}
         </div>
       )}
 
@@ -710,38 +818,54 @@ function ReservationsCalendar({ rows }) {
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
             <thead>
               <tr style={{background:BG}}>
-                {["Cliente","Check In","Check Out","Noches","Property","Sales Rep","Status","Revenue"].map(h=>(
+                {["","Cliente","Customer Type","Check In","Check Out","Noches","Property","Sales Rep","Status","Revenue"].map(h=>(
                   <th key={h} style={{padding:"9px 12px",textAlign:"left",fontWeight:600,
                     color:DARK,fontSize:11,borderBottom:`1px solid ${BRD}`,whiteSpace:"nowrap"}}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {visible.map((r,i)=>(
-                <tr key={i} style={{borderBottom:`1px solid rgba(26,24,20,.05)`,background:i%2===0?"transparent":"rgba(247,244,239,.4)"}}>
-                  <td style={{padding:"8px 12px",fontWeight:600,color:DARK}}>{r.name||"—"}</td>
-                  <td style={{padding:"8px 12px",color:MUT,whiteSpace:"nowrap"}}>{fmtDate(r.checkIn)}</td>
-                  <td style={{padding:"8px 12px",color:MUT,whiteSpace:"nowrap"}}>{fmtDate(r.checkOut)}</td>
-                  <td style={{padding:"8px 12px",color:MUT,textAlign:"center"}}>{nights(r.checkIn,r.checkOut)}</td>
-                  <td style={{padding:"8px 12px",color:MUT}}>{r.property||"—"}</td>
-                  <td style={{padding:"8px 12px",color:MUT}}>{r.salesRep||"—"}</td>
-                  <td style={{padding:"8px 12px"}}>
-                    <span style={{display:"inline-flex",alignItems:"center",gap:5,
-                      background:statusBg(r.status),color:statusColor(r.status),
-                      padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:600}}>
-                      <span style={{width:6,height:6,borderRadius:"50%",background:statusDot(r.status),display:"inline-block"}}/>
-                      {r.status||"—"}
-                    </span>
-                  </td>
-                  <td style={{padding:"8px 12px",textAlign:"right",fontWeight:700,color:DARK,fontVariantNumeric:"tabular-nums"}}>
-                    {r.total ? fmt$(parseFloat(r.total)) : "—"}
-                  </td>
-                </tr>
-              ))}
+              {visible.map((r,i)=>{
+                const tc = typeColor(r.type);
+                return (
+                  <tr key={i} style={{borderBottom:`1px solid rgba(26,24,20,.05)`,
+                    background:i%2===0?"transparent":"rgba(247,244,239,.4)"}}>
+                    <td style={{padding:"0 0 0 4px",width:4}}>
+                      <div style={{width:4,height:"100%",minHeight:38,background:tc.border,borderRadius:2}}/>
+                    </td>
+                    <td style={{padding:"8px 12px",fontWeight:600,color:DARK}}>{r.name||"—"}</td>
+                    <td style={{padding:"8px 12px"}}>
+                      {r.type ? (
+                        <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,
+                          background:tc.bg,color:tc.text,border:`1px solid ${tc.border}`}}>
+                          {r.type}
+                        </span>
+                      ) : <span style={{color:"#d1d5db",fontSize:11}}>—</span>}
+                    </td>
+                    <td style={{padding:"8px 12px",color:MUT,whiteSpace:"nowrap"}}>{fmtDate(r.checkIn)}</td>
+                    <td style={{padding:"8px 12px",color:MUT,whiteSpace:"nowrap"}}>{fmtDate(r.checkOut)}</td>
+                    <td style={{padding:"8px 12px",color:MUT,textAlign:"center"}}>{nights(r.checkIn,r.checkOut)}</td>
+                    <td style={{padding:"8px 12px",color:MUT}}>{r.property||"—"}</td>
+                    <td style={{padding:"8px 12px",color:MUT}}>{r.salesRep||"—"}</td>
+                    <td style={{padding:"8px 12px"}}>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontWeight:600,
+                        color:r.status==="Confirmed"?"#065f46":r.status==="Cancelled"?"#991b1b":"#92400e",
+                        background:r.status==="Confirmed"?"#d1fae5":r.status==="Cancelled"?"#fee2e2":"#fef3c7",
+                        padding:"2px 8px",borderRadius:20}}>
+                        <span style={{width:6,height:6,borderRadius:"50%",background:statusDot(r.status),display:"inline-block"}}/>
+                        {r.status||"—"}
+                      </span>
+                    </td>
+                    <td style={{padding:"8px 12px",textAlign:"right",fontWeight:700,color:DARK,fontVariantNumeric:"tabular-nums"}}>
+                      {r.total ? fmt$(parseFloat(r.total)) : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
             <tfoot>
               <tr style={{background:BG,borderTop:`2px solid ${BRD}`}}>
-                <td colSpan={7} style={{padding:"9px 12px",fontSize:11,fontWeight:600,color:MUT}}>
+                <td colSpan={9} style={{padding:"9px 12px",fontSize:11,fontWeight:600,color:MUT}}>
                   TOTAL MES · {visible.filter(r=>r.status==="Confirmed").length} confirmadas
                 </td>
                 <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:DARK,fontVariantNumeric:"tabular-nums"}}>
@@ -755,60 +879,54 @@ function ReservationsCalendar({ rows }) {
 
       {/* ── Gantt view ── */}
       {calView==="gantt" && visible.length>0 && (
-        <>
-          <div style={{overflowX:"auto"}}>
-            <div style={{minWidth:200+daysInMonth*30}}>
-              <div style={{display:"flex",marginBottom:4}}>
-                <div style={{width:200,flexShrink:0}}/>
-                {days.map(d=>{
-                  const dow=new Date(`${ym}-${String(d).padStart(2,"0")}T12:00:00`).getDay();
-                  const isToday=d===now.getDate()&&month===now.getMonth()&&year===now.getFullYear();
-                  return (
-                    <div key={d} style={{width:30,flexShrink:0,textAlign:"center",fontSize:10,
-                      fontWeight:isToday?700:400,color:isToday?GOLD:dow===0||dow===6?"#9ca3af":MUT,
-                      padding:"3px 0",background:isToday?"rgba(192,160,98,.12)":"transparent",borderRadius:4}}>
-                      {d}
-                    </div>
-                  );
-                })}
-              </div>
-              {visible.map((r,ri)=>(
+        <div style={{overflowX:"auto"}}>
+          <div style={{minWidth:200+daysInMonth*30}}>
+            <div style={{display:"flex",marginBottom:4}}>
+              <div style={{width:200,flexShrink:0}}/>
+              {days.map(d=>{
+                const dow=new Date(`${ym}-${String(d).padStart(2,"0")}T12:00:00`).getDay();
+                const isToday=d===now.getDate()&&month===now.getMonth()&&year===now.getFullYear();
+                return (
+                  <div key={d} style={{width:30,flexShrink:0,textAlign:"center",fontSize:10,
+                    fontWeight:isToday?700:400,color:isToday?GOLD:dow===0||dow===6?"#9ca3af":MUT,
+                    padding:"3px 0",background:isToday?"rgba(192,160,98,.12)":"transparent",borderRadius:4}}>
+                    {d}
+                  </div>
+                );
+              })}
+            </div>
+            {visible.map((r,ri)=>{
+              const tc = typeColor(r.type);
+              return (
                 <div key={ri} style={{display:"flex",alignItems:"center",marginBottom:3,minHeight:26}}>
                   <div style={{width:200,flexShrink:0,fontSize:11,fontWeight:600,color:DARK,
                     overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:10}}>
                     {r.name||"—"}
-                    <span style={{fontSize:10,fontWeight:400,color:MUT,marginLeft:4}}>{r.salesRep||""}</span>
+                    {r.type && <span style={{fontSize:9,fontWeight:700,marginLeft:5,padding:"1px 5px",
+                      borderRadius:10,background:tc.bg,color:tc.text,border:`1px solid ${tc.border}`}}>{r.type}</span>}
                   </div>
                   {days.map(d=>{
                     const ds=`${ym}-${String(d).padStart(2,"0")}`;
-                    const inRange=r.checkIn&&r.checkOut&&ds>=r.checkIn.slice(0,10)&&ds<=r.checkOut.slice(0,10);
+                    const inRange=r.checkIn&&r.checkOut&&ds>=r.checkIn.slice(0,10)&&ds<r.checkOut.slice(0,10);
                     const isStart=ds===r.checkIn?.slice(0,10);
-                    const isEnd  =ds===r.checkOut?.slice(0,10);
+                    const isEnd  =r.checkOut && `${ym}-${String(d).padStart(2,"0")}`===r.checkOut.slice(0,10);
                     const dow=new Date(ds+"T12:00:00").getDay();
                     return (
                       <div key={d} style={{width:30,flexShrink:0,height:22,
-                        background:inRange?statusBg(r.status):dow===0||dow===6?"rgba(0,0,0,.025)":"transparent",
-                        borderTop:inRange?`1px solid ${statusColor(r.status)}50`:undefined,
-                        borderBottom:inRange?`1px solid ${statusColor(r.status)}50`:undefined,
-                        borderLeft:isStart?`3px solid ${statusColor(r.status)}`:undefined,
-                        borderRight:isEnd?`3px solid ${statusColor(r.status)}`:undefined,
-                        borderRadius:isStart&&isEnd?6:isStart?"6px 0 0 6px":isEnd?"0 6px 6px 0":0,
+                        background:inRange?tc.bg:dow===0||dow===6?"rgba(0,0,0,.025)":"transparent",
+                        borderTop:inRange?`1px solid ${tc.border}`:undefined,
+                        borderBottom:inRange?`1px solid ${tc.border}`:undefined,
+                        borderLeft:isStart?`3px solid ${tc.border}`:undefined,
+                        opacity:r.status==="Cancelled"?0.45:1,
+                        borderRadius:isStart?"6px 0 0 6px":0,
                       }}/>
                     );
                   })}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
-          <div style={{display:"flex",gap:16,marginTop:12,flexWrap:"wrap"}}>
-            {[["Confirmed","#2d6a4f","#d1fae5"],["Cancelled","#9b2335","#fee2e2"],["Other","#b45309","#fef3c7"]].map(([l,c,bg])=>(
-              <span key={l} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:MUT}}>
-                <span style={{width:16,height:10,background:bg,border:`2px solid ${c}`,borderRadius:3,display:"inline-block"}}/>
-                {l}
-              </span>
-            ))}
-          </div>
-        </>
+        </div>
       )}
     </div>
   );
