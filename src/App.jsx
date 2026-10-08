@@ -1346,6 +1346,109 @@ function fmtOrderAt(at) {
          d.toLocaleTimeString("es-CO", { hour:"2-digit", minute:"2-digit" });
 }
 
+// ── Weekly platform update log (super-admin only) ─────────────────────────
+const UPDATES = [
+  {
+    week: "30 sep – 8 oct 2026",
+    areas: [
+      {
+        icon: "📊", name: "Dashboard", items: [
+          { tag: "nuevo",  text: 'Status "Activo" agregado al panel y filtros' },
+          { tag: "mejora", text: "Columnas del dashboard con ancho mínimo" },
+          { tag: "nuevo",  text: "Columnas Grocery Process e Invoice Process (NEW / OLD)" },
+          { tag: "mejora", text: 'Botón "Ver Sheet" ya no parte el texto' },
+        ],
+      },
+      {
+        icon: "✏️", name: "Itinerario — Editor", items: [
+          { tag: "nuevo",  text: "Vista previa de foto al agregar ítem nuevo" },
+          { tag: "fix",    text: "Estado inicial de ítems nuevos corregido a Borrador (⬜)" },
+          { tag: "nuevo",  text: "Botón ⎘ Duplicar en cada ítem del itinerario" },
+          { tag: "nuevo",  text: "Notas con formato rico — toolbar B / I / U / Resaltado" },
+          { tag: "mejora", text: "Botón 'Guardar itinerario' duplicado eliminado del canvas" },
+        ],
+      },
+      {
+        icon: "🖨️", name: "Itinerario — Vista Cliente", items: [
+          { tag: "nuevo",  text: "Badge ◯ Borrador en ítems sin confirmar" },
+          { tag: "mejora", text: "Bloque de transporte muestra Pasajeros y Notas" },
+          { tag: "mejora", text: 'Badge "Confirmado por X" ahora es azul (distinto del verde de confirmación)' },
+          { tag: "nuevo",  text: "Hora de vuelo editable en modo edición cuando no hay datos en vivo" },
+          { tag: "nuevo",  text: "Vuelos reordenables con flechas ↑↓ dentro del día" },
+          { tag: "mejora", text: "Bloque de vuelos con scroll horizontal en pantallas chicas" },
+        ],
+      },
+      {
+        icon: "🔐", name: "Accesos", items: [
+          { tag: "acceso", text: "Giulia agregada como Super Admin con acceso a KPIs" },
+        ],
+      },
+    ],
+  },
+];
+
+const TAG_STYLE = {
+  nuevo:  { bg: "#edf7f2", color: "#2d7a56" },
+  mejora: { bg: "#eef2fb", color: "#2353a4" },
+  fix:    { bg: "#fdf6e8", color: "#b8913a" },
+  acceso: { bg: "#f3f0fa", color: "#6547a8" },
+};
+
+function WeeklyUpdates() {
+  return (
+    <div style={{ maxWidth: 700, paddingBottom: 40 }}>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 6 }}>
+          Plataforma · Two Travel
+        </div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-1)", margin: 0 }}>
+          Actualizaciones semanales
+        </h2>
+      </div>
+
+      {UPDATES.map((update, ui) => (
+        <div key={ui} style={{ marginBottom: 36 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, paddingBottom: 10, borderBottom: "2px solid var(--text-1)" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-1)" }}>Semana {update.week}</span>
+            <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-3)", background: "var(--border)", padding: "2px 10px", borderRadius: 20 }}>
+              {update.areas.reduce((s, a) => s + a.items.length, 0)} cambios
+            </span>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {update.areas.map((area, ai) => (
+              <div key={ai}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 14 }}>{area.icon}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--text-3)" }}>
+                    {area.name}
+                  </span>
+                  <span style={{ fontSize: 10, color: "var(--text-3)", background: "var(--border)", padding: "1px 7px", borderRadius: 20, marginLeft: "auto" }}>
+                    {area.items.length}
+                  </span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  {area.items.map((item, ii) => {
+                    const ts = TAG_STYLE[item.tag] || TAG_STYLE.mejora;
+                    return (
+                      <div key={ii} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 14px", display: "flex", alignItems: "flex-start", gap: 10 }}>
+                        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", padding: "3px 7px", borderRadius: 4, background: ts.bg, color: ts.color, flexShrink: 0, marginTop: 1 }}>
+                          {item.tag}
+                        </span>
+                        <span style={{ fontSize: 13, color: "var(--text-1)", lineHeight: 1.5 }}>{item.text}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ClientesTable({ kickoffs, loading }) {
   const [cityFilter, setCityFilter] = useState("all");
   const [conciergeFilter, setConciergeFilter] = useState("all");
@@ -2211,6 +2314,7 @@ function UnifiedDashboard({ currentUser, onLogout }) {
             { id: "feedback", label: "Feedback" },
             ...( ["admin","concierge"].includes(currentUser?.role) ? [{ id: "menus", label: "🍹 Menús" }] : [] ),
             ...( isSuperAdmin(currentUser) ? [{ id: "kpis", label: "📊 KPIs" }] : [] ),
+            ...( isSuperAdmin(currentUser) ? [{ id: "updates", label: "🛠 Updates" }] : [] ),
           ].map(({ id, label }) => (
             <button key={id} onClick={() => setTab(id)}
               style={{
@@ -2847,6 +2951,9 @@ function UnifiedDashboard({ currentUser, onLogout }) {
             )}
           </>
         )}
+
+        {/* ══ Updates tab ══ */}
+        {tab === "updates" && <WeeklyUpdates />}
 
         {/* ══ Feedback tab ══ */}
         {tab === "feedback" && (
