@@ -1613,7 +1613,16 @@ const FREQS    = ["Única","Mensual","Quincenal","Semanal","Eventual"];
 const STATUS_PROV = { pendiente:{label:"Pendiente",color:"#fef3c7",text:"#92400e"}, aprobada:{label:"Aprobada",color:"#dcfce7",text:"#166534"}, pagada:{label:"Pagada",color:"#dbeafe",text:"#1e3a8a"}, rechazada:{label:"Rechazada",color:"#fee2e2",text:"#991b1b"} };
 
 function emptyProvForm(today) {
-  return { concepto:"", provId:"", provNombre:"", provTipoId:"NIT", banco:"BANCOLOMBIA", tipoCuenta:"Cuenta de Ahorro", numeroCuenta:"", amount:"", currency:"COP", category:"", area:"Concierge", clase:"Colombia: Cartagena", priority:"Media", dueDate:today, client:"", notes:"", requestedBy:"", assignedTo:"", payFreq:"Única", invoiceUrl:"", prebill:false, lote:today };
+  return { concepto:"", provId:"", provNombre:"", provTipoId:"NIT", banco:"BANCOLOMBIA", tipoCuenta:"Cuenta de Ahorro", numeroCuenta:"", amount:"", currency:"COP", category:"", area:"Concierge", clase:"Colombia: Cartagena", priority:"Media", dueDate:today, client:"", notes:"", requestedBy:"", assignedTo:"", payFreq:"Única", invoiceUrl:"", soporteUrl:"", prebill:false, lote:today };
+}
+
+async function uploadSoporte(file, rowId) {
+  const ext  = file.name.split(".").pop();
+  const path = `soportes/${rowId}-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("pagos-soportes").upload(path, file, { upsert: true });
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from("pagos-soportes").getPublicUrl(path);
+  return data.publicUrl;
 }
 
 function pFmt(n, cur) {
@@ -1650,6 +1659,7 @@ export function FinancePagosProveedores() {
   const [fArea, setFArea]         = useState("");
   const [fClase, setFClase]       = useState("");
   const [toast, setToast]         = useState("");
+  const [uploadingId, setUploadingId] = useState(null);
 
   useEffect(() => {
     Promise.all([loadSolicitudes(), loadProviderDB()])
@@ -1722,6 +1732,31 @@ export function FinancePagosProveedores() {
     setRows(updated);
     try { await saveSolicitudes(updated); showToastMsg("Eliminada"); }
     catch(ex) { showToastMsg("Error: "+ex.message); }
+  }
+
+  async function handleSoporteUpload(id, file) {
+    if (!file) return;
+    setUploadingId(id);
+    try {
+      const url = await uploadSoporte(file, id);
+      const updated = rows.map(r => r.id === id ? { ...r, soporteUrl: url } : r);
+      setRows(updated);
+      await saveSolicitudes(updated);
+      showToastMsg("📎 Soporte adjuntado");
+    } catch(ex) {
+      showToastMsg("Error subiendo soporte: " + ex.message);
+    }
+    setUploadingId(null);
+  }
+
+  async function notifyApproval(r) {
+    const msg = `✅ *Pago aprobado* — ${r.concepto}\nProveedor: ${r.provNombre}\nMonto: ${pFmt(r.amount, r.currency)}\n${r.soporteUrl ? "Soporte: "+r.soporteUrl : "Sin soporte adjunto"}\nProceder con el pago.`;
+    try {
+      await navigator.clipboard.writeText(msg);
+      showToastMsg("📲 Mensaje copiado al portapapeles");
+    } catch {
+      showToastMsg("⚠️ No se pudo copiar: " + msg.slice(0, 60) + "…");
+    }
   }
 
   function exportPayana() {
@@ -1822,7 +1857,7 @@ export function FinancePagosProveedores() {
                     <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                       <thead>
                         <tr style={{background:BG,borderBottom:`1px solid ${BRD}`}}>
-                          {["Proveedor ID","Nombre","Monto","Concepto","Área","Clase","Prior.","Fecha Vcto","Estado",""].map(h=>(
+                          {["Proveedor ID","Nombre","Monto","Concepto","Área","Clase","Prior.","Fecha Vcto","Estado","Soporte",""].map(h=>(
                             <th key={h} style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:MUT,fontSize:10,textTransform:"uppercase",letterSpacing:.4,whiteSpace:"nowrap"}}>{h}</th>
                           ))}
                         </tr>
@@ -1848,8 +1883,24 @@ export function FinancePagosProveedores() {
                                   {Object.entries(STATUS_PROV).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
                                 </select>
                               </td>
+                              <td style={{padding:"8px 10px",whiteSpace:"nowrap",textAlign:"center"}}>
+                                {r.soporteUrl ? (
+                                  <a href={r.soporteUrl} target="_blank" rel="noreferrer"
+                                    style={{fontSize:16,textDecoration:"none",marginRight:2}} title="Ver soporte">📎</a>
+                                ) : (
+                                  <label title="Adjuntar soporte" style={{cursor:"pointer",fontSize:14,color:uploadingId===r.id?"#f59e0b":MUT}}>
+                                    {uploadingId===r.id ? "⏳" : "📎+"}
+                                    <input type="file" accept="image/*,application/pdf" style={{display:"none"}}
+                                      onChange={e=>handleSoporteUpload(r.id, e.target.files[0])}/>
+                                  </label>
+                                )}
+                              </td>
                               <td style={{padding:"8px 10px",whiteSpace:"nowrap"}}>
                                 <button onClick={()=>openEdit(r.id)} style={{fontSize:10,padding:"3px 8px",border:`1px solid ${BRD}`,borderRadius:3,background:WHT,cursor:"pointer",marginRight:4,fontFamily:"'Jost',sans-serif"}}>✏️</button>
+                                {r.status==="aprobada" && (
+                                  <button onClick={()=>notifyApproval(r)} title="Copiar mensaje de aprobación"
+                                    style={{fontSize:10,padding:"3px 8px",border:"1px solid #86efac",borderRadius:3,background:"#f0fdf4",color:"#166534",cursor:"pointer",marginRight:4,fontFamily:"'Jost',sans-serif"}}>📲</button>
+                                )}
                                 <button onClick={()=>deleteRow(r.id)} style={{fontSize:10,padding:"3px 8px",border:"1px solid #fca5a5",borderRadius:3,background:"#fff5f5",color:"#dc2626",cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>✕</button>
                               </td>
                             </tr>
@@ -1949,6 +2000,29 @@ export function FinancePagosProveedores() {
                       <FGrp label="Asignado a" half><input {...PINP()} value={form.assignedTo} onChange={e=>upd("assignedTo",e.target.value)}/></FGrp>
                       <FGrp label="Frecuencia de Pago" half><select {...PSEL()} value={form.payFreq} onChange={e=>upd("payFreq",e.target.value)}>{FREQS.map(f=><option key={f}>{f}</option>)}</select></FGrp>
                       <FGrp label="Link Factura / Cuenta de cobro"><input {...PINP()} value={form.invoiceUrl} onChange={e=>upd("invoiceUrl",e.target.value)} placeholder="https://…"/></FGrp>
+                      <FGrp label="Soporte de Pago">
+                        {form.soporteUrl ? (
+                          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                            <a href={form.soporteUrl} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#2563eb"}}>📎 Ver soporte</a>
+                            <button type="button" onClick={()=>upd("soporteUrl","")} style={{fontSize:10,padding:"2px 6px",border:`1px solid ${BRD}`,borderRadius:3,background:WHT,cursor:"pointer"}}>Quitar</button>
+                          </div>
+                        ) : (
+                          <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                            <label style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",border:`1px dashed ${BRD}`,borderRadius:4,cursor:"pointer",fontSize:12,color:MUT,flexShrink:0}}>
+                              📎 Subir archivo
+                              <input type="file" accept="image/*,application/pdf" style={{display:"none"}}
+                                onChange={async e=>{
+                                  const file = e.target.files[0]; if(!file) return;
+                                  const tmpId = editId||Date.now().toString(36);
+                                  try { const url = await uploadSoporte(file,tmpId); upd("soporteUrl",url); showToastMsg("📎 Soporte adjuntado"); }
+                                  catch(ex) { showToastMsg("⚠️ Upload fallido — pega el link manualmente"); }
+                                }}/>
+                            </label>
+                            <span style={{fontSize:11,color:MUT}}>o</span>
+                            <input {...PINP({flex:"1 1 180px"})} value={form.soporteUrl||""} onChange={e=>upd("soporteUrl",e.target.value)} placeholder="https://drive.google.com/…"/>
+                          </div>
+                        )}
+                      </FGrp>
                       <FGrp label="Notas / Observaciones"><textarea rows={2} {...PINP({resize:"vertical"})} value={form.notes} onChange={e=>upd("notes",e.target.value)}/></FGrp>
                     </div>
                     <label style={{fontSize:12,display:"flex",alignItems:"center",gap:6,cursor:"pointer",marginTop:10}}>
