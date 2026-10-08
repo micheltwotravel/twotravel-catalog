@@ -741,76 +741,142 @@ function ReservationsCalendar({ rows }) {
         </div>
       )}
 
-      {/* ── Mes (grid calendar) view ── */}
-      {calView==="mes" && (
-        <div style={{background:WHT,border:`1px solid ${BRD}`,borderRadius:12,overflow:"hidden"}}>
-          {/* Day-of-week header */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:`2px solid ${BRD}`}}>
-            {["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"].map(d=>(
-              <div key={d} style={{padding:"8px 0",textAlign:"center",fontSize:10,fontWeight:700,
-                letterSpacing:".06em",textTransform:"uppercase",color:MUT}}>
-                {d}
-              </div>
-            ))}
+      {/* ── Mes (spanning-bar calendar) view ── */}
+      {calView==="mes" && (() => {
+        const firstDow = new Date(`${ym}-01T12:00:00`).getDay();
+        const totalCells = Math.ceil((firstDow + daysInMonth) / 7) * 7;
+        const dayNums = Array.from({length:totalCells},(_,i)=>{
+          const d = i - firstDow + 1;
+          return d >= 1 && d <= daysInMonth ? d : null;
+        });
+        const weeks = [];
+        for (let i=0;i<dayNums.length;i+=7) weeks.push(dayNums.slice(i,i+7));
+
+        // Returns {startSlot,endSlot,isStart,isCont} for event in this week, or null
+        const eventSlot = (r, weekDays) => {
+          const ci = r.checkIn?.slice(0,10);
+          const co = r.checkOut?.slice(0,10);
+          if (!ci) return null;
+          const valid = weekDays.map((d,i)=>d?{d,i}:null).filter(Boolean);
+          if (!valid.length) return null;
+          const wFirst = `${ym}-${String(valid[0].d).padStart(2,"0")}`;
+          const wLast  = `${ym}-${String(valid[valid.length-1].d).padStart(2,"0")}`;
+          if (ci > wLast) return null;
+          if (co && co <= wFirst) return null;
+          const dispStartDate = ci < wFirst ? wFirst : ci;
+          const dispStartDay  = parseInt(dispStartDate.slice(-2));
+          const startSlot = weekDays.indexOf(dispStartDay);
+          if (startSlot === -1) return null;
+          let dispEndDay;
+          if (!co || co > wLast) {
+            dispEndDay = valid[valid.length-1].d;
+          } else {
+            dispEndDay = parseInt(co.slice(-2)) - 1;
+            if (dispEndDay < valid[0].d) return null;
+            if (dispEndDay > valid[valid.length-1].d) dispEndDay = valid[valid.length-1].d;
+          }
+          let endSlot = weekDays.indexOf(dispEndDay);
+          if (endSlot === -1) endSlot = valid[valid.length-1].i;
+          return { startSlot, endSlot, isStart:ci>=wFirst, isCont:!co||co>wLast };
+        };
+
+        const LANE_H = 24, DAY_H = 26, PAD = 3;
+
+        return (
+          <div style={{background:WHT,border:`1px solid ${BRD}`,borderRadius:12,overflow:"hidden"}}>
+            {/* Day-of-week header */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",background:BG,borderBottom:`2px solid ${BRD}`}}>
+              {["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"].map((d,i)=>(
+                <div key={d} style={{padding:"8px 0",textAlign:"center",fontSize:10,fontWeight:700,
+                  letterSpacing:".06em",textTransform:"uppercase",
+                  color:i===0||i===6?"#b0a898":MUT,
+                  borderRight:i<6?`1px solid ${BRD}`:undefined}}>
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {weeks.map((weekDays,wi)=>{
+              // Assign events to lanes
+              const weekEvts = visible.filter(r=>eventSlot(r,weekDays)!==null)
+                .sort((a,b)=>(a.checkIn||"").localeCompare(b.checkIn||""));
+              const laneEnds = [];
+              const asgn = new Map();
+              weekEvts.forEach(ev=>{
+                const s = eventSlot(ev,weekDays);
+                if (!s) return;
+                let lane = laneEnds.findIndex(e=>e<s.startSlot);
+                if (lane===-1){lane=laneEnds.length;laneEnds.push(-1);}
+                laneEnds[lane]=s.endSlot;
+                asgn.set(ev,{lane,...s});
+              });
+              const numLanes = laneEnds.length;
+              const rowH = DAY_H + PAD + numLanes*(LANE_H+2) + PAD;
+
+              return (
+                <div key={wi} style={{
+                  position:"relative",height:rowH,
+                  borderBottom:wi<weeks.length-1?`1px solid ${BRD}`:"none",
+                }}>
+                  {/* Day number cells */}
+                  {weekDays.map((d,di)=>{
+                    const isToday=d===now.getDate()&&month===now.getMonth()&&year===now.getFullYear();
+                    const ds = d?`${ym}-${String(d).padStart(2,"0")}`:"";
+                    const dow = d?new Date(ds+"T12:00:00").getDay():di;
+                    const isWeekend = dow===0||dow===6;
+                    return (
+                      <div key={di} style={{
+                        position:"absolute",top:0,left:`${di/7*100}%`,
+                        width:`${100/7}%`,height:DAY_H,
+                        background:!d?"rgba(0,0,0,.02)":isToday?"rgba(192,160,98,.1)":isWeekend?"rgba(0,0,0,.02)":"transparent",
+                        borderRight:di<6?`1px solid ${BRD}`:undefined,
+                        display:"flex",alignItems:"center",justifyContent:"flex-end",
+                        padding:"0 7px",
+                        boxSizing:"border-box",
+                      }}>
+                        {d&&<span style={{fontSize:11,fontWeight:isToday?800:400,color:isToday?GOLD:MUT}}>{d}</span>}
+                      </div>
+                    );
+                  })}
+                  {/* Column grid lines (extend full row height) */}
+                  {[0,1,2,3,4,5].map(di=>(
+                    <div key={di} style={{position:"absolute",top:0,bottom:0,
+                      left:`${(di+1)/7*100}%`,width:1,background:BRD,zIndex:0}}/>
+                  ))}
+                  {/* Event bars */}
+                  {[...asgn.entries()].map(([ev,{lane,startSlot,endSlot,isStart,isCont}])=>{
+                    const tc = typeColor(ev.type);
+                    const barTop = DAY_H + PAD + lane*(LANE_H+2);
+                    return (
+                      <div key={(ev.name||"")+ev.checkIn}
+                        title={`${ev.name||""}${ev.type?" · "+ev.type:""}${ev.status?" · "+ev.status:""}`}
+                        style={{
+                          position:"absolute",
+                          left:`calc(${startSlot/7*100}% + ${isStart?2:0}px)`,
+                          width:`calc(${(endSlot-startSlot+1)/7*100}% - ${isStart?4:2}px)`,
+                          top:barTop, height:LANE_H,
+                          background:tc.bg,
+                          border:`1px solid ${tc.border}80`,
+                          borderLeft:isStart?`3px solid ${tc.border}`:`1px solid ${tc.border}30`,
+                          borderRight:isCont?0:`1px solid ${tc.border}80`,
+                          borderRadius:`${isStart?4:0}px ${isCont?0:4}px ${isCont?0:4}px ${isStart?4:0}px`,
+                          color:tc.text,fontSize:10,fontWeight:700,
+                          padding:"0 6px",display:"flex",alignItems:"center",
+                          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                          opacity:ev.status==="Cancelled"?.45:1,
+                          zIndex:1,cursor:"default",
+                          boxSizing:"border-box",
+                        }}>
+                        {isStart?(ev.name||"?"):""}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
-          {/* Weeks */}
-          {(() => {
-            const firstDow = new Date(`${ym}-01T12:00:00`).getDay(); // 0=Sun
-            const totalCells = Math.ceil((firstDow + daysInMonth) / 7) * 7;
-            const cells = Array.from({length:totalCells},(_,i)=>{
-              const dayNum = i - firstDow + 1;
-              return dayNum >= 1 && dayNum <= daysInMonth ? dayNum : null;
-            });
-            const weeks = [];
-            for (let i=0;i<cells.length;i+=7) weeks.push(cells.slice(i,i+7));
-            return weeks.map((week,wi)=>(
-              <div key={wi} style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",
-                borderBottom:wi<weeks.length-1?`1px solid ${BRD}`:"none"}}>
-                {week.map((dayNum,di)=>{
-                  if (!dayNum) return <div key={di} style={{minHeight:80,background:"rgba(0,0,0,.015)",borderRight:`1px solid ${BRD}`}}/>;
-                  const ds = `${ym}-${String(dayNum).padStart(2,"0")}`;
-                  const isToday = dayNum===now.getDate()&&month===now.getMonth()&&year===now.getFullYear();
-                  const dow = (firstDow + dayNum - 1) % 7;
-                  const isWeekend = dow===0||dow===6;
-                  const dayRows = visible.filter(r=>r.checkIn&&r.checkOut&&ds>=r.checkIn.slice(0,10)&&ds<r.checkOut.slice(0,10));
-                  return (
-                    <div key={di} style={{
-                      minHeight:80, padding:"4px 5px",
-                      borderRight:di<6?`1px solid ${BRD}`:"none",
-                      background:isToday?"rgba(192,160,98,.07)":isWeekend?"rgba(0,0,0,.015)":"transparent",
-                    }}>
-                      <div style={{fontSize:11,fontWeight:isToday?800:500,
-                        color:isToday?GOLD:MUT,marginBottom:3,textAlign:"right",lineHeight:1.4}}>
-                        {dayNum}
-                      </div>
-                      <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                        {dayRows.map((r,ri)=>{
-                          const tc = typeColor(r.type);
-                          const isStart = ds===r.checkIn?.slice(0,10);
-                          return (
-                            <div key={ri} title={`${r.name} · ${r.type||""} · ${r.status||""}`}
-                              style={{
-                                fontSize:9,fontWeight:600,lineHeight:1.3,
-                                padding:"2px 5px",
-                                background:tc.bg,color:tc.text,
-                                borderLeft:`3px solid ${tc.border}`,
-                                borderRadius:3,
-                                opacity:r.status==="Cancelled"?0.5:1,
-                                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-                              }}>
-                              {isStart ? (r.name||"?") : "·"}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ));
-          })()}
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Lista view ── */}
       {calView==="lista" && visible.length>0 && (

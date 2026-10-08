@@ -6937,8 +6937,8 @@ function FinanceLanding({ user, onLogout }) {
     {
       group: "Control Financiero",
       items: [
-        { icon:"📊", label:"Cash Flow",            desc:"Tablero semanal y mensual de flujo de caja", href:"/?mode=f-cashflow",    live:true },
-        { icon:"🏦", label:"Movimientos Bancarios", desc:"Entradas y salidas Colombia · México",       href:"/?mode=f-movimientos", live:true },
+        { icon:"📊", label:"Cash Flow",            desc:"Tablero semanal y mensual de flujo de caja", href:"/?mode=f-cashflow",    live:false },
+        { icon:"🏦", label:"Movimientos Bancarios", desc:"Entradas y salidas Colombia · México",       href:"/?mode=f-movimientos", live:false },
         { icon:"🔍", label:"Conciliaciones",        desc:"Control de conciliaciones bancarias",        href:null,                   live:false },
       ],
     },
@@ -6947,10 +6947,10 @@ function FinanceLanding({ user, onLogout }) {
       items: [
         { icon:"📈", label:"Reservaciones & Ventas", desc:"Ingresos esperados y comisiones de ventas", href:"/?mode=f-reservaciones", live:true },
         { icon:"💰", label:"Estimados",               desc:"Herramienta de cotizaciones para ventas",   href:"/estimates.html",        live:true },
-        { icon:"✅", label:"Cierre Mensual",          desc:"Checklist de cierre por mes",               href:"/?mode=f-cierre",        live:true },
+        { icon:"✅", label:"Cierre Mensual",          desc:"Checklist de cierre por mes",               href:"/?mode=f-cierre",        live:false },
         { icon:"🏢", label:"Pagos a Proveedores",     desc:"Solicitudes de pago · Lotes Payana · Aprobaciones", href:"/?mode=f-proveedores", live:true },
         { icon:"📅", label:"Calendario de Trabajo",   desc:"Agenda financiera del equipo",              href:null,                     live:false },
-        { icon:"📥", label:"Templates",               desc:"Payana · QuickBooks Bills · Estimates",     href:"/?mode=f-templates",     live:true },
+        { icon:"📥", label:"Templates",               desc:"Payana · QuickBooks Bills · Estimates",     href:"/?mode=f-templates",     live:false },
       ],
     },
   ];
