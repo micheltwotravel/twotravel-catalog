@@ -1273,6 +1273,20 @@ export function FinanceReservaciones() {
     setIsDirty(true);
   };
 
+  const confirmRow = useCallback(async (rowIdx) => {
+    const today = new Date().toISOString().slice(0,10);
+    const updated = rowsRef.current.map((r,i) =>
+      i===rowIdx ? {...r, needsReview:false, confirmedAt:r.confirmedAt||today} : r
+    );
+    setRows(updated);
+    setErr("");
+    try {
+      await saveReservations(updated);
+      setSaved(true); setIsDirty(false);
+      setTimeout(()=>setSaved(false), 2500);
+    } catch(e) { setErr("Error confirmando: "+e.message); setIsDirty(true); }
+  }, []);
+
   const repOpts    = [...new Set(rows.map(r=>r.salesRep).filter(Boolean))].sort();
   const sourceOpts = [...new Set(rows.map(r=>r.dealSource).filter(Boolean))].sort();
   const typeOpts   = [...new Set(rows.map(r=>r.type).filter(Boolean))].sort();
@@ -1485,21 +1499,31 @@ export function FinanceReservaciones() {
                             </td>
                           </tr>
                         )}
-                        {idxs.map((rowIdx,vi)=>(
-                          <tr key={rowIdx} style={{borderBottom:`1px solid rgba(26,24,20,.04)`,background:vi%2===0?"transparent":"rgba(247,244,239,.35)"}}>
+                        {idxs.map((rowIdx,vi)=>{
+                          const isHS = !!rows[rowIdx].needsReview;
+                          return (
+                          <tr key={rowIdx} style={{borderBottom:`1px solid rgba(26,24,20,.04)`,
+                            background:isHS?"#fffbeb":vi%2===0?"transparent":"rgba(247,244,239,.35)"}}>
                             {ALL_COLS.map(c=>(
                               <td key={c.key} style={{padding:"5px 8px",verticalAlign:"middle",maxWidth:c.w+40}}>
-                                <EditCell
-                                  value={rows[rowIdx][c.key]}
-                                  field={c.key}
-                                  isNum={c.num}
-                                  isDate={c.date}
-                                  options={cellOpts[c.key]}
-                                  onSave={val=>patchRow(rowIdx, c.key, val)}
-                                />
+                                {c.key==="name" && isHS ? (
+                                  <div style={{display:"flex",alignItems:"center",gap:5}}>
+                                    <EditCell value={rows[rowIdx][c.key]} field={c.key} isNum={c.num} isDate={c.date} options={cellOpts[c.key]} onSave={val=>patchRow(rowIdx,c.key,val)} />
+                                    <span style={{fontSize:9,fontWeight:700,letterSpacing:".06em",background:"#fef3c7",color:"#92400e",border:"1px solid #fcd34d",padding:"1px 6px",borderRadius:10,flexShrink:0,whiteSpace:"nowrap"}}>HS NUEVO</span>
+                                  </div>
+                                ) : (
+                                  <EditCell value={rows[rowIdx][c.key]} field={c.key} isNum={c.num} isDate={c.date} options={cellOpts[c.key]} onSave={val=>patchRow(rowIdx,c.key,val)} />
+                                )}
                               </td>
                             ))}
-                            <td style={{padding:"5px 8px",textAlign:"center",verticalAlign:"middle"}}>
+                            <td style={{padding:"5px 8px",textAlign:"center",verticalAlign:"middle",whiteSpace:"nowrap"}}>
+                              {isHS && (
+                                <button onClick={()=>confirmRow(rowIdx)}
+                                  style={{background:"#d1fae5",border:"1px solid #6ee7b7",color:"#065f46",
+                                    cursor:"pointer",fontSize:11,padding:"3px 8px",borderRadius:6,fontWeight:700,
+                                    marginBottom:4,display:"block",width:"100%",whiteSpace:"nowrap"}}
+                                  title="Confirmar esta reservación de HubSpot">✓ OK</button>
+                              )}
                               <button onClick={()=>deleteRow(rowIdx)}
                                 style={{background:"#fee2e2",border:"1px solid #fca5a5",color:"#dc2626",
                                   cursor:"pointer",fontSize:12,lineHeight:1,padding:"3px 7px",
@@ -1507,7 +1531,8 @@ export function FinanceReservaciones() {
                                 title="Eliminar fila">✕</button>
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </Fragment>
                     ))}
                   </tbody>
