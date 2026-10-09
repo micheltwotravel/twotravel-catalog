@@ -1840,7 +1840,7 @@ function ClientesTable({ kickoffs, loading }) {
   );
 }
 
-function UnifiedDashboard({ currentUser, onLogout, initialTab }) {
+function UnifiedDashboard({ currentUser, onLogout, initialTab, kpiOnly = false }) {
   const sheetUrl =
     "https://docs.google.com/spreadsheets/d/1Tyv5cPTN0MjxezyWRjo-XuIRqOgaPwP-z1heZfgGiuQ/edit#gid=0";
 
@@ -2311,31 +2311,33 @@ function UnifiedDashboard({ currentUser, onLogout, initialTab }) {
 
       <div style={{width:"100%",padding:"0 16px 24px"}}>
         {/* ── Tabs ── */}
-        <div style={{display:"flex",gap:6,marginBottom:24,borderBottom:"1px solid var(--border)",paddingBottom:0}}>
-          {[
-            ...( !isJunior ? [{ id: "clientes", label: "Clientes" }] : [] ),
-            { id: "feedback", label: "Feedback" },
-            ...( ["admin","concierge"].includes(currentUser?.role) ? [{ id: "menus", label: "🍹 Menús" }] : [] ),
-            ...( isSuperAdmin(currentUser) ? [{ id: "kpis", label: "📊 KPIs" }] : [] ),
-            ...( isSuperAdmin(currentUser) ? [{ id: "updates", label: "🛠 Updates" }] : [] ),
-          ].map(({ id, label }) => (
-            <button key={id} onClick={() => setTab(id)}
-              style={{
-                padding:"8px 16px",
-                fontSize:12.5,
-                fontWeight:500,
-                background:"none",
-                border:"none",
-                borderBottom: tab===id ? "2px solid #111" : "2px solid transparent",
-                color: tab===id ? "var(--text-1)" : "var(--text-3)",
-                cursor:"pointer",
-                marginBottom:-1,
-                transition:"color .12s, border-color .12s",
-              }}>
-              {label}
-            </button>
-          ))}
-        </div>
+        {!kpiOnly && (
+          <div style={{display:"flex",gap:6,marginBottom:24,borderBottom:"1px solid var(--border)",paddingBottom:0}}>
+            {[
+              ...( !isJunior ? [{ id: "clientes", label: "Clientes" }] : [] ),
+              { id: "feedback", label: "Feedback" },
+              ...( ["admin","concierge"].includes(currentUser?.role) ? [{ id: "menus", label: "🍹 Menús" }] : [] ),
+              ...( isSuperAdmin(currentUser) ? [{ id: "kpis", label: "📊 KPIs" }] : [] ),
+              ...( isSuperAdmin(currentUser) ? [{ id: "updates", label: "🛠 Updates" }] : [] ),
+            ].map(({ id, label }) => (
+              <button key={id} onClick={() => setTab(id)}
+                style={{
+                  padding:"8px 16px",
+                  fontSize:12.5,
+                  fontWeight:500,
+                  background:"none",
+                  border:"none",
+                  borderBottom: tab===id ? "2px solid #111" : "2px solid transparent",
+                  color: tab===id ? "var(--text-1)" : "var(--text-3)",
+                  cursor:"pointer",
+                  marginBottom:-1,
+                  transition:"color .12s, border-color .12s",
+                }}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* ══ Operaciones banner (juniors only) ══ */}
         {isJunior && (
@@ -2347,19 +2349,19 @@ function UnifiedDashboard({ currentUser, onLogout, initialTab }) {
         )}
 
         {/* ══ Clientes tab ══ */}
-        {tab === "clientes" && (
+        {!kpiOnly && tab === "clientes" && (
           <ClientesTable kickoffs={kickoffs} loading={kLoading} />
         )}
 
         {/* ══ Menús tab ══ */}
-        {tab === "menus" && (
+        {!kpiOnly && tab === "menus" && (
           <Suspense fallback={<PageLoader />}>
             <MenuAdminPanel />
           </Suspense>
         )}
 
         {/* ══ KPIs tab ══ */}
-        {tab === "kpis" && (
+        {(kpiOnly || tab === "kpis") && (
           <>
             {kLoading ? (
               <div className="tt-card" style={{padding:24,fontSize:13,color:"var(--text-3)"}}>Cargando KPIs…</div>
@@ -2965,10 +2967,10 @@ function UnifiedDashboard({ currentUser, onLogout, initialTab }) {
         )}
 
         {/* ══ Updates tab ══ */}
-        {tab === "updates" && <WeeklyUpdates />}
+        {!kpiOnly && tab === "updates" && <WeeklyUpdates />}
 
         {/* ══ Feedback tab ══ */}
-        {tab === "feedback" && (
+        {!kpiOnly && tab === "feedback" && (
           <>
             <div className="mb-6 grid gap-4 md:grid-cols-3">
               <select value={destinationFilter} onChange={(e) => setDestinationFilter(e.target.value)}
@@ -7257,7 +7259,7 @@ function App() {
     if (mode === "soporte-dashboard") return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
     if (mode === "tasks")     return <ErrorBoundary><TaskTracker currentUser={user} /></ErrorBoundary>;
     if (mode === "reuniones") return <S><ErrorBoundary><ReunionesPage currentUser={user} initialKickoffId={params.get("kickoffId") || ""} /></ErrorBoundary></S>;
-    if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard currentUser={user} onLogout={logout} initialTab={mode === "kpi" ? "kpis" : undefined} /></ErrorBoundary>;
+    if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard currentUser={user} onLogout={logout} kpiOnly={mode === "kpi"} /></ErrorBoundary>;
   }
 
   return <FeedbackForm kickoffId={kickoffId} />;

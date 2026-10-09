@@ -162,8 +162,8 @@ function FlightRow({ flight, lang, type, editMode, onPatchTime }) {
     return new Date(iso).toLocaleDateString("es-CO", { day:"numeric", month:"short", timeZone:"America/Bogota" });
   };
   const st = data?.status ? (STATUS_STYLE[data.status] || STATUS_STYLE.unknown) : null;
-  const depTime = data ? fmtTime(data.depActual || data.depScheduled) : (flight.time || "—");
-  const arrTime = data ? fmtTime(data.arrActual || data.arrEstimated || data.arrScheduled) : (flight.time || "—");
+  const depTime = (data ? fmtTime(data.depActual || data.depScheduled) : null) || flight.time || "—";
+  const arrTime = (data ? fmtTime(data.arrActual || data.arrEstimated || data.arrScheduled) : null) || flight.time || "—";
   const timeValue = type === "arrival" ? arrTime : depTime;
   const hasLiveTime = data && (type === "arrival"
     ? !!(data.arrActual || data.arrEstimated || data.arrScheduled)
@@ -171,7 +171,7 @@ function FlightRow({ flight, lang, type, editMode, onPatchTime }) {
   const canEditTime = editMode && onPatchTime && !hasLiveTime;
 
   return (
-    <div style={{ display:"grid", gridTemplateColumns:"minmax(70px,90px) 1fr minmax(60px,90px) minmax(60px,90px)", alignItems:"center", gap:"8px 12px",
+    <div className="flight-row-grid" style={{ display:"grid", gridTemplateColumns:"minmax(70px,90px) 1fr minmax(60px,90px) minmax(60px,90px)", alignItems:"center", gap:"8px 12px",
       padding:"12px 0", borderBottom:"1px solid #f3f4f6" }}>
       {/* Flight # */}
       <div>
