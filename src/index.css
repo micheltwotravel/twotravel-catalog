@@ -146,3 +146,8 @@
   }
   .tt-btn-ghost:hover { background: var(--bg); }
 }
+
+/* Login screen hero panel — show at ≥700 px */
+.login-hero { display: none; }
+@media (min-width: 700px) { .login-hero { display: block !important; } }
+

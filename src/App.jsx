@@ -1840,11 +1840,12 @@ function ClientesTable({ kickoffs, loading }) {
   );
 }
 
-function UnifiedDashboard({ currentUser, onLogout }) {
+function UnifiedDashboard({ currentUser, onLogout, initialTab }) {
   const sheetUrl =
     "https://docs.google.com/spreadsheets/d/1Tyv5cPTN0MjxezyWRjo-XuIRqOgaPwP-z1heZfgGiuQ/edit#gid=0";
 
-  const [tab, setTab] = useState("clientes");
+  const isJunior = currentUser?.role === "junior";
+  const [tab, setTab] = useState(initialTab || (isJunior ? "feedback" : "clientes"));
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [destinationFilter, setDestinationFilter] = useState("all");
@@ -2312,7 +2313,7 @@ function UnifiedDashboard({ currentUser, onLogout }) {
         {/* ── Tabs ── */}
         <div style={{display:"flex",gap:6,marginBottom:24,borderBottom:"1px solid var(--border)",paddingBottom:0}}>
           {[
-            { id: "clientes", label: "Clientes" },
+            ...( !isJunior ? [{ id: "clientes", label: "Clientes" }] : [] ),
             { id: "feedback", label: "Feedback" },
             ...( ["admin","concierge"].includes(currentUser?.role) ? [{ id: "menus", label: "🍹 Menús" }] : [] ),
             ...( isSuperAdmin(currentUser) ? [{ id: "kpis", label: "📊 KPIs" }] : [] ),
@@ -2335,6 +2336,15 @@ function UnifiedDashboard({ currentUser, onLogout }) {
             </button>
           ))}
         </div>
+
+        {/* ══ Operaciones banner (juniors only) ══ */}
+        {isJunior && (
+          <div style={{display:"flex",gap:12,marginBottom:16,padding:"14px 16px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:12}}>
+            <span style={{fontSize:13,color:"#166534",fontWeight:600,flexShrink:0}}>Tus accesos:</span>
+            <a href="/?mode=f-checkin" style={{fontSize:13,color:"#166534",textDecoration:"none",fontWeight:500,padding:"4px 12px",background:"#dcfce7",borderRadius:8,border:"1px solid #86efac"}}>🤝 Check-In & Concierge</a>
+            <a href="/?mode=f-transporte" style={{fontSize:13,color:"#166534",textDecoration:"none",fontWeight:500,padding:"4px 12px",background:"#dcfce7",borderRadius:8,border:"1px solid #86efac"}}>🚗 Transporte</a>
+          </div>
+        )}
 
         {/* ══ Clientes tab ══ */}
         {tab === "clientes" && (
@@ -6487,7 +6497,7 @@ const ROLE_META = {
 const ROLE_ACCESS = {
   admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"],
   concierge: ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","f-checkin","f-transporte"],
-  junior:    ["dashboard"],   // dashboard overview only — no client edit panel
+  junior:    ["dashboard","f-checkin","f-transporte"],   // feedback + operaciones boards only
   finance:   ["pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"],
   marketing: ["dashboard"],
   bodas:     ["bodas","tareas-bodas","tasks","dashboard"],
@@ -6765,8 +6775,13 @@ function LoginScreen({ onLogin }) {
   };
 
   return (
-    <div style={{minHeight:"100vh",background:"#f7f4ef",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Jost',sans-serif"}}>
-      <div style={{background:"#fff",borderRadius:16,padding:"40px 36px",boxShadow:"0 4px 24px rgba(0,0,0,.08)",width:340,textAlign:"center"}}>
+    <div style={{minHeight:"100vh",display:"flex",fontFamily:"'Jost',sans-serif"}}>
+      {/* Marketing photo — left panel, hidden on small screens */}
+      <div style={{flex:1,backgroundImage:"url('/hero.jpg')",backgroundSize:"cover",backgroundPosition:"center",display:"none"}}
+        className="login-hero" />
+      {/* Login form */}
+      <div style={{width:"100%",maxWidth:420,display:"flex",alignItems:"center",justifyContent:"center",background:"#f7f4ef",padding:"32px 24px",boxSizing:"border-box"}}>
+      <div style={{background:"#fff",borderRadius:16,padding:"40px 36px",boxShadow:"0 4px 24px rgba(0,0,0,.08)",width:"100%",maxWidth:340,textAlign:"center"}}>
         <img src="/logo.png" alt="Two Travel" style={{height:48,objectFit:"contain",marginBottom:24}} />
         <p style={{fontSize:11,color:"#9a7d52",letterSpacing:".12em",textTransform:"uppercase",marginBottom:32}}>Internal Access</p>
         <form onSubmit={handle} style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -6793,6 +6808,7 @@ function LoginScreen({ onLogin }) {
             {loading ? "Verificando…" : "Entrar"}
           </button>
         </form>
+      </div>
       </div>
     </div>
   );
@@ -7241,7 +7257,7 @@ function App() {
     if (mode === "soporte-dashboard") return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
     if (mode === "tasks")     return <ErrorBoundary><TaskTracker currentUser={user} /></ErrorBoundary>;
     if (mode === "reuniones") return <S><ErrorBoundary><ReunionesPage currentUser={user} initialKickoffId={params.get("kickoffId") || ""} /></ErrorBoundary></S>;
-    if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard currentUser={user} onLogout={logout} /></ErrorBoundary>;
+    if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard currentUser={user} onLogout={logout} initialTab={mode === "kpi" ? "kpis" : undefined} /></ErrorBoundary>;
   }
 
   return <FeedbackForm kickoffId={kickoffId} />;
