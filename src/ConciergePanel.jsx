@@ -1491,7 +1491,7 @@ function VideosField({ item, onUpdate }) {
   );
 }
 
-function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], groupSize = 1, lang = "en" }) {
+function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availableDays = [], groupSize = 1, lang = "en" }) {
   const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation || item.confirmed));
   const notesRef = useRef(null);
   const applyFormat = (marker) => {
@@ -1500,7 +1500,7 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
     const start = el.selectionStart;
     const end   = el.selectionEnd;
     const sel   = el.value.slice(start, end) || "texto";
-    const wrap  = { b: `**${sel}**`, i: `_${sel}_`, u: `__${sel}__`, c: `~~${sel}~~` };
+    const wrap  = { b: `**${sel}**`, i: `_${sel}_`, u: `__${sel}__`, c: `~~${sel}~~`, c2: `^^${sel}^^`, c3: `==${sel}==`, c4: `%%${sel}%%` };
     const newVal = el.value.slice(0, start) + wrap[marker] + el.value.slice(end);
     onUpdate(item._uid, { notes: newVal });
     setTimeout(() => { el.focus(); el.setSelectionRange(start + wrap[marker].length, start + wrap[marker].length); }, 0);
@@ -1621,6 +1621,13 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
             className={`text-[11px] px-2 py-0.5 rounded border leading-none transition-colors ${showNotes ? "bg-violet-100 text-violet-700 border-violet-300" : "text-neutral-400 border-neutral-200 hover:text-violet-600 hover:border-violet-300"}`}>
             ✏️ Editar
           </button>
+          {onDuplicate && (
+            <button type="button" onClick={() => onDuplicate(item._uid)}
+              title="Duplicar"
+              className="text-[11px] px-2 py-0.5 rounded border text-neutral-400 border-neutral-200 hover:text-blue-600 hover:border-blue-300 leading-none transition-colors">
+              ⎘
+            </button>
+          )}
           <button type="button" onClick={() => onRemove(item._uid)}
             title="Quitar"
             className="text-sm text-neutral-300 hover:text-red-500 leading-none">
@@ -1685,17 +1692,15 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
               className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
             />
           </div>
-          {String(item.category || "").toLowerCase().includes("transport") && (
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Pasajeros</span>
-              <input
-                value={item.passengers || ""}
-                onChange={e => onUpdate(item._uid, { passengers: e.target.value })}
-                placeholder="Juan, María, Sam…"
-                className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
-              />
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0">Pasajeros</span>
+            <input
+              value={item.passengers || ""}
+              onChange={e => onUpdate(item._uid, { passengers: e.target.value })}
+              placeholder="Juan, María, Sam…"
+              className="flex-1 text-xs text-neutral-500 border-b border-dashed border-neutral-200 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
+            />
+          </div>
           {/* Boating — modalidad + tipo de bote + add-ons (beach-clubs excluded: they are always Day Pass) */}
           {String(item.category||"").toLowerCase().includes("boating") && (
             <>
@@ -1749,11 +1754,19 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
             <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0 pt-1">Notas</span>
             <div className="flex-1 flex flex-col gap-1">
               <div className="flex gap-1">
-                {[["b","B","font-bold"],["i","I","italic"],["u","U","underline"],["c","◈","text-amber-500 bg-amber-50"]].map(([m,lbl,cls]) => (
+                {[
+                  ["b","B","font-bold","Negrita"],
+                  ["i","I","italic","Cursiva"],
+                  ["u","U","underline","Subrayado"],
+                  ["c","◈","text-amber-600 bg-amber-50","Amarillo"],
+                  ["c2","◈","text-green-700 bg-green-50","Verde"],
+                  ["c3","◈","text-blue-600 bg-blue-50","Azul"],
+                  ["c4","◈","text-red-500 bg-red-50","Rojo"],
+                ].map(([m,lbl,cls,title]) => (
                   <button key={m} type="button"
                     onMouseDown={e => { e.preventDefault(); applyFormat(m); }}
-                    className={`text-[10px] px-1.5 py-0.5 rounded border border-neutral-200 text-neutral-500 hover:bg-neutral-100 leading-none ${cls}`}
-                    title={{ b:"Negrita (**texto**)", i:"Cursiva (_texto_)", u:"Subrayado (__texto__)", c:"Resaltado (~~texto~~)" }[m]}>
+                    className={`text-[10px] px-1.5 py-0.5 rounded border border-neutral-200 hover:opacity-80 leading-none ${cls}`}
+                    title={title}>
                     {lbl}
                   </button>
                 ))}
@@ -1776,7 +1789,7 @@ function ActivityRow({ item, onUpdate, onRemove, onResync, availableDays = [], g
   );
 }
 
-function SortableActivityRow({ item, onUpdate, onRemove, onResync, availableDays, groupSize, lang = "en" }) {
+function SortableActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availableDays, groupSize, lang = "en" }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item._uid });
   return (
@@ -1792,7 +1805,7 @@ function SortableActivityRow({ item, onUpdate, onRemove, onResync, availableDays
         ⠿
       </button>
       <div className="flex-1 min-w-0">
-        <ActivityRow item={item} onUpdate={onUpdate} onRemove={onRemove} onResync={onResync}
+        <ActivityRow item={item} onUpdate={onUpdate} onRemove={onRemove} onDuplicate={onDuplicate} onResync={onResync}
           availableDays={availableDays} groupSize={groupSize} lang={lang} />
       </div>
     </div>
@@ -1917,7 +1930,7 @@ function SortableRichTextBlock({ item, onUpdate, onRemove }) {
 
 function DaySection({ label, meta, items, loadingServices, availableDays,
   onUpdateMeta, onRenameLabel, onRemoveDay,
-  onUpdateItem, onRemoveItem, onResyncItem, onAddManual, onAddPreset, onAddFromCatalog,
+  onUpdateItem, onRemoveItem, onDuplicateItem, onResyncItem, onAddManual, onAddPreset, onAddFromCatalog,
   onAddBlock, onReorderItems, dragHandleProps,
   groupSize = 1, lang = "en", onToggleBreakfast }) {
 
@@ -2004,7 +2017,7 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
                     : <SortableActivityRow key={item._uid || item.id} item={item}
                         availableDays={availableDays}
                         groupSize={groupSize} lang={lang}
-                        onUpdate={onUpdateItem} onRemove={onRemoveItem} onResync={onResyncItem} />
+                        onUpdate={onUpdateItem} onRemove={onRemoveItem} onDuplicate={onDuplicateItem} onResync={onResyncItem} />
                   )}
                 </div>
               </SortableContext>
@@ -2368,6 +2381,14 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
 
   const removeItem = (uid) =>
     setCart(prev => prev.filter(i => i._uid !== uid));
+
+  const duplicateItem = (uid) =>
+    setCart(prev => {
+      const idx = prev.findIndex(i => i._uid === uid);
+      if (idx === -1) return prev;
+      const copy = { ...prev[idx], _uid: `${prev[idx]._uid}_dup_${Date.now()}` };
+      return [...prev.slice(0, idx + 1), copy, ...prev.slice(idx + 1)];
+    });
 
   const resyncItem = (uid) => {
     const item = cart.find(i => i._uid === uid);
@@ -2761,6 +2782,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
                 onRemoveDay={() => removeDay(label)}
                 onUpdateItem={updateItem}
                 onRemoveItem={removeItem}
+                onDuplicateItem={duplicateItem}
                 onResyncItem={resyncItem}
                 onReorderItems={(oldIdx, newIdx) => reorderItemsInDay(label, oldIdx, newIdx)}
                 onAddManual={() => addManualToDay(label)}
@@ -4562,7 +4584,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
       const patchedKickoff = { ...kickoff, cart: patchedCart };
       localStorage.setItem(`tt_kp_${kickoff.id}`, JSON.stringify({ ts: Date.now(), data: patchedKickoff }));
     } catch {}
-    setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}&edit=1`);
+    setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}`);
   }, [kickoff.id]); // re-run when kickoff changes so localStorage is always pre-marked
 
   // Editable arrival/departure dates (concierge sets these)

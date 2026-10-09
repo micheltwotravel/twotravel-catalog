@@ -33,6 +33,7 @@ function Editable({ value, tag: Tag = "span", className = "", editMode, style, o
         key={value}
         defaultValue={value}
         className={className}
+        ref={r => { if (r) { r.style.height = "auto"; r.style.height = (r.scrollHeight + 4) + "px"; } }}
         style={{
           ...style,
           width: "100%",
@@ -162,7 +163,7 @@ function FlightRow({ flight, lang, type, editMode, onPatchTime }) {
   };
   const st = data?.status ? (STATUS_STYLE[data.status] || STATUS_STYLE.unknown) : null;
   const depTime = data ? fmtTime(data.depActual || data.depScheduled) : (flight.time || "—");
-  const arrTime = data ? fmtTime(data.arrActual || data.arrEstimated || data.arrScheduled) : "—";
+  const arrTime = data ? fmtTime(data.arrActual || data.arrEstimated || data.arrScheduled) : (flight.time || "—");
   const timeValue = type === "arrival" ? arrTime : depTime;
   const hasLiveTime = data && (type === "arrival"
     ? !!(data.arrActual || data.arrEstimated || data.arrScheduled)
@@ -170,7 +171,7 @@ function FlightRow({ flight, lang, type, editMode, onPatchTime }) {
   const canEditTime = editMode && onPatchTime && !hasLiveTime;
 
   return (
-    <div style={{ display:"grid", gridTemplateColumns:"90px 1fr 90px 90px", alignItems:"center", gap:12,
+    <div style={{ display:"grid", gridTemplateColumns:"minmax(70px,90px) 1fr minmax(60px,90px) minmax(60px,90px)", alignItems:"center", gap:"8px 12px",
       padding:"12px 0", borderBottom:"1px solid #f3f4f6" }}>
       {/* Flight # */}
       <div>
@@ -315,7 +316,10 @@ function noteToHtml(text) {
     .replace(/\*\*(.+?)\*\*/gs, "<strong>$1</strong>")
     .replace(/__(.+?)__/gs, "<u>$1</u>")
     .replace(/_(.+?)_/gs, "<em>$1</em>")
-    .replace(/~~(.+?)~~/gs, '<mark style="background:#fef08a;padding:0 2px;">$1</mark>');
+    .replace(/~~(.+?)~~/gs, '<mark style="background:#fef08a;padding:0 2px;">$1</mark>')
+    .replace(/\^\^(.+?)\^\^/gs, '<mark style="background:#bbf7d0;padding:0 2px;">$1</mark>')
+    .replace(/==(.+?)==/gs, '<mark style="background:#bfdbfe;padding:0 2px;">$1</mark>')
+    .replace(/%%(.+?)%%/gs, '<mark style="background:#fecaca;padding:0 2px;">$1</mark>');
 }
 const NoteText = ({ text, style }) => (
   <span dangerouslySetInnerHTML={{ __html: noteToHtml(text) }} style={style} />
@@ -2166,10 +2170,10 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
               ) : it.priceTiers ? (
                 <Editable value={it.priceTiers} tag="div" className="ev-price-tiers" editMode={editMode} onChange={v => patchItem?.("priceTiers", v)} />
               ) : null}
-              {it.confirmation && (
+              {it.confirmation && !String(it.category||"").toLowerCase().includes("transport") && (
                 <div style={{marginTop:6}}>
                   <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:10,fontWeight:600,color:"#1d4ed8",background:"#dbeafe",border:"1px solid #93c5fd",borderRadius:4,padding:"2px 7px",letterSpacing:"0.2px"}}>
-                    ✉ {isEs ? "Conf. por" : "Conf. by"} {it.confirmation}
+                    ✉ {isEs ? "Confirmado por" : "Confirmed by"} {it.confirmation}
                   </span>
                 </div>
               )}
@@ -2177,21 +2181,21 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
           )}
         </div>
 
-        {/* Confirmation (when no price shown) */}
-        {it.confirmation && !price && !it.priceTiers && it.category !== "transportation" && (
+        {/* Confirmation (when no price shown, and not transport — transport shows it in its own block) */}
+        {it.confirmation && !price && !it.priceTiers && !String(it.category||"").toLowerCase().includes("transport") && (
           <div style={{marginBottom:6}}>
             <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:10,fontWeight:600,color:"#1d4ed8",background:"#dbeafe",border:"1px solid #93c5fd",borderRadius:4,padding:"2px 7px",letterSpacing:"0.2px"}}>
-              ✉ {isEs ? "Conf. por" : "Conf. by"} {it.confirmation}
+              ✉ {isEs ? "Confirmado por" : "Confirmed by"} {it.confirmation}
             </span>
           </div>
         )}
 
         {/* Transport details grid — like TripIt style */}
-        {it.category === "transportation" && (it.confirmation || it.notes || it.passengers || price) && (
+        {String(it.category||"").toLowerCase().includes("transport") && (it.confirmation || it.notes || it.passengers) && (
           <div style={{display:"flex",gap:16,marginBottom:10,marginTop:4,flexWrap:"wrap"}}>
             {it.confirmation && (
               <div>
-                <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>{isEs?"Conf. por":"Conf. by"}</div>
+                <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>{isEs?"Confirmado por":"Confirmed by"}</div>
                 <div style={{fontSize:11,fontWeight:600,color:"#374151"}}>{it.confirmation}</div>
               </div>
             )}
@@ -2205,12 +2209,6 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
               <div>
                 <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>{isEs?"Notas":"Notes"}</div>
                 <div style={{fontSize:11,fontWeight:600,color:"#374151"}}><NoteText text={it.notes} /></div>
-              </div>
-            )}
-            {price && (
-              <div>
-                <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>{isEs?"Precio":"Price"}</div>
-                <div style={{fontSize:11,fontWeight:600,color:"#374151"}}>{price}</div>
               </div>
             )}
           </div>
@@ -2274,10 +2272,16 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
           </div>
         )}
 
-        {/* Concierge notes for this service */}
-        {it.notes && (
+        {/* Concierge notes — skip for transport (already shown in transport block above) */}
+        {it.notes && !String(it.category||"").toLowerCase().includes("transport") && (
           <div style={{ fontSize:11, color:"#6b7280", marginBottom:8, background:"#f9fafb", borderLeft:"3px solid #d1d5db", paddingLeft:8, paddingTop:4, paddingBottom:4, borderRadius:"0 4px 4px 0" }}>
             ✍️ <NoteText text={it.notes} />
+          </div>
+        )}
+        {/* Passengers — for any item type */}
+        {it.passengers && !String(it.category||"").toLowerCase().includes("transport") && (
+          <div style={{ fontSize:11, color:"#6b7280", marginBottom:6 }}>
+            <span style={{fontWeight:600,color:"#374151"}}>{isEs?"Pasajero":"Passenger"}:</span> {it.passengers}
           </div>
         )}
 

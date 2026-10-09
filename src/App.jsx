@@ -1637,7 +1637,7 @@ function ClientesTable({ kickoffs, loading }) {
               )}
               {filtered.map((r, i) => {
                 const { drinkSummary, grocerySummary, breakfastSummary, breakfastAt } = orderStatus(r);
-                const itinLink = `https://twotravelvip.com/?mode=itinerary&kickoffId=${r.id}`;
+                const itinLink = `https://twotravelvip.com/?mode=itinerary&kickoffId=${r.id}&lang=${r.lang || "en"}`;
                 const reunLink = `/?mode=reuniones&kickoffId=${r.id}`;
                 const isSaving = (f) => saving[r.id + f];
                 return (
