@@ -2978,12 +2978,14 @@ export default function ItineraryPrintView() {
   const lang        = params.get("lang") === "es" ? "es" : "en";
   // Edit mode ONLY when concierge explicitly adds ?edit=1 — client link never has this
   const canEdit     = params.get("edit") === "1";
+  // When embedded in the concierge panel iframe, hide the save bar (panel has its own save button)
+  const embedded    = params.get("embed") === "1";
 
   const [kickoff,   setKickoff]   = useState(null);
   const [catalog,   setCatalog]   = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState("");
-  const [editMode,  setEditMode]  = useState(false);
+  const [editMode,  setEditMode]  = useState(canEdit);
   // Mutable deep-copy of days used during edit mode (add/remove days & items)
   const [editDays,  setEditDays]  = useState(null);
   const editDaysRef = useRef(null); // always in sync with editDays for synchronous reads in saveSnapshot
@@ -3371,7 +3373,7 @@ export default function ItineraryPrintView() {
       <style>{CSS}</style>
 
       {/* ── Edit mode banner ── */}
-      {editMode && (
+      {editMode && !embedded && (
         <div className="edit-mode-bar no-print">
           <span>
             <b>✏️ Edit mode</b>
@@ -3409,7 +3411,7 @@ export default function ItineraryPrintView() {
             textDecoration: "none", boxShadow: "0 1px 4px rgba(0,0,0,.08)" }}>
           {lang === "en" ? "🇨🇴 ES" : "🇺🇸 EN"}
         </a>
-        {canEdit && (
+        {canEdit && !embedded && (
           <button onClick={() => setEditMode(v => !v)}
             style={{ ...ctrl,
               background: editMode ? "#1d4ed8" : "#fff",
