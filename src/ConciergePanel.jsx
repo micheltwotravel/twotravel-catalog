@@ -4584,7 +4584,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
       const patchedKickoff = { ...kickoff, cart: patchedCart };
       localStorage.setItem(`tt_kp_${kickoff.id}`, JSON.stringify({ ts: Date.now(), data: patchedKickoff }));
     } catch {}
-    setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}`);
+    setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}&edit=1`);
   }, [kickoff.id]); // re-run when kickoff changes so localStorage is always pre-marked
 
   // Editable arrival/departure dates (concierge sets these)
@@ -4903,7 +4903,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   setStatus(autoStatus);
   try { localStorage.setItem(`tt_kp_${kickoff.id}`, JSON.stringify({ ts: Date.now(), data: { ...kickoff, ...updates } })); } catch {}
   // Refresh client itinerary view after save
-  setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${lang || kickoff?.lang || "en"}&_t=${Date.now()}`);
+  setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${lang || kickoff?.lang || "en"}&edit=1&_t=${Date.now()}`);
   } catch(e) {
     alert("Error al guardar: " + (e?.message || String(e)));
   }
@@ -5884,7 +5884,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 // Small delay so GAS sheet write propagates before iframe re-fetches
                 await new Promise(r => setTimeout(r, 1500));
                 if (iframeRef.current) {
-                  const base = `${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}`;
+                  const base = `${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}&edit=1`;
                   iframeRef.current.src = `${base}&_t=${Date.now()}`;
                 }
               }}

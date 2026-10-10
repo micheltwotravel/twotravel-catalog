@@ -2983,7 +2983,7 @@ export default function ItineraryPrintView() {
   const [catalog,   setCatalog]   = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState("");
-  const [editMode,  setEditMode]  = useState(canEdit);
+  const [editMode,  setEditMode]  = useState(false);
   // Mutable deep-copy of days used during edit mode (add/remove days & items)
   const [editDays,  setEditDays]  = useState(null);
   const editDaysRef = useRef(null); // always in sync with editDays for synchronous reads in saveSnapshot
