@@ -4899,8 +4899,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   updates.accommodationAddrB     = accommodationAddrB.trim();
   updates.accommodationUrlB      = accommodationUrlB.trim();
 
-  // Ask the embedded itinerary iframe to save its inline edits first, then reload
-  const iframeSavePromise = new Promise((resolve) => {
+  // Ask the embedded itinerary iframe to save its inline edits FIRST, then save panel data.
+  // Order matters: iframe reads+writes Supabase, then panel reads updated data and merges its fields.
+  await new Promise((resolve) => {
     if (!iframeRef.current?.contentWindow) { resolve(); return; }
     const done = (e) => {
       if (e.data?.type === "tt-save-done") { window.removeEventListener("message", done); resolve(); }
@@ -4910,7 +4911,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     setTimeout(resolve, 3000); // safety timeout
   });
   await onSave(kickoff.id, updates);
-  await iframeSavePromise;
   setStatus(autoStatus);
   try { localStorage.setItem(`tt_kp_${kickoff.id}`, JSON.stringify({ ts: Date.now(), data: { ...kickoff, ...updates } })); } catch {}
   // Refresh client itinerary view after save
