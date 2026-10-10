@@ -3024,6 +3024,21 @@ export default function ItineraryPrintView() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode, kickoff]);
 
+  // When embedded in the concierge panel, listen for a save trigger from the parent
+  useEffect(() => {
+    if (!embedded) return;
+    const handler = async (e) => {
+      if (e.data?.type === "tt-save") {
+        await saveSnapshot();
+        window.parent?.postMessage({ type: "tt-save-done" }, "*");
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  // saveSnapshot is stable (defined outside render); embedded is constant
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embedded]);
+
   /* ── Edit-mode mutation helpers ── */
   const _upd = (updater) => {
     setEditDays(prev => {
