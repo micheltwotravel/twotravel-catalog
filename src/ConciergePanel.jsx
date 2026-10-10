@@ -909,9 +909,9 @@ const CONCIERGE_LIST = [
   { name: "Alia Jadad",           email: "alia@two.travel",     phone: "+57 301 7618012",   city: "CTG", title: "Senior Concierge Cartagena", calendarUrl: "" },
   { name: "Carolina Lopez",       email: "caro@two.travel",     phone: "+57 300 8192062",   city: "CTG", title: "Senior Concierge Cartagena", calendarUrl: "https://meetings.hubspot.com/carotwotravel/caro-calendar?uuid=4ba96711-f96d-4fe3-b9eb-12a836826a81" },
   { name: "Daniela Becerra",      email: "daniela@two.travel",  phone: "+57 304 4445285",   city: "MDE", title: "Senior Concierge Medellín",  calendarUrl: "" },
-  { name: "Nataly Cruz",          email: "nataly@two.travel",   phone: "+52 1 55 2337 7241",city: "CDMX", calendarUrl: "" },
-  { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   phone: "+52 1 55 4344 1382",city: "CDMX", calendarUrl: "" },
-  { name: "Natalia Peniche",       email: "natalia@two.travel",  phone: "",                  city: "CDMX", calendarUrl: "" },
+  { name: "Nataly Cruz",          email: "nataly@two.travel",   phone: "+52 1 55 2337 7241",city: "CDMX", title: "Senior Concierge Mexico City", calendarUrl: "" },
+  { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   phone: "+52 1 55 4344 1382",city: "CDMX", title: "Senior Concierge Mexico City", calendarUrl: "" },
+  { name: "Natalia Peniche",       email: "natalia@two.travel",  phone: "",                  city: "CDMX", title: "Senior Concierge Mexico City", calendarUrl: "" },
   { name: "Michel Sanchez",       email: "michel@two.travel",   phone: "+57 300 0000000",    city: "CTG", title: "Admin", calendarUrl: "", hidden: true },
 ];
 
@@ -2318,7 +2318,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
             const toAdd = [];
             // Check-in on day 1
             if (!hasCheckin && firstLabel) {
-              toAdd.push({ ...mapManualToCartItem(), _uid: `preset_checkin_${Date.now()}`, id: `preset_checkin_${Date.now()}`,
+              toAdd.push({ ...mapManualToCartItem(), confirmed: false, _uid: `preset_checkin_${Date.now()}`, id: `preset_checkin_${Date.now()}`,
                 name: "Check-in", name_en: "Check-in", category: "services", timeLabel: checkinTime,
                 description_es: ciService?.description_es || `Su villa estará disponible a partir de las ${checkinTime}.${accom ? ` Nos encontraremos en ${accom} para acompañarlos durante el proceso de check-in.` : " Estaremos con ustedes para acompañarlos durante el proceso."} Por favor avísennos su hora estimada de llegada.`,
                 description_en: ciService?.description  || `Your villa will be available from ${checkinTime}.${accom ? ` We will meet you at ${accom} to accompany you through the check-in process.` : " We will be there to accompany you through the process."} Please let us know your estimated arrival time.`,
@@ -2326,7 +2326,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
             }
             // Check-out on last day
             if (!hasCheckout && lastLabel && lastLabel !== firstLabel) {
-              toAdd.push({ ...mapManualToCartItem(), _uid: `preset_checkout_${Date.now()}`, id: `preset_checkout_${Date.now()}`,
+              toAdd.push({ ...mapManualToCartItem(), confirmed: false, _uid: `preset_checkout_${Date.now()}`, id: `preset_checkout_${Date.now()}`,
                 name: "Check-out", name_en: "Check-out", category: "services", timeLabel: checkoutTime,
                 description_es: coService?.description_es || `El check-out es a las ${checkoutTime}.${accom ? ` Si necesitan guardar equipaje en ${accom} o coordinar un late check-out, por favor avísennos con anticipación.` : " Si necesitan guardar equipaje o coordinar un late check-out, avísennos con anticipación."}`,
                 description_en: coService?.description  || `Check-out is at ${checkoutTime}.${accom ? ` If you need to store luggage at ${accom} or arrange a late check-out, please let us know in advance.` : " If you need to store luggage or arrange a late check-out, please let us know in advance."}`,
@@ -2343,7 +2343,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
             bfDays.forEach((dm, idx) => {
               // Skip if a manually-added breakfast already exists on this day
               if (prevNoBf.some(i => i.dayLabel === dm.label && isBfItem(i))) return;
-              toAdd.push({ ...mapManualToCartItem(),
+              toAdd.push({ ...mapManualToCartItem(), confirmed: false,
                 _uid: `preset_bf_${dm.label}_${Date.now() + idx}`, id: `preset_bf_${dm.label}_${Date.now() + idx}`,
                 name:    bfService?.name_es || "Desayuno en la Villa",
                 name_en: bfService?.name_en || "Breakfast at the Villa",
@@ -4944,10 +4944,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
         )}
 
         {/* Editor column */}
-        <div className={`flex flex-col min-h-0 ${pdfPreviewUrl ? "w-[480px] shrink-0 h-full" : "flex-1"}`}>
+        <div className={`flex flex-col min-h-0 ${pdfPreviewUrl ? "w-[600px] shrink-0 h-full" : "flex-1"}`}>
         <div className="px-5 py-4 border-b flex items-center justify-between">
           <div>
-            <p className="text-[11px] text-neutral-500">Editar kick-off</p>
+            <p className="text-[11px] text-neutral-500">Editar itinerario</p>
             <p className="text-sm font-semibold text-neutral-900">
               {kickoff.tripName || kickoff.guestName || kickoff.id}
             </p>
@@ -7423,102 +7423,17 @@ function CheckinResponsesSection({ kickoffId }) {
             </p>
           )}
 
-          {!loading && responses.length > 0 && (<>
-
-            {/* Pasaportes */}
-            <div>
-              <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">🪪 Pasaportes</p>
-              <div className="space-y-1.5">
-                {responses.map((r, i) => (
-                  <div key={i} className="bg-white rounded-lg px-3 py-2 text-xs border border-teal-100 grid grid-cols-2 gap-x-3">
-                    <div>
-                      <span className="font-semibold text-neutral-800">{r.firstName} {r.lastName}</span>
-                      {r.nationality && <span className="text-neutral-400 ml-1">· {r.nationality}</span>}
-                    </div>
-                    <div className="text-neutral-500">
-                      {r.idType && <span>{r.idType}: </span>}
-                      <span className="font-mono">{r.idNumber || "—"}</span>
-                      {r.dob && <span className="text-neutral-400 ml-1">· {fmtDate(r.dob)}</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {!loading && responses.length > 0 && (
+            <div className="space-y-1.5">
+              {responses.map((r, i) => (
+                <div key={i} className="bg-white rounded-lg px-3 py-2 text-xs border border-teal-100 flex items-center gap-2">
+                  <span className="text-teal-500">✓</span>
+                  <span className="font-semibold text-neutral-800">{r.firstName} {r.lastName}</span>
+                  {r.isGroupContact === "yes" && <span className="text-teal-600 text-[9px]">★</span>}
+                </div>
+              ))}
             </div>
-
-            {/* Restricciones alimentarias */}
-            {dietary.length > 0 && (
-              <div>
-                <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">🥗 Restricciones alimentarias</p>
-                <div className="space-y-1.5">
-                  {dietary.map((r, i) => (
-                    <div key={i} className="bg-white rounded-lg px-3 py-2 text-xs border border-orange-100">
-                      <span className="font-semibold text-neutral-700">{r.firstName} {r.lastName}: </span>
-                      {r.foodRestrictions && <span className="text-neutral-600">{r.foodRestrictions}</span>}
-                      {r.allergies && <span className="text-red-600 ml-1">⚠️ {r.allergies}</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Vuelos llegada */}
-            {arrivals.length > 0 && (
-              <div>
-                <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">🛬 Vuelos de llegada</p>
-                <div className="space-y-1.5">
-                  {[...arrivals].sort((a,b) => (a.arrivalDate||"").localeCompare(b.arrivalDate||"")).map((r, i) => (
-                    <div key={i} className="bg-white rounded-lg px-3 py-2 text-xs border border-teal-100 flex justify-between items-center">
-                      <span className="font-semibold text-neutral-700">{r.firstName} {r.lastName}</span>
-                      <span className="text-neutral-500">
-                        {r.arrivalAirline && <span>{r.arrivalAirline} </span>}
-                        {r.arrivalFlight && <span className="font-mono font-semibold text-neutral-700">{r.arrivalFlight}</span>}
-                        {r.arrivalDate && <span className="ml-1 text-neutral-400">· {fmtDate(r.arrivalDate)}</span>}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Vuelos salida */}
-            {departures.length > 0 && (
-              <div>
-                <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">🛫 Vuelos de salida</p>
-                <div className="space-y-1.5">
-                  {[...departures].sort((a,b) => (a.departureDate||"").localeCompare(b.departureDate||"")).map((r, i) => (
-                    <div key={i} className="bg-white rounded-lg px-3 py-2 text-xs border border-teal-100 flex justify-between items-center">
-                      <span className="font-semibold text-neutral-700">{r.firstName} {r.lastName}</span>
-                      <span className="text-neutral-500">
-                        {r.departureAirline && <span>{r.departureAirline} </span>}
-                        {r.departureFlight && <span className="font-mono font-semibold text-neutral-700">{r.departureFlight}</span>}
-                        {r.departureDate && <span className="ml-1 text-neutral-400">· {fmtDate(r.departureDate)}</span>}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Contactos / WhatsApp */}
-            <div>
-              <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">📱 Contactos del grupo</p>
-              <div className="space-y-1.5">
-                {responses.filter(r => r.phone || r.email).map((r, i) => (
-                  <div key={i} className="bg-white rounded-lg px-3 py-2 text-xs border border-teal-100 flex justify-between">
-                    <span className="font-semibold text-neutral-700">
-                      {r.firstName} {r.lastName}
-                      {r.isGroupContact === "yes" && <span className="ml-1 text-teal-600 text-[9px]">★ contacto principal</span>}
-                    </span>
-                    <span className="text-neutral-500">
-                      {r.phone && <a href={`https://wa.me/${r.phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" className="text-green-600 hover:underline mr-2">{r.phone}</a>}
-                      {r.email && <span className="text-neutral-400">{r.email}</span>}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </>)}
+          )}
         </div>
       )}
     </div>

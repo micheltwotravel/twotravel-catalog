@@ -2756,13 +2756,14 @@ function KeepInTouchPage({ kickoff, page, total }) {
           Explore Our Destinations
         </div>
         <p style={{ fontSize: 11, color: "#6b5a3e", lineHeight: 1.6, marginBottom: 20, maxWidth: 480, textAlign: "center", margin: "0 auto 20px" }}>
-          Whether it's a luxury getaway, a corporate retreat, or an unforgettable celebration, Two Travel is here to curate every detail. With a presence in Cartagena, Medellín, Mexico City, and now Los Cabos, count on us wherever your next adventure takes you.
+          Whether it's a luxury getaway, a corporate retreat, or an unforgettable celebration, Two Travel is here to curate every detail. With a presence in Cartagena, Medellín, Mexico City, Tulum, and Los Cabos, count on us wherever your next adventure takes you.
         </p>
         <div style={{ display: "flex", justifyContent: "center", gap: 20, marginBottom: 36, flexWrap: "wrap" }}>
           {[
             { city: "Cartagena",   emoji: "🏖️", url: "https://two.travel/cartagena-colombia/" },
             { city: "Medellín",    emoji: "🌿", url: "https://two.travel/medellin-colombia/" },
             { city: "Mexico City", emoji: "🌮", url: "https://two.travel/mexico-city/" },
+            { city: "Tulum",       emoji: "🌴", url: "https://two.travel/tulum/" },
             { city: "Los Cabos",   emoji: "🌵", url: "https://two.travel/cabo-san-lucas/" },
           ].map(d => (
             <a key={d.city} href={d.url} target="_blank" rel="noreferrer" style={{ textDecoration: "none", textAlign: "center", background: "#fdf8f2", border: "1.5px solid #f3e8d8", borderRadius: 12, padding: "14px 20px", minWidth: 90, display: "block" }}>
@@ -3231,7 +3232,7 @@ export default function ItineraryPrintView() {
           qbCode:       svc.quickbooksCode || "",
           category:     svc.category || "",
           familyFriendly: !!(svc.family_friendly),
-          confirmed:    true,
+          confirmed:    false,
           sort:         day.items.length,
           _isNewService: true,
           _serviceId:   svc.id || svc._id || null,
