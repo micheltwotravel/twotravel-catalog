@@ -4912,7 +4912,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   });
   await onSave(kickoff.id, updates);
   setStatus(autoStatus);
-  try { localStorage.setItem(`tt_kp_${kickoff.id}`, JSON.stringify({ ts: Date.now(), data: { ...kickoff, ...updates } })); } catch {}
+  try {
+    // Merge with current cache (not stale `kickoff`) so iframe's cart/dayMeta edits are preserved.
+    const prevRaw = localStorage.getItem(`tt_kp_${kickoff.id}`);
+    const prevData = prevRaw ? (JSON.parse(prevRaw).data || kickoff) : kickoff;
+    localStorage.setItem(`tt_kp_${kickoff.id}`, JSON.stringify({ ts: Date.now(), data: { ...prevData, ...updates } }));
+  } catch {}
   // Refresh client itinerary view after save
   setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${lang || kickoff?.lang || "en"}&edit=1&embed=1&_t=${Date.now()}`);
   } catch(e) {

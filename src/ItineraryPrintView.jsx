@@ -3024,20 +3024,21 @@ export default function ItineraryPrintView() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode, kickoff]);
 
-  // When embedded in the concierge panel, listen for a save trigger from the parent
+  // When embedded in the concierge panel, listen for a save trigger from the parent.
+  // saveSnapshotRef is defined after saveSnapshot below; the handler always reads the ref so it
+  // gets the latest version of saveSnapshot (with current pdfNotes, cityGuideIntro, etc.).
+  const saveSnapshotRef = useRef(null);
   useEffect(() => {
     if (!embedded) return;
     const handler = async (e) => {
       if (e.data?.type === "tt-save") {
-        await saveSnapshot();
+        await saveSnapshotRef.current?.();
         window.parent?.postMessage({ type: "tt-save-done" }, "*");
       }
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  // saveSnapshot is stable (defined outside render); embedded is constant
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [embedded]);
+  }, [embedded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Edit-mode mutation helpers ── */
   const _upd = (updater) => {
@@ -3195,6 +3196,8 @@ export default function ItineraryPrintView() {
       setSaving(false);
     }
   };
+  // Keep saveSnapshotRef in sync so the embedded tt-save handler always calls the latest version.
+  saveSnapshotRef.current = saveSnapshot;
 
   // Open catalog picker for a specific day
   const openPickerForDay = (di) => setPickerForDay(di);
