@@ -482,6 +482,7 @@ export async function uploadImageToDrive(file) {
  */
 export async function deleteKickoff(id) {
   invalidateKickoffsCache();
-  const json = await postToKickoffAPI({ action: "deleteKickoff", id });
-  return json.ok === true;
+  const { error } = await supabase.from("kickoffs").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return true;
 }
