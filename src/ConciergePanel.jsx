@@ -19,6 +19,8 @@ import {
   fetchServicesFromSheet,
   updateKickoffInSheet,
   deleteKickoff,
+  restoreKickoff,
+  permanentDeleteKickoff,
   saveKickoffToSheet,
   uploadImageToDrive,
 } from "./sheetServices";
@@ -3851,7 +3853,7 @@ function ConfirmDeleteModal({ kickoff, onCancel, onConfirm, loading }) {
         </span>
       </p>
       <p className="mt-3 text-xs text-neutral-500">
-        Esta acción no se puede deshacer.
+        El kick-off se moverá a la papelera. Puedes restaurarlo desde ahí.
       </p>
     </Modal>
   );
@@ -4964,220 +4966,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
         <div className="flex-1 overflow-auto p-5 space-y-4">
 
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-[11px] text-neutral-500">Huésped</label>
-              <input
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="Nombre del huésped"
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] text-neutral-500">Viaje</label>
-              <input
-                value={tripName}
-                onChange={(e) => setTripName(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="Nombre del viaje"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="text-[11px] text-neutral-500">Idioma del cliente</label>
-              <div className="mt-1 flex gap-2">
-                <button type="button"
-                  onClick={() => setLang("es")}
-                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${lang === "es" ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-indigo-400"}`}>
-                  🇨🇴 Español
-                </button>
-                <button type="button"
-                  onClick={() => setLang("en")}
-                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${lang === "en" ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-indigo-400"}`}>
-                  🇺🇸 English
-                </button>
-              </div>
-            </div>
-            <div>
-  <label className="text-[11px] text-neutral-500">Contacto</label>
-  <input
-    value={guestContact}
-    onChange={(e) => setGuestContact(e.target.value)}
-    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-    placeholder="WhatsApp o email"
-  />
-</div>
-            <div>
-              <label className="text-[11px] text-neutral-500">Email del cliente</label>
-              <input
-                type="email"
-                value={guestEmailState}
-                onChange={(e) => setGuestEmailState(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="cliente@email.com"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="text-[11px] text-neutral-500 mb-1 block">
-                Concierge(s) asignado(s)
-                {assignedConcierges.length > 0 && (
-                  <span className="ml-1 text-neutral-400">({assignedConcierges.join(", ")})</span>
-                )}
-              </label>
-              {(() => {
-                const kickoffCityList = city.split(",").map(c => c.trim().toUpperCase()).filter(Boolean);
-                const multiCity = kickoffCityList.length > 1;
-                return (
-                  <div className="border rounded-lg divide-y bg-white">
-                    {CONCIERGE_LIST.filter(c=>!c.hidden).map(c => {
-                      const checked = assignedConcierges.includes(c.name);
-                      return (
-                        <div key={c.email} className="px-3 py-2 hover:bg-neutral-50">
-                          <label className="flex items-center gap-2 cursor-pointer text-sm">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => {
-                                setAssignedConcierges(prev =>
-                                  checked ? prev.filter(n => n !== c.name) : [...prev, c.name]
-                                );
-                                if (!checked) {
-                                  const defaultCity = kickoffCityList.find(code => code === c.city) || c.city;
-                                  setConciergesCities(prev => ({ ...prev, [c.name]: defaultCity }));
-                                  if (!city) setCity(c.city);
-                                } else {
-                                  setConciergesCities(prev => { const { [c.name]: _, ...rest } = prev; return rest; });
-                                }
-                              }}
-                              className="rounded"
-                            />
-                            <span className="flex-1">{c.name}</span>
-                            {!checked && <span className="text-[10px] text-neutral-400">{c.city}</span>}
-                          </label>
-                          {checked && multiCity && (
-                            <div className="flex gap-1.5 mt-1.5 ml-6">
-                              {kickoffCityList.map(code => (
-                                <button
-                                  key={code}
-                                  type="button"
-                                  onClick={() => setConciergesCities(prev => ({ ...prev, [c.name]: code }))}
-                                  className={`text-[10px] px-2 py-0.5 rounded-full border font-medium transition-colors ${
-                                    conciergesCities[c.name] === code
-                                      ? "bg-indigo-600 text-white border-indigo-600"
-                                      : "bg-white text-neutral-500 border-neutral-300 hover:border-indigo-400"
-                                  }`}
-                                >
-                                  {cityFullName(code) || code}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                          {checked && !multiCity && (
-                            <div className="ml-6 mt-0.5">
-                              <span className="text-[10px] text-indigo-600 font-medium">{cityFullName(c.city) || c.city}</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="text-[11px] text-neutral-500">Título del concierge (PDF)</label>
-              <input
-                value={conciergeTitle}
-                onChange={e => setConciergeTitle(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                placeholder="Senior Concierge Cartagena"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="text-[11px] text-neutral-500">Estado</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-              >
-                <option value="new">{STATUS_LABELS.new.es}</option>
-                <option value="active">{STATUS_LABELS.active.es}</option>
-                <option value="client_submitted">{STATUS_LABELS.client_submitted.es}</option>
-                <option value="concierge_editing">{STATUS_LABELS.concierge_editing.es}</option>
-                <option value="sent_to_preview">{STATUS_LABELS.sent_to_preview.es}</option>
-                <option value="sent_to_travify">{STATUS_LABELS.sent_to_travify.es}</option>
-                <option value="feedback_submitted">{STATUS_LABELS.feedback_submitted.es}</option>
-                <option value="done">{STATUS_LABELS.done.es}</option>
-              </select>
-            </div>
-
-            {/* ── FECHAS DE ESTADÍA (editables por el concierge) ── */}
-            <div className="col-span-2 border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
-              <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — {cityFullName(city.split(",")[0]?.trim()) || city.split(",")[0]?.trim() || "Ciudad 1"}</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
-                  <input
-                    type="date"
-                    value={arrivalDate}
-                    onChange={e => setArrivalDate(e.target.value)}
-                    className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-neutral-500 mb-1">Salida</label>
-                  <input
-                    type="date"
-                    value={departureDate}
-                    min={arrivalDate || undefined}
-                    onChange={e => setDepartureDate(e.target.value)}
-                    className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white"
-                  />
-                </div>
-              </div>
-              {clientNights && (
-                <p className="text-[10px] text-blue-600">🌙 {clientNights} noche{clientNights !== 1 ? "s" : ""}</p>
-              )}
-            </div>
-
-            {/* City 2 dates — only shown when trip has 2 cities */}
-            {city.includes(",") && (
-              <div className="border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
-                <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — Ciudad 2 — {cityFullName(city.split(",")[1]?.trim())}</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
-                    <input type="date" value={arrivalDate2}
-                      min={departureDate || undefined}
-                      onChange={e => setArrivalDate2(e.target.value)}
-                      className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] text-neutral-500 mb-1">Salida</label>
-                    <input type="date" value={departureDate2}
-                      min={arrivalDate2 || undefined}
-                      onChange={e => setDepartureDate2(e.target.value)}
-                      className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
-                  </div>
-                </div>
-                {arrivalDate2 && departureDate2 && (() => {
-                  const n = Math.round((new Date(departureDate2) - new Date(arrivalDate2)) / 86400000);
-                  return n > 0 ? <p className="text-[10px] text-blue-600">🌙 {n} noche{n !== 1 ? "s" : ""}</p> : null;
-                })()}
-              </div>
-            )}
-
-
-          </div>
-
-
-
-
+          {/* ── Notas internas — siempre visible, lo primero ── */}
           <div>
             <label className="text-[11px] text-neutral-500">📝 Notas internas</label>
             <textarea
@@ -5188,7 +4977,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             />
           </div>
 
-          {/* Check-in Responses hidden */}
 
 
           {/* ── Feedback del cliente (respuestas del formulario) ── */}
@@ -5906,6 +5694,221 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               }}
             />
           </DrawerSection>
+
+          {/* ── Datos del cliente — al final ── */}
+          <DrawerSection title="👤 Datos del cliente" defaultOpen={false}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] text-neutral-500">Huésped</label>
+              <input
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                placeholder="Nombre del huésped"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] text-neutral-500">Viaje</label>
+              <input
+                value={tripName}
+                onChange={(e) => setTripName(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                placeholder="Nombre del viaje"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="text-[11px] text-neutral-500">Idioma del cliente</label>
+              <div className="mt-1 flex gap-2">
+                <button type="button"
+                  onClick={() => setLang("es")}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${lang === "es" ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-indigo-400"}`}>
+                  🇨🇴 Español
+                </button>
+                <button type="button"
+                  onClick={() => setLang("en")}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${lang === "en" ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-indigo-400"}`}>
+                  🇺🇸 English
+                </button>
+              </div>
+            </div>
+            <div>
+  <label className="text-[11px] text-neutral-500">Contacto</label>
+  <input
+    value={guestContact}
+    onChange={(e) => setGuestContact(e.target.value)}
+    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+    placeholder="WhatsApp o email"
+  />
+</div>
+            <div>
+              <label className="text-[11px] text-neutral-500">Email del cliente</label>
+              <input
+                type="email"
+                value={guestEmailState}
+                onChange={(e) => setGuestEmailState(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                placeholder="cliente@email.com"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="text-[11px] text-neutral-500 mb-1 block">
+                Concierge(s) asignado(s)
+                {assignedConcierges.length > 0 && (
+                  <span className="ml-1 text-neutral-400">({assignedConcierges.join(", ")})</span>
+                )}
+              </label>
+              {(() => {
+                const kickoffCityList = city.split(",").map(c => c.trim().toUpperCase()).filter(Boolean);
+                const multiCity = kickoffCityList.length > 1;
+                return (
+                  <div className="border rounded-lg divide-y bg-white">
+                    {CONCIERGE_LIST.filter(c=>!c.hidden).map(c => {
+                      const checked = assignedConcierges.includes(c.name);
+                      return (
+                        <div key={c.email} className="px-3 py-2 hover:bg-neutral-50">
+                          <label className="flex items-center gap-2 cursor-pointer text-sm">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setAssignedConcierges(prev =>
+                                  checked ? prev.filter(n => n !== c.name) : [...prev, c.name]
+                                );
+                                if (!checked) {
+                                  const defaultCity = kickoffCityList.find(code => code === c.city) || c.city;
+                                  setConciergesCities(prev => ({ ...prev, [c.name]: defaultCity }));
+                                  if (!city) setCity(c.city);
+                                } else {
+                                  setConciergesCities(prev => { const { [c.name]: _, ...rest } = prev; return rest; });
+                                }
+                              }}
+                              className="rounded"
+                            />
+                            <span className="flex-1">{c.name}</span>
+                            {!checked && <span className="text-[10px] text-neutral-400">{c.city}</span>}
+                          </label>
+                          {checked && multiCity && (
+                            <div className="flex gap-1.5 mt-1.5 ml-6">
+                              {kickoffCityList.map(code => (
+                                <button
+                                  key={code}
+                                  type="button"
+                                  onClick={() => setConciergesCities(prev => ({ ...prev, [c.name]: code }))}
+                                  className={`text-[10px] px-2 py-0.5 rounded-full border font-medium transition-colors ${
+                                    conciergesCities[c.name] === code
+                                      ? "bg-indigo-600 text-white border-indigo-600"
+                                      : "bg-white text-neutral-500 border-neutral-300 hover:border-indigo-400"
+                                  }`}
+                                >
+                                  {cityFullName(code) || code}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {checked && !multiCity && (
+                            <div className="ml-6 mt-0.5">
+                              <span className="text-[10px] text-indigo-600 font-medium">{cityFullName(c.city) || c.city}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="text-[11px] text-neutral-500">Título del concierge (PDF)</label>
+              <input
+                value={conciergeTitle}
+                onChange={e => setConciergeTitle(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                placeholder="Senior Concierge Cartagena"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="text-[11px] text-neutral-500">Estado</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+              >
+                <option value="new">{STATUS_LABELS.new.es}</option>
+                <option value="active">{STATUS_LABELS.active.es}</option>
+                <option value="client_submitted">{STATUS_LABELS.client_submitted.es}</option>
+                <option value="concierge_editing">{STATUS_LABELS.concierge_editing.es}</option>
+                <option value="sent_to_preview">{STATUS_LABELS.sent_to_preview.es}</option>
+                <option value="sent_to_travify">{STATUS_LABELS.sent_to_travify.es}</option>
+                <option value="feedback_submitted">{STATUS_LABELS.feedback_submitted.es}</option>
+                <option value="done">{STATUS_LABELS.done.es}</option>
+              </select>
+            </div>
+
+            {/* ── FECHAS DE ESTADÍA (editables por el concierge) ── */}
+            <div className="col-span-2 border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
+              <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — {cityFullName(city.split(",")[0]?.trim()) || city.split(",")[0]?.trim() || "Ciudad 1"}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
+                  <input
+                    type="date"
+                    value={arrivalDate}
+                    onChange={e => setArrivalDate(e.target.value)}
+                    className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-neutral-500 mb-1">Salida</label>
+                  <input
+                    type="date"
+                    value={departureDate}
+                    min={arrivalDate || undefined}
+                    onChange={e => setDepartureDate(e.target.value)}
+                    className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white"
+                  />
+                </div>
+              </div>
+              {clientNights && (
+                <p className="text-[10px] text-blue-600">🌙 {clientNights} noche{clientNights !== 1 ? "s" : ""}</p>
+              )}
+            </div>
+
+            {/* City 2 dates — only shown when trip has 2 cities */}
+            {city.includes(",") && (
+              <div className="border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
+                <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — Ciudad 2 — {cityFullName(city.split(",")[1]?.trim())}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
+                    <input type="date" value={arrivalDate2}
+                      min={departureDate || undefined}
+                      onChange={e => setArrivalDate2(e.target.value)}
+                      className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-neutral-500 mb-1">Salida</label>
+                    <input type="date" value={departureDate2}
+                      min={arrivalDate2 || undefined}
+                      onChange={e => setDepartureDate2(e.target.value)}
+                      className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
+                  </div>
+                </div>
+                {arrivalDate2 && departureDate2 && (() => {
+                  const n = Math.round((new Date(departureDate2) - new Date(arrivalDate2)) / 86400000);
+                  return n > 0 ? <p className="text-[10px] text-blue-600">🌙 {n} noche{n !== 1 ? "s" : ""}</p> : null;
+                })()}
+              </div>
+            )}
+
+
+          </div>
+          </DrawerSection>
+
+          {/* Check-in Responses hidden */}
         </div>
 
 
@@ -7949,6 +7952,7 @@ export default function ConciergePanel({ onLogout, currentUser }) {
   const [selectedForDelete, setSelectedForDelete] = useState(null);
   const [rowLoadingId, setRowLoadingId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [showPapelera, setShowPapelera] = useState(false);
 const [clientTypePickerOpen, setClientTypePickerOpen] = useState(false);
 const [pendingLinkKind, setPendingLinkKind] = useState(null); // "catalog" | "questionnaire" | "feedback"
 const [feedbackPickerOpen, setFeedbackPickerOpen] = useState(false);
@@ -8151,15 +8155,21 @@ const loadKickoffs = async () => {
 
   const bulkDelete = async () => {
     if (!selectedIds.size) return;
-    if (!window.confirm(`¿Eliminar ${selectedIds.size} cliente(s)? Esta acción no se puede deshacer.`)) return;
+    if (!window.confirm(`¿Mover ${selectedIds.size} cliente(s) a la papelera?`)) return;
     setBulkLoading(true);
     try {
       await Promise.all([...selectedIds].map(id => deleteKickoff(id)));
-      setKickoffs(prev => prev.filter(k => !selectedIds.has(k.id)));
+      const ts = new Date().toISOString();
+      setKickoffs(prev => prev.map(k => selectedIds.has(k.id) ? { ...k, deletedAt: ts } : k));
       setSelectedIds(new Set());
     } catch {}
     setBulkLoading(false);
   };
+
+  const deletedKickoffs = useMemo(() =>
+    (kickoffs || []).filter(k => k.deletedAt && !String(k.id || "").toLowerCase().startsWith("financ"))
+      .sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime()),
+  [kickoffs]);
 
   const filteredKickoffs = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -8167,6 +8177,7 @@ const loadKickoffs = async () => {
     return (kickoffs || [])
       .filter((k) => {
         if (String(k.id || "").toLowerCase().startsWith("financ")) return false;
+        if (k.deletedAt) return false;
         if (statusFilter !== "all" && k.status !== statusFilter) return false;
         if (conciergeFilter !== "all" && !String(k.assignedConcierge || "").split(",").map(s => s.trim()).includes(conciergeFilter)) return false;
         if (filterCity !== "all") {
@@ -8314,22 +8325,13 @@ const loadKickoffs = async () => {
     setDeleting(true);
     await deleteKickoff(id);
 
-    setKickoffs((prev) => {
-      const next = prev.filter((k) => k.id !== id);
-
-      setSelectedKickoffForLink((curr) => {
-  if (!curr) return null;
-  if (curr.id !== id) return curr;
-  return null;
-});
-
-      return next;
-    });
-
+    const ts = new Date().toISOString();
+    setKickoffs((prev) => prev.map(k => k.id === id ? { ...k, deletedAt: ts } : k));
+    setSelectedKickoffForLink((curr) => (curr?.id === id ? null : curr));
     setSelectedForDelete(null);
   } catch (err) {
     console.error(err);
-    alert("No se pudo eliminar el kick-off.");
+    alert("No se pudo mover el kick-off a la papelera.");
   } finally {
     setDeleting(false);
   }
@@ -8517,6 +8519,59 @@ const loadKickoffs = async () => {
             )}
           </div>
         </div>
+
+        {/* ── Papelera toggle ── */}
+        {deletedKickoffs.length > 0 && (
+          <button
+            onClick={() => setShowPapelera(v => !v)}
+            style={{fontSize:11.5,fontWeight:500,color:"#6B7280",background:"none",border:"none",cursor:"pointer",padding:"2px 0",alignSelf:"flex-start"}}
+          >
+            🗑 {showPapelera ? "Ocultar papelera" : `Papelera (${deletedKickoffs.length})`}
+          </button>
+        )}
+
+        {/* ── Papelera view ── */}
+        {showPapelera && deletedKickoffs.length > 0 && (
+          <div className="tt-card" style={{padding:"12px 16px",background:"#FEF2F2",border:"1px solid #FECACA"}}>
+            <p style={{fontSize:11.5,fontWeight:600,color:"#9CA3AF",marginBottom:10,letterSpacing:"0.05em",textTransform:"uppercase"}}>Papelera</p>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {deletedKickoffs.map(k => (
+                <div key={k.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"#fff",borderRadius:"var(--radius-sm)",border:"1px solid #FECACA"}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <span style={{fontSize:12.5,fontWeight:500,color:"#374151"}}>{k.guestName || "Sin nombre"}</span>
+                    {k.tripName && <span style={{fontSize:11.5,color:"#9CA3AF",marginLeft:8}}>{k.tripName}</span>}
+                    <span style={{fontSize:10.5,color:"#D1D5DB",marginLeft:8}}>
+                      {new Date(k.deletedAt).toLocaleDateString("es-CO", {day:"2-digit",month:"short"})}
+                    </span>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await restoreKickoff(k.id);
+                        setKickoffs(prev => prev.map(x => x.id === k.id ? { ...x, deletedAt: null } : x));
+                      } catch { alert("No se pudo restaurar."); }
+                    }}
+                    style={{fontSize:11,padding:"3px 9px",borderRadius:"var(--radius-sm)",border:"1px solid #D1D5DB",background:"#fff",color:"#374151",cursor:"pointer",whiteSpace:"nowrap"}}
+                  >
+                    Restaurar
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm(`¿Eliminar definitivamente a "${k.guestName || k.id}"? Esta acción no se puede deshacer.`)) return;
+                      try {
+                        await permanentDeleteKickoff(k.id);
+                        setKickoffs(prev => prev.filter(x => x.id !== k.id));
+                      } catch { alert("No se pudo eliminar."); }
+                    }}
+                    style={{fontSize:11,padding:"3px 9px",borderRadius:"var(--radius-sm)",border:"1px solid #FECACA",background:"#FEF2F2",color:"#DC2626",cursor:"pointer",whiteSpace:"nowrap"}}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── Ratings summary toggle ── */}
         <div>

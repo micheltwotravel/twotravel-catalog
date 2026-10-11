@@ -2917,16 +2917,23 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
             <div key={i} style={{ position: "relative", borderTop: i > 0 ? "1px solid #f0ece6" : "none" }}>
               {editMode && onMoveItem && (
                 <div className="no-print" style={{ position:"absolute", left:-30, top:"50%", transform:"translateY(-50%)", display:"flex", flexDirection:"column", gap:2, zIndex:10 }}>
-                  <button
-                    onClick={() => onMoveItem(entry.itemIdx ?? i, -1)}
-                    disabled={i === 0}
-                    style={{ border:"1px solid #d1d5db", borderRadius:3, background:"#fff", color: i===0 ? "#d1d5db" : "#374151", cursor: i===0 ? "default" : "pointer", fontSize:10, padding:"1px 5px", lineHeight:1.2 }}
-                  >↑</button>
-                  <button
-                    onClick={() => onMoveItem(entry.itemIdx ?? i, +1)}
-                    disabled={i === allEntries.length - 1}
-                    style={{ border:"1px solid #d1d5db", borderRadius:3, background:"#fff", color: i===allEntries.length-1 ? "#d1d5db" : "#374151", cursor: i===allEntries.length-1 ? "default" : "pointer", fontSize:10, padding:"1px 5px", lineHeight:1.2 }}
-                  >↓</button>
+                  {(() => {
+                    const idx = entry.itemIdx ?? i;
+                    const isFirst = idx === 0;
+                    const isLast  = idx >= displayItems.length - 1;
+                    return (<>
+                      <button
+                        onClick={() => onMoveItem(idx, -1)}
+                        disabled={isFirst}
+                        style={{ border:"1px solid #d1d5db", borderRadius:3, background:"#fff", color: isFirst ? "#d1d5db" : "#374151", cursor: isFirst ? "default" : "pointer", fontSize:10, padding:"1px 5px", lineHeight:1.2 }}
+                      >↑</button>
+                      <button
+                        onClick={() => onMoveItem(idx, +1)}
+                        disabled={isLast}
+                        style={{ border:"1px solid #d1d5db", borderRadius:3, background:"#fff", color: isLast ? "#d1d5db" : "#374151", cursor: isLast ? "default" : "pointer", fontSize:10, padding:"1px 5px", lineHeight:1.2 }}
+                      >↓</button>
+                    </>);
+                  })()}
                 </div>
               )}
               {entry.it._chefMenuGroup

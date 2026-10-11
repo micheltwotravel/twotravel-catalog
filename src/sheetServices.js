@@ -478,9 +478,31 @@ export async function uploadImageToDrive(file) {
 }
 
 /**
- * Borra un kickoff por id
+ * Soft-delete: sets deletedAt timestamp inside data (preserves row for papelera).
  */
 export async function deleteKickoff(id) {
+  invalidateKickoffsCache();
+  await updateKickoffInSheet(id, { deletedAt: new Date().toISOString() });
+  return true;
+}
+
+/**
+ * Restore a soft-deleted kickoff (clears deletedAt).
+ */
+export async function restoreKickoff(id) {
+  invalidateKickoffsCache();
+  const { data: row, error: fetchErr } = await supabase.from("kickoffs").select("*").eq("id", id).single();
+  if (fetchErr) throw new Error(fetchErr.message);
+  const merged = { ...(row.data || {}), deletedAt: null };
+  const { error } = await supabase.from("kickoffs").update({ data: merged }).eq("id", id);
+  if (error) throw new Error(error.message);
+  return true;
+}
+
+/**
+ * Permanent hard-delete (from papelera only).
+ */
+export async function permanentDeleteKickoff(id) {
   invalidateKickoffsCache();
   const { error } = await supabase.from("kickoffs").delete().eq("id", id);
   if (error) throw new Error(error.message);
