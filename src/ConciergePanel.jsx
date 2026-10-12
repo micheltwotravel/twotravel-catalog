@@ -4902,26 +4902,34 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   updates.accommodationUrlB      = accommodationUrlB.trim();
 
   // Ask the embedded itinerary iframe to save its inline edits FIRST, then save panel data.
-  // Order matters: iframe saves cart+dayMeta to localStorage+Supabase, then we read that cart
-  // so the panel save doesn't overwrite inline itinerary edits with the stale canvasCartRef.
+  // The iframe signals cartModified=true if the user actually edited the itinerary inline.
+  // Only then do we read the iframe's saved cart from localStorage — otherwise we keep
+  // canvasCartRef.current (which has any canvas changes like new activities).
+  let iframeCartModified = false;
   await new Promise((resolve) => {
     if (!iframeRef.current?.contentWindow) { resolve(); return; }
     const done = (e) => {
-      if (e.data?.type === "tt-save-done") { window.removeEventListener("message", done); resolve(); }
+      if (e.data?.type === "tt-save-done") {
+        iframeCartModified = e.data.cartModified === true;
+        window.removeEventListener("message", done);
+        resolve();
+      }
     };
     window.addEventListener("message", done);
     iframeRef.current.contentWindow.postMessage({ type: "tt-save" }, "*");
     setTimeout(resolve, 3000); // safety timeout
   });
-  // After iframe saves, read its updated cart from localStorage so panel save doesn't clobber it.
-  try {
-    const raw = localStorage.getItem(`tt_kp_${kickoff.id}`);
-    if (raw) {
-      const { data } = JSON.parse(raw);
-      if (data?.cart)    updates.cart    = typeof data.cart    === "string" ? data.cart    : JSON.stringify(data.cart);
-      if (data?.dayMeta) updates.dayMeta = typeof data.dayMeta === "string" ? data.dayMeta : JSON.stringify(data.dayMeta);
-    }
-  } catch {}
+  if (iframeCartModified) {
+    // Iframe had inline edits — use its saved cart instead of the canvas cart.
+    try {
+      const raw = localStorage.getItem(`tt_kp_${kickoff.id}`);
+      if (raw) {
+        const { data } = JSON.parse(raw);
+        if (data?.cart)    updates.cart    = typeof data.cart    === "string" ? data.cart    : JSON.stringify(data.cart);
+        if (data?.dayMeta) updates.dayMeta = typeof data.dayMeta === "string" ? data.dayMeta : JSON.stringify(data.dayMeta);
+      }
+    } catch {}
+  }
   await onSave(kickoff.id, updates);
   setStatus(autoStatus);
   try {

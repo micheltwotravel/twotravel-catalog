@@ -3029,6 +3029,7 @@ export default function ItineraryPrintView() {
     setCityGuideHidden(kickoff?.cityGuideHidden || "");
     setCityGuideIntro(kickoff?.cityGuideIntro || "");
     _editDaysInitRef.current = true;
+    editDaysModifiedRef.current = false; // reset on init so panel knows no changes yet
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode, kickoff]);
 
@@ -3036,12 +3037,16 @@ export default function ItineraryPrintView() {
   // saveSnapshotRef is defined after saveSnapshot below; the handler always reads the ref so it
   // gets the latest version of saveSnapshot (with current pdfNotes, cityGuideIntro, etc.).
   const saveSnapshotRef = useRef(null);
+  // Tracks whether _upd was called (user made inline edits). Reset on editDays init.
+  const editDaysModifiedRef = useRef(false);
   useEffect(() => {
     if (!embedded) return;
     const handler = async (e) => {
       if (e.data?.type === "tt-save") {
         await saveSnapshotRef.current?.();
-        window.parent?.postMessage({ type: "tt-save-done" }, "*");
+        // Signal whether the iframe actually changed the cart so the panel can decide
+        // whether to use the iframe's saved cart or the canvas's cart.
+        window.parent?.postMessage({ type: "tt-save-done", cartModified: editDaysModifiedRef.current }, "*");
       }
     };
     window.addEventListener("message", handler);
@@ -3050,6 +3055,7 @@ export default function ItineraryPrintView() {
 
   /* ── Edit-mode mutation helpers ── */
   const _upd = (updater) => {
+    editDaysModifiedRef.current = true; // user made an inline edit
     setEditDays(prev => {
       const next = updater(prev);
       editDaysRef.current = next;
