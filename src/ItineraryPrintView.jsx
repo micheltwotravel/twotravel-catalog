@@ -2290,23 +2290,27 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
           </div>
         )}
 
-        {/* Schedule (catalog hours, no label) */}
+        {/* Schedule / Opening hours */}
         {it.schedule && (
           <div className="ev-terms">
-            <Editable value={it.schedule} editMode={editMode} />
+            <b>{isEs ? "Horario: " : "Opening Hours: "}</b>
+            <Editable value={it.schedule} editMode={editMode} onChange={v => patchItem?.("schedule", v)} />
           </div>
         )}
 
         {/* Deposit */}
         {it.deposit && (
-          <Editable value={it.deposit} tag="div" className="ev-terms" editMode={editMode} />
+          <div className="ev-terms">
+            <b>{isEs ? "Depósito: " : "Deposit: "}</b>
+            <Editable value={it.deposit} editMode={editMode} onChange={v => patchItem?.("deposit", v)} />
+          </div>
         )}
 
         {/* Cancellation */}
         {it.cancellation && (
           <div className="ev-terms">
             <b>{isEs ? "Cancelación: " : "Cancellation: "}</b>
-            <Editable value={it.cancellation} editMode={editMode} />
+            <Editable value={it.cancellation} editMode={editMode} onChange={v => patchItem?.("cancellation", v)} />
           </div>
         )}
 
@@ -2314,7 +2318,7 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         {it.dressCode && (
           <div className="ev-terms">
             <b>{isEs ? "Vestimenta: " : "Dress code: "}</b>
-            <Editable value={it.dressCode} editMode={editMode} />
+            <Editable value={it.dressCode} editMode={editMode} onChange={v => patchItem?.("dressCode", v)} />
           </div>
         )}
 
