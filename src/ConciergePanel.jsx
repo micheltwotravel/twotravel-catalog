@@ -2235,11 +2235,10 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
       const items = cart
         .filter(i => (i.dayLabel || "Sin día") === label)
         .sort((a, b) => {
+          const sa = a.sortOrder ?? 999, sb = b.sortOrder ?? 999;
+          if (sa !== sb) return sa - sb;
           const ta = parseTimeMin(a.timeLabel), tb = parseTimeMin(b.timeLabel);
-          if (ta < 9999 && tb < 9999) return ta - tb;
-          if (ta < 9999) return -1;
-          if (tb < 9999) return 1;
-          return (a.sortOrder ?? 999) - (b.sortOrder ?? 999);
+          return ta - tb;
         });
       return { label, meta, items };
     });
@@ -2351,7 +2350,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
             const toAdd = [];
             // Check-in on day 1
             if (!hasCheckin && firstLabel) {
-              toAdd.push({ ...mapManualToCartItem(), confirmed: false, _uid: `preset_checkin_${Date.now()}`, id: `preset_checkin_${Date.now()}`,
+              toAdd.push({ ...mapManualToCartItem(), confirmed: null, _uid: `preset_checkin_${Date.now()}`, id: `preset_checkin_${Date.now()}`,
                 name: "Check-in", name_en: "Check-in", category: "services", timeLabel: checkinTime,
                 description_es: ciService?.description_es || `Su villa estará disponible a partir de las ${checkinTime}.${accom ? ` Nos encontraremos en ${accom} para acompañarlos durante el proceso de check-in.` : " Estaremos con ustedes para acompañarlos durante el proceso."} Por favor avísennos su hora estimada de llegada.`,
                 description_en: ciService?.description  || `Your villa will be available from ${checkinTime}.${accom ? ` We will meet you at ${accom} to accompany you through the check-in process.` : " We will be there to accompany you through the process."} Please let us know your estimated arrival time.`,
@@ -2359,7 +2358,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
             }
             // Check-out on last day
             if (!hasCheckout && lastLabel && lastLabel !== firstLabel) {
-              toAdd.push({ ...mapManualToCartItem(), confirmed: false, _uid: `preset_checkout_${Date.now()}`, id: `preset_checkout_${Date.now()}`,
+              toAdd.push({ ...mapManualToCartItem(), confirmed: null, _uid: `preset_checkout_${Date.now()}`, id: `preset_checkout_${Date.now()}`,
                 name: "Check-out", name_en: "Check-out", category: "services", timeLabel: checkoutTime,
                 description_es: coService?.description_es || `El check-out es a las ${checkoutTime}.${accom ? ` Si necesitan guardar equipaje en ${accom} o coordinar un late check-out, por favor avísennos con anticipación.` : " Si necesitan guardar equipaje o coordinar un late check-out, avísennos con anticipación."}`,
                 description_en: coService?.description  || `Check-out is at ${checkoutTime}.${accom ? ` If you need to store luggage at ${accom} or arrange a late check-out, please let us know in advance.` : " If you need to store luggage or arrange a late check-out, please let us know in advance."}`,
@@ -2376,7 +2375,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
             bfDays.forEach((dm, idx) => {
               // Skip if a manually-added breakfast already exists on this day
               if (prevNoBf.some(i => i.dayLabel === dm.label && isBfItem(i))) return;
-              toAdd.push({ ...mapManualToCartItem(), confirmed: false,
+              toAdd.push({ ...mapManualToCartItem(), confirmed: null,
                 _uid: `preset_bf_${dm.label}_${Date.now() + idx}`, id: `preset_bf_${dm.label}_${Date.now() + idx}`,
                 name:    bfService?.name_es || "Desayuno en la Villa",
                 name_en: bfService?.name_en || "Breakfast at the Villa",
@@ -2633,11 +2632,11 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
       const now = Date.now();
       setCart(prev => [...prev, ...p.map((item, i) => {
         const uid = `preset_${preset}_${now}_${i}`;
-        return { ...mapManualToCartItem(), ...item, confirmed: false, _uid: uid, id: uid, dayLabel, sortOrder: count + i };
+        return { ...mapManualToCartItem(), ...item, confirmed: null, _uid: uid, id: uid, dayLabel, sortOrder: count + i };
       })]);
     } else {
       const uid = `preset_${preset}_${Date.now()}`;
-      setCart(prev => [...prev, { ...mapManualToCartItem(), ...p, confirmed: false, _uid: uid, id: uid, dayLabel, sortOrder: count }]);
+      setCart(prev => [...prev, { ...mapManualToCartItem(), ...p, confirmed: null, _uid: uid, id: uid, dayLabel, sortOrder: count }]);
     }
   };
 
@@ -5347,7 +5346,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 </div>
               </div>
               <div>
-                <label className="text-[11px] text-neutral-500">Personas en el grupo <span className="text-neutral-400">(aparece en PDF)</span></label>
+                <label className="text-[11px] text-neutral-500">Personas en el grupo</label>
                 <input value={groupSize} onChange={(e) => setGroupSize(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="15 pax (11 adults, 4 kids ages 13, 10, 6, 3)" />

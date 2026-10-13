@@ -7093,8 +7093,9 @@ function UserManagement({ currentUser, onBack }) {
   const [loadError, setLoadError] = useState("");
   const [saving, setSaving]   = useState({});
   const [showAdd, setShowAdd] = useState(false);
-  const [newUser, setNewUser] = useState({ email:"", name:"", pin:"", role:"concierge" });
+  const [newUser, setNewUser] = useState({ email:"", name:"", lastName:"", pin:"", role:"concierge" });
   const [addError, setAddError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const load = async () => {
     setLoading(true); setLoadError("");
@@ -7118,9 +7119,16 @@ function UserManagement({ currentUser, onBack }) {
     e.preventDefault(); setAddError("");
     if (!newUser.email || !newUser.name || !newUser.pin) { setAddError("Completa todos los campos"); return; }
     const email = newUser.email.toLowerCase();
-    const { error } = await supabase.from("panel_users").upsert({ email, data: { name: newUser.name, pin: newUser.pin, role: newUser.role, active: "true" } });
+    const fullName = [newUser.name, newUser.lastName].filter(Boolean).join(" ");
+    const { error } = await supabase.from("panel_users").upsert({ email, data: { name: newUser.name, lastName: newUser.lastName, fullName, pin: newUser.pin, role: newUser.role, active: "true" } });
     if (error) { setAddError(error.message || "Error"); return; }
-    setShowAdd(false); setNewUser({ email:"", name:"", pin:"", role:"concierge" }); load();
+    setShowAdd(false); setNewUser({ email:"", name:"", lastName:"", pin:"", role:"concierge" }); load();
+  };
+
+  const deleteUser = async (email) => {
+    await supabase.from("panel_users").delete().eq("email", email);
+    setConfirmDelete(null);
+    setUsers(us => us.filter(u => u.email !== email));
   };
 
   return (
@@ -7139,7 +7147,9 @@ function UserManagement({ currentUser, onBack }) {
       <div style={{maxWidth:900,margin:"24px auto",padding:"0 24px"}}>
         {showAdd && (
           <form onSubmit={addUser} style={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:12,padding:20,marginBottom:20,display:"flex",flexWrap:"wrap",gap:10,alignItems:"flex-end"}}>
-            <input placeholder="Nombre" value={newUser.name} onChange={e=>setNewUser(u=>({...u,name:e.target.value}))}
+            <input placeholder="Nombre *" value={newUser.name} onChange={e=>setNewUser(u=>({...u,name:e.target.value}))}
+              style={{flex:1,minWidth:120,border:"1px solid #e5e7eb",borderRadius:8,padding:"8px 12px",fontSize:12}} />
+            <input placeholder="Apellido" value={newUser.lastName} onChange={e=>setNewUser(u=>({...u,lastName:e.target.value}))}
               style={{flex:1,minWidth:120,border:"1px solid #e5e7eb",borderRadius:8,padding:"8px 12px",fontSize:12}} />
             <input placeholder="email@two.travel" value={newUser.email} onChange={e=>setNewUser(u=>({...u,email:e.target.value}))}
               style={{flex:2,minWidth:180,border:"1px solid #e5e7eb",borderRadius:8,padding:"8px 12px",fontSize:12}} />
@@ -7181,24 +7191,37 @@ function UserManagement({ currentUser, onBack }) {
           </div>
         )}
 
+        {confirmDelete && (
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999}}>
+            <div style={{background:"#fff",borderRadius:12,padding:24,maxWidth:340,width:"90%",boxShadow:"0 8px 32px rgba(0,0,0,.2)"}}>
+              <p style={{fontSize:14,fontWeight:600,color:"#111",marginBottom:8}}>¿Eliminar usuario?</p>
+              <p style={{fontSize:12,color:"#6b7280",marginBottom:20}}>{confirmDelete} será eliminado permanentemente del panel.</p>
+              <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                <button onClick={() => setConfirmDelete(null)} style={{fontSize:12,padding:"8px 16px",borderRadius:8,border:"1px solid #e5e7eb",cursor:"pointer",background:"#fff"}}>Cancelar</button>
+                <button onClick={() => deleteUser(confirmDelete)} style={{fontSize:12,padding:"8px 16px",borderRadius:8,border:"none",cursor:"pointer",background:"#b91c1c",color:"#fff",fontWeight:600}}>Eliminar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {loadError && <p style={{color:"#b91c1c",fontSize:13,textAlign:"center",padding:16,background:"#fee2e2",borderRadius:8,marginBottom:12}}>{loadError}</p>}
         {loading ? <p style={{color:"#9ca3af",fontSize:13,textAlign:"center",padding:32}}>Cargando usuarios…</p> : (
           <div style={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:12,overflow:"hidden"}}>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead>
                 <tr style={{background:"#f9fafb"}}>
-                  {["Nombre","Email","Rol","PIN","Activo"].map(h => (
+                  {["Nombre Completo","Email","Rol","PIN","Activo",""].map(h => (
                     <th key={h} style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",color:"#6b7280",padding:"10px 16px",textAlign:"left",borderBottom:"1px solid #e5e7eb"}}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {users.length === 0 && !loadError && (
-                  <tr><td colSpan={5} style={{padding:32,textAlign:"center",color:"#9ca3af",fontSize:13}}>No hay usuarios. Agrega el primero con el botón de arriba.</td></tr>
+                  <tr><td colSpan={6} style={{padding:32,textAlign:"center",color:"#9ca3af",fontSize:13}}>No hay usuarios. Agrega el primero con el botón de arriba.</td></tr>
                 )}
                 {users.map((u, i) => (
                   <tr key={u.email} style={{background:i%2===0?"#fff":"#fafafa",opacity:u.active==="false"||u.active===false?0.45:1}}>
-                    <td style={{padding:"10px 16px",fontSize:13,fontWeight:500,color:"#111"}}>{u.name}</td>
+                    <td style={{padding:"10px 16px",fontSize:13,fontWeight:500,color:"#111"}}>{u.fullName || [u.name, u.lastName].filter(Boolean).join(" ") || u.name}</td>
                     <td style={{padding:"10px 16px",fontSize:12,color:"#6b7280"}}>{u.email}</td>
                     <td style={{padding:"10px 16px"}}>
                       <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
@@ -7226,6 +7249,12 @@ function UserManagement({ currentUser, onBack }) {
                           color: u.active===false||u.active==="false" ? "#b91c1c" : "#166534",
                           borderColor: u.active===false||u.active==="false" ? "#fca5a5" : "#86efac"}}>
                         {u.active===false||u.active==="false" ? "Inactivo" : "Activo"}
+                      </button>
+                    </td>
+                    <td style={{padding:"10px 16px"}}>
+                      <button onClick={() => setConfirmDelete(u.email)}
+                        style={{fontSize:11,padding:"3px 8px",borderRadius:6,border:"1px solid #fca5a5",cursor:"pointer",background:"#fff",color:"#b91c1c"}}>
+                        🗑
                       </button>
                     </td>
                   </tr>

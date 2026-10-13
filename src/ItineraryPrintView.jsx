@@ -616,16 +616,13 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
   };
   return orderedLabels.map(label => {
     const dm = metaList.find(d => cl(d.label) === label);
-    // Sort by TIME first so items appear in chronological order by default.
-    // sortOrder is a tiebreaker for items that share the same time (or have no time).
+    // sortOrder is the primary key (enables manual reorder without a time); time breaks ties.
     const items = (map.get(label) || []).sort((a, b) => {
+      if (a.sort !== b.sort) return a.sort - b.sort;
       const rawA = a.time || (a.isBlock ? cl(a.cartItem?.timeLabel || a.cartItem?.time || "") : "");
       const rawB = b.time || (b.isBlock ? cl(b.cartItem?.timeLabel || b.cartItem?.time || "") : "");
       const ta = parseTime(rawA), tb = parseTime(rawB);
-      if (ta !== Infinity && tb !== Infinity && ta !== tb) return ta - tb;
-      if (ta !== Infinity && tb === Infinity) return -1;
-      if (ta === Infinity && tb !== Infinity) return 1;
-      return a.sort - b.sort;
+      return ta - tb;
     });
     // Day band shows label; subtitle shows the descriptive title if set
     return { label, title: dm?.title || "", date: dm?.date || "", items };
@@ -1296,9 +1293,13 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
                 📋 {isEs ? "Formulario Pre Check-in" : "Pre Check-in Form"}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {checkinResponses.length > 0 && (
-                  <span style={{ fontSize: 10, background: "#7c3aed", color: "#fff", borderRadius: 99, padding: "2px 8px", fontWeight: 600 }}>
-                    {checkinResponses.length} {isEs ? "respuesta(s)" : "response(s)"}
+                {checkinResponses.length > 0 ? (
+                  <span style={{ fontSize: 10, background: "#16a34a", color: "#fff", borderRadius: 99, padding: "2px 8px", fontWeight: 600 }}>
+                    ✓ {checkinResponses.length} {isEs ? "respuesta(s)" : "response(s)"}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 10, background: "#f3e8ff", color: "#7c3aed", borderRadius: 99, padding: "2px 8px", fontWeight: 600, border: "1px solid #d8b4fe" }}>
+                    {isEs ? "Pendiente" : "Pending"}
                   </span>
                 )}
                 <span style={{ fontSize: 16, color: "#7c3aed" }}>→</span>
