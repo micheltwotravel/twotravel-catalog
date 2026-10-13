@@ -6795,6 +6795,23 @@ function PresetMessages({ kickoff, lang }) {
   const waBase = phone ? `https://wa.me/${phone}?text=` : `https://wa.me/?text=`;
   const base = "https://www.twotravelvip.com";
   const id = kickoff.id || "";
+  const ct = kickoff.clientType || 1;
+  const activeLang = lang || kickoff.lang || "en";
+  // City name for templates that reference the destination
+  const cityRaw = (kickoff.destination || kickoff.city || "").toLowerCase().trim();
+  const cityDisplay = (() => {
+    if (cityRaw.includes("ctg") || cityRaw.includes("cartagena")) return isEs ? "Cartagena" : "Cartagena";
+    if (cityRaw.includes("mde") || cityRaw.includes("medell")) return isEs ? "Medellín" : "Medellin";
+    if (cityRaw.includes("bog")) return isEs ? "Bogotá" : "Bogota";
+    if (cityRaw.includes("cdmx") || cityRaw.includes("mexico") || cityRaw.includes("méx")) return isEs ? "Ciudad de México" : "Mexico City";
+    if (cityRaw.includes("cabo") || cityRaw.includes("los cabos")) return "Los Cabos";
+    return isEs ? "tu destino" : "your destination";
+  })();
+  const currency = (cityRaw.includes("cdmx") || cityRaw.includes("mexico") || cityRaw.includes("cabo")) ? "MXN" : "COP";
+  const currencyLabel = currency === "MXN" ? "Mexican Pesos (MXN)" : "Colombian Pesos (COP)";
+  const currencyLabelEs = currency === "MXN" ? "Pesos Mexicanos (MXN)" : "Pesos Colombianos (COP)";
+  const currencyLink = `https://www.xe.com/currencyconverter/convert/?Amount=1&From=${currency}&To=USD`;
+  const itineraryUrl = `${base}/?mode=itinerary&kickoffId=${id}&lang=${activeLang}`;
   // Build booking slug: assigned concierge → current user fallback → first non-hidden concierge
   const bookingSlug = (() => {
     const names = String(kickoff.assignedConcierge || "").split(",").map(s => s.trim()).filter(Boolean);
@@ -6809,11 +6826,17 @@ function PresetMessages({ kickoff, lang }) {
   const meetingUrl = `${base}/book.html?c=${bookingSlug}&kickoffId=${id}&lang=${lang || kickoff.lang || "en"}`;
   const msgs = [
     ...(bookingSlug ? [{
-      key: "reunion", icon: "📅", label: isEs ? "Reunión" : "Meeting",
+      key: "reunion", icon: "📅", label: isEs ? "Kick-off Call" : "Kick-off Call",
       url: meetingUrl,
       text: isEs
         ? `Hola ${first}!\n\nSoy Carolina, pero todos me llaman Caro, Senior Concierge en Two Travel. Estoy muy emocionada de empezar a planear un viaje memorable para ti y tu grupo.\n\nA continuación te comparto el link de mi calendario para que puedas elegir el día y la hora que mejor te funcione. En esta llamada vamos a revisar el itinerario de tu viaje: reservas, día de bote, actividades en la ciudad y lo que quieras discutir.\n\n¡Espero conocerte pronto!\n\n${meetingUrl}`
         : `Hi ${first}!\n\nI'm Carolina, but everyone calls me Caro, Senior Concierge at Two Travel. I'm excited to start planning a memorable trip for you and your group.\n\nBelow is a link to my calendar so you can pick a day and time that works best for you. On this call, we'll go over your trip's itinerary: reservations, boat day, activities around the city, and anything else you'd like to discuss.\n\nLooking forward to meeting you.\n\n${meetingUrl}`,
+    }, {
+      key: "reunion_seguimiento", icon: "📅", label: isEs ? "Reunión seguimiento" : "Follow-up Meeting",
+      url: meetingUrl,
+      text: isEs
+        ? `Hola ${first}!\n\nAquí tienes mi calendario para que puedas elegir el día y la hora que mejor te funcione:\n\n${meetingUrl}\n\n¡Hablamos pronto!`
+        : `Hi ${first}!\n\nHere's my calendar so you can pick the day and time that works best for you:\n\n${meetingUrl}\n\nLooking forward to chatting soon!`,
     }] : []),
     {
       key: "pre", icon: "📋", label: "Pre Check-in",
@@ -6828,6 +6851,13 @@ function PresetMessages({ kickoff, lang }) {
       text: isEs
         ? `Hola ${first}!\n\nPrepare un catálogo con todo lo disponible para tu viaje: restaurantes, tours, beach clubs, bares, todo en un solo lugar.\n\nDate un momento para explorarlo y marca con ❤️ lo que te llame la atención. Es como ir de shopping, solo navega y escoge lo que te interesa.\n\nEn nuestra llamada lo revisamos todo en detalle y construyo el itinerario completo y personalizado desde ahí.\n\n${base}/c/${id}`
         : `Hi ${first}!\n\nI put together a catalog with everything available for your trip: restaurants, tours, beach clubs, bars, all in one place.\n\nTake a look whenever you have a minute and heart ❤️ anything that catches your eye. Think of it as window shopping, just browse and pick what interests you.\n\nOn our call, we'll go through it all together in detail and I'll build out your full, personalized itinerary from there.\n\n${base}/c/${id}`,
+    },
+    {
+      key: "cuestionario", icon: "📝", label: isEs ? "Cuestionario + Catálogo" : "Questionnaire + Catalog",
+      url: buildOnboardLink(kickoff, ct, activeLang),
+      text: isEs
+        ? `Hola ${first}!\n\nPara empezar a planear tu viaje, te comparto este cuestionario rápido que nos ayuda a entender tus preferencias y estilo para el viaje. Al finalizarlo, podrás explorar el catálogo de opciones disponibles para tu estadía.\n\n${buildOnboardLink(kickoff, ct, activeLang)}\n\n¡Gracias!`
+        : `Hi ${first}!\n\nTo start planning your trip, here's a quick questionnaire that helps us understand your preferences and travel style. Once you complete it, you'll be able to explore the catalog of options available for your stay.\n\n${buildOnboardLink(kickoff, ct, activeLang)}\n\nThank you!`,
     },
     {
       key: "bebidas", icon: "🍹", label: isEs ? "Bebidas" : "Drink Order",
@@ -6851,11 +6881,18 @@ function PresetMessages({ kickoff, lang }) {
         : `Hi ${first}!\n\nHere's our groceries order list. Here you can select specific items you'd like to have at the villa, like snacks and so on. There's also a notes box where you can add more detail or request anything that's not on the list. Just add what you want, and we'll take care of having it ready for you.\n\nPlease note that this link is editable. You can send an order anytime and come back to make changes. We'll confirm the final list with you a few days before your trip.\n\n${base}/g/${id}`,
     },
     {
+      key: "itinerario", icon: "🗺️", label: isEs ? "Primer borrador itinerario" : "First draft itinerary",
+      url: itineraryUrl,
+      text: isEs
+        ? `Hola ${first}!\n\nAquí está el primer borrador de tu itinerario. Lo construí basándome en todo lo que hablamos y tus favoritos del catálogo.\n\nTen en cuenta que los precios están en ${currencyLabelEs}. Si necesitas convertirlos a dólares, aquí tienes un convertidor:\n${currencyLink}\n\nDame tus comentarios: lo que te gusta, lo que cambiarías, lo que falta. Entre más feedback me des, más personalizado queda el itinerario.\n\n${itineraryUrl}`
+        : `Hi ${first}!\n\nHere's the first draft of your itinerary! I built it based on everything we discussed and your favorites from the catalog.\n\nPlease note that prices are listed in ${currencyLabel}. If you need to convert them to USD, here's a currency converter:\n${currencyLink}\n\nLet me know your thoughts: what you like, what you'd change, what's missing. The more feedback you give me, the more personalized the final itinerary will be.\n\n${itineraryUrl}`,
+    },
+    {
       key: "feedback", icon: "⭐", label: "Feedback",
       url: `${base}/f/${id}`,
       text: isEs
-        ? `Hola ${first}!\n\nFue un placer recibirlos, gracias por ser unos huéspedes increíbles. Esperamos haber cumplido y superado sus expectativas, y que hayan disfrutado mucho su estadía.\n\nSi tienen un momento, nos encantaría que nos dejaran una reseña en Google y tal vez algunas fotos. Estas reseñas ayudan a que futuros clientes entiendan nuestro servicio y sepan que nos esforzamos al máximo por cada grupo.\n\nCualquier palabra amable es muy apreciada 💛\n\n${base}/f/${id}`
-        : `Hi ${first}!\n\nIt was a pleasure hosting such a nice group, thank you for being amazing guests. We really hope we were able to meet and exceed expectations. And that you enjoyed your stay and Two Travel!\n\nIf you have time we would appreciate it if you leave us a nice review on Google and maybe add some cool photos. These reviews allow our future clients to understand our service and know we try very hard to make things as easy as possible for our clients.\n\nAny and all nice words are greatly appreciated 💛\n\n${base}/f/${id}`,
+        ? `Hola ${first}!\n\nFue un placer recibirlos, gracias por ser unos huéspedes increíbles. Esperamos haber cumplido y superado sus expectativas, y que hayan disfrutado mucho su estadía en ${cityDisplay}.\n\nSi tienen un momento, nos encantaría que nos dejaran una reseña en Google y tal vez algunas fotos. Estas reseñas ayudan a que futuros clientes entiendan nuestro servicio y sepan que nos esforzamos al máximo por cada grupo.\n\nCualquier palabra amable es muy apreciada 💛\n\n${base}/f/${id}`
+        : `Hi ${first}!\n\nIt was a pleasure hosting such a nice group, thank you for being amazing guests. We really hope we were able to meet and exceed expectations. And that you enjoyed ${cityDisplay} and Two Travel!\n\nIf you have time we would appreciate it if you leave us a nice review on Google and maybe add some cool photos. These reviews allow our future clients to understand our service and know we try very hard to make things as easy as possible for our clients.\n\nAny and all nice words are greatly appreciated 💛\n\n${base}/f/${id}`,
     },
   ];
   return (
