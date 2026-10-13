@@ -606,9 +606,9 @@ export default function TareasPanel({ currentUser, onLogout }) {
         {!loading && (() => {
           const PLANT_COLORS = ["#16a34a","#7c3aed","#0369a1","#b45309","#be185d"];
           const plantUsers = BODAS_USERS.map((u, i) => {
+            // For plant stats: include ALL boda tasks (ignore historial filter — plants = real total)
             const mine = tasks.filter(t => {
               if (!isBoda(t)) return false;
-              if (showHistorico ? false : !t.id.startsWith("boda_")) return false;
               const a = (t.assignedTo||"").toLowerCase().trim();
               const n = u.name.toLowerCase().trim();
               return a.includes(n) || n.includes(a);

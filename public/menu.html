@@ -177,6 +177,22 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 
 .c-gold{--c:#9a7d52}.c-green{--c:#2e7d50}.c-blue{--c:#2e527a}.c-rose{--c:#7d2e52}.c-violet{--c:#52327d}.c-gray{--c:#8a8279}
 
+/* ── Locked / coming-soon card ── */
+.card.locked{opacity:.48;cursor:not-allowed;pointer-events:none;position:relative}
+.card.locked::after{content:'🔒';position:absolute;top:10px;right:12px;font-size:13px}
+.card.locked .chip::after{content:' · Próx.';font-size:7.5px;opacity:.7}
+
+/* ── Lang toggle pill in nav ── */
+#_lang_nav{
+  font-family:'DM Mono',monospace;font-size:10px;font-weight:500;
+  letter-spacing:.1em;text-transform:uppercase;
+  color:rgba(255,255,255,.55);background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.16);border-radius:3px;
+  padding:5px 10px;cursor:pointer;transition:background .15s,color .15s;
+  white-space:nowrap;
+}
+#_lang_nav:hover{background:rgba(154,125,82,.5);color:#fff}
+
 @media(max-width:680px){
   .hero-nav{padding:20px 20px}
   .nav-links{display:none}
@@ -203,6 +219,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
       <a href="/?mode=bodas" class="nl" data-es="Bodas" data-en="Weddings">Bodas</a>
       <a href="/agent.html" class="nl" data-es="Agente IA" data-en="AI Agent">Agente IA</a>
       <a href="/?mode=users" class="nl" data-es="Usuarios" data-en="Users">Usuarios</a>
+      <button id="_lang_nav" title="Switch language / Cambiar idioma">ES/EN</button>
     </div>
   </nav>
 
@@ -286,12 +303,12 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
       <a href="/pagos.html?country=mx" class="card d c-green"><div class="chip">Pagos MX</div><div class="cn" data-es="Pagos México" data-en="Mexico Payments">Pagos México</div><div class="cd" data-es="Solicitudes y seguimiento MX" data-en="MX payment requests and tracking">Solicitudes y seguimiento MX</div></a>
       <a href="/comisiones.html" class="card c-green"><div class="chip">Control CO</div><div class="cn" data-es="Comisiones CO" data-en="Commissions CO">Comisiones CO</div><div class="cd" data-es="Cobros a proveedores Colombia" data-en="Colombia vendor commissions">Cobros a proveedores Colombia</div></a>
       <a href="/comisiones.html?country=mx" class="card c-green"><div class="chip">Control MX</div><div class="cn" data-es="Comisiones MX" data-en="Commissions MX">Comisiones MX</div><div class="cd" data-es="Cobros a proveedores México" data-en="Mexico vendor commissions">Cobros a proveedores México</div></a>
-      <a href="/?mode=f-cashflow" class="card c-green"><div class="chip">Control</div><div class="cn">Cash Flow</div><div class="cd" data-es="Tablero semanal y mensual" data-en="Weekly and monthly dashboard">Tablero semanal y mensual</div></a>
-      <a href="/?mode=f-movimientos" class="card c-green"><div class="chip">Control</div><div class="cn" data-es="Movimientos" data-en="Movements">Movimientos</div><div class="cd" data-es="Entradas y salidas Colombia · México" data-en="Income and expenses CO · MX">Entradas y salidas Colombia · México</div></a>
+      <a href="/?mode=f-cashflow" class="card c-green locked"><div class="chip">Control</div><div class="cn">Cash Flow</div><div class="cd" data-es="Tablero semanal y mensual" data-en="Weekly and monthly dashboard">Tablero semanal y mensual</div></a>
+      <a href="/?mode=f-movimientos" class="card c-green locked"><div class="chip">Control</div><div class="cn" data-es="Movimientos" data-en="Movements">Movimientos</div><div class="cd" data-es="Entradas y salidas Colombia · México" data-en="Income and expenses CO · MX">Entradas y salidas Colombia · México</div></a>
       <a href="/?mode=f-reservaciones" class="card c-green"><div class="chip">Ops</div><div class="cn" data-es="Reservaciones" data-en="Reservations">Reservaciones</div><div class="cd" data-es="Ingresos esperados y comisiones de ventas" data-en="Expected revenue and sales commissions">Ingresos esperados y comisiones de ventas</div></a>
       <a href="/?mode=f-proveedores" class="card c-green"><div class="chip">Ops</div><div class="cn" data-es="Proveedores" data-en="Suppliers">Proveedores</div><div class="cd" data-es="Solicitudes · Lotes Payana · Aprobaciones" data-en="Requests · Payana batches · Approvals">Solicitudes · Lotes Payana · Aprobaciones</div></a>
-      <a href="/?mode=f-cierre" class="card c-green"><div class="chip">Ops</div><div class="cn" data-es="Cierre Mensual" data-en="Monthly Close">Cierre Mensual</div><div class="cd" data-es="Checklist de cierre por mes" data-en="Monthly closing checklist">Checklist de cierre por mes</div></a>
-      <a href="/?mode=f-templates" class="card c-green"><div class="chip">Ops</div><div class="cn">Templates</div><div class="cd" data-es="Payana · QuickBooks · Estimados" data-en="Payana · QuickBooks · Estimates">Payana · QuickBooks · Estimados</div></a>
+      <a href="/?mode=f-cierre" class="card c-green locked"><div class="chip">Ops</div><div class="cn" data-es="Cierre Mensual" data-en="Monthly Close">Cierre Mensual</div><div class="cd" data-es="Checklist de cierre por mes" data-en="Monthly closing checklist">Checklist de cierre por mes</div></a>
+      <a href="/?mode=f-templates" class="card c-green locked"><div class="chip">Ops</div><div class="cn">Templates</div><div class="cd" data-es="Payana · QuickBooks · Estimados" data-en="Payana · QuickBooks · Estimates">Payana · QuickBooks · Estimados</div></a>
     </div>
   </div>
 
@@ -521,6 +538,23 @@ window.addEventListener('scroll', () => {
   card.insertAdjacentHTML("beforeend","<div style='position:absolute;top:10px;right:12px;font-size:14px'>🔒</div>");
   card.style.position = "relative";
 })();
+</script>
+<script>
+// Wire nav lang button — runs after lang.js injects the FAB and calls applyLang
+document.addEventListener('DOMContentLoaded', function () {
+  const nav = document.getElementById('_lang_nav');
+  if (!nav) return;
+  // Sync text with current lang
+  const cur = (() => { try { return localStorage.getItem('tt_menu_lang') || 'es'; } catch(_) { return 'es'; } })();
+  nav.textContent = cur.toUpperCase();
+  nav.onclick = function () {
+    const fab = document.getElementById('_lang_fab');
+    if (fab) {
+      fab.click();
+      setTimeout(() => { nav.textContent = (localStorage.getItem('tt_menu_lang') || 'es').toUpperCase(); }, 50);
+    }
+  };
+});
 </script>
 <script src="/lang.js"></script>
 </body>
