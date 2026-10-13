@@ -6952,25 +6952,22 @@ function PresetMessages({ kickoff, lang }) {
       {open && (
         <div className="mt-2 flex flex-col gap-2">
           {msgs.map(m => (
-            <div key={m.key} className="border border-neutral-200 rounded-lg overflow-hidden">
-              <div className="px-3 py-1.5 bg-neutral-50 border-b border-neutral-100 flex items-center justify-between">
-                <span className="text-xs font-semibold text-neutral-600">{m.icon} {m.label}</span>
-                <div className="flex gap-1">
-                  <a href={m.url} target="_blank" rel="noreferrer"
-                    className="text-[10px] px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-blue-700">🔗 Ver</a>
-                  <button type="button" onClick={() => copy(m.key + "_url", m.url)}
-                    className="text-[10px] px-2 py-0.5 rounded border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800">
-                    {copied === m.key + "_url" ? "✓" : "📋 URL"}
-                  </button>
-                  <button type="button" onClick={() => copy(m.key + "_msg", m.text)}
-                    className="text-[10px] px-2 py-0.5 rounded border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800">
-                    {copied === m.key + "_msg" ? "✓" : "💬 Msg"}
-                  </button>
-                  <a href={waBase + encodeURIComponent(m.text)} target="_blank" rel="noreferrer"
-                    className="text-[10px] px-2 py-0.5 rounded border border-green-200 bg-green-50 text-green-700 flex items-center gap-0.5">{WA_SVG} WA</a>
-                </div>
+            <div key={m.key} className="border border-neutral-200 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-neutral-700 shrink-0">{m.icon} {m.label}</span>
+              <div className="flex gap-1 shrink-0">
+                <a href={m.url} target="_blank" rel="noreferrer"
+                  className="text-[10px] px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-blue-700">🔗 Ver</a>
+                <button type="button" onClick={() => copy(m.key + "_url", m.url)}
+                  className="text-[10px] px-2 py-0.5 rounded border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800">
+                  {copied === m.key + "_url" ? "✓" : "📋 URL"}
+                </button>
+                <button type="button" onClick={() => copy(m.key + "_msg", m.text)}
+                  className="text-[10px] px-2 py-0.5 rounded border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800">
+                  {copied === m.key + "_msg" ? "✓" : "💬 Msg"}
+                </button>
+                <a href={waBase + encodeURIComponent(m.text)} target="_blank" rel="noreferrer"
+                  className="text-[10px] px-2 py-0.5 rounded border border-green-200 bg-green-50 text-green-700 flex items-center gap-0.5">{WA_SVG} WA</a>
               </div>
-              <p className="px-3 py-2 text-[10px] text-blue-600 font-mono truncate">{m.url}</p>
             </div>
           ))}
         </div>
