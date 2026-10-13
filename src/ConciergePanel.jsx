@@ -8202,12 +8202,12 @@ const [showRatings, setShowRatings] = useState(false); // ratings summary panel
   const normalizeId = (obj) =>
   obj?.id || obj?.kickoffId || obj?.ID || obj?._id || "";
 
-const loadKickoffs = async () => {
+const loadKickoffs = async (forceRefresh = false) => {
   setLoading(true);
   setLoadError("");
 
   try {
-    const data = await fetchKickoffsFromSheet();
+    const data = await fetchKickoffsFromSheet({ forceRefresh });
 
     const arr = (data || []).map((k, idx) => {
       const id = normalizeId(k);
@@ -8648,7 +8648,7 @@ const loadKickoffs = async () => {
   </button>
 
   <button
-    onClick={loadKickoffs}
+    onClick={() => loadKickoffs(true)}
     disabled={loading}
     className="tt-btn-ghost"
     style={{display:"flex",alignItems:"center",gap:6,opacity:loading?.6:1}}
