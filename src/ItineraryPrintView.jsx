@@ -3630,8 +3630,8 @@ export default function ItineraryPrintView() {
       {/* ── Let's Keep in Touch page ── */}
       <KeepInTouchPage kickoff={kickoff} page={++pageNum} total={total} />
 
-      {/* ── Billing page (last, internal/QB use) ── */}
-      <BillingPage kickoff={kickoff} />
+      {/* ── Billing page (internal QB use — hidden from clients) ── */}
+      {editMode && <BillingPage kickoff={kickoff} />}
 
       {/* Catalog picker modal */}
       {editMode && pickerForDay !== null && (
