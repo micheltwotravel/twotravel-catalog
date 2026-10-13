@@ -24,9 +24,9 @@ function driveViewUrl(url) {
   if (!url) return url;
   if (!url.includes("drive.google.com")) return url;
   const fileMatch = url.match(/\/file\/d\/([^/?]+)/);
-  if (fileMatch) return `https://drive.google.com/file/d/${fileMatch[1]}/preview`;
+  if (fileMatch) return `https://drive.google.com/file/d/${fileMatch[1]}/view?usp=sharing`;
   const openMatch = url.match(/[?&]id=([^&]+)/);
-  if (openMatch) return `https://drive.google.com/file/d/${openMatch[1]}/preview`;
+  if (openMatch) return `https://drive.google.com/file/d/${openMatch[1]}/view?usp=sharing`;
   return url;
 }
 
@@ -1042,9 +1042,12 @@ const CSS = `
    SHARED PAGE HEADER
 ═══════════════════════════════════════════════════════════ */
 const CONCIERGE_TITLE_MAP = {
-  "Alia Jadad":      "Senior Concierge Cartagena",
-  "Carolina Lopez":  "Senior Concierge Cartagena",
-  "Daniela Becerra": "Senior Concierge Medellín",
+  "Alia Jadad":             "Senior Concierge Cartagena",
+  "Carolina Lopez":         "Senior Concierge Cartagena",
+  "Daniela Becerra":        "Senior Concierge Medellín",
+  "Nataly Cruz":            "Senior Concierge Mexico City",
+  "Giulia Lorini Serrato":  "Senior Concierge Mexico City",
+  "Natalia Peniche":        "Senior Concierge Mexico City",
 };
 
 function PH({ kickoff }) {
@@ -1052,7 +1055,9 @@ function PH({ kickoff }) {
   // Strip purely numeric tokens (e.g. phone numbers stored before the name)
   const name  = rawName.split(",").map(s => s.trim()).filter(s => s && !/^\d+$/.test(s)).join(", ");
   const email = kickoff.assignedConciergeEmail || "";
-  const title = kickoff.conciergeTitle || CONCIERGE_TITLE_MAP[name] || "";
+  const title = kickoff.conciergeTitle ||
+    [...new Set(name.split(",").map(n => CONCIERGE_TITLE_MAP[n.trim()]).filter(Boolean))].join(" & ") ||
+    "";
   return (
     <div className="ph">
       <div className="ph-left">
@@ -1300,6 +1305,11 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
                 ) : (
                   <span style={{ fontSize: 10, background: "#f3e8ff", color: "#7c3aed", borderRadius: 99, padding: "2px 8px", fontWeight: 600, border: "1px solid #d8b4fe" }}>
                     {isEs ? "Pendiente" : "Pending"}
+                  </span>
+                )}
+                {checkinResponses.length > 0 && (
+                  <span style={{ fontSize: 9, color: "#166534" }}>
+                    {checkinResponses.map(r => [r.firstName, r.lastName].filter(Boolean).join(" ")).filter(Boolean).join(" · ")}
                   </span>
                 )}
                 <span style={{ fontSize: 16, color: "#7c3aed" }}>→</span>
@@ -1706,7 +1716,7 @@ function BoatDetailCard({ it, lang, editMode, onRemove, patchItem }) {
   const displayNote = it.notes || note;
   const boatName = it.location || "";
   const dock = it.description || "";
-  const displayTitle = isEs ? "Paseo en Bote — Islas del Rosario" : "Boat Trip to the Rosario Islands";
+  const displayTitle = isEs ? "TOUR EN BOTE — ISLAS DEL ROSARIO" : "BOAT TRIP TO THE ROSARIO ISLANDS";
 
   const amber = {
     display: "inline-flex", alignItems: "center", gap: 5,
@@ -1986,10 +1996,11 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
   const _descText = it.description || "";
   const _titleLower = (it.title || "").toLowerCase();
   const _catLower   = (it.category || "").toLowerCase();
-  const _isBoat = it._boatBadge ||
+  const _lunchExclude = /lunch|box|food|catering|snack|chef|comida|almuerzo/i.test(_titleLower);
+  const _isBoat = (it._boatBadge && !_lunchExclude) ||
     /\*\*(?:Boat|Bote):\*\*/i.test(_descText) ||
     ((/\bboat\b|\bbote\b/i.test(it.title || "")) &&
-      !(/lunch|box|food|catering|snack|chef|comida|almuerzo/i.test(_titleLower)) &&
+      !_lunchExclude &&
       !(/chef|food|catering|breakfast|comida/i.test(_catLower)));
   if (_isBoat) {
     let boatIt = it;
@@ -2121,8 +2132,8 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         {isConfirmed && (() => {
           const n = (it.title || "").toLowerCase();
           const cat = (it.category || "").toLowerCase();
-          if (/check.?in/.test(n) || /check.?in/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de llegada":"Arrival Information"}</div>;
-          if (/check.?out/.test(n) || /check.?out/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de salida":"Departure Information"}</div>;
+          if (/check.?in/.test(n) || /check.?in/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de Llegada y Salida":"Arrival & Departure Information"}</div>;
+          if (/check.?out/.test(n) || /check.?out/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de Llegada y Salida":"Arrival & Departure Information"}</div>;
           if (/breakfast|desayuno/.test(n)) return null;
           return null;
         })()}
@@ -3273,7 +3284,7 @@ export default function ItineraryPrintView() {
           qbCode:       svc.quickbooksCode || "",
           category:     svc.category || "",
           familyFriendly: !!(svc.family_friendly),
-          confirmed:    false,
+          confirmed:    null,
           sort:         day.items.length,
           _isNewService: true,
           _serviceId:   svc.id || svc._id || null,

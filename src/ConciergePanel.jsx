@@ -1495,7 +1495,7 @@ function VideosField({ item, onUpdate }) {
 }
 
 function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availableDays = [], groupSize = 1, lang = "en" }) {
-  const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation || item.confirmed));
+  const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation || item.confirmed || item.passengers));
   const notesRef = useRef(null);
   const applyFormat = (marker) => {
     const el = notesRef.current;
@@ -1627,7 +1627,7 @@ function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availabl
                 setShowNotes(true);
               }
             }}
-            title={item.confirmed === true ? "Click: → Por confirmar" : item.tbc ? "Click: → Recomendación" : item.confirmed === false ? "Click: → Borrador" : "Click: → Confirmado"}
+            title={item.confirmed === true ? "Click: → Por confirmar" : item.tbc ? "Click: → Recomendación" : item.confirmed === false ? "Click: → Neutro" : ""}
             className="text-xl leading-none opacity-70 hover:opacity-100 transition-opacity"
           >
             {item.confirmed === true ? "✅" : item.tbc ? "⏳" : item.confirmed === false ? "📌" : "⬜"}
@@ -2207,7 +2207,21 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
 
   const reorderItemsInDay = (dayLabel, oldIdx, newIdx) => {
     setCart(prev => {
-      const dayItems  = prev.filter(i => (i.dayLabel || "Sin día") === dayLabel);
+      const parseTm = (t) => {
+        if (!t) return 9999;
+        const m24 = t.match(/^(\d{1,2}):(\d{2})$/);
+        if (m24) return parseInt(m24[1]) * 60 + parseInt(m24[2]);
+        const m12 = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+        if (m12) { let h = parseInt(m12[1]); if (m12[3].toUpperCase()==="PM"&&h!==12) h+=12; if (m12[3].toUpperCase()==="AM"&&h===12) h=0; return h*60+parseInt(m12[2]); }
+        return 9999;
+      };
+      const dayItems = prev
+        .filter(i => (i.dayLabel || "Sin día") === dayLabel)
+        .sort((a, b) => {
+          const sa = a.sortOrder ?? 999, sb = b.sortOrder ?? 999;
+          if (sa !== sb) return sa - sb;
+          return parseTm(a.timeLabel) - parseTm(b.timeLabel);
+        });
       const otherItems = prev.filter(i => (i.dayLabel || "Sin día") !== dayLabel);
       const reordered = arrayMove(dayItems, oldIdx, newIdx).map((item, i) => ({ ...item, sortOrder: i }));
       return [...otherItems, ...reordered];
@@ -4207,7 +4221,7 @@ function DrawerSection({ title, children, defaultOpen = false, accent = "neutral
     orange:  "border-orange-200 bg-orange-50/50 text-orange-700",
     amber:   "border-amber-200 bg-amber-50/50 text-amber-800",
     blue:    "border-blue-200 bg-blue-50/50 text-blue-700",
-    indigo:  "border-indigo-200 bg-indigo-50/50 text-indigo-700",
+    indigo:  "border-indigo-300 bg-indigo-100/70 text-indigo-800",
   };
   const cls = colors[accent] || colors.neutral;
   return (
@@ -5188,7 +5202,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
         )}
 
         {/* Editor column */}
-        <div className={`flex flex-col min-h-0 ${pdfPreviewUrl ? "w-[600px] shrink-0 h-full" : "flex-1"}`}>
+        <div className={`flex flex-col min-h-0 ${pdfPreviewUrl ? "w-[720px] shrink-0 h-full" : "flex-1"}`}>
         <div className="px-5 py-4 border-b flex items-center justify-between">
           <div>
             <p className="text-[11px] text-neutral-500">Editar itinerario</p>
@@ -5381,7 +5395,11 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             let subs = [];
             try { subs = JSON.parse(kickoff?.groupSubmissions || "[]"); } catch {}
             if (!subs.length) return null;
-            return <GroupSubmissionsPanel subs={subs} />;
+            return (
+              <DrawerSection title="🗂️ Selecciones del grupo" accent="violet">
+                <GroupSubmissionsPanel subs={subs} />
+              </DrawerSection>
+            );
           })()}
 
           {/* ── Cover Info ─────────────────────────────── */}
@@ -5668,7 +5686,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   placeholder="11:00 AM" />
               </div>
               <div className="col-span-2">
-                <label className="text-[11px] text-neutral-500">Welcome PDF URL (link que aparece en el itinerario)</label>
+                <label className="text-[11px] text-neutral-500">Welcome Guide URL (link que aparece en el itinerario)</label>
                 <input value={welcomePdfUrl} onChange={(e) => setWelcomePdfUrl(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="https://drive.google.com/file/d/.../view" />
@@ -8577,7 +8595,7 @@ const loadKickoffs = async (forceRefresh = false) => {
 
   const cp = {
     es: {
-      subtitle: "Gestión interna de kick-offs enviados desde el catálogo.",
+      subtitle: "Información operativa de los clientes y edición de menús.",
       refresh: "Refrescar", refreshing: "Actualizando...",
       search: "Buscar por huésped, viaje, ID...",
       filterStatus: "Estado:", filterConcierge: "Concierge:",
@@ -8590,7 +8608,7 @@ const loadKickoffs = async (forceRefresh = false) => {
       linkCatalog: "Link catálogo", linkFeedback: "Link feedback",
     },
     en: {
-      subtitle: "Internal kick-off management — sent from the catalog.",
+      subtitle: "Client operational information and menu editing.",
       refresh: "Refresh", refreshing: "Refreshing...",
       search: "Search by guest, trip, ID...",
       filterStatus: "Status:", filterConcierge: "Concierge:",
@@ -8609,7 +8627,7 @@ const loadKickoffs = async (forceRefresh = false) => {
       <header className="tt-topbar">
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Compass</span>
-          <span style={{fontSize:11,color:"var(--text-3)",fontWeight:400}}>{filteredKickoffs.length} clientes</span>
+          <span style={{fontSize:11,color:"var(--text-3)",fontWeight:400}}>{cp.subtitle}</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
 
