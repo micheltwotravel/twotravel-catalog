@@ -20,6 +20,16 @@ function driveImgUrl(url) {
   return url;
 }
 
+function driveViewUrl(url) {
+  if (!url) return url;
+  if (!url.includes("drive.google.com")) return url;
+  const fileMatch = url.match(/\/file\/d\/([^/?]+)/);
+  if (fileMatch) return `https://drive.google.com/file/d/${fileMatch[1]}/preview`;
+  const openMatch = url.match(/[?&]id=([^&]+)/);
+  if (openMatch) return `https://drive.google.com/file/d/${openMatch[1]}/preview`;
+  return url;
+}
+
 function Editable({ value, tag: Tag = "span", className = "", editMode, style, onChange, multiline }) {
   const ref = useRef();
   if (!editMode) {
@@ -1348,7 +1358,7 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
 
         {/* Welcome Guide link — shown if configured */}
         {a.welcomePdfUrl && (
-          <a href={a.welcomePdfUrl} target="_blank" rel="noreferrer" style={{
+          <a href={driveViewUrl(a.welcomePdfUrl)} target="_blank" rel="noreferrer" style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
             textDecoration: "none", background: "#f0f9ff", border: "1px solid #bae6fd",
             borderRadius: 10, padding: "11px 16px", marginBottom: 10,
@@ -1664,7 +1674,7 @@ function WelcomePage({ kickoff, lang, page, total, editMode, localPreTrip, setLo
                 : "Access your personalized welcome guide with all the details for your stay:"}
             </p>
             <a
-              href={kickoff.welcomePdfUrl}
+              href={driveViewUrl(kickoff.welcomePdfUrl)}
               target="_blank"
               rel="noreferrer"
               style={{ color: "#1d4ed8", fontWeight: 600, fontSize: 12, textDecoration: "underline", wordBreak: "break-all" }}

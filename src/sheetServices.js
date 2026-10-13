@@ -479,10 +479,23 @@ export async function uploadImageToDrive(file) {
 
 /**
  * Soft-delete: sets deletedAt timestamp inside data (preserves row for papelera).
+ * Falls back to upsert for old kickoffs that may not exist in Supabase yet.
  */
 export async function deleteKickoff(id) {
   invalidateKickoffsCache();
-  await updateKickoffInSheet(id, { deletedAt: new Date().toISOString() });
+  const { data: existing, error: fetchErr } = await supabase.from("kickoffs").select("data").eq("id", id).single();
+  if (fetchErr) {
+    // Row doesn't exist — create it with deletedAt so it appears in papelera
+    const { error: upsertErr } = await supabase.from("kickoffs").upsert(
+      { id, data: { deletedAt: new Date().toISOString() } },
+      { onConflict: "id" }
+    );
+    if (upsertErr) throw new Error(upsertErr.message);
+  } else {
+    const merged = { ...(existing?.data || {}), deletedAt: new Date().toISOString() };
+    const { error } = await supabase.from("kickoffs").update({ data: merged }).eq("id", id);
+    if (error) throw new Error(error.message);
+  }
   return true;
 }
 
