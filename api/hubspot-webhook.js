@@ -1,11 +1,17 @@
-// HubSpot webhook — fires when a deal moves to "Introduction made by sales team"
-// Creates a kickoff in the portal with the deal's info
+// HubSpot webhook — two behaviors:
+// 1. deal.creation → WhatsApp notification to deal owner
+// 2. deal.propertyChange (dealstage → TARGET_STAGE_ID) → create kickoff in portal
 
 const GAS_URL = process.env.VITE_TASK_API_URL || process.env.GAS_URL
   || "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
 // Only create kickoff when deal enters this stage
 const TARGET_STAGE_ID = "1078723461"; // Introduction Made By Sales Team (Concierge Clients)
+
+// HubSpot owner email → WhatsApp number
+const OWNER_WA_MAP = {
+  "ray@two.travel": "+573204742249",
+};
 
 // HubSpot real property internal names
 const PROP_MAP = {
@@ -32,7 +38,7 @@ async function fetchDeal(dealId, token) {
     "dealname", "budget", "description", "hs_cross_account_note",
     "city_tt", "number_of_people_in_the_reservation", "number_of_guests_villa_b",
     "head_concierge", "arrival_date", "departure_date", "boat_type",
-    "new_invoice_process___concierge",
+    "new_invoice_process___concierge", "hubspot_owner_id",
   ].join(",");
 
   const res = await fetch(
@@ -50,6 +56,43 @@ async function fetchContact(contactId, token) {
   return res.json();
 }
 
+async function fetchOwnerEmail(ownerId, token) {
+  const res = await fetch(
+    `https://api.hubapi.com/crm/v3/owners/${ownerId}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const data = await res.json();
+  return (data.email || "").toLowerCase();
+}
+
+async function sendWhatsApp(to, message) {
+  const accountSid = (process.env.TWILIO_ACCOUNT_SID || '').trim();
+  const authToken  = (process.env.TWILIO_AUTH_TOKEN || '').trim();
+  const fromNumber = (process.env.TWILIO_WA_NUMBER || '').trim();
+  if (!accountSid || !authToken || !fromNumber) {
+    console.warn("Twilio credentials not configured — skipping WhatsApp notification");
+    return;
+  }
+
+  const phone  = to.replace(/\D/g, '');
+  const toWa   = `whatsapp:+${phone}`;
+  const fromWa = fromNumber.startsWith('whatsapp:') ? fromNumber : `whatsapp:${fromNumber}`;
+
+  const params = new URLSearchParams({ From: fromWa, To: toWa, Body: message });
+  const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+
+  const r = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+    {
+      method: 'POST',
+      headers: { 'Authorization': `Basic ${credentials}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    }
+  );
+  const data = await r.json();
+  if (!data.sid) console.error("Twilio error:", data.message || JSON.stringify(data));
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
@@ -60,12 +103,54 @@ export default async function handler(req, res) {
     const events = Array.isArray(req.body) ? req.body : [req.body];
 
     for (const event of events) {
-      // Only handle deal stage changes to our target stage
+      const dealId = event.objectId;
+
+      // 1. New deal created → WhatsApp notification to deal owner
+      if (event.subscriptionType === "deal.creation") {
+        const deal = await fetchDeal(dealId, token);
+        const props = deal.properties || {};
+
+        const dealName = props.dealname || "New lead";
+        const ownerId  = props.hubspot_owner_id;
+
+        let guestName = "", guestPhone = "";
+        const contactAssocs = deal.associations?.contacts?.results || [];
+        if (contactAssocs.length) {
+          const contact = await fetchContact(contactAssocs[0].id, token);
+          const cp = contact.properties || {};
+          guestName  = [cp.firstname, cp.lastname].filter(Boolean).join(" ");
+          guestPhone = cp.phone || cp.mobilephone || "";
+        }
+        if (!guestName) guestName = dealName.split(",")[0].trim();
+
+        if (ownerId) {
+          const ownerEmail = await fetchOwnerEmail(ownerId, token);
+          const ownerWa    = OWNER_WA_MAP[ownerEmail];
+
+          if (ownerWa && guestPhone) {
+            const cleanPhone = guestPhone.replace(/\D/g, '');
+            const preText    = encodeURIComponent(`Hi ${guestName}, this is Ray from Two Travel. I saw you reached out — happy to connect. When's a good time to talk?`);
+            const waLink     = `https://wa.me/${cleanPhone}?text=${preText}`;
+            const dealUrl    = `https://app.hubspot.com/contacts/deals/${dealId}`;
+
+            const message = [
+              `New lead — ${guestName}`,
+              guestPhone,
+              ``,
+              `Message them: ${waLink}`,
+              `Deal: ${dealUrl}`,
+            ].join("\n");
+
+            await sendWhatsApp(ownerWa, message);
+          }
+        }
+        continue;
+      }
+
+      // 2. Deal stage change → create kickoff
       if (event.subscriptionType !== "deal.propertyChange") continue;
       if (event.propertyName !== "dealstage") continue;
       if (event.propertyValue !== TARGET_STAGE_ID) continue;
-
-      const dealId = event.objectId;
       const deal = await fetchDeal(dealId, token);
       const props = deal.properties || {};
 
