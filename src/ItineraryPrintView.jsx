@@ -2100,12 +2100,7 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
           </div>
         )}
 
-        {/* State badges */}
-        {isDraft && (
-          <div style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:9,fontWeight:600,color:"#6b7280",background:"#f3f4f6",border:"1px solid #d1d5db",borderRadius:4,padding:"2px 8px",letterSpacing:"0.3px",marginBottom:6}}>
-            ◯
-          </div>
-        )}
+        {/* State badges — draft (neutral) shows nothing */}
         {it.confirmed === true && (
           <div style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:9,fontWeight:700,color:"#15803d",background:"#dcfce7",border:"1px solid #86efac",borderRadius:4,padding:"2px 8px",letterSpacing:"0.3px",marginBottom:6}}>
             ✓ {isEs ? "Confirmado" : "Confirmed"}
@@ -2126,8 +2121,8 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         {isConfirmed && (() => {
           const n = (it.title || "").toLowerCase();
           const cat = (it.category || "").toLowerCase();
-          if (/check.?in/.test(n) || /check.?in/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Llegada y Salida":"Arrival & Departure Information"}</div>;
-          if (/check.?out/.test(n) || /check.?out/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Llegada y Salida":"Arrival & Departure Information"}</div>;
+          if (/check.?in/.test(n) || /check.?in/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de llegada":"Arrival Information"}</div>;
+          if (/check.?out/.test(n) || /check.?out/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de salida":"Departure Information"}</div>;
           if (/breakfast|desayuno/.test(n)) return null;
           return null;
         })()}

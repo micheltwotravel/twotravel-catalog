@@ -7221,7 +7221,7 @@ function UserManagement({ currentUser, onBack }) {
                 )}
                 {users.map((u, i) => (
                   <tr key={u.email} style={{background:i%2===0?"#fff":"#fafafa",opacity:u.active==="false"||u.active===false?0.45:1}}>
-                    <td style={{padding:"10px 16px",fontSize:13,fontWeight:500,color:"#111"}}>{u.fullName || [u.name, u.lastName].filter(Boolean).join(" ") || u.name}</td>
+                    <td style={{padding:"10px 16px",fontSize:13,fontWeight:500,color:"#111"}}>{u.fullName || [u.name, u.lastName].filter(Boolean).join(" ") || u.name || <span style={{color:"#9ca3af",fontStyle:"italic"}}>{u.email}</span>}</td>
                     <td style={{padding:"10px 16px",fontSize:12,color:"#6b7280"}}>{u.email}</td>
                     <td style={{padding:"10px 16px"}}>
                       <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
