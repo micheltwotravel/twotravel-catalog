@@ -1538,15 +1538,36 @@ function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availabl
         </div>
         {/* Price */}
         <div className="col-span-3">
-          <input
-            type="number"
-            value={item.priceOverride_cop ?? ""}
-            onChange={e => onUpdate(item._uid, {
-              priceOverride_cop: e.target.value === "" ? null : Number(e.target.value),
-            })}
-            placeholder={String(item.price_cop || "Precio COP")}
-            className="w-full text-xs text-right text-neutral-500 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
-          />
+          {(() => {
+            const currency = item.priceInputCurrency || (item.priceUsd > 0 && !item.priceOverride_cop ? "USD" : "COP");
+            const isUsd = currency === "USD";
+            return (
+              <>
+                <div className="flex items-center gap-0.5">
+                  <input
+                    type="number"
+                    value={isUsd ? (item.priceUsd ?? "") : (item.priceOverride_cop ?? "")}
+                    onChange={e => {
+                      const v = e.target.value === "" ? null : Number(e.target.value);
+                      onUpdate(item._uid, isUsd
+                        ? { priceUsd: v }
+                        : { priceOverride_cop: v });
+                    }}
+                    placeholder={isUsd ? String(item.price_usd || "Precio USD") : String(item.price_cop || "Precio COP")}
+                    className="w-full text-xs text-right text-neutral-500 border-b border-transparent hover:border-neutral-200 focus:border-neutral-400 focus:outline-none py-0.5 bg-transparent placeholder-neutral-300"
+                  />
+                  <button
+                    type="button"
+                    title="Cambiar moneda COP/USD"
+                    onClick={() => onUpdate(item._uid, { priceInputCurrency: isUsd ? "COP" : "USD" })}
+                    className={`text-[8px] px-1 py-0 rounded border leading-4 transition flex-shrink-0 ${isUsd ? "text-emerald-600 border-emerald-300 bg-emerald-50" : "text-neutral-400 border-neutral-200 bg-transparent hover:border-neutral-400"}`}
+                  >
+                    {isUsd ? "USD" : "COP"}
+                  </button>
+                </div>
+              </>
+            );
+          })()}
           {(() => {
             const isTransport = String(item.category || "").toLowerCase().includes("transport");
             const isPerVehicle = isTransport || String(item.priceUnit || "").toLowerCase().includes("vehicle");
@@ -4728,6 +4749,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [billingCurrency, setBillingCurrency] = useState("USD");
   const [billingSending, setBillingSending] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [savedOk, setSavedOk] = useState(false);
   // Track latest ItineraryCanvas state so main "Guardar" always includes it
   // Pre-seeded from kickoff so they're never null even if onCartChange hasn't fired yet
   const canvasCartRef    = useRef(Array.isArray(kickoff?.cart)    ? kickoff.cart    : []);
@@ -4948,6 +4971,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   if (!kickoff) return null;
 
   const handleSave = async () => {
+  setSaving(true);
+  setSavedOk(false);
   try {
   // Auto-advance status when concierge saves from "new", "active", or "client_submitted"
   const autoStatus =
@@ -5133,10 +5158,14 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     const prevData = prevRaw ? (JSON.parse(prevRaw).data || kickoff) : kickoff;
     localStorage.setItem(`tt_kp_${kickoff.id}`, JSON.stringify({ ts: Date.now(), data: { ...prevData, ...updates } }));
   } catch {}
+  setSavedOk(true);
+  setTimeout(() => setSavedOk(false), 3000);
   // Refresh client itinerary view after save
   setPdfPreviewUrl(`${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${lang || kickoff?.lang || "en"}&edit=1&embed=1&_t=${Date.now()}`);
   } catch(e) {
     alert("Error al guardar: " + (e?.message || String(e)));
+  } finally {
+    setSaving(false);
   }
 };
 
@@ -6094,9 +6123,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           <button
             type="button"
             onClick={handleSave}
-            className="px-4 py-2 rounded-lg bg-neutral-900 text-sm text-white hover:bg-neutral-950"
+            disabled={saving}
+            className={`px-4 py-2 rounded-lg text-sm text-white transition-colors ${savedOk ? "bg-green-600 hover:bg-green-700" : "bg-neutral-900 hover:bg-neutral-950"} disabled:opacity-60`}
           >
-            Guardar
+            {saving ? "Guardando…" : savedOk ? "✓ Guardado" : "Guardar"}
           </button>
           {/* Itinerary: shareable link (PDF button removed — use the visual panel) */}
           {kickoff?.cart?.length > 0 && (() => {

@@ -543,7 +543,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
     map.get(key).push({
       sort         : Number(cartItem.sortOrder ?? idx),
       time         : cl(cartItem.timeLabel || cartItem.time || cartItem.startTime || ""),
-      schedule     : cl(service.schedule || ""),
+      schedule     : cl(cartItem.schedule || service.schedule || ""),
       duration     : cl(service.duration || ""),
       title        : cl(lang === "en"
         ? (cartItem.displayName || cartItem.name_en || service.name_en || service.name || cartItem.name || "")
@@ -561,8 +561,8 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       priceUsd     : cartItem.priceUsd != null ? num(cartItem.priceUsd) : (cityMatches ? num(service.price_tier_1 || service.priceTier1 || 0) : 0),
       priceUnit    : cartItem.priceUnit || service.priceUnit || "",
       pax          : Number(cartItem.pax || 0),
-      deposit      : service.deposit    || "",
-      cancellation : service.cancellation || "",
+      deposit      : cartItem.deposit || service.deposit || "",
+      cancellation : cartItem.cancellation || service.cancellation || "",
       menuUrl      : service.menuUrl    || "",
       mapsUrl      : service.mapsUrl    || "",
       image        : service.image || driveImgUrl(cartItem.image || "") || "",
@@ -3120,6 +3120,10 @@ export default function ItineraryPrintView() {
             }
             else if (field === "confirmed")   cartMirror.confirmed   = val;
             else if (field === "price")       cartMirror.priceOverride_cop = val;
+            else if (field === "cancellation") cartMirror.cancellation = val;
+            else if (field === "schedule")     cartMirror.schedule = val;
+            else if (field === "deposit")      cartMirror.deposit = val;
+            else if (field === "dressCode")    { cartMirror.dressCode = val; cartMirror.dressCode_en = val; }
             if (Object.keys(cartMirror).length) {
               updated._rawCartItem = { ...updated._rawCartItem, ...cartMirror };
             }

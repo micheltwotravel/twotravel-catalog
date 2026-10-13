@@ -2,6 +2,12 @@
 // 1. deal.creation → WhatsApp notification to deal owner
 // 2. deal.propertyChange (dealstage → TARGET_STAGE_ID) → create kickoff in portal
 
+import { createClient } from "@supabase/supabase-js";
+const supabase = createClient(
+  process.env.VITE_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
+);
+
 const GAS_URL = process.env.VITE_TASK_API_URL || process.env.GAS_URL
   || "https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec";
 
@@ -151,6 +157,19 @@ export default async function handler(req, res) {
       if (event.subscriptionType !== "deal.propertyChange") continue;
       if (event.propertyName !== "dealstage") continue;
       if (event.propertyValue !== TARGET_STAGE_ID) continue;
+
+      // Idempotency: reserve a sentinel row before creating the kickoff.
+      // HubSpot sometimes fires this webhook multiple times for the same event.
+      const sentinelId = `hs_${dealId}`;
+      const { error: insertErr } = await supabase
+        .from("kickoffs")
+        .insert({ id: sentinelId, data: { hubspotDealId: String(dealId), status: "creating", createdAt: new Date().toISOString() } });
+      if (insertErr) {
+        // Row already exists → this deal was already processed
+        console.log(`Skipping duplicate kickoff for deal ${dealId} — sentinel exists`);
+        continue;
+      }
+
       const deal = await fetchDeal(dealId, token);
       const props = deal.properties || {};
 
@@ -211,6 +230,7 @@ export default async function handler(req, res) {
             arrivalDate,
             departureDate,
             internalNotes:      "",
+            hubspotDealId:      String(dealId),
             createdAt:          new Date().toISOString(),
           },
         }),
