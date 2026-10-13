@@ -8213,7 +8213,9 @@ const [clientTypePickerOpen, setClientTypePickerOpen] = useState(false);
 const [pendingLinkKind, setPendingLinkKind] = useState(null); // "catalog" | "questionnaire" | "feedback"
 const [feedbackPickerOpen, setFeedbackPickerOpen] = useState(false);
 const [ratingModalKickoff, setRatingModalKickoff] = useState(null); // kickoff pending rating before link is shared
-const [portalLang, setPortalLang] = useState("en"); // language for client-facing links
+const [portalLang, setPortalLang] = useState(() => {
+  try { return localStorage.getItem("compass_portal_lang") || "en"; } catch { return "en"; }
+}); // language for client-facing links
 const [createModalOpen, setCreateModalOpen] = useState(false);
 const [openMenuId, setOpenMenuId] = useState(null); // row actions dropdown
 const [showRatings, setShowRatings] = useState(false); // ratings summary panel
@@ -8658,7 +8660,7 @@ const loadKickoffs = async (forceRefresh = false) => {
 
   <button
     type="button"
-    onClick={() => setPortalLang(l => l === "en" ? "es" : "en")}
+    onClick={() => setPortalLang(l => { const next = l === "en" ? "es" : "en"; try { localStorage.setItem("compass_portal_lang", next); } catch {} return next; })}
     className="tt-btn-ghost"
     title="Idioma del catálogo que verá el cliente"
   >
