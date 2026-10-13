@@ -581,6 +581,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       _boatBadge      : !!cartItem._boatBadge,
       _boatData       : cartItem._boatData || null,
       notes           : cartItem.notes || "",
+      passengers      : cartItem.passengers || "",
       _rawCartItem    : cartItem,
     });
   });
@@ -1972,9 +1973,13 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
   // Boat Details gets its own rich card layout.
   // Also check description/title for old snapshots saved before _boatBadge existed.
   const _descText = it.description || "";
+  const _titleLower = (it.title || "").toLowerCase();
+  const _catLower   = (it.category || "").toLowerCase();
   const _isBoat = it._boatBadge ||
     /\*\*(?:Boat|Bote):\*\*/i.test(_descText) ||
-    /\bboat\b|\bbote\b/i.test(it.title || "");
+    ((/\bboat\b|\bbote\b/i.test(it.title || "")) &&
+      !(/lunch|box|food|catering|snack|chef|comida|almuerzo/i.test(_titleLower)) &&
+      !(/chef|food|catering|breakfast|comida/i.test(_catLower)));
   if (_isBoat) {
     let boatIt = it;
     if (!it._boatBadge) {
