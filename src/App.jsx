@@ -6785,7 +6785,7 @@ function LoginScreen({ onLogin }) {
       <div style={{width:"100%",maxWidth:420,display:"flex",alignItems:"center",justifyContent:"center",background:"#f7f4ef",padding:"32px 24px",boxSizing:"border-box"}}>
       <div style={{background:"#fff",borderRadius:16,padding:"40px 36px",boxShadow:"0 4px 24px rgba(0,0,0,.08)",width:"100%",maxWidth:340,textAlign:"center"}}>
         <img src="/logo.png" alt="Two Travel" style={{height:48,objectFit:"contain",marginBottom:24}} />
-        <p style={{fontSize:11,color:"#9a7d52",letterSpacing:".12em",textTransform:"uppercase",marginBottom:32}}>Internal Access</p>
+        <p style={{fontSize:11,color:"#9a7d52",letterSpacing:".12em",textTransform:"uppercase",marginBottom:32}}>Compass Concierge Software</p>
         <form onSubmit={handle} style={{display:"flex",flexDirection:"column",gap:12}}>
           <input
             type="email"

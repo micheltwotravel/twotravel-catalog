@@ -1694,7 +1694,7 @@ function BoatDetailCard({ it, lang, editMode, onRemove, patchItem }) {
   const displayNote = it.notes || note;
   const boatName = it.location || "";
   const dock = it.description || "";
-  const displayTitle = boatTitle || it.title || (isEs ? "Día de Bote" : "Boat Day");
+  const displayTitle = isEs ? "Paseo en Bote — Islas del Rosario" : "Boat Trip to the Rosario Islands";
 
   const amber = {
     display: "inline-flex", alignItems: "center", gap: 5,
@@ -2087,7 +2087,7 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         {/* State badges */}
         {isDraft && (
           <div style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:9,fontWeight:600,color:"#6b7280",background:"#f3f4f6",border:"1px solid #d1d5db",borderRadius:4,padding:"2px 8px",letterSpacing:"0.3px",marginBottom:6}}>
-            ◯ {isEs ? "Borrador" : "Draft"}
+            ◯
           </div>
         )}
         {it.confirmed === true && (
@@ -2110,8 +2110,8 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         {isConfirmed && (() => {
           const n = (it.title || "").toLowerCase();
           const cat = (it.category || "").toLowerCase();
-          if (/check.?in/.test(n) || /check.?in/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Llegada":"Arrival info"}</div>;
-          if (/check.?out/.test(n) || /check.?out/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Salida":"Departure info"}</div>;
+          if (/check.?in/.test(n) || /check.?in/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Llegada y Salida":"Arrival & Departure Information"}</div>;
+          if (/check.?out/.test(n) || /check.?out/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Llegada y Salida":"Arrival & Departure Information"}</div>;
           if (/breakfast|desayuno/.test(n)) return null;
           return null;
         })()}

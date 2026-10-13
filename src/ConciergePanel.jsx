@@ -5146,7 +5146,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           })()}
 
           {/* ── Cover Info ─────────────────────────────── */}
-          <DrawerSection title="🖼️ Portada del itinerario (PDF)" accent="neutral">
+          <DrawerSection title="🖼️ Portada del itinerario" accent="neutral">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] text-neutral-500">{city.includes(",") ? `Fechas ${cityFullName(city.split(",")[0]?.trim())}` : "Fechas del viaje"}</label>
@@ -5437,8 +5437,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             </div>
           </DrawerSection>
 
-          {/* ── Calificaciones por ciudad ── */}
-          <DrawerSection title="⭐ Calificaciones por ciudad" accent="amber">
+          {/* ── Calificaciones por ciudad — removed per #14: reviews covered in KPI 3 ── */}
+          {false && <DrawerSection title="⭐ Calificaciones por ciudad" accent="amber">
             <div className="flex items-center justify-between">
               <span />
               <button
@@ -5511,7 +5511,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 />
               </div>
             ))}
-          </DrawerSection>
+          </DrawerSection>}
 
           {/* ── KPIs: reseñas + facturación ─────────────────────────────── */}
           <DrawerSection title="📊 KPIs" accent="neutral">
@@ -5937,7 +5937,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             </div>
 
             <div className="sm:col-span-2">
-              <label className="text-[11px] text-neutral-500">Título del concierge (PDF)</label>
+              <label className="text-[11px] text-neutral-500">Título del concierge</label>
               <input
                 value={conciergeTitle}
                 onChange={e => setConciergeTitle(e.target.value)}

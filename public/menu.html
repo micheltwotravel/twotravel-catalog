@@ -264,11 +264,11 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
       <div class="sec-bar"></div>
     </div>
     <div class="grid">
-      <a href="/?mode=concierge" class="card d c-gold"><div class="chip" data-es="Principal" data-en="Main">Principal</div><div class="cn" data-es="Clientes" data-en="Clients">Clientes</div><div class="cd" data-es="Kickoffs, itinerarios, PDFs y catálogo de servicios" data-en="Kickoffs, itineraries, PDFs and service catalog">Kickoffs, itinerarios, PDFs y catálogo de servicios</div></a>
-      <a href="/?mode=dashboard" class="card d c-gold"><div class="chip" data-es="Principal" data-en="Main">Principal</div><div class="cn">Dashboard</div><div class="cd" data-es="Métricas y rendimiento del equipo" data-en="Team metrics and performance">Métricas y rendimiento del equipo</div></a>
+      <a href="/?mode=concierge" class="card d c-gold" id="card-clientes"><div class="chip" data-es="Principal" data-en="Main">Principal</div><div class="cn" data-es="Clientes" data-en="Clients">Clientes</div><div class="cd" data-es="Kickoffs, itinerarios, PDFs y catálogo de servicios" data-en="Kickoffs, itineraries, PDFs and service catalog">Kickoffs, itinerarios, PDFs y catálogo de servicios</div></a>
+      <a href="/?mode=dashboard" class="card d c-gold"><div class="chip" data-es="Principal" data-en="Main">Principal</div><div class="cn">Dashboard</div><div class="cd" data-es="Información operativa de los clientes y edición de menús" data-en="Client operations and menu management">Información operativa de los clientes y edición de menús</div></a>
       <a href="/handoffs.html" class="card c-gold"><div class="chip" data-es="Operaciones" data-en="Operations">Operaciones</div><div class="cn" data-es="Reservas" data-en="Reservations">Reservas</div><div class="cd" data-es="Servicios confirmados por trip" data-en="Confirmed services by trip">Servicios confirmados por trip</div></a>
       <a href="/tasks.html" class="card c-gold"><div class="chip" data-es="Operaciones" data-en="Operations">Operaciones</div><div class="cn" data-es="Tareas" data-en="Tasks">Tareas</div><div class="cd" data-es="Seguimiento de tareas del equipo" data-en="Team task tracking">Seguimiento de tareas del equipo</div></a>
-      <a href="/accesos.html" class="card c-gold"><div class="chip" data-es="Acceso" data-en="Access">Acceso</div><div class="cn" data-es="Calendarios" data-en="Calendars">Calendarios</div><div class="cd" data-es="Links de reservas por concierge" data-en="Booking links by concierge">Links de reservas por concierge</div></a>
+      <a href="/accesos.html" class="card c-gold"><div class="chip" data-es="Acceso" data-en="Access">Acceso</div><div class="cn" data-es="Calendarios" data-en="Calendars">Calendarios</div><div class="cd" data-es="Link" data-en="Link">Link</div></a>
     </div>
   </div>
 
@@ -503,6 +503,23 @@ window.addEventListener('scroll', () => {
     </div>`;
   });
   body.innerHTML = html;
+})();
+</script>
+<script>
+// Lock Clientes card for junior users — they don't have concierge panel access
+(function lockJuniorAccess(){
+  let role = "";
+  try { role = JSON.parse(localStorage.getItem("tt_auth2") || "null")?.role || ""; } catch(_) {}
+  if (role !== "junior") return;
+  const card = document.getElementById("card-clientes");
+  if (!card) return;
+  card.style.opacity = ".65";
+  card.style.cursor = "not-allowed";
+  card.style.pointerEvents = "none";
+  const chip = card.querySelector(".chip");
+  if (chip) { chip.setAttribute("data-es","Sin acceso"); chip.setAttribute("data-en","No access"); chip.textContent = "Sin acceso"; }
+  card.insertAdjacentHTML("beforeend","<div style='position:absolute;top:10px;right:12px;font-size:14px'>🔒</div>");
+  card.style.position = "relative";
 })();
 </script>
 <script src="/lang.js"></script>
