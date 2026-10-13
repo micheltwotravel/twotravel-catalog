@@ -123,6 +123,78 @@ function TaskCard({ task, onStatusChange, onEdit, accentColor }) {
   );
 }
 
+// ── Plant widget ─────────────────────────────────────────────────
+function PlantWidget({ name, completed, total, color, onClick, active }) {
+  const ratio = total > 0 ? Math.min(completed / total, 1) : 0;
+  const pct   = Math.round(ratio * 100);
+  const uid   = name.replace(/\s+/g, "_");
+  const fillH = 96 * ratio; // how many units of plant (0–96) are filled
+
+  // Stem bottom: y=88, stem top: y=14. Leaves and flower at various heights.
+  // The clip rect reveals from bottom (y=110) upward.
+  const clipY = 110 - fillH * (110 / 96);
+
+  return (
+    <div onClick={onClick} title={`${completed} terminadas / ${total} totales`}
+      style={{ textAlign:"center", cursor:"pointer", padding:"8px 12px", borderRadius:12,
+        background: active ? "#f0fdf4" : "#fff",
+        border: `2px solid ${active ? color : "#e5ddd3"}`,
+        transition:"all 0.2s", minWidth:72 }}>
+      <svg viewBox="0 0 70 120" width="60" height="90" style={{ display:"block", margin:"0 auto" }}>
+        <defs>
+          <clipPath id={`clip-${uid}`}>
+            <rect x="0" y={clipY} width="70" height="110" />
+          </clipPath>
+        </defs>
+
+        {/* ── Gray silhouette (always visible) ── */}
+        {/* Pot */}
+        <path d="M16,96 L11,114 L59,114 L64,96 Z" fill="#e5e7eb" />
+        <rect x="9" y="90" width="52" height="9" rx="4" fill="#d1d5db" />
+        {/* Soil */}
+        <ellipse cx="35" cy="92" rx="20" ry="4" fill="#d1fae5" opacity="0.6" />
+        {/* Stem */}
+        <line x1="35" y1="88" x2="35" y2="20" stroke="#d1d5db" strokeWidth="5" strokeLinecap="round" />
+        {/* Left leaf low */}
+        <path d="M35,78 C14,68 10,50 22,44 C30,54 34,68 35,78Z" fill="#d1fae5" />
+        {/* Right leaf mid */}
+        <path d="M35,62 C56,52 58,34 46,28 C38,38 35,55 35,62Z" fill="#d1fae5" />
+        {/* Left leaf top */}
+        <path d="M35,46 C16,38 14,22 26,16 C32,26 34,40 35,46Z" fill="#d1fae5" />
+        {/* Flower */}
+        <circle cx="35" cy="14" r="7" fill="#fef08a" opacity="0.7" />
+        <circle cx="35" cy="14" r="3.5" fill="#fde047" opacity="0.7" />
+
+        {/* ── Colored fill, revealed bottom-up ── */}
+        <g clipPath={`url(#clip-${uid})`}>
+          {/* Pot */}
+          <path d="M16,96 L11,114 L59,114 L64,96 Z" fill="#a16207" />
+          <rect x="9" y="90" width="52" height="9" rx="4" fill="#b45309" />
+          {/* Soil */}
+          <ellipse cx="35" cy="92" rx="20" ry="4" fill="#78350f" />
+          {/* Stem */}
+          <line x1="35" y1="88" x2="35" y2="20" stroke={color} strokeWidth="5" strokeLinecap="round" />
+          {/* Left leaf low */}
+          <path d="M35,78 C14,68 10,50 22,44 C30,54 34,68 35,78Z" fill={color} />
+          {/* Right leaf mid */}
+          <path d="M35,62 C56,52 58,34 46,28 C38,38 35,55 35,62Z" fill={color} />
+          {/* Left leaf top */}
+          <path d="M35,46 C16,38 14,22 26,16 C32,26 34,40 35,46Z" fill={color} />
+          {/* Flower */}
+          <circle cx="35" cy="14" r="7" fill="#fbbf24" />
+          <circle cx="35" cy="14" r="3.5" fill="#f59e0b" />
+        </g>
+      </svg>
+
+      <div style={{ fontSize:12, fontWeight:600, color:"#1a1814", marginTop:3, whiteSpace:"nowrap" }}>
+        {name.split(" ")[0]}
+      </div>
+      <div style={{ fontSize:11, color:color, fontWeight:700 }}>{pct}%</div>
+      <div style={{ fontSize:10, color:"#9ca3af" }}>{completed}/{total}</div>
+    </div>
+  );
+}
+
 // ── Section ───────────────────────────────────────────────────────
 function Section({ id, title, color, accent, tasks, onStatusChange, onEdit, defaultOpen=true }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -529,6 +601,41 @@ export default function TareasPanel({ currentUser, onLogout }) {
             ))}
           </div>
         )}
+
+        {/* ── Plants leaderboard ── */}
+        {!loading && (() => {
+          const PLANT_COLORS = ["#16a34a","#7c3aed","#0369a1","#b45309","#be185d"];
+          const plantUsers = BODAS_USERS.map((u, i) => {
+            const mine = tasks.filter(t => {
+              if (!isBoda(t)) return false;
+              if (showHistorico ? false : !t.id.startsWith("boda_")) return false;
+              const a = (t.assignedTo||"").toLowerCase().trim();
+              const n = u.name.toLowerCase().trim();
+              return a.includes(n) || n.includes(a);
+            });
+            return {
+              ...u,
+              color: PLANT_COLORS[i % PLANT_COLORS.length],
+              total: mine.length,
+              completed: mine.filter(t => t.status === "Terminado").length,
+            };
+          });
+          return (
+            <div style={{ display:"flex", gap:10, marginBottom:18, overflowX:"auto", paddingBottom:4 }}>
+              {plantUsers.map(u => (
+                <PlantWidget
+                  key={u.email}
+                  name={u.name}
+                  completed={u.completed}
+                  total={u.total}
+                  color={u.color}
+                  active={filterResp === u.name}
+                  onClick={() => setFilterResp(prev => prev === u.name ? "" : u.name)}
+                />
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Scope + acción */}
         <div style={{ display:"flex", gap:8, marginBottom:12, alignItems:"center", flexWrap:"wrap" }}>
