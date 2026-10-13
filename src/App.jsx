@@ -6767,6 +6767,8 @@ function LoginScreen({ onLogin }) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [forgotPin, setForgotPin] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   const handle = async (e) => {
     e.preventDefault();
@@ -6774,6 +6776,17 @@ function LoginScreen({ onLogin }) {
     const res = await onLogin(email, pin);
     setLoading(false);
     if (!res.ok) { setError(res.error || "Credenciales incorrectas"); setPin(""); }
+  };
+
+  const handleForgot = async (e) => {
+    e.preventDefault();
+    if (!email) return;
+    setLoading(true);
+    try {
+      await supabase.from("pin_reset_requests").insert({ email: email.toLowerCase().trim(), requested_at: new Date().toISOString() });
+    } catch (_) {}
+    setLoading(false);
+    setResetSent(true);
   };
 
   return (
@@ -6786,30 +6799,70 @@ function LoginScreen({ onLogin }) {
       <div style={{background:"#fff",borderRadius:16,padding:"40px 36px",boxShadow:"0 4px 24px rgba(0,0,0,.08)",width:"100%",maxWidth:340,textAlign:"center"}}>
         <img src="/logo.png" alt="Two Travel" style={{height:48,objectFit:"contain",marginBottom:24}} />
         <p style={{fontSize:11,color:"#9a7d52",letterSpacing:".12em",textTransform:"uppercase",marginBottom:32}}>Compass Concierge Software</p>
-        <form onSubmit={handle} style={{display:"flex",flexDirection:"column",gap:12}}>
-          <input
-            type="email"
-            value={email}
-            onChange={e => { setEmail(e.target.value); setError(""); }}
-            placeholder="tu@two.travel"
-            autoFocus
-            style={{width:"100%",border:"1px solid #e5ddd3",borderRadius:10,padding:"12px 16px",fontSize:13,outline:"none",fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}}
-          />
-          <input
-            type="password"
-            inputMode="numeric"
-            maxLength={8}
-            value={pin}
-            onChange={e => { setPin(e.target.value); setError(""); }}
-            placeholder="PIN"
-            style={{width:"100%",border:"1px solid #e5ddd3",borderRadius:10,padding:"12px 16px",fontSize:18,textAlign:"center",letterSpacing:".3em",outline:"none",fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}}
-          />
-          {error && <p style={{color:"#e05c5c",fontSize:12,margin:0}}>{error}</p>}
-          <button type="submit" disabled={loading || !email || !pin}
-            style={{background:"#1a1814",color:"#fff",border:"none",borderRadius:10,padding:"13px",fontSize:13,letterSpacing:".06em",cursor:loading?"wait":"pointer",fontFamily:"'Jost',sans-serif",opacity:(!email||!pin)?0.5:1}}>
-            {loading ? "Verificando…" : "Entrar"}
-          </button>
-        </form>
+        {!forgotPin ? (
+          <>
+            <form onSubmit={handle} style={{display:"flex",flexDirection:"column",gap:12}}>
+              <input
+                type="email"
+                value={email}
+                onChange={e => { setEmail(e.target.value); setError(""); }}
+                placeholder="tu@two.travel"
+                autoFocus
+                style={{width:"100%",border:"1px solid #e5ddd3",borderRadius:10,padding:"12px 16px",fontSize:13,outline:"none",fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}}
+              />
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={8}
+                value={pin}
+                onChange={e => { setPin(e.target.value); setError(""); }}
+                placeholder="PIN"
+                style={{width:"100%",border:"1px solid #e5ddd3",borderRadius:10,padding:"12px 16px",fontSize:18,textAlign:"center",letterSpacing:".3em",outline:"none",fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}}
+              />
+              {error && <p style={{color:"#e05c5c",fontSize:12,margin:0}}>{error}</p>}
+              <button type="submit" disabled={loading || !email || !pin}
+                style={{background:"#1a1814",color:"#fff",border:"none",borderRadius:10,padding:"13px",fontSize:13,letterSpacing:".06em",cursor:loading?"wait":"pointer",fontFamily:"'Jost',sans-serif",opacity:(!email||!pin)?0.5:1}}>
+                {loading ? "Verificando…" : "Entrar"}
+              </button>
+            </form>
+            <button type="button" onClick={() => setForgotPin(true)}
+              style={{marginTop:16,fontSize:11,color:"#9a7d52",background:"none",border:"none",cursor:"pointer",textDecoration:"underline",fontFamily:"'Jost',sans-serif"}}>
+              ¿Olvidaste tu PIN?
+            </button>
+          </>
+        ) : resetSent ? (
+          <div style={{textAlign:"center"}}>
+            <p style={{fontSize:22,marginBottom:8}}>✉️</p>
+            <p style={{fontSize:13,color:"#1a1814",marginBottom:8}}>Solicitud enviada</p>
+            <p style={{fontSize:11,color:"#888",marginBottom:20}}>Un administrador restablecerá tu PIN pronto. Puedes escribir a <strong>caro@two.travel</strong> para seguimiento.</p>
+            <button type="button" onClick={() => { setForgotPin(false); setResetSent(false); }}
+              style={{fontSize:11,color:"#9a7d52",background:"none",border:"none",cursor:"pointer",textDecoration:"underline",fontFamily:"'Jost',sans-serif"}}>
+              Volver al login
+            </button>
+          </div>
+        ) : (
+          <div style={{textAlign:"center"}}>
+            <p style={{fontSize:13,color:"#1a1814",marginBottom:16}}>Ingresa tu email para solicitar el restablecimiento de tu PIN.</p>
+            <form onSubmit={handleForgot} style={{display:"flex",flexDirection:"column",gap:12}}>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="tu@two.travel"
+                autoFocus
+                style={{width:"100%",border:"1px solid #e5ddd3",borderRadius:10,padding:"12px 16px",fontSize:13,outline:"none",fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}}
+              />
+              <button type="submit" disabled={loading || !email}
+                style={{background:"#1a1814",color:"#fff",border:"none",borderRadius:10,padding:"13px",fontSize:13,cursor:loading?"wait":"pointer",fontFamily:"'Jost',sans-serif",opacity:!email?0.5:1}}>
+                {loading ? "Enviando…" : "Solicitar reset"}
+              </button>
+            </form>
+            <button type="button" onClick={() => setForgotPin(false)}
+              style={{marginTop:12,fontSize:11,color:"#9a7d52",background:"none",border:"none",cursor:"pointer",textDecoration:"underline",fontFamily:"'Jost',sans-serif"}}>
+              Volver al login
+            </button>
+          </div>
+        )}
       </div>
       </div>
     </div>

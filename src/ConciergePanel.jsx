@@ -4081,6 +4081,53 @@ function FeedbackResponseCard({ kickoffId }) {
   );
 }
 
+function GroupSubmissionsPanel({ subs }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div className="border border-indigo-200 rounded-xl overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left bg-indigo-50/50 border-indigo-200 text-indigo-700 hover:brightness-95 transition-colors"
+      >
+        <span className="text-[11px] font-semibold uppercase tracking-wide">
+          🛍️ Selecciones del grupo ({subs.length} {subs.length === 1 ? "persona" : "personas"})
+        </span>
+        <span className="text-[10px] ml-2">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="px-4 py-3 space-y-3 bg-indigo-50/50">
+          {subs.map((s, i) => (
+            <div key={i} className="bg-white rounded-lg px-3 py-2.5 border border-indigo-100 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-indigo-800">👤 {s.name}</p>
+                {s.submittedAt && (
+                  <p className="text-[10px] text-indigo-400">
+                    {new Date(s.submittedAt).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}
+                  </p>
+                )}
+              </div>
+              {Array.isArray(s.cart) && s.cart.length > 0 && (
+                <ul className="space-y-0.5">
+                  {s.cart.map((item, j) => (
+                    <li key={j} className="text-xs text-indigo-900 flex gap-1.5">
+                      <span className="text-indigo-400">•</span>
+                      <span>{item.name}{item.notes ? <span className="text-indigo-400"> — {item.notes}</span> : null}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {s.additionalNotes && (
+                <p className="text-[11px] text-indigo-500 italic">📝 {s.additionalNotes}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DrawerSection({ title, children, defaultOpen = false, accent = "neutral" }) {
   const [open, setOpen] = useState(defaultOpen);
   const colors = {
@@ -5047,7 +5094,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   return (
     <>
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
-      <div className={`h-full bg-white shadow-xl flex ${pdfPreviewUrl ? "w-full flex-row" : "w-full max-w-xl flex-col"}`}>
+      <div className={`h-full bg-white shadow-xl flex ${pdfPreviewUrl ? "w-full flex-row" : "w-full max-w-2xl flex-col"}`}>
 
         {/* PDF split panel — shown on the left when preview is open */}
         {pdfPreviewUrl && (
@@ -5255,38 +5302,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             let subs = [];
             try { subs = JSON.parse(kickoff?.groupSubmissions || "[]"); } catch {}
             if (!subs.length) return null;
-            return (
-              <div className="border border-indigo-200 rounded-xl bg-indigo-50 p-3 space-y-3">
-                <p className="text-[11px] font-semibold text-indigo-700 uppercase tracking-wide">
-                  🛍️ Selecciones del grupo ({subs.length} {subs.length === 1 ? "persona" : "personas"})
-                </p>
-                {subs.map((s, i) => (
-                  <div key={i} className="bg-white rounded-lg px-3 py-2.5 border border-indigo-100 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-indigo-800">👤 {s.name}</p>
-                      {s.submittedAt && (
-                        <p className="text-[10px] text-indigo-400">
-                          {new Date(s.submittedAt).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}
-                        </p>
-                      )}
-                    </div>
-                    {Array.isArray(s.cart) && s.cart.length > 0 && (
-                      <ul className="space-y-0.5">
-                        {s.cart.map((item, j) => (
-                          <li key={j} className="text-xs text-indigo-900 flex gap-1.5">
-                            <span className="text-indigo-400">•</span>
-                            <span>{item.name}{item.notes ? <span className="text-indigo-400"> — {item.notes}</span> : null}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {s.additionalNotes && (
-                      <p className="text-[11px] text-indigo-500 italic">📝 {s.additionalNotes}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            );
+            return <GroupSubmissionsPanel subs={subs} />;
           })()}
 
           {/* ── Cover Info ─────────────────────────────── */}
