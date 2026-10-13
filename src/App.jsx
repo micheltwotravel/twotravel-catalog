@@ -1845,7 +1845,7 @@ function UnifiedDashboard({ currentUser, onLogout, initialTab, kpiOnly = false }
     "https://docs.google.com/spreadsheets/d/1Tyv5cPTN0MjxezyWRjo-XuIRqOgaPwP-z1heZfgGiuQ/edit#gid=0";
 
   const isJunior = currentUser?.role === "junior";
-  const [tab, setTab] = useState(initialTab || (isJunior ? "feedback" : "clientes"));
+  const [tab, setTab] = useState(initialTab || (isJunior ? "clientes" : "clientes"));
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [destinationFilter, setDestinationFilter] = useState("all");
@@ -2314,9 +2314,9 @@ function UnifiedDashboard({ currentUser, onLogout, initialTab, kpiOnly = false }
         {!kpiOnly && (
           <div style={{display:"flex",gap:6,marginBottom:24,borderBottom:"1px solid var(--border)",paddingBottom:0}}>
             {[
-              ...( !isJunior ? [{ id: "clientes", label: "Clientes" }] : [] ),
-              { id: "feedback", label: "Feedback" },
-              ...( ["admin","concierge"].includes(currentUser?.role) ? [{ id: "menus", label: "🍹 Menús" }] : [] ),
+              { id: "clientes", label: "Clientes" },
+              ...( !isJunior ? [{ id: "feedback", label: "Feedback" }] : [] ),
+              ...( ["admin","concierge","junior"].includes(currentUser?.role) ? [{ id: "menus", label: "🍹 Menús" }] : [] ),
               ...( isSuperAdmin(currentUser) ? [{ id: "kpis", label: "📊 KPIs" }] : [] ),
               ...( isSuperAdmin(currentUser) ? [{ id: "updates", label: "🛠 Updates" }] : [] ),
             ].map(({ id, label }) => (
