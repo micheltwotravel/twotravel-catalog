@@ -2025,32 +2025,63 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
               </SortableContext>
             </DndContext>
           )}
-          {/* Add buttons */}
-          <div className="flex flex-wrap gap-1.5 px-4 py-2.5 bg-neutral-50 border-t border-neutral-100">
-            {[
-              { key: "checkin",   label: "🏨 Check-in" },
-              { key: "breakfast", label: lang === "es" ? "☕ Desayuno" : "☕ Breakfast" },
-              { key: "boatday",   label: "🛥 Boat Day" },
-              { key: "pickup",    label: "🚐 Traslado" },
-              { key: "checkout",  label: "🧳 Check-out" },
-            ].map(({ key, label: pl }) => (
-              <button key={key} type="button" onClick={() => onAddPreset?.(key)}
-                className="text-xs text-teal-700 hover:text-teal-900 border border-teal-200 hover:border-teal-400 rounded-lg px-2.5 py-1.5 bg-teal-50 transition-colors">
-                {pl}
+          {/* Add buttons — grouped by category */}
+          <div className="px-4 py-2.5 bg-neutral-50 border-t border-neutral-100 space-y-2">
+            {/* ARRIVAL */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Llegada</span>
+              {[
+                { key: "checkin", label: "🏨 Check-in" },
+                { key: "pickup",  label: "✈️ Traslado llegada" },
+              ].map(({ key, label: pl }) => (
+                <button key={key} type="button" onClick={() => onAddPreset?.(key)}
+                  className="text-xs text-teal-700 hover:text-teal-900 border border-teal-200 hover:border-teal-400 rounded-lg px-2.5 py-1 bg-teal-50 transition-colors">
+                  {pl}
+                </button>
+              ))}
+            </div>
+            {/* DEPARTURE */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Salida</span>
+              {[
+                { key: "checkout",  label: "🧳 Check-out" },
+                { key: "departure", label: "✈️ Traslado salida" },
+              ].map(({ key, label: pl }) => (
+                <button key={key} type="button" onClick={() => onAddPreset?.(key)}
+                  className="text-xs text-teal-700 hover:text-teal-900 border border-teal-200 hover:border-teal-400 rounded-lg px-2.5 py-1 bg-teal-50 transition-colors">
+                  {pl}
+                </button>
+              ))}
+            </div>
+            {/* FOOD & BOAT */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Servicios</span>
+              {[
+                { key: "breakfast", label: lang === "es" ? "☕ Desayuno" : "☕ Breakfast" },
+                { key: "boatday",   label: "🛥 Boat Day" },
+              ].map(({ key, label: pl }) => (
+                <button key={key} type="button" onClick={() => onAddPreset?.(key)}
+                  className="text-xs text-teal-700 hover:text-teal-900 border border-teal-200 hover:border-teal-400 rounded-lg px-2.5 py-1 bg-teal-50 transition-colors">
+                  {pl}
+                </button>
+              ))}
+            </div>
+            {/* ADD */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Agregar</span>
+              <button type="button" onClick={onAddManual}
+                className="text-xs text-neutral-500 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-400 rounded-lg px-2.5 py-1 bg-white transition-colors">
+                + Manual
               </button>
-            ))}
-            <button type="button" onClick={onAddManual}
-              className="text-xs text-neutral-500 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-400 rounded-lg px-3 py-1.5 bg-white transition-colors">
-              + Manual
-            </button>
-            <button type="button" onClick={onAddFromCatalog} disabled={loadingServices}
-              className="text-xs text-neutral-500 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-400 rounded-lg px-3 py-1.5 bg-white disabled:opacity-40 transition-colors">
-              {loadingServices ? "Cargando…" : "+ Catálogo"}
-            </button>
-            <button type="button" onClick={onAddBlock}
-              className="text-xs text-violet-600 hover:text-violet-900 border border-violet-200 hover:border-violet-400 rounded-lg px-3 py-1.5 bg-violet-50 transition-colors">
-              ✍️ Nota libre
-            </button>
+              <button type="button" onClick={onAddFromCatalog} disabled={loadingServices}
+                className="text-xs text-neutral-500 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-400 rounded-lg px-2.5 py-1 bg-white disabled:opacity-40 transition-colors">
+                {loadingServices ? "Cargando…" : "+ Catálogo"}
+              </button>
+              <button type="button" onClick={onAddBlock}
+                className="text-xs text-violet-600 hover:text-violet-900 border border-violet-200 hover:border-violet-400 rounded-lg px-2.5 py-1 bg-violet-50 transition-colors">
+                ✍️ Nota libre
+              </button>
+            </div>
           </div>
         </>
       )}
@@ -2552,6 +2583,47 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
           description_en: co?.description   || `Check-out is at ${checkoutTime}.${accom ? ` If you need to store luggage at ${accom} or arrange a late check-out, please let us know in advance.` : " If you need to store luggage or arrange a late check-out, please let us know in advance."}`,
         };
       })(),
+      departure: (() => {
+        const guestName = kickoff?.guestName || "";
+        const accomEs = kickoff?.accommodationName || "el alojamiento";
+        const cityRaw = (kickoff?._rowCity || kickoff?.city || "").toLowerCase();
+        const AIRPORTS = {
+          ctg: { en: "Rafael Núñez International Airport", es: "Aeropuerto Internacional Rafael Núñez", code: "CTG" },
+          cartagena: { en: "Rafael Núñez International Airport", es: "Aeropuerto Internacional Rafael Núñez", code: "CTG" },
+          mde: { en: "José María Córdova International Airport", es: "Aeropuerto Internacional José María Córdova", code: "MDE" },
+          medellin: { en: "José María Córdova International Airport", es: "Aeropuerto Internacional José María Córdova", code: "MDE" },
+          medellín: { en: "José María Córdova International Airport", es: "Aeropuerto Internacional José María Córdova", code: "MDE" },
+          bog: { en: "El Dorado International Airport", es: "Aeropuerto Internacional El Dorado", code: "BOG" },
+          bogota: { en: "El Dorado International Airport", es: "Aeropuerto Internacional El Dorado", code: "BOG" },
+          bogotá: { en: "El Dorado International Airport", es: "Aeropuerto Internacional El Dorado", code: "BOG" },
+          cdmx: { en: "Benito Juárez International Airport", es: "Aeropuerto Internacional Benito Juárez", code: "MEX" },
+          mexico: { en: "Benito Juárez International Airport", es: "Aeropuerto Internacional Benito Juárez", code: "MEX" },
+        };
+        const airport = AIRPORTS[cityRaw] || { en: "the airport", es: "el aeropuerto", code: "" };
+        // Try departure flight info
+        let depFlight = null;
+        try { const dep = JSON.parse(kickoff?.departures || "[]"); depFlight = dep.find(a => a.flightNumber) || null; } catch {}
+        const flightNum = depFlight?.flightNumber || "";
+        const depTime = depFlight?.time || "";
+        const items = [];
+        if (flightNum) {
+          items.push({
+            name: `Flight ${flightNum}`, name_en: `Flight ${flightNum}`, name_es: `Vuelo ${flightNum}`,
+            category: "transportation", timeLabel: depTime,
+            description_en: `Flight: **${flightNum}**${depTime ? `\nDeparture: ${depTime}` : ""}`,
+            description_es: `Vuelo: **${flightNum}**${depTime ? `\nSalida: ${depTime}` : ""}`,
+          });
+        }
+        items.push({
+          name: `Airport Drop-off — ${airport.code || "Airport"}`,
+          name_en: `Airport Drop-off — ${airport.code || "Airport"}`,
+          name_es: `Traslado al aeropuerto — ${airport.code || "Aeropuerto"}`,
+          category: "transportation", timeLabel: "",
+          description_en: `Your transfer to **${airport.en}**${airport.code ? ` (${airport.code})` : ""} will be arranged. Please let us know your flight time so we can coordinate the pickup.`,
+          description_es: `Tu traslado al **${airport.es}**${airport.code ? ` (${airport.code})` : ""} estará coordinado. Avísanos la hora de tu vuelo para organizar la salida.`,
+        });
+        return items;
+      })(),
     };
     const p = presets[preset];
     if (!p) return;
@@ -2560,11 +2632,11 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
       const now = Date.now();
       setCart(prev => [...prev, ...p.map((item, i) => {
         const uid = `preset_${preset}_${now}_${i}`;
-        return { ...mapManualToCartItem(), ...item, _uid: uid, id: uid, dayLabel, sortOrder: count + i };
+        return { ...mapManualToCartItem(), ...item, confirmed: false, _uid: uid, id: uid, dayLabel, sortOrder: count + i };
       })]);
     } else {
       const uid = `preset_${preset}_${Date.now()}`;
-      setCart(prev => [...prev, { ...mapManualToCartItem(), ...p, _uid: uid, id: uid, dayLabel, sortOrder: count }]);
+      setCart(prev => [...prev, { ...mapManualToCartItem(), ...p, confirmed: false, _uid: uid, id: uid, dayLabel, sortOrder: count }]);
     }
   };
 
@@ -4052,7 +4124,10 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
   const [boatDayType,   setBoatDayType]   = useState(kickoff?.boatDayType   || "");
   const [dock,          setDock]          = useState(kickoff?.dock          || "");
   const [beachClub,     setBeachClub]     = useState(kickoff?.beachClub     || "");
-  const [beachClubDay, setBeachClubDay] = useState(kickoff?.beachClubDay || "");
+  const [beachClubDay,  setBeachClubDay]  = useState(kickoff?.beachClubDay  || "");
+  const [juniorConcierge,  setJuniorConcierge]  = useState(kickoff?.juniorConcierge  || "");
+  const [juniorBoat,       setJuniorBoat]       = useState(kickoff?.juniorBoat       || "");
+  const [juniorBeachClub,  setJuniorBeachClub]  = useState(kickoff?.juniorBeachClub  || "");
   const [saving, setSaving] = useState(false);
   const [boatList, setBoatList] = useState([]);
   useEffect(() => {
@@ -4081,6 +4156,7 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
       houseDrinkListSent, boatDrinkListSent, boatFoodReady,
       listSentToBoatOwner, foodRestrictionsShared, passportOk,
       boatName, boatDay, boatDayType, dock, beachClub, beachClubDay,
+      juniorConcierge, juniorBoat, juniorBeachClub,
     });
     setSaving(false);
     onClose();
@@ -4184,6 +4260,27 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
                 <label className="text-[10px] text-neutral-500">Día beach club</label>
                 <input type="date" value={beachClubDay} onChange={e => setBeachClubDay(e.target.value)}
                   min={kickoff?.arrivalDate || ""} max={kickoff?.departureDate || ""}
+                  className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs" />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-semibold text-orange-600 uppercase tracking-wider mb-3">Jr. Concierge</p>
+            <div className="grid grid-cols-1 gap-3">
+              <div>
+                <label className="text-[10px] text-neutral-500">Jr. Grupo</label>
+                <input value={juniorConcierge} onChange={e => setJuniorConcierge(e.target.value)} placeholder="Nombre del junior…"
+                  className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs" />
+              </div>
+              <div>
+                <label className="text-[10px] text-neutral-500">Jr. Bote</label>
+                <input value={juniorBoat} onChange={e => setJuniorBoat(e.target.value)} placeholder="Nombre del junior…"
+                  className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs" />
+              </div>
+              <div>
+                <label className="text-[10px] text-neutral-500">Jr. Beach Club</label>
+                <input value={juniorBeachClub} onChange={e => setJuniorBeachClub(e.target.value)} placeholder="Nombre del junior…"
                   className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs" />
               </div>
             </div>
@@ -8808,7 +8905,7 @@ const loadKickoffs = async () => {
                           if (!ciResps.length) return null;
                           const groupSize = k.groupSize || k.pax || "?";
                           return (
-                            <span onClick={e => { e.stopPropagation(); setInfoPopup({ title:"📋 Pre Check-in", text: ciResps.map(r => { const name = [r.firstName, r.lastName].filter(Boolean).join(" ") || r.name || ""; const diet = [r.foodRestrictions && `Dieta: ${r.foodRestrictions}`, r.allergies && `Alergias: ${r.allergies}`].filter(Boolean).join(" / "); return [name, diet].filter(Boolean).join(": "); }).filter(Boolean).join("\n") }); }}
+                            <span onClick={e => { e.stopPropagation(); setInfoPopup({ title:"📋 Pre Check-in", text: ciResps.map(r => ([r.firstName, r.lastName].filter(Boolean).join(" ") || r.name || "")).filter(Boolean).join("\n") }); }}
                               style={{fontSize:9,background:"#F5F3FF",color:"#5B21B6",border:"1px solid #DDD6FE",borderRadius:3,padding:"0px 5px",cursor:"pointer",fontWeight:600}}>
                               📋 {ciResps.length}/{groupSize}
                             </span>
