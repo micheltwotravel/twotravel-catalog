@@ -2474,63 +2474,72 @@ const CITY_GUIDE_SECTIONS = [
   {
     id: "dining",
     icon: "🍽️",
-    title: "Dining & Food",
+    title_en: "Dining & Food",
+    title_es: "Gastronomía",
     items: [
-      { id: "brunch", icon: "☀️", label: "Brunch Spots", desc: "Perfect for a relaxed late morning or early afternoon.", url: "https://maps.app.goo.gl/XqbGsW5f3Gb6Bw8GA" },
-      { id: "coffee", icon: "☕", label: "Coffee Shops", desc: "Great for a quick pick-me-up or a casual meet-up.", url: "https://maps.app.goo.gl/8Sk2eyN5PyKCNAcw5" },
-      { id: "dinner_walled", icon: "🍷", label: "Dinner – Walled City", desc: "Our top picks for dinner in Cartagena's historic center.", url: "https://maps.app.goo.gl/RpoHDyNRMcyXjyPC6" },
-      { id: "casual_walled", icon: "🥗", label: "Casual Dining – Walled City", desc: "More laid-back options for an easy meal.", url: "https://maps.app.goo.gl/8D1oCLWroj5mXCvx7" },
-      { id: "getsemani", icon: "🌮", label: "Restaurants in Getsemani", desc: "Trendy, local, and vibrant dining options.", url: "https://maps.app.goo.gl/pXCVbUS64qXw7DMs5" },
-      { id: "latenight", icon: "🌙", label: "Late-Night Eats", desc: "Ideal for post-party bites or late cravings.", url: "https://maps.app.goo.gl/4eycD4YFt4nGEqn58" },
+      { id: "brunch", icon: "☀️", label_en: "Brunch Spots", label_es: "Brunch", desc_en: "Perfect for a relaxed late morning or early afternoon.", desc_es: "Perfecto para una mañana tranquila o inicio de tarde.", url: "https://maps.app.goo.gl/XqbGsW5f3Gb6Bw8GA" },
+      { id: "coffee", icon: "☕", label_en: "Coffee Shops", label_es: "Cafés", desc_en: "Great for a quick pick-me-up or a casual meet-up.", desc_es: "Ideales para un café rápido o un encuentro casual.", url: "https://maps.app.goo.gl/8Sk2eyN5PyKCNAcw5" },
+      { id: "dinner_walled", icon: "🍷", label_en: "Dinner – Walled City", label_es: "Cenas – Ciudad Amurallada", desc_en: "Our top picks for dinner in Cartagena's historic center.", desc_es: "Los mejores lugares para cenar en el centro histórico de Cartagena.", url: "https://maps.app.goo.gl/RpoHDyNRMcyXjyPC6" },
+      { id: "casual_walled", icon: "🥗", label_en: "Casual Dining – Walled City", label_es: "Casual – Ciudad Amurallada", desc_en: "More laid-back options for an easy meal.", desc_es: "Opciones más relajadas para una comida sin complicaciones.", url: "https://maps.app.goo.gl/8D1oCLWroj5mXCvx7" },
+      { id: "getsemani", icon: "🌮", label_en: "Restaurants in Getsemani", label_es: "Restaurantes en Getsemaní", desc_en: "Trendy, local, and vibrant dining options.", desc_es: "Opciones de comida locales, modernas y llenas de ambiente.", url: "https://maps.app.goo.gl/pXCVbUS64qXw7DMs5" },
+      { id: "latenight", icon: "🌙", label_en: "Late-Night Eats", label_es: "Comida de Madrugada", desc_en: "Ideal for post-party bites or late cravings.", desc_es: "Perfecto para comer después de salir o para antojos nocturnos.", url: "https://maps.app.goo.gl/4eycD4YFt4nGEqn58" },
     ],
   },
   {
     id: "nightlife",
     icon: "🎭",
-    title: "Nightlife & Entertainment",
+    title_en: "Nightlife & Entertainment",
+    title_es: "Vida Nocturna",
     items: [
-      { id: "rooftops", icon: "🌅", label: "Rooftops", desc: "Best spots for sunset views and cocktails.", url: "https://maps.app.goo.gl/ke3S9xDyKqfAsUky6" },
-      { id: "bars", icon: "🍸", label: "Bars & Bar Hopping", desc: "From chill drinks to lively atmospheres — perfect for a bar crawl.", url: "https://maps.app.goo.gl/KAGw1LQBvhWb65XP8" },
-      { id: "nightclubs", icon: "🎉", label: "Nightclubs", desc: "Where to go for a proper night out.", url: "https://maps.app.goo.gl/QDZTGL5sH2tWaxzb6" },
-      { id: "gentlemens", icon: "🎩", label: "Gentleman's Clubs", desc: "Curated options for adult nightlife experiences.", url: "https://maps.app.goo.gl/34CwoubwzfiyMr9G8" },
+      { id: "rooftops", icon: "🌅", label_en: "Rooftops", label_es: "Rooftops", desc_en: "Best spots for sunset views and cocktails.", desc_es: "Los mejores lugares para ver el atardecer con cócteles.", url: "https://maps.app.goo.gl/ke3S9xDyKqfAsUky6" },
+      { id: "bars", icon: "🍸", label_en: "Bars & Bar Hopping", label_es: "Bares", desc_en: "From chill drinks to lively atmospheres — perfect for a bar crawl.", desc_es: "Desde tragos tranquilos hasta ambientes animados — perfectos para una noche de bares.", url: "https://maps.app.goo.gl/KAGw1LQBvhWb65XP8" },
+      { id: "nightclubs", icon: "🎉", label_en: "Nightclubs", label_es: "Discotecas", desc_en: "Where to go for a proper night out.", desc_es: "Los mejores lugares para salir de noche.", url: "https://maps.app.goo.gl/QDZTGL5sH2tWaxzb6" },
+      { id: "gentlemens", icon: "🎩", label_en: "Gentleman's Clubs", label_es: "Gentleman's Clubs", desc_en: "Curated options for adult nightlife experiences.", desc_es: "Opciones seleccionadas para la vida nocturna adulta.", url: "https://maps.app.goo.gl/34CwoubwzfiyMr9G8" },
     ],
   },
   {
     id: "beach",
     icon: "🏖️",
-    title: "Beach & Day Experiences",
+    title_en: "Beach & Day Experiences",
+    title_es: "Playa y Experiencias de Día",
     items: [
-      { id: "beach_clubs", icon: "🏖️", label: "Beach Clubs", desc: "The best spots for a day by the water.", url: "https://maps.app.goo.gl/n5Vqe4547qqJUBGSA" },
+      { id: "beach_clubs", icon: "🏖️", label_en: "Beach Clubs", label_es: "Beach Clubs", desc_en: "The best spots for a day by the water.", desc_es: "Los mejores lugares para un día junto al agua.", url: "https://maps.app.goo.gl/n5Vqe4547qqJUBGSA" },
     ],
   },
   {
     id: "shopping",
     icon: "🛍️",
-    title: "Shopping & Lifestyle",
+    title_en: "Shopping & Lifestyle",
+    title_es: "Compras y Estilo de Vida",
     items: [
-      { id: "shopping", icon: "🛍️", label: "Shopping & Souvenirs", desc: "Local boutiques, gifts, and artisan finds.", url: "https://maps.app.goo.gl/HJ3iWCeDoAinNv2L8" },
-      { id: "cigars", icon: "🚬", label: "Cigar Shops & Lounges", desc: "Premium cigars and relaxed atmospheres.", url: "https://maps.app.goo.gl/SCAChpWjLppZYfd76" },
-      { id: "hair", icon: "✂️", label: "Hair & Barber Shops", desc: "Trusted spots for grooming and quick touch-ups.", url: "https://maps.app.goo.gl/EBF2W9acSgh4aaxaA" },
+      { id: "shopping", icon: "🛍️", label_en: "Shopping & Souvenirs", label_es: "Compras y Souvenirs", desc_en: "Local boutiques, gifts, and artisan finds.", desc_es: "Boutiques locales, regalos y artesanías.", url: "https://maps.app.goo.gl/HJ3iWCeDoAinNv2L8" },
+      { id: "cigars", icon: "🚬", label_en: "Cigar Shops & Lounges", label_es: "Tiendas de Puros", desc_en: "Premium cigars and relaxed atmospheres.", desc_es: "Puros premium y ambientes relajados.", url: "https://maps.app.goo.gl/SCAChpWjLppZYfd76" },
+      { id: "hair", icon: "✂️", label_en: "Hair & Barber Shops", label_es: "Peluquerías y Barberías", desc_en: "Trusted spots for grooming and quick touch-ups.", desc_es: "Lugares de confianza para arreglarse antes de salir.", url: "https://maps.app.goo.gl/EBF2W9acSgh4aaxaA" },
     ],
   },
   {
     id: "essentials",
     icon: "⚙️",
-    title: "Essentials & Services",
+    title_en: "Essentials & Services",
+    title_es: "Servicios Esenciales",
     items: [
-      { id: "atms", icon: "💳", label: "ATMs", desc: "Convenient locations to withdraw cash.", url: "https://maps.app.goo.gl/H2f4SgGZki4zLhh38" },
-      { id: "pharmacies", icon: "💊", label: "24/7 Pharmacies", desc: "For any last-minute needs.", url: "https://maps.app.goo.gl/2snjVdKhHcnpEhJA6" },
-      { id: "emergency", icon: "🏥", label: "Hospitals & Police Stations", desc: "Nearby emergency services for peace of mind.", url: "https://maps.app.goo.gl/8yomj1ZFQWF7JuoT6" },
+      { id: "atms", icon: "💳", label_en: "ATMs", label_es: "Cajeros Automáticos", desc_en: "Convenient locations to withdraw cash.", desc_es: "Ubicaciones convenientes para retirar efectivo.", url: "https://maps.app.goo.gl/H2f4SgGZki4zLhh38" },
+      { id: "pharmacies", icon: "💊", label_en: "24/7 Pharmacies", label_es: "Farmacias 24/7", desc_en: "For any last-minute needs.", desc_es: "Para cualquier necesidad de último momento.", url: "https://maps.app.goo.gl/2snjVdKhHcnpEhJA6" },
+      { id: "emergency", icon: "🏥", label_en: "Hospitals & Police Stations", label_es: "Hospitales y Policía", desc_en: "Nearby emergency services for peace of mind.", desc_es: "Servicios de emergencia cercanos para mayor tranquilidad.", url: "https://maps.app.goo.gl/8yomj1ZFQWF7JuoT6" },
     ],
   },
 ];
 
-const DEFAULT_CITY_GUIDE_INTRO =
+const DEFAULT_CITY_GUIDE_INTRO_EN =
   "A curated collection of additional spots across the city — from hidden culinary gems and vibrant nightlife to essential services. Use these recommendations as your personal guide to explore Cartagena beyond your itinerary.";
+const DEFAULT_CITY_GUIDE_INTRO_ES =
+  "Una selección curada de lugares adicionales en la ciudad — desde joyas gastronómicas escondidas y vida nocturna vibrante hasta servicios esenciales. Usa estas recomendaciones como tu guía personal para explorar Cartagena más allá de tu itinerario.";
 
 function CityGuidePage({ kickoff, cityGuideHidden, cityGuideIntro, onIntroChange, page, total, lang, editMode, onToggleHidden }) {
+  const isEs = lang === "es";
   const hidden = (cityGuideHidden || "").split(",").map(s => s.trim()).filter(Boolean);
-  const intro = cityGuideIntro || DEFAULT_CITY_GUIDE_INTRO;
+  const defaultIntro = isEs ? DEFAULT_CITY_GUIDE_INTRO_ES : DEFAULT_CITY_GUIDE_INTRO_EN;
+  const intro = cityGuideIntro || defaultIntro;
   const cityName = kickoff.cityName || "Cartagena";
 
   return (
@@ -2575,7 +2584,7 @@ function CityGuidePage({ kickoff, cityGuideHidden, cityGuideIntro, onIntroChange
                   letterSpacing: ".18em", color: "#1c1917",
                   fontFamily: "system-ui,sans-serif",
                 }}>
-                  {section.title}
+                  {isEs ? section.title_es : section.title_en}
                 </span>
                 <div style={{ flex: 1, height: 1, background: "#d6cfc4" }} />
               </div>
@@ -2603,10 +2612,10 @@ function CityGuidePage({ kickoff, cityGuideHidden, cityGuideIntro, onIntroChange
                             paddingBottom: "0px",
                           }}
                         >
-                          {item.label}
+                          {isEs ? (item.label_es || item.label_en) : (item.label_en || item.label)}
                         </a>
                         <div style={{ fontSize: 9.5, color: "#9a8a78", lineHeight: 1.4, marginTop: 1, fontFamily: "system-ui,sans-serif" }}>
-                          {item.desc}
+                          {isEs ? (item.desc_es || item.desc_en) : (item.desc_en || item.desc)}
                         </div>
                       </div>
                     </div>
@@ -2622,7 +2631,7 @@ function CityGuidePage({ kickoff, cityGuideHidden, cityGuideIntro, onIntroChange
                           flexShrink: 0, fontFamily: "system-ui,sans-serif",
                         }}
                       >
-                        {isHidden ? "Show" : "Hide"}
+                        {isEs ? (isHidden ? "Mostrar" : "Ocultar") : (isHidden ? "Show" : "Hide")}
                       </button>
                     )}
                   </div>
