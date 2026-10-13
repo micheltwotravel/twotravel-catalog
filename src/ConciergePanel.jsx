@@ -5082,18 +5082,162 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
         <div className="flex-1 overflow-auto p-5 space-y-4">
 
-          {/* ── Notas internas — siempre visible, lo primero ── */}
-          <div>
-            <label className="text-[11px] text-neutral-500">📝 Notas internas</label>
-            <textarea
-              value={internalNotes}
-              onChange={(e) => setInternalNotes(e.target.value)}
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm min-h-[90px]"
-              placeholder="Notas extra para el equipo…"
-            />
+          <DrawerSection title="👤 Datos del cliente" defaultOpen={true}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] text-neutral-500">Huésped</label>
+              <input
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                placeholder="Nombre del huésped"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] text-neutral-500">Viaje</label>
+              <input
+                value={tripName}
+                onChange={(e) => setTripName(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                placeholder="Nombre del viaje"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="text-[11px] text-neutral-500">Idioma del cliente</label>
+              <div className="mt-1 flex gap-2">
+                <button type="button"
+                  onClick={() => setLang("es")}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${lang === "es" ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-indigo-400"}`}>
+                  🇨🇴 Español
+                </button>
+                <button type="button"
+                  onClick={() => setLang("en")}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${lang === "en" ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-indigo-400"}`}>
+                  🇺🇸 English
+                </button>
+              </div>
+            </div>
+            <div>
+  <label className="text-[11px] text-neutral-500">Contacto</label>
+  <input
+    value={guestContact}
+    onChange={(e) => setGuestContact(e.target.value)}
+    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+    placeholder="WhatsApp o email"
+  />
+</div>
+            <div>
+              <label className="text-[11px] text-neutral-500">Email del cliente</label>
+              <input
+                type="email"
+                value={guestEmailState}
+                onChange={(e) => setGuestEmailState(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                placeholder="cliente@email.com"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="text-[11px] text-neutral-500 mb-1 block">
+                Concierge(s) asignado(s)
+                {assignedConcierges.length > 0 && (
+                  <span className="ml-1 text-neutral-400">({assignedConcierges.join(", ")})</span>
+                )}
+              </label>
+              {(() => {
+                const kickoffCityList = city.split(",").map(c => c.trim().toUpperCase()).filter(Boolean);
+                const multiCity = kickoffCityList.length > 1;
+                return (
+                  <div className="border rounded-lg divide-y bg-white">
+                    {CONCIERGE_LIST.filter(c=>!c.hidden).map(c => {
+                      const checked = assignedConcierges.includes(c.name);
+                      return (
+                        <div key={c.email} className="px-3 py-2 hover:bg-neutral-50">
+                          <label className="flex items-center gap-2 cursor-pointer text-sm">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setAssignedConcierges(prev =>
+                                  checked ? prev.filter(n => n !== c.name) : [...prev, c.name]
+                                );
+                                if (!checked) {
+                                  const defaultCity = kickoffCityList.find(code => code === c.city) || c.city;
+                                  setConciergesCities(prev => ({ ...prev, [c.name]: defaultCity }));
+                                  if (!city) setCity(c.city);
+                                } else {
+                                  setConciergesCities(prev => { const { [c.name]: _, ...rest } = prev; return rest; });
+                                }
+                              }}
+                              className="rounded"
+                            />
+                            <span className="flex-1">{c.name}</span>
+                            {!checked && <span className="text-[10px] text-neutral-400">{c.city}</span>}
+                          </label>
+                          {checked && multiCity && (
+                            <div className="flex gap-1.5 mt-1.5 ml-6">
+                              {kickoffCityList.map(code => (
+                                <button
+                                  key={code}
+                                  type="button"
+                                  onClick={() => setConciergesCities(prev => ({ ...prev, [c.name]: code }))}
+                                  className={`text-[10px] px-2 py-0.5 rounded-full border font-medium transition-colors ${
+                                    conciergesCities[c.name] === code
+                                      ? "bg-indigo-600 text-white border-indigo-600"
+                                      : "bg-white text-neutral-500 border-neutral-300 hover:border-indigo-400"
+                                  }`}
+                                >
+                                  {cityFullName(code) || code}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {checked && !multiCity && (
+                            <div className="ml-6 mt-0.5">
+                              <span className="text-[10px] text-indigo-600 font-medium">{cityFullName(c.city) || c.city}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="text-[11px] text-neutral-500">Título del concierge</label>
+              <input
+                value={conciergeTitle}
+                onChange={e => setConciergeTitle(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                placeholder="Senior Concierge Cartagena"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="text-[11px] text-neutral-500">Estado</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+              >
+                <option value="new">{STATUS_LABELS.new.es}</option>
+                <option value="active">{STATUS_LABELS.active.es}</option>
+                <option value="client_submitted">{STATUS_LABELS.client_submitted.es}</option>
+                <option value="concierge_editing">{STATUS_LABELS.concierge_editing.es}</option>
+                <option value="sent_to_preview">{STATUS_LABELS.sent_to_preview.es}</option>
+                <option value="sent_to_travify">{STATUS_LABELS.sent_to_travify.es}</option>
+                <option value="feedback_submitted">{STATUS_LABELS.feedback_submitted.es}</option>
+                <option value="done">{STATUS_LABELS.done.es}</option>
+              </select>
+            </div>
+
+
+
           </div>
-
-
+          </DrawerSection>
 
           {/* ── Feedback del cliente (respuestas del formulario) ── */}
           {(kickoff.status === "feedback_submitted" || kickoff.feedbackAt) && (
@@ -5434,127 +5578,74 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="https://drive.google.com/file/d/.../view" />
               </div>
-            </div>
-          </DrawerSection>
 
-          {/* ── Calificaciones por ciudad — removed per #14: reviews covered in KPI 3 ── */}
-          {false && <DrawerSection title="⭐ Calificaciones por ciudad" accent="amber">
-            <div className="flex items-center justify-between">
-              <span />
-              <button
-                type="button"
-                onClick={addCityRating}
-                className="text-[11px] px-2.5 py-1 rounded-full bg-amber-800 text-white hover:bg-amber-900 transition"
-              >
-                + Agregar ciudad
-              </button>
-            </div>
-
-            {cityRatings.length === 0 && (
-              <p className="text-[11px] text-amber-700 italic">
-                Agrega una calificación después de cada leg del viaje.
-              </p>
-            )}
-
-            {cityRatings.map((cr, i) => (
-              <div key={i} className="bg-white border border-amber-200 rounded-xl p-3 space-y-2">
-                <div className="flex items-center gap-2">
-                  {/* City dropdown */}
-                  <select
-                    value={cr.city}
-                    onChange={e => patchCityRating(i, { city: e.target.value })}
-                    className="flex-1 border border-neutral-200 rounded-lg px-2 py-1.5 text-sm bg-white outline-none"
-                  >
-                    <option value="">— Ciudad —</option>
-                    {["Cartagena","Medellín","CDMX","Tulum","Los Cabos"].map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                  {/* Remove */}
-                  <button
-                    type="button"
-                    onClick={() => removeCityRating(i)}
-                    className="text-neutral-400 hover:text-red-500 text-lg leading-none px-1"
-                    title="Eliminar"
-                  >×</button>
-                </div>
-
-                {/* Star rating 1-5 */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] text-neutral-500 mr-1">Rating:</span>
-                  {[1,2,3,4,5].map(n => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => patchCityRating(i, { rating: cr.rating === n ? 0 : n })}
-                      className={`w-8 h-8 rounded-full text-sm font-semibold transition border ${
-                        cr.rating >= n
-                          ? "bg-amber-400 border-amber-400 text-white"
-                          : "bg-white border-neutral-200 text-neutral-400 hover:border-amber-300"
-                      }`}
-                    >
-                      ★
-                    </button>
-                  ))}
-                  {cr.rating > 0 && (
-                    <span className="ml-1 text-[11px] text-amber-700 font-medium">{cr.rating}/5</span>
-                  )}
-                </div>
-
-                {/* Notes */}
-                <textarea
-                  value={cr.notes}
-                  onChange={e => patchCityRating(i, { notes: e.target.value })}
-                  rows={2}
-                  placeholder="Notas internas sobre este leg del viaje..."
-                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-xs bg-neutral-50 outline-none resize-none"
-                />
-              </div>
-            ))}
-          </DrawerSection>}
-
-          {/* ── KPIs: reseñas + facturación ─────────────────────────────── */}
-          <DrawerSection title="📊 KPIs" accent="neutral">
-            <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-2">Reseñas externas · KPI 3</p>
-            <div className="space-y-3 mb-4">
-              {[
-                { label: "Google Review", val: googleReviewStars, set: setGoogleReviewStars },
-                { label: "TripAdvisor Review", val: tripAdvisorReviewStars, set: setTripAdvisorReviewStars },
-              ].map(({ label, val, set }) => (
-                <div key={label}>
-                  <span className="text-[11px] text-neutral-500 block mb-1">{label}</span>
-                  <div className="flex items-center gap-1">
-                    <button type="button" onClick={() => set(0)}
-                      className={`text-[10px] px-2 py-0.5 rounded border transition ${val === 0 ? "bg-neutral-900 text-white border-neutral-900" : "border-neutral-300 text-neutral-400 hover:border-neutral-500"}`}>
-                      Sin reseña
-                    </button>
-                    {[1,2,3,4,5].map(n => (
-                      <button key={n} type="button" onClick={() => set(val === n ? 0 : n)}
-                        className={`w-7 h-7 rounded-full text-sm font-semibold transition border ${val >= n ? "bg-amber-400 border-amber-400 text-white" : "bg-white border-neutral-200 text-neutral-300 hover:border-amber-300"}`}>
-                        ★
-                      </button>
-                    ))}
-                    {val > 0 && <span className="ml-1 text-[11px] text-amber-700 font-medium">{val}/5</span>}
+              {/* ── FECHAS DE ESTADÍA ── */}
+              <div className="col-span-2 border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
+                <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — {cityFullName(city.split(",")[0]?.trim()) || city.split(",")[0]?.trim() || "Ciudad 1"}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
+                    <input type="date" value={arrivalDate} onChange={e => setArrivalDate(e.target.value)}
+                      className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-neutral-500 mb-1">Salida</label>
+                    <input type="date" value={departureDate} min={arrivalDate || undefined} onChange={e => setDepartureDate(e.target.value)}
+                      className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
                   </div>
                 </div>
-              ))}
-            </div>
-            <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-2">Facturación · KPI 5</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[11px] text-neutral-500 block mb-1">Pre-Bill enviado a Lyna</label>
-                <input type="date" value={preBillSentAt} onChange={e => setPreBillSentAt(e.target.value)}
-                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white outline-none" />
+                {clientNights && (
+                  <p className="text-[10px] text-blue-600">🌙 {clientNights} noche{clientNights !== 1 ? "s" : ""}</p>
+                )}
               </div>
-              <div>
-                <label className="text-[11px] text-neutral-500 block mb-1">Lyna envió factura</label>
-                <input type="date" value={lynaInvoiceSentAt} onChange={e => setLynaInvoiceSentAt(e.target.value)}
-                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white outline-none" />
-              </div>
+              {city.includes(",") && (
+                <div className="col-span-2 border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
+                  <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — Ciudad 2 — {cityFullName(city.split(",")[1]?.trim())}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
+                      <input type="date" value={arrivalDate2} min={departureDate || undefined} onChange={e => setArrivalDate2(e.target.value)}
+                        className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-neutral-500 mb-1">Salida</label>
+                      <input type="date" value={departureDate2} min={arrivalDate2 || undefined} onChange={e => setDepartureDate2(e.target.value)}
+                        className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
+                    </div>
+                  </div>
+                  {arrivalDate2 && departureDate2 && (() => {
+                    const n = Math.round((new Date(departureDate2) - new Date(arrivalDate2)) / 86400000);
+                    return n > 0 ? <p className="text-[10px] text-blue-600">🌙 {n} noche{n !== 1 ? "s" : ""}</p> : null;
+                  })()}
+                </div>
+              )}
             </div>
           </DrawerSection>
 
-          {/* ── LLEGADAS Y SALIDAS DEL GRUPO ─────────────────────────────── */}
+          <DrawerSection title="📅 Itinerario" accent="indigo" defaultOpen={true}>
+            <div className="-mt-1 mb-1" />
+            <ItineraryCanvas
+              kickoff={kickoff}
+              onCartChange={(newCart, newDayMeta) => {
+                canvasCartRef.current    = newCart;
+                canvasDayMetaRef.current = newDayMeta;
+              }}
+              onSave={async (newCart, newDayMeta) => {
+                await onSilentUpdate(kickoff.id, {
+                  cart:    JSON.stringify(newCart),
+                  dayMeta: JSON.stringify(newDayMeta),
+                  status: "concierge_editing",
+                });
+                // Small delay so GAS sheet write propagates before iframe re-fetches
+                await new Promise(r => setTimeout(r, 1500));
+                if (iframeRef.current) {
+                  const base = `${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}&edit=1&embed=1`;
+                  iframeRef.current.src = `${base}&_t=${Date.now()}`;
+                }
+              }}
+            />
+          </DrawerSection>
+
           <DrawerSection title="✈️ Llegadas y salidas del grupo" accent="neutral">
             {/* Import from check-in responses */}
             {(() => {
@@ -5787,243 +5878,137 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           </DrawerSection>
 
           {/* ITINERARIO — canvas con edición inline por día */}
-          <DrawerSection title="📅 Itinerario" accent="neutral" defaultOpen={true}>
-            <div className="-mt-1 mb-1" />
-            <ItineraryCanvas
-              kickoff={kickoff}
-              onCartChange={(newCart, newDayMeta) => {
-                canvasCartRef.current    = newCart;
-                canvasDayMetaRef.current = newDayMeta;
-              }}
-              onSave={async (newCart, newDayMeta) => {
-                await onSilentUpdate(kickoff.id, {
-                  cart:    JSON.stringify(newCart),
-                  dayMeta: JSON.stringify(newDayMeta),
-                  status: "concierge_editing",
-                });
-                // Small delay so GAS sheet write propagates before iframe re-fetches
-                await new Promise(r => setTimeout(r, 1500));
-                if (iframeRef.current) {
-                  const base = `${window.location.origin}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${kickoff?.lang || "en"}&edit=1&embed=1`;
-                  iframeRef.current.src = `${base}&_t=${Date.now()}`;
-                }
-              }}
-            />
+          <DrawerSection title="📊 KPIs" accent="neutral">
+            <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-2">Reseñas externas · KPI 3</p>
+            <div className="space-y-3 mb-4">
+              {[
+                { label: "Google Review", val: googleReviewStars, set: setGoogleReviewStars },
+                { label: "TripAdvisor Review", val: tripAdvisorReviewStars, set: setTripAdvisorReviewStars },
+              ].map(({ label, val, set }) => (
+                <div key={label}>
+                  <span className="text-[11px] text-neutral-500 block mb-1">{label}</span>
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => set(0)}
+                      className={`text-[10px] px-2 py-0.5 rounded border transition ${val === 0 ? "bg-neutral-900 text-white border-neutral-900" : "border-neutral-300 text-neutral-400 hover:border-neutral-500"}`}>
+                      Sin reseña
+                    </button>
+                    {[1,2,3,4,5].map(n => (
+                      <button key={n} type="button" onClick={() => set(val === n ? 0 : n)}
+                        className={`w-7 h-7 rounded-full text-sm font-semibold transition border ${val >= n ? "bg-amber-400 border-amber-400 text-white" : "bg-white border-neutral-200 text-neutral-300 hover:border-amber-300"}`}>
+                        ★
+                      </button>
+                    ))}
+                    {val > 0 && <span className="ml-1 text-[11px] text-amber-700 font-medium">{val}/5</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-2">Facturación · KPI 5</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] text-neutral-500 block mb-1">Pre-Bill enviado a Lyna</label>
+                <input type="date" value={preBillSentAt} onChange={e => setPreBillSentAt(e.target.value)}
+                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white outline-none" />
+              </div>
+              <div>
+                <label className="text-[11px] text-neutral-500 block mb-1">Lyna envió factura</label>
+                <input type="date" value={lynaInvoiceSentAt} onChange={e => setLynaInvoiceSentAt(e.target.value)}
+                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white outline-none" />
+              </div>
+            </div>
           </DrawerSection>
 
-          {/* ── Datos del cliente — al final ── */}
-          <DrawerSection title="👤 Datos del cliente" defaultOpen={false}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-[11px] text-neutral-500">Huésped</label>
-              <input
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="Nombre del huésped"
-              />
-            </div>
+          {/* ── LLEGADAS Y SALIDAS DEL GRUPO ─────────────────────────────── */}
+          {/* ── Notas internas — siempre visible, lo primero ── */}
+          <div>
+            <label className="text-[11px] text-neutral-500">📝 Notas internas</label>
+            <textarea
+              value={internalNotes}
+              onChange={(e) => setInternalNotes(e.target.value)}
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm min-h-[90px]"
+              placeholder="Notas extra para el equipo…"
+            />
+          </div>
 
-            <div>
-              <label className="text-[11px] text-neutral-500">Viaje</label>
-              <input
-                value={tripName}
-                onChange={(e) => setTripName(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="Nombre del viaje"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="text-[11px] text-neutral-500">Idioma del cliente</label>
-              <div className="mt-1 flex gap-2">
-                <button type="button"
-                  onClick={() => setLang("es")}
-                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${lang === "es" ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-indigo-400"}`}>
-                  🇨🇴 Español
-                </button>
-                <button type="button"
-                  onClick={() => setLang("en")}
-                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${lang === "en" ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-indigo-400"}`}>
-                  🇺🇸 English
-                </button>
-              </div>
-            </div>
-            <div>
-  <label className="text-[11px] text-neutral-500">Contacto</label>
-  <input
-    value={guestContact}
-    onChange={(e) => setGuestContact(e.target.value)}
-    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-    placeholder="WhatsApp o email"
-  />
-</div>
-            <div>
-              <label className="text-[11px] text-neutral-500">Email del cliente</label>
-              <input
-                type="email"
-                value={guestEmailState}
-                onChange={(e) => setGuestEmailState(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="cliente@email.com"
-              />
-            </div>
 
-            <div className="sm:col-span-2">
-              <label className="text-[11px] text-neutral-500 mb-1 block">
-                Concierge(s) asignado(s)
-                {assignedConcierges.length > 0 && (
-                  <span className="ml-1 text-neutral-400">({assignedConcierges.join(", ")})</span>
-                )}
-              </label>
-              {(() => {
-                const kickoffCityList = city.split(",").map(c => c.trim().toUpperCase()).filter(Boolean);
-                const multiCity = kickoffCityList.length > 1;
-                return (
-                  <div className="border rounded-lg divide-y bg-white">
-                    {CONCIERGE_LIST.filter(c=>!c.hidden).map(c => {
-                      const checked = assignedConcierges.includes(c.name);
-                      return (
-                        <div key={c.email} className="px-3 py-2 hover:bg-neutral-50">
-                          <label className="flex items-center gap-2 cursor-pointer text-sm">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => {
-                                setAssignedConcierges(prev =>
-                                  checked ? prev.filter(n => n !== c.name) : [...prev, c.name]
-                                );
-                                if (!checked) {
-                                  const defaultCity = kickoffCityList.find(code => code === c.city) || c.city;
-                                  setConciergesCities(prev => ({ ...prev, [c.name]: defaultCity }));
-                                  if (!city) setCity(c.city);
-                                } else {
-                                  setConciergesCities(prev => { const { [c.name]: _, ...rest } = prev; return rest; });
-                                }
-                              }}
-                              className="rounded"
-                            />
-                            <span className="flex-1">{c.name}</span>
-                            {!checked && <span className="text-[10px] text-neutral-400">{c.city}</span>}
-                          </label>
-                          {checked && multiCity && (
-                            <div className="flex gap-1.5 mt-1.5 ml-6">
-                              {kickoffCityList.map(code => (
-                                <button
-                                  key={code}
-                                  type="button"
-                                  onClick={() => setConciergesCities(prev => ({ ...prev, [c.name]: code }))}
-                                  className={`text-[10px] px-2 py-0.5 rounded-full border font-medium transition-colors ${
-                                    conciergesCities[c.name] === code
-                                      ? "bg-indigo-600 text-white border-indigo-600"
-                                      : "bg-white text-neutral-500 border-neutral-300 hover:border-indigo-400"
-                                  }`}
-                                >
-                                  {cityFullName(code) || code}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                          {checked && !multiCity && (
-                            <div className="ml-6 mt-0.5">
-                              <span className="text-[10px] text-indigo-600 font-medium">{cityFullName(c.city) || c.city}</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
 
-            <div className="sm:col-span-2">
-              <label className="text-[11px] text-neutral-500">Título del concierge</label>
-              <input
-                value={conciergeTitle}
-                onChange={e => setConciergeTitle(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                placeholder="Senior Concierge Cartagena"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="text-[11px] text-neutral-500">Estado</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+          {/* ── Calificaciones por ciudad — removed per #14: reviews covered in KPI 3 ── */}
+          {false && <DrawerSection title="⭐ Calificaciones por ciudad" accent="amber">
+            <div className="flex items-center justify-between">
+              <span />
+              <button
+                type="button"
+                onClick={addCityRating}
+                className="text-[11px] px-2.5 py-1 rounded-full bg-amber-800 text-white hover:bg-amber-900 transition"
               >
-                <option value="new">{STATUS_LABELS.new.es}</option>
-                <option value="active">{STATUS_LABELS.active.es}</option>
-                <option value="client_submitted">{STATUS_LABELS.client_submitted.es}</option>
-                <option value="concierge_editing">{STATUS_LABELS.concierge_editing.es}</option>
-                <option value="sent_to_preview">{STATUS_LABELS.sent_to_preview.es}</option>
-                <option value="sent_to_travify">{STATUS_LABELS.sent_to_travify.es}</option>
-                <option value="feedback_submitted">{STATUS_LABELS.feedback_submitted.es}</option>
-                <option value="done">{STATUS_LABELS.done.es}</option>
-              </select>
+                + Agregar ciudad
+              </button>
             </div>
 
-            {/* ── FECHAS DE ESTADÍA (editables por el concierge) ── */}
-            <div className="col-span-2 border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
-              <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — {cityFullName(city.split(",")[0]?.trim()) || city.split(",")[0]?.trim() || "Ciudad 1"}</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
-                  <input
-                    type="date"
-                    value={arrivalDate}
-                    onChange={e => setArrivalDate(e.target.value)}
-                    className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-neutral-500 mb-1">Salida</label>
-                  <input
-                    type="date"
-                    value={departureDate}
-                    min={arrivalDate || undefined}
-                    onChange={e => setDepartureDate(e.target.value)}
-                    className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white"
-                  />
-                </div>
-              </div>
-              {clientNights && (
-                <p className="text-[10px] text-blue-600">🌙 {clientNights} noche{clientNights !== 1 ? "s" : ""}</p>
-              )}
-            </div>
-
-            {/* City 2 dates — only shown when trip has 2 cities */}
-            {city.includes(",") && (
-              <div className="border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
-                <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — Ciudad 2 — {cityFullName(city.split(",")[1]?.trim())}</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
-                    <input type="date" value={arrivalDate2}
-                      min={departureDate || undefined}
-                      onChange={e => setArrivalDate2(e.target.value)}
-                      className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] text-neutral-500 mb-1">Salida</label>
-                    <input type="date" value={departureDate2}
-                      min={arrivalDate2 || undefined}
-                      onChange={e => setDepartureDate2(e.target.value)}
-                      className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
-                  </div>
-                </div>
-                {arrivalDate2 && departureDate2 && (() => {
-                  const n = Math.round((new Date(departureDate2) - new Date(arrivalDate2)) / 86400000);
-                  return n > 0 ? <p className="text-[10px] text-blue-600">🌙 {n} noche{n !== 1 ? "s" : ""}</p> : null;
-                })()}
-              </div>
+            {cityRatings.length === 0 && (
+              <p className="text-[11px] text-amber-700 italic">
+                Agrega una calificación después de cada leg del viaje.
+              </p>
             )}
 
+            {cityRatings.map((cr, i) => (
+              <div key={i} className="bg-white border border-amber-200 rounded-xl p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  {/* City dropdown */}
+                  <select
+                    value={cr.city}
+                    onChange={e => patchCityRating(i, { city: e.target.value })}
+                    className="flex-1 border border-neutral-200 rounded-lg px-2 py-1.5 text-sm bg-white outline-none"
+                  >
+                    <option value="">— Ciudad —</option>
+                    {["Cartagena","Medellín","CDMX","Tulum","Los Cabos"].map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                  {/* Remove */}
+                  <button
+                    type="button"
+                    onClick={() => removeCityRating(i)}
+                    className="text-neutral-400 hover:text-red-500 text-lg leading-none px-1"
+                    title="Eliminar"
+                  >×</button>
+                </div>
 
-          </div>
-          </DrawerSection>
+                {/* Star rating 1-5 */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-neutral-500 mr-1">Rating:</span>
+                  {[1,2,3,4,5].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => patchCityRating(i, { rating: cr.rating === n ? 0 : n })}
+                      className={`w-8 h-8 rounded-full text-sm font-semibold transition border ${
+                        cr.rating >= n
+                          ? "bg-amber-400 border-amber-400 text-white"
+                          : "bg-white border-neutral-200 text-neutral-400 hover:border-amber-300"
+                      }`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                  {cr.rating > 0 && (
+                    <span className="ml-1 text-[11px] text-amber-700 font-medium">{cr.rating}/5</span>
+                  )}
+                </div>
 
+                {/* Notes */}
+                <textarea
+                  value={cr.notes}
+                  onChange={e => patchCityRating(i, { notes: e.target.value })}
+                  rows={2}
+                  placeholder="Notas internas sobre este leg del viaje..."
+                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-xs bg-neutral-50 outline-none resize-none"
+                />
+              </div>
+            ))}
+          </DrawerSection>}
+
+          {/* ── KPIs: reseñas + facturación ─────────────────────────────── */}
           {/* Check-in Responses hidden */}
         </div>
 
