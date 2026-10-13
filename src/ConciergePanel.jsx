@@ -1792,16 +1792,25 @@ function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availabl
   );
 }
 
-function SortableActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availableDays, groupSize, lang = "en" }) {
+function SortableActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availableDays, groupSize, lang = "en", onMoveUp, onMoveDown, isFirst, isLast }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item._uid });
   return (
     <div ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
       className="flex items-stretch border-b border-neutral-100 last:border-0">
+      {/* Up/down arrow buttons */}
+      <div className="flex flex-col justify-center px-1 gap-0.5 flex-shrink-0">
+        <button type="button" onClick={onMoveUp} disabled={isFirst}
+          className="text-[10px] leading-none text-neutral-300 hover:text-neutral-600 disabled:opacity-20 disabled:cursor-default w-4 h-4 flex items-center justify-center rounded hover:bg-neutral-100"
+          title="Subir">▲</button>
+        <button type="button" onClick={onMoveDown} disabled={isLast}
+          className="text-[10px] leading-none text-neutral-300 hover:text-neutral-600 disabled:opacity-20 disabled:cursor-default w-4 h-4 flex items-center justify-center rounded hover:bg-neutral-100"
+          title="Bajar">▼</button>
+      </div>
       <button
         type="button" {...attributes} {...listeners}
-        className="px-2 text-neutral-300 hover:text-neutral-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0 flex items-center select-none"
+        className="px-1.5 text-neutral-300 hover:text-neutral-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0 flex items-center select-none"
         title="Arrastrar para reordenar"
         onMouseDown={e => e.stopPropagation()}
       >
@@ -2015,12 +2024,15 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
               }}>
               <SortableContext items={items.map(i => i._uid)} strategy={verticalListSortingStrategy}>
                 <div className="bg-white">
-                  {items.map(item => item.type === "block"
+                  {items.map((item, idx) => item.type === "block"
                     ? <SortableRichTextBlock key={item._uid} item={item} onUpdate={onUpdateItem} onRemove={onRemoveItem} />
                     : <SortableActivityRow key={item._uid || item.id} item={item}
                         availableDays={availableDays}
                         groupSize={groupSize} lang={lang}
-                        onUpdate={onUpdateItem} onRemove={onRemoveItem} onDuplicate={onDuplicateItem} onResync={onResyncItem} />
+                        onUpdate={onUpdateItem} onRemove={onRemoveItem} onDuplicate={onDuplicateItem} onResync={onResyncItem}
+                        isFirst={idx === 0} isLast={idx === items.length - 1}
+                        onMoveUp={() => onReorderItems?.(idx, idx - 1)}
+                        onMoveDown={() => onReorderItems?.(idx, idx + 1)} />
                   )}
                 </div>
               </SortableContext>
@@ -2028,12 +2040,12 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
           )}
           {/* Add buttons — grouped by category */}
           <div className="px-4 py-2.5 bg-neutral-50 border-t border-neutral-100 space-y-2">
-            {/* ARRIVAL */}
+            {/* LLEGADA */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Llegada</span>
               {[
-                { key: "checkin", label: "🏨 Check-in" },
                 { key: "pickup",  label: "✈️ Traslado llegada" },
+                { key: "checkin", label: "🏨 Check-in" },
               ].map(({ key, label: pl }) => (
                 <button key={key} type="button" onClick={() => onAddPreset?.(key)}
                   className="text-xs text-teal-700 hover:text-teal-900 border border-teal-200 hover:border-teal-400 rounded-lg px-2.5 py-1 bg-teal-50 transition-colors">
@@ -2041,7 +2053,7 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
                 </button>
               ))}
             </div>
-            {/* DEPARTURE */}
+            {/* SALIDA */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Salida</span>
               {[
@@ -2054,20 +2066,34 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
                 </button>
               ))}
             </div>
-            {/* FOOD & BOAT */}
+            {/* COMIDA */}
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Servicios</span>
+              <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Comida</span>
               {[
-                { key: "breakfast", label: lang === "es" ? "☕ Desayuno" : "☕ Breakfast" },
-                { key: "boatday",   label: "🛥 Boat Day" },
+                { key: "breakfast",   label: "☕ Desayuno" },
+                { key: "foodonboard", label: "🍽 Food on Board" },
+                { key: "chefdinner",  label: "👨‍🍳 Chef Dinner" },
               ].map(({ key, label: pl }) => (
                 <button key={key} type="button" onClick={() => onAddPreset?.(key)}
-                  className="text-xs text-teal-700 hover:text-teal-900 border border-teal-200 hover:border-teal-400 rounded-lg px-2.5 py-1 bg-teal-50 transition-colors">
+                  className="text-xs text-amber-700 hover:text-amber-900 border border-amber-200 hover:border-amber-400 rounded-lg px-2.5 py-1 bg-amber-50 transition-colors">
                   {pl}
                 </button>
               ))}
             </div>
-            {/* ADD */}
+            {/* BOTE */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Bote</span>
+              {[
+                { key: "boatday",   label: "🛥 Boat Day" },
+                { key: "beachclub", label: "🏖 Beach Club" },
+              ].map(({ key, label: pl }) => (
+                <button key={key} type="button" onClick={() => onAddPreset?.(key)}
+                  className="text-xs text-blue-700 hover:text-blue-900 border border-blue-200 hover:border-blue-400 rounded-lg px-2.5 py-1 bg-blue-50 transition-colors">
+                  {pl}
+                </button>
+              ))}
+            </div>
+            {/* AGREGAR */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Agregar</span>
               <button type="button" onClick={onAddManual}
@@ -2107,7 +2133,7 @@ function SortableDaySection({ label, ...props }) {
   );
 }
 
-function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
+function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
   // Parse cart/dayMeta whether they arrive as arrays or JSON strings from the Sheet
   const parseArr = (v) => {
     if (Array.isArray(v)) return v;
@@ -2127,6 +2153,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
   };
   const [cart,     setCart]     = useState(withUid(parseArr(kickoff?.cart)));
   const [dayMeta,  setDayMeta]  = useState(parseArr(kickoff?.dayMeta));
+  const [lang,     setLang]     = useState(kickoff?.lang || "en");
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(false);
   const [saving,   setSaving]   = useState(false);
@@ -2175,7 +2202,6 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
     if (newMeta.length === 0 && kickoff?.arrivalDate && kickoff?.departureDate) {
       const arrDate = kickoff.arrivalDate;
       const depDate = kickoff.departureDate;
-      const lang = kickoff?.lang || "en";
       const loc = lang === "es" ? "es-CO" : "en-US";
       const totalDays = Math.max(
         Math.round((new Date(depDate + "T12:00:00") - new Date(arrDate + "T12:00:00")) / 86400000) + 1,
@@ -2269,7 +2295,6 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
     if (arrDate) {
       const d = new Date(arrDate + "T12:00:00");
       d.setDate(d.getDate() + (nextNum - 1));
-      const lang = kickoff?.lang || "en";
       label = d.toLocaleDateString(lang === "es" ? "es-CO" : "en-US", { weekday: "long", month: "long", day: "numeric" });
     } else {
       label = `Día ${nextNum}`;
@@ -2280,7 +2305,6 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
   const autoFillDayTitles = () => {
     const arrDate = kickoff?.arrivalDate;
     if (!arrDate) { alert("Necesitas configurar la fecha de llegada primero."); return; }
-    const lang = kickoff?.lang || "en";
     const loc  = lang === "es" ? "es-CO" : "en-US";
 
     // Calculate total days from arrival to departure
@@ -2335,7 +2359,6 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
       setDayMeta(currentMeta => {
         const firstLabel = currentMeta[0]?.label;
         const lastLabel  = currentMeta[currentMeta.length - 1]?.label;
-        const lang = kickoff?.lang || "en";
         const accom = kickoff?.accommodationName || "";
         const checkinTime  = kickoff?.checkIn  || "3:00 PM";
         const checkoutTime = kickoff?.checkOut || "11:00 AM";
@@ -2466,7 +2489,6 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
     const accom = kickoff?.accommodationName || "";
     const checkinTime  = kickoff?.checkIn  || "3:00 PM";
     const checkoutTime = kickoff?.checkOut || "11:00 AM";
-    const lang = kickoff?.lang || "en";
     const presets = {
       checkin: (() => {
         const ci = allItineraryItemsRef.current.find(i => /^check.?in$/i.test((i.name_en||"").trim()) || /^check.?in$/i.test((i.name_es||"").trim()));
@@ -2625,6 +2647,24 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         });
         return items;
       })(),
+      foodonboard: {
+        name: "Comida a bordo", name_en: "Food on Board", category: "services",
+        timeLabel: "",
+        description_es: "Servicio de comida a bordo del bote. Menú a definir — avísanos si tienen restricciones alimentarias o preferencias.",
+        description_en: "Food service on board the boat. Menu to be defined — let us know if you have any dietary restrictions or preferences.",
+      },
+      chefdinner: {
+        name: "Cena con chef", name_en: "Chef Dinner", category: "services",
+        timeLabel: "7:00 PM",
+        description_es: "Cena privada preparada por chef en la villa. El menú y los horarios se coordinan con anticipación.",
+        description_en: "Private dinner prepared by a chef at the villa. Menu and timing are coordinated in advance.",
+      },
+      beachclub: {
+        name: "Beach Club", name_en: "Beach Club", category: "actividades",
+        timeLabel: "11:00 AM",
+        description_es: "Día de beach club. Les daremos todos los detalles de acceso, horarios y servicios disponibles.",
+        description_en: "Beach club day. We will provide all the details on access, hours, and available services.",
+      },
     };
     const p = presets[preset];
     if (!p) return;
@@ -2754,7 +2794,18 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
           {days.length} {days.length === 1 ? "día" : "días"} · {totalActivities} actividades
           {loadingServices && " · Cargando catálogo…"}
         </p>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {/* #45 — language toggle */}
+          <div className="flex rounded-lg border border-neutral-200 overflow-hidden text-xs">
+            <button type="button" onClick={() => { setLang("es"); onLangChange?.("es"); }}
+              className={`px-2.5 py-1.5 font-medium transition-colors ${lang === "es" ? "bg-indigo-600 text-white" : "bg-white text-neutral-500 hover:bg-neutral-50"}`}>
+              🇨🇴 ES
+            </button>
+            <button type="button" onClick={() => { setLang("en"); onLangChange?.("en"); }}
+              className={`px-2.5 py-1.5 font-medium transition-colors border-l border-neutral-200 ${lang === "en" ? "bg-indigo-600 text-white" : "bg-white text-neutral-500 hover:bg-neutral-50"}`}>
+              🇺🇸 EN
+            </button>
+          </div>
           <button type="button" onClick={addDay}
             className="px-3 py-1.5 rounded-lg border border-neutral-200 text-xs hover:bg-neutral-50 text-neutral-600">
             + Agregar día
@@ -2851,7 +2902,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
                 loadingServices={loadingServices}
                 availableDays={days.map(d => d.label)}
                 groupSize={parseInt(kickoff?.groupSize || "1", 10) || 1}
-                lang={kickoff?.lang || "en"}
+                lang={lang}
                 onUpdateMeta={patch => upsertDayMeta(label, patch)}
                 onRenameLabel={newLabel => renameDayLabel(label, newLabel)}
                 onRemoveDay={() => removeDay(label)}
@@ -2891,13 +2942,12 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange }) {
         <CatalogPickerModal
           services={services}
           clientType={kickoff?.clientType || 1}
-          lang={kickoff?.lang || "en"}
+          lang={lang}
           city={kickoff?.city || kickoff?.destination || ""}
           onClose={() => setCatalogTargetDay(null)}
           onPick={svc => {
             const count = cart.filter(i => (i.dayLabel || "Sin día") === catalogTargetDay).length;
             const newItem = mapServiceToCartItem(svc, kickoff?.clientType || 1, parseInt(kickoff?.groupSize || "1") || 1);
-            const lang = kickoff?.lang || "en";
             setCart(prev => [...prev, {
               ...newItem,
               _uid: `${newItem.id}_${Date.now()}_${Math.random()}`,
@@ -5645,6 +5695,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               onCartChange={(newCart, newDayMeta) => {
                 canvasCartRef.current    = newCart;
                 canvasDayMetaRef.current = newDayMeta;
+              }}
+              onLangChange={async (newLang) => {
+                await onSilentUpdate(kickoff.id, { lang: newLang });
               }}
               onSave={async (newCart, newDayMeta) => {
                 await onSilentUpdate(kickoff.id, {
