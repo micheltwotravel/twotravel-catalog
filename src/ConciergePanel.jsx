@@ -2638,12 +2638,12 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
           });
         }
         items.push({
-          name: `Airport Drop-off — ${airport.code || "Airport"}`,
-          name_en: `Airport Drop-off — ${airport.code || "Airport"}`,
-          name_es: `Traslado al aeropuerto — ${airport.code || "Aeropuerto"}`,
+          name: `Departure — ${airport.code || "Airport"}`,
+          name_en: `Departure — ${airport.code || "Airport"}`,
+          name_es: `Salida — ${airport.code || "Aeropuerto"}`,
           category: "transportation", timeLabel: "",
-          description_en: `Your transfer to **${airport.en}**${airport.code ? ` (${airport.code})` : ""} will be arranged. Please let us know your flight time so we can coordinate the pickup.`,
-          description_es: `Tu traslado al **${airport.es}**${airport.code ? ` (${airport.code})` : ""} estará coordinado. Avísanos la hora de tu vuelo para organizar la salida.`,
+          description_en: `Departure from **${airport.en}**${airport.code ? ` (${airport.code})` : ""}. Your transfer from the villa to the airport will be coordinated — please confirm your flight time so we can schedule the pickup and ensure you arrive with enough time.`,
+          description_es: `Salida desde **${airport.es}**${airport.code ? ` (${airport.code})` : ""}. Se coordinará el traslado desde la villa hasta el aeropuerto — avísanos la hora de tu vuelo para organizar la salida con suficiente tiempo.`,
         });
         return items;
       })(),
@@ -6129,7 +6129,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           })()}
           {/* Pre-set WhatsApp messages */}
           <PresetMessages kickoff={kickoff} lang={lang} />
-          {/* Billing — send to Slack */}
+          {/* Billing — send to Slack (#46) */}
           {kickoff?.cart?.length > 0 && (
             <div className="flex items-center gap-1">
               <button
