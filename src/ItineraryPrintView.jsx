@@ -1996,7 +1996,9 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
   const _descText = it.description || "";
   const _titleLower = (it.title || "").toLowerCase();
   const _catLower   = (it.category || "").toLowerCase();
-  const _lunchExclude = /lunch|box|food|catering|snack|chef|comida|almuerzo/i.test(_titleLower);
+  const _rawName    = (it._rawCartItem?.name || it._rawCartItem?.name_en || it._rawCartItem?.name_es || "").toLowerCase();
+  const _lunchExclude = /lunch|box|food|catering|snack|chef|comida|almuerzo/i.test(_titleLower) ||
+                        /lunch|box|food|catering|snack|chef|comida|almuerzo/i.test(_rawName);
   const _isBoat = (it._boatBadge && !_lunchExclude) ||
     /\*\*(?:Boat|Bote):\*\*/i.test(_descText) ||
     ((/\bboat\b|\bbote\b/i.test(it.title || "")) &&
@@ -3135,6 +3137,8 @@ export default function ItineraryPrintView() {
             else if (field === "schedule")     cartMirror.schedule = val;
             else if (field === "deposit")      cartMirror.deposit = val;
             else if (field === "dressCode")    { cartMirror.dressCode = val; cartMirror.dressCode_en = val; }
+            else if (field === "location")     cartMirror.location = val;
+            else if (field === "priceTiers")   cartMirror.priceTiers = val;
             if (Object.keys(cartMirror).length) {
               updated._rawCartItem = { ...updated._rawCartItem, ...cartMirror };
             }

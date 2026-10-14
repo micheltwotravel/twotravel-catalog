@@ -7126,9 +7126,15 @@ function UserManagement({ currentUser, onBack }) {
   };
 
   const deleteUser = async (email) => {
-    await supabase.from("panel_users").delete().eq("email", email);
+    const { error } = await supabase.from("panel_users").delete().eq("email", email);
+    if (error) {
+      alert("Error al eliminar usuario: " + error.message);
+      return;
+    }
     setConfirmDelete(null);
-    setUsers(us => us.filter(u => u.email !== email));
+    // Reload from DB to confirm deletion persisted
+    const { data } = await supabase.from("panel_users").select("email, data").order("email");
+    if (data) setUsers(data.map(row => ({ email: row.email, ...(row.data || {}) })));
   };
 
   return (

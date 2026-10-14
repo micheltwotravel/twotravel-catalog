@@ -5405,15 +5405,55 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           {/* ── Cover Info ─────────────────────────────── */}
           <DrawerSection title="🖼️ Portada del itinerario" accent="neutral">
             <div className="grid grid-cols-2 gap-3">
+              {/* ── FECHAS DE ESTADÍA ── */}
+              <div className="col-span-2 border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
+                <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — {cityFullName(city.split(",")[0]?.trim()) || city.split(",")[0]?.trim() || "Ciudad 1"}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
+                    <input type="date" value={arrivalDate} onChange={e => setArrivalDate(e.target.value)}
+                      className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-neutral-500 mb-1">Salida</label>
+                    <input type="date" value={departureDate} min={arrivalDate || undefined} onChange={e => setDepartureDate(e.target.value)}
+                      className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
+                  </div>
+                </div>
+                {clientNights && (
+                  <p className="text-[10px] text-blue-600">🌙 {clientNights} noche{clientNights !== 1 ? "s" : ""}</p>
+                )}
+              </div>
+              {city.includes(",") && (
+                <div className="col-span-2 border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
+                  <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — Ciudad 2 — {cityFullName(city.split(",")[1]?.trim())}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
+                      <input type="date" value={arrivalDate2} min={departureDate || undefined} onChange={e => setArrivalDate2(e.target.value)}
+                        className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-neutral-500 mb-1">Salida</label>
+                      <input type="date" value={departureDate2} min={arrivalDate2 || undefined} onChange={e => setDepartureDate2(e.target.value)}
+                        className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
+                    </div>
+                  </div>
+                  {arrivalDate2 && departureDate2 && (() => {
+                    const n = Math.round((new Date(departureDate2) - new Date(arrivalDate2)) / 86400000);
+                    return n > 0 ? <p className="text-[10px] text-blue-600">🌙 {n} noche{n !== 1 ? "s" : ""}</p> : null;
+                  })()}
+                </div>
+              )}
               <div>
-                <label className="text-[11px] text-neutral-500">{city.includes(",") ? `Fechas ${cityFullName(city.split(",")[0]?.trim())}` : "Fechas del viaje"}</label>
+                <label className="text-[11px] text-neutral-500">{city.includes(",") ? `Fechas ${cityFullName(city.split(",")[0]?.trim())}` : "Fechas del viaje"} <span className="text-neutral-400">(como se ve en portada)</span></label>
                 <input value={tripDates} onChange={(e) => setTripDates(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="May 22-28, 2026" />
               </div>
               {city.includes(",") && (
                 <div>
-                  <label className="text-[11px] text-neutral-500">Fechas {cityFullName(city.split(",")[1]?.trim())}</label>
+                  <label className="text-[11px] text-neutral-500">Fechas {cityFullName(city.split(",")[1]?.trim())} <span className="text-neutral-400">(portada)</span></label>
                   <input value={tripDates2} onChange={(e) => setTripDates2(e.target.value)}
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                     placeholder="Jun 1-5, 2026" />
@@ -5692,46 +5732,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   placeholder="https://drive.google.com/file/d/.../view" />
               </div>
 
-              {/* ── FECHAS DE ESTADÍA ── */}
-              <div className="col-span-2 border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
-                <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — {cityFullName(city.split(",")[0]?.trim()) || city.split(",")[0]?.trim() || "Ciudad 1"}</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
-                    <input type="date" value={arrivalDate} onChange={e => setArrivalDate(e.target.value)}
-                      className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] text-neutral-500 mb-1">Salida</label>
-                    <input type="date" value={departureDate} min={arrivalDate || undefined} onChange={e => setDepartureDate(e.target.value)}
-                      className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
-                  </div>
-                </div>
-                {clientNights && (
-                  <p className="text-[10px] text-blue-600">🌙 {clientNights} noche{clientNights !== 1 ? "s" : ""}</p>
-                )}
-              </div>
-              {city.includes(",") && (
-                <div className="col-span-2 border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
-                  <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">📅 Fechas de estadía — Ciudad 2 — {cityFullName(city.split(",")[1]?.trim())}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10px] text-neutral-500 mb-1">Llegada</label>
-                      <input type="date" value={arrivalDate2} min={departureDate || undefined} onChange={e => setArrivalDate2(e.target.value)}
-                        className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] text-neutral-500 mb-1">Salida</label>
-                      <input type="date" value={departureDate2} min={arrivalDate2 || undefined} onChange={e => setDepartureDate2(e.target.value)}
-                        className="w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400/30 bg-white" />
-                    </div>
-                  </div>
-                  {arrivalDate2 && departureDate2 && (() => {
-                    const n = Math.round((new Date(departureDate2) - new Date(arrivalDate2)) / 86400000);
-                    return n > 0 ? <p className="text-[10px] text-blue-600">🌙 {n} noche{n !== 1 ? "s" : ""}</p> : null;
-                  })()}
-                </div>
-              )}
             </div>
           </DrawerSection>
 
@@ -6970,6 +6970,28 @@ function PresetMessages({ kickoff, lang }) {
               </div>
             </div>
           ))}
+          {(() => {
+            const calConcierges = CONCIERGE_LIST.filter(c => !c.hidden && c.calendarUrl);
+            if (!calConcierges.length) return null;
+            return (
+              <div className="mt-1">
+                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide mb-1.5 px-1">Links de calendarios de las concierges</p>
+                {calConcierges.map(c => (
+                  <div key={c.email} className="border border-neutral-200 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-neutral-700 shrink-0">📅 {c.name.split(" ")[0]}</span>
+                    <div className="flex gap-1 shrink-0">
+                      <a href={c.calendarUrl} target="_blank" rel="noreferrer"
+                        className="text-[10px] px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-blue-700">🔗 Ver</a>
+                      <button type="button" onClick={() => copy("cal_" + c.email, c.calendarUrl)}
+                        className="text-[10px] px-2 py-0.5 rounded border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-800">
+                        {copied === "cal_" + c.email ? "✓" : "📋 URL"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
