@@ -8478,9 +8478,13 @@ const loadKickoffs = async (forceRefresh = false) => {
         return text.includes(q);
       })
       .sort((a, b) => {
-        const da = new Date(a.lastModified || a.createdAt || 0).getTime();
-        const db = new Date(b.lastModified || b.createdAt || 0).getTime();
-        return db - da;
+        const arrA = a.arrivalDate || "";
+        const arrB = b.arrivalDate || "";
+        // Groups with no arrival date go to the bottom
+        if (!arrA && !arrB) return 0;
+        if (!arrA) return 1;
+        if (!arrB) return -1;
+        return arrA.localeCompare(arrB);
       });
   }, [kickoffs, search, statusFilter, conciergeFilter, filterCity]);
 
