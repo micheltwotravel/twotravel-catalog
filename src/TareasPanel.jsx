@@ -10,7 +10,7 @@ const COLORS      = { overdue:"#f4c7c3", today:"#ffe599", upcoming:"#c9daf8", do
 const BODAS_USERS = [
   { name:"Alexandra",    email:"alexandra@two.travel" },
   { name:"Angelica",     email:"angelica@two.travel" },
-  { name:"Laura Ospina", email:"laura@two.travel" },
+  { name:"Oskalia",      email:"oskalia@two.travel" },
 ];
 
 function flatRow(row) {
@@ -649,14 +649,20 @@ export default function TareasPanel({ currentUser, onLogout }) {
         </div>
 
         {/* Filtros */}
-        <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
+        <div style={{ display:"flex", gap:8, marginBottom:8, flexWrap:"wrap" }}>
+          <select style={{...inp, flex:1, minWidth:140}} value={filterCliente} onChange={e=>setFilterCliente(e.target.value)}>
+            <option value="">👰 Todos los novios</option>
+            {clientes.map(c=><option key={c} value={c}>{c}</option>)}
+          </select>
           <select style={{...inp, flex:1, minWidth:120}} value={filterResp} onChange={e=>setFilterResp(e.target.value)}>
             <option value="">👤 Todos</option>
             {responsables.map(r=><option key={r.email||r.name} value={r.name}>{r.name}</option>)}
           </select>
+        </div>
+        <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
           <div style={{ display:"flex", gap:4, flex:2, minWidth:160 }}>
             <input ref={searchRef} style={{...inp, flex:1}} placeholder="🔍 Buscar..." onChange={e=>setFilterQ(e.target.value)} />
-            {(filterResp||filterQ||scope!=="all") && (
+            {(filterCliente||filterResp||filterQ||scope!=="all") && (
               <button onClick={resetFiltros} style={{...inp, cursor:"pointer", padding:"7px 10px"}} title="Limpiar filtros">✕</button>
             )}
           </div>

@@ -53,8 +53,10 @@ function rowToBoda(row) {
     venue:       row.venue       || "",
     responsable: row.responsable || "",
     contact:     row.contact     || "",
-    coupleEmail: row.coupleEmail || "",
-    phase:       row.phase       || "Onboarding",
+    coupleEmail:  row.coupleEmail  || "",
+    coupleEmail2: row.coupleEmail2 || "",
+    ceremonyType: row.ceremonyType || "",
+    phase:        row.phase        || "Onboarding",
     status:      row.status      || "Activa",
     guestCount:  row.guestCount  || "",
     budget:      row.budget      || "",
@@ -116,6 +118,7 @@ async function apiSaveBoda(f) {
   const payload = {
     id, clienteName: f.clienteName, weddingDate: f.weddingDate, venue: f.venue,
     responsable: f.responsable, contact: f.contact, coupleEmail: f.coupleEmail || "",
+    coupleEmail2: f.coupleEmail2 || "", ceremonyType: f.ceremonyType || "",
     phase: f.phase, status: f.status, guestCount: f.guestCount, budget: f.budget,
     notes: f.notes, coverPhoto: f.coverPhoto || "",
     tasks: [], suppliers: [], songs: [], photos: [], calls: [], guests: [], palette: [],
@@ -166,7 +169,7 @@ const INP_SM = {...INP,padding:"6px 10px",fontSize:12};
 
 // ─── BODA FORM ───────────────────────────────────────────────────────────────
 function BodaForm({ boda, onSave, onCancel, saving, users=[] }) {
-  const [f,setF]=useState({clienteName:boda?.clienteName||"",weddingDate:toDateInput(boda?.weddingDate),venue:boda?.venue||"",responsable:boda?.responsable||"",phase:boda?.phase||"Onboarding",status:boda?.status||"Activa",guestCount:boda?.guestCount||"",budget:boda?.budget||"",notes:boda?.notes||"",contact:boda?.contact||"",coupleEmail:boda?.coupleEmail||""});
+  const [f,setF]=useState({clienteName:boda?.clienteName||"",weddingDate:toDateInput(boda?.weddingDate),venue:boda?.venue||"",responsable:boda?.responsable||"",phase:boda?.phase||"Onboarding",status:boda?.status||"Activa",guestCount:boda?.guestCount||"",budget:boda?.budget||"",notes:boda?.notes||"",contact:boda?.contact||"",coupleEmail:boda?.coupleEmail||"",coupleEmail2:boda?.coupleEmail2||"",ceremonyType:boda?.ceremonyType||"",coverPhoto:boda?.coverPhoto||""});
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
   return (
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
@@ -177,7 +180,10 @@ function BodaForm({ boda, onSave, onCancel, saving, users=[] }) {
       </div>
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Venue</label><input style={INP} value={f.venue} onChange={e=>set("venue",e.target.value)} placeholder="Nombre del lugar" /></div>
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Contacto cliente</label><input style={INP} value={f.contact} onChange={e=>set("contact",e.target.value)} placeholder="WhatsApp o email" /></div>
-      <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Email novios 💌</label><input type="email" style={INP} value={f.coupleEmail} onChange={e=>set("coupleEmail",e.target.value)} placeholder="Para notificaciones de tareas" /></div>
+      <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Email novia/novio 1 💌</label><input type="email" style={INP} value={f.coupleEmail} onChange={e=>set("coupleEmail",e.target.value)} placeholder="Para notificaciones de tareas" /></div>
+      <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Email novia/novio 2 💌</label><input type="email" style={INP} value={f.coupleEmail2} onChange={e=>set("coupleEmail2",e.target.value)} placeholder="Segundo correo (opcional)" /></div>
+      <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Tipo de ceremonia</label><select style={INP} value={f.ceremonyType} onChange={e=>set("ceremonyType",e.target.value)}><option value="">— seleccionar —</option><option>Religiosa</option><option>Civil</option><option>Simbólica</option></select></div>
+      <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Foto de portada (URL)</label><input style={INP} value={f.coverPhoto} onChange={e=>set("coverPhoto",e.target.value)} placeholder="https://…" /></div>
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Fase</label><select style={INP} value={f.phase} onChange={e=>set("phase",e.target.value)}>{FASES.map(p=><option key={p}>{p}</option>)}</select></div>
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Estado</label><select style={INP} value={f.status} onChange={e=>set("status",e.target.value)}>{ESTADOS_BODA.map(s=><option key={s}>{s}</option>)}</select></div>
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>N° invitados</label><input type="number" style={INP} value={f.guestCount} onChange={e=>set("guestCount",e.target.value)} placeholder="150" /></div>
@@ -202,10 +208,12 @@ function TasksTab({ boda, users, onPatch }) {
   function cat(t) { if(!t.dueDate) return "up"; const d=new Date(t.dueDate+"T12:00:00"); d.setHours(0,0,0,0); if(d<today) return "late"; if(d.getTime()===today.getTime()) return "today"; return "up"; }
   async function persist(u){ setTasks(u); onPatch({tasks:u}); try{ await apiSaveNotes(boda.id,{...boda,tasks:u}); } catch(e){ setSaveErr("No se pudo guardar: "+e.message); setTimeout(()=>setSaveErr(""),6000); } }
   async function sendTaskEmail(taskName, dueDate, isReminder) {
-    const email = boda.coupleEmail;
-    if (!email || !email.includes("@")) return;
+    const emails = [boda.coupleEmail, boda.coupleEmail2].filter(e => e && e.includes("@"));
+    if (!emails.length) return;
     try {
-      await gasPost({ action:"sendBodaTaskEmail", payload:{ to:email, taskName, bodaName:boda.clienteName, dueDate:dueDate||"", isReminder:!!isReminder } });
+      for (const email of emails) {
+        await gasPost({ action:"sendBodaTaskEmail", payload:{ to:email, taskName, bodaName:boda.clienteName, dueDate:dueDate||"", isReminder:!!isReminder } });
+      }
     } catch(e) { console.warn("Email error:", e.message); }
   }
   async function add(){ if(!blank.taskName.trim()) return; setSaving(true); const newTask={...blank,id:uid(),createdAt:new Date().toISOString()}; await persist([...tasks,newTask]); if(blank.assignedTo==="Novios") await sendTaskEmail(blank.taskName, blank.dueDate, false); setBlank({taskName:"",assignedTo:"",dueDate:"",status:"Pendiente",phase:"General",notes:""}); setShow(false); setSaving(false); }
@@ -282,7 +290,8 @@ function TasksTab({ boda, users, onPatch }) {
 }
 
 // ─── PROVEEDORES TAB ──────────────────────────────────────────────────────────
-const SUP_CATS     = ["Fotografía","Video","Catering","Flores","DJ","Banda","Pastelería","Maquillaje","Peinado","Transporte","Decoración","Venue","Iluminación","Sonido","Papelería","Otro"];
+const SUP_CATS     = ["Fotografía y video","Maquillaje y peinado","DJ","Música en vivo","Decoración","Producción","Tarimas","Pirotecnia","Mulatas y tamboreros","Carros antiguos","Fotocabina","Hora loca","Experiencias","Tortas y postres","Catering","Flores","Transporte","Venue","Papelería","Otro"];
+const SUP_CITIES   = ["","Medellín","Cartagena"];
 const SUP_STATUSES = ["Cotizando","Contratado","Pagado","Cancelado"];
 const SUP_STYLE    = { "Cotizando":{bg:"#fffbeb",color:"#b45309",dot:"#f59e0b"}, "Contratado":{bg:"#eff6ff",color:"#1d4ed8",dot:"#3b82f6"}, "Pagado":{bg:"#f0fdf4",color:"#16a34a",dot:"#22c55e"}, "Cancelado":{bg:"#f5f5f4",color:"#78716c",dot:"#a8a29e"} };
 
@@ -291,7 +300,7 @@ function ProveedoresTab({ boda, onPatch }) {
   const [show,setShow]=useState(false);
   const [saving,setSaving]=useState(false);
   const [editId,setEditId]=useState(null);
-  const EMPTY={category:"Fotografía",company:"",contact:"",phone:"",email:"",status:"Cotizando",quote:"",currency:"USD",notes:"",instagram:""};
+  const EMPTY={category:"Fotografía y video",city:"",company:"",contact:"",phone:"",email:"",status:"Cotizando",quote:"",currency:"USD",notes:"",instagram:""};
   const [blank,setBlank]=useState(EMPTY);
 
   async function persist(u){ setSuppliers(u); onPatch({suppliers:u}); await apiSaveNotes(boda.id,{...boda,suppliers:u}); }
@@ -316,6 +325,7 @@ function ProveedoresTab({ boda, onPatch }) {
       {show&&(
         <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+            <select style={INP_SM} value={blank.city}     onChange={e=>setBlank(p=>({...p,city:e.target.value}))}    ><option value="">🌎 Ciudad</option>{["Medellín","Cartagena"].map(c=><option key={c}>{c}</option>)}</select>
             <select style={INP_SM} value={blank.category} onChange={e=>setBlank(p=>({...p,category:e.target.value}))}>{SUP_CATS.map(c=><option key={c}>{c}</option>)}</select>
             <select style={INP_SM} value={blank.status}   onChange={e=>setBlank(p=>({...p,status:e.target.value}))}>{SUP_STATUSES.map(s=><option key={s}>{s}</option>)}</select>
             <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.company}   onChange={e=>setBlank(p=>({...p,company:e.target.value}))}   placeholder="Nombre empresa / proveedor *" /></div>
@@ -338,43 +348,72 @@ function ProveedoresTab({ boda, onPatch }) {
 
       {suppliers.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin proveedores. Agrega el primero arriba.</p>}
 
-      {SUP_CATS.filter(c=>suppliers.some(s=>s.category===c)).map(cat=>(
-        <div key={cat} style={{marginBottom:16}}>
-          <p style={{fontSize:11,fontWeight:700,color:R.muted,textTransform:"uppercase",letterSpacing:".06em",margin:"0 0 6px"}}>{cat}</p>
-          {suppliers.filter(s=>s.category===cat).map(s=>{
-            const ss=SUP_STYLE[s.status]||SUP_STYLE["Cotizando"];
-            return (
-              <div key={s.id} style={{border:`1px solid ${R.border}`,borderRadius:12,padding:"12px 14px",marginBottom:6,background:R.white}}>
-                <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}}>
-                      <span style={{fontSize:13,fontWeight:600,color:R.text}}>{s.company}</span>
-                      <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:ss.bg,color:ss.color,display:"flex",alignItems:"center",gap:4}}>
-                        <span style={{width:5,height:5,borderRadius:"50%",background:ss.dot,display:"inline-block"}} />{s.status}
-                      </span>
-                      {s.quote&&<span style={{fontSize:11,fontWeight:600,color:"#1d4ed8"}}>${fmt$(s.quote)} {s.currency}</span>}
+      {(()=>{
+        const cityGroups = ["Medellín","Cartagena",""].map(city=>({
+          city,
+          label: city || "Sin ciudad",
+          suppliers: suppliers.filter(s=>(s.city||"")===(city)),
+        })).filter(g=>g.suppliers.length>0);
+        return cityGroups.map(({city,label,suppliers:citySups})=>(
+          <div key={city||"__none"} style={{marginBottom:20}}>
+            {cityGroups.length>1&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><div style={{height:1,flex:1,background:R.border}}></div><span style={{fontSize:10,fontWeight:700,color:R.accent,textTransform:"uppercase",letterSpacing:".1em",padding:"0 10px"}}>{city==="Medellín"?"🌿 Medellín":city==="Cartagena"?"🌊 Cartagena":"📦 Sin ciudad"}</span><div style={{height:1,flex:1,background:R.border}}></div></div>}
+            {SUP_CATS.filter(c=>citySups.some(s=>s.category===c)).map(cat=>(
+              <div key={cat} style={{marginBottom:14}}>
+                <p style={{fontSize:11,fontWeight:700,color:R.muted,textTransform:"uppercase",letterSpacing:".06em",margin:"0 0 6px"}}>{cat}</p>
+                {citySups.filter(s=>s.category===cat).map(s=>{
+                  const ss=SUP_STYLE[s.status]||SUP_STYLE["Cotizando"];
+                  return (
+                    <div key={s.id} style={{border:`1px solid ${R.border}`,borderRadius:12,padding:"12px 14px",marginBottom:6,background:R.white}}>
+                      <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}}>
+                            <span style={{fontSize:13,fontWeight:600,color:R.text}}>{s.company}</span>
+                            <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:ss.bg,color:ss.color,display:"flex",alignItems:"center",gap:4}}>
+                              <span style={{width:5,height:5,borderRadius:"50%",background:ss.dot,display:"inline-block"}} />{s.status}
+                            </span>
+                            {s.quote&&<span style={{fontSize:11,fontWeight:600,color:"#1d4ed8"}}>${fmt$(s.quote)} {s.currency}</span>}
+                          </div>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:"2px 10px",fontSize:11,color:R.muted}}>
+                            {s.contact  &&<span>👤 {s.contact}</span>}
+                            {s.phone    &&<span>📱 <a href={`https://wa.me/${s.phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{color:R.muted}}>{s.phone}</a></span>}
+                            {s.email    &&<span>✉️ <a href={`mailto:${s.email}`} style={{color:R.muted}}>{s.email}</a></span>}
+                            {s.instagram&&<span>📷 <a href={`https://instagram.com/${s.instagram.replace("@","")}`} target="_blank" rel="noreferrer" style={{color:R.muted}}>{s.instagram}</a></span>}
+                          </div>
+                          {s.notes&&<p style={{fontSize:11,color:R.text2,margin:"4px 0 0",whiteSpace:"pre-line"}}>{s.notes}</p>}
+                        </div>
+                        <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end",flexShrink:0}}>
+                          {s.status!=="Pagado"&&s.status!=="Cancelado"&&(
+                            <button onClick={()=>nextStatus(s.id)} style={{fontSize:10,background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'Jost',sans-serif"}}>→ Avanzar</button>
+                          )}
+                          <button onClick={()=>startEdit(s)} style={{fontSize:10,background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>✏️ Editar</button>
+                          <button onClick={()=>del(s.id)} style={{fontSize:10,background:"transparent",color:R.border,border:"none",borderRadius:6,padding:"3px 8px",cursor:"pointer"}}>🗑</button>
+                        </div>
+                      </div>
                     </div>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:"2px 10px",fontSize:11,color:R.muted}}>
-                      {s.contact  &&<span>👤 {s.contact}</span>}
-                      {s.phone    &&<span>📱 <a href={`https://wa.me/${s.phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{color:R.muted}}>{s.phone}</a></span>}
-                      {s.email    &&<span>✉️ <a href={`mailto:${s.email}`} style={{color:R.muted}}>{s.email}</a></span>}
-                      {s.instagram&&<span>📷 <a href={`https://instagram.com/${s.instagram.replace("@","")}`} target="_blank" rel="noreferrer" style={{color:R.muted}}>{s.instagram}</a></span>}
-                    </div>
-                    {s.notes&&<p style={{fontSize:11,color:R.text2,margin:"4px 0 0",whiteSpace:"pre-line"}}>{s.notes}</p>}
-                  </div>
-                  <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end",flexShrink:0}}>
-                    {s.status!=="Pagado"&&s.status!=="Cancelado"&&(
-                      <button onClick={()=>nextStatus(s.id)} style={{fontSize:10,background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'Jost',sans-serif"}}>→ Avanzar</button>
-                    )}
-                    <button onClick={()=>startEdit(s)} style={{fontSize:10,background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>✏️ Editar</button>
-                    <button onClick={()=>del(s.id)} style={{fontSize:10,background:"transparent",color:R.border,border:"none",borderRadius:6,padding:"3px 8px",cursor:"pointer"}}>🗑</button>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-      ))}
+            ))}
+            {citySups.filter(s=>!SUP_CATS.includes(s.category)).length>0&&(
+              <div style={{marginBottom:14}}>
+                <p style={{fontSize:11,fontWeight:700,color:R.muted,textTransform:"uppercase",letterSpacing:".06em",margin:"0 0 6px"}}>Otro</p>
+                {citySups.filter(s=>!SUP_CATS.includes(s.category)).map(s=>{
+                  const ss=SUP_STYLE[s.status]||SUP_STYLE["Cotizando"];
+                  return (
+                    <div key={s.id} style={{border:`1px solid ${R.border}`,borderRadius:12,padding:"12px 14px",marginBottom:6,background:R.white}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:13,fontWeight:600,color:R.text}}>{s.company}</span><span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:ss.bg,color:ss.color}}>{s.status}</span>{s.quote&&<span style={{fontSize:11,fontWeight:600,color:"#1d4ed8"}}>${fmt$(s.quote)} {s.currency}</span>}</div>
+                      <div style={{display:"flex",gap:8,marginTop:6,justifyContent:"flex-end"}}>
+                        <button onClick={()=>startEdit(s)} style={{fontSize:10,background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>✏️ Editar</button>
+                        <button onClick={()=>del(s.id)} style={{fontSize:10,background:"transparent",color:R.border,border:"none",borderRadius:6,padding:"3px 8px",cursor:"pointer"}}>🗑</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ));
+      })()}
 
       {suppliers.length>0&&(
         <div style={{borderTop:`1px solid ${R.border}`,paddingTop:12,marginTop:4,display:"flex",flexWrap:"wrap",gap:"8px 20px"}}>
