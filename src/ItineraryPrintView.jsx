@@ -1981,6 +1981,7 @@ function groupChefMenuItems(items) {
       result.push({
         ...it,
         title: key,
+        _origIdx: idx,
         _chefMenuGroup: group.map(({ it: m }) => ({
           label: menuLabel(m.title || ""),
           menuUrl: m.menuUrl,
@@ -1988,7 +1989,7 @@ function groupChefMenuItems(items) {
         })),
       });
     } else {
-      result.push(it);
+      result.push({ ...it, _origIdx: idx });
     }
   });
   return result;
@@ -2884,7 +2885,7 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
   // Always show items in array order (concierge controls order via ↑↓).
   // Flights are inserted by time between items so they appear at the right moment.
   const allEntries = (() => {
-    const items = displayItems.map((it, itemIdx) => ({ kind:"item", it, itemIdx, sortTime: parseTime(it.time || "") }));
+    const items = displayItems.map((it, itemIdx) => ({ kind:"item", it, itemIdx: it._origIdx !== undefined ? it._origIdx : itemIdx, sortTime: parseTime(it.time || "") }));
     const flights = (dayFlights || []).map(({ flight, type }) => ({ kind:"flight", flight, type, sortTime: parseTime(flight.time || "") }));
     if (!flights.length) return items;
     // Insert each flight before the first item whose time is strictly after the flight's time.
@@ -2949,7 +2950,7 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
             <div key={i} style={{ margin: "10px 0", position: "relative", display:"flex", borderLeft:"3px solid #d1c4a8", borderBottom:"1px solid #f0f0f0", background:"#faf9f7" }}>
               <div style={{ flex:1, padding:"14px 20px" }}>
                 {editMode && onRemoveItem && (
-                  <button onClick={() => onRemoveItem(i)} style={{position:"absolute",top:6,right:8,border:"none",background:"none",cursor:"pointer",color:"#9ca3af",fontSize:11,zIndex:2}}>✕</button>
+                  <button onClick={() => onRemoveItem(entry.itemIdx ?? i)} style={{position:"absolute",top:6,right:8,border:"none",background:"none",cursor:"pointer",color:"#9ca3af",fontSize:11,zIndex:2}}>✕</button>
                 )}
                 <div dangerouslySetInnerHTML={{ __html: (entry.it.cartItem.html || "").replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>").replace(/\n/g,"<br>") }} style={{ fontSize: 12.5, color: "#374151", lineHeight: 1.7 }} />
               </div>
