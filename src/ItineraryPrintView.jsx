@@ -620,18 +620,13 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
   };
   return orderedLabels.map(label => {
     const dm = metaList.find(d => cl(d.label) === label);
-    // When BOTH items have an explicit time, sort chronologically.
-    // Otherwise keep manual sortOrder (preserves canvas order for untimed items
-    // and for mixed timed/untimed comparisons).
+    // sortOrder is the primary key (manual order set in the canvas / edit mode).
+    // Time is only a tiebreaker when two items share the same sortOrder.
     const items = (map.get(label) || []).sort((a, b) => {
+      if (a.sort !== b.sort) return a.sort - b.sort;
       const rawA = a.time || (a.isBlock ? cl(a.cartItem?.timeLabel || a.cartItem?.time || "") : "");
       const rawB = b.time || (b.isBlock ? cl(b.cartItem?.timeLabel || b.cartItem?.time || "") : "");
-      const ta = parseTime(rawA), tb = parseTime(rawB);
-      if (ta !== Infinity && tb !== Infinity) {
-        if (ta !== tb) return ta - tb;
-        return a.sort - b.sort; // same time → manual order
-      }
-      return a.sort - b.sort; // at least one untimed → manual order
+      return parseTime(rawA) - parseTime(rawB);
     });
     // Day band shows label; subtitle shows the descriptive title if set
     return { label, title: dm?.title || "", date: dm?.date || "", items };
