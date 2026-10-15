@@ -3340,16 +3340,19 @@ export default function ItineraryPrintView() {
     )
       .then(async ([k, cats]) => {
         if (!k) throw new Error("Kickoff no encontrado. Verifica el link.");
-        // Auto-fill address from Properties portfolio if missing
-        if (!k.accommodationAddr && k.accommodationName) {
+        // Auto-fill address + photo from Properties portfolio if missing
+        if ((!k.accommodationAddr || !k.accommodationPhoto) && k.accommodationName) {
           try {
             const name = encodeURIComponent(k.accommodationName.trim());
             const r = await fetch(`${GAS_URL}?action=getProperty&name=${name}`);
             const d = await r.json();
-            const addr = d?.data?.Address || d?.data?.address || "";
-            const mapsUrl = d?.data?.["Maps URL"] || d?.data?.mapsUrl || d?.data?.["Google Maps"] || "";
-            if (addr) k = { ...k, accommodationAddr: addr };
+            const dt = d?.data || {};
+            const addr = dt.Address || dt.address || "";
+            const mapsUrl = dt["Maps URL"] || dt.mapsUrl || dt["Google Maps"] || "";
+            const photo = dt.photoUrl || dt.PhotoUrl || dt.photo || dt.Photo || dt.coverPhoto || dt.CoverPhoto || dt["Photo URL"] || dt.photo_url || dt.image || dt.Image || dt.imageUrl || dt["Cover Photo"] || dt["Image URL"] || "";
+            if (addr && !k.accommodationAddr) k = { ...k, accommodationAddr: addr };
             if (mapsUrl && !k.accommodationMapsUrl) k = { ...k, accommodationMapsUrl: mapsUrl };
+            if (photo && !k.accommodationPhoto) k = { ...k, accommodationPhoto: photo };
           } catch {}
         }
         setKickoff(k);

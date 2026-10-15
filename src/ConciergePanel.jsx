@@ -779,6 +779,70 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
             : "The Metro and Metrocable are safe and efficient. InDriver and Uber work well throughout the city." },
       ],
     },
+    CDMX: {
+      sections: [
+        { title: lang === "es" ? "Colonias a explorar" : "Neighborhoods to explore",
+          body: lang === "es"
+            ? "Polanco es el barrio de lujo con restaurantes gourmet y boutiques. Roma y Condesa tienen una vibe bohemia con cafés, galerías y parques. El Centro Histórico alberga la historia y cultura de la ciudad."
+            : "Polanco is the upscale district with gourmet restaurants and boutiques. Roma and Condesa have a bohemian vibe with cafes, galleries and parks. The Historic Center holds the city's rich history and culture." },
+        { title: lang === "es" ? "Clima y qué llevar" : "Weather & what to pack",
+          body: lang === "es"
+            ? "La Ciudad de México tiene un clima templado (~18-22°C). Las tardes pueden ser frescas y en temporada de lluvias (jun–sep) es común que llueva por las tardes. Lleva una chaqueta ligera y paraguas compacto."
+            : "Mexico City has a mild climate (~18-22°C). Evenings can be cool and afternoon showers are common during rainy season (Jun–Sep). Bring a light jacket and a compact umbrella." },
+        { title: lang === "es" ? "Transporte local" : "Local transport",
+          body: lang === "es"
+            ? "Uber funciona muy bien en toda la ciudad. El Metro es eficiente y económico. Evita taxis de la calle — siempre usa apps para mayor seguridad."
+            : "Uber works great throughout the city. The Metro is efficient and affordable. Avoid street taxis — always use apps for safety." },
+      ],
+    },
+    TUL: {
+      sections: [
+        { title: lang === "es" ? "Zonas a explorar" : "Areas to explore",
+          body: lang === "es"
+            ? "La zona hotelera de Tulum tiene las playas más exclusivas. El pueblo tiene restaurantes y vida nocturna más auténtica. Las cenotes cercanas (Gran Cenote, Dos Ojos) son imperdibles."
+            : "Tulum's hotel zone has the most exclusive beaches. The town has more authentic restaurants and nightlife. Nearby cenotes (Gran Cenote, Dos Ojos) are a must-see." },
+        { title: lang === "es" ? "Clima y qué llevar" : "Weather & what to pack",
+          body: lang === "es"
+            ? "Tulum es tropical con calor y humedad (~30°C). Lleva ropa ligera, protector solar biodegradable (obligatorio en cenotes), repelente de insectos y sandalias cómodas."
+            : "Tulum is tropical with heat and humidity (~30°C). Pack light clothing, biodegradable sunscreen (required in cenotes), insect repellent and comfortable sandals." },
+        { title: lang === "es" ? "Transporte local" : "Local transport",
+          body: lang === "es"
+            ? "Las bicicletas son el transporte más usado entre el pueblo y la zona hotelera. También hay colectivos (taxis compartidos) muy económicos y Uber funciona en la zona."
+            : "Bicycles are the most popular transport between town and the hotel zone. Collectivos (shared taxis) are very affordable and Uber operates in the area." },
+      ],
+    },
+    CAB: {
+      sections: [
+        { title: lang === "es" ? "Zonas a explorar" : "Areas to explore",
+          body: lang === "es"
+            ? "San José del Cabo tiene el centro histórico con galerías de arte. Cabo San Lucas es el polo de entretenimiento y playa. El Corredor conecta ambas zonas con hoteles y restaurantes de lujo."
+            : "San José del Cabo has a historic art district. Cabo San Lucas is the entertainment and beach hub. The Corridor connects both with luxury hotels and restaurants." },
+        { title: lang === "es" ? "Clima y qué llevar" : "Weather & what to pack",
+          body: lang === "es"
+            ? "Los Cabos tiene clima árido y soleado casi todo el año (~27-32°C). Lleva protector solar, ropa ligera y algo para protegerte del viento en el mar."
+            : "Los Cabos has a dry, sunny climate almost year-round (~27-32°C). Pack sunscreen, light clothing and something for the ocean breeze." },
+        { title: lang === "es" ? "Transporte local" : "Local transport",
+          body: lang === "es"
+            ? "Uber está disponible en Los Cabos. También hay taxis autorizados del hotel y servicios privados de traslado. Alquilar un auto es una buena opción para moverse entre San José y Cabo."
+            : "Uber is available in Los Cabos. There are also authorized hotel taxis and private transfer services. Renting a car is a good option to move between San José and Cabo." },
+      ],
+    },
+    BOG: {
+      sections: [
+        { title: lang === "es" ? "Barrios a explorar" : "Neighborhoods to explore",
+          body: lang === "es"
+            ? "La Candelaria es el corazón histórico con museos y arquitectura colonial. Usaquén tiene mercados artesanales y restaurantes. El Parque 93 y la Zona Rosa son el centro gastronómico y de entretenimiento."
+            : "La Candelaria is the historic heart with museums and colonial architecture. Usaquén has craft markets and restaurants. Parque 93 and Zona Rosa are the culinary and entertainment center." },
+        { title: lang === "es" ? "Clima y qué llevar" : "Weather & what to pack",
+          body: lang === "es"
+            ? "Bogotá está a 2.600 metros de altitud con clima fresco (~14-18°C). Lleva capas, una chaqueta abrigada y paraguas — puede llover a cualquier hora. El sol pega fuerte al mediodía."
+            : "Bogotá sits at 2,600m altitude with cool weather (~14-18°C). Layer up, bring a warm jacket and an umbrella — it can rain at any time. The midday sun is strong." },
+        { title: lang === "es" ? "Transporte local" : "Local transport",
+          body: lang === "es"
+            ? "Uber e InDriver son las mejores opciones. El TransMilenio (bus rápido) es económico pero puede ser muy concurrido. Evita taxis de la calle en zonas turísticas."
+            : "Uber and InDriver are the best options. TransMilenio (rapid bus) is affordable but can be very crowded. Avoid street taxis in tourist areas." },
+      ],
+    },
   };
   const guideSections = (cityGuideData[guideCityCode] || {}).sections || [
     { title: lang === "es" ? "Explora la ciudad" : "Explore the city",
