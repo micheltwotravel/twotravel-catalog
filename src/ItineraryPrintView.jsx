@@ -620,13 +620,20 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
   };
   return orderedLabels.map(label => {
     const dm = metaList.find(d => cl(d.label) === label);
-    // sortOrder is the primary key (enables manual reorder without a time); time breaks ties.
+    // Items with an explicit time are sorted by time (chronological).
+    // Items without a time keep their manual sortOrder relative to each other.
+    // Timed items appear before untimed ones; same-time items use sortOrder as tiebreaker.
     const items = (map.get(label) || []).sort((a, b) => {
-      if (a.sort !== b.sort) return a.sort - b.sort;
       const rawA = a.time || (a.isBlock ? cl(a.cartItem?.timeLabel || a.cartItem?.time || "") : "");
       const rawB = b.time || (b.isBlock ? cl(b.cartItem?.timeLabel || b.cartItem?.time || "") : "");
       const ta = parseTime(rawA), tb = parseTime(rawB);
-      return ta - tb;
+      const aHasTime = ta !== Infinity, bHasTime = tb !== Infinity;
+      if (aHasTime && bHasTime) {
+        if (ta !== tb) return ta - tb;
+        return a.sort - b.sort; // same time → manual order
+      }
+      if (!aHasTime && !bHasTime) return a.sort - b.sort; // both untimed → manual order
+      return aHasTime ? -1 : 1; // timed items before untimed
     });
     // Day band shows label; subtitle shows the descriptive title if set
     return { label, title: dm?.title || "", date: dm?.date || "", items };
