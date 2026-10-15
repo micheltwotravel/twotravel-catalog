@@ -375,14 +375,26 @@ export async function saveKickoffToSheet(payload) {
   return { ok: true, id };
 }
 
-export async function updateKickoffInSheet(id, updates) {
-  invalidateKickoffsCache();
+// Per-kickoff write queue: serializes concurrent updateKickoffInSheet calls for the same
+// kickoff so a silent update (e.g. lang change) can't overwrite a concurrent main save.
+const _writeQueues = {};
+async function _doKickoffUpdate(id, updates) {
   const { data: existing, error: fetchErr } = await supabase.from("kickoffs").select("data").eq("id", id).single();
   if (fetchErr) throw new Error(fetchErr.message);
   const merged = { ...(existing?.data || {}), ...updates };
   const { error } = await supabase.from("kickoffs").update({ data: merged }).eq("id", id);
   if (error) throw new Error(error.message);
   return true;
+}
+export async function updateKickoffInSheet(id, updates) {
+  invalidateKickoffsCache();
+  const prev = _writeQueues[id] || Promise.resolve();
+  const next = prev.then(
+    () => _doKickoffUpdate(id, updates),
+    () => _doKickoffUpdate(id, updates), // run even if previous call failed
+  );
+  _writeQueues[id] = next.catch(() => {}); // keep chain alive; caller gets the real error
+  return next;
 }
 
 const ERROR_LOG_ID = "__kpi_error_log__";

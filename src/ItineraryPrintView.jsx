@@ -533,9 +533,13 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       map.get(key).push({ isBlock: true, cartItem, sort: Number(cartItem.sortOrder ?? idx), _rawCartItem: cartItem });
       return;
     }
+    const _cartDescEs = (cartItem.description_es || "").trim();
+    const _cartDescEn = (cartItem.description_en || "").trim();
+    const _isTbcEs = /^tbc$/i.test(_cartDescEs);
+    const _isTbcEn = /^tbc$/i.test(_cartDescEn);
     const desc = lang === "es"
-      ? (cartItem.description_es || service.description?.es || service.descriptionEs || service.description?.en || service.descriptionEn || "")
-      : (cartItem.description_en || service.description?.en || service.descriptionEn || service.description?.es || service.descriptionEs || "");
+      ? ((!_isTbcEs && _cartDescEs) || service.description?.es || service.descriptionEs || service.description?.en || service.descriptionEn || "")
+      : ((!_isTbcEn && _cartDescEn) || service.description?.en || service.descriptionEn || service.description?.es || service.descriptionEs || "");
     const rawLoc = lang === "es" ? (service.location_es || service.location || "") : (service.location || "");
     const locLower = rawLoc.toLowerCase();
     const locMentionsOtherCity = Object.values(CITY_FULL).some(cn => locLower.includes(cn) && !tripCities.includes(cn));
@@ -2134,8 +2138,8 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         {isConfirmed && (() => {
           const n = (it.title || "").toLowerCase();
           const cat = (it.category || "").toLowerCase();
-          if (/check.?in/.test(n) || /check.?in/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de Llegada y Salida":"Arrival & Departure Information"}</div>;
-          if (/check.?out/.test(n) || /check.?out/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de Llegada y Salida":"Arrival & Departure Information"}</div>;
+          if (/check.?in/.test(n) || /check.?in/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de Llegada y Salida":"Arrival and Departure Information"}</div>;
+          if (/check.?out/.test(n) || /check.?out/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de Llegada y Salida":"Arrival and Departure Information"}</div>;
           if (/breakfast|desayuno/.test(n)) return null;
           return null;
         })()}
@@ -2303,9 +2307,9 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
           </div>
         )}
         {/* Passengers — for any item type */}
-        {it.passengers && !String(it.category||"").toLowerCase().includes("transport") && (
+        {it.passengers && (
           <div style={{ fontSize:11, color:"#6b7280", marginBottom:6 }}>
-            <span style={{fontWeight:600,color:"#374151"}}>{isEs?"Pasajero":"Passenger"}:</span> {it.passengers}
+            <span style={{fontWeight:600,color:"#374151"}}>{isEs?"Pasajeros":"Passengers"}:</span> {it.passengers}
           </div>
         )}
 
@@ -3234,14 +3238,14 @@ export default function ItineraryPrintView() {
       cityGuideIntro: cityGuideIntro.trim(),
       itineraryUpdatedAt: now,
     };
-    // Always update local state and localStorage so edits persist in session
+    // Always update local state and localStorage so edits persist in session.
+    // Write even when there is no existing entry — EditDrawer reads from localStorage
+    // to pick up description edits; a missing entry would fall back to the stale canvas cart.
     setKickoff(prev => ({ ...prev, ...updates }));
     try {
       const cached = localStorage.getItem(`tt_kp_${kickoffId}`);
-      if (cached) {
-        const { data } = JSON.parse(cached);
-        localStorage.setItem(`tt_kp_${kickoffId}`, JSON.stringify({ ts: Date.now(), data: { ...data, ...updates } }));
-      }
+      const existingData = cached ? (JSON.parse(cached).data || {}) : {};
+      localStorage.setItem(`tt_kp_${kickoffId}`, JSON.stringify({ ts: Date.now(), data: { ...existingData, ...updates } }));
     } catch {}
     try {
       await updateKickoffInSheet(kickoffId, updates);

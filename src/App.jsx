@@ -4695,6 +4695,13 @@ function DrinksCatalog() {
 
   const GAS_URL = import.meta.env.VITE_GAS_URL;
   const mkItems = (cats) => (cats || DRINK_CATEGORIES_DEFAULT).map(cat => ({ ...cat, items: cat.items.map(it => ({ ...it })) }));
+  const mergeWithSaved = (current, savedCats) => {
+    if (!savedCats) return current;
+    const qtyMap = {};
+    savedCats.forEach(cat => cat.items?.forEach(it => { if (it.qty) qtyMap[it.name] = it.qty; }));
+    return current.map(cat => ({ ...cat, items: cat.items.map(it => ({ ...it, qty: qtyMap[it.name] ?? it.qty ?? 0 })) }));
+  };
+  const savedDrinkOrderRef = React.useRef(null);
   const [houseItems, setHouseItems] = React.useState(() => mkItems());
   const [boatItems,  setBoatItems]  = React.useState(() => mkItems());
   const [activeTab,  setActiveTab]  = React.useState("house");
@@ -4720,8 +4727,9 @@ function DrinksCatalog() {
       .then(r => r.json()).then(d => {
         if (d?.ok && d.data && Object.keys(d.data).length) {
           const cats = applyMenuOverrides(DRINK_CATEGORIES_DEFAULT, d.data, "drink");
-          setHouseItems(mkItems(cats));
-          setBoatItems(mkItems(cats));
+          const saved = savedDrinkOrderRef.current;
+          setHouseItems(mergeWithSaved(mkItems(cats), saved?.house));
+          setBoatItems(mergeWithSaved(mkItems(cats), saved?.boat));
         }
       }).catch(() => {});
   }, []);
@@ -4737,8 +4745,9 @@ function DrinksCatalog() {
         if (k.drinkOrderJson) {
           try {
             const saved = JSON.parse(k.drinkOrderJson);
-            if (saved.house) setHouseItems(saved.house);
-            if (saved.boat)  setBoatItems(saved.boat);
+            savedDrinkOrderRef.current = saved;
+            if (saved.house) setHouseItems(prev => mergeWithSaved(prev, saved.house));
+            if (saved.boat)  setBoatItems(prev => mergeWithSaved(prev, saved.boat));
             if (saved.extra) setExtra(saved.extra);
           } catch {}
         }

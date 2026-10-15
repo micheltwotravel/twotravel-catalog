@@ -727,7 +727,7 @@ export function BookingPage({ conciergeEmail, conciergeName, kickoffId, guestNam
   function _localDateStr(d) {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
   }
-  const dates    = Array.from({ length: 14 }, (_, i) => {
+  const dates    = Array.from({ length: 30 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() + i + 1);
     return _localDateStr(d);
   });

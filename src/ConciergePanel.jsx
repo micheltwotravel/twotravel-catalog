@@ -2623,8 +2623,8 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
         const boatPrefix_en = boatNameVal ? `**Boat:** ${boatNameVal}${dockName ? `\n**Dock:** ${dockName}` : ""}\n\n` : (dockName ? `**Dock:** ${dockName}\n\n` : "");
         // Single consolidated card — boat info + activity description in one
         return {
-          name:    s?.name_es || svc?.name_es || "Día de Bote",
-          name_en: s?.name_en || svc?.name_en || "Boat Day",
+          name:    "Boat Trip to the Rosario Islands",
+          name_en: "Boat Trip to the Rosario Islands",
           category: "actividades",
           timeLabel: "10:00 AM",
           ...(boatNameVal ? { location: boatNameVal } : {}),
@@ -2675,19 +2675,19 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
             description_es: `Vuelo: **${flightNum}**${arrTime ? `\nLlegada: ${arrTime}` : ""}`,
           });
         }
-        // 2. Arrive at airport — use arrTime so it sorts after the Flight item in the PDF
+        // 2. Arrive at airport — title only, no description (#49)
         items.push({
           name: `Arrive at ${airport.en}`, name_en: `Arrive at ${airport.en}`,
           name_es: `Llegada al ${airport.es}`,
           category: "transportation",
           timeLabel: arrTime,
-          description_en: `You will arrive at **${airport.en}**${airport.code ? ` (${airport.code})` : ""}.`,
-          description_es: `Llegada al **${airport.es}**${airport.code ? ` (${airport.code})` : ""}.`,
+          description_en: "",
+          description_es: "",
         });
-        // 3. Pickup message — same time so sortOrder keeps it after Arrive
+        // 3. Pickup message — renamed to "Airport Transfer to the Villa" (#51)
         items.push({
-          name: `Pick up — ${airport.code || "Airport"}`, name_en: `Pick up — ${airport.code || "Airport"}`,
-          name_es: `Pick up — ${airport.code || "Aeropuerto"}`,
+          name: "Airport Transfer to the Villa", name_en: "Airport Transfer to the Villa",
+          name_es: "Traslado del aeropuerto a la villa",
           category: "transportation",
           timeLabel: arrTime,
           description_en: `When you come out, make sure you turn to the **right** where you will find our representative waiting to direct you to the vehicle. Even if you arrive in separate groups, your reservation will always be under the group leader's name: **${guestName || "group leader"}**\n\n**Transport options:**\n${vehicleOptions.en}\n\n_All vehicles include A/C and luggage. Services between 19:00–6:00 generate a 10% night fee._`,
@@ -2894,17 +2894,6 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
           {loadingServices && " · Cargando catálogo…"}
         </p>
         <div className="flex gap-2 flex-wrap">
-          {/* #45 — language toggle */}
-          <div className="flex rounded-lg border border-neutral-200 overflow-hidden text-xs">
-            <button type="button" onClick={() => { setLang("es"); onLangChange?.("es"); }}
-              className={`px-2.5 py-1.5 font-medium transition-colors ${lang === "es" ? "bg-indigo-600 text-white" : "bg-white text-neutral-500 hover:bg-neutral-50"}`}>
-              🇨🇴 ES
-            </button>
-            <button type="button" onClick={() => { setLang("en"); onLangChange?.("en"); }}
-              className={`px-2.5 py-1.5 font-medium transition-colors border-l border-neutral-200 ${lang === "en" ? "bg-indigo-600 text-white" : "bg-white text-neutral-500 hover:bg-neutral-50"}`}>
-              🇺🇸 EN
-            </button>
-          </div>
           <button type="button" onClick={addDay}
             className="px-3 py-1.5 rounded-lg border border-neutral-200 text-xs hover:bg-neutral-50 text-neutral-600">
             + Agregar día
@@ -4280,25 +4269,25 @@ function GroupSubmissionsPanel({ subs }) {
 function DrawerSection({ title, children, defaultOpen = false, accent = "neutral" }) {
   const [open, setOpen] = useState(defaultOpen);
   const colors = {
-    neutral: "border-neutral-200 bg-neutral-50 text-neutral-700",
-    violet:  "border-violet-200 bg-violet-50/50 text-violet-700",
-    orange:  "border-orange-200 bg-orange-50/50 text-orange-700",
-    amber:   "border-amber-200 bg-amber-50/50 text-amber-800",
-    blue:    "border-blue-200 bg-blue-50/50 text-blue-700",
-    indigo:  "border-indigo-300 bg-indigo-100/70 text-indigo-800",
+    neutral: { border: "border-neutral-200", header: "bg-neutral-50 text-neutral-700",   body: "bg-white" },
+    violet:  { border: "border-violet-200",  header: "bg-violet-50 text-violet-700",      body: "bg-white" },
+    orange:  { border: "border-orange-200",  header: "bg-orange-50 text-orange-700",      body: "bg-white" },
+    amber:   { border: "border-amber-200",   header: "bg-amber-50 text-amber-800",        body: "bg-white" },
+    blue:    { border: "border-blue-200",    header: "bg-blue-50 text-blue-700",          body: "bg-white" },
+    indigo:  { border: "border-indigo-500",  header: "bg-indigo-600 text-white font-bold", body: "bg-indigo-50/60" },
   };
-  const cls = colors[accent] || colors.neutral;
+  const c = colors[accent] || colors.neutral;
   return (
-    <div className={`border rounded-2xl overflow-hidden ${cls.split(" ")[0]}`}>
+    <div className={`border rounded-2xl overflow-hidden ${c.border}`}>
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className={`w-full flex items-center justify-between px-4 py-3 text-left ${cls} transition-colors hover:brightness-95`}
+        className={`w-full flex items-center justify-between px-4 py-3 text-left ${c.header} transition-colors hover:brightness-95`}
       >
         <span className="text-[11px] font-semibold uppercase tracking-wide">{title}</span>
         <span className="text-[10px] ml-2">{open ? "▲" : "▼"}</span>
       </button>
-      {open && <div className={`px-4 py-3 space-y-3 ${cls.split(" ")[1]}`}>{children}</div>}
+      {open && <div className={`px-4 py-3 space-y-3 ${c.body}`}>{children}</div>}
     </div>
   );
 }
@@ -5307,7 +5296,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 placeholder="Nombre del viaje"
               />
             </div>
-            <div className="col-span-2">
+            <div>
               <label className="text-[11px] text-neutral-500">Idioma del cliente</label>
               <div className="mt-1 flex gap-2">
                 <button type="button"
@@ -8542,13 +8531,12 @@ const loadKickoffs = async (forceRefresh = false) => {
         return text.includes(q);
       })
       .sort((a, b) => {
-        const arrA = a.arrivalDate || "";
-        const arrB = b.arrivalDate || "";
-        // Groups with no arrival date go to the bottom
-        if (!arrA && !arrB) return 0;
-        if (!arrA) return 1;
-        if (!arrB) return -1;
-        return arrA.localeCompare(arrB);
+        const tA = a.lastModified || a.createdAt || "";
+        const tB = b.lastModified || b.createdAt || "";
+        if (!tA && !tB) return 0;
+        if (!tA) return 1;
+        if (!tB) return -1;
+        return tB.localeCompare(tA);
       });
   }, [kickoffs, search, statusFilter, conciergeFilter, filterCity]);
 
@@ -8684,7 +8672,7 @@ const loadKickoffs = async (forceRefresh = false) => {
 
   const cp = {
     es: {
-      subtitle: "Información operativa de los clientes y edición de menús.",
+      subtitle: "Kickoffs, itinerarios, PDFs y catálogo de servicios.",
       refresh: "Refrescar", refreshing: "Actualizando...",
       search: "Buscar por huésped, viaje, ID...",
       filterStatus: "Estado:", filterConcierge: "Concierge:",
@@ -8697,7 +8685,7 @@ const loadKickoffs = async (forceRefresh = false) => {
       linkCatalog: "Link catálogo", linkFeedback: "Link feedback",
     },
     en: {
-      subtitle: "Client operational information and menu editing.",
+      subtitle: "Kickoffs, itineraries, PDFs and service catalog.",
       refresh: "Refresh", refreshing: "Refreshing...",
       search: "Search by guest, trip, ID...",
       filterStatus: "Status:", filterConcierge: "Concierge:",

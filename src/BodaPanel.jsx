@@ -1688,7 +1688,6 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
 
   const TABS=[
     {id:"resumen",      label:"Resumen"},
-    {id:"tareas",       label:`Tareas (${activeTasks.length})`},
     {id:"presupuesto",  label:`Presupuesto (${(boda.budgetItems||[]).length})`},
     {id:"pagos",        label:`Pagos (${(boda.payments||[]).length})`},
     {id:"contratos",    label:`Contratos (${(boda.contracts||[]).length})`},
@@ -1738,7 +1737,7 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
       </div>
 
       <div style={CARD}>
-        <div style={{overflowX:"auto",borderBottom:`1px solid ${R.border}`}}>
+        <div style={{overflowX:"auto",borderBottom:`1px solid ${R.border}`,position:"sticky",top:56,zIndex:100,background:R.white}}>
           <div style={{display:"flex",minWidth:"max-content"}}>
             {TABS.map(t=>(
               <button key={t.id} onClick={()=>setTab(t.id)}
@@ -1792,7 +1791,6 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
               })()}
             </div>
           )}
-          {tab==="tareas"      &&<TasksTab        boda={boda} users={users} onPatch={handlePatch} />}
           {tab==="presupuesto" &&<PresupuestoTab  boda={boda} onPatch={handlePatch} />}
           {tab==="pagos"       &&<PagosTab        boda={boda} onPatch={handlePatch} />}
           {tab==="contratos"   &&<ContratosTab    boda={boda} onPatch={handlePatch} />}
@@ -2389,7 +2387,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
 
   return (
     <div style={{minHeight:"100vh",background:R.cream,fontFamily:"'Jost',sans-serif"}}>
-      <div style={{background:R.dark,padding:"0 24px",borderBottom:"1px solid rgba(255,255,255,0.07)"}}>
+      <div style={{background:R.dark,padding:"0 24px",borderBottom:"1px solid rgba(255,255,255,0.07)",position:"sticky",top:0,zIndex:200}}>
         <div style={GOLD_BAR} />
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 0"}}>
           <div style={{display:"flex",alignItems:"center",gap:16}}>
@@ -2405,7 +2403,6 @@ export default function BodaPanel({ currentUser, onLogout }) {
               style={{background:"rgba(255,255,255,.07)",color:refreshing?"rgba(255,255,255,.25)":"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 10px",fontSize:14,cursor:"pointer",transition:"opacity .15s",lineHeight:1}}>
               {refreshing?"⏳":"🔄"}
             </button>
-            <a href="/?mode=tareas-bodas" style={{background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",textDecoration:"none"}}>📋 Tareas</a>
             <a href="/?mode=concierge" style={{background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",textDecoration:"none"}}>← Panel</a>
             <button onClick={onLogout} style={{background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.55)",border:"1px solid rgba(255,255,255,.12)",borderRadius:8,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>Salir</button>
           </div>
