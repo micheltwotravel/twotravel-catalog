@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Two Travel · Proyecto Grande</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Cormorant+Garamond:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sand:#f7f4ef;--sand2:#efe9e0;--sand3:#e5ddd3;
+  --ink:#1a1814;--ink2:#3d3a35;--ink3:#7a7570;
+  --gold:#9a7d52;--gold2:#c4a272;
+  --white:#fff;--border:rgba(26,24,20,.09);--border2:rgba(26,24,20,.15);
+  --pv:#0A6A5C;--pv-bg:#EEF7F5;--pv-brd:#AADAD2;
+  --pn:#4B38B8;--pn-bg:#F0EFFE;--pn-brd:#C0B8F0;
+  --ti:#A0540A;--ti-bg:#FEF5E8;--ti-brd:#F0CEAA;
+  --sn-bg:#e8e8e4;--sn-fg:#55555f;
+  --si-bg:#fff0d0;--si-fg:#7a4200;
+  --sd-bg:#d4f0e0;--sd-fg:#1a5a38;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;font-family:'Jost',sans-serif;background:var(--sand);color:var(--ink);font-weight:300}
+button,input,select,textarea{font-family:'Jost',sans-serif}
+a{color:inherit;text-decoration:none}
+
+.hdr{height:52px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;position:sticky;top:0;z-index:300}
+.logo{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:500;letter-spacing:.04em}
+.hdiv{width:1px;height:13px;background:var(--border2);margin:0 12px}
+.hls{font-size:10px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase}
+.back{margin-left:auto;font-size:11px;color:var(--ink3);border:1px solid var(--border2);padding:4px 11px;transition:.12s}
+.back:hover{color:var(--ink);border-color:var(--gold)}
+
+.tabs{background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;position:sticky;top:52px;z-index:299;overflow-x:auto}
+.tab{padding:14px 18px;font-size:11px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;background:none;border:none;cursor:pointer;color:var(--ink3);border-bottom:2px solid transparent;transition:.12s;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.tab.a-pv{color:var(--pv);border-bottom-color:var(--pv)}
+.tab.a-pn{color:var(--pn);border-bottom-color:var(--pn)}
+.tab.a-ti{color:var(--ti);border-bottom-color:var(--ti)}
+.tab:hover:not(.a-pv):not(.a-pn):not(.a-ti){color:var(--ink2)}
+.tab-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.d-pv{background:var(--pv)}.d-pn{background:var(--pn)}.d-ti{background:var(--ti)}
+.tcnt{font-family:'DM Mono',monospace;font-size:9px;background:var(--sand2);color:var(--ink3);padding:1px 6px;border-radius:10px}
+
+.content{padding:20px;max-width:900px}
+
+.track-hdr{padding:14px 18px;border-radius:8px;margin-bottom:18px}
+.t-pv{background:var(--pv-bg);border:1px solid var(--pv-brd)}
+.t-pn{background:var(--pn-bg);border:1px solid var(--pn-brd)}
+.t-ti{background:var(--ti-bg);border:1px solid var(--ti-brd)}
+.tr-title{font-size:14px;font-weight:500}
+.tr-desc{font-size:11.5px;color:var(--ink3);margin-top:3px;line-height:1.5}
+.tr-prog{margin-top:8px;display:flex;align-items:center;gap:8px}
+.prog-bar{flex:1;height:4px;background:rgba(0,0,0,.1);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;border-radius:2px;transition:width .3s}
+.f-pv{background:var(--pv)}.f-pn{background:var(--pn)}.f-ti{background:var(--ti)}
+.prog-pct{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);white-space:nowrap}
+
+.wk-grp{margin-bottom:22px}
+.wk-lbl{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.wk-chip{background:var(--ink);color:var(--white);font-family:'DM Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;padding:3px 8px;border-radius:4px}
+.wk-meta{font-size:11px;color:var(--ink3)}
+
+.tc{background:var(--white);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden;transition:border-color .12s}
+.tc:hover{border-color:var(--border2)}
+.tc-top{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;cursor:pointer}
+.tc-main{flex:1;min-width:0}
+.tc-name{font-size:13px;font-weight:400;line-height:1.4}
+.tc-detail{font-size:11.5px;color:var(--ink3);margin-top:3px;line-height:1.45}
+.tc-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.tc-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+
+.spill{font-size:10px;font-weight:500;letter-spacing:.04em;padding:3px 9px;border-radius:20px;cursor:pointer;user-select:none;white-space:nowrap;border:none;transition:.12s}
+.sn{background:var(--sn-bg);color:var(--sn-fg)}.si{background:var(--si-bg);color:var(--si-fg)}.sd{background:var(--sd-bg);color:var(--sd-fg)}
+.hrs{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3)}
+.ach{font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;color:#fff;white-space:nowrap}
+.a-m{background:#1a1814}.a-s{background:#4B38B8}.a-mk{background:#A0540A}.a-all{background:#2e7d50}
+
+.ev-panel{border-top:1px solid var(--border);padding:12px 14px;background:var(--sand);display:flex;flex-direction:column;gap:7px}
+.ev-lbl{font-size:10.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.ev-link{font-size:12px;color:var(--gold);word-break:break-all;text-decoration:underline}
+.ev-note{font-size:12px;color:var(--ink2);line-height:1.4;font-style:italic}
+.ev-inp{width:100%;padding:6px 9px;font-size:12px;border:1px solid var(--border2);background:var(--white);color:var(--ink);outline:none;transition:.12s}
+.ev-inp:focus{border-color:var(--gold)}
+.ev-ta{min-height:52px;resize:vertical}
+.ev-row{display:flex;gap:7px;margin-top:2px}
+.btn{padding:5px 13px;font-size:11px;font-weight:400;border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--ink2);transition:.12s;letter-spacing:.04em}
+.btn:hover{border-color:var(--gold);color:var(--gold)}
+.btn.p{background:var(--gold);color:#fff;border-color:var(--gold)}
+.btn.p:hover{background:var(--gold2);border-color:var(--gold2)}
+
+.spinner{display:flex;align-items:center;justify-content:center;height:140px;font-size:12px;color:var(--ink3);letter-spacing:.06em}
+.err{padding:20px;background:var(--white);border:1px solid var(--border2);border-radius:8px;font-size:12px;color:#c00;margin:20px 0}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <span class="logo">Two Travel</span>
+  <span class="hdiv"></span>
+  <span class="hls">Proyecto Grande</span>
+  <a href="/menu.html" class="back">← Menú</a>
+</div>
+
+<div class="tabs">
+  <button class="tab" data-sub="pagina_vieja" onclick="sw('pagina_vieja')">
+    <span class="tab-dot d-pv"></span> Página Vieja
+    <span class="tcnt" id="c-pv">—</span>
+  </button>
+  <button class="tab" data-sub="pagina_nueva" onclick="sw('pagina_nueva')">
+    <span class="tab-dot d-pn"></span> Página Nueva
+    <span class="tcnt" id="c-pn">—</span>
+  </button>
+  <button class="tab" data-sub="insurance" onclick="sw('insurance')">
+    <span class="tab-dot d-ti"></span> Travel Insurance
+    <span class="tcnt" id="c-ti">—</span>
+  </button>
+</div>
+
+<div class="content" id="content">
+  <div class="spinner" id="spin">Cargando tareas…</div>
+</div>
+
+<script>
+const SUPA = "https://zcgisoigfzytpanoaomq.supabase.co";
+const KEY  = "sb_publishable_7k9A4WP1x7hDQdrsHY52jQ_Rpj3ASjU";
+const SRC  = "web_project";
+
+// seed data stored in tasks table as {id, data:{source:'web_project', ...}}
+const SEED = [
+  // PÁGINA VIEJA
+  {id:'wp_pv01',sub:'pagina_vieja',wk:1,name:'Arreglar robots.txt — desbloquear imágenes',detail:'Google no puede crawlear las imágenes. Editar robots.txt para permitir acceso. Verificar en GSC que ya no aparece la restricción.',who:'Michel',hrs:'~1h'},
+  {id:'wp_pv02',sub:'pagina_vieja',wk:1,name:'Corregir páginas en español → redirigen al homepage en inglés',detail:'Las URLs en español caen en el homepage en inglés. Mapear rutas afectadas y configurar 301s correctos.',who:'Michel',hrs:'~2h'},
+  {id:'wp_pv03',sub:'pagina_vieja',wk:1,name:'Mapear todas las redirecciones encadenadas',detail:'Algunas URLs pasan por 2–3 saltos. Listar todos los casos y simplificar a redireccionamiento directo (A → C).',who:'Michel',hrs:'~2h'},
+  {id:'wp_pv04',sub:'pagina_vieja',wk:1,name:'Revisar páginas de bodas rotas — qué existía, qué restauramos',detail:'Buscar en Wayback Machine qué contenido había. Decidir qué se restaura vs. qué se marca como retirado.',who:'Michel',hrs:'~1.5h'},
+  {id:'wp_pv05',sub:'pagina_vieja',wk:1,name:'Google Search Console — lista de páginas excluidas del índice',detail:'Ver qué páginas están excluidas. Separar intencionales de errores. Lista de páginas comerciales fuera del índice.',who:'Michel',hrs:'~1h'},
+  {id:'wp_pv06',sub:'pagina_vieja',wk:2,name:'Implementar redireccionamientos limpios',detail:'Con el mapa de Sem 1, ejecutar los 301s. Confirmar que cada URL llega al destino correcto en un salto.',who:'Michel',hrs:'~2h'},
+  {id:'wp_pv07',sub:'pagina_vieja',wk:2,name:'Restaurar / recrear páginas de bodas y destinos',detail:'Restaurar contenido aprobado. Si no existe, crear página mínima con información actual del servicio.',who:'Michel + Marketing',hrs:'~3h'},
+  {id:'wp_pv08',sub:'pagina_vieja',wk:2,name:'Mejorar títulos y H1s en villas, botes, bachelor',detail:'Alinear los títulos y H1s con lo que busca la gente (search intent). Impacto directo en posicionamiento.',who:'Michel',hrs:'~1.5h'},
+  // PÁGINA NUEVA
+  {id:'wp_pn01',sub:'pagina_nueva',wk:1,name:'Michel escribe el brief del sitio nuevo',detail:'Qué vende el sitio, a quién, qué servicios (villas / botes / bodas / bachelor), CTA principal, idiomas, sitio de referencia de Ray.',who:'Michel',hrs:'~2h'},
+  {id:'wp_pn02',sub:'pagina_nueva',wk:1,name:'Samuel: proponer stack + configurar ambiente de desarrollo',detail:'Samuel propone tecnología (Next.js / Astro / Webflow), hosting, si hay CMS. Michel aprueba. Samuel configura repo y dominio de staging.',who:'Samuel',hrs:'~8h'},
+  {id:'wp_pn03',sub:'pagina_nueva',wk:1,name:'Marketing: 3 sitios de referencia que debemos superar',detail:'Elegir 3 competidores o referencias. Screenshots de qué funciona y qué no. Incluir el sitio que mandó Ray. Define la dirección visual antes del diseño.',who:'Marketing',hrs:'~3h'},
+  {id:'wp_pn04',sub:'pagina_nueva',wk:2,name:'Samuel: wireframes — homepage + 4 páginas de servicio',detail:'Lo-fi: estructura de bloques, dónde van los CTAs, formulario de cotización, cómo se ven en mobile. Michel aprueba antes de diseño.',who:'Samuel',hrs:'~12h'},
+  {id:'wp_pn05',sub:'pagina_nueva',wk:2,name:'Marketing: lista de fotos y copy necesario por página',detail:'Qué texto e imágenes necesita cada página. Qué tenemos ya, qué hay que producir. Entregarlo a Samuel antes del build.',who:'Marketing',hrs:'~4h'},
+  {id:'wp_pn06',sub:'pagina_nueva',wk:3,name:'Samuel: diseño visual homepage → aprobación Michel → build',detail:'Hi-fi del homepage (colores, tipografía, fotos). Michel aprueba. Samuel construye y replica para las demás páginas.',who:'Samuel',hrs:'~60h'},
+  {id:'wp_pn07',sub:'pagina_nueva',wk:4,name:'Marketing: escribir copy de las 5 páginas (ES + EN)',detail:'Texto real para homepage + villas + botes + bodas + bachelor. Español e inglés. Michel revisa antes de que entre al build.',who:'Marketing',hrs:'~10h'},
+  {id:'wp_pn08',sub:'pagina_nueva',wk:5,name:'Samuel: formulario cotización → HubSpot + WhatsApp',detail:'El formulario notifica por WhatsApp igual que el bot actual y registra el lead en HubSpot. Samuel integra; Michel prueba el flujo.',who:'Samuel',hrs:'~6h'},
+  {id:'wp_pn09',sub:'pagina_nueva',wk:6,name:'SEO on-page del sitio nuevo',detail:'Titles, meta descriptions, H1s, canonical tags, sitemap.xml, robots.txt, alt text. No indexar staging. Hacerlo bien desde el inicio.',who:'Samuel',hrs:'~4h'},
+  {id:'wp_pn10',sub:'pagina_nueva',wk:8,name:'QA + aprobación Ray → launch',detail:'Pruebas mobile y desktop. Formularios funcionando. Copy revisado. Lighthouse ≥ 80. Ray da visto bueno. Deploy + DNS. Monitor 48h.',who:'Todos',hrs:'~10h'},
+  // TRAVEL INSURANCE
+  {id:'wp_ti01',sub:'insurance',wk:1,name:'Registrarse en AgentMaxOnline — ACCAM F216705',detail:'Ir a agentmaxonline.com → "Create New Account" → email + ACCAM F216705 → verificar email de agentservices@allianzassistance.com.',who:'Michel',hrs:'~30min'},
+  {id:'wp_ti02',sub:'insurance',wk:1,name:'Descargar brochures Allianz con logo Two Travel',detail:'AgentMax permite pedir brochures personalizados. Pedir versión digital para enviar por WhatsApp y email a clientes.',who:'Michel + Marketing',hrs:'~1h'},
+  {id:'wp_ti03',sub:'insurance',wk:1,name:'Definir el proceso: cuándo y cómo ofrecemos el seguro',detail:'¿En el kickoff? ¿En el formulario? ¿Automáticamente en cada cotización? Michel decide, Marketing ejecuta en la comunicación.',who:'Michel',hrs:'~30min'},
+  {id:'wp_ti04',sub:'insurance',wk:2,name:'Agregar widget QuoteMax al sitio actual',detail:'Allianz da un código QuoteMax que conecta el sitio al cotizador. Las ventas se acreditan al ACCAM automáticamente. Pegar en página de reservas o footer.',who:'Michel',hrs:'~1h'},
+  {id:'wp_ti05',sub:'insurance',wk:2,name:'Samuel: incluir sección de seguro en el sitio nuevo',detail:'El sitio nuevo tendrá sección de seguro de viaje con el widget QuoteMax integrado. Samuel construye durante el build; Marketing escribe el copy.',who:'Samuel + Marketing',hrs:'~2h'},
+  {id:'wp_ti06',sub:'insurance',wk:2,name:'Marketing: mensaje a clientes actuales sobre seguro Allianz',detail:'Mandar a la base de clientes un mensaje explicando que Two Travel ahora ofrece seguro de viaje integrado. WhatsApp o email con materiales de Allianz.',who:'Marketing',hrs:'~2h'},
+];
+
+const STATUS = [
+  {k:'sin_empezar',c:'sn',l:'Sin Empezar'},
+  {k:'en_progreso',c:'si',l:'En Progreso'},
+  {k:'listo',     c:'sd',l:'Listo ✓'},
+];
+
+const TI = {
+  pagina_vieja:{cls:'t-pv',fc:'f-pv',title:'Página Vieja — SEO Recovery',desc:'Michel ejecuta directamente. El sitio actual nunca para de mejorar mientras se construye el nuevo.'},
+  pagina_nueva: {cls:'t-pn',fc:'f-pn',title:'Página Nueva — Build con Samuel',desc:'Samuel (20 h/semana) construye. Marketing produce contenido. Michel aprueba cada fase.'},
+  insurance:    {cls:'t-ti',fc:'f-ti',title:'Travel Insurance — Allianz Partners',desc:'ACCAM F216705 aprobado. Michel activa el portal, Samuel integra el widget, Marketing comunica a clientes.'},
+};
+
+const WM = {1:'Oct 19–25',2:'Oct 26–Nov 1',3:'Nov 2–8',4:'Nov 9–15',5:'Nov 16–22',6:'Nov 23–29',8:'Dic 7–13'};
+
+let TASKS=[], CUR='pagina_vieja', EV_ID=null;
+
+function hdr(){ return {apikey:KEY,'Authorization':`Bearer ${KEY}`,'Content-Type':'application/json'}; }
+
+async function load(){
+  const r = await fetch(`${SUPA}/rest/v1/tasks?select=id,data&data->>source=eq.${SRC}&order=id`,{headers:hdr()});
+  if(!r.ok){ showErr(`Error ${r.status}: ${await r.text()}`); return false; }
+  const rows = await r.json();
+  if(rows.length===0){ await seed(); return load(); }
+  TASKS = rows.map(r=>({id:r.id,...(r.data||{})}));
+  return true;
+}
+
+async function seed(){
+  const now = new Date().toISOString();
+  const rows = SEED.map(s=>({
+    id: s.id,
+    data:{
+      source:SRC, subproject:s.sub, week_num:s.wk,
+      task_name:s.name, detail:s.detail, assignee:s.who,
+      hours_estimate:s.hrs, status:'sin_empezar',
+      evidence_url:'', evidence_note:'', created_at:now, updated_at:now,
+    }
+  }));
+  await fetch(`${SUPA}/rest/v1/tasks`,{method:'POST',headers:{...hdr(),'Prefer':'return=minimal'},body:JSON.stringify(rows)});
+}
+
+async function patch(id,fields){
+  const cur = TASKS.find(t=>t.id===id);
+  if(!cur) return;
+  const newData = {...(cur._raw||{}), ...cur};
+  // rebuild data object
+  const data = {source:SRC,subproject:cur.subproject,week_num:cur.week_num,task_name:cur.task_name,detail:cur.detail,assignee:cur.assignee,hours_estimate:cur.hours_estimate,status:cur.status,evidence_url:cur.evidence_url,evidence_note:cur.evidence_note,created_at:cur.created_at,...fields,updated_at:new Date().toISOString()};
+  await fetch(`${SUPA}/rest/v1/tasks?id=eq.${id}`,{method:'PATCH',headers:{...hdr(),'Prefer':'return=minimal'},body:JSON.stringify({data})});
+  Object.assign(cur,fields);
+}
+
+function aClass(a){
+  if(!a) return 'a-m';
+  const l=a.toLowerCase();
+  if(l.includes('samuel')) return 'a-s';
+  if(l.includes('market')) return 'a-mk';
+  if(l.includes('todos')||l.includes('todo')) return 'a-all';
+  return 'a-m';
+}
+function aChips(a){
+  if(!a) return '';
+  return a.split('+').map(p=>p.trim()).filter(Boolean)
+    .map(p=>`<span class="ach ${aClass(p)}">${e(p)}</span>`).join('');
+}
+function si(s){ return STATUS.find(x=>x.k===s)||STATUS[0]; }
+function e(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function card(t){
+  const s=si(t.status);
+  const ev_url=e(t.evidence_url||'');
+  const ev_note=e(t.evidence_note||'');
+  return `<div class="tc" id="tc_${t.id}">
+  <div class="tc-top" onclick="toggleEv('${t.id}')">
+    <div class="tc-main">
+      <div class="tc-name">${e(t.task_name)}</div>
+      <div class="tc-detail">${e(t.detail||'')}</div>
+      <div class="tc-chips">${aChips(t.assignee)}</div>
+    </div>
+    <div class="tc-right">
+      <button class="spill ${s.c}" onclick="cycleS(event,'${t.id}')">${s.l}</button>
+      ${t.hours_estimate?`<span class="hrs">${e(t.hours_estimate)}</span>`:''}
+    </div>
+  </div>
+  <div class="ev-panel" id="ev_${t.id}" style="display:none">
+    <div class="ev-lbl">Evidencia</div>
+    <div id="evf_${t.id}"></div>
+  </div>
+</div>`;
+}
+
+function renderEv(id){
+  const t=TASKS.find(x=>x.id===id); if(!t) return;
+  const ev_url=e(t.evidence_url||'');
+  const ev_note=e(t.evidence_note||'');
+  document.getElementById(`evf_${id}`).innerHTML=`
+    <input class="ev-inp" id="eu_${id}" type="url" placeholder="URL de evidencia (Drive, Loom, screenshot…)" value="${ev_url}">
+    <textarea class="ev-inp ev-ta" id="en_${id}" placeholder="Nota: qué se hizo, cómo quedó…">${ev_note}</textarea>
+    <div class="ev-row">
+      <button class="btn p" onclick="saveEv('${id}')">Guardar</button>
+      <button class="btn" onclick="closeEv('${id}')">Cancelar</button>
+      ${ev_url?`<a class="btn" href="${ev_url}" target="_blank" rel="noreferrer">Ver enlace →</a>`:''}
+    </div>`;
+}
+
+function toggleEv(id){
+  if(EV_ID===id){ closeEv(id); return; }
+  if(EV_ID){ document.getElementById(`ev_${EV_ID}`).style.display='none'; }
+  EV_ID=id;
+  document.getElementById(`ev_${id}`).style.display='';
+  renderEv(id);
+}
+function closeEv(id){
+  const el=document.getElementById(`ev_${id}`); if(el) el.style.display='none';
+  if(EV_ID===id) EV_ID=null;
+}
+
+async function saveEv(id){
+  const url=(document.getElementById(`eu_${id}`)?.value||'').trim();
+  const note=(document.getElementById(`en_${id}`)?.value||'').trim();
+  const btn=document.querySelector(`#ev_${id} .btn.p`);
+  if(btn){btn.textContent='Guardando…';btn.disabled=true;}
+  await patch(id,{evidence_url:url,evidence_note:note});
+  closeEv(id);
+}
+
+async function cycleS(e,id){
+  e.stopPropagation();
+  const t=TASKS.find(x=>x.id===id); if(!t) return;
+  const cur=STATUS.findIndex(s=>s.k===t.status);
+  const nxt=STATUS[(cur+1)%STATUS.length];
+  const pill=e.currentTarget;
+  pill.className=`spill ${nxt.c}`;
+  pill.textContent=nxt.l;
+  await patch(id,{status:nxt.k});
+  updCounts(); updProg();
+}
+
+function groupByWk(tasks){
+  const m={};
+  tasks.forEach(t=>{const k=t.week_num||1;(m[k]=m[k]||[]).push(t);});
+  return Object.entries(m).sort((a,b)=>+a[0]-+b[0]);
+}
+
+function render(sub){
+  const tasks=TASKS.filter(t=>t.subproject===sub);
+  const info=TI[sub];
+  const done=tasks.filter(t=>t.status==='listo').length;
+  const pct=tasks.length?Math.round(done/tasks.length*100):0;
+  let html=`<div class="track-hdr ${info.cls}">
+    <div class="tr-title">${info.title}</div>
+    <div class="tr-desc">${info.desc}</div>
+    <div class="tr-prog">
+      <div class="prog-bar"><div class="prog-fill ${info.fc}" id="pf_${sub}" style="width:${pct}%"></div></div>
+      <span class="prog-pct" id="pp_${sub}">${done}/${tasks.length} · ${pct}%</span>
+    </div>
+  </div>`;
+  groupByWk(tasks).forEach(([wk,wt])=>{
+    const lbl=+wk>=3?`Sem ${wk}`:`Semana ${wk}`;
+    html+=`<div class="wk-grp"><div class="wk-lbl"><span class="wk-chip">${lbl}</span><span class="wk-meta">${WM[+wk]||''}</span></div>${wt.map(card).join('')}</div>`;
+  });
+  return html;
+}
+
+function updCounts(){
+  [['pagina_vieja','c-pv'],['pagina_nueva','c-pn'],['insurance','c-ti']].forEach(([s,id])=>{
+    const t=TASKS.filter(x=>x.subproject===s);
+    const d=t.filter(x=>x.status==='listo').length;
+    document.getElementById(id).textContent=`${d}/${t.length}`;
+  });
+}
+
+function updProg(){
+  ['pagina_vieja','pagina_nueva','insurance'].forEach(s=>{
+    const t=TASKS.filter(x=>x.subproject===s);
+    const d=t.filter(x=>x.status==='listo').length;
+    const pct=t.length?Math.round(d/t.length*100):0;
+    const f=document.getElementById(`pf_${s}`); if(f) f.style.width=pct+'%';
+    const p=document.getElementById(`pp_${s}`); if(p) p.textContent=`${d}/${t.length} · ${pct}%`;
+  });
+}
+
+function sw(sub){
+  CUR=sub; EV_ID=null;
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.classList.remove('a-pv','a-pn','a-ti');
+    if(t.dataset.sub===sub) t.classList.add({pagina_vieja:'a-pv',pagina_nueva:'a-pn',insurance:'a-ti'}[sub]);
+  });
+  document.getElementById('content').innerHTML=render(sub);
+  updCounts();
+}
+
+function showErr(msg){
+  document.getElementById('content').innerHTML=`<div class="err">Error cargando tareas: ${e(msg)}</div>`;
+}
+
+async function init(){
+  const ok=await load();
+  if(ok) sw('pagina_vieja');
+}
+init();
+</script>
+</body>
+</html>
