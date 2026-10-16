@@ -1559,7 +1559,7 @@ function VideosField({ item, onUpdate }) {
 }
 
 function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availableDays = [], groupSize = 1, lang = "en" }) {
-  const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation || item.confirmed || item.passengers));
+  const [showNotes, setShowNotes] = useState(!!(item.notes || item.confirmation || item.confirmed || item.passengers || !item.sku));
   const notesRef = useRef(null);
   const applyFormat = (marker) => {
     const el = notesRef.current;
@@ -1839,7 +1839,7 @@ function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availabl
             </>
           )}
           <div className="flex items-start gap-2">
-            <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0 pt-1">Notas</span>
+            <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0 pt-1">Recomendaciones</span>
             <div className="flex-1 flex flex-col gap-1">
               <div className="flex gap-1">
                 {[
@@ -1863,7 +1863,7 @@ function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availabl
                 ref={notesRef}
                 value={item.notes || ""}
                 onChange={e => onUpdate(item._uid, { notes: e.target.value })}
-                placeholder="Mesa, alergias, instrucciones…"
+                placeholder="Recomendaciones para el cliente…"
                 rows={2}
                 className="text-xs text-neutral-500 border border-dashed border-neutral-200 rounded focus:outline-none p-1 bg-transparent placeholder-neutral-300 resize-y"
               />
