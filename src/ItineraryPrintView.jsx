@@ -2303,9 +2303,13 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         )}
 
         {/* Concierge notes — skip for transport (already shown in transport block above) */}
-        {it.notes && !String(it.category||"").toLowerCase().includes("transport") && (
+        {(it.notes || (editMode && patchItem)) && !String(it.category||"").toLowerCase().includes("transport") && (
           <div style={{ fontSize:11, color:"#6b7280", marginBottom:8, background:"#f9fafb", borderLeft:"3px solid #d1d5db", paddingLeft:8, paddingTop:4, paddingBottom:4, borderRadius:"0 4px 4px 0" }}>
-            ✍️ <NoteText text={it.notes} />
+            ✍️{" "}
+            {editMode && patchItem
+              ? <Editable value={it.notes || ""} tag="span" editMode={editMode} onChange={v => patchItem("notes", v)} multiline
+                  style={{ fontSize:11, color:"#6b7280", display:"inline" }} />
+              : <NoteText text={it.notes} />}
           </div>
         )}
         {/* Passengers — for any item type */}
@@ -3144,6 +3148,7 @@ export default function ItineraryPrintView() {
             }
             else if (field === "confirmed")   cartMirror.confirmed   = val;
             else if (field === "price")       cartMirror.priceOverride_cop = val;
+            else if (field === "priceUsd")    cartMirror.priceUsd = val;
             else if (field === "cancellation") cartMirror.cancellation = val;
             else if (field === "schedule")     cartMirror.schedule = val;
             else if (field === "deposit")      cartMirror.deposit = val;
