@@ -343,6 +343,48 @@ function DepartureTracker({ kickoff, lang, editMode, onPatchFlight }) {
 // Compact flight entry rendered inline within a day's item list
 const normFlightNum = s => (s || "").toUpperCase().replace(/\s+/g, "");
 
+function NotesField({ notes, onSave }) {
+  const taRef = useRef();
+  const insertLink = (e) => {
+    e.preventDefault();
+    const ta = taRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart, end = ta.selectionEnd;
+    const sel = ta.value.slice(start, end) || "texto";
+    const url = window.prompt("URL del hipervínculo:", "https://");
+    if (!url) return;
+    const wrapped = `[${sel}](${url})`;
+    const newVal = ta.value.slice(0, start) + wrapped + ta.value.slice(end);
+    ta.value = newVal;
+    ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px";
+    onSave(newVal);
+    setTimeout(() => { ta.focus(); ta.setSelectionRange(start + wrapped.length, start + wrapped.length); }, 0);
+  };
+  return (
+    <div style={{ position: "relative" }}>
+      <button type="button" onMouseDown={insertLink}
+        style={{ position:"absolute", top:2, right:0, fontSize:10, padding:"1px 5px", background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:4, cursor:"pointer", color:"#2563eb", zIndex:1 }}
+        title="Insertar link">🔗</button>
+      <textarea
+        key={notes || ""}
+        ref={taRef}
+        defaultValue={notes || ""}
+        placeholder="✍️ Nota interna..."
+        rows={1}
+        style={{
+          display:"block", width:"100%", border:"none",
+          borderBottom:"1px dashed #d1d5db", background:"transparent",
+          resize:"none", fontFamily:"inherit", fontSize:11,
+          lineHeight:1.7, color:"#6b7280", outline:"none",
+          padding:"2px 0", marginBottom:6, overflow:"hidden",
+        }}
+        onInput={e => { e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; }}
+        onBlur={e => onSave(e.target.value)}
+      />
+    </div>
+  );
+}
+
 // Convert simple markdown markers to HTML for note display
 function noteToHtml(text) {
   if (!text) return "";
@@ -2337,21 +2379,7 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         {/* Concierge notes — skip for transport (already shown in transport block above) */}
         {!String(it.category||"").toLowerCase().includes("transport") && (
           editMode && patchItem ? (
-            <textarea
-              key={it.notes || ""}
-              defaultValue={it.notes || ""}
-              placeholder="✍️ Nota interna..."
-              rows={1}
-              style={{
-                display: "block", width: "100%", border: "none",
-                borderBottom: "1px dashed #d1d5db", background: "transparent",
-                resize: "none", fontFamily: "inherit", fontSize: 11,
-                lineHeight: 1.7, color: "#6b7280", outline: "none",
-                padding: "2px 0", marginBottom: 6, overflow: "hidden",
-              }}
-              onInput={e => { e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; }}
-              onBlur={e => patchItem("notes", e.target.value)}
-            />
+            <NotesField notes={it.notes} onSave={v => patchItem("notes", v)} />
           ) : it.notes ? (
             <div style={{ fontSize:11, color:"#6b7280", marginBottom:8, background:"#f9fafb", borderLeft:"3px solid #d1d5db", paddingLeft:8, paddingTop:4, paddingBottom:4, borderRadius:"0 4px 4px 0" }}>
               ✍️{" "}<NoteText text={it.notes} />
