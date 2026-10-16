@@ -1567,6 +1567,15 @@ function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availabl
     const start = el.selectionStart;
     const end   = el.selectionEnd;
     const sel   = el.value.slice(start, end) || "texto";
+    if (marker === "link") {
+      const url = window.prompt("URL del hipervínculo:", "https://");
+      if (!url) return;
+      const wrapped = `[${sel}](${url})`;
+      const newVal = el.value.slice(0, start) + wrapped + el.value.slice(end);
+      onUpdate(item._uid, { notes: newVal });
+      setTimeout(() => { el.focus(); el.setSelectionRange(start + wrapped.length, start + wrapped.length); }, 0);
+      return;
+    }
     const wrap  = { b: `**${sel}**`, i: `_${sel}_`, u: `__${sel}__`, c: `~~${sel}~~`, c2: `^^${sel}^^`, c3: `==${sel}==`, c4: `%%${sel}%%` };
     const newVal = el.value.slice(0, start) + wrap[marker] + el.value.slice(end);
     onUpdate(item._uid, { notes: newVal });
@@ -1846,6 +1855,7 @@ function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availabl
                   ["b","B","font-bold","Negrita"],
                   ["i","I","italic","Cursiva"],
                   ["u","U","underline","Subrayado"],
+                  ["link","🔗","text-blue-600 bg-blue-50","Hipervínculo"],
                   ["c","◈","text-amber-600 bg-amber-50","Amarillo"],
                   ["c2","◈","text-green-700 bg-green-50","Verde"],
                   ["c3","◈","text-blue-600 bg-blue-50","Azul"],
@@ -1953,6 +1963,9 @@ function RichTextBlock({ item, onUpdate, onRemove }) {
         <div className="w-px h-4 bg-neutral-200 mx-0.5"/>
         <button type="button" onMouseDown={e=>{e.preventDefault();exec("insertUnorderedList");}}
           className="text-[11px] px-1.5 py-0.5 rounded hover:bg-neutral-100 text-neutral-600">• Lista</button>
+        <div className="w-px h-4 bg-neutral-200 mx-0.5"/>
+        <button type="button" onMouseDown={e=>{e.preventDefault();const url=window.prompt("URL del hipervínculo:","https://");if(url){exec("createLink",url);}}}
+          className="text-[11px] px-1.5 py-0.5 rounded hover:bg-neutral-100 text-blue-600" title="Hipervínculo">🔗</button>
         <div className="w-px h-4 bg-neutral-200 mx-0.5"/>
         {/* Text color */}
         <div className="relative">
@@ -2746,18 +2759,26 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
         });
         return items;
       })(),
-      foodonboard: {
-        name: "Comida a bordo", name_en: "Food on Board", category: "services",
-        timeLabel: "",
-        description_es: "Servicio de comida a bordo del bote. Menú a definir — avísanos si tienen restricciones alimentarias o preferencias.",
-        description_en: "Food service on board the boat. Menu to be defined — let us know if you have any dietary restrictions or preferences.",
-      },
-      chefdinner: {
-        name: "Cena con chef", name_en: "Chef Dinner", category: "services",
-        timeLabel: "7:00 PM",
-        description_es: "Cena privada preparada por chef en la villa. El menú y los horarios se coordinan con anticipación.",
-        description_en: "Private dinner prepared by a chef at the villa. Menu and timing are coordinated in advance.",
-      },
+      foodonboard: (() => {
+        const s = allItineraryItemsRef.current.find(i => /food.?on.?board|comida.?a.?bordo/i.test(i.name_en) || /food.?on.?board|comida.?a.?bordo/i.test(i.name_es));
+        return {
+          name: s?.name_es || "Comida a bordo", name_en: s?.name_en || "Food on Board", category: "services",
+          timeLabel: "",
+          ...(s?.image ? { image: s.image } : {}),
+          description_es: s?.description_es || "Servicio de comida a bordo del bote. Menú a definir — avísanos si tienen restricciones alimentarias o preferencias.",
+          description_en: s?.description || s?.description_en || "Food service on board the boat. Menu to be defined — let us know if you have any dietary restrictions or preferences.",
+        };
+      })(),
+      chefdinner: (() => {
+        const s = allItineraryItemsRef.current.find(i => /chef.?dinner|cena.?chef/i.test(i.name_en) || /chef.?dinner|cena.?chef/i.test(i.name_es));
+        return {
+          name: s?.name_es || "Cena con chef", name_en: s?.name_en || "Chef Dinner", category: "services",
+          timeLabel: "7:00 PM",
+          ...(s?.image ? { image: s.image } : {}),
+          description_es: s?.description_es || "Cena privada preparada por chef en la villa. El menú y los horarios se coordinan con anticipación.",
+          description_en: s?.description || s?.description_en || "Private dinner prepared by a chef at the villa. Menu and timing are coordinated in advance.",
+        };
+      })(),
       beachclub: {
         name: "Beach Club", name_en: "Beach Club", category: "actividades",
         timeLabel: "11:00 AM",
