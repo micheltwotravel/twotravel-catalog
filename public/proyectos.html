@@ -23,15 +23,18 @@ html,body{min-height:100%;font-family:'Jost',sans-serif;background:var(--sand);c
 button,input,select,textarea{font-family:'Jost',sans-serif}
 a{color:inherit;text-decoration:none}
 
-.hdr{height:52px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;position:sticky;top:0;z-index:300}
+.hdr{height:52px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;position:sticky;top:0;z-index:300}
 .logo{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:500;letter-spacing:.04em}
-.hdiv{width:1px;height:13px;background:var(--border2);margin:0 12px}
+.hdiv{width:1px;height:13px;background:var(--border2)}
 .hls{font-size:10px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase}
-.back{margin-left:auto;font-size:11px;color:var(--ink3);border:1px solid var(--border2);padding:4px 11px;transition:.12s}
+.hrow{margin-left:auto;display:flex;align-items:center;gap:8px}
+.lang-btn{background:var(--sand2);border:1px solid var(--border2);padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.06em;transition:.12s;color:var(--ink2)}
+.lang-btn:hover{border-color:var(--gold);color:var(--gold)}
+.back{font-size:11px;color:var(--ink3);border:1px solid var(--border2);padding:4px 11px;transition:.12s;background:none;cursor:pointer;display:inline-block}
 .back:hover{color:var(--ink);border-color:var(--gold)}
 
 .tabs{background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;position:sticky;top:52px;z-index:299;overflow-x:auto}
-.tab{padding:14px 18px;font-size:11px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;background:none;border:none;cursor:pointer;color:var(--ink3);border-bottom:2px solid transparent;transition:.12s;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.tab{padding:14px 16px;font-size:11px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;background:none;border:none;cursor:pointer;color:var(--ink3);border-bottom:2px solid transparent;transition:.12s;white-space:nowrap;display:flex;align-items:center;gap:7px}
 .tab.a-pv{color:var(--pv);border-bottom-color:var(--pv)}
 .tab.a-pn{color:var(--pn);border-bottom-color:var(--pn)}
 .tab.a-ti{color:var(--ti);border-bottom-color:var(--ti)}
@@ -41,7 +44,6 @@ a{color:inherit;text-decoration:none}
 .tcnt{font-family:'DM Mono',monospace;font-size:9px;background:var(--sand2);color:var(--ink3);padding:1px 6px;border-radius:10px}
 
 .content{padding:20px;max-width:900px}
-
 .track-hdr{padding:14px 18px;border-radius:8px;margin-bottom:18px}
 .t-pv{background:var(--pv-bg);border:1px solid var(--pv-brd)}
 .t-pn{background:var(--pn-bg);border:1px solid var(--pn-brd)}
@@ -72,20 +74,20 @@ a{color:inherit;text-decoration:none}
 .sn{background:var(--sn-bg);color:var(--sn-fg)}.si{background:var(--si-bg);color:var(--si-fg)}.sd{background:var(--sd-bg);color:var(--sd-fg)}
 .hrs{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3)}
 .ach{font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;color:#fff;white-space:nowrap}
-.a-m{background:#1a1814}.a-s{background:#4B38B8}.a-mk{background:#A0540A}.a-all{background:#2e7d50}
+.a-m{background:#1a1814}.a-s{background:#4B38B8}.a-mk{background:#A0540A}.a-all{background:#2e7d50}.a-mr{background:#6b2a8f}
 
 .ev-panel{border-top:1px solid var(--border);padding:12px 14px;background:var(--sand);display:flex;flex-direction:column;gap:7px}
 .ev-lbl{font-size:10.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
-.ev-link{font-size:12px;color:var(--gold);word-break:break-all;text-decoration:underline}
-.ev-note{font-size:12px;color:var(--ink2);line-height:1.4;font-style:italic}
 .ev-inp{width:100%;padding:6px 9px;font-size:12px;border:1px solid var(--border2);background:var(--white);color:var(--ink);outline:none;transition:.12s}
 .ev-inp:focus{border-color:var(--gold)}
 .ev-ta{min-height:52px;resize:vertical}
-.ev-row{display:flex;gap:7px;margin-top:2px}
+.ev-row{display:flex;gap:7px;margin-top:2px;flex-wrap:wrap}
 .btn{padding:5px 13px;font-size:11px;font-weight:400;border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--ink2);transition:.12s;letter-spacing:.04em}
 .btn:hover{border-color:var(--gold);color:var(--gold)}
 .btn.p{background:var(--gold);color:#fff;border-color:var(--gold)}
 .btn.p:hover{background:var(--gold2);border-color:var(--gold2)}
+.btn-link{display:inline-block;padding:5px 13px;font-size:11px;border:1px solid var(--border2);color:var(--ink2);transition:.12s;letter-spacing:.04em}
+.btn-link:hover{border-color:var(--gold);color:var(--gold)}
 
 .spinner{display:flex;align-items:center;justify-content:center;height:140px;font-size:12px;color:var(--ink3);letter-spacing:.06em}
 .err{padding:20px;background:var(--white);border:1px solid var(--border2);border-radius:8px;font-size:12px;color:#c00;margin:20px 0}
@@ -96,21 +98,27 @@ a{color:inherit;text-decoration:none}
 <div class="hdr">
   <span class="logo">Two Travel</span>
   <span class="hdiv"></span>
-  <span class="hls">Proyecto Grande</span>
-  <a href="/menu.html" class="back">← Menú</a>
+  <span class="hls" id="hdr-title">Proyecto Grande</span>
+  <div class="hrow">
+    <button class="lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+    <a href="/menu.html" class="back" id="back-btn">← Menú</a>
+  </div>
 </div>
 
 <div class="tabs">
   <button class="tab" data-sub="pagina_vieja" onclick="sw('pagina_vieja')">
-    <span class="tab-dot d-pv"></span> Página Vieja
+    <span class="tab-dot d-pv"></span>
+    <span id="tab-pv">Página Vieja</span>
     <span class="tcnt" id="c-pv">—</span>
   </button>
   <button class="tab" data-sub="pagina_nueva" onclick="sw('pagina_nueva')">
-    <span class="tab-dot d-pn"></span> Página Nueva
+    <span class="tab-dot d-pn"></span>
+    <span id="tab-pn">Página Nueva</span>
     <span class="tcnt" id="c-pn">—</span>
   </button>
   <button class="tab" data-sub="insurance" onclick="sw('insurance')">
-    <span class="tab-dot d-ti"></span> Travel Insurance
+    <span class="tab-dot d-ti"></span>
+    <span id="tab-ti">Travel Insurance</span>
     <span class="tcnt" id="c-ti">—</span>
   </button>
 </div>
@@ -122,174 +130,355 @@ a{color:inherit;text-decoration:none}
 <script>
 const SUPA = "https://zcgisoigfzytpanoaomq.supabase.co";
 const KEY  = "sb_publishable_7k9A4WP1x7hDQdrsHY52jQ_Rpj3ASjU";
-const SRC  = "web_project";
+const SRC  = "web_project_v2";
 
-// seed data stored in tasks table as {id, data:{source:'web_project', ...}}
-const SEED = [
-  // PÁGINA VIEJA
-  {id:'wp_pv01',sub:'pagina_vieja',wk:1,name:'Arreglar robots.txt — desbloquear imágenes',detail:'Google no puede crawlear las imágenes. Editar robots.txt para permitir acceso. Verificar en GSC que ya no aparece la restricción.',who:'Michel',hrs:'~1h'},
-  {id:'wp_pv02',sub:'pagina_vieja',wk:1,name:'Corregir páginas en español → redirigen al homepage en inglés',detail:'Las URLs en español caen en el homepage en inglés. Mapear rutas afectadas y configurar 301s correctos.',who:'Michel',hrs:'~2h'},
-  {id:'wp_pv03',sub:'pagina_vieja',wk:1,name:'Mapear todas las redirecciones encadenadas',detail:'Algunas URLs pasan por 2–3 saltos. Listar todos los casos y simplificar a redireccionamiento directo (A → C).',who:'Michel',hrs:'~2h'},
-  {id:'wp_pv04',sub:'pagina_vieja',wk:1,name:'Revisar páginas de bodas rotas — qué existía, qué restauramos',detail:'Buscar en Wayback Machine qué contenido había. Decidir qué se restaura vs. qué se marca como retirado.',who:'Michel',hrs:'~1.5h'},
-  {id:'wp_pv05',sub:'pagina_vieja',wk:1,name:'Google Search Console — lista de páginas excluidas del índice',detail:'Ver qué páginas están excluidas. Separar intencionales de errores. Lista de páginas comerciales fuera del índice.',who:'Michel',hrs:'~1h'},
-  {id:'wp_pv06',sub:'pagina_vieja',wk:2,name:'Implementar redireccionamientos limpios',detail:'Con el mapa de Sem 1, ejecutar los 301s. Confirmar que cada URL llega al destino correcto en un salto.',who:'Michel',hrs:'~2h'},
-  {id:'wp_pv07',sub:'pagina_vieja',wk:2,name:'Restaurar / recrear páginas de bodas y destinos',detail:'Restaurar contenido aprobado. Si no existe, crear página mínima con información actual del servicio.',who:'Michel + Marketing',hrs:'~3h'},
-  {id:'wp_pv08',sub:'pagina_vieja',wk:2,name:'Mejorar títulos y H1s en villas, botes, bachelor',detail:'Alinear los títulos y H1s con lo que busca la gente (search intent). Impacto directo en posicionamiento.',who:'Michel',hrs:'~1.5h'},
-  // PÁGINA NUEVA
-  {id:'wp_pn01',sub:'pagina_nueva',wk:1,name:'Michel escribe el brief del sitio nuevo',detail:'Qué vende el sitio, a quién, qué servicios (villas / botes / bodas / bachelor), CTA principal, idiomas, sitio de referencia de Ray.',who:'Michel',hrs:'~2h'},
-  {id:'wp_pn02',sub:'pagina_nueva',wk:1,name:'Samuel: proponer stack + configurar ambiente de desarrollo',detail:'Samuel propone tecnología (Next.js / Astro / Webflow), hosting, si hay CMS. Michel aprueba. Samuel configura repo y dominio de staging.',who:'Samuel',hrs:'~8h'},
-  {id:'wp_pn03',sub:'pagina_nueva',wk:1,name:'Marketing: 3 sitios de referencia que debemos superar',detail:'Elegir 3 competidores o referencias. Screenshots de qué funciona y qué no. Incluir el sitio que mandó Ray. Define la dirección visual antes del diseño.',who:'Marketing',hrs:'~3h'},
-  {id:'wp_pn04',sub:'pagina_nueva',wk:2,name:'Samuel: wireframes — homepage + 4 páginas de servicio',detail:'Lo-fi: estructura de bloques, dónde van los CTAs, formulario de cotización, cómo se ven en mobile. Michel aprueba antes de diseño.',who:'Samuel',hrs:'~12h'},
-  {id:'wp_pn05',sub:'pagina_nueva',wk:2,name:'Marketing: lista de fotos y copy necesario por página',detail:'Qué texto e imágenes necesita cada página. Qué tenemos ya, qué hay que producir. Entregarlo a Samuel antes del build.',who:'Marketing',hrs:'~4h'},
-  {id:'wp_pn06',sub:'pagina_nueva',wk:3,name:'Samuel: diseño visual homepage → aprobación Michel → build',detail:'Hi-fi del homepage (colores, tipografía, fotos). Michel aprueba. Samuel construye y replica para las demás páginas.',who:'Samuel',hrs:'~60h'},
-  {id:'wp_pn07',sub:'pagina_nueva',wk:4,name:'Marketing: escribir copy de las 5 páginas (ES + EN)',detail:'Texto real para homepage + villas + botes + bodas + bachelor. Español e inglés. Michel revisa antes de que entre al build.',who:'Marketing',hrs:'~10h'},
-  {id:'wp_pn08',sub:'pagina_nueva',wk:5,name:'Samuel: formulario cotización → HubSpot + WhatsApp',detail:'El formulario notifica por WhatsApp igual que el bot actual y registra el lead en HubSpot. Samuel integra; Michel prueba el flujo.',who:'Samuel',hrs:'~6h'},
-  {id:'wp_pn09',sub:'pagina_nueva',wk:6,name:'SEO on-page del sitio nuevo',detail:'Titles, meta descriptions, H1s, canonical tags, sitemap.xml, robots.txt, alt text. No indexar staging. Hacerlo bien desde el inicio.',who:'Samuel',hrs:'~4h'},
-  {id:'wp_pn10',sub:'pagina_nueva',wk:8,name:'QA + aprobación Ray → launch',detail:'Pruebas mobile y desktop. Formularios funcionando. Copy revisado. Lighthouse ≥ 80. Ray da visto bueno. Deploy + DNS. Monitor 48h.',who:'Todos',hrs:'~10h'},
-  // TRAVEL INSURANCE
-  {id:'wp_ti01',sub:'insurance',wk:1,name:'Registrarse en AgentMaxOnline — ACCAM F216705',detail:'Ir a agentmaxonline.com → "Create New Account" → email + ACCAM F216705 → verificar email de agentservices@allianzassistance.com.',who:'Michel',hrs:'~30min'},
-  {id:'wp_ti02',sub:'insurance',wk:1,name:'Descargar brochures Allianz con logo Two Travel',detail:'AgentMax permite pedir brochures personalizados. Pedir versión digital para enviar por WhatsApp y email a clientes.',who:'Michel + Marketing',hrs:'~1h'},
-  {id:'wp_ti03',sub:'insurance',wk:1,name:'Definir el proceso: cuándo y cómo ofrecemos el seguro',detail:'¿En el kickoff? ¿En el formulario? ¿Automáticamente en cada cotización? Michel decide, Marketing ejecuta en la comunicación.',who:'Michel',hrs:'~30min'},
-  {id:'wp_ti04',sub:'insurance',wk:2,name:'Agregar widget QuoteMax al sitio actual',detail:'Allianz da un código QuoteMax que conecta el sitio al cotizador. Las ventas se acreditan al ACCAM automáticamente. Pegar en página de reservas o footer.',who:'Michel',hrs:'~1h'},
-  {id:'wp_ti05',sub:'insurance',wk:2,name:'Samuel: incluir sección de seguro en el sitio nuevo',detail:'El sitio nuevo tendrá sección de seguro de viaje con el widget QuoteMax integrado. Samuel construye durante el build; Marketing escribe el copy.',who:'Samuel + Marketing',hrs:'~2h'},
-  {id:'wp_ti06',sub:'insurance',wk:2,name:'Marketing: mensaje a clientes actuales sobre seguro Allianz',detail:'Mandar a la base de clientes un mensaje explicando que Two Travel ahora ofrece seguro de viaje integrado. WhatsApp o email con materiales de Allianz.',who:'Marketing',hrs:'~2h'},
-];
+let LANG = 'es';
+try { LANG = localStorage.getItem('pg_lang') || 'es'; } catch(e){}
 
-const STATUS = [
-  {k:'sin_empezar',c:'sn',l:'Sin Empezar'},
-  {k:'en_progreso',c:'si',l:'En Progreso'},
-  {k:'listo',     c:'sd',l:'Listo ✓'},
-];
-
-const TI = {
-  pagina_vieja:{cls:'t-pv',fc:'f-pv',title:'Página Vieja — SEO Recovery',desc:'Michel ejecuta directamente. El sitio actual nunca para de mejorar mientras se construye el nuevo.'},
-  pagina_nueva: {cls:'t-pn',fc:'f-pn',title:'Página Nueva — Build con Samuel',desc:'Samuel (20 h/semana) construye. Marketing produce contenido. Michel aprueba cada fase.'},
-  insurance:    {cls:'t-ti',fc:'f-ti',title:'Travel Insurance — Allianz Partners',desc:'ACCAM F216705 aprobado. Michel activa el portal, Samuel integra el widget, Marketing comunica a clientes.'},
+const L = {
+  es: {
+    hdr_title:'Proyecto Grande', back:'← Menú',
+    tab_pv:'Página Vieja', tab_pn:'Página Nueva', tab_ti:'Travel Insurance',
+    loading:'Cargando tareas…', evidence:'Evidencia',
+    ev_url:'URL de evidencia (Drive, Loom, screenshot…)',
+    ev_note:'Nota: qué se hizo, cómo quedó…',
+    save:'Guardar', cancel:'Cancelar', see_link:'Ver enlace →', saving:'Guardando…',
+    sk:['sin_empezar','en_progreso','listo'],
+    sl:['Sin Empezar','En Progreso','Listo ✓'],
+    sc:['sn','si','sd'],
+    wl:'Semana', ws:'Sem',
+    dates:{1:'Oct 19–25',2:'Oct 26–Nov 1',3:'Nov 2–8',4:'Nov 9–15',5:'Nov 16–22',6:'Nov 23–29',7:'Nov 30–Dic 6',8:'Dic 7–13',9:'Dic 14–20',10:'Dic 21–27',11:'Ene 4–10',12:'Ene 11–17'},
+    tracks:{
+      pagina_vieja:{cls:'t-pv',fc:'f-pv',title:'Página Vieja — SEO Recovery',desc:'Michel ejecuta directamente. El sitio actual nunca para de mejorar mientras se construye el nuevo.'},
+      pagina_nueva:{cls:'t-pn',fc:'f-pn',title:'Página Nueva — Build con Samuel',desc:'Samuel (20 h/semana) construye. Marketing produce contenido. Michel aprueba cada fase.'},
+      insurance:{cls:'t-ti',fc:'f-ti',title:'Travel Insurance — Allianz Partners',desc:'ACCAM F216705 aprobado. Michel activa el portal, Samuel integra el widget, Marketing comunica a clientes.'},
+    }
+  },
+  en: {
+    hdr_title:'Big Project', back:'← Menu',
+    tab_pv:'Old Site', tab_pn:'New Site', tab_ti:'Travel Insurance',
+    loading:'Loading tasks…', evidence:'Evidence',
+    ev_url:'Evidence URL (Drive, Loom, screenshot…)',
+    ev_note:'Note: what was done, how it turned out…',
+    save:'Save', cancel:'Cancel', see_link:'View link →', saving:'Saving…',
+    sk:['sin_empezar','en_progreso','listo'],
+    sl:['Not Started','In Progress','Done ✓'],
+    sc:['sn','si','sd'],
+    wl:'Week', ws:'Wk',
+    dates:{1:'Oct 19–25',2:'Oct 26–Nov 1',3:'Nov 2–8',4:'Nov 9–15',5:'Nov 16–22',6:'Nov 23–29',7:'Nov 30–Dec 6',8:'Dec 7–13',9:'Dec 14–20',10:'Dec 21–27',11:'Jan 4–10',12:'Jan 11–17'},
+    tracks:{
+      pagina_vieja:{cls:'t-pv',fc:'f-pv',title:'Old Site — SEO Recovery',desc:"Michel executes directly. The current site keeps improving while the new one is built."},
+      pagina_nueva:{cls:'t-pn',fc:'f-pn',title:'New Site — Build with Samuel',desc:'Samuel (20 h/week) builds. Marketing produces content. Michel approves each phase.'},
+      insurance:{cls:'t-ti',fc:'f-ti',title:'Travel Insurance — Allianz Partners',desc:'ACCAM F216705 approved. Michel activates the portal, Samuel integrates the widget, Marketing communicates to clients.'},
+    }
+  }
 };
 
-const WM = {1:'Oct 19–25',2:'Oct 26–Nov 1',3:'Nov 2–8',4:'Nov 9–15',5:'Nov 16–22',6:'Nov 23–29',8:'Dic 7–13'};
+const SEED = [
+  // PÁGINA VIEJA (17 tasks, Weeks 1–8)
+  {id:'wp_pv01',sub:'pagina_vieja',wk:1,who:'Michel',hrs:'~2h',
+   es:['Auditoría completa en Google Search Console','Revisar cobertura, errores de indexación, páginas excluidas, velocidad y Core Web Vitals. Lista priorizada de problemas antes de tocar cualquier código.'],
+   en:['Full Google Search Console audit','Review coverage, indexation errors, excluded pages, speed and Core Web Vitals. Prioritized list of issues before touching any code.']},
 
-let TASKS=[], CUR='pagina_vieja', EV_ID=null;
+  {id:'wp_pv02',sub:'pagina_vieja',wk:1,who:'Michel',hrs:'~1h',
+   es:['Arreglar robots.txt — desbloquear imágenes para Google','Google no puede crawlear las imágenes del sitio. Editar robots.txt para permitir acceso a la carpeta de imágenes. Verificar en GSC que la restricción desaparece.'],
+   en:['Fix robots.txt — unblock images for Google','Google cannot crawl site images. Edit robots.txt to allow access to the images folder. Verify in GSC that the restriction disappears.']},
 
-function hdr(){ return {apikey:KEY,'Authorization':`Bearer ${KEY}`,'Content-Type':'application/json'}; }
+  {id:'wp_pv03',sub:'pagina_vieja',wk:1,who:'Michel',hrs:'~2h',
+   es:['Mapear todas las URLs del sitio — 200, 301, 404','Usar Screaming Frog (gratis hasta 500 URLs). Exportar lista completa con código de respuesta. Es la base para las correcciones de las semanas 2-3.'],
+   en:['Map all site URLs — 200, 301, 404','Use Screaming Frog (free up to 500 URLs). Export full list with response codes. This is the base for week 2-3 fixes.']},
 
-async function load(){
-  const r = await fetch(`${SUPA}/rest/v1/tasks?select=id,data&data->>source=eq.${SRC}&order=id`,{headers:hdr()});
-  if(!r.ok){ showErr(`Error ${r.status}: ${await r.text()}`); return false; }
+  {id:'wp_pv04',sub:'pagina_vieja',wk:1,who:'Michel',hrs:'~1.5h',
+   es:['Auditoría de velocidad con PageSpeed Insights','Correr PageSpeed en homepage, villas, botes y bachelor. Documentar scores y los 3 problemas principales de cada página.'],
+   en:['Speed audit with PageSpeed Insights','Run PageSpeed on homepage, villas, boats and bachelor. Document scores and the 3 main problems per page.']},
+
+  {id:'wp_pv05',sub:'pagina_vieja',wk:2,who:'Michel',hrs:'~2h',
+   es:['Corregir redirecciones encadenadas → 301 directos','Identificar URLs que hacen 2+ saltos (A→B→C). Corregir para que A vaya directo a C. Cada salto adicional pierde autoridad SEO.'],
+   en:['Fix chained redirects → direct 301s','Identify URLs that make 2+ hops (A→B→C). Fix so A goes directly to C. Each extra hop loses SEO authority.']},
+
+  {id:'wp_pv06',sub:'pagina_vieja',wk:2,who:'Michel',hrs:'~2h',
+   es:['Corregir páginas en español que redirigen al homepage en inglés','Las URLs en español caen en el homepage en inglés, borrando todo el SEO en español. Mapear rutas afectadas y configurar 301s correctos.'],
+   en:['Fix Spanish pages that redirect to the English homepage','Spanish URLs land on the English homepage, erasing all Spanish SEO. Map affected routes and configure correct 301s.']},
+
+  {id:'wp_pv07',sub:'pagina_vieja',wk:2,who:'Michel',hrs:'~2h',
+   es:['Restaurar páginas de bodas y destinos perdidas','Buscar en Wayback Machine qué páginas de bodas existían. Restaurar o recrear las que tenían contenido real. Muchas búsquedas de bodas en Cartagena llegan hoy a un 404.'],
+   en:['Restore lost wedding and destination pages','Search Wayback Machine for what wedding pages existed. Restore or recreate those with real content. Many Cartagena wedding searches currently land on a 404.']},
+
+  {id:'wp_pv08',sub:'pagina_vieja',wk:3,who:'Michel',hrs:'~2h',
+   es:['Mejorar H1s y title tags — villas, botes, bachelor, bodas','Alinear H1 y title con lo que busca la gente. Ej: "Alquiler de Yates en Cartagena" en vez de "Botes". Impacto directo en posicionamiento. Máx 60 chars.'],
+   en:['Improve H1s and title tags — villas, boats, bachelor, weddings','Align H1 and title with what people search for. E.g.: "Yacht Rentals in Cartagena" instead of "Boats". Direct ranking impact. Max 60 chars.']},
+
+  {id:'wp_pv09',sub:'pagina_vieja',wk:3,who:'Michel',hrs:'~2h',
+   es:['Escribir meta descriptions para las 20 páginas principales','Cada página necesita una meta description única de 150-160 caracteres. No afecta ranking directamente pero sí el CTR desde Google.'],
+   en:['Write meta descriptions for the top 20 pages','Each page needs a unique 150-160 character meta description. Doesn\'t directly affect ranking but does affect CTR from Google.']},
+
+  {id:'wp_pv10',sub:'pagina_vieja',wk:3,who:'Michel',hrs:'~1.5h',
+   es:['Agregar alt text a imágenes críticas (top 10 páginas)','Las imágenes sin alt text son invisibles para Google Images. Escribir alt text descriptivo para las fotos principales de villas, botes y bodas.'],
+   en:['Add alt text to critical images (top 10 pages)','Images without alt text are invisible to Google Images. Write descriptive alt text for the main photos of villas, boats and weddings.']},
+
+  {id:'wp_pv11',sub:'pagina_vieja',wk:4,who:'Michel',hrs:'~2h',
+   es:['Implementar schema.org en páginas clave (JSON-LD)','Agregar datos estructurados: LocalBusiness en homepage, TouristTrip en páginas de servicios. Ayuda a Google a entender qué es el negocio.'],
+   en:['Implement schema.org on key pages (JSON-LD)','Add structured data: LocalBusiness on homepage, TouristTrip on service pages. Helps Google understand what the business is.']},
+
+  {id:'wp_pv12',sub:'pagina_vieja',wk:4,who:'Michel + Marketing',hrs:'~4h',
+   es:['Crear / mejorar página de bachelor parties en Cartagena','Alta búsqueda, página actual débil. Meta: 800-1000 palabras con rutas reales, precios, opciones de botes, fotos y 1-2 testimonios de clientes.'],
+   en:['Create / improve Cartagena bachelor party page','High search volume, weak current page. Goal: 800-1,000 words with real routes, prices, boat options, photos and 1-2 client testimonials.']},
+
+  {id:'wp_pv13',sub:'pagina_vieja',wk:5,who:'Michel + Marketing',hrs:'~4h',
+   es:['Crear / mejorar página de bodas en Cartagena','Bodas en velero, yacht privado, atardecer en la bahía. Página dedicada con fotos reales, paquetes, precios indicativos y formulario de contacto.'],
+   en:['Create / improve Cartagena weddings page','Weddings on sailboat, private yacht, sunset in the bay. Dedicated page with real photos, packages, indicative prices and contact form.']},
+
+  {id:'wp_pv14',sub:'pagina_vieja',wk:5,who:'Michel',hrs:'~1.5h',
+   es:['Enlazado interno — conectar páginas relacionadas','La página de bachelor enlaza a botes, la de bodas a villas, etc. El enlazado interno distribuye autoridad SEO y baja el porcentaje de rebote.'],
+   en:['Internal linking — connect related pages','Bachelor page links to boats, weddings to villas, etc. Internal linking distributes SEO authority and reduces the bounce rate.']},
+
+  {id:'wp_pv15',sub:'pagina_vieja',wk:6,who:'Michel + Marketing',hrs:'~3h',
+   es:['Agregar testimonios de clientes con schema Review','Pedir reseñas a 5-10 clientes recientes. Mostrarlas en páginas principales con markup Review para que aparezcan como estrellas en Google.'],
+   en:['Add client testimonials with schema Review','Ask 5-10 recent clients for reviews. Display them on main pages with Review markup so they appear as stars in Google results.']},
+
+  {id:'wp_pv16',sub:'pagina_vieja',wk:7,who:'Michel',hrs:'~1h/sem',
+   es:['Revisión semanal GSC + ajustes iterativos','Cada viernes: revisar impresiones, clics y posición de las páginas trabajadas. Documentar tendencias. Ajustar lo que no está mejorando.'],
+   en:['Weekly GSC review + iterative adjustments','Every Friday: review impressions, clicks and position of worked pages. Document week-over-week trends. Adjust what isn\'t improving.']},
+
+  {id:'wp_pv17',sub:'pagina_vieja',wk:8,who:'Michel',hrs:'~1h',
+   es:['Verificar indexación de páginas corregidas','Solicitar re-indexación en GSC de cada página corregida. Confirmar en 2-4 semanas que Google la procesó. Documentar qué se indexó y qué sigue pendiente.'],
+   en:['Verify indexation of fixed pages','Request re-indexation in GSC for each fixed page. Confirm in 2-4 weeks that Google processed it. Document what was indexed and what is still pending.']},
+
+  // PÁGINA NUEVA (22 tasks, Weeks 1–12)
+  {id:'wp_pn01',sub:'pagina_nueva',wk:1,who:'Michel',hrs:'~2h',
+   es:['Michel escribe el brief completo del sitio nuevo','Qué vende el sitio, a quién, qué servicios (villas / botes / bodas / bachelor), idiomas, CTA principal, sitio de referencia de Ray, qué NO debe parecerse al sitio viejo.'],
+   en:['Michel writes the complete new site brief','What the site sells, to whom, what services (villas / boats / weddings / bachelor), languages, main CTA, Ray\'s reference site, what NOT to look like vs. the old site.']},
+
+  {id:'wp_pn02',sub:'pagina_nueva',wk:1,who:'Samuel',hrs:'~8h',
+   es:['Samuel: proponer stack técnico + configurar repo y staging','Samuel propone tecnología (Next.js / Astro / Webflow). Michel aprueba. Samuel configura el repositorio, dominio de staging y CI/CD básico.'],
+   en:['Samuel: propose tech stack + set up repo and staging','Samuel proposes technology (Next.js / Astro / Webflow). Michel approves. Samuel sets up the repository, staging domain and basic CI/CD.']},
+
+  {id:'wp_pn03',sub:'pagina_nueva',wk:1,who:'Marketing',hrs:'~3h',
+   es:['Marketing: 3 sitios de referencia que debemos superar','Incluir el sitio que mandó Ray. Screenshots de qué funciona y qué no. Esto define la dirección visual y de contenido antes de que Samuel diseñe nada.'],
+   en:['Marketing: 3 reference sites we need to beat','Include the site Ray sent. Screenshots of what works and what doesn\'t. This sets the visual and content direction before Samuel designs anything.']},
+
+  {id:'wp_pn04',sub:'pagina_nueva',wk:2,who:'Samuel',hrs:'~10h',
+   es:['Samuel: wireframes lo-fi — homepage + 5 páginas de servicio','Estructura de bloques sin diseño visual. Dónde van los CTAs, el formulario, cómo se ven en mobile. Michel aprueba antes de pasar al diseño hi-fi.'],
+   en:['Samuel: lo-fi wireframes — homepage + 5 service pages','Block structure without visual design. Where CTAs go, the form, how they look on mobile. Michel approves before moving to hi-fi design.']},
+
+  {id:'wp_pn05',sub:'pagina_nueva',wk:2,who:'Michel',hrs:'~2h',
+   es:['Michel: auditoría de contenido actual (qué se puede reutilizar)','Qué fotos, textos y páginas del sitio viejo son rescatables. Lista con URL origen y en qué página del sitio nuevo va. Entregar a Samuel y Marketing.'],
+   en:['Michel: current content audit (what can be reused)','Which photos, texts and pages from the old site are worth keeping. List with source URL and which new page it goes to. Deliver to Samuel and Marketing.']},
+
+  {id:'wp_pn06',sub:'pagina_nueva',wk:3,who:'Samuel',hrs:'~6h',
+   es:['Samuel: moodboard y paleta de colores — Michel aprueba','3 propuestas de dirección visual: lujosa, playera, neutral. Michel elige una. Esta decisión bloquea todo el diseño hi-fi — sin aprobación no se avanza.'],
+   en:['Samuel: moodboard and color palette — Michel approves','3 visual direction proposals: luxurious, beachy, neutral. Michel picks one. This decision gates all hi-fi design — no approval = no progress.']},
+
+  {id:'wp_pn07',sub:'pagina_nueva',wk:3,who:'Marketing',hrs:'~4h',
+   es:['Marketing: copy brief por página antes del diseño','Antes del copy final: audiencia, tono, puntos clave y CTA de cada página. Samuel necesita esto para diseñar los bloques de texto del hi-fi.'],
+   en:['Marketing: copy brief per page before design','Before final copy: audience, tone, key points and CTA for each page. Samuel needs this to design the text blocks in the hi-fi.']},
+
+  {id:'wp_pn08',sub:'pagina_nueva',wk:4,who:'Samuel',hrs:'~12h',
+   es:['Samuel: diseño hi-fi homepage → Michel y Ray aprueban','Diseño completo: colores, tipografía, fotos, bloques, CTAs. Michel y Ray aprueban antes de que Samuel construya nada. Desbloquea el build.'],
+   en:['Samuel: hi-fi homepage design → Michel and Ray approve','Complete design: colors, typography, photos, blocks, CTAs. Michel and Ray approve before Samuel builds anything. This unlocks the build.']},
+
+  {id:'wp_pn09',sub:'pagina_nueva',wk:5,who:'Samuel',hrs:'~12h',
+   es:['Samuel: diseño páginas internas (villas, botes, bodas, bachelor, seguros)','Aplicar el sistema visual aprobado a cada página interna. Mismo nivel de detalle que el homepage. Aprobación de Michel por sección antes de construir.'],
+   en:['Samuel: internal pages design (villas, boats, weddings, bachelor, insurance)','Apply the approved visual system to each internal page. Same level of detail as homepage. Michel approval per section before building.']},
+
+  {id:'wp_pn10',sub:'pagina_nueva',wk:6,who:'Samuel',hrs:'~16h',
+   es:['Samuel: build homepage + navegación + estructura base de componentes','Primera fase del build: nav, footer, homepage completo y sistema de componentes reutilizables. Todo el build posterior depende de esta base.'],
+   en:['Samuel: build homepage + navigation + base component structure','First build phase: nav, footer, complete homepage and reusable component system. All subsequent build work depends on this base.']},
+
+  {id:'wp_pn11',sub:'pagina_nueva',wk:7,who:'Samuel',hrs:'~20h',
+   es:['Samuel: build páginas de servicios (villas, botes, bodas, bachelor)','Construir las 4 páginas de servicio usando el sistema de componentes. Incluir fotos, copy provisional en ES/EN y CTA de contacto en cada una.'],
+   en:['Samuel: build service pages (villas, boats, weddings, bachelor)','Build the 4 service pages using the component system. Include photos, provisional copy in ES/EN and a contact CTA on each one.']},
+
+  {id:'wp_pn12',sub:'pagina_nueva',wk:8,who:'Samuel',hrs:'~8h',
+   es:['Samuel: formulario de cotización → HubSpot + WhatsApp Bot','El formulario notifica por WhatsApp (igual que el bot actual) y registra el lead en HubSpot. Samuel integra; Michel prueba el flujo completo.'],
+   en:['Samuel: quote form → HubSpot + WhatsApp Bot','The form notifies via WhatsApp (same as current bot) and registers the lead in HubSpot. Samuel integrates; Michel tests the complete end-to-end flow.']},
+
+  {id:'wp_pn13',sub:'pagina_nueva',wk:8,who:'Samuel',hrs:'~3h',
+   es:['Samuel: botón flotante de WhatsApp en todas las páginas','El botón de WhatsApp es el CTA principal para convertir visitantes en mobile. Fijo en pantalla, visible en todas las páginas, con mensaje pre-cargado.'],
+   en:['Samuel: floating WhatsApp button on all pages','The WhatsApp button is the main CTA to convert mobile visitors. Fixed on screen, visible on all pages, with a pre-loaded message.']},
+
+  {id:'wp_pn14',sub:'pagina_nueva',wk:9,who:'Marketing',hrs:'~10h',
+   es:['Marketing: copy final ES + EN — las 5 páginas','Texto final listo para entrar al build: homepage, villas, botes, bodas, bachelor. En español e inglés. Michel revisa la versión en inglés antes de que entre al sitio.'],
+   en:['Marketing: final copy ES + EN — the 5 pages','Final text ready to enter the build: homepage, villas, boats, weddings, bachelor. In Spanish and English. Michel reviews the English version before it goes live.']},
+
+  {id:'wp_pn15',sub:'pagina_nueva',wk:9,who:'Marketing',hrs:'~5h',
+   es:['Marketing: selección y optimización de fotos por página','Las mejores fotos para cada página. Comprimir, renombrar con keywords (ej: alquiler-yates-cartagena.jpg), agregar alt text. Entregar a Samuel en carpeta organizada.'],
+   en:['Marketing: photo selection and optimization per page','Best photos for each page. Compress, rename with keywords (e.g.: yacht-rental-cartagena.jpg), add alt text. Deliver to Samuel in an organized folder.']},
+
+  {id:'wp_pn16',sub:'pagina_nueva',wk:10,who:'Samuel',hrs:'~5h',
+   es:['Samuel: SEO técnico — titles, metas, canonicals, hreflang, sitemap','Cada página con title único (60 chars), meta description (155 chars), canonical, hreflang ES/EN. Generar sitemap.xml. robots.txt sin bloqueos. No indexar staging.'],
+   en:['Samuel: technical SEO — titles, metas, canonicals, hreflang, sitemap','Each page with unique title (60 chars), meta description (155 chars), canonical, hreflang ES/EN. Generate sitemap.xml. robots.txt without blocks. Don\'t index staging.']},
+
+  {id:'wp_pn17',sub:'pagina_nueva',wk:10,who:'Michel',hrs:'~1.5h',
+   es:['Michel: revisar SEO on-page antes del launch','Verificar que el SEO técnico está bien implementado. Checar los 5 keywords principales y confirmar que las páginas están optimizadas para ellos.'],
+   en:['Michel: review on-page SEO before launch','Verify technical SEO is properly implemented. Check the 5 main keywords and confirm pages are optimized for them.']},
+
+  {id:'wp_pn18',sub:'pagina_nueva',wk:11,who:'Samuel',hrs:'~6h',
+   es:['Samuel: QA mobile + desktop — Lighthouse ≥ 80 en todo','Tests en Chrome DevTools (responsive), Safari mobile, Lighthouse (Performance, SEO, Accessibility). Score mínimo 80. Documentar y arreglar lo que falle.'],
+   en:['Samuel: mobile + desktop QA — Lighthouse ≥ 80 across the board','Tests in Chrome DevTools (responsive), mobile Safari, Lighthouse (Performance, SEO, Accessibility). Minimum score 80. Document and fix failures.']},
+
+  {id:'wp_pn19',sub:'pagina_nueva',wk:11,who:'Samuel',hrs:'~3h',
+   es:['Samuel: pruebas de formulario e integraciones end-to-end','Probar el formulario: submission → HubSpot deal creado → mensaje WhatsApp recibido → email de confirmación. Desde mobile y desktop. Cero tolerancia a bugs.'],
+   en:['Samuel: form and integration end-to-end tests','Test the form: submission → HubSpot deal created → WhatsApp message received → confirmation email. From mobile and desktop. Zero tolerance for bugs.']},
+
+  {id:'wp_pn20',sub:'pagina_nueva',wk:11,who:'Michel + Ray',hrs:'~2h',
+   es:['Michel + Ray: revisión final en staging y aprobación formal','Ray revisa el sitio completo en staging. Lista de ajustes finales. Sign-off formal. Sin esta aprobación no hay deploy a producción.'],
+   en:['Michel + Ray: final staging review and formal approval','Ray reviews the complete site on staging. List of final adjustments. Formal sign-off. Without this approval there is no production deploy.']},
+
+  {id:'wp_pn21',sub:'pagina_nueva',wk:12,who:'Samuel',hrs:'~4h',
+   es:['Samuel: deploy producción + DNS + 301s del sitio viejo','Apuntar el dominio, configurar CDN, activar SSL. Mapear las URLs del sitio viejo con 301s para transferir el SEO acumulado. No dejar nada apuntando al viejo.'],
+   en:['Samuel: production deploy + DNS + old site 301 redirects','Point the domain, configure CDN, activate SSL. Map old site URLs with 301s to transfer accumulated SEO. Don\'t leave anything pointing to the old site.']},
+
+  {id:'wp_pn22',sub:'pagina_nueva',wk:12,who:'Michel',hrs:'~2h',
+   es:['Michel: monitor post-launch 48h (GSC, Analytics, formularios)','Las 48h post-launch son críticas. Verificar que GSC no reporta errores, Analytics recibe tráfico, los formularios funcionan y los 301s están correctos.'],
+   en:['Michel: post-launch monitoring 48h (GSC, Analytics, forms)','The 48h post-launch are critical. Verify GSC reports no errors, Analytics receives traffic, forms work and 301 redirects are correct.']},
+
+  // TRAVEL INSURANCE (10 tasks, Weeks 1–4)
+  {id:'wp_ti01',sub:'insurance',wk:1,who:'Michel',hrs:'~30min',
+   es:['Registrarse en AgentMaxOnline — ACCAM F216705','Ir a agentmaxonline.com → "Create New Account" → ingresar ACCAM F216705 → verificar email de agentservices@allianzassistance.com. Guardar las credenciales.'],
+   en:['Register on AgentMaxOnline — ACCAM F216705','Go to agentmaxonline.com → "Create New Account" → enter ACCAM F216705 → verify email from agentservices@allianzassistance.com. Save credentials.']},
+
+  {id:'wp_ti02',sub:'insurance',wk:1,who:'Michel',hrs:'~1h',
+   es:['Configurar perfil de agente Two Travel y verificar comisiones','Dentro de AgentMax: completar perfil de Two Travel, verificar que la comisión de agente (típicamente 10-15%) está activada, explorar las herramientas disponibles.'],
+   en:['Set up Two Travel agent profile and verify commissions','Inside AgentMax: complete the Two Travel profile, verify that the agent commission (typically 10-15%) is active, explore the available tools.']},
+
+  {id:'wp_ti03',sub:'insurance',wk:2,who:'Michel + Marketing',hrs:'~1h',
+   es:['Descargar brochures digitales Allianz con logo Two Travel','AgentMax permite brochures personalizados con el logo del agente. Pedir versión digital para enviar por WhatsApp y email. Guardar en el Drive del equipo.'],
+   en:['Download Allianz digital brochures with Two Travel branding','AgentMax allows customized brochures with the agent logo. Request the digital version for sending via WhatsApp and email. Save to team Drive.']},
+
+  {id:'wp_ti04',sub:'insurance',wk:2,who:'Michel',hrs:'~1h',
+   es:['Definir el proceso de venta — cuándo y cómo se ofrece el seguro','Decisión de Michel: ¿en el kickoff? ¿en el formulario de pre-check-in? ¿como línea en cada cotización? Documentar para que todo el equipo lo siga.'],
+   en:['Define the sales process — when and how insurance is offered','Michel\'s decision: in the kickoff? in the pre-check-in form? as a line in every quote? Document the standard process so the whole team follows it.']},
+
+  {id:'wp_ti05',sub:'insurance',wk:2,who:'Michel + Marketing',hrs:'~1h',
+   es:['Crear mensaje estándar WhatsApp para ofrecer el seguro','Texto corto y claro que el equipo use con cada cliente. Con link al QuoteMax para que el cliente cotice directamente. En ES e EN. Aprobar con Ray.'],
+   en:['Create standard WhatsApp message to offer insurance','Short, clear text the team uses with every client. With QuoteMax link so the client can quote directly. In ES and EN. Approve with Ray.']},
+
+  {id:'wp_ti06',sub:'insurance',wk:3,who:'Michel',hrs:'~1h',
+   es:['Integrar widget QuoteMax al sitio actual','Allianz provee un código QuoteMax que conecta el sitio al cotizador. Las ventas se acreditan al ACCAM automáticamente. Insertar en la página de reservas o en el footer.'],
+   en:['Integrate QuoteMax widget on the current site','Allianz provides a QuoteMax code connecting the site to the online quoting tool. Sales are credited to the ACCAM automatically. Insert on the reservations page or footer.']},
+
+  {id:'wp_ti07',sub:'insurance',wk:3,who:'Samuel',hrs:'~2h',
+   es:['Samuel: sección de seguro en el sitio nuevo + widget QuoteMax','El sitio nuevo tendrá sección dedicada de seguro de viaje con el widget integrado. Samuel lo construye durante el build; Marketing escribe el copy de esta sección.'],
+   en:['Samuel: insurance section on new site + QuoteMax widget','The new site will have a dedicated travel insurance section with the integrated widget. Samuel builds it during the build; Marketing writes the copy for this section.']},
+
+  {id:'wp_ti08',sub:'insurance',wk:3,who:'Marketing',hrs:'~2h',
+   es:['Marketing: copy para la sección de seguro (ES + EN)','Explicar en lenguaje simple qué cubre el seguro Allianz, por qué vale la pena y cómo cotizar. En español e inglés. Usar los materiales de Allianz como base.'],
+   en:['Marketing: copy for the insurance section (ES + EN)','Explain in simple language what Allianz insurance covers, why it\'s worth it and how to quote. In Spanish and English. Use Allianz materials as a base.']},
+
+  {id:'wp_ti09',sub:'insurance',wk:4,who:'Michel + Marketing',hrs:'~2h',
+   es:['Campaña a clientes actuales — email + WhatsApp con materiales Allianz','Enviar a la base de clientes activos un mensaje informando que Two Travel ahora ofrece seguro de viaje integrado. Incluir brochure personalizado y link de cotización.'],
+   en:['Campaign to current clients — email + WhatsApp with Allianz materials','Send active clients a message informing them Two Travel now offers integrated travel insurance. Include the personalized brochure and quote link.']},
+
+  {id:'wp_ti10',sub:'insurance',wk:4,who:'Michel',hrs:'~1h',
+   es:['Capacitación al equipo — cómo presentar el seguro a clientes','Sesión corta (30 min): qué dice el seguro, qué cubre, qué no, cómo responder objeciones comunes ("ya tengo seguro de la tarjeta de crédito").'],
+   en:['Team training — how to present insurance to clients','Short session (30 min): what the insurance covers, what it doesn\'t, how to answer common objections ("I already have credit card insurance").']},
+];
+
+let TASKS = [], CUR = 'pagina_vieja', EV_ID = null;
+const hf = () => ({apikey:KEY,'Authorization':`Bearer ${KEY}`,'Content-Type':'application/json'});
+
+async function load() {
+  const r = await fetch(`${SUPA}/rest/v1/tasks?select=id,data&data->>source=eq.${SRC}&order=id`, {headers:hf()});
+  if (!r.ok) { showErr(`Error ${r.status}: ${await r.text()}`); return false; }
   const rows = await r.json();
-  if(rows.length===0){ await seed(); return load(); }
-  TASKS = rows.map(r=>({id:r.id,...(r.data||{})}));
+  if (rows.length === 0) { await seed(); return load(); }
+  TASKS = rows.map(r => ({
+    id: r.id,
+    subproject: r.data.subproject,
+    week_num: r.data.week_num,
+    name_es: r.data.task_name_es || '',
+    name_en: r.data.task_name_en || '',
+    detail_es: r.data.detail_es || '',
+    detail_en: r.data.detail_en || '',
+    assignee: r.data.assignee || '',
+    hours_estimate: r.data.hours_estimate || '',
+    status: r.data.status || 'sin_empezar',
+    evidence_url: r.data.evidence_url || '',
+    evidence_note: r.data.evidence_note || '',
+    created_at: r.data.created_at || '',
+  }));
   return true;
 }
 
-async function seed(){
+async function seed() {
   const now = new Date().toISOString();
-  const rows = SEED.map(s=>({
+  const rows = SEED.map(s => ({
     id: s.id,
-    data:{
-      source:SRC, subproject:s.sub, week_num:s.wk,
-      task_name:s.name, detail:s.detail, assignee:s.who,
-      hours_estimate:s.hrs, status:'sin_empezar',
-      evidence_url:'', evidence_note:'', created_at:now, updated_at:now,
+    data: {
+      source: SRC, subproject: s.sub, week_num: s.wk,
+      task_name_es: s.es[0], task_name_en: s.en[0],
+      detail_es: s.es[1], detail_en: s.en[1],
+      assignee: s.who, hours_estimate: s.hrs,
+      status: 'sin_empezar', evidence_url: '', evidence_note: '',
+      created_at: now, updated_at: now,
     }
   }));
-  await fetch(`${SUPA}/rest/v1/tasks`,{method:'POST',headers:{...hdr(),'Prefer':'return=minimal'},body:JSON.stringify(rows)});
+  await fetch(`${SUPA}/rest/v1/tasks`, {
+    method: 'POST',
+    headers: {...hf(), 'Prefer': 'return=minimal,resolution=merge-duplicates'},
+    body: JSON.stringify(rows)
+  });
 }
 
-async function patch(id,fields){
-  const cur = TASKS.find(t=>t.id===id);
-  if(!cur) return;
-  const newData = {...(cur._raw||{}), ...cur};
-  // rebuild data object
-  const data = {source:SRC,subproject:cur.subproject,week_num:cur.week_num,task_name:cur.task_name,detail:cur.detail,assignee:cur.assignee,hours_estimate:cur.hours_estimate,status:cur.status,evidence_url:cur.evidence_url,evidence_note:cur.evidence_note,created_at:cur.created_at,...fields,updated_at:new Date().toISOString()};
-  await fetch(`${SUPA}/rest/v1/tasks?id=eq.${id}`,{method:'PATCH',headers:{...hdr(),'Prefer':'return=minimal'},body:JSON.stringify({data})});
-  Object.assign(cur,fields);
+async function patch(id, fields) {
+  const t = TASKS.find(x => x.id === id); if (!t) return;
+  const data = {
+    source:SRC, subproject:t.subproject, week_num:t.week_num,
+    task_name_es:t.name_es, task_name_en:t.name_en,
+    detail_es:t.detail_es, detail_en:t.detail_en,
+    assignee:t.assignee, hours_estimate:t.hours_estimate,
+    status:t.status, evidence_url:t.evidence_url, evidence_note:t.evidence_note,
+    created_at:t.created_at, ...fields, updated_at:new Date().toISOString(),
+  };
+  await fetch(`${SUPA}/rest/v1/tasks?id=eq.${id}`, {
+    method:'PATCH', headers:{...hf(),'Prefer':'return=minimal'}, body:JSON.stringify({data})
+  });
+  Object.assign(t, fields);
 }
+
+function lc() { return L[LANG]; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 function aClass(a){
-  if(!a) return 'a-m';
-  const l=a.toLowerCase();
-  if(l.includes('samuel')) return 'a-s';
-  if(l.includes('market')) return 'a-mk';
-  if(l.includes('todos')||l.includes('todo')) return 'a-all';
+  const lo=(a||'').toLowerCase();
+  if(lo.includes('samuel')) return 'a-s';
+  if(lo.includes('market')) return 'a-mk';
+  if(lo.includes('todos')||lo.includes('all')) return 'a-all';
+  if(lo.includes('ray')) return 'a-mr';
   return 'a-m';
 }
 function aChips(a){
-  if(!a) return '';
-  return a.split('+').map(p=>p.trim()).filter(Boolean)
-    .map(p=>`<span class="ach ${aClass(p)}">${e(p)}</span>`).join('');
+  return (a||'').split(/[+\/]/).map(p=>p.trim()).filter(Boolean)
+    .map(p=>`<span class="ach ${aClass(p)}">${esc(p)}</span>`).join('');
 }
-function si(s){ return STATUS.find(x=>x.k===s)||STATUS[0]; }
-function e(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function siFor(s){
+  const l=lc(); const i=Math.max(0,l.sk.indexOf(s));
+  return {k:l.sk[i],c:l.sc[i],lbl:l.sl[i]};
+}
 
 function card(t){
-  const s=si(t.status);
-  const ev_url=e(t.evidence_url||'');
-  const ev_note=e(t.evidence_note||'');
+  const s=siFor(t.status);
+  const name=LANG==='en'?t.name_en:t.name_es;
+  const detail=LANG==='en'?t.detail_en:t.detail_es;
   return `<div class="tc" id="tc_${t.id}">
   <div class="tc-top" onclick="toggleEv('${t.id}')">
     <div class="tc-main">
-      <div class="tc-name">${e(t.task_name)}</div>
-      <div class="tc-detail">${e(t.detail||'')}</div>
+      <div class="tc-name">${esc(name)}</div>
+      <div class="tc-detail">${esc(detail)}</div>
       <div class="tc-chips">${aChips(t.assignee)}</div>
     </div>
     <div class="tc-right">
-      <button class="spill ${s.c}" onclick="cycleS(event,'${t.id}')">${s.l}</button>
-      ${t.hours_estimate?`<span class="hrs">${e(t.hours_estimate)}</span>`:''}
+      <button class="spill ${s.c}" onclick="cycleS(event,'${t.id}')">${s.lbl}</button>
+      ${t.hours_estimate?`<span class="hrs">${esc(t.hours_estimate)}</span>`:''}
     </div>
   </div>
   <div class="ev-panel" id="ev_${t.id}" style="display:none">
-    <div class="ev-lbl">Evidencia</div>
+    <div class="ev-lbl">${lc().evidence}</div>
     <div id="evf_${t.id}"></div>
   </div>
 </div>`;
-}
-
-function renderEv(id){
-  const t=TASKS.find(x=>x.id===id); if(!t) return;
-  const ev_url=e(t.evidence_url||'');
-  const ev_note=e(t.evidence_note||'');
-  document.getElementById(`evf_${id}`).innerHTML=`
-    <input class="ev-inp" id="eu_${id}" type="url" placeholder="URL de evidencia (Drive, Loom, screenshot…)" value="${ev_url}">
-    <textarea class="ev-inp ev-ta" id="en_${id}" placeholder="Nota: qué se hizo, cómo quedó…">${ev_note}</textarea>
-    <div class="ev-row">
-      <button class="btn p" onclick="saveEv('${id}')">Guardar</button>
-      <button class="btn" onclick="closeEv('${id}')">Cancelar</button>
-      ${ev_url?`<a class="btn" href="${ev_url}" target="_blank" rel="noreferrer">Ver enlace →</a>`:''}
-    </div>`;
-}
-
-function toggleEv(id){
-  if(EV_ID===id){ closeEv(id); return; }
-  if(EV_ID){ document.getElementById(`ev_${EV_ID}`).style.display='none'; }
-  EV_ID=id;
-  document.getElementById(`ev_${id}`).style.display='';
-  renderEv(id);
-}
-function closeEv(id){
-  const el=document.getElementById(`ev_${id}`); if(el) el.style.display='none';
-  if(EV_ID===id) EV_ID=null;
-}
-
-async function saveEv(id){
-  const url=(document.getElementById(`eu_${id}`)?.value||'').trim();
-  const note=(document.getElementById(`en_${id}`)?.value||'').trim();
-  const btn=document.querySelector(`#ev_${id} .btn.p`);
-  if(btn){btn.textContent='Guardando…';btn.disabled=true;}
-  await patch(id,{evidence_url:url,evidence_note:note});
-  closeEv(id);
-}
-
-async function cycleS(e,id){
-  e.stopPropagation();
-  const t=TASKS.find(x=>x.id===id); if(!t) return;
-  const cur=STATUS.findIndex(s=>s.k===t.status);
-  const nxt=STATUS[(cur+1)%STATUS.length];
-  const pill=e.currentTarget;
-  pill.className=`spill ${nxt.c}`;
-  pill.textContent=nxt.l;
-  await patch(id,{status:nxt.k});
-  updCounts(); updProg();
 }
 
 function groupByWk(tasks){
@@ -300,9 +489,10 @@ function groupByWk(tasks){
 
 function render(sub){
   const tasks=TASKS.filter(t=>t.subproject===sub);
-  const info=TI[sub];
+  const info=lc().tracks[sub];
   const done=tasks.filter(t=>t.status==='listo').length;
   const pct=tasks.length?Math.round(done/tasks.length*100):0;
+  const l=lc();
   let html=`<div class="track-hdr ${info.cls}">
     <div class="tr-title">${info.title}</div>
     <div class="tr-desc">${info.desc}</div>
@@ -312,32 +502,79 @@ function render(sub){
     </div>
   </div>`;
   groupByWk(tasks).forEach(([wk,wt])=>{
-    const lbl=+wk>=3?`Sem ${wk}`:`Semana ${wk}`;
-    html+=`<div class="wk-grp"><div class="wk-lbl"><span class="wk-chip">${lbl}</span><span class="wk-meta">${WM[+wk]||''}</span></div>${wt.map(card).join('')}</div>`;
+    const n=+wk;
+    const lbl=n<=2?`${l.wl} ${n}`:`${l.ws} ${n}`;
+    html+=`<div class="wk-grp">
+      <div class="wk-lbl"><span class="wk-chip">${lbl}</span><span class="wk-meta">${l.dates[n]||''}</span></div>
+      ${wt.map(card).join('')}
+    </div>`;
   });
   return html;
 }
 
-function updCounts(){
-  [['pagina_vieja','c-pv'],['pagina_nueva','c-pn'],['insurance','c-ti']].forEach(([s,id])=>{
-    const t=TASKS.filter(x=>x.subproject===s);
-    const d=t.filter(x=>x.status==='listo').length;
-    document.getElementById(id).textContent=`${d}/${t.length}`;
-  });
+function renderEv(id){
+  const t=TASKS.find(x=>x.id===id); if(!t) return;
+  const l=lc();
+  document.getElementById(`evf_${id}`).innerHTML=`
+    <input class="ev-inp" id="eu_${id}" type="url" placeholder="${l.ev_url}" value="${esc(t.evidence_url||'')}">
+    <textarea class="ev-inp ev-ta" id="en_${id}" placeholder="${l.ev_note}">${esc(t.evidence_note||'')}</textarea>
+    <div class="ev-row">
+      <button class="btn p" onclick="saveEv('${id}')">${l.save}</button>
+      <button class="btn" onclick="closeEv('${id}')">${l.cancel}</button>
+      ${t.evidence_url?`<a class="btn-link" href="${esc(t.evidence_url)}" target="_blank" rel="noreferrer">${l.see_link}</a>`:''}
+    </div>`;
 }
 
+function toggleEv(id){
+  if(EV_ID===id){closeEv(id);return;}
+  if(EV_ID) document.getElementById(`ev_${EV_ID}`).style.display='none';
+  EV_ID=id;
+  document.getElementById(`ev_${id}`).style.display='';
+  renderEv(id);
+}
+function closeEv(id){
+  const el=document.getElementById(`ev_${id}`);if(el) el.style.display='none';
+  if(EV_ID===id) EV_ID=null;
+}
+async function saveEv(id){
+  const url=(document.getElementById(`eu_${id}`)?.value||'').trim();
+  const note=(document.getElementById(`en_${id}`)?.value||'').trim();
+  const btn=document.querySelector(`#ev_${id} .btn.p`);
+  if(btn){btn.textContent=lc().saving;btn.disabled=true;}
+  await patch(id,{evidence_url:url,evidence_note:note});
+  closeEv(id);
+}
+
+async function cycleS(evt,id){
+  evt.stopPropagation();
+  const t=TASKS.find(x=>x.id===id); if(!t) return;
+  const l=lc();
+  const ni=(Math.max(0,l.sk.indexOf(t.status))+1)%3;
+  const pill=evt.currentTarget;
+  pill.className=`spill ${l.sc[ni]}`;
+  pill.textContent=l.sl[ni];
+  await patch(id,{status:l.sk[ni]});
+  updCounts();updProg();
+}
+
+function updCounts(){
+  [['pagina_vieja','c-pv'],['pagina_nueva','c-pn'],['insurance','c-ti']].forEach(([s,id])=>{
+    const ts=TASKS.filter(x=>x.subproject===s);
+    document.getElementById(id).textContent=`${ts.filter(x=>x.status==='listo').length}/${ts.length}`;
+  });
+}
 function updProg(){
   ['pagina_vieja','pagina_nueva','insurance'].forEach(s=>{
-    const t=TASKS.filter(x=>x.subproject===s);
-    const d=t.filter(x=>x.status==='listo').length;
-    const pct=t.length?Math.round(d/t.length*100):0;
-    const f=document.getElementById(`pf_${s}`); if(f) f.style.width=pct+'%';
-    const p=document.getElementById(`pp_${s}`); if(p) p.textContent=`${d}/${t.length} · ${pct}%`;
+    const ts=TASKS.filter(x=>x.subproject===s);
+    const d=ts.filter(x=>x.status==='listo').length;
+    const pct=ts.length?Math.round(d/ts.length*100):0;
+    const f=document.getElementById(`pf_${s}`);if(f) f.style.width=pct+'%';
+    const p=document.getElementById(`pp_${s}`);if(p) p.textContent=`${d}/${ts.length} · ${pct}%`;
   });
 }
 
 function sw(sub){
-  CUR=sub; EV_ID=null;
+  CUR=sub;EV_ID=null;
   document.querySelectorAll('.tab').forEach(t=>{
     t.classList.remove('a-pv','a-pn','a-ti');
     if(t.dataset.sub===sub) t.classList.add({pagina_vieja:'a-pv',pagina_nueva:'a-pn',insurance:'a-ti'}[sub]);
@@ -346,11 +583,30 @@ function sw(sub){
   updCounts();
 }
 
+function applyLang(){
+  const l=lc();
+  document.getElementById('hdr-title').textContent=l.hdr_title;
+  document.getElementById('back-btn').textContent=l.back;
+  document.getElementById('lang-btn').textContent=LANG==='es'?'EN':'ES';
+  document.getElementById('tab-pv').textContent=l.tab_pv;
+  document.getElementById('tab-pn').textContent=l.tab_pn;
+  document.getElementById('tab-ti').textContent=l.tab_ti;
+  document.documentElement.lang=LANG;
+}
+
+function toggleLang(){
+  LANG=LANG==='es'?'en':'es';
+  try{localStorage.setItem('pg_lang',LANG);}catch(e){}
+  applyLang();
+  sw(CUR);
+}
+
 function showErr(msg){
-  document.getElementById('content').innerHTML=`<div class="err">Error cargando tareas: ${e(msg)}</div>`;
+  document.getElementById('content').innerHTML=`<div class="err">Error: ${esc(msg)}</div>`;
 }
 
 async function init(){
+  applyLang();
   const ok=await load();
   if(ok) sw('pagina_vieja');
 }
