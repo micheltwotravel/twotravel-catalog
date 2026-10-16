@@ -97,12 +97,13 @@ const num = (v) => { const n = Number(cl(v).replace(/[^0-9.-]/g, "")); return is
 // Newlines are preserved via white-space: pre-line on the parent.
 function renderMd(text) {
   const parts = [];
-  const re = /\*\*(.+?)\*\*|_(.+?)_/g;
+  const re = /\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)|\*\*(.+?)\*\*|_(.+?)_/g;
   let i = 0, m, key = 0;
   while ((m = re.exec(text)) !== null) {
     if (m.index > i) parts.push(text.slice(i, m.index));
-    if (m[1] !== undefined) parts.push(<strong key={key++}>{m[1]}</strong>);
-    else parts.push(<em key={key++}>{m[2]}</em>);
+    if (m[1] !== undefined) parts.push(<a key={key++} href={m[2]} target="_blank" rel="noreferrer" style={{color:"#2563eb",textDecoration:"underline"}}>{m[1]}</a>);
+    else if (m[3] !== undefined) parts.push(<strong key={key++}>{m[3]}</strong>);
+    else parts.push(<em key={key++}>{m[4]}</em>);
     i = m.index + m[0].length;
   }
   if (i < text.length) parts.push(text.slice(i));
