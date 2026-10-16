@@ -2846,73 +2846,70 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
     }
   };
 
-  /* ── Generate tasks from cart ── */
+  /* ── Generate reservation ── */
   const [generating, setGenerating] = useState(false);
-  const [taskModal, setTaskModal] = useState(null); // { items, selected }
 
-  const openTaskModal = () => {
-    if (!cart.length) return alert("No hay servicios en el itinerario.");
-    const taskable = cart.filter(it => it.name || it.serviceName);
-    setTaskModal({ items: taskable, selected: new Set(taskable.map((_, i) => i)) });
-  };
+  const handleGenerateReservation = async () => {
+    const guestName  = kickoff?.guestName  || kickoff?.tripName || "";
+    const concierge  = kickoff?.assignedConciergeName || kickoff?.assignedConcierge || "";
+    const city       = kickoff?.city || "";
+    const checkIn    = kickoff?.arrivalDate   || kickoff?.checkIn  || "";
+    const checkOut   = kickoff?.departureDate || kickoff?.checkOut || "";
+    const qty        = kickoff?.groupSize || "";
 
-  const handleGenerateTasks = async (selectedItems) => {
-    const concierge = kickoff?.assignedConciergeName || kickoff?.assignedConcierge || "";
-    const conciergeFirst = concierge.split(" ")[0] || concierge;
-    const guestName = kickoff?.guestName || kickoff?.tripName || "";
-    const city = kickoff?.city || "";
-    const arrival = kickoff?.arrivalDate || kickoff?.checkIn || "";
-    const dueDate = (() => {
-      if (!arrival) return "";
-      const d = new Date(arrival);
-      if (isNaN(d)) return "";
-      d.setDate(d.getDate() - 2);
-      return d.toISOString().slice(0, 10);
-    })();
-    const priorityFor = (cat) => {
-      const c = String(cat||"").toLowerCase();
-      if (/restauran|chef|food|dining/.test(c)) return "alta";
-      if (/tour|activit|excursion/.test(c))     return "media";
-      return "media";
-    };
-    setTaskModal(null);
+    if (!guestName) return alert("El kickoff no tiene nombre del cliente.");
+
     setGenerating(true);
+    try {
+      // Read existing reservations from kickoffs table
+      const { data: existing } = await supabase
+        .from("kickoffs").select("data").eq("id", "finance_reservations_v1").single();
+      const d = existing?.data || {};
+      const notes = typeof d.internalNotes === "string"
+        ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
+      const rows = notes.reservations || [];
 
-    const now = new Date().toISOString();
-    const rows = selectedItems
-      .map(item => item.name || item.serviceName || "")
-      .filter(Boolean)
-      .map(name => {
-        const item = selectedItems.find(i => (i.name||i.serviceName) === name);
-        const id = "tt_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
-        return {
-          id,
-          data: {
-            id,
-            taskName:     `Confirmar: ${name}`,
-            status:       "pendiente",
-            priority:     priorityFor(item?.category),
-            assignedTo:   conciergeFirst,
-            kickoffName:  guestName + (city ? ` — ${city}` : ""),
-            kickoffId:    kickoff?.id || "",
-            dueDate,
-            notes:        item?.dayLabel ? `Día: ${item.dayLabel}` : "",
-            area:         "reservas",
-            createdAt:    now,
-            createdBy:    concierge,
-          },
-        };
-      });
+      // Prevent duplicate (same kickoff id already in list)
+      const kickoffId = kickoff?.id || "";
+      if (kickoffId && rows.some(r => r._kickoffId === kickoffId)) {
+        setGenerating(false);
+        return alert(`⚠️ Ya existe una reserva para ${guestName} en el Tablero de Reservas.`);
+      }
 
-    let count = 0;
-    if (rows.length) {
-      const { error } = await supabase.from("tasks").insert(rows);
-      if (!error) count = rows.length;
-      else console.error("generateTasks supabase error:", error);
+      const newRow = {
+        _kickoffId:   kickoffId,
+        name:         guestName,
+        salesRep:     concierge,
+        dealSource:   "Panel",
+        type:         "",
+        checkIn,
+        checkOut,
+        property:     "",
+        city,
+        qty,
+        rate:         "",
+        tax:          "",
+        total:        "",
+        commission:   "",
+        ourPrice:     "",
+        status:       "Confirmed",
+        confirmedAt:  new Date().toISOString().slice(0, 10),
+      };
+
+      const merged = {
+        ...d,
+        internalNotes: JSON.stringify({ ...notes, reservations: [newRow, ...rows] }),
+      };
+      const { error } = await supabase
+        .from("kickoffs").update({ data: merged }).eq("id", "finance_reservations_v1");
+
+      if (error) throw new Error(error.message);
+      alert(`✅ Reserva de ${guestName} creada en el Tablero de Reservas.`);
+    } catch (e) {
+      console.error("generateReservation error:", e);
+      alert("Error creando la reserva: " + e.message);
     }
-
     setGenerating(false);
-    alert(`✅ ${count} tarea${count!==1?"s":""} generada${count!==1?"s":""} en el Task Tracker.`);
   };
 
   /* ── Save ── */
@@ -2960,57 +2957,11 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
             className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs hover:bg-amber-100">
             🗓️ Fechas + defaults
           </button>
-          <button type="button" onClick={openTaskModal} disabled={generating || !cart.length}
-            title="Crea una tarea de confirmación por cada servicio del itinerario"
+          <button type="button" onClick={handleGenerateReservation} disabled={generating}
+            title="Crea una fila en el Tablero de Reservas con los datos de este kickoff"
             className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs hover:bg-blue-100 disabled:opacity-40 transition">
-            {generating ? "Generando…" : "✨ Generar tareas"}
+            {generating ? "Generando…" : "📋 Generar reserva"}
           </button>
-          {/* ── Task selection modal ── */}
-          {taskModal && (
-            <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
-              onClick={() => setTaskModal(null)}>
-              <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:16, boxShadow:"0 16px 48px rgba(0,0,0,.25)", width:"min(520px,96vw)", maxHeight:"80vh", display:"flex", flexDirection:"column" }}>
-                <div style={{ padding:"16px 20px", borderBottom:"1px solid #f3f4f6", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                  <span style={{ fontWeight:700, fontSize:14, color:"#111" }}>✨ Generar tareas</span>
-                  <button onClick={() => setTaskModal(null)} style={{ border:"none", background:"none", cursor:"pointer", color:"#9ca3af", fontSize:20 }}>✕</button>
-                </div>
-                <div style={{ padding:"12px 20px", borderBottom:"1px solid #f3f4f6", display:"flex", gap:8 }}>
-                  <button onClick={() => setTaskModal(m => ({ ...m, selected: new Set(m.items.map((_,i)=>i)) }))}
-                    style={{ fontSize:11, padding:"4px 10px", borderRadius:6, border:"1px solid #e5e7eb", background:"#f9fafb", cursor:"pointer" }}>Seleccionar todo</button>
-                  <button onClick={() => setTaskModal(m => ({ ...m, selected: new Set() }))}
-                    style={{ fontSize:11, padding:"4px 10px", borderRadius:6, border:"1px solid #e5e7eb", background:"#f9fafb", cursor:"pointer" }}>Limpiar</button>
-                </div>
-                <div style={{ overflowY:"auto", flex:1, padding:"8px 20px" }}>
-                  {taskModal.items.map((item, i) => {
-                    const name = item.name || item.serviceName || "";
-                    const checked = taskModal.selected.has(i);
-                    return (
-                      <label key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:"1px solid #f9fafb", cursor:"pointer" }}>
-                        <input type="checkbox" checked={checked} onChange={() => {
-                          setTaskModal(m => {
-                            const next = new Set(m.selected);
-                            if (next.has(i)) next.delete(i); else next.add(i);
-                            return { ...m, selected: next };
-                          });
-                        }} style={{ width:15, height:15, flexShrink:0 }} />
-                        <span style={{ fontSize:12, color:"#111", flex:1 }}>{name}</span>
-                        {item.dayLabel && <span style={{ fontSize:10, color:"#9ca3af", flexShrink:0 }}>{item.dayLabel}</span>}
-                      </label>
-                    );
-                  })}
-                </div>
-                <div style={{ padding:"14px 20px", borderTop:"1px solid #f3f4f6", display:"flex", gap:8, justifyContent:"flex-end" }}>
-                  <button onClick={() => setTaskModal(null)}
-                    style={{ padding:"8px 16px", borderRadius:8, border:"1px solid #e5e7eb", background:"#fff", fontSize:13, cursor:"pointer" }}>Cancelar</button>
-                  <button onClick={() => handleGenerateTasks(taskModal.items.filter((_,i) => taskModal.selected.has(i)))}
-                    disabled={taskModal.selected.size === 0}
-                    style={{ padding:"8px 16px", borderRadius:8, border:"none", background: taskModal.selected.size ? "#1d4ed8" : "#e5e7eb", color: taskModal.selected.size ? "#fff" : "#9ca3af", fontSize:13, fontWeight:600, cursor: taskModal.selected.size ? "pointer" : "default" }}>
-                    Generar {taskModal.selected.size} tarea{taskModal.selected.size !== 1 ? "s" : ""}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
           {/* Save handled by main EditDrawer "Guardar" button above — canvas state syncs via onCartChange */}
         </div>
       </div>
