@@ -45,7 +45,7 @@ function Editable({ value, tag: Tag = "span", className = "", editMode, style, o
       if (!ta) return;
       const start = ta.selectionStart, end = ta.selectionEnd;
       const sel = ta.value.slice(start, end) || "texto";
-      const url = window.prompt("URL del hipervínculo:", "https://");
+      const url = (window.prompt("URL del hipervínculo:", "https://") || "").trim();
       if (!url) return;
       const wrapped = `[${sel}](${url})`;
       const newVal = ta.value.slice(0, start) + wrapped + ta.value.slice(end);
@@ -121,11 +121,11 @@ const num = (v) => { const n = Number(cl(v).replace(/[^0-9.-]/g, "")); return is
 // Newlines are preserved via white-space: pre-line on the parent.
 function renderMd(text) {
   const parts = [];
-  const re = /\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)|\*\*(.+?)\*\*|_(.+?)_/g;
+  const re = /\[([^\]]*)\]\(\s*(https?:\/\/[^)]+?)\s*\)|\*\*(.+?)\*\*|_(.+?)_/g;
   let i = 0, m, key = 0;
   while ((m = re.exec(text)) !== null) {
     if (m.index > i) parts.push(text.slice(i, m.index));
-    if (m[1] !== undefined) parts.push(<a key={key++} href={m[2]} target="_blank" rel="noreferrer" style={{color:"#2563eb",textDecoration:"underline"}}>{m[1]}</a>);
+    if (m[1] !== undefined) parts.push(<a key={key++} href={driveViewUrl(m[2].trim())} target="_blank" rel="noreferrer" style={{color:"#2563eb",textDecoration:"underline"}}>{m[1]}</a>);
     else if (m[3] !== undefined) parts.push(<strong key={key++}>{m[3]}</strong>);
     else parts.push(<em key={key++}>{m[4]}</em>);
     i = m.index + m[0].length;
@@ -351,7 +351,7 @@ function NotesField({ notes, onSave }) {
     if (!ta) return;
     const start = ta.selectionStart, end = ta.selectionEnd;
     const sel = ta.value.slice(start, end) || "texto";
-    const url = window.prompt("URL del hipervínculo:", "https://");
+    const url = (window.prompt("URL del hipervínculo:", "https://") || "").trim();
     if (!url) return;
     const wrapped = `[${sel}](${url})`;
     const newVal = ta.value.slice(0, start) + wrapped + ta.value.slice(end);
@@ -391,8 +391,8 @@ function noteToHtml(text) {
   const linkStyle = 'color:#2563eb;text-decoration:underline;';
   return text
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
-      `<a href="$2" target="_blank" rel="noopener noreferrer" style="${linkStyle}">$1</a>`)
+    .replace(/\[([^\]]+)\]\(\s*(https?:\/\/[^)]+?)\s*\)/g,
+      (_, t, u) => `<a href="${driveViewUrl(u.trim())}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">${t}</a>`)
     .replace(/(?<!href=")https?:\/\/[^\s<>"']+/g,
       url => `<a href="${url}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">${url}</a>`)
     .replace(/\*\*(.+?)\*\*/gs, "<strong>$1</strong>")
@@ -3033,7 +3033,7 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
                 )}
                 <div dangerouslySetInnerHTML={{ __html: (entry.it.cartItem.html || "")
                   .replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>")
-                  .replace(/\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g,'<a href="$2" target="_blank" rel="noreferrer" style="color:#1d4ed8;text-decoration:underline">$1</a>')
+                  .replace(/\[([^\]]*)\]\(\s*(https?:\/\/[^)]+?)\s*\)/g,(_, t, u) => `<a href="${driveViewUrl(u.trim())}" target="_blank" rel="noreferrer" style="color:#1d4ed8;text-decoration:underline">${t}</a>`)
                   .replace(/\n/g,"<br>") }} style={{ fontSize: 12.5, color: "#374151", lineHeight: 1.7, wordBreak:"break-word", overflowWrap:"anywhere" }} />
               </div>
             </div>

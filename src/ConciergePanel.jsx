@@ -1568,7 +1568,7 @@ function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availabl
     const end   = el.selectionEnd;
     const sel   = el.value.slice(start, end) || "texto";
     if (marker === "link") {
-      const url = window.prompt("URL del hipervínculo:", "https://");
+      const url = (window.prompt("URL del hipervínculo:", "https://") || "").trim();
       if (!url) return;
       const wrapped = `[${sel}](${url})`;
       const newVal = el.value.slice(0, start) + wrapped + el.value.slice(end);
@@ -1967,7 +1967,7 @@ function RichTextBlock({ item, onUpdate, onRemove }) {
         <button type="button" onMouseDown={e=>{e.preventDefault();exec("insertUnorderedList");}}
           className="text-[11px] px-1.5 py-0.5 rounded hover:bg-neutral-100 text-neutral-600">• Lista</button>
         <div className="w-px h-4 bg-neutral-200 mx-0.5"/>
-        <button type="button" onMouseDown={e=>{e.preventDefault();const url=window.prompt("URL del hipervínculo:","https://");if(url){exec("createLink",url);}}}
+        <button type="button" onMouseDown={e=>{e.preventDefault();const url=(window.prompt("URL del hipervínculo:","https://")||"").trim();if(url){exec("createLink",url);}}}
           className="text-[11px] px-1.5 py-0.5 rounded hover:bg-neutral-100 text-blue-600" title="Hipervínculo">🔗</button>
         <div className="w-px h-4 bg-neutral-200 mx-0.5"/>
         {/* Text color */}
