@@ -10,6 +10,7 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { supabase } from "./supabaseClient.js";
 
 const TASK_API_URL = import.meta.env.VITE_GAS_URL;
 
@@ -2860,7 +2861,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
     const conciergeFirst = concierge.split(" ")[0] || concierge;
     const guestName = kickoff?.guestName || kickoff?.tripName || "";
     const city = kickoff?.city || "";
-    const arrival   = kickoff?.arrivalDate || kickoff?.checkIn || "";
+    const arrival = kickoff?.arrivalDate || kickoff?.checkIn || "";
     const dueDate = (() => {
       if (!arrival) return "";
       const d = new Date(arrival);
@@ -2870,53 +2871,44 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
     })();
     const priorityFor = (cat) => {
       const c = String(cat||"").toLowerCase();
-      if (/restauran|chef|food|dining/.test(c)) return "high";
-      if (/tour|activit|excursion/.test(c))     return "medium";
-      return "medium";
+      if (/restauran|chef|food|dining/.test(c)) return "alta";
+      if (/tour|activit|excursion/.test(c))     return "media";
+      return "media";
     };
     setTaskModal(null);
     setGenerating(true);
 
-    // Load existing tasks from GAS first, then append new ones
-    let existing = [];
-    try {
-      const res = await fetch(TASK_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "getTasks" }),
-      });
-      const d = await res.json();
-      if (Array.isArray(d.data)) existing = d.data;
-    } catch { /* proceed without existing */ }
-
-    const newTasks = selectedItems
+    const now = new Date().toISOString();
+    const rows = selectedItems
       .map(item => item.name || item.serviceName || "")
       .filter(Boolean)
-      .map(name => ({
-        id: "tt_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
-        title:    `Confirmar: ${name}`,
-        status:   "todo",
-        priority: priorityFor(selectedItems.find(i => (i.name||i.serviceName) === name)?.category),
-        assignee: conciergeFirst,
-        client:   guestName + (city ? ` — ${city}` : ""),
-        due:      dueDate,
-        notes:    selectedItems.find(i => (i.name||i.serviceName) === name)?.dayLabel
-                    ? `Día: ${selectedItems.find(i => (i.name||i.serviceName) === name).dayLabel}` : "",
-        category: "handoff",
-        activity: [],
-        kickoffId: kickoff?.id || "",
-      }));
+      .map(name => {
+        const item = selectedItems.find(i => (i.name||i.serviceName) === name);
+        const id = "tt_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+        return {
+          id,
+          data: {
+            id,
+            taskName:     `Confirmar: ${name}`,
+            status:       "pendiente",
+            priority:     priorityFor(item?.category),
+            assignedTo:   conciergeFirst,
+            kickoffName:  guestName + (city ? ` — ${city}` : ""),
+            kickoffId:    kickoff?.id || "",
+            dueDate,
+            notes:        item?.dayLabel ? `Día: ${item.dayLabel}` : "",
+            area:         "reservas",
+            createdAt:    now,
+            createdBy:    concierge,
+          },
+        };
+      });
 
     let count = 0;
-    if (newTasks.length) {
-      try {
-        await fetch(TASK_API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "saveTasks", data: { tasks: [...existing, ...newTasks] } }),
-        });
-        count = newTasks.length;
-      } catch { /* network error */ }
+    if (rows.length) {
+      const { error } = await supabase.from("tasks").insert(rows);
+      if (!error) count = rows.length;
+      else console.error("generateTasks supabase error:", error);
     }
 
     setGenerating(false);
