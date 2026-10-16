@@ -2009,8 +2009,8 @@ function RichTextBlock({ item, onUpdate, onRemove }) {
           onBlur={() => { setShowToolbar(false); setColorOpen(false); setHlOpen(false); saveHtml(); }}
           onInput={saveHtml}
           data-placeholder="Escribe una nota, instrucción, mensaje especial…"
-          className="min-h-[48px] px-4 py-3 text-sm text-neutral-800 focus:outline-none"
-          style={{wordBreak:"break-word"}}
+          className="min-h-[48px] px-4 py-3 text-sm text-neutral-800 focus:outline-none [&_a]:text-blue-600 [&_a]:underline [&_a]:cursor-pointer"
+          style={{wordBreak:"break-word",overflowWrap:"anywhere"}}
         />
         {!item.html && (
           <div className="absolute top-3 left-4 right-0 text-sm text-neutral-400 pointer-events-none select-none">
