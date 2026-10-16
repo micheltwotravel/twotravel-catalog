@@ -2978,7 +2978,10 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
                 {editMode && onRemoveItem && (
                   <button onClick={() => entry.itemIdxs && onRemoveItems ? onRemoveItems(entry.itemIdxs) : onRemoveItem(entry.itemIdx ?? i)} style={{position:"absolute",top:6,right:8,border:"none",background:"none",cursor:"pointer",color:"#9ca3af",fontSize:11,zIndex:2}}>✕</button>
                 )}
-                <div dangerouslySetInnerHTML={{ __html: (entry.it.cartItem.html || "").replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>").replace(/\n/g,"<br>") }} style={{ fontSize: 12.5, color: "#374151", lineHeight: 1.7 }} />
+                <div dangerouslySetInnerHTML={{ __html: (entry.it.cartItem.html || "")
+                  .replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>")
+                  .replace(/\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g,'<a href="$2" target="_blank" rel="noreferrer" style="color:#1d4ed8;text-decoration:underline">$1</a>')
+                  .replace(/\n/g,"<br>") }} style={{ fontSize: 12.5, color: "#374151", lineHeight: 1.7, wordBreak:"break-word", overflowWrap:"anywhere" }} />
               </div>
             </div>
           ) : (
