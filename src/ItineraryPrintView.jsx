@@ -32,38 +32,62 @@ function driveViewUrl(url) {
 
 function Editable({ value, tag: Tag = "span", className = "", editMode, style, onChange, multiline }) {
   const ref = useRef();
+  const taRef = useRef();
   if (!editMode) {
     return multiline
       ? <Tag className={className} style={{ ...style, whiteSpace: "pre-line" }}>{renderMd(value)}</Tag>
       : <Tag className={className} style={style}>{value}</Tag>;
   }
   if (multiline) {
+    const insertLink = (e) => {
+      e.preventDefault();
+      const ta = taRef.current;
+      if (!ta) return;
+      const start = ta.selectionStart, end = ta.selectionEnd;
+      const sel = ta.value.slice(start, end) || "texto";
+      const url = window.prompt("URL del hipervínculo:", "https://");
+      if (!url) return;
+      const wrapped = `[${sel}](${url})`;
+      const newVal = ta.value.slice(0, start) + wrapped + ta.value.slice(end);
+      ta.value = newVal;
+      ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 4) + "px";
+      onChange?.(newVal);
+      setTimeout(() => { ta.focus(); ta.setSelectionRange(start + wrapped.length, start + wrapped.length); }, 0);
+    };
     return (
-      <textarea
-        key={value}
-        defaultValue={value}
-        className={className}
-        ref={r => { if (r) { r.style.height = "auto"; r.style.height = (r.scrollHeight + 4) + "px"; } }}
-        style={{
-          ...style,
-          width: "100%",
-          border: "1px dashed #aaa",
-          borderRadius: 4,
-          padding: "4px 6px",
-          resize: "vertical",
-          fontFamily: "inherit",
-          fontSize: "inherit",
-          lineHeight: "inherit",
-          background: "rgba(255,255,255,0.6)",
-          outline: "none",
-          minHeight: 90,
-          boxSizing: "border-box",
-          display: "block",
-          overflow: "hidden",
-        }}
-        onInput={e => { e.target.style.height = "auto"; e.target.style.height = (e.target.scrollHeight + 4) + "px"; }}
-        onBlur={e => onChange?.(e.target.value)}
-      />
+      <div style={{ position: "relative" }}>
+        <button
+          type="button"
+          onMouseDown={insertLink}
+          style={{ position:"absolute", top:4, right:4, zIndex:2, fontSize:11, padding:"1px 6px", background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:4, cursor:"pointer", color:"#2563eb" }}
+          title="Insertar hipervínculo"
+        >🔗 link</button>
+        <textarea
+          key={value}
+          defaultValue={value}
+          className={className}
+          ref={r => { taRef.current = r; if (r) { r.style.height = "auto"; r.style.height = (r.scrollHeight + 4) + "px"; } }}
+          style={{
+            ...style,
+            width: "100%",
+            border: "1px dashed #aaa",
+            borderRadius: 4,
+            padding: "4px 6px",
+            resize: "vertical",
+            fontFamily: "inherit",
+            fontSize: "inherit",
+            lineHeight: "inherit",
+            background: "rgba(255,255,255,0.6)",
+            outline: "none",
+            minHeight: 90,
+            boxSizing: "border-box",
+            display: "block",
+            overflow: "hidden",
+          }}
+          onInput={e => { e.target.style.height = "auto"; e.target.style.height = (e.target.scrollHeight + 4) + "px"; }}
+          onBlur={e => onChange?.(e.target.value)}
+        />
+      </div>
     );
   }
   return (
