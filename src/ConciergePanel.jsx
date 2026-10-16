@@ -1572,12 +1572,14 @@ function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availabl
       if (!url) return;
       const wrapped = `[${sel}](${url})`;
       const newVal = el.value.slice(0, start) + wrapped + el.value.slice(end);
+      el.value = newVal;
       onUpdate(item._uid, { notes: newVal });
       setTimeout(() => { el.focus(); el.setSelectionRange(start + wrapped.length, start + wrapped.length); }, 0);
       return;
     }
     const wrap  = { b: `**${sel}**`, i: `_${sel}_`, u: `__${sel}__`, c: `~~${sel}~~`, c2: `^^${sel}^^`, c3: `==${sel}==`, c4: `%%${sel}%%` };
     const newVal = el.value.slice(0, start) + wrap[marker] + el.value.slice(end);
+    el.value = newVal;
     onUpdate(item._uid, { notes: newVal });
     setTimeout(() => { el.focus(); el.setSelectionRange(start + wrap[marker].length, start + wrap[marker].length); }, 0);
   };
@@ -1871,8 +1873,9 @@ function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availabl
               </div>
               <textarea
                 ref={notesRef}
-                value={item.notes || ""}
-                onChange={e => onUpdate(item._uid, { notes: e.target.value })}
+                key={item._uid}
+                defaultValue={item.notes || ""}
+                onBlur={e => { if (e.target.value !== (item.notes || "")) onUpdate(item._uid, { notes: e.target.value }); }}
                 placeholder="Recomendaciones para el cliente…"
                 rows={2}
                 className="text-xs text-neutral-500 border border-dashed border-neutral-200 rounded focus:outline-none p-1 bg-transparent placeholder-neutral-300 resize-y"
@@ -2760,23 +2763,64 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
         return items;
       })(),
       foodonboard: (() => {
-        const s = allItineraryItemsRef.current.find(i => /food.?on.?board|comida.?a.?bordo/i.test(i.name_en) || /food.?on.?board|comida.?a.?bordo/i.test(i.name_es));
+        // Add all food-on-board catalog variants at once (Chef On Board, Self Service Catering, Boat Lunch Box)
+        const isFob = s => {
+          const n = (s.name_en || s.name || "").toLowerCase();
+          return (n.includes("food") && n.includes("board")) ||
+            (n.includes("chef") && n.includes("board")) ||
+            (n.includes("self") && n.includes("catering")) ||
+            (n.includes("boat") && n.includes("lunch")) ||
+            (n.includes("catering")) ||
+            ((s.name||"").toLowerCase().includes("comida") && (s.name||"").toLowerCase().includes("bord"));
+        };
+        const catalogItems = services.filter(isFob);
+        if (catalogItems.length > 0) {
+          return catalogItems.map(s => ({
+            id: String(s.id || ""), sku: s.sku || "",
+            name: s.name || "Food on Board", name_en: s.name_en || s.name || "Food on Board",
+            category: s.category || "chef",
+            timeLabel: "",
+            image: s.image || "", menuUrl: s.menuUrl || "",
+            description_es: s.description?.es || "", description_en: s.description?.en || "",
+          }));
+        }
+        // Fallback: single item from sheet
+        const sh = allItineraryItemsRef.current.find(i => /food.?on.?board|comida.?a.?bordo/i.test(i.name_en) || /food.?on.?board|comida.?a.?bordo/i.test(i.name_es));
         return {
-          name: s?.name_es || "Comida a bordo", name_en: s?.name_en || "Food on Board", category: "services",
+          name: sh?.name_es || "Comida a bordo", name_en: sh?.name_en || "Food on Board", category: "services",
           timeLabel: "",
-          ...(s?.image ? { image: s.image } : {}),
-          description_es: s?.description_es || "Servicio de comida a bordo del bote. Menú a definir — avísanos si tienen restricciones alimentarias o preferencias.",
-          description_en: s?.description || s?.description_en || "Food service on board the boat. Menu to be defined — let us know if you have any dietary restrictions or preferences.",
+          ...(sh?.image ? { image: sh.image } : {}),
+          description_es: sh?.description_es || "Servicio de comida a bordo del bote. Menú a definir — avísanos si tienen restricciones alimentarias o preferencias.",
+          description_en: sh?.description || sh?.description_en || "Food service on board the boat. Menu to be defined — let us know if you have any dietary restrictions or preferences.",
         };
       })(),
       chefdinner: (() => {
-        const s = allItineraryItemsRef.current.find(i => /chef.?dinner|cena.?chef/i.test(i.name_en) || /chef.?dinner|cena.?chef/i.test(i.name_es));
+        // Add all chef dinner catalog variants at once (BBQ Menu, VIP Menu, Standard Menu, Local Menu, etc.)
+        const isChefDinner = s => {
+          if (s.category !== "chef") return false;
+          const n = (s.name_en || s.name || "").toLowerCase();
+          const nEs = (s.name || "").toLowerCase();
+          return n.includes("dinner") || nEs.includes("cena") || nEs.includes("chef dinner");
+        };
+        const catalogItems = services.filter(isChefDinner);
+        if (catalogItems.length > 0) {
+          return catalogItems.map(s => ({
+            id: String(s.id || ""), sku: s.sku || "",
+            name: s.name || "Chef Dinner", name_en: s.name_en || s.name || "Chef Dinner",
+            category: "chef",
+            timeLabel: "7:00 PM",
+            image: s.image || "", menuUrl: s.menuUrl || "",
+            description_es: s.description?.es || "", description_en: s.description?.en || "",
+          }));
+        }
+        // Fallback: single item from sheet
+        const sh = allItineraryItemsRef.current.find(i => CHEF_PATTERN.test(i.name_en) || CHEF_PATTERN.test(i.name_es));
         return {
-          name: s?.name_es || "Cena con chef", name_en: s?.name_en || "Chef Dinner", category: "services",
+          name: sh?.name_es || "Cena con chef", name_en: sh?.name_en || "Chef Dinner", category: "services",
           timeLabel: "7:00 PM",
-          ...(s?.image ? { image: s.image } : {}),
-          description_es: s?.description_es || "Cena privada preparada por chef en la villa. El menú y los horarios se coordinan con anticipación.",
-          description_en: s?.description || s?.description_en || "Private dinner prepared by a chef at the villa. Menu and timing are coordinated in advance.",
+          ...(sh?.image ? { image: sh.image } : {}),
+          description_es: sh?.description_es || "Cena privada preparada por chef en la villa. El menú y los horarios se coordinan con anticipación.",
+          description_en: sh?.description || sh?.description_en || "Private dinner prepared by a chef at the villa. Menu and timing are coordinated in advance.",
         };
       })(),
       beachclub: {
@@ -3020,7 +3064,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
                 onDuplicateItem={duplicateItem}
                 onResyncItem={resyncItem}
                 onReorderItems={(oldIdx, newIdx) => reorderItemsInDay(label, oldIdx, newIdx)}
-                onAddManual={() => addManualToDay(label)}
+                onAddManual={() => addBlockToDay(label)}
                 onAddPreset={(preset) => addPresetToDay(label, preset)}
                 onAddBlock={() => addBlockToDay(label)}
                 onAddFromCatalog={() => setCatalogTargetDay(label)}

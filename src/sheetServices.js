@@ -208,7 +208,11 @@ video1: video1,
     cancellation_es: row.cancellation_es || "",         // Spanish
     priceTiers:    row.pricetiers    || row.price_tiers    || "",
     priceTiers_en: row.pricetiers_en || row.price_tiers_en || "",
-    menuUrl:   row.menuurl   || row.menu_url   || row["menu url"]   || row.menuUrl   || "",
+    menuUrl:   row.menuurl   || row.menu_url   || row["menu url"]   || row.menuUrl   ||
+      // price_tier_1/price_tier_2 may contain menu PDF URLs for chef services
+      (typeof row.price_tier_1 === "string" && /^https?:\/\//i.test(row.price_tier_1.trim()) ? row.price_tier_1.trim() : "") ||
+      (typeof row.price_tier_2 === "string" && /^https?:\/\//i.test(row.price_tier_2.trim()) ? row.price_tier_2.trim() : "") ||
+      "",
     mapsUrl:   row.mapsurl   || row.maps_url   || row["maps url"]   || row.mapsUrl   || "",
     // Dress code — dress_code = español · dress_code_en = inglés
     dressCode:    row.dress_code    || row["dress code"]    || row.dresscode || "",
