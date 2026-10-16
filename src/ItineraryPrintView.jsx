@@ -1982,6 +1982,7 @@ function groupChefMenuItems(items) {
         ...it,
         title: key,
         _origIdx: idx,
+        _chefGroupOrigIdxs: group.map(({ idx: j }) => j),
         _chefMenuGroup: group.map(({ it: m }) => ({
           label: menuLabel(m.title || ""),
           menuUrl: m.menuUrl,
@@ -2870,7 +2871,7 @@ function BillingPage({ kickoff }) {
 /* ═══════════════════════════════════════════════════════════
    DAY PAGE
 ═══════════════════════════════════════════════════════════ */
-function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onDuplicateItem, onAddItem, billingBlock, hasFamilies, patchDay, patchItemFn, dayFlights, onMoveItem, patchDayFlight }) {
+function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRemoveItem, onRemoveItems, onDuplicateItem, onAddItem, billingBlock, hasFamilies, patchDay, patchItemFn, dayFlights, onMoveItem, patchDayFlight }) {
   const minutesToHHMM = m => { const h = Math.floor(m / 60); const min = m % 60; return `${String(h).padStart(2,"0")}:${String(min).padStart(2,"0")}`; };
   const parseTime = t => {
     const s = String(t || "").trim();
@@ -2885,7 +2886,7 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
   // Always show items in array order (concierge controls order via ↑↓).
   // Flights are inserted by time between items so they appear at the right moment.
   const allEntries = (() => {
-    const items = displayItems.map((it, itemIdx) => ({ kind:"item", it, itemIdx: it._origIdx !== undefined ? it._origIdx : itemIdx, sortTime: parseTime(it.time || "") }));
+    const items = displayItems.map((it, itemIdx) => ({ kind:"item", it, itemIdx: it._origIdx !== undefined ? it._origIdx : itemIdx, itemIdxs: it._chefGroupOrigIdxs || null, sortTime: parseTime(it.time || "") }));
     const flights = (dayFlights || []).map(({ flight, type }) => ({ kind:"flight", flight, type, sortTime: parseTime(flight.time || "") }));
     if (!flights.length) return items;
     // Insert each flight before the first item whose time is strictly after the flight's time.
@@ -2950,7 +2951,7 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
             <div key={i} style={{ margin: "10px 0", position: "relative", display:"flex", borderLeft:"3px solid #d1c4a8", borderBottom:"1px solid #f0f0f0", background:"#faf9f7" }}>
               <div style={{ flex:1, padding:"14px 20px" }}>
                 {editMode && onRemoveItem && (
-                  <button onClick={() => onRemoveItem(entry.itemIdx ?? i)} style={{position:"absolute",top:6,right:8,border:"none",background:"none",cursor:"pointer",color:"#9ca3af",fontSize:11,zIndex:2}}>✕</button>
+                  <button onClick={() => entry.itemIdxs && onRemoveItems ? onRemoveItems(entry.itemIdxs) : onRemoveItem(entry.itemIdx ?? i)} style={{position:"absolute",top:6,right:8,border:"none",background:"none",cursor:"pointer",color:"#9ca3af",fontSize:11,zIndex:2}}>✕</button>
                 )}
                 <div dangerouslySetInnerHTML={{ __html: (entry.it.cartItem.html || "").replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>").replace(/\n/g,"<br>") }} style={{ fontSize: 12.5, color: "#374151", lineHeight: 1.7 }} />
               </div>
@@ -2979,7 +2980,7 @@ function DayPage({ kickoff, day, page, total, lang, editMode, onRemoveDay, onRem
                 </div>
               )}
               {entry.it._chefMenuGroup
-                ? <ChefMenuGroupCard it={entry.it} lang={lang} editMode={editMode} onRemove={onRemoveItem ? () => onRemoveItem(entry.itemIdx ?? i) : undefined} patchItem={patchItemFn ? (field, val) => patchItemFn(entry.itemIdx ?? i, field, val) : undefined} />
+                ? <ChefMenuGroupCard it={entry.it} lang={lang} editMode={editMode} onRemove={entry.itemIdxs && onRemoveItems ? () => onRemoveItems(entry.itemIdxs) : (onRemoveItem ? () => onRemoveItem(entry.itemIdx ?? i) : undefined)} patchItem={patchItemFn ? (field, val) => patchItemFn(entry.itemIdx ?? i, field, val) : undefined} />
                 : <EventBlock
                     it={entry.it}
                     lang={lang}
@@ -3111,6 +3112,11 @@ export default function ItineraryPrintView() {
   const removeItem = (di, ii) =>
     _upd(prev => prev.map((day, i) =>
       i !== di ? day : { ...day, items: day.items.filter((_, j) => j !== ii) }
+    ));
+
+  const removeItemsByIdxs = (di, idxs) =>
+    _upd(prev => prev.map((day, i) =>
+      i !== di ? day : { ...day, items: day.items.filter((_, j) => !idxs.includes(j)) }
     ));
 
   const patchDay = (di, field, val) =>
@@ -3583,6 +3589,7 @@ export default function ItineraryPrintView() {
               editMode={editMode}
               onRemoveDay={editMode ? () => removeDay(di) : undefined}
               onRemoveItem={editMode ? (ii) => removeItem(di, ii) : undefined}
+              onRemoveItems={editMode ? (idxs) => removeItemsByIdxs(di, idxs) : undefined}
               onDuplicateItem={editMode ? (ii) => duplicateItem(di, ii) : undefined}
               onMoveItem={editMode ? (ii, dir) => moveItem(di, ii, dir) : undefined}
               onAddItem={editMode ? () => openPickerForDay(di) : undefined}
