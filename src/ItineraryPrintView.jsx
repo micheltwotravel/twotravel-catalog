@@ -375,10 +375,11 @@ function InlineFlightRow({ flight, lang, type, editMode, onMoveUp, onMoveDown })
   );
 }
 
-function fmtPrice(v) {
+function fmtPrice(v, currency) {
   const n = num(v);
   if (!n) return "";
-  return n >= 10000
+  const isCop = currency === "COP" || (currency !== "USD" && n >= 10000);
+  return isCop
     ? `$${n.toLocaleString("es-CO")} COP`
     : `$${n.toLocaleString("en-US")} USD`;
 }
@@ -562,6 +563,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       city         : service.city       || "",
       price        : cartItem.priceOverride_cop || (cityMatches ? (service.price_cop || service.priceCop || service.price_tier_1 || service.priceTier1 || "") : ""),
       priceIsOverride: !!cartItem.priceOverride_cop,
+      priceInputCurrency: cartItem.priceInputCurrency || null,
       priceUsd     : cartItem.priceUsd != null ? num(cartItem.priceUsd) : (cityMatches ? num(service.price_tier_1 || service.priceTier1 || 0) : 0),
       priceUnit    : cartItem.priceUnit || service.priceUnit || "",
       pax          : Number(cartItem.pax || 0),
@@ -2033,7 +2035,7 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
     !HIDE_PRICE_CATS.has(String(it.category || "").trim().toLowerCase()) ||
     String(it.priceUnit || "").toLowerCase().includes("day pass")
   );
-  const price    = showPrice ? fmtPrice(it.price) : "";
+  const price    = showPrice ? fmtPrice(it.price, it.priceInputCurrency) : "";
   const hiList   = splitList(it.highlights);
   const incList  = splitList(it.includes);
   const isEs     = lang === "es";
