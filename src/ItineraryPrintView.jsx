@@ -321,8 +321,13 @@ const normFlightNum = s => (s || "").toUpperCase().replace(/\s+/g, "");
 // Convert simple markdown markers to HTML for note display
 function noteToHtml(text) {
   if (!text) return "";
+  const linkStyle = 'color:#2563eb;text-decoration:underline;';
   return text
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+      `<a href="$2" target="_blank" rel="noopener noreferrer" style="${linkStyle}">$1</a>`)
+    .replace(/(?<!href=")https?:\/\/[^\s<>"']+/g,
+      url => `<a href="${url}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">${url}</a>`)
     .replace(/\*\*(.+?)\*\*/gs, "<strong>$1</strong>")
     .replace(/__(.+?)__/gs, "<u>$1</u>")
     .replace(/_(.+?)_/gs, "<em>$1</em>")
@@ -2305,14 +2310,28 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         )}
 
         {/* Concierge notes — skip for transport (already shown in transport block above) */}
-        {(it.notes || (editMode && patchItem)) && !String(it.category||"").toLowerCase().includes("transport") && (
-          <div style={{ fontSize:11, color:"#6b7280", marginBottom:8, background:"#f9fafb", borderLeft:"3px solid #d1d5db", paddingLeft:8, paddingTop:4, paddingBottom:4, borderRadius:"0 4px 4px 0" }}>
-            ✍️{" "}
-            {editMode && patchItem
-              ? <Editable value={it.notes || ""} tag="span" editMode={editMode} onChange={v => patchItem("notes", v)} multiline
-                  style={{ fontSize:11, color:"#6b7280", display:"inline" }} />
-              : <NoteText text={it.notes} />}
-          </div>
+        {!String(it.category||"").toLowerCase().includes("transport") && (
+          editMode && patchItem ? (
+            <textarea
+              key={it.notes || ""}
+              defaultValue={it.notes || ""}
+              placeholder="✍️ Nota interna..."
+              rows={1}
+              style={{
+                display: "block", width: "100%", border: "none",
+                borderBottom: "1px dashed #d1d5db", background: "transparent",
+                resize: "none", fontFamily: "inherit", fontSize: 11,
+                lineHeight: 1.7, color: "#6b7280", outline: "none",
+                padding: "2px 0", marginBottom: 6, overflow: "hidden",
+              }}
+              onInput={e => { e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; }}
+              onBlur={e => patchItem("notes", e.target.value)}
+            />
+          ) : it.notes ? (
+            <div style={{ fontSize:11, color:"#6b7280", marginBottom:8, background:"#f9fafb", borderLeft:"3px solid #d1d5db", paddingLeft:8, paddingTop:4, paddingBottom:4, borderRadius:"0 4px 4px 0" }}>
+              ✍️{" "}<NoteText text={it.notes} />
+            </div>
+          ) : null
         )}
         {/* Passengers — for any item type */}
         {it.passengers && (
