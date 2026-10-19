@@ -2954,11 +2954,10 @@ function KeepInTouchPage({ kickoff, page, total }) {
 
 function BillingPage({ kickoff }) {
   return (
-    <div className="page" style={{ position: "relative" }}>
-      <PH kickoff={kickoff} />
-      <div style={{ padding: "32px 40px 24px" }}>
-        <div style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "#999", marginBottom: 6 }}>
-          Internal · QuickBooks
+    <div className="no-print" style={{ margin: "24px 0" }}>
+      <div style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 20px", background: "#fafafa" }}>
+        <div style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "#aaa", marginBottom: 10 }}>
+          Internal · QuickBooks — solo visible en modo edición, no se imprime
         </div>
         <BillingBlock kickoff={kickoff} />
       </div>
