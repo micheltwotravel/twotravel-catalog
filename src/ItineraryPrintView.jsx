@@ -471,7 +471,11 @@ function matchCart(cartRaw, catalog, kickoff) {
   for (let item of cart) {
     // Keep boat details in sync with kickoff fields — build rich _boatData
     const _descForBoat = item.description_en || item.description_es || item.description || "";
-    if (/bote|\bboat\b/i.test(item.name) || /bote|\bboat\b/i.test(item.name_en) || item._boatBadge || /\*\*(?:Boat|Bote):\*\*/i.test(_descForBoat)) {
+    // Item 68: only flag as boat-trip if not a food/photo/other "BOAT X" compound item
+    const _boatFoodEx = /lunch|box|food|catering|snack|chef|comida|almuerzo|photographer|photo/i;
+    const _nameMatchesBoat = (/bote|\bboat\b/i.test(item.name) || /bote|\bboat\b/i.test(item.name_en)) &&
+                             !_boatFoodEx.test(item.name) && !_boatFoodEx.test(item.name_en);
+    if (_nameMatchesBoat || item._boatBadge || /\*\*(?:Boat|Bote):\*\*/i.test(_descForBoat)) {
       const bn = kickoff?.boatName || "";
       const dk = kickoff?.dock || "";
       const city = String(kickoff?.city || kickoff?._rowCity || "").toUpperCase();
@@ -524,7 +528,7 @@ function matchCart(cartRaw, catalog, kickoff) {
         location: finalBn,
         _boatBadge: true,
         _boatData: {
-          title:         kickoff?.boatTitle || finalBn || (isCtg ? (isEs ? CTG_TITLE_ES : CTG_TITLE_EN) : ""),
+          title:         kickoff?.boatTitle || (isCtg ? (isEs ? CTG_TITLE_ES : CTG_TITLE_EN) : ""),
           departureTime: kickoff?.boatDepartureTime || "",
           description:   kickoff?.boatDescription   || (isCtg ? (isEs ? CTG_DESC_ES  : CTG_DESC_EN)  : ""),
           bullets:       userBullets.length ? userBullets : (isCtg ? (isEs ? CTG_BULLETS_ES : CTG_BULLETS_EN) : []),

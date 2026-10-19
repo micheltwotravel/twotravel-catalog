@@ -2744,6 +2744,10 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
         try { const dep = JSON.parse(kickoff?.departures || "[]"); depFlight = dep.find(a => a.flightNumber) || null; } catch {}
         const flightNum = depFlight?.flightNumber || "";
         const depTime = depFlight?.time || "";
+        const vehicleOptions = {
+          en: `**SUV** (1–3 pax) · $130,000 COP per vehicle\n**Mini Van** (3–6 pax) · $195,000 COP per vehicle\n**Master Van** (6–8 pax) · $255,000 COP per vehicle\n**Sprinter** (9–10 pax) · $370,000 COP per vehicle`,
+          es: `**SUV** (1–3 pax) · $130,000 COP por vehículo\n**Mini Van** (3–6 pax) · $195,000 COP por vehículo\n**Master Van** (6–8 pax) · $255,000 COP por vehículo\n**Sprinter** (9–10 pax) · $370,000 COP por vehículo`,
+        };
         const items = [];
         if (flightNum) {
           items.push({
@@ -2753,13 +2757,23 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
             description_es: `Vuelo: **${flightNum}**${depTime ? `\nSalida: ${depTime}` : ""}`,
           });
         }
+        // Always: airport transfer item
         items.push({
-          name: `Departure — ${airport.code || "Airport"}`,
-          name_en: `Departure — ${airport.code || "Airport"}`,
-          name_es: `Salida — ${airport.code || "Aeropuerto"}`,
-          category: "transportation", timeLabel: "",
-          description_en: `Departure from **${airport.en}**${airport.code ? ` (${airport.code})` : ""}. Your transfer from the villa to the airport will be coordinated — please confirm your flight time so we can schedule the pickup and ensure you arrive with enough time.`,
-          description_es: `Salida desde **${airport.es}**${airport.code ? ` (${airport.code})` : ""}. Se coordinará el traslado desde la villa hasta el aeropuerto — avísanos la hora de tu vuelo para organizar la salida con suficiente tiempo.`,
+          name: `Airport Transfer to ${airport.code || "Airport"}`,
+          name_en: `Airport Transfer to ${airport.code || "Airport"}`,
+          name_es: `Traslado al ${airport.code || "Aeropuerto"}`,
+          category: "transportation", timeLabel: depTime,
+          description_en: `Your transfer from the villa to **${airport.en}**${airport.code ? ` (${airport.code})` : ""} will be coordinated. Please confirm your flight time so we can schedule the pickup and ensure you arrive with enough time.\n\n**Transport options:**\n${vehicleOptions.en}\n\n_All vehicles include A/C and luggage. Services between 19:00–6:00 generate a 10% night fee._`,
+          description_es: `Se coordinará el traslado desde la villa hasta el **${airport.es}**${airport.code ? ` (${airport.code})` : ""}. Avísanos la hora de tu vuelo para organizar la salida con suficiente tiempo.\n\n**Opciones de transporte:**\n${vehicleOptions.es}\n\n_Todos los vehículos incluyen A/C y equipaje. Servicios entre 19:00–6:00 generan un recargo nocturno del 10%._`,
+        });
+        // Always: departure marker item
+        items.push({
+          name: `Departure from ${airport.en}`,
+          name_en: `Departure from ${airport.en}`,
+          name_es: `Salida desde ${airport.es}`,
+          category: "transportation", timeLabel: depTime,
+          description_en: "",
+          description_es: "",
         });
         return items;
       })(),
@@ -8710,7 +8724,7 @@ const loadKickoffs = async (forceRefresh = false) => {
 
   const cp = {
     es: {
-      subtitle: "Kickoffs, itinerarios, PDFs y catálogo de servicios.",
+      subtitle: "Información operativa de los clientes y edición de menús.",
       refresh: "Refrescar", refreshing: "Actualizando...",
       search: "Buscar por huésped, viaje, ID...",
       filterStatus: "Estado:", filterConcierge: "Concierge:",
@@ -8723,7 +8737,7 @@ const loadKickoffs = async (forceRefresh = false) => {
       linkCatalog: "Link catálogo", linkFeedback: "Link feedback",
     },
     en: {
-      subtitle: "Kickoffs, itineraries, PDFs and service catalog.",
+      subtitle: "Client operations, management and menu editor.",
       refresh: "Refresh", refreshing: "Refreshing...",
       search: "Search by guest, trip, ID...",
       filterStatus: "Status:", filterConcierge: "Concierge:",
