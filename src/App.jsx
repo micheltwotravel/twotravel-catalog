@@ -2316,9 +2316,9 @@ function UnifiedDashboard({ currentUser, onLogout, initialTab, kpiOnly = false }
             {[
               { id: "clientes", label: "Clientes" },
               ...( !isJunior ? [{ id: "feedback", label: "Feedback" }] : [] ),
-              ...( ["admin","concierge","junior"].includes(currentUser?.role) ? [{ id: "menus", label: "🍹 Menús" }] : [] ),
+              ...( ["admin","concierge","junior","marketing"].includes(currentUser?.role) ? [{ id: "menus", label: "🍹 Menús" }] : [] ),
               ...( isSuperAdmin(currentUser) ? [{ id: "kpis", label: "📊 KPIs" }] : [] ),
-              ...( isSuperAdmin(currentUser) ? [{ id: "updates", label: "🛠 Updates" }] : [] ),
+              ...( isSuperAdmin(currentUser) || currentUser?.role === "marketing" ? [{ id: "updates", label: "🛠 Updates" }] : [] ),
             ].map(({ id, label }) => (
               <button key={id} onClick={() => setTab(id)}
                 style={{

@@ -1015,6 +1015,88 @@ const formatPriceCOP = (value) =>
    Pre-Trip Information block.
    ========================================= */
 
+const DEFAULT_PRE_TRIP_ES = `Échale un vistazo — Cartagena
+Por favor revisa esto antes de tu llegada. Tiene información útil para tu viaje.
+
+Pre Check-in Form: https://forms.gle/REPLACE_WITH_FORM_LINK
+Calculadora de Bebidas: https://two.travel/drinks
+Guía de Cartagena (PDF): https://two.travel/ctg-guide.pdf
+WhatsApp Concierge: https://wa.me/573001234567
+
+──────────────────────────────
+
+¡Promo!
+Muéstrale a todos lo increíble que es viajar con el servicio de concierge de Two Travel y obtén descuentos en tus experiencias. Síguenos en @twotravelconcierge en Instagram y @twotravelvip en TikTok.
+
+Nota: La publicación debe hacerse durante tu estadía. Se requiere un tag por persona para aplicar el descuento. Para servicios grupales (transporte, chef, etc.), todos los integrantes deben participar para que aplique el descuento.
+
+──────────────────────────────
+
+Recomendaciones en Cartagena
+
+☕ Cafés y Panaderías
+Cafe San Alberto — Café de especialidad, tostador premiado de Bogotá. Calle del Arzobispado #36-57.
+Libertario — Café artesanal en un patio relajado. Calle de Badillo.
+Epoca Cafe Bar — Café de día, bar de noche. Excelente para brunch (sin reservas, por orden de llegada). Calle de la Mantilla.
+La Manchuria — Café tranquilo con buen café de filtro. Centro Histórico.
+Ely — Querida panadería local famosa por pan de bono, pasteles y desayunos ligeros. Varias ubicaciones.
+
+🍫 Chocolate
+Evok — Tienda de chocolate artesanal colombiano, hermosos regalos y degustaciones.
+
+🏛️ Museos
+Museo del Oro Zenú — Museo de oro gratuito que exhibe la cultura Zenú. Plaza de Bolívar.
+Museo Histórico de Cartagena — Dentro del histórico Palacio de la Inquisición. Visita obligada.
+Museo de Arte Moderno de Cartagena (MAMCA) — Exposiciones de arte moderno itinerantes. Plaza de San Pedro.
+
+🌅 Rooftops
+Townhouse Cartagena — Rooftop elegante con vistas a la ciudad y cócteles excelentes. Se recomienda reservar.
+Apogeo — Elegante bar en terraza con vistas de 360°. Centro Histórico.
+Buena Vida — Rooftop casual con buen ambiente y tragos accesibles.
+Mirador — Rooftop tranquilo. Ideal para ver el atardecer.
+
+──────────────────────────────
+
+🛍️ Compras
+Centro Comercial La Serrezuela: Malva (diseñadores locales), Artesanías de Colombia, Loto del Sur (esmeraldas colombianas).
+Boutiques en la Ciudad Amurallada: Soloio, Agua de León, St Dom, Casa Chiqui, Territorio.
+
+──────────────────────────────
+
+🥞 Brunch
+Al Alma — Impresionante restaurante en patio de una mansión colonial. Ambiente hermoso, excelentes eggs benedict y bowls de açaí. Se recomienda mucho reservar. Calle del Santísimo #8-19.
+Ely Centro Histórico — Institución cartagenera. Querida por su pan de bono, jugos frescos y empanadas. Casual y local. Calle Segunda de Badillo.
+Epoca Cafe Bar — Spot de brunch moderno con excelente café y comida. Sin reservas, llega temprano. Calle de la Mantilla.
+
+──────────────────────────────
+
+🍽️ Almuerzo
+Pezetarian — Menú mediterráneo con enfoque vegetal en un hermoso rincón de la Ciudad Amurallada. Fresco, ligero y delicioso. Se recomienda reservar.
+Kona — Poke bowls al estilo hawaiano y mariscos frescos. Ideal para un almuerzo más ligero. Plaza de San Diego.
+Buena Vida Marisquería — Especializado en mariscos con excelente ceviche y pescado a la parrilla. Popular entre locales.
+Tacos del Gordo — Tacos callejeros mexicanos auténticos, sorprendentemente buenos. Muy accesibles. Getsemaní.
+
+──────────────────────────────
+
+🌿 Almuerzo en Getsemaní
+El Beso — Joya del barrio con platos de fusión colombiana y decoración colorida.
+Cocina de Pepina — Cocina casera colombiana tradicional, recetas de abuela. Reconfortante y deliciosa.
+Casa del Túnel — Restaurante relajado en patio de casa colonial. Buenos mojitos.
+Carta Ajena / OSH — Bar y restaurante de cócteles creativos. Uno de los spots más cool de Getsemaní.
+
+──────────────────────────────
+
+📍 Lugares para Visitar (gratis / caminando)
+Plaza de San Diego — Encantadora plaza rodeada de restaurantes y boutiques.
+Plaza Fernández de Madrid — Plaza tranquila y auténticamente local. Ideal para observar a la gente.
+Plaza de la Merced — Hermosa iglesia colonial y plaza abierta.
+Plaza Santo Domingo — Icónica plaza con la famosa escultura de Botero. Muy animada en la noche.
+Plaza de Bolívar — Plaza central con el museo de oro y el Palacio de la Inquisición.
+Iglesia de San Pedro Claver — Hermosa iglesia colonial con claustro. Vale la pena visitar.
+Plaza de la Aduana — Gran plaza colonial cerca de la Torre del Reloj.
+Plaza de los Coches — Portal de los Dulces con vendedores de golosinas locales.
+Torre del Reloj — La entrada principal a la Ciudad Amurallada. Ideal para fotos.`;
+
 const DEFAULT_PRE_TRIP = `Take a look - Cartagena
 Please take a look at this before your arrival. It has some helpful info for your trip.
 
@@ -5059,7 +5141,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [checkIn,            setCheckIn]            = useState(kickoff?.checkIn            || "3:00 PM");
   const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "11:00 AM");
   const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eli_IGa0Y2X/view?usp=sharing");
-  const [preTripContent,     setPreTripContent]     = useState(kickoff?.preTripContent     || DEFAULT_PRE_TRIP);
+  const [preTripContent,     setPreTripContent]     = useState(kickoff?.preTripContent     || (kickoff?.lang === "es" ? DEFAULT_PRE_TRIP_ES : DEFAULT_PRE_TRIP));
   const [meetings, setMeetings] = useState(() => {
     try {
       const parsed = JSON.parse(kickoff?.meetingNotes || "[]");
@@ -8453,7 +8535,7 @@ const loadKickoffs = async (forceRefresh = false) => {
       internalNotes: "",
       cart: [],
       welcomePdfUrl: "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=drivesdk",
-      preTripContent: DEFAULT_PRE_TRIP,
+      preTripContent: portalLang === "es" ? DEFAULT_PRE_TRIP_ES : DEFAULT_PRE_TRIP,
     });
 
     const kickoff = {
