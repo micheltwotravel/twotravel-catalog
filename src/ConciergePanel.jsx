@@ -8010,6 +8010,30 @@ const BREAKFAST_ADMIN = [
   ]},
 ];
 
+function SortableMenuExtraItem({ id, item, catId, idx, isDrink, onUpdate, onRemove, driveImgUrl }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <div ref={setNodeRef} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#f0fdf4", borderRadius: 10, padding: "12px 14px", border: "1px solid #bbf7d0", opacity: isDragging ? 0.5 : 1, transform: CSS.Transform.toString(transform), transition }}>
+      <button {...attributes} {...listeners} title="Arrastrar para reordenar" style={{ flexShrink: 0, cursor: "grab", background: "none", border: "none", fontSize: 16, color: "#9ca3af", padding: "4px 0", marginTop: 2 }}>⠿</button>
+      {item.img ? (
+        <img src={driveImgUrl(item.img)} alt="" style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 6, flexShrink: 0, marginTop: 2 }} onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "inline"; }} />
+      ) : null}
+      <span style={{ fontSize: 24, marginTop: 4, display: item.img ? "none" : "inline" }}>{item.emoji || "🍽️"}</span>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+        <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Nombre</label>
+        <input value={item.name || ""} onChange={e => onUpdate(catId, idx, "name", e.target.value)} style={{ width: "100%", border: "1px solid #bbf7d0", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }} />
+        <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>URL foto</label>
+        <input value={item.img || ""} onChange={e => onUpdate(catId, idx, "img", e.target.value)} placeholder="https://…" style={{ width: "100%", border: "1px solid #bbf7d0", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }} />
+        {isDrink && (<>
+          <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Precio (COP)</label>
+          <input type="number" value={item.priceCOP || ""} onChange={e => onUpdate(catId, idx, "priceCOP", parseInt(e.target.value) || 0)} placeholder="0" style={{ width: 160, border: "1px solid #bbf7d0", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }} />
+        </>)}
+      </div>
+      <button onClick={() => onRemove(catId, idx)} title="Eliminar item" style={{ color: "#dc2626", background: "none", border: "none", cursor: "pointer", fontSize: 16, flexShrink: 0, marginTop: 4 }}>✕</button>
+    </div>
+  );
+}
+
 export function MenuAdminPanel() {
   const [overrides, setOverrides] = useState({});
   const [loading, setLoading]     = useState(true);
@@ -8018,6 +8042,7 @@ export function MenuAdminPanel() {
   const [activeCat, setActiveCat] = useState(DRINK_CATEGORIES_DEFAULT[0]?.id || "");
   const [newItemForm, setNewItemForm] = useState(null); // { catId, type, fields: {} }
   const [newCatForm, setNewCatForm]   = useState(null); // { type: "drink"|"grocery" }
+  const menuExtraSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   useEffect(() => {
     fetch(`${MENU_GAS}?action=getMenuConfig`)
@@ -8059,6 +8084,15 @@ export function MenuAdminPanel() {
       arr.splice(idx, 1);
       return { ...prev, [key]: arr };
     });
+    setSaved(false);
+  };
+
+  const reorderExtraItems = (catId, oldIdx, newIdx) => {
+    const key = `_extra__${catId}`;
+    setOverrides(prev => ({
+      ...prev,
+      [key]: arrayMove(prev[key] || [], oldIdx, newIdx),
+    }));
     setSaved(false);
   };
 
@@ -8312,26 +8346,39 @@ export function MenuAdminPanel() {
               );
             })}
 
-            {/* Custom (added) items — editable inline */}
-            {(overrides[`_extra__${cat?.id}`] || []).map((item, idx) => (
-              <div key={idx} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#f0fdf4", borderRadius: 10, padding: "12px 14px", border: "1px solid #bbf7d0" }}>
-                {item.img ? (
-                  <img src={driveImgUrl(item.img)} alt="" style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 6, flexShrink: 0, marginTop: 2 }} onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "inline"; }} />
-                ) : null}
-                <span style={{ fontSize: 24, marginTop: 4, display: item.img ? "none" : "inline" }}>{item.emoji || "🍽️"}</span>
-                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                  <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Nombre</label>
-                  <input value={item.name || ""} onChange={e => updateExtraItem(cat.id, idx, "name", e.target.value)} style={{ width: "100%", border: "1px solid #bbf7d0", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }} />
-                  <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>URL foto</label>
-                  <input value={item.img || ""} onChange={e => updateExtraItem(cat.id, idx, "img", e.target.value)} placeholder="https://…" style={{ width: "100%", border: "1px solid #bbf7d0", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }} />
-                  {isDrink && (<>
-                    <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Precio (COP)</label>
-                    <input type="number" value={item.priceCOP || ""} onChange={e => updateExtraItem(cat.id, idx, "priceCOP", parseInt(e.target.value) || 0)} placeholder="0" style={{ width: 160, border: "1px solid #bbf7d0", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }} />
-                  </>)}
-                </div>
-                <button onClick={() => removeExtraItem(cat.id, idx)} title="Eliminar item" style={{ color: "#dc2626", background: "none", border: "none", cursor: "pointer", fontSize: 16, flexShrink: 0, marginTop: 4 }}>✕</button>
-              </div>
-            ))}
+            {/* Custom (added) items — editable inline, draggable to reorder */}
+            {(overrides[`_extra__${cat?.id}`] || []).length > 0 && (() => {
+              const extraItems = overrides[`_extra__${cat?.id}`];
+              const extraIds = extraItems.map((_, i) => `extra-${cat?.id}-${i}`);
+              return (
+                <DndContext
+                  sensors={menuExtraSensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={({ active, over }) => {
+                    if (!over || active.id === over.id) return;
+                    const oldIdx = extraIds.indexOf(active.id);
+                    const newIdx = extraIds.indexOf(over.id);
+                    if (oldIdx !== -1 && newIdx !== -1) reorderExtraItems(cat.id, oldIdx, newIdx);
+                  }}
+                >
+                  <SortableContext items={extraIds} strategy={verticalListSortingStrategy}>
+                    {extraItems.map((item, idx) => (
+                      <SortableMenuExtraItem
+                        key={extraIds[idx]}
+                        id={extraIds[idx]}
+                        item={item}
+                        catId={cat.id}
+                        idx={idx}
+                        isDrink={isDrink}
+                        onUpdate={updateExtraItem}
+                        onRemove={removeExtraItem}
+                        driveImgUrl={driveImgUrl}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
+              );
+            })()}
 
             {/* Add item button */}
             <button
