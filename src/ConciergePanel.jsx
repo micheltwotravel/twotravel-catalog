@@ -2993,7 +2993,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
           <button type="button" onClick={handleGenerateReservation} disabled={generating}
             title="Crea una fila en el Tablero de Reservas con los datos de este kickoff"
             className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs hover:bg-blue-100 disabled:opacity-40 transition">
-            {generating ? "Generando…" : "📋 Generar reserva"}
+            {generating ? "Exportando…" : "📤 Exportar reservas"}
           </button>
           {/* Save handled by main EditDrawer "Guardar" button above — canvas state syncs via onCartChange */}
         </div>
@@ -7504,13 +7504,10 @@ export function ReunionesPage({ currentUser, initialKickoffId }) {
         return true;
       })
       .sort((a,b) => {
-        // most recent meeting date first
-        const lastDate = (k) => {
-          const ms = getMeetings(k);
-          const dates = ms.map(m=>m.date).filter(Boolean).sort();
-          return dates[dates.length-1] || "";
-        };
-        return lastDate(b).localeCompare(lastDate(a));
+        // newest deal first (by creation date)
+        const ca = a.created_at || a.createdAt || "";
+        const cb = b.created_at || b.createdAt || "";
+        return cb.localeCompare(ca);
       });
   }, [kickoffs, filterConcierge, search]);
 
@@ -8685,10 +8682,10 @@ const loadKickoffs = async (forceRefresh = false) => {
 
   } catch (err) {
     console.error("handleSaveEdit error:", err);
-    alert("No se pudieron guardar los cambios.\n\nDetalle: " + (err?.message || String(err)));
-  } finally {
     setRowLoadingId(null);
+    throw err; // re-throw so handleSave can surface the error and not show false "✓ Guardado"
   }
+  setRowLoadingId(null);
 };
 
   const handleConfirmDelete = async () => {
