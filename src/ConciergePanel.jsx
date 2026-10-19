@@ -4524,6 +4524,8 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
   const [juniorConcierge,  setJuniorConcierge]  = useState(kickoff?.juniorConcierge  || "");
   const [juniorBoat,       setJuniorBoat]       = useState(kickoff?.juniorBoat       || "");
   const [juniorBeachClub,  setJuniorBeachClub]  = useState(kickoff?.juniorBeachClub  || "");
+  const [juniorPrice,      setJuniorPrice]      = useState(kickoff?.juniorPrice      || "");
+  const [juniorCurrency,   setJuniorCurrency]   = useState(kickoff?.juniorCurrency   || "COP");
   const [saving, setSaving] = useState(false);
   const [boatList, setBoatList] = useState([]);
   useEffect(() => {
@@ -4552,7 +4554,7 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
       houseDrinkListSent, boatDrinkListSent, boatFoodReady,
       listSentToBoatOwner, foodRestrictionsShared, passportOk,
       boatName, boatDay, boatDayType, dock, beachClub, beachClubDay,
-      juniorConcierge, juniorBoat, juniorBeachClub,
+      juniorConcierge, juniorBoat, juniorBeachClub, juniorPrice, juniorCurrency,
     });
     setSaving(false);
     onClose();
@@ -4678,6 +4680,19 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
                 <label className="text-[10px] text-neutral-500">Jr. Beach Club</label>
                 <input value={juniorBeachClub} onChange={e => setJuniorBeachClub(e.target.value)} placeholder="Nombre del junior…"
                   className="mt-0.5 w-full border rounded-lg px-2 py-1.5 text-xs" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-[10px] text-neutral-500">Precio Jr.</label>
+                <div className="mt-0.5 flex gap-1.5 items-center">
+                  <input type="number" value={juniorPrice} onChange={e => setJuniorPrice(e.target.value)} placeholder="0"
+                    className="flex-1 border rounded-lg px-2 py-1.5 text-xs" />
+                  {["COP","USD","MXN"].map(c => (
+                    <button key={c} type="button" onClick={() => setJuniorCurrency(c)}
+                      className={`text-[10px] px-2 py-1 rounded border transition ${juniorCurrency===c?"bg-orange-500 text-white border-orange-500":"border-neutral-300 text-neutral-500"}`}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -5009,6 +5024,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [juniorConcierge,        setJuniorConcierge]         = useState(kickoff?.juniorConcierge        || "");
   const [juniorBoat,             setJuniorBoat]              = useState(kickoff?.juniorBoat             || "");
   const [juniorBeachClub,        setJuniorBeachClub]         = useState(kickoff?.juniorBeachClub        || "");
+  const [juniorPrice,            setJuniorPrice]             = useState(kickoff?.juniorPrice            || "");
+  const [juniorCurrency,         setJuniorCurrency]          = useState(kickoff?.juniorCurrency         || "COP");
   const [earlyCheckin,           setEarlyCheckin]            = useState(!!(kickoff?.earlyCheckin));
   const [preBillSent,            setPreBillSent]             = useState(!!(kickoff?.preBillSent));
   const [preBillPaid,            setPreBillPaid]             = useState(!!(kickoff?.preBillPaid));
@@ -5364,6 +5381,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   updates.juniorConcierge        = juniorConcierge.trim();
   updates.juniorBoat             = juniorBoat.trim();
   updates.juniorBeachClub        = juniorBeachClub.trim();
+  updates.juniorPrice            = juniorPrice;
+  updates.juniorCurrency         = juniorCurrency;
   updates.earlyCheckin           = earlyCheckin;
   updates.preBillSent            = preBillSent;
   updates.preBillPaid            = preBillPaid;
