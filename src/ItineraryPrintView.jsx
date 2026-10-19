@@ -475,7 +475,8 @@ function matchCart(cartRaw, catalog, kickoff) {
     const _boatFoodEx = /lunch|box|food|catering|snack|chef|comida|almuerzo|photographer|photo/i;
     const _nameMatchesBoat = (/bote|\bboat\b/i.test(item.name) || /bote|\bboat\b/i.test(item.name_en)) &&
                              !_boatFoodEx.test(item.name) && !_boatFoodEx.test(item.name_en);
-    if (_nameMatchesBoat || item._boatBadge || /\*\*(?:Boat|Bote):\*\*/i.test(_descForBoat)) {
+    const _isBoatCandidate = _nameMatchesBoat || item._boatBadge || /\*\*(?:Boat|Bote):\*\*/i.test(_descForBoat);
+    if (_isBoatCandidate && !_boatFoodEx.test(item.name) && !_boatFoodEx.test(item.name_en)) {
       const bn = kickoff?.boatName || "";
       const dk = kickoff?.dock || "";
       const city = String(kickoff?.city || kickoff?._rowCity || "").toUpperCase();
@@ -2087,11 +2088,12 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
   const _rawName    = (it._rawCartItem?.name || it._rawCartItem?.name_en || it._rawCartItem?.name_es || "").toLowerCase();
   const _lunchExclude = /lunch|box|food|catering|snack|chef|comida|almuerzo/i.test(_titleLower) ||
                         /lunch|box|food|catering|snack|chef|comida|almuerzo/i.test(_rawName);
-  const _isBoat = (it._boatBadge && !_lunchExclude) ||
+  const _isBoat = !_lunchExclude && (
+    it._boatBadge ||
     /\*\*(?:Boat|Bote):\*\*/i.test(_descText) ||
     ((/\bboat\b|\bbote\b/i.test(it.title || "")) &&
-      !_lunchExclude &&
-      !(/chef|food|catering|breakfast|comida/i.test(_catLower)));
+      !(/chef|food|catering|breakfast|comida/i.test(_catLower)))
+  );
   if (_isBoat) {
     let boatIt = it;
     if (!it._boatBadge) {
@@ -2222,8 +2224,8 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         {isConfirmed && (() => {
           const n = (it.title || "").toLowerCase();
           const cat = (it.category || "").toLowerCase();
-          if (/check.?in/.test(n) || /check.?in/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de Llegada":"Arrival Information"}</div>;
-          if (/check.?out/.test(n) || /check.?out/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de Salida":"Departure Information"}</div>;
+          if (/check.?in/.test(n) || /check.?in/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de Llegada y Salida":"Arrival and Departure Information"}</div>;
+          if (/check.?out/.test(n) || /check.?out/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de Llegada y Salida":"Arrival and Departure Information"}</div>;
           if (/breakfast|desayuno/.test(n)) return null;
           return null;
         })()}
@@ -2394,8 +2396,8 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
             </div>
           ) : null
         )}
-        {/* Passengers — for any item type */}
-        {it.passengers && (
+        {/* Passengers — non-transport items only (transport items show it in the grid block above) */}
+        {it.passengers && !String(it.category||"").toLowerCase().includes("transport") && (
           <div style={{ fontSize:11, color:"#6b7280", marginBottom:6 }}>
             <span style={{fontWeight:600,color:"#374151"}}>{isEs?"Pasajeros":"Passengers"}:</span> {it.passengers}
           </div>
@@ -3175,6 +3177,11 @@ export default function ItineraryPrintView() {
     if (!embedded) return;
     const handler = async (e) => {
       if (e.data?.type === "tt-save") {
+        // Flush any in-progress edits: blur forces onBlur which calls onChange/patchItem,
+        // updating editDaysRef.current synchronously before saveSnapshot reads it.
+        if (document.activeElement && document.activeElement !== document.body) {
+          document.activeElement.blur();
+        }
         await saveSnapshotRef.current?.();
         // Signal whether the iframe actually changed the cart so the panel can decide
         // whether to use the iframe's saved cart or the canvas's cart.
@@ -3240,6 +3247,7 @@ export default function ItineraryPrintView() {
             else if (field === "dressCode")    { cartMirror.dressCode = val; cartMirror.dressCode_en = val; }
             else if (field === "location")     cartMirror.location = val;
             else if (field === "priceTiers")   cartMirror.priceTiers = val;
+            else if (field === "passengers")   cartMirror.passengers = val;
             if (Object.keys(cartMirror).length) {
               updated._rawCartItem = { ...updated._rawCartItem, ...cartMirror };
             }

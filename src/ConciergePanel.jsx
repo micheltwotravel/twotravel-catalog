@@ -1483,7 +1483,7 @@ function mapManualToCartItem() {
     dayLabel: "",
     timeLabel: "",
     notes: "",
-    confirmed: true,
+    confirmed: null,
     confirmation: "",
     dressCode: "",
     passengers: "",
@@ -7294,7 +7294,7 @@ function PresetMessages({ kickoff, lang }) {
             if (!calConcierges.length) return null;
             return (
               <div className="mt-1">
-                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide mb-1.5 px-1">Links de calendarios de cada Concierge</p>
+                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide mb-1.5 px-1">Links de calendarios de las concierges</p>
                 {calConcierges.map(c => (
                   <div key={c.email} className="border border-neutral-200 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-neutral-700 shrink-0">📅 {c.name.split(" ")[0]}</span>
