@@ -3460,6 +3460,12 @@ export default function ItineraryPrintView() {
     fetchCheckinResponses(kickoffId).then(setCheckinResponses).catch(() => {});
   }, [kickoffId]);
 
+  useEffect(() => {
+    if (embedded || !kickoff?.guestName) return;
+    document.title = `${kickoff.guestName} — Concierge Itinerary | Two Travel`;
+    return () => { document.title = "Two Travel — Concierge Itinerary"; };
+  }, [embedded, kickoff?.guestName]);
+
   const days = useMemo(() => {
     if (!kickoff) return [];
     const cartRaw = kickoff.cart;
