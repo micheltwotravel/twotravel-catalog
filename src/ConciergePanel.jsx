@@ -2268,8 +2268,9 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Bote</span>
               {[
-                { key: "boatday",   label: "🛥 Boat Day" },
-                { key: "beachclub", label: "🏖 Beach Club" },
+                { key: "boatday",        label: "🛥 Boat Day" },
+                { key: "beachclub",      label: "🏖 Beach Club" },
+                { key: "wateractivities", label: "🌊 Water Activities" },
               ].map(({ key, label: pl }) => (
                 <button key={key} type="button" onClick={() => onAddPreset?.(key)}
                   className="text-xs text-blue-700 hover:text-blue-900 border border-blue-200 hover:border-blue-400 rounded-lg px-2.5 py-1 bg-blue-50 transition-colors">
@@ -2729,9 +2730,14 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
         const boatPrefix_es = boatNameVal ? `**Bote:** ${boatNameVal}${dockName ? `\n**Muelle:** ${dockName}` : ""}\n\n` : (dockName ? `**Muelle:** ${dockName}\n\n` : "");
         const boatPrefix_en = boatNameVal ? `**Boat:** ${boatNameVal}${dockName ? `\n**Dock:** ${dockName}` : ""}\n\n` : (dockName ? `**Dock:** ${dockName}\n\n` : "");
         // Single consolidated card — boat info + activity description in one
+        const cityNormBd = (kickoff?.city || "").toLowerCase();
+        const isCtgBd = /ctg|cartagena/.test(cityNormBd);
+        const boatDayTitle = isCtgBd ? "Boat Trip to the Rosario Islands" : "Boat Day";
+        const boatDayTitle_es = isCtgBd ? "Paseo en Bote — Islas del Rosario" : "Día de Bote";
         return {
-          name:    "Boat Trip to the Rosario Islands",
-          name_en: "Boat Trip to the Rosario Islands",
+          name:    boatDayTitle,
+          name_en: boatDayTitle,
+          name_es: boatDayTitle_es,
           category: "actividades",
           timeLabel: "10:00 AM",
           ...(boatNameVal ? { location: boatNameVal } : {}),
@@ -2965,6 +2971,38 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
           timeLabel: "11:00 AM",
           description_es: "Día de beach club. Les daremos todos los detalles de acceso, horarios y servicios disponibles.",
           description_en: "Beach club day. We will provide all the details on access, hours, and available services.",
+        };
+      })(),
+      wateractivities: (() => {
+        const isWa = s => {
+          const n = (s.name_en || s.name || "").toLowerCase();
+          return n.includes("water activ") || n.includes("fliteboard") || n.includes("jet ski") ||
+                 n.includes("kayak") || n.includes("snorkel") || n.includes("paddleboard") ||
+                 n.includes("wakeboard") || n.includes("kitesurf");
+        };
+        const cityNormWa = (kickoff?.city || "").toLowerCase();
+        let catalogItems = services.filter(isWa);
+        if (cityNormWa && catalogItems.length > 1) {
+          const byCty = catalogItems.filter(s => !s.city || s.city.includes(cityNormWa) || cityNormWa.includes(s.city));
+          if (byCty.length > 0) catalogItems = byCty;
+        }
+        if (catalogItems.length > 0) {
+          return catalogItems.map(s => ({
+            id: String(s.id || ""), sku: s.sku || "",
+            name: s.name || "Water Activities", name_en: s.name_en || s.name || "Water Activities",
+            category: s.category || "actividades",
+            timeLabel: "10:00 AM",
+            image: s.image || "", menuUrl: s.menuUrl || "",
+            price_cop: s.price_cop || 0,
+            description_es: s.description?.es || "", description_en: s.description?.en || "",
+          }));
+        }
+        return {
+          name: "Water Activities", name_en: "Water Activities", name_es: "Actividades Acuáticas",
+          category: "actividades",
+          timeLabel: "10:00 AM",
+          description_es: "Actividades acuáticas a coordinar. Confirmamos disponibilidad y detalles con anticipación.",
+          description_en: "Water activities to be coordinated. We will confirm availability and details in advance.",
         };
       })(),
       recommendations: (() => {
@@ -5134,12 +5172,17 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // Auto-compute conciergeTitle when assigned concierges change
   useEffect(() => {
     if (assignedConcierges.length === 0) return;
-    const titles = assignedConcierges
-      .map(n => CONCIERGE_LIST.find(c => c.name === n)?.title)
-      .filter(Boolean);
-    if (titles.length === 0) return;
-    const unique = [...new Set(titles)];
-    setConciergeTitle(unique.join(" & "));
+    const concierges = assignedConcierges.map(n => CONCIERGE_LIST.find(c => c.name === n)).filter(Boolean);
+    if (concierges.length === 0) return;
+    const cities = [...new Set(concierges.map(c => c.city).filter(Boolean))];
+    const hasColombia = cities.some(c => /CTG|MDE/.test(c));
+    const hasMexico   = cities.some(c => /CDMX/.test(c));
+    if (hasColombia && hasMexico) {
+      setConciergeTitle("Senior Concierge Colombia & Mexico");
+    } else {
+      const unique = [...new Set(concierges.map(c => c.title).filter(Boolean))];
+      setConciergeTitle(unique.join(" & "));
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignedConcierges]);
 
@@ -5175,7 +5218,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
   const [checkIn,            setCheckIn]            = useState(kickoff?.checkIn            || "3:00 PM");
   const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "11:00 AM");
-  const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eli_IGa0Y2X/view?usp=sharing");
+  const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=sharing");
   const [preTripContent,     setPreTripContent]     = useState(kickoff?.preTripContent     || (kickoff?.lang === "es" ? DEFAULT_PRE_TRIP_ES : DEFAULT_PRE_TRIP));
   const [meetings, setMeetings] = useState(() => {
     try {
@@ -7154,7 +7197,7 @@ function PresetMessages({ kickoff, lang }) {
         : `Hi ${first}!\n\nHere's our groceries order list. Here you can select specific items you'd like to have at the villa, like snacks and so on. There's also a notes box where you can add more detail or request anything that's not on the list. Just add what you want, and we'll take care of having it ready for you.\n\nPlease note that this link is editable. You can send an order anytime and come back to make changes. We'll confirm the final list with you a few days before your trip.\n\n${base}/g/${id}`,
     },
     {
-      key: "itinerario", icon: "🗺️", label: isEs ? "Primer borrador itinerario" : "First draft itinerary",
+      key: "itinerario", icon: "🗺️", label: isEs ? "Itinerario Concierge" : "Concierge Itinerary",
       url: itineraryUrl,
       text: isEs
         ? `Hola ${first}!\n\nAquí está el primer borrador de tu itinerario. Lo construí basándome en todo lo que hablamos y tus favoritos del catálogo.\n\nTen en cuenta que los precios están en ${currencyLabelEs}. Si necesitas convertirlos a dólares, aquí tienes un convertidor:\n${currencyLink}\n\nDame tus comentarios: lo que te gusta, lo que cambiarías, lo que falta. Entre más feedback me des, más personalizado queda el itinerario.\n\n${itineraryUrl}`
@@ -7200,7 +7243,7 @@ function PresetMessages({ kickoff, lang }) {
             if (!calConcierges.length) return null;
             return (
               <div className="mt-1">
-                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide mb-1.5 px-1">Links de calendarios de las concierges</p>
+                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide mb-1.5 px-1">Links de calendarios de cada Concierge</p>
                 {calConcierges.map(c => (
                   <div key={c.email} className="border border-neutral-200 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-neutral-700 shrink-0">📅 {c.name.split(" ")[0]}</span>

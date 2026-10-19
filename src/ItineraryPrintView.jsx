@@ -1137,9 +1137,13 @@ function PH({ kickoff }) {
   // Strip purely numeric tokens (e.g. phone numbers stored before the name)
   const name  = rawName.split(",").map(s => s.trim()).filter(s => s && !/^\d+$/.test(s)).join(", ");
   const email = kickoff.assignedConciergeEmail || "";
-  const title = kickoff.conciergeTitle ||
-    [...new Set(name.split(",").map(n => CONCIERGE_TITLE_MAP[n.trim()]).filter(Boolean))].join(" & ") ||
-    "";
+  const _ctitles = [...new Set(name.split(",").map(n => CONCIERGE_TITLE_MAP[n.trim()]).filter(Boolean))];
+  const _hasColombia = _ctitles.some(t => /Cartagena|Medellín/i.test(t));
+  const _hasMexico   = _ctitles.some(t => /Mexico City/i.test(t));
+  const _autoTitle   = (_hasColombia && _hasMexico)
+    ? "Senior Concierge Colombia & Mexico"
+    : _ctitles.join(" & ");
+  const title = kickoff.conciergeTitle || _autoTitle || "";
   return (
     <div className="ph">
       <div className="ph-left">
