@@ -5703,6 +5703,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 {clientNights && (
                   <p className="text-[10px] text-blue-600">🌙 {clientNights} noche{clientNights !== 1 ? "s" : ""}</p>
                 )}
+                <div>
+                  <label className="text-[10px] text-neutral-400">{city.includes(",") ? `Texto portada (${cityFullName(city.split(",")[0]?.trim())})` : "Texto portada (como se ve)"}</label>
+                  <input value={tripDates} onChange={(e) => setTripDates(e.target.value)}
+                    className="mt-0.5 w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none"
+                    placeholder="May 22-28, 2026" />
+                </div>
               </div>
               {city.includes(",") && (
                 <div className="col-span-2 border border-blue-200 rounded-xl px-3 py-3 space-y-2 bg-blue-50">
@@ -5723,20 +5729,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     const n = Math.round((new Date(departureDate2) - new Date(arrivalDate2)) / 86400000);
                     return n > 0 ? <p className="text-[10px] text-blue-600">🌙 {n} noche{n !== 1 ? "s" : ""}</p> : null;
                   })()}
-                </div>
-              )}
-              <div>
-                <label className="text-[11px] text-neutral-500">{city.includes(",") ? `Fechas ${cityFullName(city.split(",")[0]?.trim())}` : "Fechas del viaje"} <span className="text-neutral-400">(como se ve en portada)</span></label>
-                <input value={tripDates} onChange={(e) => setTripDates(e.target.value)}
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="May 22-28, 2026" />
-              </div>
-              {city.includes(",") && (
-                <div>
-                  <label className="text-[11px] text-neutral-500">Fechas {cityFullName(city.split(",")[1]?.trim())} <span className="text-neutral-400">(portada)</span></label>
-                  <input value={tripDates2} onChange={(e) => setTripDates2(e.target.value)}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                    placeholder="Jun 1-5, 2026" />
+                  <div>
+                    <label className="text-[10px] text-neutral-400">Texto portada ({cityFullName(city.split(",")[1]?.trim())})</label>
+                    <input value={tripDates2} onChange={(e) => setTripDates2(e.target.value)}
+                      className="mt-0.5 w-full border border-neutral-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none"
+                      placeholder="Jun 1-5, 2026" />
+                  </div>
                 </div>
               )}
               <div>

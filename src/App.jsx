@@ -6791,8 +6791,17 @@ function LoginScreen({ onLogin }) {
     e.preventDefault();
     if (!email) return;
     setLoading(true);
+    const normalEmail = email.toLowerCase().trim();
     try {
-      await supabase.from("pin_reset_requests").insert({ email: email.toLowerCase().trim(), requested_at: new Date().toISOString() });
+      await supabase.from("pin_reset_requests").insert({ email: normalEmail, requested_at: new Date().toISOString() });
+    } catch (_) {}
+    // Notify admin via GAS email
+    try {
+      await fetch(GAS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "sendPinResetNotification", payload: { userEmail: normalEmail } }),
+      });
     } catch (_) {}
     setLoading(false);
     setResetSent(true);
@@ -6882,6 +6891,8 @@ const SUPER_ADMINS = ["michel@two.travel","caro@two.travel","ray@two.travel","gi
 
 function RegisterScreen() {
   const [email, setEmail]     = useState("");
+  const [name, setName]       = useState("");
+  const [lastName, setLastName] = useState("");
   const [pin, setPin]         = useState("");
   const [pin2, setPin2]       = useState("");
   const [loading, setLoading] = useState(false);
@@ -6891,13 +6902,15 @@ function RegisterScreen() {
   const handle = async (e) => {
     e.preventDefault(); setError("");
     if (!email.toLowerCase().endsWith("@two.travel")) { setError("Solo emails @two.travel"); return; }
+    if (!name.trim()) { setError("Ingresa tu nombre"); return; }
     if (pin.length < 4) { setError("PIN mínimo 4 dígitos"); return; }
     if (pin !== pin2)   { setError("Los PINs no coinciden"); return; }
     setLoading(true);
     const normalEmail = email.toLowerCase().trim();
     const { error: existErr } = await supabase.from("panel_users").select("email").eq("email", normalEmail).single();
     if (!existErr) { setLoading(false); setError("Este email ya está registrado"); return; }
-    const { error } = await supabase.from("panel_users").insert({ email: normalEmail, data: { name: "", pin, role: "pending", active: "false" } });
+    const fullName = [name.trim(), lastName.trim()].filter(Boolean).join(" ");
+    const { error } = await supabase.from("panel_users").insert({ email: normalEmail, data: { name: name.trim(), lastName: lastName.trim(), fullName, pin, role: "pending", active: "false" } });
     setLoading(false);
     if (error) { setError(error.message || "Error al registrar"); return; }
     setDone(true);
@@ -6919,8 +6932,14 @@ function RegisterScreen() {
           </div>
         ) : (
           <form onSubmit={handle} style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div style={{display:"flex",gap:8}}>
+              <input value={name} onChange={e=>{setName(e.target.value);setError("");}}
+                placeholder="Nombre *" autoFocus style={{...inp,flex:1}} />
+              <input value={lastName} onChange={e=>{setLastName(e.target.value);setError("");}}
+                placeholder="Apellido" style={{...inp,flex:1}} />
+            </div>
             <input type="email" value={email} onChange={e=>{setEmail(e.target.value);setError("");}}
-              placeholder="tu@two.travel" autoFocus style={inp} />
+              placeholder="tu@two.travel" style={inp} />
             <input type="password" inputMode="numeric" maxLength={8} value={pin}
               onChange={e=>{setPin(e.target.value);setError("");}}
               placeholder="Elige un PIN" style={{...inp,textAlign:"center",letterSpacing:".3em",fontSize:18}} />
@@ -6928,8 +6947,8 @@ function RegisterScreen() {
               onChange={e=>{setPin2(e.target.value);setError("");}}
               placeholder="Confirma el PIN" style={{...inp,textAlign:"center",letterSpacing:".3em",fontSize:18}} />
             {error && <p style={{color:"#e05c5c",fontSize:12,margin:0}}>{error}</p>}
-            <button type="submit" disabled={loading||!email||!pin||!pin2}
-              style={{background:"#1a1814",color:"#fff",border:"none",borderRadius:10,padding:"13px",fontSize:13,cursor:"pointer",opacity:(!email||!pin||!pin2)?0.5:1}}>
+            <button type="submit" disabled={loading||!email||!name||!pin||!pin2}
+              style={{background:"#1a1814",color:"#fff",border:"none",borderRadius:10,padding:"13px",fontSize:13,cursor:"pointer",opacity:(!email||!name||!pin||!pin2)?0.5:1}}>
               {loading ? "Enviando…" : "Solicitar acceso"}
             </button>
             <a href="/?mode=dashboard" style={{fontSize:11,color:"#9ca3af"}}>Ya tengo cuenta → entrar</a>
@@ -7236,7 +7255,24 @@ function UserManagement({ currentUser, onBack }) {
                 )}
                 {users.map((u, i) => (
                   <tr key={u.email} style={{background:i%2===0?"#fff":"#fafafa",opacity:u.active==="false"||u.active===false?0.45:1}}>
-                    <td style={{padding:"10px 16px",fontSize:13,fontWeight:500,color:"#111"}}>{u.fullName || [u.name, u.lastName].filter(Boolean).join(" ") || u.name || <span style={{color:"#9ca3af",fontStyle:"italic"}}>{u.email}</span>}</td>
+                    <td style={{padding:"10px 16px",fontSize:13}}>
+                      <input
+                        defaultValue={u.fullName || [u.name, u.lastName].filter(Boolean).join(" ") || u.name || ""}
+                        placeholder={u.email}
+                        onBlur={e => {
+                          const v = e.target.value.trim();
+                          if (v !== (u.fullName || [u.name, u.lastName].filter(Boolean).join(" ") || u.name || "")) {
+                            const parts = v.split(" ");
+                            const fn = parts.slice(0, 1).join(" ");
+                            const ln = parts.slice(1).join(" ");
+                            update(u.email, "name", fn);
+                            if (ln) update(u.email, "lastName", ln);
+                            update(u.email, "fullName", v);
+                          }
+                        }}
+                        style={{border:"none",background:"transparent",fontWeight:500,color:u.fullName||u.name?"#111":"#9ca3af",fontSize:13,width:"100%",fontFamily:"inherit",fontStyle:u.fullName||u.name?"normal":"italic"}}
+                      />
+                    </td>
                     <td style={{padding:"10px 16px",fontSize:12,color:"#6b7280"}}>{u.email}</td>
                     <td style={{padding:"10px 16px"}}>
                       <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>

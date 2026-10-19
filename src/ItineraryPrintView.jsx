@@ -700,12 +700,22 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
   return orderedLabels.map(label => {
     const dm = metaList.find(d => cl(d.label) === label);
     // sortOrder is the primary key (manual order set in the canvas / edit mode).
-    // Time is only a tiebreaker when two items share the same sortOrder.
+    // Time is a tiebreaker when two items share the same sortOrder.
+    // Category is a final tiebreaker: transportation (arrive/depart) before services (check-in/out).
+    const catPriority = item => {
+      const cat = String((item.isBlock ? item.cartItem?.category : item.category) || "").toLowerCase();
+      if (cat.includes("transport")) return 0;
+      if (cat.includes("service"))   return 2;
+      return 1;
+    };
     const items = (map.get(label) || []).sort((a, b) => {
       if (a.sort !== b.sort) return a.sort - b.sort;
       const rawA = a.time || (a.isBlock ? cl(a.cartItem?.timeLabel || a.cartItem?.time || "") : "");
       const rawB = b.time || (b.isBlock ? cl(b.cartItem?.timeLabel || b.cartItem?.time || "") : "");
-      return parseTime(rawA) - parseTime(rawB);
+      const tA = parseTime(rawA);
+      const tB = parseTime(rawB);
+      if (tA !== tB) return tA - tB;
+      return catPriority(a) - catPriority(b);
     });
     // Day band shows label; subtitle shows the descriptive title if set
     return { label, title: dm?.title || "", date: dm?.date || "", items };
