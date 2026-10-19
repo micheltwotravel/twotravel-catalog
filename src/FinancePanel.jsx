@@ -867,7 +867,7 @@ function ReservationsCalendar({ rows }) {
                           zIndex:1,cursor:"default",
                           boxSizing:"border-box",
                         }}>
-                        {ev.name||"?"}
+                        {ev.name || ev.property || "?"}
                       </div>
                     );
                   })}
@@ -901,7 +901,7 @@ function ReservationsCalendar({ rows }) {
                     </td>
                     <td style={{padding:"8px 12px",fontWeight:600,color:DARK}}>
                       <span style={{display:"inline-flex",alignItems:"center",gap:6}}>
-                        {r.name||"—"}
+                        {r.name || r.property || "—"}
                         {r.needsReview && <span style={{fontSize:9,fontWeight:700,letterSpacing:".06em",background:"#fef3c7",color:"#92400e",border:"1px solid #fcd34d",padding:"1px 6px",borderRadius:10,flexShrink:0}}>HS NUEVO</span>}
                       </span>
                     </td>
@@ -972,7 +972,7 @@ function ReservationsCalendar({ rows }) {
                 <div key={ri} style={{display:"flex",alignItems:"center",marginBottom:3,minHeight:26}}>
                   <div style={{width:200,flexShrink:0,fontSize:11,fontWeight:600,color:DARK,
                     overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:10}}>
-                    {r.name||"—"}
+                    {r.name || r.property || "—"}
                     {r.type && <span style={{fontSize:9,fontWeight:700,marginLeft:5,padding:"1px 5px",
                       borderRadius:10,background:tc.bg,color:tc.text,border:`1px solid ${tc.border}`}}>{r.type}</span>}
                   </div>
