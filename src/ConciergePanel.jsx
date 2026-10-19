@@ -5191,15 +5191,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     if (assignedConcierges.length === 0) return;
     const concierges = assignedConcierges.map(n => CONCIERGE_LIST.find(c => c.name === n)).filter(Boolean);
     if (concierges.length === 0) return;
-    const cities = [...new Set(concierges.map(c => c.city).filter(Boolean))];
-    const hasColombia = cities.some(c => /CTG|MDE/.test(c));
-    const hasMexico   = cities.some(c => /CDMX/.test(c));
-    if (hasColombia && hasMexico) {
-      setConciergeTitle("Senior Concierge Colombia & Mexico");
-    } else {
-      const unique = [...new Set(concierges.map(c => c.title).filter(Boolean))];
-      setConciergeTitle(unique.join(" & "));
-    }
+    const unique = [...new Set(concierges.map(c => c.title).filter(Boolean))];
+    setConciergeTitle(unique.join(" & "));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignedConcierges]);
 
@@ -6322,17 +6315,14 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             </div>
           </DrawerSection>
 
-          {/* ── LLEGADAS Y SALIDAS DEL GRUPO ─────────────────────────────── */}
-          {/* ── Notas internas — siempre visible, lo primero ── */}
-          <div>
-            <label className="text-[11px] text-neutral-500">📝 Notas internas</label>
+          <DrawerSection title="📝 Notas internas" accent="neutral">
             <textarea
               value={internalNotes}
               onChange={(e) => setInternalNotes(e.target.value)}
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm min-h-[90px]"
+              className="w-full border rounded-lg px-3 py-2 text-sm min-h-[90px]"
               placeholder="Notas extra para el equipo…"
             />
-          </div>
+          </DrawerSection>
 
 
 
