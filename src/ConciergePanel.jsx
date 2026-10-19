@@ -478,7 +478,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
   doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(40,40,40);
   dt(lang === "es" ? "Guia de Bienvenida Two Travel:" : "Two Travel Welcome Guide:", ML, y); y += 11;
   doc.setFont("helvetica","normal"); doc.setTextColor(30,100,200);
-  dtLink("twotravelvip.com/welcome-guide.pdf", ML, y, "https://twotravelvip.com/welcome-guide.pdf");
+  dtLink("Two Travel Welcome Guide", ML, y, "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=sharing");
   y += 18;
 
   // Cover footer
@@ -955,8 +955,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       action: "sendBillingToSlack",
       payload: { pdfBase64, pdfSize, filename,
         comment: lang === "es"
-          ? `📋 Guía de Bienvenida Two Travel: https://twotravelvip.com/welcome-guide.pdf`
-          : `📋 Two Travel Welcome Guide: https://twotravelvip.com/welcome-guide.pdf`,
+          ? `📋 Guía de Bienvenida Two Travel: https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=sharing`
+          : `📋 Two Travel Welcome Guide: https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=sharing`,
         slackToken: SLACK_BOT_TOKEN, channelId: SLACK_CHANNEL_ID },
     }),
   });
