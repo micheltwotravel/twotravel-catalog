@@ -2277,6 +2277,14 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
                 </button>
               ))}
             </div>
+            {/* RECOMENDACIONES */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Reco.</span>
+              <button type="button" onClick={() => onAddPreset?.("recommendations")}
+                className="text-xs text-emerald-700 hover:text-emerald-900 border border-emerald-200 hover:border-emerald-400 rounded-lg px-2.5 py-1 bg-emerald-50 transition-colors">
+                📍 Recomendaciones
+              </button>
+            </div>
             {/* AGREGAR */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Agregar</span>
@@ -2957,6 +2965,33 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
           timeLabel: "11:00 AM",
           description_es: "Día de beach club. Les daremos todos los detalles de acceso, horarios y servicios disponibles.",
           description_en: "Beach club day. We will provide all the details on access, hours, and available services.",
+        };
+      })(),
+      recommendations: (() => {
+        const cityRaw = (kickoff?.city || "").toLowerCase();
+        const isCtg  = cityRaw.includes("ctg") || cityRaw.includes("cartagena");
+        const isMde  = cityRaw.includes("mde") || cityRaw.includes("medell");
+        const isCdmx = cityRaw.includes("cdmx") || cityRaw.includes("mexico") || cityRaw.includes("méx");
+        const cityNameEn = isCtg ? "Cartagena" : isMde ? "Medellín" : isCdmx ? "Mexico City" : (kickoff?.city || "your destination");
+        const cityNameEs = isCtg ? "Cartagena" : isMde ? "Medellín" : isCdmx ? "Ciudad de México" : (kickoff?.city || "tu destino");
+        const descEn = isCtg
+          ? `☕ **Coffee & Bakeries**\nCafe San Alberto, Libertario, Epoca Cafe Bar, La Manchuria, Ely\n\n🥞 **Brunch**\nAl Alma, Ely Centro Histórico, Epoca Cafe Bar\n\n🍽️ **Lunch**\nPezetarian, Kona, Buena Vida Marisquería\n\n🌅 **Rooftops**\nTownhouse Cartagena, Apogeo, Buena Vida, Mirador\n\n🛍️ **Shopping**\nLa Serrezuela Mall · Walled City boutiques: Soloio, Agua de Leon, St Dom\n\n📍 **Places to Visit**\nPlaza Santo Domingo, Plaza de Bolívar, Museo del Oro Zenú, San Pedro Claver Church`
+          : isMde
+          ? `☕ **Coffee**\nCafé Velvet, Pergamino, Azahar\n\n🍽️ **Lunch**\nEl Cielo, Carmen, Santō\n\n🌅 **Rooftops & Bars**\nBarrio Colombia, Botánica\n\n📍 **Places to Visit**\nEl Poblado, Laureles, Jardín Botánico, Plaza Botero`
+          : `☕ **Coffee**\nCafé Nin, Quentin Bakery\n\n🍽️ **Lunch**\nLimosneros, Contramar, Quintonil\n\n🌅 **Bars & Nightlife**\nParlamento, Bar Oriente, Roma Norte\n\n📍 **Places to Visit**\nCondesa, Roma Norte, Coyoacán, Zócalo`;
+        const descEs = isCtg
+          ? `☕ **Cafés y Panaderías**\nCafe San Alberto, Libertario, Epoca Cafe Bar, La Manchuria, Ely\n\n🥞 **Brunch**\nAl Alma, Ely Centro Histórico, Epoca Cafe Bar\n\n🍽️ **Almuerzo**\nPezetarian, Kona, Buena Vida Marisquería\n\n🌅 **Rooftops**\nTownhouse Cartagena, Apogeo, Buena Vida, Mirador\n\n🛍️ **Compras**\nCentro Comercial La Serrezuela · Boutiques Ciudad Amurallada: Soloio, Agua de León, St Dom\n\n📍 **Lugares para Visitar**\nPlaza Santo Domingo, Plaza de Bolívar, Museo del Oro Zenú, Iglesia de San Pedro Claver`
+          : isMde
+          ? `☕ **Café**\nCafé Velvet, Pergamino, Azahar\n\n🍽️ **Almuerzo**\nEl Cielo, Carmen, Santō\n\n🌅 **Rooftops y Bares**\nBarrio Colombia, Botánica\n\n📍 **Lugares para Visitar**\nEl Poblado, Laureles, Jardín Botánico, Plaza Botero`
+          : `☕ **Café**\nCafé Nin, Quentin Bakery\n\n🍽️ **Almuerzo**\nLimosneros, Contramar, Quintonil\n\n🌅 **Bares y Vida Nocturna**\nParlamento, Bar Oriente, Roma Norte\n\n📍 **Lugares para Visitar**\nCondesa, Roma Norte, Coyoacán, Zócalo`;
+        return {
+          name: `Recomendaciones — ${cityNameEs}`,
+          name_en: `Recommendations — ${cityNameEn}`,
+          name_es: `Recomendaciones — ${cityNameEs}`,
+          category: "recommendations",
+          timeLabel: "",
+          description_es: descEs,
+          description_en: descEn,
         };
       })(),
     };
@@ -5377,7 +5412,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   return (
     <>
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
-      <div className={`h-full bg-white shadow-xl flex ${pdfPreviewUrl ? "w-full flex-row" : "w-full max-w-2xl flex-col"}`}>
+      <div className={`h-full bg-white shadow-xl flex ${pdfPreviewUrl ? "w-full flex-row" : "w-full max-w-4xl flex-col"}`}>
 
         {/* PDF split panel — shown on the left when preview is open */}
         {pdfPreviewUrl && (

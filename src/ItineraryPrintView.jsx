@@ -1824,7 +1824,7 @@ function BoatDetailCard({ it, lang, editMode, onRemove, patchItem }) {
           display:"grid",
           gridTemplateColumns: photos.length === 1 ? "1fr" : "2fr 1fr",
           gridTemplateRows: photos.length >= 3 ? "1fr 1fr" : "1fr",
-          gap:3, height:260, overflow:"hidden", background:"#e8e8e8", flexShrink:0,
+          gap:3, aspectRatio:"16/7", overflow:"hidden", background:"#e8e8e8", flexShrink:0,
         }}>
           <img src={photos[0]} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center", display:"block",
             gridRow: photos.length >= 3 ? "1 / 3" : "1", gridColumn:"1" }}
