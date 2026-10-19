@@ -867,7 +867,7 @@ function ReservationsCalendar({ rows }) {
                           zIndex:1,cursor:"default",
                           boxSizing:"border-box",
                         }}>
-                        {isStart?(ev.name||"?"):""}
+                        {ev.name||"?"}
                       </div>
                     );
                   })}
