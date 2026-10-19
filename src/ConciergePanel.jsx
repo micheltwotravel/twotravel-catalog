@@ -5474,7 +5474,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   return (
     <>
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
-      <div className={`h-full bg-white shadow-xl flex ${pdfPreviewUrl ? "w-full flex-row" : "w-full max-w-4xl flex-col"}`}>
+      <div className={`h-full bg-white shadow-xl flex ${pdfPreviewUrl ? "w-full flex-row" : "w-full max-w-5xl flex-col"}`}>
 
         {/* PDF split panel — shown on the left when preview is open */}
         {pdfPreviewUrl && (
@@ -6412,8 +6412,50 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             ))}
           </DrawerSection>}
 
-          {/* ── KPIs: reseñas + facturación ─────────────────────────────── */}
-          {/* Check-in Responses hidden */}
+          {/* ── Recomendaciones por ciudad ─────────────────────────────── */}
+          {(() => {
+            const cityRaw = (city || kickoff?.city || "").toLowerCase();
+            const isCtg  = cityRaw.includes("ctg") || cityRaw.includes("cartagena");
+            const isMde  = cityRaw.includes("mde") || cityRaw.includes("medell");
+            const isCdmx = cityRaw.includes("cdmx") || cityRaw.includes("mexico") || cityRaw.includes("méx");
+            if (!isCtg && !isMde && !isCdmx) return null;
+            const cityLabel = isCtg ? "Cartagena" : isMde ? "Medellín" : "Ciudad de México";
+            const recs = isCtg ? [
+              { cat: "☕ Café & Brunch",      items: ["Cafe San Alberto", "Libertario", "Epoca Cafe Bar", "La Manchuria", "Ely", "Al Alma"] },
+              { cat: "🍽️ Almuerzo",          items: ["Pezetarian", "Kona", "Buena Vida Marisquería"] },
+              { cat: "🌅 Rooftops & Bars",   items: ["Townhouse Cartagena", "Apogeo", "Buena Vida Rooftop", "Mirador"] },
+              { cat: "🛍️ Compras",           items: ["La Serrezuela Mall", "Soloio", "Agua de León", "St Dom"] },
+              { cat: "📍 Lugares para visitar", items: ["Plaza Santo Domingo", "Plaza de Bolívar", "Museo del Oro Zenú", "San Pedro Claver"] },
+            ] : isMde ? [
+              { cat: "☕ Café",              items: ["Café Velvet", "Pergamino", "Azahar"] },
+              { cat: "🍽️ Almuerzo",          items: ["El Cielo", "Carmen", "Santō"] },
+              { cat: "🌅 Rooftops & Bares",  items: ["Barrio Colombia", "Botánica"] },
+              { cat: "📍 Lugares para visitar", items: ["El Poblado", "Laureles", "Jardín Botánico", "Plaza Botero"] },
+            ] : [
+              { cat: "☕ Café",              items: ["Café Nin", "Quentin Bakery"] },
+              { cat: "🍽️ Almuerzo/Cena",    items: ["Limosneros", "Contramar", "Quintonil"] },
+              { cat: "🌅 Bares & Nightlife", items: ["Parlamento", "Bar Oriente"] },
+              { cat: "📍 Colonias",          items: ["Condesa", "Roma Norte", "Coyoacán", "Zócalo"] },
+            ];
+            return (
+              <DrawerSection title={`📍 Recomendaciones — ${cityLabel}`} accent="neutral">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {recs.map(({ cat, items }) => (
+                    <div key={cat} className="bg-neutral-50 border border-neutral-200 rounded-xl p-3">
+                      <div className="text-[11px] font-semibold text-neutral-700 mb-1.5">{cat}</div>
+                      <ul className="space-y-0.5">
+                        {items.map(name => (
+                          <li key={name} className="text-[12px] text-neutral-600 flex items-center gap-1">
+                            <span className="text-neutral-300">·</span> {name}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </DrawerSection>
+            );
+          })()}
         </div>
 
 
@@ -8072,6 +8114,44 @@ const BREAKFAST_ADMIN = [
   ]},
 ];
 
+function SortableMenuDefaultItem({ id, item, isHidden, isDrink, currentImg, currentPrice, currentName, onPatch, onHide, onRestore, driveImgUrl }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <div ref={setNodeRef} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: isHidden ? "#fef2f2" : "#fafafa", borderRadius: 10, padding: "12px 14px", border: `1px solid ${isHidden ? "#fecaca" : "#f0f0f0"}`, opacity: isHidden ? 0.65 : isDragging ? 0.5 : 1, transform: CSS.Transform.toString(transform), transition }}>
+      <button {...attributes} {...listeners} title="Arrastrar para reordenar" style={{ flexShrink: 0, cursor: "grab", background: "none", border: "none", fontSize: 16, color: "#d1d5db", padding: "4px 0", marginTop: 2 }}>⠿</button>
+      <div style={{ width: 64, height: 64, flexShrink: 0, borderRadius: 8, overflow: "hidden", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>
+        {currentImg && !isHidden ? <img src={driveImgUrl(currentImg)} alt={currentName} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.display = "none"; e.target.nextSibling && (e.target.nextSibling.style.display = "inline"); }} /> : null}
+        <span style={{ display: (!currentImg || isHidden) ? "inline" : "none" }}>{item.emoji || "🍽️"}</span>
+      </div>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+        {!isHidden ? (
+          <input value={currentName} onChange={e => onPatch(item.name, "nameOverride", e.target.value)}
+            style={{ fontSize: 13, fontWeight: 600, color: "#111", border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 7px", background: "#fff", width: "100%", boxSizing: "border-box" }} />
+        ) : (
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#111", textDecoration: "line-through" }}>{currentName}</div>
+        )}
+        {item.name_en && item.name_en !== item.name && <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_en}</div>}
+        {item.name_es && <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_es}</div>}
+        {!isHidden && (<>
+          <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>URL de foto</label>
+          <input value={currentImg} onChange={e => onPatch(item.name, "img", e.target.value)} placeholder="https://…" style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }} />
+          {isDrink && (<>
+            <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Precio (COP)</label>
+            <input type="number" value={currentPrice || ""} onChange={e => onPatch(item.name, "priceCOP", parseInt(e.target.value) || 0)} placeholder="0" style={{ width: 160, border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }} />
+          </>)}
+        </>)}
+        {isHidden && <div style={{ fontSize: 11, color: "#dc2626", fontWeight: 500 }}>Eliminado del menú</div>}
+      </div>
+      <button
+        onClick={() => isHidden ? onRestore() : onHide()}
+        title={isHidden ? "Restaurar item" : "Eliminar del menú"}
+        style={{ flexShrink: 0, padding: "4px 8px", borderRadius: 6, border: `1px solid ${isHidden ? "#86efac" : "#fca5a5"}`, background: isHidden ? "#f0fdf4" : "#fff5f5", color: isHidden ? "#16a34a" : "#dc2626", fontSize: 12, cursor: "pointer", fontWeight: 600, marginTop: 2 }}>
+        {isHidden ? "↩ Restaurar" : "✕ Eliminar"}
+      </button>
+    </div>
+  );
+}
+
 function SortableMenuExtraItem({ id, item, catId, idx, isDrink, onUpdate, onRemove, driveImgUrl }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
@@ -8154,6 +8234,15 @@ export function MenuAdminPanel() {
     setOverrides(prev => ({
       ...prev,
       [key]: arrayMove(prev[key] || [], oldIdx, newIdx),
+    }));
+    setSaved(false);
+  };
+
+  const reorderDefaultItems = (catId, items, oldIdx, newIdx) => {
+    const currentOrder = overrides[`_order__${catId}`] || items.map(i => i.name);
+    setOverrides(prev => ({
+      ...prev,
+      [`_order__${catId}`]: arrayMove(currentOrder, oldIdx, newIdx),
     }));
     setSaved(false);
   };
@@ -8366,47 +8455,60 @@ export function MenuAdminPanel() {
           /* Drinks / Grocery editor */
           <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
             {/* Built-in items */}
-            {(cat?.items || []).map(item => {
-              const hiddenList = overrides[`_hidden__${cat.id}`] || [];
-              const isHidden = hiddenList.includes(item.name);
-              const ov = overrides[item.name] || {};
-              const currentImg   = ov.img          !== undefined ? ov.img          : item.img;
-              const currentPrice = ov.priceCOP     !== undefined ? ov.priceCOP     : item.priceCOP;
-              const currentName  = ov.nameOverride !== undefined ? ov.nameOverride  : item.name;
+            {(() => {
+              const defaultItems = cat?.items || [];
+              const customOrder = overrides[`_order__${cat?.id}`];
+              const sortedItems = customOrder
+                ? [...defaultItems].sort((a, b) => {
+                    const ai = customOrder.indexOf(a.name);
+                    const bi = customOrder.indexOf(b.name);
+                    if (ai === -1 && bi === -1) return 0;
+                    if (ai === -1) return 1;
+                    if (bi === -1) return -1;
+                    return ai - bi;
+                  })
+                : defaultItems;
+              const defaultIds = sortedItems.map(i => `def-${cat?.id}-${i.name}`);
               return (
-                <div key={item.name} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: isHidden ? "#fef2f2" : "#fafafa", borderRadius: 10, padding: "12px 14px", border: `1px solid ${isHidden ? "#fecaca" : "#f0f0f0"}`, opacity: isHidden ? 0.65 : 1 }}>
-                  <div style={{ width: 64, height: 64, flexShrink: 0, borderRadius: 8, overflow: "hidden", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>
-                    {currentImg && !isHidden ? <img src={driveImgUrl(currentImg)} alt={currentName} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.display = "none"; e.target.nextSibling && (e.target.nextSibling.style.display = "inline"); }} /> : null}
-                    <span style={{ display: (!currentImg || isHidden) ? "inline" : "none" }}>{item.emoji || "🍽️"}</span>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                    {!isHidden ? (
-                      <input value={currentName} onChange={e => patch(item.name, "nameOverride", e.target.value)}
-                        style={{ fontSize: 13, fontWeight: 600, color: "#111", border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 7px", background: "#fff", width: "100%", boxSizing: "border-box" }} />
-                    ) : (
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "#111", textDecoration: "line-through" }}>{currentName}</div>
-                    )}
-                    {item.name_en && item.name_en !== item.name && <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_en}</div>}
-                    {item.name_es && <div style={{ fontSize: 11, color: "#9ca3af" }}>{item.name_es}</div>}
-                    {!isHidden && (<>
-                      <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>URL de foto</label>
-                      <input value={currentImg} onChange={e => patch(item.name, "img", e.target.value)} placeholder="https://…" style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }} />
-                      {isDrink && (<>
-                        <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Precio (COP)</label>
-                        <input type="number" value={currentPrice || ""} onChange={e => patch(item.name, "priceCOP", parseInt(e.target.value) || 0)} placeholder="0" style={{ width: 160, border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }} />
-                      </>)}
-                    </>)}
-                    {isHidden && <div style={{ fontSize: 11, color: "#dc2626", fontWeight: 500 }}>Eliminado del menú</div>}
-                  </div>
-                  <button
-                    onClick={() => isHidden ? restoreDefaultItem(cat.id, item.name) : hideDefaultItem(cat.id, item.name)}
-                    title={isHidden ? "Restaurar item" : "Eliminar del menú"}
-                    style={{ flexShrink: 0, padding: "4px 8px", borderRadius: 6, border: `1px solid ${isHidden ? "#86efac" : "#fca5a5"}`, background: isHidden ? "#f0fdf4" : "#fff5f5", color: isHidden ? "#16a34a" : "#dc2626", fontSize: 12, cursor: "pointer", fontWeight: 600, marginTop: 2 }}>
-                    {isHidden ? "↩ Restaurar" : "✕ Eliminar"}
-                  </button>
-                </div>
+                <DndContext
+                  sensors={menuExtraSensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={({ active, over }) => {
+                    if (!over || active.id === over.id) return;
+                    const oldIdx = defaultIds.indexOf(active.id);
+                    const newIdx = defaultIds.indexOf(over.id);
+                    if (oldIdx !== -1 && newIdx !== -1) reorderDefaultItems(cat.id, sortedItems, oldIdx, newIdx);
+                  }}
+                >
+                  <SortableContext items={defaultIds} strategy={verticalListSortingStrategy}>
+                    {sortedItems.map((item, idx) => {
+                      const hiddenList = overrides[`_hidden__${cat.id}`] || [];
+                      const isHidden = hiddenList.includes(item.name);
+                      const ov = overrides[item.name] || {};
+                      const currentImg   = ov.img          !== undefined ? ov.img          : item.img;
+                      const currentPrice = ov.priceCOP     !== undefined ? ov.priceCOP     : item.priceCOP;
+                      const currentName  = ov.nameOverride !== undefined ? ov.nameOverride  : item.name;
+                      return (
+                        <SortableMenuDefaultItem
+                          key={defaultIds[idx]}
+                          id={defaultIds[idx]}
+                          item={item}
+                          isHidden={isHidden}
+                          isDrink={isDrink}
+                          currentImg={currentImg}
+                          currentPrice={currentPrice}
+                          currentName={currentName}
+                          onPatch={patch}
+                          onHide={() => hideDefaultItem(cat.id, item.name)}
+                          onRestore={() => restoreDefaultItem(cat.id, item.name)}
+                          driveImgUrl={driveImgUrl}
+                        />
+                      );
+                    })}
+                  </SortableContext>
+                </DndContext>
               );
-            })}
+            })()}
 
             {/* Custom (added) items — editable inline, draggable to reorder */}
             {(overrides[`_extra__${cat?.id}`] || []).length > 0 && (() => {
@@ -8950,7 +9052,7 @@ const loadKickoffs = async (forceRefresh = false) => {
 
   const cp = {
     es: {
-      subtitle: "Información operativa de los clientes y edición de menús.",
+      subtitle: "Kickoffs, itinerarios, PDFs y catálogo de servicios",
       refresh: "Refrescar", refreshing: "Actualizando...",
       search: "Buscar por huésped, viaje, ID...",
       filterStatus: "Estado:", filterConcierge: "Concierge:",
@@ -8963,7 +9065,7 @@ const loadKickoffs = async (forceRefresh = false) => {
       linkCatalog: "Link catálogo", linkFeedback: "Link feedback",
     },
     en: {
-      subtitle: "Client operations, management and menu editor.",
+      subtitle: "Kickoffs, itineraries, PDFs and service catalog",
       refresh: "Refresh", refreshing: "Refreshing...",
       search: "Search by guest, trip, ID...",
       filterStatus: "Status:", filterConcierge: "Concierge:",
