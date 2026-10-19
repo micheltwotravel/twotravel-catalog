@@ -659,7 +659,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
         return all.map(driveImgUrl).filter(Boolean);
       })(),
       qbCode       : service.quickbooksCode || service.quickbooks_code || "",
-      category     : service.category   || "",
+      category     : service.category   || cartItem.category || "",
       familyFriendly: !!(service.family_friendly),
       dressCode    : cl(lang === "en"
         ? (cartItem.dressCode_en || service.dressCode_en || service.dress_code_en || "")
