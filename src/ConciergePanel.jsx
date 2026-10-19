@@ -1615,7 +1615,7 @@ function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availabl
         {/* Price */}
         <div className="col-span-3">
           {(() => {
-            const currency = item.priceInputCurrency || (item.priceUsd > 0 && !item.priceOverride_cop ? "USD" : "COP");
+            const currency = item.priceInputCurrency || (item.priceUsd > 0 && !item.priceOverride_cop && !(Number(item.price_cop) > 0) ? "USD" : "COP");
             const isUsd = currency === "USD";
             return (
               <>
@@ -2782,6 +2782,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
             category: s.category || "chef",
             timeLabel: "",
             image: s.image || "", menuUrl: s.menuUrl || "",
+            price_cop: s.price_cop || 0,
             description_es: s.description?.es || "", description_en: s.description?.en || "",
           }));
         }
@@ -2811,6 +2812,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
             category: "chef",
             timeLabel: "7:00 PM",
             image: s.image || "", menuUrl: s.menuUrl || "",
+            price_cop: s.price_cop || 0,
             description_es: s.description?.es || "", description_en: s.description?.en || "",
           }));
         }
@@ -2824,12 +2826,43 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
           description_en: sh?.description || sh?.description_en || "Private dinner prepared by a chef at the villa. Menu and timing are coordinated in advance.",
         };
       })(),
-      beachclub: {
-        name: "Beach Club", name_en: "Beach Club", category: "actividades",
-        timeLabel: "11:00 AM",
-        description_es: "Día de beach club. Les daremos todos los detalles de acceso, horarios y servicios disponibles.",
-        description_en: "Beach club day. We will provide all the details on access, hours, and available services.",
-      },
+      beachclub: (() => {
+        const isBeachClub = s => s.category === "beach-clubs";
+        const cityNorm = (kickoff?.city || "").toLowerCase();
+        let catalogItems = services.filter(isBeachClub);
+        // For Cartagena, prefer Islas del Rosario clubs
+        if (cityNorm.includes("cartagena")) {
+          const islas = catalogItems.filter(s =>
+            (s.name || "").toLowerCase().includes("rosario") ||
+            (s.name_en || "").toLowerCase().includes("rosario") ||
+            (s.location || "").toLowerCase().includes("rosario") ||
+            (s.location_es || "").toLowerCase().includes("rosario")
+          );
+          if (islas.length > 0) catalogItems = islas;
+        }
+        // Filter by city if set
+        if (cityNorm && catalogItems.length > 1) {
+          const byCty = catalogItems.filter(s => !s.city || s.city.includes(cityNorm) || cityNorm.includes(s.city));
+          if (byCty.length > 0) catalogItems = byCty;
+        }
+        if (catalogItems.length > 0) {
+          return catalogItems.map(s => ({
+            id: String(s.id || ""), sku: s.sku || "",
+            name: s.name || "Beach Club", name_en: s.name_en || s.name || "Beach Club",
+            category: "beach-clubs",
+            timeLabel: "11:00 AM",
+            image: s.image || "", menuUrl: s.menuUrl || "",
+            price_cop: s.price_cop || 0,
+            description_es: s.description?.es || "", description_en: s.description?.en || "",
+          }));
+        }
+        return {
+          name: "Beach Club", name_en: "Beach Club", category: "actividades",
+          timeLabel: "11:00 AM",
+          description_es: "Día de beach club. Les daremos todos los detalles de acceso, horarios y servicios disponibles.",
+          description_en: "Beach club day. We will provide all the details on access, hours, and available services.",
+        };
+      })(),
     };
     const p = presets[preset];
     if (!p) return;
