@@ -2906,8 +2906,8 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
         const catalogItems = services.filter(isFob);
         const fmt = n => new Intl.NumberFormat("es-CO").format(n);
         if (catalogItems.length > 0) {
-          const optEn = catalogItems.map(s => `• **${s.name_en || s.name}**${s.price_cop ? ` — ${fmt(s.price_cop)} COP per person` : ""}`).join("\n");
-          const optEs = catalogItems.map(s => `• **${s.name || s.name_en}**${s.price_cop ? ` — ${fmt(s.price_cop)} COP por persona` : ""}`).join("\n");
+          const optEn = catalogItems.map(s => `• ${s.name_en || s.name}${s.price_cop ? ` — ${fmt(s.price_cop)} COP per person` : ""}`).join("\n");
+          const optEs = catalogItems.map(s => `• ${s.name || s.name_en}${s.price_cop ? ` — ${fmt(s.price_cop)} COP por persona` : ""}`).join("\n");
           return {
             name: "Food on Board", name_en: "Food on Board", name_es: "Comida a bordo",
             category: "chef", timeLabel: "",
@@ -2933,8 +2933,8 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
         const catalogItems = services.filter(isChefDinner);
         const fmt = n => new Intl.NumberFormat("es-CO").format(n);
         if (catalogItems.length > 0) {
-          const optEn = catalogItems.map(s => `• **${s.name_en || s.name}**${s.price_cop ? ` — ${fmt(s.price_cop)} COP per person` : ""}`).join("\n");
-          const optEs = catalogItems.map(s => `• **${s.name || s.name_en}**${s.price_cop ? ` — ${fmt(s.price_cop)} COP por persona` : ""}`).join("\n");
+          const optEn = catalogItems.map(s => `• ${s.name_en || s.name}${s.price_cop ? ` — ${fmt(s.price_cop)} COP per person` : ""}`).join("\n");
+          const optEs = catalogItems.map(s => `• ${s.name || s.name_en}${s.price_cop ? ` — ${fmt(s.price_cop)} COP por persona` : ""}`).join("\n");
           return {
             name: "Chef Dinner", name_en: "Chef Dinner", name_es: "Cena con Chef",
             category: "chef", timeLabel: "7:00 PM",
@@ -2969,8 +2969,8 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
         }
         const fmt = n => new Intl.NumberFormat("es-CO").format(n);
         if (catalogItems.length > 0) {
-          const optEn = catalogItems.map(s => `• **${s.name_en || s.name}**${s.price_cop ? ` — ${fmt(s.price_cop)} COP per person` : ""}`).join("\n");
-          const optEs = catalogItems.map(s => `• **${s.name || s.name_en}**${s.price_cop ? ` — ${fmt(s.price_cop)} COP por persona` : ""}`).join("\n");
+          const optEn = catalogItems.map(s => `• ${s.name_en || s.name}${s.price_cop ? ` — ${fmt(s.price_cop)} COP per person` : ""}`).join("\n");
+          const optEs = catalogItems.map(s => `• ${s.name || s.name_en}${s.price_cop ? ` — ${fmt(s.price_cop)} COP por persona` : ""}`).join("\n");
           return {
             name: "Beach Club", name_en: "Beach Club", name_es: "Beach Club",
             category: "beach-clubs", timeLabel: "11:00 AM",
