@@ -675,6 +675,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       _boatData       : cartItem._boatData || null,
       notes           : cartItem.notes || "",
       passengers      : cartItem.passengers || "",
+      _subItems       : Array.isArray(cartItem.subItems) ? cartItem.subItems : null,
       _rawCartItem    : cartItem,
     });
   });
@@ -2374,6 +2375,25 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         {/* Description */}
         {it.description && (
           <Editable value={it.description} tag="p" className="ev-desc" editMode={editMode} onChange={v => patchItem?.("description", v)} multiline />
+        )}
+
+        {/* Sub-item buttons (Chef Dinner menus, Food on Board options) */}
+        {it._subItems?.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+            {it._subItems.map((sub, i) => {
+              const label = (isEs ? sub.nameEs : sub.name) || sub.name || "";
+              return sub.menuUrl ? (
+                <a key={i} href={sub.menuUrl} target="_blank" rel="noreferrer"
+                  style={{ fontSize: 11, color: "#1d4ed8", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 6, padding: "4px 10px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 500 }}>
+                  📄 {label}
+                </a>
+              ) : (
+                <span key={i} style={{ fontSize: 11, color: "#374151", background: "#f3f4f6", border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 10px" }}>
+                  {label}
+                </span>
+              );
+            })}
+          </div>
         )}
 
         {/* Highlights */}

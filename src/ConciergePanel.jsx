@@ -2913,6 +2913,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
             category: "chef", timeLabel: "",
             description_en: `Food service for your boat day. Please choose one option:\n\n${optEn}`,
             description_es: `Servicio de comida para tu día de bote. Por favor elige una opción:\n\n${optEs}`,
+            subItems: catalogItems.map(s => ({ name: s.name_en || s.name, nameEs: s.name || s.name_en, menuUrl: s.menuUrl || "", image: s.image || "" })),
           };
         }
         return {
@@ -2940,6 +2941,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
             category: "chef", timeLabel: "7:00 PM",
             description_en: `Private dinner prepared by a chef at the villa. Please choose one menu:\n\n${optEn}`,
             description_es: `Cena privada preparada por chef en la villa. Por favor elige un menú:\n\n${optEs}`,
+            subItems: catalogItems.map(s => ({ name: s.name_en || s.name, nameEs: s.name || s.name_en, menuUrl: s.menuUrl || "", image: s.image || "" })),
           };
         }
         return {
