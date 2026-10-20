@@ -2291,7 +2291,7 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
               <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Reco.</span>
               <button type="button" onClick={() => onAddPreset?.("recommendations")}
                 className="text-xs text-emerald-700 hover:text-emerald-900 border border-emerald-200 hover:border-emerald-400 rounded-lg px-2.5 py-1 bg-emerald-50 transition-colors">
-                📍 Recomendaciones
+                📍 Nota
               </button>
             </div>
             {/* AGREGAR */}
@@ -2739,7 +2739,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
         };
       })(),
       boatday: (() => {
-        const isBd = x => /boat/i.test(x?.name_en) || /bote/i.test(x?.name_es);
+        const isBd = x => /\bboat\s*(day|trip|tour)\b/i.test(x?.name_en) || /\b(día de bote|paseo en bote|bote)\b/i.test(x?.name_es);
         // services sheet (no-catalog) takes priority over catalog
         const s = allItineraryItemsRef.current.find(isBd) || itineraryItems.find(isBd);
         const svc = !s ? services.find(isBd) : null;
@@ -2874,9 +2874,9 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
         }
         // Always: airport transfer item
         items.push({
-          name: `Airport Transfer to ${airport.code || "Airport"}`,
-          name_en: `Airport Transfer to ${airport.code || "Airport"}`,
-          name_es: `Traslado al ${airport.code || "Aeropuerto"}`,
+          name: "Airport Transfer to the Villa",
+          name_en: "Airport Transfer to the Villa",
+          name_es: "Traslado al aeropuerto",
           category: "transportation", timeLabel: depTime,
           description_en: `Your transfer from the villa to **${airport.en}**${airport.code ? ` (${airport.code})` : ""} will be coordinated. Please confirm your flight time so we can schedule the pickup and ensure you arrive with enough time.\n\n**Transport options:**\n${vehicleOptions.en}\n\n_All vehicles include A/C and luggage. Services between 19:00–6:00 generate a 10% night fee._`,
           description_es: `Se coordinará el traslado desde la villa hasta el **${airport.es}**${airport.code ? ` (${airport.code})` : ""}. Avísanos la hora de tu vuelo para organizar la salida con suficiente tiempo.\n\n**Opciones de transporte:**\n${vehicleOptions.es}\n\n_Todos los vehículos incluyen A/C y equipaje. Servicios entre 19:00–6:00 generan un recargo nocturno del 10%._`,
@@ -4578,7 +4578,7 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
         {/* Header */}
         <div className="px-5 py-4 border-b flex items-center justify-between">
           <div>
-            <p className="text-[11px] text-neutral-500">Operaciones</p>
+            <p className="text-[11px] text-neutral-500">Logística</p>
             <p className="text-sm font-semibold text-neutral-900">{kickoff.tripName || kickoff.guestName}</p>
             <p className="text-[11px] text-neutral-500">{kickoff.city} · {kickoff.groupSize && `${kickoff.groupSize} pers.`}</p>
           </div>
@@ -6281,6 +6281,17 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   ))}
                 </div>
               </div>
+              <div className="col-span-2">
+                <label className="text-[11px] text-neutral-500 block mb-1">Precio junior concierge</label>
+                <div className="flex gap-0">
+                  <button type="button" onClick={() => setJuniorCurrency(c => c === "COP" ? "USD" : c === "USD" ? "MXN" : "COP")}
+                    className="px-2.5 py-2 rounded-l-lg border border-r-0 border-neutral-300 text-[11px] font-mono text-neutral-600 bg-neutral-50 hover:bg-neutral-100 shrink-0">
+                    {juniorCurrency}
+                  </button>
+                  <input value={juniorPrice} onChange={e => setJuniorPrice(e.target.value)} placeholder="0" inputMode="numeric"
+                    className="flex-1 border border-neutral-200 rounded-r-lg px-3 py-2 text-sm bg-white outline-none" />
+                </div>
+              </div>
             </div>
           </DrawerSection>
 
@@ -6478,7 +6489,23 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           {/* Itinerary: shareable link (PDF button removed — use the visual panel) */}
           {kickoff?.cart?.length > 0 && (() => {
             const clientUrl = `${CLIENT_BASE_URL}/?mode=itinerary&kickoffId=${kickoff.id}&lang=${lang || kickoff.lang || "en"}`;
-            return <CopyLinkButton url={clientUrl} />;
+            const first = (kickoff.guestName || "").split(" ")[0] || "";
+            const msgEs = `Hola${first ? ` ${first}` : ""}! 🌟\n\nAquí tienes el link de tu itinerario digital — puedes verlo desde tu teléfono y siempre estará actualizado:\n\n${clientUrl}\n\n¡Nos vemos pronto! ✨\n— Two Travel`;
+            const msgEn = `Hi${first ? ` ${first}` : ""}! 🌟\n\nHere's your digital itinerary link — you can view it from your phone and it's always up to date:\n\n${clientUrl}\n\nSee you soon! ✨\n— Two Travel`;
+            const svgWa = <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.523 5.845L0 24l6.335-1.493A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.368l-.36-.214-3.726.878.936-3.617-.235-.374A9.818 9.818 0 1112 21.818z"/></svg>;
+            return (
+              <div className="flex items-center gap-1.5">
+                <CopyLinkButton url={clientUrl} />
+                <a href={`https://wa.me/?text=${encodeURIComponent(msgEs)}`} target="_blank" rel="noreferrer" title="Enviar itinerario por WA (ES)"
+                  className="px-3 py-2 rounded-lg border border-green-300 text-sm text-green-700 bg-green-50 hover:bg-green-100 flex items-center gap-1.5">
+                  {svgWa} ES
+                </a>
+                <a href={`https://wa.me/?text=${encodeURIComponent(msgEn)}`} target="_blank" rel="noreferrer" title="Send itinerary via WA (EN)"
+                  className="px-3 py-2 rounded-lg border border-green-300 text-sm text-green-700 bg-green-50 hover:bg-green-100 flex items-center gap-1.5">
+                  {svgWa} EN
+                </a>
+              </div>
+            );
           })()}
           {/* WhatsApp — enviar PDF al cliente */}
           {(() => {
