@@ -460,11 +460,11 @@ export function FinanceTemplates() {
   const templates = [
     {
       icon:"📥", label:"Payana — Importar pagos",
-      desc:"CSV con el formato de columnas que requiere Payana para cargar órdenes de pago.",
+      desc:"CSV con el formato exacto de columnas que requiere Payana para cargar órdenes de pago.",
       action:()=>downloadCSV("payana-pagos.csv",
-        ["Fecha","Proveedor","NIT/RUT","Banco","No. Cuenta","Tipo Cuenta","Monto","Moneda","Concepto","Referencia"],
-        [[today,"Proveedor Ejemplo","900123456-1","Bancolombia","12345678901","Ahorros","500000","COP","Servicio "+mm,"REF-001"],
-         [today,"Otro Proveedor S.A.S","800987654-3","Davivienda","98765432101","Corriente","1200000","COP","Comisión tour","REF-002"]]
+        ["Nro. ID proveedor","Nombre proveedor","ID factura","Monto","Concepto","Fecha emisión","Fecha vencimiento","Etiqueta","Tipo ID proveedor","Tipo cuenta","Nro. cuenta","Nombre banco"],
+        [["900123456","Proveedor Ejemplo S.A.S","FAC-001","500000","Servicio turístico "+mm,today,"","","NIT","Cuenta de Ahorro","12345678901","BANCOLOMBIA"],
+         ["12345678","Otro Proveedor","FAC-002","1200000","Comisión tour "+mm,today,"","","CC","Cuenta de Ahorro","98765432101","DAVIVIENDA"]]
       ),
     },
     {
@@ -541,12 +541,12 @@ async function loadReservations() {
 }
 
 async function saveReservations(rows) {
-  const { data: existing, error: fetchErr } = await supabase.from("kickoffs").select("data").eq("id", "finance_reservations_v1").single();
+  const { data: existing, error: fetchErr } = await supabase.from("kickoffs").select("data").eq("id", "finance_reservations_v1").maybeSingle();
   if (fetchErr) throw new Error(fetchErr.message);
   const d = existing?.data || {};
   const notes = typeof d.internalNotes === "string" ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
   const merged = { ...d, internalNotes: JSON.stringify({ ...notes, reservations: rows }) };
-  const { error } = await supabase.from("kickoffs").update({ data: merged }).eq("id", "finance_reservations_v1");
+  const { error } = await supabase.from("kickoffs").upsert({ id: "finance_reservations_v1", data: merged }, { onConflict: "id" });
   if (error) throw new Error(error.message);
 }
 
@@ -1761,8 +1761,8 @@ export function FinancePagosProveedores() {
 
   function exportPayana() {
     const visible = filtered.filter(r=>r.status==="aprobada"||r.status==="pendiente");
-    const headers = ["Número proveedor","PROVEEDOR Nombre","PROVEEDOR Tipo ID","Monto","Moneda","Concepto","Fecha emisión","Fecha vencimiento","Tipo cuenta","Número cuenta","Banco","Category / Service","Client","Clase","Área","Prioridad","Solicitado por"];
-    const rowData = visible.map(r=>[r.provId||"",r.provNombre||"",r.provTipoId||"",r.amount||0,r.currency||"COP",(r.concepto||"").slice(0,40),r.lote||today,r.dueDate||"",r.tipoCuenta||"",r.numeroCuenta||"",r.banco||"",r.category||"",r.client||"",r.clase||"",r.area||"",r.priority||"",r.requestedBy||""]);
+    const headers = ["Nro. ID proveedor","Nombre proveedor","ID factura","Monto","Concepto","Fecha emisión","Fecha vencimiento","Etiqueta","Tipo ID proveedor","Tipo cuenta","Nro. cuenta","Nombre banco"];
+    const rowData = visible.map(r=>[r.provId||"",r.provNombre||"",(r.concepto||"").slice(0,40),r.amount||0,"",r.lote||today,r.dueDate||"","",r.provTipoId||"CC",r.tipoCuenta||"",r.numeroCuenta||"",r.banco||""]);
     downloadCSV(`payana-lote-${today}.csv`, headers, rowData);
     showToastMsg("✅ CSV Payana descargado");
   }

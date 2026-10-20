@@ -3075,9 +3075,10 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
 
     setGenerating(true);
     try {
-      // Read existing reservations from kickoffs table
-      const { data: existing } = await supabase
-        .from("kickoffs").select("data").eq("id", "finance_reservations_v1").single();
+      // Read existing reservations from kickoffs table (maybeSingle so missing row doesn't throw)
+      const { data: existing, error: readErr } = await supabase
+        .from("kickoffs").select("data").eq("id", "finance_reservations_v1").maybeSingle();
+      if (readErr) throw new Error(readErr.message);
       const d = existing?.data || {};
       const notes = typeof d.internalNotes === "string"
         ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
@@ -3114,8 +3115,9 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
         ...d,
         internalNotes: JSON.stringify({ ...notes, reservations: [newRow, ...rows] }),
       };
+      // upsert handles both "row exists" and "row missing" — update silently drops when row is absent
       const { error } = await supabase
-        .from("kickoffs").update({ data: merged }).eq("id", "finance_reservations_v1");
+        .from("kickoffs").upsert({ id: "finance_reservations_v1", data: merged }, { onConflict: "id" });
 
       if (error) throw new Error(error.message);
       alert(`✅ Reserva de ${guestName} creada en el Tablero de Reservas.`);
