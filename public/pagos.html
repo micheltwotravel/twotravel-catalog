@@ -948,7 +948,7 @@ function renderRow(p){
 
   const facturaCell = [
     p.stripeLink ? `<a href="${esc(p.stripeLink)}" target="_blank" style="font-size:10px;color:#635bff;text-decoration:none;white-space:nowrap;display:block" title="${esc(p.stripeLink)}">💳 Stripe</a>` : '',
-    p.factura    ? `<a href="${esc(p.factura)}"    target="_blank" style="font-size:10px;color:var(--gold);text-decoration:none;white-space:nowrap;display:block" title="${esc(p.factura)}">📄 PDF</a>` : '',
+    p.factura    ? `<span style="display:flex;align-items:center;gap:4px"><a href="${esc(p.factura)}" target="_blank" style="font-size:10px;color:var(--gold);text-decoration:none;white-space:nowrap" title="Ver PDF">📄 PDF</a><a href="${esc(p.factura)}" download target="_blank" style="font-size:10px;color:var(--ink3);text-decoration:none" title="Descargar PDF">⬇</a></span>` : '',
   ].filter(Boolean).join('') || `<span style="color:var(--border2);font-size:11px">—</span>`;
 
   const pdfLink = p.dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
