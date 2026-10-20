@@ -556,6 +556,16 @@ function monthLabel(ym) {
   return `${MONTH_NAMES[parseInt(m,10)-1]} ${y}`;
 }
 
+// Fixed option lists for Planner inline editing
+const CUSTOMER_TYPE_OPTS = ["B2C Sales","B2B Corporate","Wedding","Group","Repeat Client","Corporate","Referral","Agency","Direct","Other"];
+const DEAL_SOURCE_OPTS   = ["HubSpot","Panel","Referral","Website","Social Media","Direct","Agency","Organic","Word of Mouth"];
+
+function isoToPayana(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return d && m && y ? `${d}/${m}/${y}` : iso;
+}
+
 // Deterministic color per Customer Type string
 const TYPE_PALETTE = [
   { bg:"#dbeafe", border:"#60a5fa", text:"#1e40af" }, // blue
@@ -917,7 +927,7 @@ function ReservationsCalendar({ rows }) {
                     <td style={{padding:"8px 12px",color:MUT,whiteSpace:"nowrap"}}>{fmtDate(r.checkOut)}</td>
                     <td style={{padding:"8px 12px",color:MUT,textAlign:"center"}}>{nights(r.checkIn,r.checkOut)}</td>
                     <td style={{padding:"8px 12px",color:MUT}}>{r.property||"—"}</td>
-                    <td style={{padding:"8px 12px",color:MUT}}>{r.salesRep||"—"}</td>
+                    <td style={{padding:"8px 12px",color:MUT}}>{resolveSalesRep(r.salesRep)}</td>
                     <td style={{padding:"8px 12px"}}>
                       <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontWeight:600,
                         color:r.status==="Confirmed"?"#065f46":r.status==="Cancelled"?"#991b1b":"#92400e",
@@ -1208,22 +1218,23 @@ function ReservationsDashboard({ rows }) {
 }
 
 export function FinanceReservaciones() {
-  const [rows,     setRows]     = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [saving,   setSaving]   = useState(false);
-  const [saved,    setSaved]    = useState(false);   // shows ✓ briefly
-  const [isDirty,  setIsDirty]  = useState(false);
-  const [err,      setErr]      = useState("");
-  const [view,     setView]     = useState("tabla");
-  const [search,   setSearch]   = useState("");
-  const [typeF,    setTypeF]    = useState("all");
-  const [repF,     setRepF]     = useState("all");
-  const [statusF,  setStatusF]  = useState("all");
-  const [monthF,   setMonthF]   = useState("all");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo,   setDateTo]   = useState("");
-  const [sortCol,  setSortCol]  = useState("checkIn");
-  const [sortDir,  setSortDir]  = useState(1);
+  const [rows,       setRows]       = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [saving,     setSaving]     = useState(false);
+  const [saved,      setSaved]      = useState(false);
+  const [isDirty,    setIsDirty]    = useState(false);
+  const [err,        setErr]        = useState("");
+  const [view,       setView]       = useState("tabla");
+  const [search,     setSearch]     = useState("");
+  const [typeF,      setTypeF]      = useState("all");
+  const [repF,       setRepF]       = useState("all");
+  const [statusF,    setStatusF]    = useState("all");
+  const [monthF,     setMonthF]     = useState("all");
+  const [dateFrom,   setDateFrom]   = useState("");
+  const [dateTo,     setDateTo]     = useState("");
+  const [sortCol,    setSortCol]    = useState("checkIn");
+  const [sortDir,    setSortDir]    = useState(1);
+  const [ownerNames, setOwnerNames] = useState({});
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
 
@@ -1234,6 +1245,15 @@ export function FinanceReservaciones() {
     setLoading(false);
   }, []);
   useEffect(()=>{load();},[load]);
+
+  // Resolve HubSpot owner IDs → names
+  useEffect(() => {
+    fetch("/api/hubspot", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ action:"get_owners", data:{} }) })
+      .then(r=>r.json())
+      .then(d=>{ const m={}; (d.owners||[]).forEach(o=>{m[String(o.id)]=o.name;}); setOwnerNames(m); })
+      .catch(()=>{});
+  }, []);
 
   // Warn on tab close when there are unsaved changes
   useEffect(()=>{
@@ -1288,9 +1308,10 @@ export function FinanceReservaciones() {
   }, []);
 
   const repOpts    = [...new Set(rows.map(r=>r.salesRep).filter(Boolean))].sort();
-  const sourceOpts = [...new Set(rows.map(r=>r.dealSource).filter(Boolean))].sort();
-  const typeOpts   = [...new Set(rows.map(r=>r.type).filter(Boolean))].sort();
+  const sourceOpts = [...new Set([...DEAL_SOURCE_OPTS, ...rows.map(r=>r.dealSource).filter(Boolean)])].sort();
+  const typeOpts   = [...new Set([...CUSTOMER_TYPE_OPTS, ...rows.map(r=>r.type).filter(Boolean)])].sort();
   const cellOpts   = { salesRep:repOpts, dealSource:sourceOpts, type:typeOpts };
+  const resolveSalesRep = v => (v && ownerNames[String(v)]) ? ownerNames[String(v)] : (v||"—");
 
   const months = ["all",...[...new Set(rows.map(r=>r.checkIn?.slice(0,7)).filter(Boolean))].sort()];
 
@@ -1660,6 +1681,8 @@ export function FinancePagosProveedores() {
   const [fClase, setFClase]       = useState("");
   const [toast, setToast]         = useState("");
   const [uploadingId, setUploadingId] = useState(null);
+  const [showProvMgr, setShowProvMgr] = useState(false);
+  const [newProvForm, setNewProvForm] = useState({ provId:"", provNombre:"", provTipoId:"NIT", banco:"BANCOLOMBIA", tipoCuenta:"Cuenta de Ahorro", numeroCuenta:"" });
 
   useEffect(() => {
     Promise.all([loadSolicitudes(), loadProviderDB()])
@@ -1762,7 +1785,7 @@ export function FinancePagosProveedores() {
   function exportPayana() {
     const visible = filtered.filter(r=>r.status==="aprobada"||r.status==="pendiente");
     const headers = ["Nro. ID proveedor","Nombre proveedor","ID factura","Monto","Concepto","Fecha emisión","Fecha vencimiento","Etiqueta","Tipo ID proveedor","Tipo cuenta","Nro. cuenta","Nombre banco"];
-    const rowData = visible.map(r=>[r.provId||"",r.provNombre||"",(r.concepto||"").slice(0,40),r.amount||0,"",r.lote||today,r.dueDate||"","",r.provTipoId||"CC",r.tipoCuenta||"",r.numeroCuenta||"",r.banco||""]);
+    const rowData = visible.map(r=>[r.provId||"",r.provNombre||"",(r.concepto||"").slice(0,40),r.amount||0,"",isoToPayana(r.lote||today),isoToPayana(r.dueDate||""),"",r.provTipoId||"CC",r.tipoCuenta||"",r.numeroCuenta||"",r.banco||""]);
     downloadCSV(`payana-lote-${today}.csv`, headers, rowData);
     showToastMsg("✅ CSV Payana descargado");
   }
@@ -1829,6 +1852,7 @@ export function FinancePagosProveedores() {
             ))}
             <button onClick={exportPayana} style={{padding:"7px 14px",background:"#10b981",color:WHT,border:"none",borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",fontWeight:600}}>⬇ CSV Payana</button>
             <a href="/solicitud-pago.html" target="_blank" rel="noreferrer" style={{padding:"7px 14px",background:"#6366f1",color:WHT,border:"none",borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",fontWeight:600,textDecoration:"none"}}>🔗 Link solicitud</a>
+            <button onClick={()=>setShowProvMgr(true)} style={{padding:"7px 14px",background:"#475569",color:WHT,border:"none",borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",fontWeight:600}}>📋 Proveedores</button>
             <button onClick={openNew} style={{padding:"7px 14px",background:GOLD,color:WHT,border:"none",borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",fontWeight:600}}>+ Nueva Solicitud</button>
           </div>
 
@@ -1883,12 +1907,16 @@ export function FinancePagosProveedores() {
                                   {Object.entries(STATUS_PROV).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
                                 </select>
                               </td>
-                              <td style={{padding:"8px 10px",whiteSpace:"nowrap",textAlign:"center"}}>
+                              <td style={{padding:"8px 10px",whiteSpace:"nowrap",textAlign:"center",display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}>
+                                {r.invoiceUrl && (
+                                  <a href={r.invoiceUrl} target="_blank" rel="noreferrer"
+                                    style={{fontSize:15,textDecoration:"none"}} title="Ver factura / cuenta de cobro">📄</a>
+                                )}
                                 {r.soporteUrl ? (
                                   <a href={r.soporteUrl} target="_blank" rel="noreferrer"
-                                    style={{fontSize:16,textDecoration:"none",marginRight:2}} title="Ver soporte">📎</a>
+                                    style={{fontSize:15,textDecoration:"none"}} title="Ver certificación bancaria / soporte">📎</a>
                                 ) : (
-                                  <label title="Adjuntar soporte" style={{cursor:"pointer",fontSize:14,color:uploadingId===r.id?"#f59e0b":MUT}}>
+                                  <label title="Adjuntar soporte" style={{cursor:"pointer",fontSize:13,color:uploadingId===r.id?"#f59e0b":MUT}}>
                                     {uploadingId===r.id ? "⏳" : "📎+"}
                                     <input type="file" accept="image/*,application/pdf" style={{display:"none"}}
                                       onChange={e=>handleSoporteUpload(r.id, e.target.files[0])}/>
@@ -2037,6 +2065,109 @@ export function FinancePagosProveedores() {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* Provider Manager Modal */}
+          {showProvMgr && (
+            <div onClick={e=>{if(e.target===e.currentTarget)setShowProvMgr(false);}} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1010,padding:20}}>
+              <div style={{background:WHT,borderRadius:12,width:"100%",maxWidth:720,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}>
+                <div style={{padding:"16px 22px",borderBottom:`1px solid ${BRD}`,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,background:WHT,zIndex:1}}>
+                  <span style={{fontSize:15,fontWeight:700,color:DARK}}>📋 Base de Proveedores ({providers.length})</span>
+                  <button onClick={()=>setShowProvMgr(false)} style={{fontSize:22,background:"none",border:"none",cursor:"pointer",color:MUT}}>×</button>
+                </div>
+                <div style={{padding:"16px 22px"}}>
+                  {/* Add new provider form */}
+                  <div style={{background:BG,borderRadius:8,padding:"14px 16px",marginBottom:20,border:`1px solid ${BRD}`}}>
+                    <div style={{fontSize:12,fontWeight:700,color:DARK,marginBottom:10}}>+ Agregar Proveedor</div>
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
+                      <div style={{flex:"1 1 80px"}}>
+                        <div style={{fontSize:10,color:MUT,marginBottom:3}}>Tipo ID</div>
+                        <select value={newProvForm.provTipoId} onChange={e=>setNewProvForm(f=>({...f,provTipoId:e.target.value}))}
+                          style={{width:"100%",padding:"5px 7px",border:`1px solid ${BRD}`,borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif"}}>
+                          {TIPO_ID.map(t=><option key={t}>{t}</option>)}
+                        </select>
+                      </div>
+                      <div style={{flex:"1 1 120px"}}>
+                        <div style={{fontSize:10,color:MUT,marginBottom:3}}>Número ID</div>
+                        <input value={newProvForm.provId} onChange={e=>setNewProvForm(f=>({...f,provId:e.target.value}))}
+                          placeholder="890801748" style={{width:"100%",padding:"5px 7px",border:`1px solid ${BRD}`,borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}}/>
+                      </div>
+                      <div style={{flex:"2 1 180px"}}>
+                        <div style={{fontSize:10,color:MUT,marginBottom:3}}>Nombre Proveedor *</div>
+                        <input value={newProvForm.provNombre} onChange={e=>setNewProvForm(f=>({...f,provNombre:e.target.value}))}
+                          placeholder="MABE SERVICIOS S.A.S." style={{width:"100%",padding:"5px 7px",border:`1px solid ${BRD}`,borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}}/>
+                      </div>
+                      <div style={{flex:"1 1 130px"}}>
+                        <div style={{fontSize:10,color:MUT,marginBottom:3}}>Banco</div>
+                        <select value={newProvForm.banco} onChange={e=>setNewProvForm(f=>({...f,banco:e.target.value}))}
+                          style={{width:"100%",padding:"5px 7px",border:`1px solid ${BRD}`,borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif"}}>
+                          {BANCOS.map(b=><option key={b}>{b}</option>)}
+                        </select>
+                      </div>
+                      <div style={{flex:"1 1 130px"}}>
+                        <div style={{fontSize:10,color:MUT,marginBottom:3}}>Tipo Cuenta</div>
+                        <select value={newProvForm.tipoCuenta} onChange={e=>setNewProvForm(f=>({...f,tipoCuenta:e.target.value}))}
+                          style={{width:"100%",padding:"5px 7px",border:`1px solid ${BRD}`,borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif"}}>
+                          {TIPO_CTA.map(t=><option key={t}>{t}</option>)}
+                        </select>
+                      </div>
+                      <div style={{flex:"1 1 130px"}}>
+                        <div style={{fontSize:10,color:MUT,marginBottom:3}}>Nro. Cuenta</div>
+                        <input value={newProvForm.numeroCuenta} onChange={e=>setNewProvForm(f=>({...f,numeroCuenta:e.target.value}))}
+                          placeholder="07080174803" style={{width:"100%",padding:"5px 7px",border:`1px solid ${BRD}`,borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}}/>
+                      </div>
+                      <button onClick={async()=>{
+                        if(!newProvForm.provNombre) return alert("Nombre requerido");
+                        const entry = {...newProvForm};
+                        const already = providers.find(p=>p.provId===entry.provId && p.provNombre===entry.provNombre);
+                        if(already) return alert("Proveedor ya existe");
+                        const updated = [entry, ...providers];
+                        setProviders(updated);
+                        try { await saveProviderDB(updated); showToastMsg("✅ Proveedor guardado"); } catch(e) { showToastMsg("Error: "+e.message); }
+                        setNewProvForm({ provId:"", provNombre:"", provTipoId:"NIT", banco:"BANCOLOMBIA", tipoCuenta:"Cuenta de Ahorro", numeroCuenta:"" });
+                      }} style={{padding:"6px 14px",background:GOLD,color:WHT,border:"none",borderRadius:4,fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",fontWeight:700,whiteSpace:"nowrap",flexShrink:0}}>
+                        + Guardar
+                      </button>
+                    </div>
+                  </div>
+                  {/* Provider list */}
+                  <div style={{overflowX:"auto"}}>
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                      <thead>
+                        <tr style={{background:BG,borderBottom:`1px solid ${BRD}`}}>
+                          {["Tipo ID","ID","Nombre","Banco","Tipo Cta","Nro. Cuenta",""].map(h=>(
+                            <th key={h} style={{padding:"7px 10px",textAlign:"left",fontWeight:600,color:MUT,fontSize:10,textTransform:"uppercase",letterSpacing:.4}}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {providers.length===0 && (
+                          <tr><td colSpan={7} style={{padding:"24px",textAlign:"center",color:MUT,fontSize:12}}>Sin proveedores. Agrega el primero arriba.</td></tr>
+                        )}
+                        {providers.map((p,i)=>(
+                          <tr key={p.provId+i} style={{borderBottom:`1px solid ${BRD}`,background:i%2===0?WHT:BG}}>
+                            <td style={{padding:"7px 10px",color:MUT,fontSize:11}}>{p.provTipoId||"—"}</td>
+                            <td style={{padding:"7px 10px",fontFamily:"monospace",color:MUT,fontSize:11}}>{p.provId||"—"}</td>
+                            <td style={{padding:"7px 10px",fontWeight:600,color:DARK}}>{p.provNombre||"—"}</td>
+                            <td style={{padding:"7px 10px",color:MUT,fontSize:11}}>{p.banco||"—"}</td>
+                            <td style={{padding:"7px 10px",color:MUT,fontSize:11}}>{p.tipoCuenta||"—"}</td>
+                            <td style={{padding:"7px 10px",fontFamily:"monospace",color:MUT,fontSize:11}}>{p.numeroCuenta||"—"}</td>
+                            <td style={{padding:"7px 10px"}}>
+                              <button onClick={async()=>{
+                                if(!confirm(`Eliminar "${p.provNombre}"?`)) return;
+                                const updated = providers.filter((_,j)=>j!==i);
+                                setProviders(updated);
+                                try { await saveProviderDB(updated); showToastMsg("Proveedor eliminado"); } catch {}
+                              }} style={{fontSize:10,padding:"2px 8px",border:"1px solid #fca5a5",borderRadius:3,background:"#fff5f5",color:"#dc2626",cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>✕</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             </div>
           )}
