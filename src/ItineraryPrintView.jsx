@@ -2377,21 +2377,29 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
           <Editable value={it.description} tag="p" className="ev-desc" editMode={editMode} onChange={v => patchItem?.("description", v)} multiline />
         )}
 
-        {/* Sub-item buttons (Chef Dinner menus, Food on Board options) */}
+        {/* Sub-item cards (Chef Dinner menus, Food on Board options) */}
         {it._subItems?.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10, marginBottom: 16 }}>
             {it._subItems.map((sub, i) => {
               const label = (isEs ? sub.nameEs : sub.name) || sub.name || "";
-              return sub.menuUrl ? (
-                <a key={i} href={sub.menuUrl} target="_blank" rel="noreferrer"
-                  style={{ fontSize: 11, color: "#1d4ed8", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 6, padding: "4px 10px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 500 }}>
-                  📄 {label}
-                </a>
-              ) : (
-                <span key={i} style={{ fontSize: 11, color: "#374151", background: "#f3f4f6", border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 10px" }}>
-                  {label}
-                </span>
+              const hasLink = !!sub.menuUrl;
+              const inner = (
+                <>
+                  {sub.image && (
+                    <img src={sub.image} alt={label} style={{ width: "100%", height: 90, objectFit: "cover", display: "block", flexShrink: 0 }} onError={e => e.target.style.display="none"} />
+                  )}
+                  <div style={{ padding: "8px 10px", flex: 1 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#111827", lineHeight: 1.35, marginBottom: hasLink ? 4 : 0 }}>{label}</div>
+                    {hasLink && (
+                      <div style={{ fontSize: 10, color: "#2563eb", fontWeight: 500 }}>{isEs ? "Ver menú ↗" : "View menu ↗"}</div>
+                    )}
+                  </div>
+                </>
               );
+              const cardStyle = { display: "flex", flexDirection: "column", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,.06)", textDecoration: "none" };
+              return hasLink
+                ? <a key={i} href={sub.menuUrl} target="_blank" rel="noreferrer" style={cardStyle}>{inner}</a>
+                : <div key={i} style={cardStyle}>{inner}</div>;
             })}
           </div>
         )}
