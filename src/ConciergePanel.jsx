@@ -558,13 +558,21 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       }
       return 9999;
     };
+    const catPri = (cat) => {
+      const c = String(cat || "").toLowerCase();
+      if (c.includes("transport")) return 0;
+      if (c.includes("service"))   return 2;
+      return 1;
+    };
     const items = (rawMap.get(label) || []).sort((a, b) => {
+      if (a.sort !== b.sort) return a.sort - b.sort;
       const ta = parseTime(a.time), tb = parseTime(b.time);
-      // If both have times, sort by time; otherwise keep sortOrder
+      const pa = catPri(a.category), pb = catPri(b.category);
       if (ta < 9999 && tb < 9999) return ta - tb;
+      if (pa !== pb) return pa - pb;
       if (ta < 9999) return -1;
       if (tb < 9999) return 1;
-      return a.sort - b.sort;
+      return 0;
     });
     if (!items.length) return;
 
@@ -2466,13 +2474,24 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
         if (m12) { let h = parseInt(m12[1]); if (m12[3].toUpperCase()==="PM"&&h!==12) h+=12; if (m12[3].toUpperCase()==="AM"&&h===12) h=0; return h*60+parseInt(m12[2]); }
         return 9999;
       };
+      const catPriMin = (item) => {
+        const c = String(item.category || "").toLowerCase();
+        if (c.includes("transport")) return 0;
+        if (c.includes("service"))   return 2;
+        return 1;
+      };
       const items = cart
         .filter(i => (i.dayLabel || "Sin día") === label)
         .sort((a, b) => {
           const sa = a.sortOrder ?? 999, sb = b.sortOrder ?? 999;
           if (sa !== sb) return sa - sb;
           const ta = parseTimeMin(a.timeLabel), tb = parseTimeMin(b.timeLabel);
-          return ta - tb;
+          const pa = catPriMin(a), pb = catPriMin(b);
+          if (ta < 9999 && tb < 9999) return ta - tb;
+          if (pa !== pb) return pa - pb;
+          if (ta < 9999) return -1;
+          if (tb < 9999) return 1;
+          return 0;
         });
       return { label, meta, items };
     });
@@ -2874,7 +2893,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
         return items;
       })(),
       foodonboard: (() => {
-        // Add all food-on-board catalog variants at once (Chef On Board, Self Service Catering, Boat Lunch Box)
+        // Single grouped item listing all food-on-board options (#52)
         const isFob = s => {
           const n = (s.name_en || s.name || "").toLowerCase();
           return (n.includes("food") && n.includes("board")) ||
@@ -2885,29 +2904,26 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
             ((s.name||"").toLowerCase().includes("comida") && (s.name||"").toLowerCase().includes("bord"));
         };
         const catalogItems = services.filter(isFob);
+        const fmt = n => new Intl.NumberFormat("es-CO").format(n);
         if (catalogItems.length > 0) {
-          return catalogItems.map(s => ({
-            id: String(s.id || ""), sku: s.sku || "",
-            name: s.name || "Food on Board", name_en: s.name_en || s.name || "Food on Board",
-            category: s.category || "chef",
-            timeLabel: "",
-            image: s.image || "", menuUrl: s.menuUrl || "",
-            price_cop: s.price_cop || 0,
-            description_es: s.description?.es || "", description_en: s.description?.en || "",
-          }));
+          const optEn = catalogItems.map(s => `• **${s.name_en || s.name}**${s.price_cop ? ` — ${fmt(s.price_cop)} COP per person` : ""}`).join("\n");
+          const optEs = catalogItems.map(s => `• **${s.name || s.name_en}**${s.price_cop ? ` — ${fmt(s.price_cop)} COP por persona` : ""}`).join("\n");
+          return {
+            name: "Food on Board", name_en: "Food on Board", name_es: "Comida a bordo",
+            category: "chef", timeLabel: "",
+            description_en: `Food service for your boat day. Please choose one option:\n\n${optEn}`,
+            description_es: `Servicio de comida para tu día de bote. Por favor elige una opción:\n\n${optEs}`,
+          };
         }
-        // Fallback: single item from sheet
-        const sh = allItineraryItemsRef.current.find(i => /food.?on.?board|comida.?a.?bordo/i.test(i.name_en) || /food.?on.?board|comida.?a.?bordo/i.test(i.name_es));
         return {
-          name: sh?.name_es || "Comida a bordo", name_en: sh?.name_en || "Food on Board", category: "services",
+          name: "Food on Board", name_en: "Food on Board", name_es: "Comida a bordo", category: "chef",
           timeLabel: "",
-          ...(sh?.image ? { image: sh.image } : {}),
-          description_es: sh?.description_es || "Servicio de comida a bordo del bote. Menú a definir — avísanos si tienen restricciones alimentarias o preferencias.",
-          description_en: sh?.description || sh?.description_en || "Food service on board the boat. Menu to be defined — let us know if you have any dietary restrictions or preferences.",
+          description_es: "Servicio de comida a bordo del bote. Menú a definir — avísanos si tienen restricciones alimentarias o preferencias.",
+          description_en: "Food service on board the boat. Menu to be defined — let us know if you have any dietary restrictions or preferences.",
         };
       })(),
       chefdinner: (() => {
-        // Add all chef dinner catalog variants at once (BBQ Menu, VIP Menu, Standard Menu, Local Menu, etc.)
+        // Single grouped item listing all chef dinner options (#52)
         const isChefDinner = s => {
           if (s.category !== "chef") return false;
           const n = (s.name_en || s.name || "").toLowerCase();
@@ -2915,32 +2931,29 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
           return n.includes("dinner") || nEs.includes("cena") || nEs.includes("chef dinner");
         };
         const catalogItems = services.filter(isChefDinner);
+        const fmt = n => new Intl.NumberFormat("es-CO").format(n);
         if (catalogItems.length > 0) {
-          return catalogItems.map(s => ({
-            id: String(s.id || ""), sku: s.sku || "",
-            name: s.name || "Chef Dinner", name_en: s.name_en || s.name || "Chef Dinner",
-            category: "chef",
-            timeLabel: "7:00 PM",
-            image: s.image || "", menuUrl: s.menuUrl || "",
-            price_cop: s.price_cop || 0,
-            description_es: s.description?.es || "", description_en: s.description?.en || "",
-          }));
+          const optEn = catalogItems.map(s => `• **${s.name_en || s.name}**${s.price_cop ? ` — ${fmt(s.price_cop)} COP per person` : ""}`).join("\n");
+          const optEs = catalogItems.map(s => `• **${s.name || s.name_en}**${s.price_cop ? ` — ${fmt(s.price_cop)} COP por persona` : ""}`).join("\n");
+          return {
+            name: "Chef Dinner", name_en: "Chef Dinner", name_es: "Cena con Chef",
+            category: "chef", timeLabel: "7:00 PM",
+            description_en: `Private dinner prepared by a chef at the villa. Please choose one menu:\n\n${optEn}`,
+            description_es: `Cena privada preparada por chef en la villa. Por favor elige un menú:\n\n${optEs}`,
+          };
         }
-        // Fallback: single item from sheet
-        const sh = allItineraryItemsRef.current.find(i => CHEF_PATTERN.test(i.name_en) || CHEF_PATTERN.test(i.name_es));
         return {
-          name: sh?.name_es || "Cena con chef", name_en: sh?.name_en || "Chef Dinner", category: "services",
+          name: "Chef Dinner", name_en: "Chef Dinner", name_es: "Cena con Chef", category: "chef",
           timeLabel: "7:00 PM",
-          ...(sh?.image ? { image: sh.image } : {}),
-          description_es: sh?.description_es || "Cena privada preparada por chef en la villa. El menú y los horarios se coordinan con anticipación.",
-          description_en: sh?.description || sh?.description_en || "Private dinner prepared by a chef at the villa. Menu and timing are coordinated in advance.",
+          description_es: "Cena privada preparada por chef en la villa. El menú y los horarios se coordinan con anticipación.",
+          description_en: "Private dinner prepared by a chef at the villa. Menu and timing are coordinated in advance.",
         };
       })(),
       beachclub: (() => {
+        // Single grouped item listing all beach club options (#53)
         const isBeachClub = s => s.category === "beach-clubs";
         const cityNorm = (kickoff?.city || "").toLowerCase();
         let catalogItems = services.filter(isBeachClub);
-        // For Cartagena, prefer Islas del Rosario clubs
         if (cityNorm.includes("cartagena")) {
           const islas = catalogItems.filter(s =>
             (s.name || "").toLowerCase().includes("rosario") ||
@@ -2950,24 +2963,23 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
           );
           if (islas.length > 0) catalogItems = islas;
         }
-        // Filter by city if set
         if (cityNorm && catalogItems.length > 1) {
           const byCty = catalogItems.filter(s => !s.city || s.city.includes(cityNorm) || cityNorm.includes(s.city));
           if (byCty.length > 0) catalogItems = byCty;
         }
+        const fmt = n => new Intl.NumberFormat("es-CO").format(n);
         if (catalogItems.length > 0) {
-          return catalogItems.map(s => ({
-            id: String(s.id || ""), sku: s.sku || "",
-            name: s.name || "Beach Club", name_en: s.name_en || s.name || "Beach Club",
-            category: "beach-clubs",
-            timeLabel: "11:00 AM",
-            image: s.image || "", menuUrl: s.menuUrl || "",
-            price_cop: s.price_cop || 0,
-            description_es: s.description?.es || "", description_en: s.description?.en || "",
-          }));
+          const optEn = catalogItems.map(s => `• **${s.name_en || s.name}**${s.price_cop ? ` — ${fmt(s.price_cop)} COP per person` : ""}`).join("\n");
+          const optEs = catalogItems.map(s => `• **${s.name || s.name_en}**${s.price_cop ? ` — ${fmt(s.price_cop)} COP por persona` : ""}`).join("\n");
+          return {
+            name: "Beach Club", name_en: "Beach Club", name_es: "Beach Club",
+            category: "beach-clubs", timeLabel: "11:00 AM",
+            description_en: `Beach club day. Please choose one option:\n\n${optEn}`,
+            description_es: `Día de beach club. Por favor elige una opción:\n\n${optEs}`,
+          };
         }
         return {
-          name: "Beach Club", name_en: "Beach Club", category: "actividades",
+          name: "Beach Club", name_en: "Beach Club", category: "beach-clubs",
           timeLabel: "11:00 AM",
           description_es: "Día de beach club. Les daremos todos los detalles de acceso, horarios y servicios disponibles.",
           description_en: "Beach club day. We will provide all the details on access, hours, and available services.",

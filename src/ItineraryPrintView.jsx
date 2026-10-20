@@ -714,8 +714,12 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       const rawB = b.time || (b.isBlock ? cl(b.cartItem?.timeLabel || b.cartItem?.time || "") : "");
       const tA = parseTime(rawA);
       const tB = parseTime(rawB);
-      if (tA !== tB) return tA - tB;
-      return catPriority(a) - catPriority(b);
+      const pA = catPriority(a), pB = catPriority(b);
+      if (tA < 9999 && tB < 9999) return tA - tB;
+      if (pA !== pB) return pA - pB;
+      if (tA < 9999) return -1;
+      if (tB < 9999) return 1;
+      return 0;
     });
     // Day band shows label; subtitle shows the descriptive title if set
     return { label, title: dm?.title || "", date: dm?.date || "", items };
