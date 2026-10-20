@@ -590,7 +590,7 @@ async function loadFromGAS(){
       body:JSON.stringify({action:getAction})});
     const d = await r.json();
     if(d.ok && d.data?.length && d.data.some(x => x.vendor || x.amount || x.proveedor)){
-      comisiones = d.data.map(x => ({
+      comisiones = d.data.filter(x => x.vendor || x.proveedor || x.amount || x.monto || x.client || x.desc).map(x => ({
         ...x,
         vendor: x.vendor || x.proveedor || '',
         amount: x.amount || x.monto || '',

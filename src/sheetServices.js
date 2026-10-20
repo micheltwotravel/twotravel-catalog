@@ -239,9 +239,53 @@ video1: video1,
   };
 }
 
-const CATALOG_CACHE_KEY = "tt_catalog_v1";
+const CATALOG_CACHE_KEY = "tt_catalog_v2";
 const CATALOG_CACHE_TTL = 10 * 60 * 1000;
 let _catalogPromise = null;
+
+const PARSE_OPTS = {
+  header: true,
+  skipEmptyLines: true,
+  transformHeader: (h) => String(h || "").trim().toLowerCase().replace(/\ufeff/g, ""),
+};
+
+function mapNonCatalogRow(row, index) {
+  const nameEn = (row["item name"] || "").trim();
+  const nameEs = (row["item nombre$"] || row["item nombre"] || nameEn).trim();
+  if (!nameEn) return null;
+  return {
+    id: 10000 + index,
+    sku: "",
+    name: nameEn,
+    name_en: nameEn,
+    nameEs,
+    category: "services",
+    city: "",
+    images: [],
+    video1: "",
+    priceLevel: "",
+    price_cop: 0,
+    price_tier_1: 0,
+    price_tier_2: 0,
+    priceUnit: "",
+    image: normalizeDriveImage(row.image || ""),
+    description: { es: row["descripcion esp"] || "", en: row.description || "" },
+    travefy: { libraryId: "", libraryName: "", enabled: false, notesTemplate: "", categoryOverride: "" },
+    capacity: { min: 1, max: 10 },
+    capacity_notes: "", vehicle_type: "", route: "",
+    schedule: "", schedule_es: "", duration: "", duration_es: "",
+    location: "", location_es: "",
+    highlights: [], highlights_en: [],
+    quickbooksCode: "",
+    deposit: "", deposit_es: "", cancellation: "", cancellation_es: "",
+    priceTiers: "", priceTiers_en: "",
+    menuUrl: "", mapsUrl: "",
+    dressCode: "", dressCode_en: "",
+    clientType: "", family_friendly: false, vegetarian: false, accessibility: false,
+    subcategory: "", subcategory_en: "",
+    isNonCatalog: true,
+  };
+}
 
 async function fetchCatalogFromSheet() {
   if (_catalogPromise) return _catalogPromise;
@@ -255,18 +299,27 @@ async function fetchCatalogFromSheet() {
 
   _catalogPromise = (async () => {
     const sep = SHEET_CSV_URL.includes("?") ? "&" : "?";
-    const response = await fetch(`${SHEET_CSV_URL}${sep}t=${Date.now()}`);
-    if (!response.ok) throw new Error(`No se pudo cargar el catálogo: ${response.status}`);
-    const csvText = await response.text();
+    const ts = Date.now();
+    const [mainRes, ncRes] = await Promise.all([
+      fetch(`${SHEET_CSV_URL}${sep}t=${ts}`),
+      fetch(`/api/itinerary-csv?t=${ts}`).catch(() => null),
+    ]);
+    if (!mainRes.ok) throw new Error(`No se pudo cargar el cat\u00e1logo: ${mainRes.status}`);
+    const csvText = await mainRes.text();
     // Row 2 is a Spanish display header row \u2014 strip it before parsing
     const lines = csvText.split("\n");
     const cleaned = lines.length > 1 ? [lines[0], ...lines.slice(2)].join("\n") : csvText;
-    const parsed = Papa.parse(cleaned, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: (h) => String(h || "").trim().toLowerCase().replace(/\ufeff/g, ""),
-    });
-    const result = parsed.data.map(mapRowToService);
+    const mainItems = Papa.parse(cleaned, PARSE_OPTS).data.map(mapRowToService);
+
+    let nonCatalogItems = [];
+    if (ncRes && ncRes.ok) {
+      const ncText = await ncRes.text();
+      nonCatalogItems = Papa.parse(ncText, PARSE_OPTS).data
+        .map(mapNonCatalogRow)
+        .filter(Boolean);
+    }
+
+    const result = [...mainItems, ...nonCatalogItems];
     try { sessionStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}
     _catalogPromise = null;
     return result;
