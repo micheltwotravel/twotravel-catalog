@@ -3520,6 +3520,29 @@ export default function ItineraryPrintView() {
     const cartRaw = kickoff.cart;
     const matched = matchCart(cartRaw, catalog, kickoff);
     const result = buildDays(matched, lang, parseJsonField(kickoff.dayMeta), kickoff.city);
+    // Derive _subItems for chef/foodonboard grouped items that pre-date the subItems field
+    if (catalog.length > 0) {
+      const chefSvcs = catalog.filter(s => s.category === "chef");
+      result.forEach(day => {
+        (day.items || []).forEach(it => {
+          if (!it._subItems && it.category === "chef" && (it.description || "").includes("•")) {
+            const bullets = it.description.split("\n")
+              .filter(l => l.trimStart().startsWith("•"))
+              .map(l => l.replace(/^[\s•]+/, "").replace(/\*\*/g, "").split("—")[0].trim())
+              .filter(Boolean);
+            if (bullets.length > 0) {
+              it._subItems = bullets.map(label => {
+                const svc = chefSvcs.find(s => {
+                  const nm = (s.name_en || s.name || "").replace(/\*\*/g, "");
+                  return nm && (label === nm || label.startsWith(nm) || nm.startsWith(label.slice(0, Math.min(label.length, 15))));
+                });
+                return { name: label, nameEs: svc?.name || label, menuUrl: svc?.menuUrl || "", image: svc?.image || "" };
+              });
+            }
+          }
+        });
+      });
+    }
     return result;
   }, [kickoff, catalog, lang]);
 
