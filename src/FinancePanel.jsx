@@ -1026,7 +1026,7 @@ function ReservationsDashboard({ rows }) {
   const convRate    = rows.length ? Math.round(confirmed.length/rows.length*100) : 0;
 
   // By month (only years that look valid)
-  const byMonth={}, byRep={}, byType={}, bySource={};
+  const byMonth={}, byRep={}, byType={}, bySource={}, byCity={};
   confirmed.forEach(r=>{
     const m=r.checkIn?.slice(0,7);
     if(m) {
@@ -1037,14 +1037,18 @@ function ReservationsDashboard({ rows }) {
     byRep[rep].rev+=(parseFloat(r.total)||0); byRep[rep].cnt++;
     const tp=r.type||"Sin tipo"; byType[tp]=(byType[tp]||0)+1;
     const src=r.dealSource||"Sin fuente"; bySource[src]=(bySource[src]||0)+1;
+    const ct=r.city||"Sin ciudad"; byCity[ct]=(byCity[ct]||{rev:0,cnt:0});
+    byCity[ct].rev+=(parseFloat(r.total)||0); byCity[ct].cnt++;
   });
 
   const monthEntries  = Object.entries(byMonth).sort((a,b)=>a[0].localeCompare(b[0]));
   const repEntries    = Object.entries(byRep).sort((a,b)=>b[1].rev-a[1].rev);
   const typeEntries   = Object.entries(byType).sort((a,b)=>b[1]-a[1]);
   const sourceEntries = Object.entries(bySource).sort((a,b)=>b[1]-a[1]);
+  const cityEntries   = Object.entries(byCity).sort((a,b)=>b[1].rev-a[1].rev);
   const totalType     = typeEntries.reduce((s,[,v])=>s+v,0)||1;
   const totalSrc      = sourceEntries.reduce((s,[,v])=>s+v,0)||1;
+  const maxCity       = Math.max(1,...cityEntries.map(([,{rev}])=>rev));
 
   const maxM = Math.max(1,...monthEntries.map(([,v])=>v));
   const maxR = Math.max(1,...repEntries.map(([,{rev}])=>rev));
@@ -1213,6 +1217,36 @@ function ReservationsDashboard({ rows }) {
           </div>
         </Card>
       </div>
+
+      {/* Row 4: Revenue por Ciudad */}
+      <Card>
+        <CardTitle>Revenue por Ciudad</CardTitle>
+        {cityEntries.length===0
+          ? <div style={{fontSize:12,color:MUT}}>Sin datos — agrega la columna "City" en las filas del Planner</div>
+          : (
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:14}}>
+              {cityEntries.map(([city,{rev,cnt}],i)=>{
+                const pct = Math.round(rev/maxCity*100);
+                const color = REP_COLORS[i%REP_COLORS.length];
+                return (
+                  <div key={city} style={{background:BG,borderRadius:10,padding:"14px 16px",borderLeft:`4px solid ${color}`}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                      <div style={{fontSize:13,fontWeight:700,color:DARK}}>{city}</div>
+                      <div style={{fontSize:10,color:MUT,background:WHT,border:`1px solid ${BRD}`,borderRadius:20,padding:"1px 7px",whiteSpace:"nowrap"}}>{cnt} deal{cnt!==1?"s":""}</div>
+                    </div>
+                    <div style={{fontSize:20,fontWeight:800,color,fontVariantNumeric:"tabular-nums",marginBottom:8}}>
+                      {rev>=1000?`$${Math.round(rev/1000)}k`:fmt$(rev)}
+                    </div>
+                    <div style={{height:6,background:"rgba(0,0,0,.06)",borderRadius:4,overflow:"hidden"}}>
+                      <div style={{width:`${pct}%`,height:"100%",background:color,borderRadius:4}}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        }
+      </Card>
     </div>
   );
 }
