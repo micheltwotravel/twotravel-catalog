@@ -7046,12 +7046,12 @@ function FinanceLanding({ user, onLogout }) {
     {
       group: "Operaciones",
       items: [
-        { icon:"📈", label:"Reservaciones & Ventas", desc:"Ingresos esperados y comisiones de ventas", href:"/?mode=f-reservaciones", live:true },
+        { icon:"📈", label:"Planner", desc:"Ingresos esperados y comisiones de ventas", href:"/?mode=f-reservaciones", live:true },
         { icon:"🤝", label:"Check-In & Concierge",   desc:"Servicios de check-in y concierge con margen", href:"/?mode=f-checkin",   live:true },
         { icon:"🚗", label:"Transporte",              desc:"Transfers y logística de transporte con margen", href:"/?mode=f-transporte", live:true },
         { icon:"💰", label:"Estimados",               desc:"Herramienta de cotizaciones para ventas",   href:"/estimates.html",        live:true },
         { icon:"✅", label:"Cierre Mensual",          desc:"Checklist de cierre por mes",               href:"/?mode=f-cierre",        live:false },
-        { icon:"🏢", label:"Pagos a Proveedores",     desc:"Solicitudes de pago · Lotes Payana · Aprobaciones", href:"/?mode=f-proveedores", live:true },
+        { icon:"🏢", label:"Providers Payments",     desc:"Solicitudes de pago · Lotes Payana · Aprobaciones", href:"/?mode=f-proveedores", live:true },
         { icon:"📅", label:"Calendario de Trabajo",   desc:"Agenda financiera del equipo",              href:null,                     live:false },
         { icon:"📥", label:"Templates",               desc:"Payana · QuickBooks Bills · Estimates",     href:"/?mode=f-templates",     live:false },
       ],

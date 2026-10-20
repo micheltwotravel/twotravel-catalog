@@ -1356,7 +1356,7 @@ export function FinanceReservaciones() {
   const filteredRows = sorted.map(i => rows[i]);
 
   return (
-    <Shell title="Reservaciones & Ventas" subtitle={`${sorted.length} de ${rows.length} registros`}>
+    <Shell title="Planner" subtitle={`${sorted.length} de ${rows.length} registros`}>
       {err&&<Err msg={err} onRetry={load} />}
       {/* Bad-date warning */}
       {(() => {
@@ -1789,7 +1789,7 @@ export function FinancePagosProveedores() {
   }
 
   return (
-    <Shell title="Pagos a Proveedores" subtitle="Solicitudes · Aprobaciones · Payana">
+    <Shell title="Providers Payments" subtitle="Solicitudes · Aprobaciones · Payana">
       {loading ? (
         <div style={{padding:40,textAlign:"center",color:MUT}}>Cargando solicitudes…</div>
       ) : (
