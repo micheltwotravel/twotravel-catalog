@@ -8824,6 +8824,45 @@ const loadKickoffs = async (forceRefresh = false) => {
     setKickoffs((prev) => [kickoff, ...(prev || [])]);
     setSelectedKickoffForLink(kickoff);
 
+    // Fire-and-forget: create contact + deal in HubSpot for the new kickoff
+    (async () => {
+      try {
+        const nameParts = (guestName || "").trim().split(/\s+/);
+        const hsEmail = email || `${kickoffId}@no-email.two.travel`;
+        const contactRes = await fetch("/api/hubspot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "upsert_contact",
+            data: {
+              email: hsEmail,
+              firstName: nameParts[0] || guestName,
+              lastName: nameParts.slice(1).join(" ") || "",
+              phone: guestContact || "",
+              status: "NEW",
+              destination: city || "",
+              agent: assignedConciergeName || "",
+            },
+          }),
+        });
+        const contactData = await contactRes.json().catch(() => ({}));
+        await fetch("/api/hubspot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "upsert_deal",
+            data: {
+              dealName: tripName || guestName,
+              stage: "warm",
+              destination: city || "",
+              agentName: assignedConciergeName || "",
+              contactId: contactData.contactId,
+            },
+          }),
+        });
+      } catch {}
+    })();
+
     // ⚠ Capture BEFORE clearing state — React batches don't apply mid-function
     const linkKind = pendingLinkKind;
     setCreateModalOpen(false);
