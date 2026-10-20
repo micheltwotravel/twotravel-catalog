@@ -3530,11 +3530,20 @@ export default function ItineraryPrintView() {
     const result = buildDays(matched, lang, parseJsonField(kickoff.dayMeta), kickoff.city);
     // Derive _subItems for chef/foodonboard grouped items that pre-date the subItems field
     if (catalog.length > 0) {
-      const matchableCategories = ["chef", "foodonboard"];
+      const isFobName = n => {
+        const l = n.toLowerCase();
+        return (l.includes("food") && l.includes("board")) || (l.includes("chef") && l.includes("board")) ||
+          (l.includes("self") && l.includes("catering")) || (l.includes("boat") && l.includes("lunch")) ||
+          l.includes("catering") || (l.includes("comida") && l.includes("bord"));
+      };
       result.forEach(day => {
         (day.items || []).forEach(it => {
-          if (!it._subItems && matchableCategories.includes(it.category) && (it.description || "").includes("•")) {
-            const catSvcs = catalog.filter(s => s.category === it.category);
+          if (!it._subItems && (it.description || "").includes("•")) {
+            const itName = (it.name || it.name_en || "").toLowerCase();
+            const isFobItem = itName.includes("food") || itName.includes("comida");
+            const catSvcs = isFobItem
+              ? catalog.filter(s => isFobName(s.name_en || s.name || ""))
+              : catalog.filter(s => s.category === it.category);
             const bullets = it.description.split("\n")
               .filter(l => l.trimStart().startsWith("•"))
               .map(l => l.replace(/^[\s•]+/, "").replace(/\*\*/g, "").split("—")[0].trim())
