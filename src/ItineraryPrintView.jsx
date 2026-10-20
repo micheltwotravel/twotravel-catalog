@@ -2374,7 +2374,7 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
 
         {/* Description */}
         {it.description && (
-          <Editable value={it.description} tag="p" className="ev-desc" editMode={editMode} onChange={v => patchItem?.("description", v)} multiline />
+          <Editable value={it.description.replace(/\*\*([^*]*)\*\*/g, "$1")} tag="p" className="ev-desc" editMode={editMode} onChange={v => patchItem?.("description", v)} multiline />
         )}
 
         {/* Sub-item cards (Chef Dinner menus, Food on Board options) */}
@@ -3530,17 +3530,18 @@ export default function ItineraryPrintView() {
     const result = buildDays(matched, lang, parseJsonField(kickoff.dayMeta), kickoff.city);
     // Derive _subItems for chef/foodonboard grouped items that pre-date the subItems field
     if (catalog.length > 0) {
-      const chefSvcs = catalog.filter(s => s.category === "chef");
+      const matchableCategories = ["chef", "foodonboard"];
       result.forEach(day => {
         (day.items || []).forEach(it => {
-          if (!it._subItems && it.category === "chef" && (it.description || "").includes("•")) {
+          if (!it._subItems && matchableCategories.includes(it.category) && (it.description || "").includes("•")) {
+            const catSvcs = catalog.filter(s => s.category === it.category);
             const bullets = it.description.split("\n")
               .filter(l => l.trimStart().startsWith("•"))
               .map(l => l.replace(/^[\s•]+/, "").replace(/\*\*/g, "").split("—")[0].trim())
               .filter(Boolean);
             if (bullets.length > 0) {
               it._subItems = bullets.map(label => {
-                const svc = chefSvcs.find(s => {
+                const svc = catSvcs.find(s => {
                   const nm = (s.name_en || s.name || "").replace(/\*\*/g, "");
                   return nm && (label === nm || label.startsWith(nm) || nm.startsWith(label.slice(0, Math.min(label.length, 15))));
                 });
