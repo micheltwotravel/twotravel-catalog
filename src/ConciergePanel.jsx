@@ -5458,12 +5458,30 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     setTimeout(resolve, 3000); // safety timeout
   });
   if (iframeCartModified) {
-    // Iframe had inline edits — use its saved cart instead of the canvas cart.
+    // Iframe had inline edits — merge them into the canvas cart.
+    // Inline edits only change fields on existing items (title, description, time, duration, etc.).
+    // The canvas cart may have NEW items not present in the iframe's cart, so we keep all canvas
+    // items and apply the inline-edited fields from the iframe cart onto matching items by _uid.
     try {
       const raw = localStorage.getItem(`tt_kp_${kickoff.id}`);
       if (raw) {
         const { data } = JSON.parse(raw);
-        if (data?.cart)    updates.cart    = typeof data.cart    === "string" ? data.cart    : JSON.stringify(data.cart);
+        if (data?.cart) {
+          const iframeCart = typeof data.cart === "string" ? JSON.parse(data.cart) : data.cart;
+          const iframeByUid = Object.fromEntries(iframeCart.map(i => [i._uid || i.id, i]));
+          // Inline-editable fields that the iframe can change
+          const INLINE_FIELDS = ["displayName","title","name","name_en","name_es","description","description_en","description_es","timeLabel","time","duration","notes","confirmation"];
+          const canvasCart = typeof updates.cart === "string" ? JSON.parse(updates.cart) : canvasCartRef.current;
+          const merged = canvasCart.map(ci => {
+            const key = ci._uid || ci.id;
+            const ic = iframeByUid[key];
+            if (!ic) return ci;
+            const patch = {};
+            for (const f of INLINE_FIELDS) { if (ic[f] !== undefined) patch[f] = ic[f]; }
+            return { ...ci, ...patch };
+          });
+          updates.cart = JSON.stringify(merged);
+        }
         if (data?.dayMeta) updates.dayMeta = typeof data.dayMeta === "string" ? data.dayMeta : JSON.stringify(data.dayMeta);
       }
     } catch {}
@@ -5506,7 +5524,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
         )}
 
         {/* Editor column */}
-        <div className={`flex flex-col min-h-0 ${pdfPreviewUrl ? "w-[720px] shrink-0 h-full" : "flex-1"}`}>
+        <div className={`flex flex-col min-h-0 ${pdfPreviewUrl ? "w-[600px] shrink-0 h-full" : "flex-1"}`}>
         <div className="px-5 py-4 border-b flex items-center justify-between">
           <div>
             <p className="text-[11px] text-neutral-500">Editar itinerario</p>
@@ -9098,6 +9116,14 @@ const loadKickoffs = async (forceRefresh = false) => {
         return next;
       })
     );
+    // Keep drawer in sync so re-opening fields shows saved values
+    setSelectedForEdit(prev => {
+      if (!prev || prev.id !== id) return prev;
+      const next = { ...prev, ...updates };
+      if (typeof next.cart    === "string") { try { next.cart    = JSON.parse(next.cart);    } catch {} }
+      if (typeof next.dayMeta === "string") { try { next.dayMeta = JSON.parse(next.dayMeta); } catch {} }
+      return next;
+    });
     broadcastKickoffUpdate(id, updates);
 
   } catch (err) {
