@@ -5230,7 +5230,15 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     const concierges = assignedConcierges.map(n => CONCIERGE_LIST.find(c => c.name === n)).filter(Boolean);
     if (concierges.length === 0) return;
     const unique = [...new Set(concierges.map(c => c.title).filter(Boolean))];
-    setConciergeTitle(unique.join(" & "));
+    // Merge "Senior Concierge X" + "Senior Concierge Y" → "Senior Concierge X & Y" (#7)
+    const SC_PREFIX = /^Senior Concierge\s*/i;
+    const allSC = unique.length > 0 && unique.every(t => SC_PREFIX.test(t));
+    if (allSC && unique.length > 1) {
+      const cities = unique.map(t => t.replace(SC_PREFIX, "").trim()).filter(Boolean);
+      setConciergeTitle("Senior Concierge " + cities.join(" & "));
+    } else {
+      setConciergeTitle(unique.join(" & "));
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignedConcierges]);
 
@@ -5268,6 +5276,17 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "11:00 AM");
   const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=sharing");
   const [preTripContent,     setPreTripContent]     = useState(kickoff?.preTripContent     || (kickoff?.lang === "es" ? DEFAULT_PRE_TRIP_ES : DEFAULT_PRE_TRIP));
+
+  // When language changes, swap pre-trip template if the user hasn't customized it (#28)
+  useEffect(() => {
+    setPreTripContent(prev => {
+      if (prev === DEFAULT_PRE_TRIP || prev === DEFAULT_PRE_TRIP_ES) {
+        return lang === "es" ? DEFAULT_PRE_TRIP_ES : DEFAULT_PRE_TRIP;
+      }
+      return prev;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
   const [meetings, setMeetings] = useState(() => {
     try {
       const parsed = JSON.parse(kickoff?.meetingNotes || "[]");
