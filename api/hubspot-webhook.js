@@ -212,33 +212,37 @@ export default async function handler(req, res) {
       if (notes)       briefingParts.push(`Notas ventas: ${notes}`);
       briefingParts.push(`HubSpot: ${hubspotDealUrl}`);
 
-      // Create kickoff in portal
-      await fetch(GAS_URL, {
+      const kickoffPayload = {
+        id:                 sentinelId,
+        guestName:          guestName || dealName,
+        tripName:           dealName,
+        status:             "active",
+        destination,
+        city:               destination,
+        guestCount:         pax,
+        groupSize:          pax,
+        guestEmail,
+        guestContact,
+        assignedConcierge:  concierge,
+        briefBudget:        budget,
+        briefHasBoat:       boatType ? "Sí" : "",
+        briefNotes:         notes,
+        arrivalDate,
+        departureDate,
+        internalNotes:      briefingParts.join("\n"),
+        hubspotDealId:      String(dealId),
+        hubspotDealUrl,
+        createdAt:          new Date().toISOString(),
+      };
+
+      // Update the sentinel row in Supabase with full kickoff data so it shows in the panel
+      await supabase.from("kickoffs").update({ data: kickoffPayload }).eq("id", sentinelId);
+
+      // Also notify GAS for backward compatibility
+      fetch(GAS_URL, {
         method: "POST",
-        body: JSON.stringify({
-          action: "saveKickoff",
-          payload: {
-            guestName:          guestName || dealName,
-            tripName:           dealName,
-            status:             "active",
-            destination,
-            city:               destination,
-            guestCount:         pax,
-            groupSize:          pax,
-            guestEmail,
-            guestContact,
-            assignedConcierge:  concierge,
-            briefBudget:        budget,
-            briefHasBoat:       boatType ? "Sí" : "",
-            briefNotes:         notes,
-            arrivalDate,
-            departureDate,
-            internalNotes:      "",
-            hubspotDealId:      String(dealId),
-            createdAt:          new Date().toISOString(),
-          },
-        }),
-      });
+        body: JSON.stringify({ action: "saveKickoff", payload: kickoffPayload }),
+      }).catch(e => console.warn("GAS notify failed (non-critical):", e.message));
     }
 
     res.json({ ok: true });

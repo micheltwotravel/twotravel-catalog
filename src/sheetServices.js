@@ -372,7 +372,7 @@ export function invalidateKickoffsCache() {
 }
 
 function normalizeKickoff(row) {
-  const k = { id: row.id, ...row.data };
+  const k = { id: row.id, created_at: row.created_at, ...row.data };
   const parseJsonArr = (v) => {
     if (Array.isArray(v)) return v;
     if (typeof v === "string" && v.trim()) { try { return JSON.parse(v); } catch {} }

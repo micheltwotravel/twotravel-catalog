@@ -2103,13 +2103,15 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
   const _titleLower = (it.title || "").toLowerCase();
   const _catLower   = (it.category || "").toLowerCase();
   const _rawName    = (it._rawCartItem?.name || it._rawCartItem?.name_en || it._rawCartItem?.name_es || "").toLowerCase();
-  const _lunchExclude = /lunch|box|food|catering|snack|chef|comida|almuerzo/i.test(_titleLower) ||
-                        /lunch|box|food|catering|snack|chef|comida|almuerzo/i.test(_rawName);
+  const _lunchExclude = /lunch|box|food|catering|snack|chef|comida|almuerzo|massage|masaje|spa|drink|bebida/i.test(_titleLower) ||
+                        /lunch|box|food|catering|snack|chef|comida|almuerzo|massage|masaje|spa/i.test(_rawName);
+  const _boatTripKw = /\b(trip|tour|excursion|excursión|charter|rosario|barú|baru|transfer|isla|island|day\s*trip|viaje)\b/i;
   const _isBoat = !_lunchExclude && (
     it._boatBadge ||
     /\*\*(?:Boat|Bote):\*\*/i.test(_descText) ||
     ((/\bboat\b|\bbote\b/i.test(it.title || "")) &&
-      !(/chef|food|catering|breakfast|comida/i.test(_catLower)))
+      !(/chef|food|catering|breakfast|comida/i.test(_catLower)) &&
+      _boatTripKw.test(_titleLower))
   );
   if (_isBoat) {
     let boatIt = it;
@@ -2210,12 +2212,19 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
       <div className="ev-content">
 
         {/* Time badge — always visible when set */}
-        {timePart && (
+        {(timePart || durPart || editMode) && (
           <div className="ev-time-badge">
             {editMode
-              ? <Editable value={timePart} editMode={editMode} onChange={v => patchItem?.("time", v)} />
+              ? <Editable value={timePart} editMode={editMode} placeholder="Hora…" onChange={v => patchItem?.("time", v)} />
               : timePart}
-            {durPart && <span className="ev-time-dur"> · {durPart}</span>}
+            {(durPart || editMode) && (
+              <span className="ev-time-dur">
+                {timePart || !editMode ? " · " : ""}
+                {editMode
+                  ? <Editable value={durPart} editMode={editMode} placeholder="Duración…" onChange={v => patchItem?.("duration", v)} />
+                  : durPart}
+              </span>
+            )}
             <span style={{ fontWeight:400, color:"#b45309", fontSize:8, letterSpacing:".5px", marginLeft:4 }}>Colombia Standard Time</span>
           </div>
         )}
@@ -2322,7 +2331,7 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         )}
 
         {/* Transport details grid — like TripIt style */}
-        {String(it.category||"").toLowerCase().includes("transport") && (it.confirmation || it.notes || it.passengers) && (
+        {String(it.category||"").toLowerCase().includes("transport") && (it.confirmation || it.notes || it.passengers || editMode) && (
           <div style={{display:"flex",gap:16,marginBottom:10,marginTop:4,flexWrap:"wrap"}}>
             {it.confirmation && (
               <div>
@@ -2330,10 +2339,13 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
                 <div style={{fontSize:11,fontWeight:600,color:"#374151"}}>{it.confirmation}</div>
               </div>
             )}
-            {it.passengers && (
+            {(it.passengers || editMode) && (
               <div>
                 <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>{isEs?"Pasajeros":"Passengers"}</div>
-                <div style={{fontSize:11,fontWeight:600,color:"#374151"}}>{it.passengers}</div>
+                <Editable value={it.passengers || ""} tag="div" editMode={editMode}
+                  style={{fontSize:11,fontWeight:600,color:"#374151",minWidth:editMode?40:undefined}}
+                  placeholder={editMode?"Pax…":undefined}
+                  onChange={v => patchItem?.("passengers", v)} />
               </div>
             )}
             {it.notes && (
@@ -3313,6 +3325,7 @@ export default function ItineraryPrintView() {
             else if (field === "location")     cartMirror.location = val;
             else if (field === "priceTiers")   cartMirror.priceTiers = val;
             else if (field === "passengers")   cartMirror.passengers = val;
+            else if (field === "duration")     cartMirror.duration = val;
             if (Object.keys(cartMirror).length) {
               updated._rawCartItem = { ...updated._rawCartItem, ...cartMirror };
             }

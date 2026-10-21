@@ -1941,7 +1941,7 @@ function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availabl
             </>
           )}
           <div className="flex items-start gap-2">
-            <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0 pt-1">Recomendaciones</span>
+            <span className="text-[9px] text-neutral-400 uppercase tracking-wider w-20 shrink-0 pt-1">Nota</span>
             <div className="flex-1 flex flex-col gap-1">
               <div className="flex gap-1">
                 {[
