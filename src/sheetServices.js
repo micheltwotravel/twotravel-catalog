@@ -143,7 +143,13 @@ video1: video1,
     price_tier_1: parseNum(row.price_tier_1),
     price_tier_2: parseNum(row.price_tier_2),
 
-    priceUnit: row.priceUnit || "per person",
+    priceUnit: (() => {
+      const raw = (row.priceUnit || "").toLowerCase();
+      // Food/chef services are never priced per vehicle — override bad sheet data
+      const cat = (row.category_es || row.category_en || row.category || row.Category || row.categoria || "").toLowerCase();
+      if (raw === "per vehicle" && (cat.includes("food") || cat.includes("chef") || cat.includes("comida"))) return "per person";
+      return row.priceUnit || "per person";
+    })(),
     // Each source is normalized independently so a folder URL in image_source
     // doesn't block the fallback to row.image (which restaurants use).
     image: normalizeDriveImage(row["image_source"] || row["image source"] || "") ||
