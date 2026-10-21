@@ -1846,7 +1846,7 @@ export function FinancePagosProveedores() {
   }
 
   return (
-    <Shell title="Providers Payments" subtitle="Solicitudes · Aprobaciones · Payana">
+    <Shell title="Pagos a Proveedores" subtitle="Solicitudes · Aprobaciones · Payana">
       {loading ? (
         <div style={{padding:40,textAlign:"center",color:MUT}}>Cargando solicitudes…</div>
       ) : (

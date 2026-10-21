@@ -2913,6 +2913,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
             category: "chef", timeLabel: "",
             description_en: `Food service for your boat day. Please choose one option:\n\n${optEn}`,
             description_es: `Servicio de comida para tu día de bote. Por favor elige una opción:\n\n${optEs}`,
+            cancellation: "Once a food option is confirmed, cancellations made less than 24 hours before the boat day are non-refundable.",
             subItems: catalogItems.map(s => ({ name: s.name_en || s.name, nameEs: s.name || s.name_en, menuUrl: s.menuUrl || "", image: s.image || "" })),
           };
         }
@@ -2921,6 +2922,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
           timeLabel: "",
           description_es: "Servicio de comida a bordo del bote. Menú a definir — avísanos si tienen restricciones alimentarias o preferencias.",
           description_en: "Food service on board the boat. Menu to be defined — let us know if you have any dietary restrictions or preferences.",
+          cancellation: "Once a food option is confirmed, cancellations made less than 24 hours before the boat day are non-refundable.",
         };
       })(),
       chefdinner: (() => {
@@ -2941,6 +2943,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
             category: "chef", timeLabel: "7:00 PM",
             description_en: `Private dinner prepared by a chef at the villa. Please choose one menu:\n\n${optEn}`,
             description_es: `Cena privada preparada por chef en la villa. Por favor elige un menú:\n\n${optEs}`,
+            cancellation: "Once the menu is confirmed, cancellations made less than 48 hours in advance are non-refundable.",
             subItems: catalogItems.map(s => ({ name: s.name_en || s.name, nameEs: s.name || s.name_en, menuUrl: s.menuUrl || "", image: s.image || "" })),
           };
         }
@@ -2949,6 +2952,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
           timeLabel: "7:00 PM",
           description_es: "Cena privada preparada por chef en la villa. El menú y los horarios se coordinan con anticipación.",
           description_en: "Private dinner prepared by a chef at the villa. Menu and timing are coordinated in advance.",
+          cancellation: "Once the menu is confirmed, cancellations made less than 48 hours in advance are non-refundable.",
         };
       })(),
       beachclub: (() => {
@@ -2973,11 +2977,13 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
         if (catalogItems.length > 0) {
           const optEn = catalogItems.map(s => `• ${s.name_en || s.name}${s.price_cop ? ` — ${fmt(s.price_cop)} COP per person` : ""}`).join("\n");
           const optEs = catalogItems.map(s => `• ${s.name || s.name_en}${s.price_cop ? ` — ${fmt(s.price_cop)} COP por persona` : ""}`).join("\n");
+          const BEACH_CANCEL = "Day passes are non-refundable once confirmed. Changes or cancellations must be requested at least 48 hours in advance.";
           return {
             name: "Beach Club", name_en: "Beach Club", name_es: "Beach Club",
             category: "beach-clubs", timeLabel: "11:00 AM",
             description_en: `Beach club day. Please choose one option:\n\n${optEn}`,
             description_es: `Día de beach club. Por favor elige una opción:\n\n${optEs}`,
+            cancellation: BEACH_CANCEL,
           };
         }
         return {
@@ -2985,6 +2991,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
           timeLabel: "11:00 AM",
           description_es: "Día de beach club. Les daremos todos los detalles de acceso, horarios y servicios disponibles.",
           description_en: "Beach club day. We will provide all the details on access, hours, and available services.",
+          cancellation: "Day passes are non-refundable once confirmed. Changes or cancellations must be requested at least 48 hours in advance.",
         };
       })(),
       wateractivities: (() => {
@@ -4119,6 +4126,7 @@ function CatalogPickerModal({ services, clientType = 1, lang = "en", city = "", 
             { id: "transportation", label: "🚗 Transporte" },
             { id: "chef",           label: "👨‍🍳 Chef" },
             { id: "services",       label: "✨ Servicios" },
+            { id: "paquetes",       label: "📦 Paquetes" },
           ].map(({ id, label }) => (
             <button
               key={id}
@@ -8811,7 +8819,7 @@ const loadKickoffs = async (forceRefresh = false) => {
 
       internalNotes: "",
       cart: [],
-      welcomePdfUrl: "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=drivesdk",
+      welcomePdfUrl: "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=sharing",
       preTripContent: portalLang === "es" ? DEFAULT_PRE_TRIP_ES : DEFAULT_PRE_TRIP,
     });
 

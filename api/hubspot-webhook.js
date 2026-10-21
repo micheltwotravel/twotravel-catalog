@@ -165,9 +165,13 @@ export default async function handler(req, res) {
         .from("kickoffs")
         .insert({ id: sentinelId, data: { hubspotDealId: String(dealId), status: "creating", createdAt: new Date().toISOString() } });
       if (insertErr) {
-        // Row already exists → this deal was already processed
-        console.log(`Skipping duplicate kickoff for deal ${dealId} — sentinel exists`);
-        continue;
+        const isDuplicate = insertErr.code === "23505" || /duplicate|unique/i.test(insertErr.message || "");
+        if (isDuplicate) {
+          console.log(`Skipping duplicate kickoff for deal ${dealId} — sentinel exists`);
+          continue;
+        }
+        // Other error (permissions, schema) — log but still proceed to create the kickoff
+        console.error(`Sentinel insert failed for deal ${dealId} (non-duplicate): code=${insertErr.code} msg=${insertErr.message} — proceeding anyway`);
       }
 
       const deal = await fetchDeal(dealId, token);
