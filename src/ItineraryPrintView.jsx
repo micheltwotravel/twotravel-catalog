@@ -478,7 +478,7 @@ function matchCart(cartRaw, catalog, kickoff) {
                              !_boatFoodEx.test(item.name) && !_boatFoodEx.test(item.name_en) &&
                              (_boatTripKw.test(item.name) || _boatTripKw.test(item.name_en) || _boatTripKw.test(item.description_en || "") || _boatTripKw.test(item.description_es || ""));
     const _isBoatCandidate = _nameMatchesBoat || item._boatBadge || /\*\*(?:Boat|Bote):\*\*/i.test(_descForBoat);
-    if (_isBoatCandidate && !_boatFoodEx.test(item.name) && !_boatFoodEx.test(item.name_en)) {
+    if (_isBoatCandidate && !_boatFoodEx.test(item.name) && !_boatFoodEx.test(item.name_en) && !/^(chef|food|catering)$/i.test(item.category || "")) {
       const bn = kickoff?.boatName || "";
       const dk = kickoff?.dock || "";
       const city = String(kickoff?.city || kickoff?._rowCity || "").toUpperCase();
@@ -2104,7 +2104,8 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
   const _catLower   = (it.category || "").toLowerCase();
   const _rawName    = (it._rawCartItem?.name || it._rawCartItem?.name_en || it._rawCartItem?.name_es || "").toLowerCase();
   const _lunchExclude = /lunch|box|food|catering|snack|chef|comida|almuerzo|massage|masaje|spa|drink|bebida/i.test(_titleLower) ||
-                        /lunch|box|food|catering|snack|chef|comida|almuerzo|massage|masaje|spa/i.test(_rawName);
+                        /lunch|box|food|catering|snack|chef|comida|almuerzo|massage|masaje|spa/i.test(_rawName) ||
+                        /^(chef|food|catering)$/.test(_catLower);
   const _boatTripKw = /\b(trip|tour|excursion|excursión|charter|rosario|barú|baru|transfer|isla|island|day\s*trip|viaje)\b/i;
   const _isBoat = !_lunchExclude && (
     it._boatBadge ||

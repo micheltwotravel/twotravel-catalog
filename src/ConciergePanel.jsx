@@ -3059,6 +3059,20 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
     const count = cart.filter(i => (i.dayLabel || "Sin día") === dayLabel).length;
     if (Array.isArray(p)) {
       const now = Date.now();
+      // "pickup" (arrival) items must appear before any existing items in the day (#9/#32)
+      if (preset === "pickup") {
+        setCart(prev => {
+          const dayItems = prev.filter(i => (i.dayLabel || "Sin día") === dayLabel);
+          const otherItems = prev.filter(i => (i.dayLabel || "Sin día") !== dayLabel);
+          const bump = dayItems.map(i => ({ ...i, sortOrder: (i.sortOrder ?? 0) + p.length }));
+          const newItems = p.map((item, i) => {
+            const uid = `preset_pickup_${now}_${i}`;
+            return { ...mapManualToCartItem(), ...item, confirmed: null, _uid: uid, id: uid, dayLabel, sortOrder: i };
+          });
+          return [...otherItems, ...bump, ...newItems];
+        });
+        return;
+      }
       setCart(prev => [...prev, ...p.map((item, i) => {
         const uid = `preset_${preset}_${now}_${i}`;
         return { ...mapManualToCartItem(), ...item, confirmed: null, _uid: uid, id: uid, dayLabel, sortOrder: count + i };
@@ -7796,10 +7810,10 @@ export function ReunionesPage({ currentUser, initialKickoffId }) {
         return true;
       })
       .sort((a,b) => {
-        // newest deal first (by creation date)
-        const ca = a.created_at || a.createdAt || "";
-        const cb = b.created_at || b.createdAt || "";
-        return cb.localeCompare(ca);
+        // newest-activity first: edited deals bubble above older ones (#57)
+        const ta = a._updatedAt || a.created_at || a.createdAt || "";
+        const tb = b._updatedAt || b.created_at || b.createdAt || "";
+        return tb.localeCompare(ta);
       });
   }, [kickoffs, filterConcierge, search]);
 

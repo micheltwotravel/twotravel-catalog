@@ -444,7 +444,7 @@ const _writeQueues = {};
 async function _doKickoffUpdate(id, updates) {
   const { data: existing, error: fetchErr } = await supabase.from("kickoffs").select("data").eq("id", id).single();
   if (fetchErr) throw new Error(fetchErr.message);
-  const merged = { ...(existing?.data || {}), ...updates };
+  const merged = { ...(existing?.data || {}), ...updates, _updatedAt: new Date().toISOString() };
   const { data: updated, error } = await supabase.from("kickoffs").update({ data: merged }).eq("id", id).select("id");
   if (error) throw new Error(error.message);
   if (!updated || updated.length === 0) throw new Error(`No se encontró el kick-off (id=${id}) para guardar. Intenta recargar la página.`);
