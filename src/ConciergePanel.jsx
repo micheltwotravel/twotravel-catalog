@@ -1967,7 +1967,7 @@ function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availabl
                 key={item._uid}
                 defaultValue={item.notes || ""}
                 onBlur={e => { if (e.target.value !== (item.notes || "")) onUpdate(item._uid, { notes: e.target.value }); }}
-                placeholder="Recomendaciones para el cliente…"
+                placeholder="Nota para el cliente…"
                 rows={2}
                 className="text-xs text-neutral-500 border border-dashed border-neutral-200 rounded focus:outline-none p-1 bg-transparent placeholder-neutral-300 resize-y"
               />
@@ -2286,12 +2286,12 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
                 </button>
               ))}
             </div>
-            {/* RECOMENDACIONES */}
+            {/* NOTA */}
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Reco.</span>
+              <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Nota</span>
               <button type="button" onClick={() => onAddPreset?.("recommendations")}
                 className="text-xs text-emerald-700 hover:text-emerald-900 border border-emerald-200 hover:border-emerald-400 rounded-lg px-2.5 py-1 bg-emerald-50 transition-colors">
-                📍 Nota
+                📍 Nota libre
               </button>
             </div>
             {/* AGREGAR */}
@@ -3044,9 +3044,9 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
           ? `☕ **Café**\nCafé Velvet, Pergamino, Azahar\n\n🍽️ **Almuerzo**\nEl Cielo, Carmen, Santō\n\n🌅 **Rooftops y Bares**\nBarrio Colombia, Botánica\n\n📍 **Lugares para Visitar**\nEl Poblado, Laureles, Jardín Botánico, Plaza Botero`
           : `☕ **Café**\nCafé Nin, Quentin Bakery\n\n🍽️ **Almuerzo**\nLimosneros, Contramar, Quintonil\n\n🌅 **Bares y Vida Nocturna**\nParlamento, Bar Oriente, Roma Norte\n\n📍 **Lugares para Visitar**\nCondesa, Roma Norte, Coyoacán, Zócalo`;
         return {
-          name: `Recomendaciones — ${cityNameEs}`,
-          name_en: `Recommendations — ${cityNameEn}`,
-          name_es: `Recomendaciones — ${cityNameEs}`,
+          name: "Nota libre",
+          name_en: "Free Note",
+          name_es: "Nota libre",
           category: "recommendations",
           timeLabel: "",
           description_es: descEs,
@@ -9122,7 +9122,7 @@ const loadKickoffs = async (forceRefresh = false) => {
     setSelectedForDelete(null);
   } catch (err) {
     console.error(err);
-    alert("No se pudo mover el kick-off a la papelera.");
+    alert("No se pudo mover el kick-off a la papelera.\n" + (err?.message || String(err)));
   } finally {
     setDeleting(false);
   }

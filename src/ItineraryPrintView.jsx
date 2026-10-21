@@ -628,7 +628,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       sort         : Number(cartItem.sortOrder ?? idx),
       time         : cl(cartItem.timeLabel || cartItem.time || cartItem.startTime || ""),
       schedule     : cl(cartItem.schedule || service.schedule || ""),
-      duration     : cl(service.duration || ""),
+      duration     : cl(cartItem.duration || service.duration || ""),
       title        : cl(lang === "en"
         ? (cartItem.displayName || cartItem.name_en || service.name_en || service.name || cartItem.name || "")
         : (cartItem.displayName || cartItem.name    || service.name    || "")),
@@ -3710,11 +3710,13 @@ export default function ItineraryPrintView() {
         display: "flex", gap: 8, alignItems: "center",
         transition: "top .2s",
       }}>
-        <a href={`?mode=itinerary&kickoffId=${kickoffId}&lang=${lang === "en" ? "es" : "en"}`}
-          style={{ ...ctrl, border: "1px solid #ddd", color: "#555", background: "#fff",
-            textDecoration: "none", boxShadow: "0 1px 4px rgba(0,0,0,.08)" }}>
-          {lang === "en" ? "🇨🇴 ES" : "🇺🇸 EN"}
-        </a>
+        {!embedded && (
+          <a href={`?mode=itinerary&kickoffId=${kickoffId}&lang=${lang === "en" ? "es" : "en"}`}
+            style={{ ...ctrl, border: "1px solid #ddd", color: "#555", background: "#fff",
+              textDecoration: "none", boxShadow: "0 1px 4px rgba(0,0,0,.08)" }}>
+            {lang === "en" ? "🇨🇴 ES" : "🇺🇸 EN"}
+          </a>
+        )}
         {canEdit && !embedded && (
           <button onClick={() => setEditMode(v => !v)}
             style={{ ...ctrl,
