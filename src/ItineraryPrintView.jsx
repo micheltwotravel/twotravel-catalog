@@ -2375,9 +2375,29 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         )}
 
         {/* Description */}
-        {it.description && (
+        {it.description && it.category !== "recommendations" && (
           <Editable value={it.description.replace(/\*\*([^*]*)\*\*/g, "$1")} tag="p" className="ev-desc" editMode={editMode} onChange={v => patchItem?.("description", v)} multiline />
         )}
+
+        {/* Recommendations: rendered as section cards */}
+        {it.category === "recommendations" && it.description && (() => {
+          const sections = it.description.replace(/\*\*([^*]*)\*\*/g, "$1").split(/\n\n+/).map(block => {
+            const lines = block.trim().split("\n").filter(Boolean);
+            return { title: lines[0] || "", venues: lines.slice(1).join(", ").split(",").map(v => v.trim()).filter(Boolean) };
+          }).filter(s => s.title);
+          return (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10, marginBottom: 16 }}>
+              {sections.map((sec, i) => (
+                <div key={i} style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 10, padding: "10px 12px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 6, lineHeight: 1.35 }}>{sec.title}</div>
+                  {sec.venues.map((v, j) => (
+                    <div key={j} style={{ fontSize: 10, color: "#6b7280", lineHeight: 1.7 }}>• {v}</div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Sub-item cards (Chef Dinner menus, Food on Board options) */}
         {it._subItems?.length > 0 && (
@@ -2385,11 +2405,13 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
             {it._subItems.map((sub, i) => {
               const label = (isEs ? sub.nameEs : sub.name) || sub.name || "";
               const hasLink = !!sub.menuUrl;
+              const catEmoji = it.name?.toLowerCase().includes("food") || it.name?.toLowerCase().includes("comida") ? "🍽️" : "👨‍🍳";
               const inner = (
                 <>
-                  {sub.image && (
-                    <img src={sub.image} alt={label} style={{ width: "100%", height: 90, objectFit: "cover", display: "block", flexShrink: 0 }} onError={e => e.target.style.display="none"} />
-                  )}
+                  <div style={{ width: "100%", height: 90, background: "linear-gradient(135deg, #f0fdf4, #dcfce7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0, position: "relative" }}>
+                    <span>{catEmoji}</span>
+                    {sub.image && <img src={sub.image} alt={label} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} onError={e => e.target.style.display="none"} />}
+                  </div>
                   <div style={{ padding: "8px 10px", flex: 1 }}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: "#111827", lineHeight: 1.35, marginBottom: hasLink ? 4 : 0 }}>{label}</div>
                     {hasLink && (

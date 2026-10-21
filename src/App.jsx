@@ -7258,7 +7258,7 @@ function UserManagement({ currentUser, onBack }) {
                     <td style={{padding:"10px 16px",fontSize:13}}>
                       <input
                         defaultValue={u.fullName || [u.name, u.lastName].filter(Boolean).join(" ") || u.name || ""}
-                        placeholder={u.email}
+                        placeholder="Sin nombre"
                         onBlur={e => {
                           const v = e.target.value.trim();
                           if (v !== (u.fullName || [u.name, u.lastName].filter(Boolean).join(" ") || u.name || "")) {
