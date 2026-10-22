@@ -74,6 +74,7 @@ const i18n = {
     bars: "Bares · Cócteles",
     chef: "Chef Privado",
     services: "Experiencias",
+    packages: "Paquetes",
     styles: "Estilos",
     price: "Precio",
     priceGroup: "por grupo",
@@ -146,6 +147,7 @@ quizEditAnswers: "Editar respuestas",
     chef: "Private Chef",
     transportation: "Transportation",
     services: "Experiences",
+    packages: "Packages",
     styles: "Styles",
     price: "Price",
     priceGroup: "per group",
@@ -1880,17 +1882,17 @@ const CATEGORY_FALLBACKS = {
     "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=1280&q=80",
   nightlife:
     "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1280&q=80",
-  services:
-    "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=1280&q=80",
+  services:    null,
+  packages:    null,
   transportation:
     "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=1280&q=80",
-  default:
-    "https://images.unsplash.com/photo-1526779259212-939e64788e3c?w=1280&q=80",
+  default:     null,
 };
 
 function safeImg(url, category = "default") {
   if (url && String(url).startsWith("http")) return url;
-  return CATEGORY_FALLBACKS[category] || CATEGORY_FALLBACKS.default;
+  const fb = CATEGORY_FALLBACKS[category];
+  return fb !== undefined ? fb : CATEGORY_FALLBACKS.default;
 }
 
 // Extract Google Drive file ID from any Drive URL format
@@ -1917,7 +1919,9 @@ function driveOnError(e, category = "default") {
     e.target.src = `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
   } else {
     e.target.dataset.driveAttempt = "done";
-    e.target.src = CATEGORY_FALLBACKS[category] || CATEGORY_FALLBACKS.default;
+    const fb = CATEGORY_FALLBACKS[category] ?? CATEGORY_FALLBACKS.default;
+    if (fb) e.target.src = fb;
+    else e.target.style.display = "none";
   }
 }
 const StepIndicator = ({ step, lang }) => {
@@ -2017,6 +2021,7 @@ const normalizeCategory = (raw) => {
     traslado: "transportation",
     services: "services", servicio: "services", servicios: "services",
     experience: "services", experiences: "services", experiencia: "services", experiencias: "services",
+    package: "packages", packages: "packages", paquete: "packages", paquetes: "packages",
     chef: "chef", chefs: "chef", "private chef": "chef", "chef privado": "chef",
   };
   if (EXACT[v]) return EXACT[v];
@@ -3823,12 +3828,18 @@ setCart([]);
 }}
   >
     <div className="relative h-44">
-      <img
-  src={safeImg(s.image, s.category)}
-  alt={s.name}
-  className="w-full h-full object-cover object-center group-hover:scale-[1.02] transition-transform duration-300"
-  onError={e => driveOnError(e, s.category)}
-/>
+      {safeImg(s.image, s.category) ? (
+        <img
+          src={safeImg(s.image, s.category)}
+          alt={s.name}
+          className="w-full h-full object-cover object-center group-hover:scale-[1.02] transition-transform duration-300"
+          onError={e => driveOnError(e, s.category)}
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-[#f7f4ef]">
+          <img src={logo} alt="Two Travel" style={{height:32,opacity:.35,objectFit:"contain"}} />
+        </div>
+      )}
 
       {/* ✅ BADGE */}
       <div className="absolute top-2 left-2">
@@ -3868,7 +3879,7 @@ setCart([]);
         {selectedCategory === "all" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {(() => {
-            const CAT_ORDER = ["restaurants","bars","beach-clubs","nightlife","chef","tours","services","transportation"];
+            const CAT_ORDER = ["restaurants","bars","beach-clubs","nightlife","chef","tours","services","packages","transportation"];
             const sorted = [...filteredServices].sort((a, b) => {
               const ai = CAT_ORDER.indexOf(normalizeCategory(a.category));
               const bi = CAT_ORDER.indexOf(normalizeCategory(b.category));
@@ -3897,7 +3908,13 @@ setCart([]);
                     onClick={() => { setSelectedService(s); setImgIndex(0); setSelectedPricingOption(null); }}
                   >
                     <div className="relative h-48">
-                      <img src={safeImg(s.image, serviceCategory)} alt={s.name} className="w-full h-full object-cover"/>
+                      {safeImg(s.image, serviceCategory) ? (
+                        <img src={safeImg(s.image, serviceCategory)} alt={s.name} className="w-full h-full object-cover"/>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-[#f7f4ef]">
+                          <img src={logo} alt="Two Travel" style={{height:32,opacity:.35,objectFit:"contain"}} />
+                        </div>
+                      )}
                       <button onClick={(e)=>{e.stopPropagation();if(!isInCart)addToCart(s);}} className={`absolute bottom-2 right-2 w-9 h-9 rounded-full flex items-center justify-center shadow-md border transition-colors ${isInCart?"bg-white/90 text-red-500 border-white":"bg-white/90 text-neutral-400 border-white hover:text-red-400"}`}>
                         <Heart className={`w-4 h-4 ${isInCart?"fill-current":""}`}/>
                       </button>
