@@ -5513,7 +5513,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           const iframeCart = typeof data.cart === "string" ? JSON.parse(data.cart) : data.cart;
           const iframeByUid = Object.fromEntries(iframeCart.map(i => [i._uid || i.id, i]));
           // Inline-editable fields that the iframe can change
-          const INLINE_FIELDS = ["displayName","title","name","name_en","name_es","description","description_en","description_es","timeLabel","time","duration","notes","confirmation","cancellation","deposit","schedule"];
+          const INLINE_FIELDS = ["displayName","title","name","name_en","name_es","description","description_en","description_es","timeLabel","time","duration","notes","confirmation","cancellation","deposit","schedule","passengers"];
           const canvasCart = typeof updates.cart === "string" ? JSON.parse(updates.cart) : canvasCartRef.current;
           const merged = canvasCart.map(ci => {
             const key = ci._uid || ci.id;
