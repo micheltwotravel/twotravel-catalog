@@ -2291,7 +2291,7 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
               <span className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider w-14 shrink-0">Nota</span>
               <button type="button" onClick={() => onAddPreset?.("recommendations")}
                 className="text-xs text-emerald-700 hover:text-emerald-900 border border-emerald-200 hover:border-emerald-400 rounded-lg px-2.5 py-1 bg-emerald-50 transition-colors">
-                📍 Nota libre
+                📍 Nota
               </button>
             </div>
             {/* AGREGAR */}
@@ -2307,7 +2307,7 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
               </button>
               <button type="button" onClick={onAddBlock}
                 className="text-xs text-violet-600 hover:text-violet-900 border border-violet-200 hover:border-violet-400 rounded-lg px-2.5 py-1 bg-violet-50 transition-colors">
-                ✍️ Nota libre
+                ✍️ Nota
               </button>
             </div>
           </div>
@@ -3044,9 +3044,9 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
           ? `☕ **Café**\nCafé Velvet, Pergamino, Azahar\n\n🍽️ **Almuerzo**\nEl Cielo, Carmen, Santō\n\n🌅 **Rooftops y Bares**\nBarrio Colombia, Botánica\n\n📍 **Lugares para Visitar**\nEl Poblado, Laureles, Jardín Botánico, Plaza Botero`
           : `☕ **Café**\nCafé Nin, Quentin Bakery\n\n🍽️ **Almuerzo**\nLimosneros, Contramar, Quintonil\n\n🌅 **Bares y Vida Nocturna**\nParlamento, Bar Oriente, Roma Norte\n\n📍 **Lugares para Visitar**\nCondesa, Roma Norte, Coyoacán, Zócalo`;
         return {
-          name: "Nota libre",
-          name_en: "Free Note",
-          name_es: "Nota libre",
+          name: "Nota",
+          name_en: "Note",
+          name_es: "Nota",
           category: "recommendations",
           timeLabel: "",
           description_es: descEs,
@@ -5123,9 +5123,17 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
       // Pre-mark boat items so ItineraryPrintView renders BoatDetailCard even on old deployments
       let rawCart = kickoff.cart;
       if (typeof rawCart === "string") { try { rawCart = JSON.parse(rawCart); } catch { rawCart = []; } }
+      const _boatFoodEx = /lunch|box|food|catering|snack|chef|comida|almuerzo|photographer|photo/i;
+      const _boatTripKw = /\b(trip|tour|excursion|excursi[oó]n|charter|rosario|bar[uú]|transfer|isla|island|day\s*trip|viaje)\b/i;
       const patchedCart = (Array.isArray(rawCart) ? rawCart : []).map(item => {
-        if (/bote|\bboat\b/i.test(item.name || "") || /bote|\bboat\b/i.test(item.name_en || "")) {
-          const descText = item.description_en || item.description_es || "";
+        const nameRaw = item.name || "";
+        const nameEn  = item.name_en || "";
+        const hasBoatWord = /bote|\bboat\b/i.test(nameRaw) || /bote|\bboat\b/i.test(nameEn);
+        const hasFoodWord = _boatFoodEx.test(nameRaw) || _boatFoodEx.test(nameEn);
+        const hasTripKw   = _boatTripKw.test(nameRaw) || _boatTripKw.test(nameEn);
+        const descText = item.description_en || item.description_es || "";
+        const hasBoatDesc = /\*\*(?:Boat|Bote):\*\*/i.test(descText);
+        if ((hasBoatWord && !hasFoodWord && hasTripKw) || hasBoatDesc || item._boatBadge) {
           const parsedBoat = /\*\*(?:Boat|Bote):\*\*\s*([^\n*]{1,60})/i.exec(descText);
           const parsedDock = /\*\*(?:Dock|Muelle):\*\*\s*([^\n*]{1,60})/i.exec(descText);
           const finalBn = kickoff.boatName || (parsedBoat ? parsedBoat[1].trim() : "");
@@ -5505,7 +5513,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           const iframeCart = typeof data.cart === "string" ? JSON.parse(data.cart) : data.cart;
           const iframeByUid = Object.fromEntries(iframeCart.map(i => [i._uid || i.id, i]));
           // Inline-editable fields that the iframe can change
-          const INLINE_FIELDS = ["displayName","title","name","name_en","name_es","description","description_en","description_es","timeLabel","time","duration","notes","confirmation"];
+          const INLINE_FIELDS = ["displayName","title","name","name_en","name_es","description","description_en","description_es","timeLabel","time","duration","notes","confirmation","cancellation","deposit","schedule"];
           const canvasCart = typeof updates.cart === "string" ? JSON.parse(updates.cart) : canvasCartRef.current;
           const merged = canvasCart.map(ci => {
             const key = ci._uid || ci.id;

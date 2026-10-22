@@ -2107,6 +2107,8 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
   const _lunchExclude = /lunch|box|food|catering|snack|chef|comida|almuerzo|massage|masaje|spa|drink|bebida/i.test(_titleLower) ||
                         /lunch|box|food|catering|snack|chef|comida|almuerzo|massage|masaje|spa/i.test(_rawName) ||
                         /^(chef|food|catering)$/.test(_catLower);
+  // "Arrive at airport" items: title-only, no description, no passengers field (#33, #49)
+  const _isArriveItem = /^(?:arrive at\b|llegada al?\b)/i.test((it.title || "").trim());
   const _boatTripKw = /\b(trip|tour|excursion|excursión|charter|rosario|barú|baru|transfer|isla|island|day\s*trip|viaje)\b/i;
   const _isBoat = !_lunchExclude && (
     it._boatBadge ||
@@ -2341,7 +2343,7 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
                 <div style={{fontSize:11,fontWeight:600,color:"#374151"}}>{it.confirmation}</div>
               </div>
             )}
-            {(it.passengers || editMode) && (
+            {!_isArriveItem && (it.passengers || editMode) && (
               <div>
                 <div style={{fontSize:8,color:"#aaa",textTransform:"uppercase",letterSpacing:"1px",marginBottom:1}}>{isEs?"Pasajeros":"Passengers"}</div>
                 <Editable value={it.passengers || ""} tag="div" editMode={editMode}
@@ -2388,8 +2390,8 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
           </div>
         )}
 
-        {/* Description */}
-        {it.description && it.category !== "recommendations" && (
+        {/* Description — hidden for arrive-at-airport items (#49) */}
+        {it.description && it.category !== "recommendations" && !_isArriveItem && (
           <Editable value={it.description.replace(/\*\*([^*]*)\*\*/g, "$1")} tag="p" className="ev-desc" editMode={editMode} onChange={v => patchItem?.("description", v)} multiline />
         )}
 
