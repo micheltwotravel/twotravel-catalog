@@ -2334,7 +2334,7 @@ function SortableDaySection({ label, ...props }) {
   );
 }
 
-function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
+function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTypeOverride }) {
   // Parse cart/dayMeta whether they arrive as arrays or JSON strings from the Sheet
   const parseArr = (v) => {
     if (Array.isArray(v)) return v;
@@ -3276,13 +3276,13 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange }) {
       {catalogTargetDay && (
         <CatalogPickerModal
           services={services}
-          clientType={kickoff?.clientType || 1}
+          clientType={clientTypeOverride ?? kickoff?.clientType ?? 1}
           lang={lang}
           city={kickoff?.city || kickoff?.destination || ""}
           onClose={() => setCatalogTargetDay(null)}
           onPick={svc => {
             const count = cart.filter(i => (i.dayLabel || "Sin día") === catalogTargetDay).length;
-            const newItem = mapServiceToCartItem(svc, kickoff?.clientType || 1, parseInt(kickoff?.groupSize || "1") || 1);
+            const newItem = mapServiceToCartItem(svc, clientTypeOverride ?? kickoff?.clientType ?? 1, parseInt(kickoff?.groupSize || "1") || 1);
             setCart(prev => [...prev, {
               ...newItem,
               _uid: `${newItem.id}_${Date.now()}_${Math.random()}`,
@@ -5000,6 +5000,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [guestName, setGuestName] = useState(kickoff?.guestName || "");
   const [tripName, setTripName] = useState(kickoff?.tripName || "");
   const [lang, setLang] = useState(kickoff?.lang || "en");
+  const [clientType, setClientType] = useState(Number(kickoff?.clientType) === 2 ? 2 : 1);
   const [guestContact, setGuestContact] = useState(kickoff?.guestContact || "");
   const [kickoffCallUrl, setKickoffCallUrl] = useState(kickoff?.kickoffCallUrl || "");
   const [checkInCity,    setCheckInCity]    = useState(() => {
@@ -5400,6 +5401,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   };
 
   updates.lang = lang;
+  updates.clientType = clientType;
   updates.guestContact = guestContact.trim();
   updates.kickoffCallUrl = kickoffCallUrl.trim();
   updates.checkInCity    = checkInCity;
@@ -5610,6 +5612,21 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   onClick={() => setLang("en")}
                   className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${lang === "en" ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-indigo-400"}`}>
                   🇺🇸 English
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="text-[11px] text-neutral-500">Tier de precios</label>
+              <div className="mt-1 flex gap-2">
+                <button type="button"
+                  onClick={() => setClientType(1)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${clientType === 1 ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-emerald-400"}`}>
+                  Tier 1
+                </button>
+                <button type="button"
+                  onClick={() => setClientType(2)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${clientType === 2 ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-emerald-400"}`}>
+                  Tier 2
                 </button>
               </div>
             </div>
@@ -6092,6 +6109,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
             <div className="-mt-1 mb-1" />
             <ItineraryCanvas
               kickoff={kickoff}
+              clientTypeOverride={clientType}
               onCartChange={(newCart, newDayMeta) => {
                 canvasCartRef.current    = newCart;
                 canvasDayMetaRef.current = newDayMeta;

@@ -597,7 +597,8 @@ function normCity(c) {
   return CITY_FULL[u] || String(c || "").trim().toLowerCase();
 }
 
-function buildDays(matched, lang, dayMeta, tripCityRaw) {
+function buildDays(matched, lang, dayMeta, tripCityRaw, clientType = 1) {
+  const ct = String(clientType).includes("2") ? 2 : 1;
   const tripCities = String(tripCityRaw || "").split(",").map(normCity).filter(Boolean);
   const svcMatchesTrip = (svcCity) => {
     if (!svcCity || !tripCities.length) return true;
@@ -640,7 +641,7 @@ function buildDays(matched, lang, dayMeta, tripCityRaw) {
       location     : cityMatches ? rawLoc : "",
       address      : service.address    || "",
       city         : service.city       || "",
-      price        : cartItem.priceOverride_cop || (cityMatches ? (service.price_cop || service.priceCop || service.price_tier_1 || service.priceTier1 || "") : ""),
+      price        : cartItem.priceOverride_cop || cartItem.price_cop || (cityMatches ? (ct === 2 ? (service.price_tier_2 || service.price_cop || service.priceCop || "") : (service.price_tier_1 || service.price_cop || service.priceCop || "")) : ""),
       priceIsOverride: !!cartItem.priceOverride_cop,
       priceInputCurrency: cartItem.priceInputCurrency || null,
       priceUsd     : cartItem.priceUsd != null ? num(cartItem.priceUsd) : (cityMatches ? num(service.price_tier_1 || service.priceTier1 || 0) : 0),
@@ -3465,7 +3466,7 @@ export default function ItineraryPrintView() {
           location:     svc.location || "",
           address:      svc.address || "",
           city:         svc.city || "",
-          price:        svc.price_cop || svc.priceCop || "",
+          price:        (Number(kickoff?.clientType) === 2 ? (svc.price_tier_2 || svc.price_cop || svc.priceCop) : (svc.price_tier_1 || svc.price_cop || svc.priceCop)) || "",
           priceUsd:     num(svc.price_tier_1 || svc.priceTier1 || 0),
           priceUnit:    svc.priceUnit || "",
           deposit:      svc.deposit || "",
@@ -3565,7 +3566,7 @@ export default function ItineraryPrintView() {
     if (!kickoff) return [];
     const cartRaw = kickoff.cart;
     const matched = matchCart(cartRaw, catalog, kickoff);
-    const result = buildDays(matched, lang, parseJsonField(kickoff.dayMeta), kickoff.city);
+    const result = buildDays(matched, lang, parseJsonField(kickoff.dayMeta), kickoff.city, kickoff.clientType || 1);
     // Derive _subItems for chef/foodonboard grouped items that pre-date the subItems field
     if (catalog.length > 0) {
       const isFobName = n => {
