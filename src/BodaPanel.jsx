@@ -1701,24 +1701,49 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
     navigator.clipboard.writeText(url).then(()=>{ setCopied(true); setTimeout(()=>setCopied(false),2200); });
   }
   function handlePrint() {
-    const w=window.open("","_blank","width=820,height=960");
+    const w=window.open("","_blank","width=860,height=980");
     const activeTasks_=(boda.tasks||[]).filter(t=>!["Terminado","Cancelado"].includes(t.status));
     const doneTasks=(boda.tasks||[]).filter(t=>t.status==="Terminado");
     const sups=(boda.suppliers||[]);
     const pays=(boda.payments||[]);
-    const fmt=n=>Number(n||0).toLocaleString("es-CO");
+    const budget=(boda.budgetItems||[]);
+    const timeline=[...(boda.schedule||[])].sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+    const contracts=(boda.contracts||[]);
+    const num=n=>parseFloat(String(n||"").replace(/,/g,"."))||0;
+    const fmt=n=>num(n).toLocaleString("es-CO");
+    const budgetTotal=budget.reduce((s,it)=>s+num(it.budgetAmount),0);
+    const actualTotal=budget.reduce((s,it)=>s+num(it.actualCost),0);
+    const payReceived=pays.filter(p=>p.received&&p.type!=="Devolución").reduce((s,p)=>s+num(p.amount),0);
+    const payPending=pays.filter(p=>!p.received).reduce((s,p)=>s+num(p.amount),0);
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${boda.clienteName} — Brief</title>
-<style>*{box-sizing:border-box}body{font-family:'Georgia',serif;max-width:720px;margin:40px auto;padding:0 20px;color:#1a1814;line-height:1.55}
-h1{font-size:34px;font-style:italic;font-weight:400;margin:0 0 6px;letter-spacing:.03em}
-.sub{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#b4975a;font-family:Arial,sans-serif;margin:0 0 18px}
-h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#888;font-family:Arial,sans-serif;margin:28px 0 10px;border-bottom:1px solid #e8e4de;padding-bottom:5px}
-.meta{display:flex;flex-wrap:wrap;gap:4px 20px;font-size:12px;color:#555;font-family:Arial,sans-serif;margin-bottom:18px}
+<style>
+*{box-sizing:border-box}
+body{font-family:'Georgia',serif;max-width:740px;margin:0 auto;padding:0 24px 48px;color:#1a1814;line-height:1.55}
+.cover{width:100%;height:260px;object-fit:cover;display:block;margin:0 -24px;width:calc(100% + 48px);border-bottom:3px solid #c4a26a}
+.cover-placeholder{width:calc(100% + 48px);margin:0 -24px;height:120px;background:linear-gradient(135deg,#1a1814 0%,#2e2a24 100%);display:flex;align-items:center;justify-content:center;border-bottom:3px solid #c4a26a}
+.cover-placeholder p{font-family:'Georgia',serif;font-size:28px;font-style:italic;color:#c4a26a;letter-spacing:.08em}
+.header{padding:28px 0 0}
+h1{font-size:36px;font-style:italic;font-weight:400;margin:0 0 4px;letter-spacing:.03em}
+.sub{font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:#b4975a;font-family:Arial,sans-serif;margin:0 0 20px}
+h2{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:#aaa;font-family:Arial,sans-serif;margin:32px 0 10px;border-bottom:1px solid #e8e4de;padding-bottom:5px;page-break-after:avoid}
+.meta{display:flex;flex-wrap:wrap;gap:4px 22px;font-size:12px;color:#555;font-family:Arial,sans-serif;margin-bottom:16px}
 .badge{background:#f5efe6;color:#92693d;border-radius:4px;padding:2px 8px;font-size:11px;font-family:Arial,sans-serif;display:inline-block}
-table{width:100%;border-collapse:collapse;font-size:12px;font-family:Arial,sans-serif}
+.notes{font-size:13px;color:#444;font-family:Arial,sans-serif;margin:10px 0 0;white-space:pre-line}
+table{width:100%;border-collapse:collapse;font-size:12px;font-family:Arial,sans-serif;page-break-inside:avoid}
 td,th{padding:5px 8px;border-bottom:1px solid #f0ebe4;text-align:left;vertical-align:top}
 th{font-weight:700;color:#aaa;text-transform:uppercase;font-size:9px;letter-spacing:.06em;background:#faf8f5}
+.totals{display:flex;gap:20px;flex-wrap:wrap;font-family:Arial,sans-serif;font-size:12px;margin-top:8px;padding:8px;background:#faf8f5;border-radius:6px}
+.totals strong{color:#1a1814}
+.tl-time{color:#b4975a;font-weight:700;white-space:nowrap;font-family:Arial,sans-serif}
+.tl-cat{font-size:10px;color:#888;font-family:Arial,sans-serif}
+.cst-badge{font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;font-family:Arial,sans-serif}
 .foot{font-size:10px;color:#ccc;font-family:Arial,sans-serif;margin-top:48px;text-align:right;border-top:1px solid #eee;padding-top:8px}
-@media print{@page{margin:20mm}}</style></head><body>
+@media print{@page{margin:15mm 18mm}body{padding:0 0 30px}.cover,.cover-placeholder{margin:0;width:100%}}
+</style></head><body>
+${boda.coverPhoto
+  ?`<img class="cover" src="${boda.coverPhoto}" alt="${boda.clienteName}" />`
+  :`<div class="cover-placeholder"><p>${boda.clienteName}</p></div>`}
+<div class="header">
 <h1>${boda.clienteName}</h1>
 <p class="sub">Two Lovers — Two Travel</p>
 <div class="meta">
@@ -1730,24 +1755,53 @@ th{font-weight:700;color:#aaa;text-transform:uppercase;font-size:9px;letter-spac
   ${boda.status?`<span class="badge">${boda.status}</span>`:""}
   ${boda.phase?`<span class="badge">${boda.phase}</span>`:""}
 </div>
-${boda.budget?`<p style="font-size:12px;color:#555;font-family:Arial,sans-serif">Presupuesto: <strong>$${fmt(boda.budget)} USD</strong></p>`:""}
-${boda.notes?`<p style="font-size:13px;color:#444;font-family:Arial,sans-serif;margin-top:12px">${boda.notes}</p>`:""}
+${boda.notes?`<p class="notes">${boda.notes}</p>`:""}
+</div>
+
+${budget.length?`<h2>Presupuesto (${budget.length} ítems)</h2>
+<table><thead><tr><th>Categoría</th><th>Proveedor</th><th>Presupuestado</th><th>Costo real</th><th>Estado pago</th></tr></thead><tbody>
+${budget.map(it=>`<tr><td>${it.category||""}</td><td>${it.supplier||""}</td><td>${it.budgetAmount?`$${fmt(it.budgetAmount)} USD`:""}</td><td>${it.actualCost?`$${fmt(it.actualCost)} USD`:""}</td><td>${it.paymentStatus||""}</td></tr>`).join("")}
+</tbody></table>
+<div class="totals">
+  <span>Presupuestado total: <strong>$${fmt(budgetTotal)} USD</strong></span>
+  <span>Costo real total: <strong>$${fmt(actualTotal)} USD</strong></span>
+  ${budgetTotal>0?`<span>Diferencia: <strong style="color:${actualTotal>budgetTotal?"#dc2626":"#16a34a"}">$${fmt(Math.abs(actualTotal-budgetTotal))} USD ${actualTotal>budgetTotal?"sobre":"bajo"} presupuesto</strong></span>`:""}
+</div>`:""}
+
+${pays.length?`<h2>Pagos (${pays.length})</h2>
+<table><thead><tr><th>Concepto</th><th>Tipo</th><th>Monto</th><th>Recibido</th><th>Fecha</th></tr></thead><tbody>
+${pays.map(p=>`<tr><td>${p.concept||""}</td><td>${p.type||""}</td><td>$${fmt(p.amount)}</td><td>${p.received?"✓":""}</td><td>${p.date||""}</td></tr>`).join("")}
+</tbody></table>
+<div class="totals">
+  <span>Recibido: <strong style="color:#16a34a">$${fmt(payReceived)} USD</strong></span>
+  <span>Pendiente: <strong style="color:${payPending>0?"#dc2626":"#16a34a"}">$${fmt(payPending)} USD</strong></span>
+</div>`:""}
+
+${timeline.length?`<h2>Timeline (${timeline.length} eventos)</h2>
+<table><thead><tr><th>Hora</th><th>Categoría</th><th>Evento</th><th>Responsable</th><th>Notas</th></tr></thead><tbody>
+${timeline.map(e=>`<tr><td class="tl-time">${e.time||""}</td><td class="tl-cat">${e.category||""}</td><td>${e.description||""}${e.isHighlight?" ⭐":""}</td><td>${e.assignedTo||""}</td><td>${e.notes||""}</td></tr>`).join("")}
+</tbody></table>`:""}
+
+${sups.length?`<h2>Proveedores (${sups.length})</h2>
+<table><thead><tr><th>Empresa</th><th>Categoría</th><th>Ciudad</th><th>Estado</th><th>Cotización</th><th>Contacto</th></tr></thead><tbody>
+${sups.map(s=>`<tr><td>${s.company}</td><td>${s.category||""}</td><td>${s.city||""}</td><td>${s.status}</td><td>${s.quote?`$${fmt(s.quote)} ${s.currency||"USD"}`:""}</td><td>${s.contact||""}${s.phone?` · ${s.phone}`:""}</td></tr>`).join("")}
+</tbody></table>`:""}
+
 ${activeTasks_.length?`<h2>Tareas activas (${activeTasks_.length})</h2>
 <table><thead><tr><th>Tarea</th><th>Responsable</th><th>Fecha límite</th><th>Fase</th></tr></thead><tbody>
 ${activeTasks_.map(t=>`<tr><td>${t.taskName}</td><td>${t.assignedTo||""}</td><td>${t.dueDate||""}</td><td>${t.phase||""}</td></tr>`).join("")}
 </tbody></table>`:""}
-${sups.length?`<h2>Proveedores (${sups.length})</h2>
-<table><thead><tr><th>Empresa</th><th>Categoría</th><th>Estado</th><th>Cotización</th><th>Contacto</th></tr></thead><tbody>
-${sups.map(s=>`<tr><td>${s.company}</td><td>${s.category||""}</td><td>${s.status}</td><td>${s.quote?`$${fmt(s.quote)} ${s.currency||"USD"}`:""}</td><td>${s.contact||""}${s.phone?` · ${s.phone}`:""}</td></tr>`).join("")}
+
+${contracts.length?`<h2>Contratos (${contracts.length})</h2>
+<table><thead><tr><th>Título</th><th>Estado</th><th>Fecha</th></tr></thead><tbody>
+${contracts.map(c=>`<tr><td>${c.title||""}</td><td><span class="cst-badge">${c.status||""}</span></td><td>${c.createdAt||""}</td></tr>`).join("")}
 </tbody></table>`:""}
-${pays.length?`<h2>Pagos (${pays.length})</h2>
-<table><thead><tr><th>Concepto</th><th>Tipo</th><th>Monto</th><th>Recibido</th><th>Fecha</th></tr></thead><tbody>
-${pays.map(p=>`<tr><td>${p.concept||""}</td><td>${p.type||""}</td><td>$${fmt(p.amount)}</td><td>${p.received?"✓":""}</td><td>${p.date||""}</td></tr>`).join("")}
-</tbody></table>`:""}
+
 ${doneTasks.length?`<h2>Tareas completadas (${doneTasks.length})</h2>
 <table><thead><tr><th>Tarea</th><th>Fase</th></tr></thead><tbody>
 ${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).join("")}
 </tbody></table>`:""}
+
 <p class="foot">Two Lovers — Two Travel &nbsp;·&nbsp; ${new Date().toLocaleDateString("es-CO")}</p>
 <script>window.onload=()=>{window.print();}</script></body></html>`);
     w.document.close();
