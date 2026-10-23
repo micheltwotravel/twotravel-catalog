@@ -308,7 +308,7 @@ function TasksTab({ boda, users, onPatch }) {
 
 // ─── PROVEEDORES TAB ──────────────────────────────────────────────────────────
 const SUP_CATS     = ["Fotografía y video","Maquillaje y peinado","DJ","Música en vivo","Decoración","Producción","Tarimas","Pirotecnia","Mulatas y tamboreros","Carros antiguos","Fotocabina","Hora loca","Experiencias","Tortas y postres","Catering","Flores","Transporte","Venue","Papelería","Otro"];
-const SUP_CITIES   = ["","Medellín","Cartagena"];
+const SUP_CITIES   = ["","Medellín","Cartagena","Bogotá","Ciudad de México","Tulum","Cali"];
 const SUP_STATUSES = ["Cotizando","Contratado","Pagado","Cancelado"];
 const SUP_STYLE    = { "Cotizando":{bg:"#fffbeb",color:"#b45309",dot:"#f59e0b"}, "Contratado":{bg:"#eff6ff",color:"#1d4ed8",dot:"#3b82f6"}, "Pagado":{bg:"#f0fdf4",color:"#16a34a",dot:"#22c55e"}, "Cancelado":{bg:"#f5f5f4",color:"#78716c",dot:"#a8a29e"} };
 
@@ -342,7 +342,7 @@ function ProveedoresTab({ boda, onPatch }) {
       {show&&(
         <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-            <select style={INP_SM} value={blank.city}     onChange={e=>setBlank(p=>({...p,city:e.target.value}))}    ><option value="">🌎 Ciudad</option>{["Medellín","Cartagena"].map(c=><option key={c}>{c}</option>)}</select>
+            <select style={INP_SM} value={blank.city}     onChange={e=>setBlank(p=>({...p,city:e.target.value}))}    ><option value="">🌎 Ciudad</option>{SUP_CITIES.filter(Boolean).map(c=><option key={c}>{c}</option>)}</select>
             <select style={INP_SM} value={blank.category} onChange={e=>setBlank(p=>({...p,category:e.target.value}))}>{SUP_CATS.map(c=><option key={c}>{c}</option>)}</select>
             <select style={INP_SM} value={blank.status}   onChange={e=>setBlank(p=>({...p,status:e.target.value}))}>{SUP_STATUSES.map(s=><option key={s}>{s}</option>)}</select>
             <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.company}   onChange={e=>setBlank(p=>({...p,company:e.target.value}))}   placeholder="Nombre empresa / proveedor *" /></div>
@@ -368,14 +368,17 @@ function ProveedoresTab({ boda, onPatch }) {
       {suppliers.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin proveedores. Agrega el primero arriba.</p>}
 
       {(()=>{
-        const cityGroups = ["Medellín","Cartagena",""].map(city=>({
+        const CITY_EMOJI={"Medellín":"🌿","Cartagena":"🌊","Bogotá":"🏙","Ciudad de México":"🌮","Tulum":"🌴","Cali":"💃"};
+        const usedCities=[...new Set(suppliers.map(s=>s.city||""))];
+        const cityOrder=[...SUP_CITIES.filter(c=>usedCities.includes(c)),...usedCities.filter(c=>!SUP_CITIES.includes(c)&&c!==""),""];
+        const cityGroups=cityOrder.map(city=>({
           city,
           label: city || "Sin ciudad",
           suppliers: suppliers.filter(s=>(s.city||"")===(city)),
         })).filter(g=>g.suppliers.length>0);
         return cityGroups.map(({city,label,suppliers:citySups})=>(
           <div key={city||"__none"} style={{marginBottom:20}}>
-            {cityGroups.length>1&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><div style={{height:1,flex:1,background:R.border}}></div><span style={{fontSize:10,fontWeight:700,color:R.accent,textTransform:"uppercase",letterSpacing:".1em",padding:"0 10px"}}>{city==="Medellín"?"🌿 Medellín":city==="Cartagena"?"🌊 Cartagena":"📦 Sin ciudad"}</span><div style={{height:1,flex:1,background:R.border}}></div></div>}
+            {cityGroups.length>1&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><div style={{height:1,flex:1,background:R.border}}></div><span style={{fontSize:10,fontWeight:700,color:R.accent,textTransform:"uppercase",letterSpacing:".1em",padding:"0 10px"}}>{city?(CITY_EMOJI[city]||"📍")+" "+city:"📦 Sin ciudad"}</span><div style={{height:1,flex:1,background:R.border}}></div></div>}
             {SUP_CATS.filter(c=>citySups.some(s=>s.category===c)).map(cat=>(
               <div key={cat} style={{marginBottom:14}}>
                 <p style={{fontSize:11,fontWeight:700,color:R.muted,textTransform:"uppercase",letterSpacing:".06em",margin:"0 0 6px"}}>{cat}</p>
@@ -685,7 +688,7 @@ function TimelineTab({ boda, onScheduleChange }) {
         </div>
         <div style={{display:"flex",gap:8}}>
           {sorted.length>0&&<button onClick={()=>window.print()} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>🖨</button>}
-          <button onClick={()=>{setShow(v=>!v);setEditing(null);}} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Agregar</button>
+          <button onClick={()=>{setShow(v=>!v);setEditing(null);}} style={{background:show?R.accent:"#1a0812",color:"#fff",border:"none",borderRadius:8,padding:"7px 18px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".03em"}}>+ Evento</button>
         </div>
       </div>
       {show&&!editing&&<TimelineEventForm val={blank} setVal={setBlank} saving={saving} onSubmit={add} onCancel={()=>setShow(false)} submitLabel="Agregar" />}
@@ -2206,18 +2209,26 @@ function CalendarioView({ bodas, onSelectBoda }) {
 }
 
 // ─── GLOBAL TASKS VIEW ───────────────────────────────────────────────────────
-function GlobalTasksView({ bodas, onSelectBoda }) {
+function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask }) {
   const today=new Date(); today.setHours(0,0,0,0);
+  const [section,setSection]=useState("equipo");
   const [filterPerson,setFilterPerson]=useState("");
   const [filterBoda,setFilterBoda]=useState("");
   const [filterStatus,setFilterStatus]=useState("active");
+  const [showAdd,setShowAdd]=useState(false);
+  const [addBodaId,setAddBodaId]=useState("");
+  const [addName,setAddName]=useState("");
+  const [addDate,setAddDate]=useState("");
+  const [saving,setSaving]=useState(false);
 
   const allTasks=bodas.flatMap(b=>(b.tasks||[]).map(t=>({...t,bodaName:b.clienteName,bodaId:b.id})));
-  const persons=[...new Set(allTasks.map(t=>t.assignedTo).filter(Boolean))].sort();
+  const isNovios=t=>(t.assignedTo||"")==="Novios";
+  const sectionTasks=allTasks.filter(t=>section==="novios"?isNovios(t):!isNovios(t));
+  const persons=[...new Set(sectionTasks.filter(t=>!isNovios(t)).map(t=>t.assignedTo).filter(Boolean))].sort();
 
   function cat(t){ if(!t.dueDate) return "up"; const d=new Date(t.dueDate+"T12:00:00"); d.setHours(0,0,0,0); if(d<today) return "late"; if(d.getTime()===today.getTime()) return "today"; return "up"; }
 
-  const filtered=allTasks
+  const filtered=sectionTasks
     .filter(t=>{
       if(filterStatus==="active" && ["Terminado","Cancelado"].includes(t.status)) return false;
       if(filterStatus==="done"   && !["Terminado","Cancelado"].includes(t.status)) return false;
@@ -2235,32 +2246,80 @@ function GlobalTasksView({ bodas, onSelectBoda }) {
 
   const late=filtered.filter(t=>cat(t)==="late").length;
   const todayN=filtered.filter(t=>cat(t)==="today").length;
+  const noviosCount=allTasks.filter(t=>isNovios(t)&&!["Terminado","Cancelado"].includes(t.status)).length;
+  const equipoCount=allTasks.filter(t=>!isNovios(t)&&!["Terminado","Cancelado"].includes(t.status)).length;
+
+  async function addNoviosTask(){
+    if(!addBodaId||!addName.trim()) return;
+    setSaving(true);
+    try{
+      await onAddTask(addBodaId,{id:uid(),taskName:addName,assignedTo:"Novios",dueDate:addDate,status:"Pendiente",phase:"General",notes:""});
+      setAddName(""); setAddDate(""); setAddBodaId(""); setShowAdd(false);
+    }catch(e){alert("Error: "+e.message);}
+    setSaving(false);
+  }
+
+  const TAB_BTN=(id,label,count)=>(
+    <button onClick={()=>{setSection(id);setFilterPerson("");setFilterBoda("");setShowAdd(false);}}
+      style={{padding:"8px 18px",border:"none",borderBottom:section===id?`2.5px solid ${R.gold}`:"2.5px solid transparent",background:"transparent",fontSize:12,fontWeight:section===id?600:400,color:section===id?R.text:R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif",display:"flex",alignItems:"center",gap:6}}>
+      {label}{count>0&&<span style={{fontSize:10,fontWeight:700,background:section===id?R.accent:"#e5e7eb",color:section===id?"#fff":R.muted,borderRadius:99,padding:"1px 6px",minWidth:16,textAlign:"center"}}>{count}</span>}
+    </button>
+  );
 
   return (
     <div>
+      {/* Section tabs */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`1px solid ${R.border}`,marginBottom:16}}>
+        <div style={{display:"flex"}}>
+          {TAB_BTN("equipo","👥 Equipo",equipoCount)}
+          {TAB_BTN("novios","💍 Novios",noviosCount)}
+        </div>
+        {section==="novios"&&<button onClick={()=>setShowAdd(v=>!v)} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"5px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,marginBottom:4}}>+ Tarea para novios</button>}
+      </div>
+
+      {/* Add novios task form */}
+      {section==="novios"&&showAdd&&(
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:14}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+            <select style={{...INP_SM,gridColumn:"span 2"}} value={addBodaId} onChange={e=>setAddBodaId(e.target.value)}>
+              <option value="">💍 Selecciona boda *</option>
+              {bodas.filter(b=>b.status==="Activa"||b.status==="En planificación").map(b=><option key={b.id} value={b.id}>{b.clienteName}</option>)}
+            </select>
+            <input style={{...INP_SM,gridColumn:"span 2"}} value={addName} onChange={e=>setAddName(e.target.value)} placeholder="Descripción de la tarea *" />
+            <input type="date" style={INP_SM} value={addDate} onChange={e=>setAddDate(e.target.value)} />
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={addNoviosTask} disabled={saving||!addBodaId||!addName.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!addBodaId||!addName.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Agregar"}</button>
+            <button onClick={()=>setShowAdd(false)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
-      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:18}}>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
         <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={{...INP_SM,width:"auto"}}>
           <option value="active">Activas</option>
           <option value="all">Todas</option>
           <option value="done">Terminadas</option>
         </select>
-        <select value={filterPerson} onChange={e=>setFilterPerson(e.target.value)} style={{...INP_SM,flex:1,minWidth:130}}>
+        {section==="equipo"&&<select value={filterPerson} onChange={e=>setFilterPerson(e.target.value)} style={{...INP_SM,flex:1,minWidth:130}}>
           <option value="">👤 Todas las personas</option>
           {persons.map(p=><option key={p} value={p}>{p}</option>)}
-        </select>
+        </select>}
         <select value={filterBoda} onChange={e=>setFilterBoda(e.target.value)} style={{...INP_SM,flex:1,minWidth:150}}>
           <option value="">💍 Todas las bodas</option>
-          {bodas.filter(b=>b.tasks?.length).map(b=><option key={b.id} value={b.id}>{b.clienteName}</option>)}
+          {bodas.filter(b=>b.tasks?.some(t=>section==="novios"?isNovios(t):!isNovios(t))).map(b=><option key={b.id} value={b.id}>{b.clienteName}</option>)}
         </select>
       </div>
+
       {/* Summary chips */}
       <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
         <span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:"#fef2f2",color:"#dc2626"}}>{late} atrasadas</span>
         <span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:"#fffbeb",color:"#b45309"}}>{todayN} hoy</span>
         <span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:R.light,color:R.accent}}>{filtered.length} total</span>
       </div>
-      {filtered.length===0&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"16px 0"}}>Sin tareas.</p>}
+
+      {filtered.length===0&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"16px 0"}}>Sin tareas {section==="novios"?"para novios":"del equipo"}.</p>}
       {filtered.map(t=>{
         const c=cat(t);
         const rowBg={late:"#fff5f5",today:"#fffbeb",up:R.white}[c];
@@ -2272,7 +2331,7 @@ function GlobalTasksView({ bodas, onSelectBoda }) {
               <p style={{fontSize:13,fontWeight:500,color:R.text,margin:0}}>{t.taskName}</p>
               <div style={{display:"flex",flexWrap:"wrap",gap:"3px 10px",marginTop:3,fontSize:11,color:R.muted}}>
                 <span style={{color:R.accent,fontWeight:600}}>💍 {t.bodaName}</span>
-                {t.assignedTo&&<span>👤 {t.assignedTo}</span>}
+                {t.assignedTo&&section==="equipo"&&<span>👤 {t.assignedTo}</span>}
                 {t.dueDate&&<span>📅 {t.dueDate}</span>}
                 {t.phase&&t.phase!=="General"&&<span>{t.phase}</span>}
                 {c==="late"&&<span style={{fontWeight:700,color:"#dc2626"}}>⚠️ Atrasada</span>}
@@ -2654,7 +2713,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
         {/* Dashboard view */}
         {mainView==="dashboard"&&!loading&&<GlobalDashboard bodas={bodas} onSelectBoda={b=>{setSelected(b);}} />}
         {mainView==="calendario"&&!loading&&<CalendarioView bodas={bodas} onSelectBoda={b=>{setSelected(b);}} />}
-        {mainView==="tareas"&&!loading&&<GlobalTasksView bodas={bodas} onSelectBoda={b=>{setSelected(b);}} />}
+        {mainView==="tareas"&&!loading&&<GlobalTasksView bodas={bodas} users={users} onSelectBoda={b=>{setSelected(b);}} onAddTask={async(bodaId,task)=>{ const b=bodas.find(x=>x.id===bodaId); if(!b) return; const newTasks=[...(b.tasks||[]),task]; await apiSaveNotes(bodaId,{...b,tasks:newTasks}); setBodas(prev=>prev.map(x=>x.id===bodaId?{...x,tasks:newTasks}:x)); }} />}
 
         {(mainView==="dashboard"||mainView==="calendario"||mainView==="tareas")&&loading&&(
           <div style={{textAlign:"center",padding:"60px 0"}}>
