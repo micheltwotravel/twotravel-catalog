@@ -1568,8 +1568,10 @@ function SeatingTab({ boda, onPatch }) {
 
           {/* Empty room hint */}
           {seating.length===0&&(
-            <div style={{position:"absolute",bottom:48,left:0,right:0,textAlign:"center",pointerEvents:"none"}}>
-              <p style={{fontSize:12,color:R.muted,margin:0,fontFamily:"'Jost',sans-serif",letterSpacing:".03em"}}>Agrega mesas · Arrástralas para acomodar el salón</p>
+            <div style={{position:"absolute",bottom:48,left:0,right:0,textAlign:"center"}}>
+              <p style={{fontSize:12,color:R.muted,margin:"0 0 10px",fontFamily:"'Jost',sans-serif",letterSpacing:".03em"}}>Agrega mesas · Arrástralas para acomodar el salón</p>
+              <button onClick={e=>{e.stopPropagation();setShowNew(true);setSelected(null);setPendingGuest(null);}}
+                style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 22px",fontSize:13,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".03em",boxShadow:"0 2px 12px rgba(0,0,0,.15)"}}>+ Agregar primera mesa</button>
             </div>
           )}
 
