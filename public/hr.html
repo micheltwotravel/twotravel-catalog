@@ -332,7 +332,7 @@ const PROJ_STATUS = {
   review:      { label:"En revisión", cls:"pill-review" },
 };
 const PROJ_SECTIONS = ["Backlog","Planning","En Curso","Completado"];
-const ATTEND_STATES = ["","present","absent","late","day_off"];
+const ATTEND_STATES = ["","present","absent","day_off"];
 const ATTEND_ICONS  = { present:"✓", absent:"✗", late:"~", day_off:"✦", "":"·" };
 const ATTEND_LABELS = { present:"Presente", absent:"Ausente", late:"Tarde", day_off:"Day Off", "":"" };
 
@@ -581,8 +581,7 @@ function renderAttendance() {
       ${attendSubTab === 'standup' ? `
         <span><span style="color:var(--green)">✓</span> Presente</span>
         <span><span style="color:var(--red)">✗</span> Ausente</span>
-        <span><span style="color:var(--orange)">~</span> Tarde</span>
-        <span><span style="color:#0284c7">✦</span> Day Off</span>
+        <span><span style="color:#0284c7">✦</span> Day Off (= presente)</span>
       ` : `
         <span><span style="color:var(--green)">✓</span> Asistió</span>
         <span style="color:var(--ink3)">· = no fue (normal)</span>
