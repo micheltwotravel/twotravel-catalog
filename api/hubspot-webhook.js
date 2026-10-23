@@ -175,9 +175,15 @@ export default async function handler(req, res) {
       }
 
       const deal = await fetchDeal(dealId, token);
+      // HubSpot returns {status:"error"} on API failures — bail out and clean up sentinel
+      if (deal.status === "error" || !deal.properties) {
+        console.error(`HubSpot deal fetch failed for ${dealId}: ${deal.message || JSON.stringify(deal)}`);
+        await supabase.from("kickoffs").delete().eq("id", sentinelId);
+        continue;
+      }
       const props = deal.properties || {};
 
-      const dealName    = props.dealname || "Sin nombre";
+      const dealName    = props.dealname || "";
       const destination = pickProp(props, PROP_MAP.destination);
       const pax         = pickProp(props, PROP_MAP.pax);
       const budget      = pickProp(props, PROP_MAP.budget);
@@ -198,7 +204,7 @@ export default async function handler(req, res) {
         guestContact = cp.phone || cp.mobilephone || "";
       }
       // Fallback: deal name often is "Client Name, City, Date" — take only what's before the first comma
-      if (!guestName) guestName = dealName.split(",")[0].trim();
+      if (!guestName) guestName = (dealName || "").split(",")[0].trim();
 
       const hubspotDealUrl = `https://app.hubspot.com/contacts/deals/${dealId}`;
 
@@ -214,8 +220,8 @@ export default async function handler(req, res) {
 
       const kickoffPayload = {
         id:                 sentinelId,
-        guestName:          guestName || dealName,
-        tripName:           dealName,
+        guestName:          guestName || dealName || "Sin nombre",
+        tripName:           dealName || guestName || "Sin nombre",
         status:             "active",
         destination,
         city:               destination,
@@ -236,7 +242,15 @@ export default async function handler(req, res) {
       };
 
       // Update the sentinel row in Supabase with full kickoff data so it shows in the panel
-      await supabase.from("kickoffs").update({ data: kickoffPayload }).eq("id", sentinelId);
+      const { error: updateErr } = await supabase
+        .from("kickoffs")
+        .update({ data: { ...kickoffPayload, _updatedAt: new Date().toISOString() } })
+        .eq("id", sentinelId);
+      if (updateErr) {
+        console.error(`Supabase update failed for deal ${dealId}: ${updateErr.message} — deleting sentinel`);
+        await supabase.from("kickoffs").delete().eq("id", sentinelId);
+        continue;
+      }
 
       // Also notify GAS for backward compatibility
       fetch(GAS_URL, {
