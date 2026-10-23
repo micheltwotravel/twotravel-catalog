@@ -204,6 +204,8 @@ function TasksTab({ boda, users, onPatch }) {
   const [saving,setSaving]=useState(false);
   const [saveErr,setSaveErr]=useState("");
   const [blank,setBlank]=useState({taskName:"",assignedTo:"",dueDate:"",status:"Pendiente",phase:"General",notes:""});
+  const [filterPerson,setFilterPerson]=useState("");
+  const [filterSort,setFilterSort]=useState("due");
   const today=new Date(); today.setHours(0,0,0,0);
   function cat(t) { if(!t.dueDate) return "up"; const d=new Date(t.dueDate+"T12:00:00"); d.setHours(0,0,0,0); if(d<today) return "late"; if(d.getTime()===today.getTime()) return "today"; return "up"; }
   async function persist(u){ setTasks(u); onPatch({tasks:u}); try{ await apiSaveNotes(boda.id,{...boda,tasks:u}); } catch(e){ setSaveErr("No se pudo guardar: "+e.message); setTimeout(()=>setSaveErr(""),6000); } }
@@ -219,16 +221,31 @@ function TasksTab({ boda, users, onPatch }) {
   async function add(){ if(!blank.taskName.trim()) return; setSaving(true); const newTask={...blank,id:uid(),createdAt:new Date().toISOString()}; await persist([...tasks,newTask]); if(blank.assignedTo==="Novios") await sendTaskEmail(blank.taskName, blank.dueDate, false); setBlank({taskName:"",assignedTo:"",dueDate:"",status:"Pendiente",phase:"General",notes:""}); setShow(false); setSaving(false); }
   async function toggle(id){ const u=tasks.map(t=>t.id===id?{...t,status:t.status==="Terminado"?"Pendiente":"Terminado"}:t); try{await persist(u);}catch{setTasks(tasks);} }
   async function remove(id){ try{await persist(tasks.filter(t=>t.id!==id));}catch{setTasks(tasks);} }
-  const active=tasks.filter(t=>!["Terminado","Cancelado"].includes(t.status));
+  const allActive=tasks.filter(t=>!["Terminado","Cancelado"].includes(t.status));
+  const persons=[...new Set(allActive.map(t=>t.assignedTo).filter(Boolean))];
+  const active=(filterPerson?allActive.filter(t=>(t.assignedTo||"")===filterPerson):allActive)
+    .sort((a,b)=>{if(filterSort!=="due")return 0;const da=a.dueDate||"9999";const db=b.dueDate||"9999";return da>db?1:da<db?-1:0;});
   const done  =tasks.filter(t=> ["Terminado","Cancelado"].includes(t.status));
   const rowBg=(t)=>({late:"#fff5f5",today:"#fffbeb",up:R.white}[cat(t)]);
   const rowBd=(t)=>({late:"#fca5a5",today:"#fcd34d",up:R.border}[cat(t)]);
   return (
     <div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-        <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{active.length} activa{active.length!==1?"s":""}</span>
+        <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{allActive.length} activa{allActive.length!==1?"s":""}</span>
         <button onClick={()=>setShow(v=>!v)} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Nueva tarea</button>
       </div>
+      {allActive.length>1&&(
+        <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+          <select value={filterPerson} onChange={e=>setFilterPerson(e.target.value)} style={{...INP_SM,flex:1,minWidth:120}}>
+            <option value="">👤 Todos</option>
+            {persons.map(p=><option key={p} value={p}>{p}</option>)}
+          </select>
+          <select value={filterSort} onChange={e=>setFilterSort(e.target.value)} style={{...INP_SM,width:"auto",flex:"0 0 auto"}}>
+            <option value="due">📅 Por fecha</option>
+            <option value="none">Sin orden</option>
+          </select>
+        </div>
+      )}
       {show&&(
         <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:12}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
@@ -300,7 +317,7 @@ function ProveedoresTab({ boda, onPatch }) {
   const [show,setShow]=useState(false);
   const [saving,setSaving]=useState(false);
   const [editId,setEditId]=useState(null);
-  const EMPTY={category:"Fotografía y video",city:"",company:"",contact:"",phone:"",email:"",status:"Cotizando",quote:"",currency:"USD",notes:"",instagram:""};
+  const EMPTY={category:"Fotografía y video",city:"",company:"",contact:"",phone:"",email:"",status:"Cotizando",quote:"",currency:"USD",commission:"",venueType:"",notes:"",instagram:""};
   const [blank,setBlank]=useState(EMPTY);
 
   async function persist(u){ setSuppliers(u); onPatch({suppliers:u}); await apiSaveNotes(boda.id,{...boda,suppliers:u}); }
@@ -338,6 +355,8 @@ function ProveedoresTab({ boda, onPatch }) {
               <select style={{...INP_SM,width:70,flex:"0 0 auto"}} value={blank.currency} onChange={e=>setBlank(p=>({...p,currency:e.target.value}))}><option>USD</option><option>COP</option><option>MXN</option></select>
             </div>
             <div style={{gridColumn:"span 2"}}><textarea style={{...INP_SM,resize:"vertical"}} rows={2} value={blank.notes} onChange={e=>setBlank(p=>({...p,notes:e.target.value}))} placeholder="Notas, link brochure, observaciones..." /></div>
+            <input style={INP_SM} type="number" value={blank.commission} onChange={e=>setBlank(p=>({...p,commission:e.target.value}))} placeholder="Comisión (%)" />
+            <select style={INP_SM} value={blank.venueType} onChange={e=>setBlank(p=>({...p,venueType:e.target.value}))}><option value="">Tipo de evento</option><option value="Pre-boda">Pre-boda</option><option value="Boda">Boda</option></select>
           </div>
           <div style={{display:"flex",gap:8}}>
             <button onClick={save} disabled={saving||!blank.company.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.company.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":(editId?"Guardar":"Agregar")}</button>
@@ -378,6 +397,8 @@ function ProveedoresTab({ boda, onPatch }) {
                             {s.phone    &&<span>📱 <a href={`https://wa.me/${s.phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{color:R.muted}}>{s.phone}</a></span>}
                             {s.email    &&<span>✉️ <a href={`mailto:${s.email}`} style={{color:R.muted}}>{s.email}</a></span>}
                             {s.instagram&&<span>📷 <a href={`https://instagram.com/${s.instagram.replace("@","")}`} target="_blank" rel="noreferrer" style={{color:R.muted}}>{s.instagram}</a></span>}
+                            {s.commission&&<span>💸 Comisión: {s.commission}%</span>}
+                            {s.venueType&&<span>🎪 {s.venueType}</span>}
                           </div>
                           {s.notes&&<p style={{fontSize:11,color:R.text2,margin:"4px 0 0",whiteSpace:"pre-line"}}>{s.notes}</p>}
                         </div>
@@ -1679,6 +1700,58 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
     const url=`${window.location.origin}/?mode=bodas-cliente&id=${boda.id}`;
     navigator.clipboard.writeText(url).then(()=>{ setCopied(true); setTimeout(()=>setCopied(false),2200); });
   }
+  function handlePrint() {
+    const w=window.open("","_blank","width=820,height=960");
+    const activeTasks_=(boda.tasks||[]).filter(t=>!["Terminado","Cancelado"].includes(t.status));
+    const doneTasks=(boda.tasks||[]).filter(t=>t.status==="Terminado");
+    const sups=(boda.suppliers||[]);
+    const pays=(boda.payments||[]);
+    const fmt=n=>Number(n||0).toLocaleString("es-CO");
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${boda.clienteName} — Brief</title>
+<style>*{box-sizing:border-box}body{font-family:'Georgia',serif;max-width:720px;margin:40px auto;padding:0 20px;color:#1a1814;line-height:1.55}
+h1{font-size:34px;font-style:italic;font-weight:400;margin:0 0 6px;letter-spacing:.03em}
+.sub{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#b4975a;font-family:Arial,sans-serif;margin:0 0 18px}
+h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#888;font-family:Arial,sans-serif;margin:28px 0 10px;border-bottom:1px solid #e8e4de;padding-bottom:5px}
+.meta{display:flex;flex-wrap:wrap;gap:4px 20px;font-size:12px;color:#555;font-family:Arial,sans-serif;margin-bottom:18px}
+.badge{background:#f5efe6;color:#92693d;border-radius:4px;padding:2px 8px;font-size:11px;font-family:Arial,sans-serif;display:inline-block}
+table{width:100%;border-collapse:collapse;font-size:12px;font-family:Arial,sans-serif}
+td,th{padding:5px 8px;border-bottom:1px solid #f0ebe4;text-align:left;vertical-align:top}
+th{font-weight:700;color:#aaa;text-transform:uppercase;font-size:9px;letter-spacing:.06em;background:#faf8f5}
+.foot{font-size:10px;color:#ccc;font-family:Arial,sans-serif;margin-top:48px;text-align:right;border-top:1px solid #eee;padding-top:8px}
+@media print{@page{margin:20mm}}</style></head><body>
+<h1>${boda.clienteName}</h1>
+<p class="sub">Two Lovers — Two Travel</p>
+<div class="meta">
+  ${boda.weddingDate?`<span>💍 ${boda.weddingDate}</span>`:""}
+  ${boda.venue?`<span>📍 ${boda.venue}</span>`:""}
+  ${boda.responsable?`<span>👤 ${boda.responsable}</span>`:""}
+  ${boda.guestCount?`<span>👥 ${boda.guestCount} invitados</span>`:""}
+  ${boda.contact?`<span>📱 ${boda.contact}</span>`:""}
+  ${boda.status?`<span class="badge">${boda.status}</span>`:""}
+  ${boda.phase?`<span class="badge">${boda.phase}</span>`:""}
+</div>
+${boda.budget?`<p style="font-size:12px;color:#555;font-family:Arial,sans-serif">Presupuesto: <strong>$${fmt(boda.budget)} USD</strong></p>`:""}
+${boda.notes?`<p style="font-size:13px;color:#444;font-family:Arial,sans-serif;margin-top:12px">${boda.notes}</p>`:""}
+${activeTasks_.length?`<h2>Tareas activas (${activeTasks_.length})</h2>
+<table><thead><tr><th>Tarea</th><th>Responsable</th><th>Fecha límite</th><th>Fase</th></tr></thead><tbody>
+${activeTasks_.map(t=>`<tr><td>${t.taskName}</td><td>${t.assignedTo||""}</td><td>${t.dueDate||""}</td><td>${t.phase||""}</td></tr>`).join("")}
+</tbody></table>`:""}
+${sups.length?`<h2>Proveedores (${sups.length})</h2>
+<table><thead><tr><th>Empresa</th><th>Categoría</th><th>Estado</th><th>Cotización</th><th>Contacto</th></tr></thead><tbody>
+${sups.map(s=>`<tr><td>${s.company}</td><td>${s.category||""}</td><td>${s.status}</td><td>${s.quote?`$${fmt(s.quote)} ${s.currency||"USD"}`:""}</td><td>${s.contact||""}${s.phone?` · ${s.phone}`:""}</td></tr>`).join("")}
+</tbody></table>`:""}
+${pays.length?`<h2>Pagos (${pays.length})</h2>
+<table><thead><tr><th>Concepto</th><th>Tipo</th><th>Monto</th><th>Recibido</th><th>Fecha</th></tr></thead><tbody>
+${pays.map(p=>`<tr><td>${p.concept||""}</td><td>${p.type||""}</td><td>$${fmt(p.amount)}</td><td>${p.received?"✓":""}</td><td>${p.date||""}</td></tr>`).join("")}
+</tbody></table>`:""}
+${doneTasks.length?`<h2>Tareas completadas (${doneTasks.length})</h2>
+<table><thead><tr><th>Tarea</th><th>Fase</th></tr></thead><tbody>
+${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).join("")}
+</tbody></table>`:""}
+<p class="foot">Two Lovers — Two Travel &nbsp;·&nbsp; ${new Date().toLocaleDateString("es-CO")}</p>
+<script>window.onload=()=>{window.print();}</script></body></html>`);
+    w.document.close();
+  }
   const days=daysUntil(boda.weddingDate);
   const ph=FASE_COLORS[boda.phase]||{bg:"#f5f5f4",color:"#57534e"};
   const activeTasks=(boda.tasks||[]).filter(t=>!["Terminado","Cancelado"].includes(t.status));
@@ -1727,6 +1800,7 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
               )}
             </div>
             <div style={{display:"flex",gap:8}}>
+              <button onClick={handlePrint} style={{background:"rgba(255,255,255,.08)",color:R.gold,border:`1px solid rgba(196,162,114,.30)`,borderRadius:2,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>📄 PDF</button>
               <button onClick={shareLink} style={{background:"rgba(255,255,255,.08)",color:copied?"#86efac":R.gold,border:`1px solid ${copied?"rgba(134,239,172,.35)":"rgba(196,162,114,.30)"}`,borderRadius:2,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",transition:"all .2s"}}>{copied?"✓ Copiado":"🔗 Compartir"}</button>
               <button onClick={()=>setEditing(v=>!v)} style={{background:editing?"rgba(255,255,255,.15)":"rgba(255,255,255,.08)",color:R.white,border:"1px solid rgba(255,255,255,.18)",borderRadius:2,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>{editing?"Cancelar":"✏️ Editar"}</button>
             </div>
@@ -2077,6 +2151,87 @@ function CalendarioView({ bodas, onSelectBoda }) {
   );
 }
 
+// ─── GLOBAL TASKS VIEW ───────────────────────────────────────────────────────
+function GlobalTasksView({ bodas, onSelectBoda }) {
+  const today=new Date(); today.setHours(0,0,0,0);
+  const [filterPerson,setFilterPerson]=useState("");
+  const [filterBoda,setFilterBoda]=useState("");
+  const [filterStatus,setFilterStatus]=useState("active");
+
+  const allTasks=bodas.flatMap(b=>(b.tasks||[]).map(t=>({...t,bodaName:b.clienteName,bodaId:b.id})));
+  const persons=[...new Set(allTasks.map(t=>t.assignedTo).filter(Boolean))].sort();
+
+  function cat(t){ if(!t.dueDate) return "up"; const d=new Date(t.dueDate+"T12:00:00"); d.setHours(0,0,0,0); if(d<today) return "late"; if(d.getTime()===today.getTime()) return "today"; return "up"; }
+
+  const filtered=allTasks
+    .filter(t=>{
+      if(filterStatus==="active" && ["Terminado","Cancelado"].includes(t.status)) return false;
+      if(filterStatus==="done"   && !["Terminado","Cancelado"].includes(t.status)) return false;
+      if(filterPerson && (t.assignedTo||"")!==filterPerson) return false;
+      if(filterBoda   && t.bodaId!==filterBoda) return false;
+      return true;
+    })
+    .sort((a,b)=>{
+      const pa=cat(a)==="late"?0:cat(a)==="today"?1:2;
+      const pb=cat(b)==="late"?0:cat(b)==="today"?1:2;
+      if(pa!==pb) return pa-pb;
+      const da=a.dueDate||"9999"; const db=b.dueDate||"9999";
+      return da>db?1:da<db?-1:0;
+    });
+
+  const late=filtered.filter(t=>cat(t)==="late").length;
+  const todayN=filtered.filter(t=>cat(t)==="today").length;
+
+  return (
+    <div>
+      {/* Filters */}
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:18}}>
+        <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={{...INP_SM,width:"auto"}}>
+          <option value="active">Activas</option>
+          <option value="all">Todas</option>
+          <option value="done">Terminadas</option>
+        </select>
+        <select value={filterPerson} onChange={e=>setFilterPerson(e.target.value)} style={{...INP_SM,flex:1,minWidth:130}}>
+          <option value="">👤 Todas las personas</option>
+          {persons.map(p=><option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={filterBoda} onChange={e=>setFilterBoda(e.target.value)} style={{...INP_SM,flex:1,minWidth:150}}>
+          <option value="">💍 Todas las bodas</option>
+          {bodas.filter(b=>b.tasks?.length).map(b=><option key={b.id} value={b.id}>{b.clienteName}</option>)}
+        </select>
+      </div>
+      {/* Summary chips */}
+      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+        <span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:"#fef2f2",color:"#dc2626"}}>{late} atrasadas</span>
+        <span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:"#fffbeb",color:"#b45309"}}>{todayN} hoy</span>
+        <span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:R.light,color:R.accent}}>{filtered.length} total</span>
+      </div>
+      {filtered.length===0&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"16px 0"}}>Sin tareas.</p>}
+      {filtered.map(t=>{
+        const c=cat(t);
+        const rowBg={late:"#fff5f5",today:"#fffbeb",up:R.white}[c];
+        const rowBd={late:"#fca5a5",today:"#fcd34d",up:R.border}[c];
+        return (
+          <button key={t.id+t.bodaId} onClick={()=>onSelectBoda(bodas.find(b=>b.id===t.bodaId))}
+            style={{display:"flex",alignItems:"flex-start",gap:10,width:"100%",background:rowBg,border:`1px solid ${rowBd}`,borderRadius:12,padding:"10px 14px",marginBottom:6,cursor:"pointer",textAlign:"left",fontFamily:"'Jost',sans-serif"}}>
+            <div style={{flex:1,minWidth:0}}>
+              <p style={{fontSize:13,fontWeight:500,color:R.text,margin:0}}>{t.taskName}</p>
+              <div style={{display:"flex",flexWrap:"wrap",gap:"3px 10px",marginTop:3,fontSize:11,color:R.muted}}>
+                <span style={{color:R.accent,fontWeight:600}}>💍 {t.bodaName}</span>
+                {t.assignedTo&&<span>👤 {t.assignedTo}</span>}
+                {t.dueDate&&<span>📅 {t.dueDate}</span>}
+                {t.phase&&t.phase!=="General"&&<span>{t.phase}</span>}
+                {c==="late"&&<span style={{fontWeight:700,color:"#dc2626"}}>⚠️ Atrasada</span>}
+                {c==="today"&&<span style={{fontWeight:700,color:"#d97706"}}>🔥 Hoy</span>}
+              </div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── GLOBAL DASHBOARD ────────────────────────────────────────────────────────
 function GlobalDashboard({ bodas, onSelectBoda }) {
   const today = new Date(); today.setHours(0,0,0,0);
@@ -2412,7 +2567,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
       <div style={{maxWidth:900,margin:"0 auto",padding:"24px 16px 60px"}}>
         {/* Main nav tabs */}
         <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:20,borderBottom:`1px solid ${R.border}`}}>
-          {[{id:"dashboard",label:"📊 Dashboard"},{id:"calendario",label:"📆 Calendario"},{id:"lista",label:"💍 Lista"}].map(v=>(
+          {[{id:"dashboard",label:"📊 Dashboard"},{id:"calendario",label:"📆 Calendario"},{id:"lista",label:"💍 Lista"},{id:"tareas",label:"📋 Tareas"}].map(v=>(
             <button key={v.id} onClick={()=>setMainView(v.id)}
               style={{padding:"12px 22px",border:"none",borderBottom:mainView===v.id?`2.5px solid ${R.gold}`:"2.5px solid transparent",background:"transparent",fontSize:13,fontWeight:mainView===v.id?600:400,color:mainView===v.id?R.text:R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif",transition:"color .15s",letterSpacing:mainView===v.id?".01em":"normal"}}>
               {v.label}
@@ -2445,8 +2600,9 @@ export default function BodaPanel({ currentUser, onLogout }) {
         {/* Dashboard view */}
         {mainView==="dashboard"&&!loading&&<GlobalDashboard bodas={bodas} onSelectBoda={b=>{setSelected(b);}} />}
         {mainView==="calendario"&&!loading&&<CalendarioView bodas={bodas} onSelectBoda={b=>{setSelected(b);}} />}
+        {mainView==="tareas"&&!loading&&<GlobalTasksView bodas={bodas} onSelectBoda={b=>{setSelected(b);}} />}
 
-        {(mainView==="dashboard"||mainView==="calendario")&&loading&&(
+        {(mainView==="dashboard"||mainView==="calendario"||mainView==="tareas")&&loading&&(
           <div style={{textAlign:"center",padding:"60px 0"}}>
             <div style={{width:28,height:28,border:`2px solid ${R.border}`,borderTop:`2px solid ${R.accent}`,borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 12px"}} />
             <p style={{fontSize:13,color:R.muted}}>Cargando dashboard...</p>
