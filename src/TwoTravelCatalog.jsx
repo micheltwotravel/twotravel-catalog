@@ -1960,11 +1960,17 @@ export default function TwoTravelCatalog() {
   const [step, setStep] = useState("welcome"); // "welcome" | "quiz" | "catalog"
   const [fadeIn, setFadeIn] = useState(false);
 
-  const [lang, setLang] = useState(() => {
+  const [lang, setLangRaw] = useState(() => {
     const p = new URLSearchParams(window.location.search);
     const l = p.get("lang");
     return l === "en" || l === "es" ? l : "en";
   });
+  const setLang = (l) => {
+    setLangRaw(l);
+    const p = new URLSearchParams(window.location.search);
+    p.set("lang", l);
+    window.history.replaceState(null, "", "?" + p.toString());
+  };
   // Currency defaults to USD when language is English, COP when Spanish
   const [currency, setCurrency] = useState(() => {
     const p = new URLSearchParams(window.location.search);
@@ -3268,28 +3274,17 @@ setCart([]);
     return (
       <div className="min-h-screen bg-neutral-50">
         <div className="flex justify-end px-4 pt-4">
-  <button
-    onClick={() => setLang("es")}
-    className={`px-3 py-1 text-xs rounded-l border ${
-      lang === "es"
-        ? "bg-neutral-900 text-white"
-        : "bg-white text-neutral-700"
-    }`}
-  >
-    ES
-  </button>
-
-  <button
-    onClick={() => setLang("en")}
-    className={`px-3 py-1 text-xs rounded-r border ${
-      lang === "en"
-        ? "bg-neutral-900 text-white"
-        : "bg-white text-neutral-700"
-    }`}
-  >
-    EN
-  </button>
-</div>
+          <div className="flex border border-neutral-200 rounded-lg overflow-hidden text-xs font-medium">
+            {["en","es"].map(l => (
+              <button key={l} type="button" onClick={() => setLang(l)}
+                className={`px-3 py-1.5 uppercase transition-colors ${
+                  lang === l ? "bg-neutral-900 text-white" : "text-neutral-500 hover:text-neutral-900"
+                }`}>
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="max-w-3xl mx-auto px-4 py-10 space-y-4">
           <img src={logo} alt="Two Travel" className="h-10 w-auto" />
@@ -3560,17 +3555,15 @@ setCart([]);
 
           <div className="flex items-center gap-2 sm:gap-3 text-sm">
             {/* Idioma */}
-            <div className="flex items-center gap-1">
-              <Globe className="w-4 h-4 text-tt.teal" />
-              <span className="hidden sm:inline">{t.language}:</span>
-              <select
-                className="border rounded px-2 py-1"
-                value={lang}
-                onChange={(e) => setLang(e.target.value)}
-              >
-                <option value="es">ES</option>
-                <option value="en">EN</option>
-              </select>
+            <div className="flex border border-neutral-200 rounded-lg overflow-hidden text-xs font-medium">
+              {["en","es"].map(l => (
+                <button key={l} type="button" onClick={() => setLang(l)}
+                  className={`px-3 py-1.5 uppercase transition-colors ${
+                    lang === l ? "bg-neutral-900 text-white" : "text-neutral-500 hover:text-neutral-900"
+                  }`}>
+                  {l}
+                </button>
+              ))}
             </div>
 
             {/* Moneda */}
