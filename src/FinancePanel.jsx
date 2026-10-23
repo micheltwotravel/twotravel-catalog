@@ -1942,9 +1942,12 @@ export function FinancePagosProveedores() {
                                 </select>
                               </td>
                               <td style={{padding:"8px 10px",whiteSpace:"nowrap",textAlign:"center",display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}>
-                                {r.invoiceUrl && (
+                                {r.invoiceUrl ? (
                                   <a href={r.invoiceUrl} target="_blank" rel="noreferrer"
                                     style={{fontSize:15,textDecoration:"none"}} title="Ver factura / cuenta de cobro">📄</a>
+                                ) : (
+                                  <button onClick={()=>openEdit(r.id)} title="Agregar factura / cuenta de cobro"
+                                    style={{background:"none",border:"none",cursor:"pointer",fontSize:15,opacity:.35,padding:0,lineHeight:1}}>📄</button>
                                 )}
                                 {r.soporteUrl ? (
                                   <a href={r.soporteUrl} target="_blank" rel="noreferrer"
