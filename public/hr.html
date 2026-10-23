@@ -170,6 +170,11 @@ button,input,select,textarea{font-family:'Jost',sans-serif}
 /* done section */
 .section-done .section-hdr{background:var(--green-bg);border-color:rgba(22,163,74,.2)}
 .section-done .section-name{color:var(--green)}
+/* new hiring status pills */
+.pill-in_process{background:#d1fae5;color:#065f46}
+.pill-assessment{background:#fef3c7;color:#92400e}
+/* day off attendance cell */
+.attend-cell.day_off{background:#e0f2fe;color:#0284c7}
 </style>
 </head>
 <body>
@@ -276,6 +281,7 @@ let panelId = null;
 let panelType = null;
 let modalMode = null; // { type, id? }
 let currentWeek = getMonday(new Date());
+let projSortDate = false;
 
 // ── HELPERS ──────────────────────────────────────────────
 function getMonday(d) {
@@ -310,11 +316,13 @@ function timeSince(iso) {
 }
 
 const CAND_STATUS = {
-  open:      { label:"Contactado",  cls:"pill-open" },
-  interview: { label:"Entrevista",  cls:"pill-interview" },
-  offer:     { label:"Oferta",      cls:"pill-offer" },
-  hired:     { label:"Contratado",  cls:"pill-hired" },
-  rejected:  { label:"Rechazado",   cls:"pill-rejected" },
+  open:        { label:"Contactado",  cls:"pill-open" },
+  in_process:  { label:"En Proceso",  cls:"pill-in_process" },
+  assessment:  { label:"Assessment",  cls:"pill-assessment" },
+  interview:   { label:"Entrevista",  cls:"pill-interview" },
+  offer:       { label:"Oferta",      cls:"pill-offer" },
+  hired:       { label:"Contratado",  cls:"pill-hired" },
+  rejected:    { label:"Rechazado",   cls:"pill-rejected" },
 };
 const PROJ_STATUS = {
   not_started: { label:"No iniciado", cls:"pill-not_started" },
@@ -324,9 +332,9 @@ const PROJ_STATUS = {
   review:      { label:"En revisión", cls:"pill-review" },
 };
 const PROJ_SECTIONS = ["Backlog","Planning","En Curso","Completado"];
-const ATTEND_STATES = ["","present","absent","late"];
-const ATTEND_ICONS  = { present:"✓", absent:"✗", late:"~", "":"·" };
-const ATTEND_LABELS = { present:"Presente", absent:"Ausente", late:"Tarde", "":"" };
+const ATTEND_STATES = ["","present","absent","late","day_off"];
+const ATTEND_ICONS  = { present:"✓", absent:"✗", late:"~", day_off:"✦", "":"·" };
+const ATTEND_LABELS = { present:"Presente", absent:"Ausente", late:"Tarde", day_off:"Day Off", "":"" };
 
 function pill(status, map, onclick) {
   const s = map[status] || { label: status, cls: "pill-not_started" };
@@ -371,7 +379,7 @@ function renderHiring() {
     </div>`;
 
   // Group by status order
-  const order = ["open","interview","offer","hired","rejected"];
+  const order = ["open","in_process","assessment","interview","offer","hired","rejected"];
   const filtered = candidates.filter(c => {
     if (searchQ) {
       const q = searchQ.toLowerCase();
@@ -435,7 +443,7 @@ function renderHiring() {
 }
 
 function cycleCandStatus(id) {
-  const order = ["open","interview","offer","hired","rejected"];
+  const order = ["open","in_process","assessment","interview","offer","hired","rejected"];
   const c = candidates.find(x => x.id === id);
   if (!c) return;
   const idx = order.indexOf(c.status);
@@ -463,11 +471,15 @@ function renderProjects() {
   tb.innerHTML = `
     <button class="tbtn primary" onclick="openModal('project')">+ Agregar iniciativa</button>
     <div class="search"><span style="color:var(--ink3);font-size:13px">🔍</span>
-      <input placeholder="Buscar iniciativa…" value="${searchQ}" oninput="searchQ=this.value;renderProjects()"></div>`;
+      <input placeholder="Buscar iniciativa…" value="${searchQ}" oninput="searchQ=this.value;renderProjects()"></div>
+    <button class="tbtn ${projSortDate?'primary':''}" onclick="projSortDate=!projSortDate;renderProjects()" title="Ordenar por fecha límite">📅 ${projSortDate?'Fecha ↓':'Fecha'}</button>`;
 
-  const filtered = projects.filter(p =>
+  const allFiltered = projects.filter(p =>
     !searchQ || (p.title||"").toLowerCase().includes(searchQ.toLowerCase())
   );
+  const filtered = projSortDate
+    ? [...allFiltered].sort((a,b) => (b.dueDate||"").localeCompare(a.dueDate||""))
+    : allFiltered;
 
   const projTable = (list) => `
     <table class="tbl">
@@ -570,6 +582,7 @@ function renderAttendance() {
         <span><span style="color:var(--green)">✓</span> Presente</span>
         <span><span style="color:var(--red)">✗</span> Ausente</span>
         <span><span style="color:var(--orange)">~</span> Tarde</span>
+        <span><span style="color:#0284c7">✦</span> Day Off</span>
       ` : `
         <span><span style="color:var(--green)">✓</span> Asistió</span>
         <span style="color:var(--ink3)">· = no fue (normal)</span>
@@ -585,7 +598,7 @@ function renderAttendance() {
     return r.type === type && d >= currentWeek && d <= addDays(currentWeek, 4);
   });
   const totalPossible = weekStaff.length * 5;
-  const presents = weekRecords.filter(r => r.status === "present").length;
+  const presents = weekRecords.filter(r => r.status === "present" || r.status === "day_off").length;
   const absents  = weekRecords.filter(r => r.status === "absent").length;
 
   let html = `<div class="month-summary">
@@ -613,7 +626,7 @@ function renderAttendance() {
       const weekPresent = days.filter(d => {
         const iso = isoDate(d);
         const rec = rowRecords.find(r => r.date === iso);
-        return rec?.status === "present";
+        return rec?.status === "present" || rec?.status === "day_off";
       }).length;
 
       html += `<tr>
@@ -736,6 +749,26 @@ function renderCultura() {
   </div>`;
 
   html += `</div>`;
+
+  // Employee of month history
+  const empHistory = cultura.empHistory || [];
+  if (empHistory.length) {
+    html += `<div style="background:var(--white);border:1px solid var(--border);padding:16px 20px;margin-bottom:16px">
+      <div style="font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:12px">📚 Historial empleado del mes</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        ${empHistory.map((e,i) => `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--sand);border:1px solid var(--border);min-width:180px;flex:0 0 auto">
+          <div style="width:34px;height:34px;border-radius:50%;overflow:hidden;background:var(--sand2);flex-shrink:0;display:flex;align-items:center;justify-content:center">
+            ${e.photo ? `<img src="${e.photo}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">` : `<span style="font-size:13px">${(e.name||"?").charAt(0).toUpperCase()}</span>`}
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:400">${e.name}</div>
+            <div style="font-size:10px;color:var(--ink3)">${e.role||""}</div>
+            <div style="font-size:10px;color:var(--gold2)">${e.month||""}</div>
+          </div>
+        </div>`).join("")}
+      </div>
+    </div>`;
+  }
 
   // Posts / novedades
   html += `<div style="background:var(--white);border:1px solid var(--border);padding:20px">
@@ -1030,8 +1063,12 @@ function openModal(type, id) {
         <div class="field-row"><label>Mes</label>
           <input id="fEMonth" value="${em.month||""}" placeholder="Septiembre 2026"></div>
       </div>
-      <div class="field-row"><label>URL de foto (opcional)</label>
-        <input id="fEPhoto" value="${em.photo||""}" placeholder="https://…"></div>
+      <div class="field-row"><label>Foto (URL o archivo)</label>
+        <input id="fEPhoto" value="${em.photo&&!em.photo.startsWith('data:')?em.photo:""}" placeholder="https://… (URL de foto)">
+        <div style="margin-top:6px;font-size:10px;color:var(--ink3);letter-spacing:.04em">— o subir archivo —</div>
+        <input type="file" id="fEFile" accept="image/*" style="margin-top:4px;font-size:11px;width:100%;color:var(--ink2)">
+        ${em.photo ? `<div style="margin-top:4px;font-size:10px;color:var(--green)">✓ Foto actual: ${em.photo.startsWith('data:')?"Imagen subida":"URL guardada"}</div>` : ""}
+      </div>
       <div class="field-row"><label>Mensaje de reconocimiento</label>
         <textarea id="fEMsg" rows="3" placeholder="Descripción de sus logros…">${em.message||""}</textarea></div>`;
   } else if (type === "cultura_post") {
@@ -1107,9 +1144,26 @@ function saveModal() {
     const month   = document.getElementById("fEMonth").value.trim();
     const photo   = document.getElementById("fEPhoto").value.trim();
     const message = document.getElementById("fEMsg").value.trim();
+    const fileEl  = document.getElementById("fEFile");
     if (!name) { alert("El nombre es obligatorio."); return; }
-    cultura.empMonth = { name, role, month, photo, message };
-    saveCultura();
+    const commit = (finalPhoto) => {
+      if (cultura.empMonth?.name) {
+        if (!cultura.empHistory) cultura.empHistory = [];
+        cultura.empHistory.unshift({...cultura.empMonth});
+      }
+      cultura.empMonth = { name, role, month, photo: finalPhoto, message };
+      saveCultura();
+      closeModal();
+      render();
+    };
+    if (fileEl?.files?.[0]) {
+      const r = new FileReader();
+      r.onload = (e) => commit(e.target.result);
+      r.readAsDataURL(fileEl.files[0]);
+      return;
+    }
+    commit(photo);
+    return;
   } else if (type === "cultura_post") {
     const emoji = document.getElementById("fPEmoji").value.trim() || "📌";
     const title = document.getElementById("fPTitle").value.trim();
