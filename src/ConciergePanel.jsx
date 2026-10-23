@@ -4722,7 +4722,7 @@ function JuniorDrawer({ kickoff, onClose, onSave }) {
               <div className="col-span-2">
                 <label className="text-[10px] text-neutral-500">Precio Jr.</label>
                 <div className="mt-0.5 flex gap-1.5 items-center">
-                  <input type="number" value={juniorPrice} onChange={e => setJuniorPrice(e.target.value)} placeholder="0"
+                  <input type="text" inputMode="numeric" value={juniorPrice} onChange={e => setJuniorPrice(e.target.value)} placeholder="0"
                     className="flex-1 border rounded-lg px-2 py-1.5 text-xs" />
                   {["COP","USD","MXN"].map(c => (
                     <button key={c} type="button" onClick={() => setJuniorCurrency(c)}
@@ -8253,7 +8253,7 @@ function SortableMenuDefaultItem({ id, item, isHidden, isDrink, currentImg, curr
           <input value={currentImg} onChange={e => onPatch(item.name, "img", e.target.value)} placeholder="https://…" style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }} />
           {isDrink && (<>
             <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Precio (COP)</label>
-            <input type="number" value={currentPrice || ""} onChange={e => onPatch(item.name, "priceCOP", parseInt(e.target.value) || 0)} placeholder="0" style={{ width: 160, border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }} />
+            <input type="text" inputMode="numeric" value={currentPrice || ""} onChange={e => onPatch(item.name, "priceCOP", parseInt(e.target.value) || 0)} placeholder="0" style={{ width: 160, border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }} />
           </>)}
         </>)}
         {isHidden && <div style={{ fontSize: 11, color: "#dc2626", fontWeight: 500 }}>Eliminado del menú</div>}
@@ -8284,7 +8284,7 @@ function SortableMenuExtraItem({ id, item, catId, idx, isDrink, onUpdate, onRemo
         <input value={item.img || ""} onChange={e => onUpdate(catId, idx, "img", e.target.value)} placeholder="https://…" style={{ width: "100%", border: "1px solid #bbf7d0", borderRadius: 6, padding: "5px 8px", fontSize: 12, boxSizing: "border-box", background: "#fff" }} />
         {isDrink && (<>
           <label style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Precio (COP)</label>
-          <input type="number" value={item.priceCOP || ""} onChange={e => onUpdate(catId, idx, "priceCOP", parseInt(e.target.value) || 0)} placeholder="0" style={{ width: 160, border: "1px solid #bbf7d0", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }} />
+          <input type="text" inputMode="numeric" value={item.priceCOP || ""} onChange={e => onUpdate(catId, idx, "priceCOP", parseInt(e.target.value) || 0)} placeholder="0" style={{ width: 160, border: "1px solid #bbf7d0", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }} />
         </>)}
       </div>
       <button onClick={() => onRemove(catId, idx)} title="Eliminar item" style={{ color: "#dc2626", background: "none", border: "none", cursor: "pointer", fontSize: 16, flexShrink: 0, marginTop: 4 }}>✕</button>
@@ -8519,7 +8519,7 @@ export function MenuAdminPanel() {
                   return (
                     <label key={pi} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                       <span style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>{label}</span>
-                      <input type="number" value={val || ""}
+                      <input type="text" inputMode="numeric" value={val || ""}
                         onChange={e => patch(key, field, parseInt(e.target.value) || 0)}
                         style={{ width: 120, border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }}
                       />
@@ -8552,7 +8552,7 @@ export function MenuAdminPanel() {
                             return (
                               <label key={pi} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                                 <span style={{ fontSize: 10, color: "#6b7280", fontWeight: 500 }}>{label}</span>
-                                <input type="number" value={val || ""}
+                                <input type="text" inputMode="numeric" value={val || ""}
                                   onChange={e => patch(key, field, parseInt(e.target.value) || 0)}
                                   style={{ width: 110, border: "1px solid #e5e7eb", borderRadius: 6, padding: "5px 8px", fontSize: 12, background: "#fff" }}
                                 />

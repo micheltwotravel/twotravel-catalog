@@ -1844,7 +1844,8 @@ function UnifiedDashboard({ currentUser, onLogout, initialTab, kpiOnly = false }
   const sheetUrl =
     "https://docs.google.com/spreadsheets/d/1Tyv5cPTN0MjxezyWRjo-XuIRqOgaPwP-z1heZfgGiuQ/edit#gid=0";
 
-  const isJunior = currentUser?.role === "junior";
+  const isJunior = currentUser?.role === "junior" ||
+    Object.values(JUNIOR_CONCIERGES_BY_CITY).flat().includes(currentUser?.name);
   const [tab, setTab] = useState(initialTab || (isJunior ? "clientes" : "clientes"));
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
