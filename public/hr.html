@@ -1085,7 +1085,11 @@ function openModal(type, id) {
   } else if (type === "cultura_img") {
     title.textContent = "Agregar imagen a galería";
     body.innerHTML = `
-      <div class="field-row"><label>URL de la imagen</label>
+      <div class="field-row"><label>Subir archivo</label>
+        <input type="file" id="fIFile" accept="image/*" style="font-size:13px;padding:4px 0" onchange="previewImg(this)">
+        <div id="fIPreview" style="margin-top:8px;display:none"><img id="fIPreviewImg" style="max-width:100%;max-height:160px;border-radius:4px;object-fit:contain;border:1px solid var(--border)"></div>
+      </div>
+      <div class="field-row" style="margin-top:8px"><label style="color:var(--ink3);font-size:10px">— o pega un enlace —</label>
         <input id="fIUrl" placeholder="https://… (link directo a la imagen)"></div>
       <div class="field-row"><label>Caption (opcional)</label>
         <input id="fICaption" placeholder="Cartagena · Diciembre 2026"></div>`;
@@ -1172,15 +1176,39 @@ function saveModal() {
     cultura.posts.push({ emoji, title, body, at: new Date().toISOString() });
     saveCultura();
   } else if (type === "cultura_img") {
-    const url     = document.getElementById("fIUrl").value.trim();
-    const caption = document.getElementById("fICaption").value.trim();
-    if (!url) { alert("La URL es obligatoria."); return; }
+    const urlInput = document.getElementById("fIUrl").value.trim();
+    const caption  = document.getElementById("fICaption").value.trim();
+    const fileInput = document.getElementById("fIFile");
+    const file = fileInput && fileInput.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        if (!cultura.gallery) cultura.gallery = [];
+        cultura.gallery.push({ url: ev.target.result, caption });
+        saveCultura();
+        closeModal();
+        render();
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+    if (!urlInput) { alert("Selecciona un archivo o pega una URL."); return; }
     if (!cultura.gallery) cultura.gallery = [];
-    cultura.gallery.push({ url, caption });
+    cultura.gallery.push({ url: urlInput, caption });
     saveCultura();
   }
   closeModal();
   render();
+}
+
+function previewImg(input) {
+  const file = input.files[0];
+  const prev = document.getElementById("fIPreview");
+  const img  = document.getElementById("fIPreviewImg");
+  if (!file || !prev || !img) return;
+  const reader = new FileReader();
+  reader.onload = ev => { img.src = ev.target.result; prev.style.display = "block"; };
+  reader.readAsDataURL(file);
 }
 
 // ── INIT ────────────────────────────────────────────────────
