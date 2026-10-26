@@ -10,6 +10,18 @@
     <meta property="og:image" content="https://two.travel/og-itinerary.jpg" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Concierge Itinerary — Two Travel" />
+  <!-- HubSpot Tracking: set VITE_HUBSPOT_PORTAL_ID in .env to enable lead attribution -->
+  <script id="hs-tracking-loader">
+    (function() {
+      var pid = "%VITE_HUBSPOT_PORTAL_ID%";
+      if (!pid || !/^\d+$/.test(pid)) return; // not set or still a placeholder
+      var s = document.createElement("script");
+      s.id = "hs-script-loader";
+      s.src = "//js.hs-scripts.com/" + pid + ".js";
+      s.async = s.defer = true;
+      document.head.appendChild(s);
+    })();
+  </script>
   </head>
   <body class="bg-gray-50">
     <div id="root"></div>

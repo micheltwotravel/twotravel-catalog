@@ -58,7 +58,7 @@ export default async function handler(req, res) {
   try {
     // ── UPSERT CONTACT ─────────────────────────────────────────
     if (action === "upsert_contact") {
-      const { email, firstName, lastName, phone, status, destination, agent, notes } = data;
+      const { email, firstName, lastName, phone, status, destination, agent, notes, hutk, pageUri, pageName } = data;
       if (!email) return res.status(400).json({ error: "email required" });
 
       const props = {
@@ -80,6 +80,35 @@ export default async function handler(req, res) {
         result = await hubspotRequest(`/crm/v3/objects/contacts/${existing.id}`, "PATCH", { properties: props }, token);
         return res.status(200).json({ action: "updated", contactId: existing.id, ...result.data });
       } else {
+        // When hutk is present (client submitted from their own browser), use the Forms API
+        // so HubSpot attributes the lead to the correct marketing channel (Paid Search, Organic, etc.)
+        const portalId = process.env.HUBSPOT_PORTAL_ID;
+        const formGuid = process.env.HUBSPOT_FORM_GUID;
+        if (hutk && portalId && formGuid) {
+          const formBody = {
+            submittedAt: Date.now(),
+            fields: [
+              { name: "email",     value: email },
+              { name: "firstname", value: firstName || "" },
+              { name: "lastname",  value: lastName  || "" },
+              ...(phone        ? [{ name: "phone",   value: phone }]       : []),
+              ...(destination  ? [{ name: "destination__c", value: destination }] : []),
+            ],
+            context: {
+              hutk,
+              pageUri:  pageUri  || "https://app.two.travel/",
+              pageName: pageName || "Two Travel Questionnaire",
+            },
+          };
+          const formRes = await fetch(
+            `https://api.hsforms.com/submissions/v3/integration/submit/${portalId}/${formGuid}`,
+            { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formBody) }
+          );
+          const formData = await formRes.json().catch(() => ({}));
+          // Fetch the contact that was just created so we can return its id
+          const created = await findContactByEmail(email, token);
+          return res.status(200).json({ action: "created_via_form", contactId: created?.id, formResult: formData });
+        }
         result = await hubspotRequest(`/crm/v3/objects/contacts`, "POST", { properties: props }, token);
         return res.status(200).json({ action: "created", contactId: result.data?.id, ...result.data });
       }

@@ -3082,6 +3082,35 @@ console.log("CONTACTO QUE SE ENVIA:", finalGuestContact);
 console.log("PAYLOAD QUE SE ENVIA:", payload);
 await updateKickoffInSheet(idToUse, payload);
 
+// ── HubSpot source attribution: upsert contact with tracking cookie ────────
+// Send hutk so HubSpot attributes the lead to the real channel (Paid Search,
+// Organic, etc.) instead of "Offline". Must fire BEFORE any deal is created.
+const hsEmail = currentKickoff?.email || currentKickoff?.guestEmail || "";
+if (hsEmail) {
+  try {
+    const hutk = document.cookie.split(";").map(c => c.trim())
+      .find(c => c.startsWith("hubspotutk="))?.split("=")[1] || "";
+    const nameParts = (cleanGuestName || "").trim().split(/\s+/);
+    fetch("/api/hubspot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "upsert_contact",
+        data: {
+          email: hsEmail,
+          firstName: nameParts[0] || cleanGuestName,
+          lastName: nameParts.slice(1).join(" ") || "",
+          phone: finalGuestContact || "",
+          status: "IN_PROGRESS",
+          destination: currentKickoff?.city || currentKickoff?.destination || "",
+          notes: `Cliente submittió catálogo: ${cleanTripName || idToUse}`,
+          ...(hutk && { hutk, pageUri: window.location.href, pageName: "Two Travel Questionnaire" }),
+        },
+      }),
+    }).catch(() => {});
+  } catch {}
+}
+
 // ── Auto-create concierge tasks based on cart ─────────────────────────────
 const TASK_API_URL = import.meta.env.VITE_GAS_URL_CATALOG;
 const autoTaskLabel = (item) => {
