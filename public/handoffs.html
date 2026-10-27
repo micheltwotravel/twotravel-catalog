@@ -965,6 +965,12 @@ function editCell(cell, id, field){
       const o = document.createElement('option'); o.value=v; o.textContent=v||'—'; if(v===cur) o.selected=true;
       input.appendChild(o);
     });
+  } else if(field === 'currency'){
+    input = document.createElement('select');
+    ['COP','USD','MXN'].forEach(v=>{
+      const o = document.createElement('option'); o.value=v; o.textContent=v; if(v===(cur||'COP')) o.selected=true;
+      input.appendChild(o);
+    });
   } else {
     input = document.createElement('input');
     input.value = cur;

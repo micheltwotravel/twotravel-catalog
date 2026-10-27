@@ -1465,6 +1465,52 @@ const DEFAULT_FLOOR_SVG = `<svg viewBox="0 0 700 480" xmlns="http://www.w3.org/2
   <text x="36" y="333" text-anchor="middle" font-size="8" fill="#7f1d3a" font-family="Arial,sans-serif" transform="rotate(-90,36,333)">Salida</text>
 </svg>`;
 
+const VENUE_FLOORS = {
+  "Baluarte SFJ": [
+    {label:"Plano general",   url:"/venue-floors/baluarte-sfj/plano.jpg"},
+    {label:"Vista 1",         url:"/venue-floors/baluarte-sfj/vista1.jpg"},
+    {label:"Vista 2",         url:"/venue-floors/baluarte-sfj/vista2.jpg"},
+  ],
+  "Baluarte Santiago Apóstol": [
+    {label:"Plano",           url:"/venue-floors/baluarte-santiago-apostol/plano.jpg"},
+  ],
+  "Casa Cochera del Gobernador": [
+    {label:"Salón AC",        url:"/venue-floors/casa-cochera-gobernador/salon.jpg"},
+    {label:"Rooftop",         url:"/venue-floors/casa-cochera-gobernador/rooftop.jpg"},
+    {label:"Terraza",         url:"/venue-floors/casa-cochera-gobernador/terraza.jpg"},
+  ],
+  "Casa Córdoba Cabal": [
+    {label:"Segundo piso",    url:"/venue-floors/casa-cordoba-cabal/segundo-piso.jpg"},
+    {label:"Tercer piso",     url:"/venue-floors/casa-cordoba-cabal/tercer-piso.jpg"},
+    {label:"Terraza",         url:"/venue-floors/casa-cordoba-cabal/terraza.jpg"},
+  ],
+  "Casa El Rosal": [
+    {label:"Plano 1",         url:"/venue-floors/casa-el-rosal/plano1.jpg"},
+    {label:"Plano 2",         url:"/venue-floors/casa-el-rosal/plano2.jpg"},
+    {label:"Plano 3",         url:"/venue-floors/casa-el-rosal/plano3.jpg"},
+  ],
+  "Casa Estrella": [
+    {label:"Segundo piso",    url:"/venue-floors/casa-estrella/segundo-piso.png"},
+    {label:"Segundo piso (detalle)", url:"/venue-floors/casa-estrella/segundo-piso-detalle.jpg"},
+  ],
+  "Casa Santiago Botero": [
+    {label:"Overview",        url:"/venue-floors/casa-santiago-botero/overview.jpg"},
+    {label:"Primer piso",     url:"/venue-floors/casa-santiago-botero/primer-piso.jpg"},
+    {label:"Primer piso (detalle)", url:"/venue-floors/casa-santiago-botero/primer-piso-detalle.jpg"},
+    {label:"Rooftop",         url:"/venue-floors/casa-santiago-botero/rooftop.jpg"},
+  ],
+  "Museo Naval": [
+    {label:"Piso 1",          url:"/venue-floors/museo-naval/piso1.jpg"},
+    {label:"Piso 2",          url:"/venue-floors/museo-naval/piso2.jpg"},
+  ],
+  "Restaurante Fuerte del Pastelillo": [
+    {label:"Plano general",   url:"/venue-floors/restaurante-pastelillo/plano.jpg"},
+    {label:"Muelle + Restaurante", url:"/venue-floors/restaurante-pastelillo/muelle.jpg"},
+    {label:"Medidas",         url:"/venue-floors/restaurante-pastelillo/medidas.jpg"},
+    {label:"Zona de cañones", url:"/venue-floors/restaurante-pastelillo/canones.jpg"},
+  ],
+};
+
 function SeatingTab({ boda, onPatch }) {
   const [seating,setSeating]=useState(()=>(boda.seating||[]).map((t,i)=>({x:80+(i%4)*170,y:60+Math.floor(i/4)*160,...t})));
   const [guests,setGuests]=useState(boda.guests||[]);
@@ -1552,9 +1598,29 @@ function SeatingTab({ boda, onPatch }) {
       {/* Floor plan upload */}
       {showFloor&&(
         <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:"12px 16px",marginBottom:12,display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-          <span style={{fontSize:11,color:R.muted}}>Subir plano del salón:</span>
+          <span style={{fontSize:11,color:R.muted,fontWeight:600}}>Plano del salón:</span>
+          {/* Predefined venue selector */}
+          <select
+            defaultValue=""
+            onChange={e=>{
+              if(!e.target.value) return;
+              setFloorUrl(e.target.value);
+              try{localStorage.setItem("tt_floor_"+boda.id,e.target.value);}catch{}
+              e.target.value="";
+            }}
+            style={{fontSize:11,border:`1px solid ${R.border}`,borderRadius:6,padding:"4px 8px",background:R.card,color:R.text,fontFamily:"'Jost',sans-serif",cursor:"pointer"}}
+          >
+            <option value="">Venues guardados…</option>
+            {Object.entries(VENUE_FLOORS).map(([venue,plans])=>
+              plans.length===1
+                ? <option key={venue} value={plans[0].url}>{venue}</option>
+                : <optgroup key={venue} label={venue}>
+                    {plans.map(p=><option key={p.url} value={p.url}>{p.label}</option>)}
+                  </optgroup>
+            )}
+          </select>
           <label style={{...BTN_SM,color:R.accent,cursor:"pointer"}}>
-            Elegir imagen
+            Subir imagen
             <input type="file" accept="image/*" onChange={handleFloorFile} style={{display:"none"}} />
           </label>
           {floorUrl&&<button onClick={clearFloor} style={{background:"none",border:"none",color:"#dc2626",cursor:"pointer",fontSize:11,fontFamily:"'Jost',sans-serif"}}>Quitar</button>}
@@ -2150,16 +2216,40 @@ function ContratosTab({ boda, onPatch }) {
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {contracts.map(c=>{
           const st=CONTRACT_STATUS_STYLE[c.status]||CONTRACT_STATUS_STYLE["Borrador"];
+          const isEditingPdf=pdfEditId===c.id;
           return (
-            <div key={c.id} style={{border:`1px solid ${R.border}`,borderRadius:12,padding:"12px 16px",background:R.white,display:"flex",alignItems:"center",gap:12}}>
-              <div style={{flex:1,minWidth:0}}>
-                <p style={{fontSize:13,fontWeight:600,color:R.text,margin:"0 0 3px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.title}</p>
-                <p style={{fontSize:11,color:R.muted,margin:0}}>Creado {c.createdAt||"—"}{c.signedAt?` · Firmado ${c.signedAt}`:""}</p>
+            <div key={c.id} style={{border:`1px solid ${R.border}`,borderRadius:12,background:R.white,overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <p style={{fontSize:13,fontWeight:600,color:R.text,margin:"0 0 3px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.title}</p>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:"4px 12px",marginTop:2}}>
+                    <span style={{fontSize:11,color:R.muted}}>Creado {c.createdAt||"—"}</span>
+                    {c.supplierName&&<span style={{fontSize:11,color:R.muted}}>· {c.supplierName}</span>}
+                    {c.contractDate&&<span style={{fontSize:11,color:R.muted}}>· {c.contractDate}</span>}
+                    {c.amount&&<span style={{fontSize:11,color:"#16a34a",fontWeight:600}}>· ${c.amount}</span>}
+                  </div>
+                </div>
+                {c.pdfUrl&&<a href={c.pdfUrl} target="_blank" rel="noopener noreferrer" title="Ver PDF adjunto" style={{fontSize:18,textDecoration:"none",flexShrink:0}}>📎</a>}
+                <button onClick={()=>isEditingPdf?setPdfEditId(null):openPdfEdit(c)} title="Adjuntar PDF" style={{background:"none",border:`1px solid ${R.border}`,borderRadius:6,cursor:"pointer",fontSize:11,color:isEditingPdf?R.accent:R.muted,padding:"3px 8px",flexShrink:0,fontFamily:"'Jost',sans-serif"}}>PDF</button>
+                <button onClick={()=>cycleStatus(c.id)} style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:st.bg,color:st.color,border:"none",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,fontFamily:"'Jost',sans-serif"}}>{c.status}</button>
+                <button onClick={()=>printContract(c,boda)} title="Imprimir / PDF" style={{background:"none",border:"none",cursor:"pointer",fontSize:14,flexShrink:0}}>🖨</button>
+                <button onClick={()=>openEdit(c.id)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:R.muted,flexShrink:0}}>✏️</button>
+                <button onClick={()=>del(c.id)}       style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:R.border,flexShrink:0}}>✕</button>
               </div>
-              <button onClick={()=>cycleStatus(c.id)} style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:st.bg,color:st.color,border:"none",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,fontFamily:"'Jost',sans-serif"}}>{c.status}</button>
-              <button onClick={()=>printContract(c,boda)} title="Imprimir / PDF" style={{background:"none",border:"none",cursor:"pointer",fontSize:14,flexShrink:0}}>🖨</button>
-              <button onClick={()=>openEdit(c.id)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:R.muted,flexShrink:0}}>✏️</button>
-              <button onClick={()=>del(c.id)}       style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:R.border,flexShrink:0}}>✕</button>
+              {isEditingPdf&&(
+                <div style={{borderTop:`1px solid ${R.border}`,padding:"12px 16px",background:R.light,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <div style={{gridColumn:"span 2"}}>
+                    <input style={INP_SM} value={pdfForm.pdfUrl} onChange={e=>setPdfForm(p=>({...p,pdfUrl:e.target.value}))} placeholder="URL del PDF (Drive, Dropbox, …)" />
+                  </div>
+                  <input style={INP_SM} value={pdfForm.supplierName} onChange={e=>setPdfForm(p=>({...p,supplierName:e.target.value}))} placeholder="Proveedor" />
+                  <input type="date" style={INP_SM} value={pdfForm.contractDate} onChange={e=>setPdfForm(p=>({...p,contractDate:e.target.value}))} />
+                  <input style={INP_SM} value={pdfForm.amount} onChange={e=>setPdfForm(p=>({...p,amount:e.target.value}))} placeholder="Precio (ej: 2500 USD)" />
+                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                    <button onClick={savePdfMeta} disabled={saving} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Guardar"}</button>
+                    <button onClick={()=>setPdfEditId(null)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

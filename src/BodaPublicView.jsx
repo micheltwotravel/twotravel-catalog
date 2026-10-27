@@ -3,9 +3,48 @@ import { supabase } from "./supabaseClient.js";
 
 /* ── Venue floor-plan registry ─────────────────────────── */
 const VENUE_PLANS = {
-  "Casa de la Estrella": [
-    { label: "Planta Segundo Piso",  file: "/venues/casa-estrella-piso2.pdf" },
-    { label: "Layouts de Espacios",  file: "/venues/casa-estrella-layouts.pdf" },
+  "Baluarte SFJ": [
+    { label: "Plano general",            img: "/venue-floors/baluarte-sfj/plano.jpg" },
+    { label: "Vista 1",                  img: "/venue-floors/baluarte-sfj/vista1.jpg" },
+    { label: "Vista 2",                  img: "/venue-floors/baluarte-sfj/vista2.jpg" },
+  ],
+  "Baluarte Santiago Apóstol": [
+    { label: "Plano",                    img: "/venue-floors/baluarte-santiago-apostol/plano.jpg" },
+  ],
+  "Casa Cochera del Gobernador": [
+    { label: "Salón AC",                 img: "/venue-floors/casa-cochera-gobernador/salon.jpg" },
+    { label: "Rooftop",                  img: "/venue-floors/casa-cochera-gobernador/rooftop.jpg" },
+    { label: "Terraza",                  img: "/venue-floors/casa-cochera-gobernador/terraza.jpg" },
+  ],
+  "Casa Córdoba Cabal": [
+    { label: "Segundo piso",             img: "/venue-floors/casa-cordoba-cabal/segundo-piso.jpg" },
+    { label: "Tercer piso",              img: "/venue-floors/casa-cordoba-cabal/tercer-piso.jpg" },
+    { label: "Terraza",                  img: "/venue-floors/casa-cordoba-cabal/terraza.jpg" },
+  ],
+  "Casa El Rosal": [
+    { label: "Plano 1",                  img: "/venue-floors/casa-el-rosal/plano1.jpg" },
+    { label: "Plano 2",                  img: "/venue-floors/casa-el-rosal/plano2.jpg" },
+    { label: "Plano 3",                  img: "/venue-floors/casa-el-rosal/plano3.jpg" },
+  ],
+  "Casa Estrella": [
+    { label: "Segundo piso",             img: "/venue-floors/casa-estrella/segundo-piso.png" },
+    { label: "Segundo piso (detalle)",   img: "/venue-floors/casa-estrella/segundo-piso-detalle.jpg" },
+  ],
+  "Casa Santiago Botero": [
+    { label: "Overview",                 img: "/venue-floors/casa-santiago-botero/overview.jpg" },
+    { label: "Primer piso",              img: "/venue-floors/casa-santiago-botero/primer-piso.jpg" },
+    { label: "Primer piso (detalle)",    img: "/venue-floors/casa-santiago-botero/primer-piso-detalle.jpg" },
+    { label: "Rooftop",                  img: "/venue-floors/casa-santiago-botero/rooftop.jpg" },
+  ],
+  "Museo Naval": [
+    { label: "Piso 1",                   img: "/venue-floors/museo-naval/piso1.jpg" },
+    { label: "Piso 2",                   img: "/venue-floors/museo-naval/piso2.jpg" },
+  ],
+  "Restaurante Fuerte del Pastelillo": [
+    { label: "Plano general",            img: "/venue-floors/restaurante-pastelillo/plano.jpg" },
+    { label: "Muelle + Restaurante",     img: "/venue-floors/restaurante-pastelillo/muelle.jpg" },
+    { label: "Medidas",                  img: "/venue-floors/restaurante-pastelillo/medidas.jpg" },
+    { label: "Zona de cañones",          img: "/venue-floors/restaurante-pastelillo/canones.jpg" },
   ],
 };
 
@@ -137,33 +176,35 @@ function TaskItem({ task, done }) {
 
 /* ── Venue floor plans ──────────────────────────────────── */
 function VenuePlans({ venue }) {
+  const [active, setActive] = useState(0);
   const plans = VENUE_PLANS[venue];
   if (!plans) return null;
+  const cur = plans[active];
   return (
     <Card>
       <SectionHead>Planos del Espacio</SectionHead>
-      <p style={{ fontSize: 12, color: T.muted, marginBottom: 18, lineHeight: 1.6 }}>
-        Planos arquitectónicos de <strong style={{ color: T.ink }}>{venue}</strong>.
+      {plans.length > 1 && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+          {plans.map((p, i) => (
+            <button key={i} onClick={() => setActive(i)} style={{
+              fontSize: 10, letterSpacing: ".07em", textTransform: "uppercase",
+              fontFamily: "'Jost',sans-serif", border: `1px solid ${i === active ? T.gold : T.border}`,
+              borderRadius: 4, padding: "4px 10px", cursor: "pointer",
+              background: i === active ? T.gold3 : "transparent",
+              color: i === active ? T.ink : T.muted,
+            }}>{p.label}</button>
+          ))}
+        </div>
+      )}
+      <a href={cur.img} target="_blank" rel="noopener noreferrer">
+        <img src={cur.img} alt={cur.label}
+          style={{ width: "100%", display: "block", borderRadius: 4,
+            border: `1px solid ${T.border}`, objectFit: "contain", maxHeight: 520 }} />
+      </a>
+      <p style={{ margin: "8px 0 0", fontSize: 10, color: T.muted, textAlign: "center",
+        letterSpacing: ".06em" }}>
+        {cur.label} · {venue} · Toca para ampliar ↗
       </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-        {plans.map((p, i) => (
-          <div key={i}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <p style={{ margin: 0, fontSize: 12, color: T.ink2, fontFamily: "'Jost',sans-serif",
-                letterSpacing: ".06em", textTransform: "uppercase" }}>{p.label}</p>
-              <a href={p.file} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: 11, color: T.gold, textDecoration: "none", letterSpacing: ".06em" }}>
-                Abrir PDF ↗
-              </a>
-            </div>
-            <iframe
-              src={p.file}
-              title={p.label}
-              style={{ width: "100%", height: 420, border: `1px solid ${T.border2}`, display: "block" }}
-            />
-          </div>
-        ))}
-      </div>
     </Card>
   );
 }
@@ -324,20 +365,33 @@ export default function BodaPublicView() {
         {pending.length > 0 && (
           <Card>
             <SectionHead>Tareas en proceso</SectionHead>
-            {TASK_PHASES.map(ph => {
-              const inPhase = pending.filter(t => t.phase === ph);
-              if (!inPhase.length) return null;
-              const phm = PHASE_META[ph] || { color: T.muted };
+            {(() => {
+              const knownPhases = TASK_PHASES;
+              const other = pending.filter(t => !knownPhases.includes(t.phase));
               return (
-                <div key={ph} style={{ marginBottom: 20 }}>
-                  <p style={{ margin: "0 0 2px", fontSize: 9, letterSpacing: ".14em",
-                    textTransform: "uppercase", color: phm.color, fontWeight: 600 }}>
-                    {ph}
-                  </p>
-                  {inPhase.map(t => <TaskItem key={t.id} task={t} done={false} />)}
-                </div>
+                <>
+                  {knownPhases.map(ph => {
+                    const inPhase = pending.filter(t => t.phase === ph);
+                    if (!inPhase.length) return null;
+                    const phm = PHASE_META[ph] || { color: T.muted };
+                    return (
+                      <div key={ph} style={{ marginBottom: 20 }}>
+                        <p style={{ margin: "0 0 2px", fontSize: 9, letterSpacing: ".14em",
+                          textTransform: "uppercase", color: phm.color, fontWeight: 600 }}>
+                          {ph}
+                        </p>
+                        {inPhase.map(t => <TaskItem key={t.id} task={t} done={false} />)}
+                      </div>
+                    );
+                  })}
+                  {other.length > 0 && (
+                    <div style={{ marginBottom: 20 }}>
+                      {other.map(t => <TaskItem key={t.id} task={t} done={false} />)}
+                    </div>
+                  )}
+                </>
               );
-            })}
+            })()}
           </Card>
         )}
 
