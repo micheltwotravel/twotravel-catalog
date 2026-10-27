@@ -8,7 +8,8 @@
     { "source": "/g/:id",  "destination": "/?mode=groceries&kickoffId=:id",    "permanent": false },
     { "source": "/ci/:id", "destination": "/?mode=checkin&kickoffId=:id",      "permanent": false },
     { "source": "/c/:id",  "destination": "/?mode=questionnaire&kickoffId=:id","permanent": false },
-    { "source": "/f/:id",  "destination": "/?kickoffId=:id",                   "permanent": false }
+    { "source": "/f/:id",  "destination": "/?kickoffId=:id",                   "permanent": false },
+    { "source": "/sp",     "destination": "/nueva-solicitud.html",               "permanent": false }
   ],
   "rewrites": [
     { "source": "/((?!api/)(?!.*\\.html$).*)", "destination": "/index.html" }

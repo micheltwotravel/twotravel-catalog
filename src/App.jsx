@@ -6506,13 +6506,15 @@ const ROLE_META = {
 };
 
 // Modes each role can access
+const PAGOS_MODES = ["pagos","f-proveedores"];
 const ROLE_ACCESS = {
   admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"],
-  concierge: ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","f-checkin","f-transporte"],
-  junior:    ["dashboard","f-checkin","f-transporte"],   // feedback + operaciones boards only
+  concierge: ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","f-checkin","f-transporte",...PAGOS_MODES],
+  junior:    ["dashboard","f-checkin","f-transporte",...PAGOS_MODES],
   finance:   ["pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"],
-  marketing: ["dashboard"],
-  bodas:     ["bodas","tareas-bodas","tasks","dashboard"],
+  marketing: ["dashboard",...PAGOS_MODES],
+  bodas:     ["bodas","tareas-bodas","tasks","dashboard",...PAGOS_MODES],
+  pending:   [...PAGOS_MODES],
 };
 
 const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"]);

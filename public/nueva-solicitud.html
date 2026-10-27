@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Solicitud de Pago · Two Travel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root{--gold:#c9a96e;--dark:#1a1a1a;--bg:#f8f6f2;--wht:#fff;--brd:#e5e0d8;--mut:#888;--red:#dc2626;--green:#166534;--green-bg:#dcfce7}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Jost',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh;padding:0 0 60px}
+  header{background:var(--dark);padding:16px 24px;display:flex;align-items:center;gap:14px}
+  header img{height:32px;filter:brightness(0) invert(1);opacity:.9}
+  header span{color:#fff;font-size:13px;font-weight:600;letter-spacing:.3px;opacity:.85}
+  .wrap{max-width:640px;margin:0 auto;padding:28px 20px}
+  h1{font-size:20px;font-weight:700;color:var(--dark);margin-bottom:4px}
+  .sub{font-size:12px;color:var(--mut);margin-bottom:24px}
+  .card{background:var(--wht);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:22px 20px;margin-bottom:18px}
+  .sec-title{font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--brd)}
+  .row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .fgrp{display:flex;flex-direction:column;gap:4px;flex:1 1 180px}
+  .fgrp.full{flex:1 1 100%}
+  .fgrp.half{flex:1 1 120px}
+  label{font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.3px}
+  input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--brd);border-radius:5px;font-family:'Jost',sans-serif;font-size:13px;color:var(--dark);background:var(--wht);outline:none;transition:border .15s}
+  input:focus,select:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(201,169,110,.15)}
+  textarea{resize:vertical;min-height:70px}
+  .upload-box{border:1.5px dashed var(--brd);border-radius:5px;padding:14px;text-align:center;cursor:pointer;transition:border .15s}
+  .upload-box:hover{border-color:var(--gold)}
+  .upload-box input{display:none}
+  .upload-box span{font-size:12px;color:var(--mut)}
+  .file-name{font-size:12px;color:var(--green);margin-top:6px;font-weight:600}
+  .btn{width:100%;padding:13px;background:var(--gold);color:#fff;border:none;border-radius:7px;font-family:'Jost',sans-serif;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px;margin-top:6px;transition:opacity .15s}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .success{display:none;background:var(--green-bg);border:1px solid #86efac;border-radius:8px;padding:20px;text-align:center;margin-bottom:20px}
+  .success.show{display:block}
+  .success h2{color:var(--green);font-size:16px;margin-bottom:6px}
+  .success p{font-size:13px;color:#166534}
+  .err{font-size:11px;color:var(--red);margin-top:3px;display:none}
+  .err.show{display:block}
+  .char-count{font-size:10px;color:var(--mut);text-align:right;margin-top:2px}
+  @media(max-width:480px){.fgrp,.fgrp.half{flex:1 1 100%}}
+</style>
+</head>
+<body>
+
+<header>
+  <img src="/two-travel-logo.png" alt="Two Travel" onerror="this.style.display='none'"/>
+  <span>Two Travel · Solicitudes de Pago</span>
+</header>
+
+<div class="wrap">
+  <h1>Nueva Solicitud de Pago</h1>
+  <p class="sub">Completa el formulario y haz clic en Enviar. El equipo de finanzas recibirá tu solicitud.</p>
+
+  <div class="success" id="success">
+    <h2>✅ Solicitud enviada</h2>
+    <p>Tu solicitud fue registrada. El equipo de finanzas la revisará pronto.</p>
+    <p style="margin-top:10px"><a href="/nueva-solicitud.html" style="color:#166534;font-weight:600">Enviar otra solicitud →</a></p>
+  </div>
+
+  <form id="form" autocomplete="off">
+
+    <!-- Solicitante -->
+    <div class="card">
+      <div class="sec-title">Quién solicita</div>
+      <div class="row">
+        <div class="fgrp full">
+          <label>Tu nombre *</label>
+          <input type="text" id="requestedBy" placeholder="Ej: María García" required/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Concepto -->
+    <div class="card">
+      <div class="sec-title">Concepto</div>
+      <div class="row">
+        <div class="fgrp full">
+          <label>Descripción del pago *</label>
+          <input type="text" id="concepto" placeholder="Ej: Arreglo lavadora Casa Moneda" maxlength="40" required
+            oninput="document.getElementById('concChar').textContent=this.value.length+'/40'"/>
+          <div class="char-count" id="concChar">0/40</div>
+        </div>
+        <div class="fgrp full">
+          <label>Cliente / Centro de Costos</label>
+          <input type="text" id="client" placeholder="Nombre del cliente"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Proveedor -->
+    <div class="card">
+      <div class="sec-title">Proveedor</div>
+      <div class="row">
+        <div class="fgrp half">
+          <label>Tipo ID</label>
+          <select id="provTipoId">
+            <option>NIT</option><option>CC</option><option>CE</option><option>Pasaporte</option><option>RUT</option>
+          </select>
+        </div>
+        <div class="fgrp half">
+          <label>Número ID</label>
+          <input type="text" id="provId" placeholder="890801748"/>
+        </div>
+        <div class="fgrp full">
+          <label>Nombre Proveedor *</label>
+          <input type="text" id="provNombre" placeholder="MABE SERVICIOS" required/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cuenta bancaria -->
+    <div class="card">
+      <div class="sec-title">Cuenta Bancaria</div>
+      <div class="row">
+        <div class="fgrp half">
+          <label>Banco</label>
+          <select id="banco">
+            <option>BANCOLOMBIA</option><option>DAVIVIENDA</option><option>BANCO DE BOGOTÁ</option>
+            <option>BBVA</option><option>NEQUI</option><option>SCOTIABANK COLPATRIA</option>
+            <option>BANCO POPULAR</option><option>AV VILLAS</option><option>ITAÚ</option><option>OTRO</option>
+          </select>
+        </div>
+        <div class="fgrp half">
+          <label>Tipo de Cuenta</label>
+          <select id="tipoCuenta">
+            <option>Cuenta de Ahorro</option><option>Cuenta Corriente</option>
+          </select>
+        </div>
+        <div class="fgrp full">
+          <label>Número de Cuenta</label>
+          <input type="text" id="numeroCuenta" placeholder="07080174803"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monto -->
+    <div class="card">
+      <div class="sec-title">Monto</div>
+      <div class="row">
+        <div class="fgrp half">
+          <label>Monto *</label>
+          <input type="number" id="amount" min="0" placeholder="349000" required/>
+        </div>
+        <div class="fgrp half">
+          <label>Moneda</label>
+          <select id="currency"><option>COP</option><option>USD</option><option>MXN</option></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clasificación -->
+    <div class="card">
+      <div class="sec-title">Clasificación</div>
+      <div class="row">
+        <div class="fgrp half">
+          <label>Área</label>
+          <select id="area">
+            <option>Concierge</option><option>Logistica</option><option>Marketing</option>
+            <option>HR</option><option>Sales</option><option>Finance</option><option>Property Management</option>
+          </select>
+        </div>
+        <div class="fgrp half">
+          <label>Clase</label>
+          <select id="clase">
+            <option>Colombia: Cartagena</option><option>Colombia: Medellín</option><option>Mexico: Mexico City</option>
+          </select>
+        </div>
+        <div class="fgrp half">
+          <label>Prioridad</label>
+          <select id="priority"><option>Alta</option><option selected>Media</option><option>Normal</option></select>
+        </div>
+        <div class="fgrp half">
+          <label>Fecha Vencimiento *</label>
+          <input type="date" id="dueDate" required/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Soporte -->
+    <div class="card">
+      <div class="sec-title">Soporte</div>
+      <div class="row">
+        <div class="fgrp full">
+          <label>Factura / Cuenta de cobro (link)</label>
+          <input type="url" id="invoiceUrl" placeholder="https://drive.google.com/…"/>
+        </div>
+        <div class="fgrp full">
+          <label>Soporte de pago (archivo)</label>
+          <label class="upload-box" for="soporteFile">
+            <input type="file" id="soporteFile" accept="image/*,application/pdf" onchange="showFileName(this)"/>
+            <span id="uploadLabel">📎 Toca para adjuntar PDF o imagen</span>
+            <div class="file-name" id="fileName"></div>
+          </label>
+        </div>
+        <div class="fgrp full">
+          <label>Notas / Observaciones</label>
+          <textarea id="notes" placeholder="Cualquier detalle adicional…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div id="errMsg" class="err"></div>
+    <button class="btn" type="submit" id="submitBtn">Enviar Solicitud</button>
+  </form>
+</div>
+
+<script>
+const SUPABASE_URL = "https://zcgisoigfzytpanoaomq.supabase.co";
+const ANON_KEY    = "sb_publishable_7k9A4WP1x7hDQdrsHY52jQ_Rpj3ASjU";
+const PROV_ID     = "finance_proveedores_v1";
+
+function showFileName(input) {
+  document.getElementById("fileName").textContent = input.files[0]?.name || "";
+  document.getElementById("uploadLabel").textContent = input.files[0] ? "📎 Archivo seleccionado:" : "📎 Toca para adjuntar PDF o imagen";
+}
+
+async function sbFetch(path, opts={}) {
+  const res = await fetch(SUPABASE_URL + path, {
+    ...opts,
+    headers: {
+      "apikey": ANON_KEY,
+      "Authorization": "Bearer " + ANON_KEY,
+      "Content-Type": "application/json",
+      ...(opts.headers || {})
+    }
+  });
+  return res;
+}
+
+async function uploadFile(file, rowId) {
+  const ext  = file.name.split(".").pop();
+  const path = `public/${rowId}_soporte.${ext}`;
+  const res  = await fetch(`${SUPABASE_URL}/storage/v1/object/pagos-soportes/${path}`, {
+    method: "POST",
+    headers: { "apikey": ANON_KEY, "Authorization": "Bearer " + ANON_KEY, "Content-Type": file.type, "x-upsert": "true" },
+    body: file
+  });
+  if (!res.ok) throw new Error("Upload fallido");
+  return `${SUPABASE_URL}/storage/v1/object/public/pagos-soportes/${path}`;
+}
+
+async function loadSolicitudes() {
+  const res = await sbFetch(`/rest/v1/kickoffs?id=eq.${PROV_ID}&select=data`);
+  const arr = await res.json();
+  if (!arr.length) return { rows: [], existing: null };
+  const d = arr[0].data || {};
+  const notes = typeof d.internalNotes === "string" ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
+  return { rows: notes.solicitudes || [], existing: arr[0], notes, d };
+}
+
+async function saveSolicitudes(rows, ctx) {
+  const { notes, d } = ctx;
+  const merged = { ...d, internalNotes: JSON.stringify({ ...notes, solicitudes: rows }) };
+  const method = ctx.existing ? "PATCH" : "POST";
+  const url    = ctx.existing
+    ? `/rest/v1/kickoffs?id=eq.${PROV_ID}`
+    : `/rest/v1/kickoffs`;
+  const body   = ctx.existing ? { data: merged } : { id: PROV_ID, data: merged };
+  const res = await sbFetch(url, { method, headers: { "Prefer": "return=minimal" }, body: JSON.stringify(body) });
+  if (!res.ok) { const t = await res.text(); throw new Error(t); }
+}
+
+document.getElementById("dueDate").valueAsDate = (() => { const d = new Date(); d.setDate(d.getDate()+7); return d; })();
+
+document.getElementById("form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const btn = document.getElementById("submitBtn");
+  const err = document.getElementById("errMsg");
+  err.classList.remove("show");
+  btn.disabled = true;
+  btn.textContent = "Enviando…";
+
+  try {
+    const rowId    = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+    const today    = new Date().toISOString().slice(0,10);
+    let soporteUrl = "";
+    const file = document.getElementById("soporteFile").files[0];
+    if (file) soporteUrl = await uploadFile(file, rowId);
+
+    const row = {
+      id:           rowId,
+      lote:         today,
+      concepto:     document.getElementById("concepto").value.trim(),
+      provId:       document.getElementById("provId").value.trim(),
+      provNombre:   document.getElementById("provNombre").value.trim(),
+      provTipoId:   document.getElementById("provTipoId").value,
+      banco:        document.getElementById("banco").value,
+      tipoCuenta:   document.getElementById("tipoCuenta").value,
+      numeroCuenta: document.getElementById("numeroCuenta").value.trim(),
+      amount:       parseFloat(document.getElementById("amount").value) || 0,
+      currency:     document.getElementById("currency").value,
+      area:         document.getElementById("area").value,
+      clase:        document.getElementById("clase").value,
+      priority:     document.getElementById("priority").value,
+      dueDate:      document.getElementById("dueDate").value,
+      client:       document.getElementById("client").value.trim(),
+      requestedBy:  document.getElementById("requestedBy").value.trim(),
+      invoiceUrl:   document.getElementById("invoiceUrl").value.trim(),
+      soporteUrl,
+      notes:        document.getElementById("notes").value.trim(),
+      status:       "pendiente",
+      estadoContable: "",
+      assignedTo:   "",
+      payFreq:      "Única",
+      prebill:      false,
+      createdAt:    new Date().toISOString(),
+    };
+
+    const ctx = await loadSolicitudes();
+    ctx.rows.push(row);
+    await saveSolicitudes(ctx.rows, ctx);
+
+    document.getElementById("form").style.display = "none";
+    document.getElementById("success").classList.add("show");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+  } catch(ex) {
+    err.textContent = "Error al enviar: " + ex.message;
+    err.classList.add("show");
+    btn.disabled = false;
+    btn.textContent = "Enviar Solicitud";
+  }
+});
+</script>
+</body>
+</html>
