@@ -209,6 +209,50 @@ function VenuePlans({ venue }) {
   );
 }
 
+/* ── Proveedores confirmados ─────────────────────────────── */
+const CAT_ICON = {
+  "Fotografía": "📷", "Video": "🎬", "Flores": "💐", "Decoración": "✨",
+  "Venue": "🏛", "Catering": "🍽", "Música": "🎶", "Iluminación": "💡",
+  "Papelería": "📜", "Vestido": "👗", "Transporte": "🚗", "Torta": "🎂",
+};
+function ProveedoresSection({ suppliers }) {
+  const confirmed = (suppliers || []).filter(s => ["Contratado","Pagado"].includes(s.status));
+  if (!confirmed.length) return null;
+  return (
+    <Card>
+      <SectionHead>Tu Equipo de Boda</SectionHead>
+      <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+        {confirmed.map((s, i) => (
+          <div key={s.id || i} style={{
+            display: "flex", alignItems: "center", gap: 14,
+            padding: "12px 0", borderBottom: `1px solid ${T.border}`,
+          }}>
+            <span style={{ fontSize: 20, flexShrink: 0, width: 28, textAlign: "center" }}>
+              {CAT_ICON[s.category] || "🤝"}
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: T.ink,
+                fontFamily: "'Jost',sans-serif", overflow: "hidden",
+                textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {s.company}
+              </p>
+              <p style={{ margin: "2px 0 0", fontSize: 10, color: T.muted,
+                letterSpacing: ".06em", textTransform: "uppercase" }}>
+                {s.category}{s.contact ? ` · ${s.contact}` : ""}
+              </p>
+            </div>
+            <span style={{
+              fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase",
+              padding: "3px 8px", border: `1px solid ${s.status === "Pagado" ? "#16a34a" : T.gold}`,
+              color: s.status === "Pagado" ? "#16a34a" : T.gold, flexShrink: 0,
+            }}>{s.status}</span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 /* ── Main component ─────────────────────────────────────── */
 export default function BodaPublicView() {
   const params = new URLSearchParams(window.location.search);
@@ -233,8 +277,9 @@ export default function BodaPublicView() {
           status:      d.status      || "Activa",
           guestCount:  d.guestCount  || "",
           coverPhoto:  d.coverPhoto  || "",
-          tasks:       Array.isArray(d.tasks)    ? d.tasks    : [],
-          schedule:    Array.isArray(d.schedule) ? d.schedule : [],
+          tasks:       Array.isArray(d.tasks)     ? d.tasks     : [],
+          schedule:    Array.isArray(d.schedule)  ? d.schedule  : [],
+          suppliers:   Array.isArray(d.suppliers) ? d.suppliers : [],
         });
       })
       .catch(e => setError("Error al cargar: " + e.message))
@@ -439,6 +484,9 @@ export default function BodaPublicView() {
             </div>
           </Card>
         )}
+
+        {/* Confirmed suppliers */}
+        <ProveedoresSection suppliers={boda.suppliers} />
 
         {/* Venue floor plans */}
         <VenuePlans venue={boda.venue} />
