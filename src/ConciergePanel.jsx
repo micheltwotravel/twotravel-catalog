@@ -616,8 +616,8 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
       doc.setFontSize(12.5); doc.setFont("helvetica","bold"); doc.setTextColor(10,10,10);
       dt(se(item.name), ML, y); y += 17;
 
-      // Price (deposit amount) — show COP price when set
-      const itemPriceCop = Number(item.price_cop ?? 0);
+      // Price (deposit amount) — show COP price when set, tier-aware
+      const itemPriceCop = Number(item.priceOverride_cop || getItemPrice(item, kickoff.clientType) || 0);
       if (itemPriceCop > 0) {
         const paxCount = Number(item.pax || 1);
         const isPerPerson = String(item.priceUnit || "").toLowerCase().includes("person");
@@ -911,7 +911,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     if (!qb2) return;
     const pax2  = PAX_MULTIPLIES.has(c2) ? Math.max(1, Number(it.pax || 1)) : 1;
     const unit2 = currency === "COP"
-      ? Number(it.priceOverride_cop ?? it.price_cop ?? 0)
+      ? Number(it.priceOverride_cop || getItemPrice(it, kickoff.clientType) || 0)
       : currency === "MXN"
       ? (() => {
           // MXN: use price_mxn if available, otherwise convert from USD (approx 17 MXN/USD)
@@ -919,13 +919,13 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
           if (mxn > 0) return mxn;
           const usd = Number(it.priceUsd ?? 0);
           if (usd > 0) return Math.round(usd * (fxRate > 0 ? fxRate / 200 : 17));
-          const cop = Number(it.priceOverride_cop ?? it.price_cop ?? 0);
+          const cop = Number(it.priceOverride_cop || getItemPrice(it, kickoff.clientType) || 0);
           return cop > 0 ? Math.round(cop / fxRate * 17) : 0;
         })()
       : (() => {
           const manual = Number(it.priceUsd ?? 0);
           if (manual > 0) return manual;
-          const cop = Number(it.priceOverride_cop ?? it.price_cop ?? 0);
+          const cop = Number(it.priceOverride_cop || getItemPrice(it, kickoff.clientType) || 0);
           return cop > 0 ? Math.round(cop / fxRate) : 0;
         })();
     const tot2  = unit2 * pax2;
@@ -1419,6 +1419,15 @@ function resolveVariablePrice(service, groupSizeNum) {
     return match ? { price: match.totalPrice, unit: "per group" } : null;
   }
   return null;
+}
+
+function getItemPrice(item, clientType = 1) {
+  const ct = String(clientType).includes("2") ? 2 : 1;
+  const t1 = Number(item?.price_tier_1 || 0);
+  const t2 = Number(item?.price_tier_2 || 0);
+  const base = Number(item?.base_price_cop || item?.price_cop || 0);
+  if (!t1 && !t2) return Number(item?.priceOverride_cop || item?.price_cop || 0);
+  return ct === 2 ? (t2 || base) : (t1 || base);
 }
 
 function mapServiceToCartItem(service, clientType = 1, groupSizeNum = 1) {
@@ -2352,7 +2361,16 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
       return { ...item, _uid: uid };
     });
   };
-  const [cart,     setCart]     = useState(withUid(parseArr(kickoff?.cart)));
+  const resolvedClientType = String(clientTypeOverride ?? kickoff?.clientType ?? 1).includes("2") ? 2 : 1;
+  const normalizeTierPrices = (items) => items.map(item => {
+    const t1 = Number(item.price_tier_1 || 0);
+    const t2 = Number(item.price_tier_2 || 0);
+    if (!t1 && !t2) return item;
+    const base = Number(item.base_price_cop || item.price_cop || 0);
+    return { ...item, price_cop: resolvedClientType === 2 ? (t2 || base) : (t1 || base) };
+  });
+
+  const [cart,     setCart]     = useState(normalizeTierPrices(withUid(parseArr(kickoff?.cart))));
   const [dayMeta,  setDayMeta]  = useState(parseArr(kickoff?.dayMeta));
   const [lang,     setLang]     = useState(kickoff?.lang || "en");
   const [services, setServices] = useState([]);
@@ -3743,7 +3761,7 @@ function SummaryModal({ kickoff, onClose }) {
                     {(() => {
                       const cat = String(item.category || "").toLowerCase();
                       const usesLevels = ["restaurants","bars","beach-clubs","nightlife"].includes(cat);
-                      const price = item.priceOverride_cop || item.price_cop;
+                      const price = item.priceOverride_cop || getItemPrice(item, ct);
                       if (usesLevels) {
                         // Show price-level indicator instead of COP
                         const lvl = item.priceLevel || (price >= 300000 ? "$$$" : price >= 150000 ? "$$" : price ? "$" : null);
