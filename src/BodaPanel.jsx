@@ -253,7 +253,6 @@ function TasksTab({ boda, users, onPatch }) {
             <select style={INP_SM} value={blank.assignedTo} onChange={e=>setBlank(p=>({...p,assignedTo:e.target.value}))}>
               <option value="">— responsable —</option>
               <option value="Novios">💍 Novios</option>
-              {(users||[]).map(u=><option key={u.email} value={u.name||u.email}>{u.name||u.email}</option>)}
             </select>
             <input type="date" style={INP_SM} value={blank.dueDate} onChange={e=>setBlank(p=>({...p,dueDate:e.target.value}))} />
             <select style={INP_SM} value={blank.phase} onChange={e=>setBlank(p=>({...p,phase:e.target.value}))}>{["General",...FASES].map(ph=><option key={ph}>{ph}</option>)}</select>
