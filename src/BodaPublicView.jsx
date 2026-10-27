@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { fetchKickoffsFromSheet } from "./sheetServices";
+import { supabase } from "./supabaseClient.js";
 
 /* ── Venue floor-plan registry ─────────────────────────── */
 const VENUE_PLANS = {
@@ -42,24 +42,6 @@ function daysUntil(d) {
   return Math.ceil((dt - t) / 86400000);
 }
 
-function parseBoda(k) {
-  try {
-    const meta  = JSON.parse(k.conciergeSummary || "{}");
-    if (meta.type !== "boda") return null;
-    const notes = JSON.parse(k.internalNotes || "{}");
-    return {
-      id:          k.id,
-      clienteName: String(k.guestName || "").replace(/^Boda:\s*/i, ""),
-      weddingDate: meta.weddingDate || "",
-      venue:       meta.venue       || "",
-      phase:       meta.phase       || "Onboarding",
-      status:      meta.status      || "Activa",
-      guestCount:  meta.guestCount  || "",
-      tasks:       notes.tasks      || [],
-      schedule:    JSON.parse(k.travifyText || "[]"),
-    };
-  } catch { return null; }
-}
 
 const TASK_PHASES = ["Onboarding", "Planning", "Pre-Wedding", "Wedding Day", "Post-Wedding"];
 
@@ -161,37 +143,25 @@ function VenuePlans({ venue }) {
     <Card>
       <SectionHead>Planos del Espacio</SectionHead>
       <p style={{ fontSize: 12, color: T.muted, marginBottom: 18, lineHeight: 1.6 }}>
-        Planos arquitectónicos de <strong style={{ color: T.ink }}>{venue}</strong> para
-        planificar la disposición y logística de su evento.
+        Planos arquitectónicos de <strong style={{ color: T.ink }}>{venue}</strong>.
       </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
         {plans.map((p, i) => (
-          <a key={i} href={p.file} target="_blank" rel="noopener noreferrer"
-            style={{
-              display: "flex", alignItems: "center", gap: 14,
-              padding: "14px 18px", border: `1px solid ${T.border2}`,
-              textDecoration: "none", background: T.bg,
-              transition: "border-color .15s, background .15s",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = T.gold; e.currentTarget.style.background = T.white; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = T.border2; e.currentTarget.style.background = T.bg; }}
-          >
-            <svg width={18} height={18} viewBox="0 0 24 24" fill="none"
-              stroke={T.gold} strokeWidth={1.5} strokeLinecap="round">
-              <rect x={3} y={3} width={18} height={18} rx={0} />
-              <line x1={9} y1={3} x2={9} y2={21} />
-              <line x1={3} y1={9} x2={21} y2={9} />
-              <line x1={3} y1={15} x2={21} y2={15} />
-            </svg>
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontSize: 13, color: T.ink, fontFamily: "'Jost',sans-serif" }}>
-                {p.label}
-              </p>
-              <p style={{ margin: "2px 0 0", fontSize: 10, color: T.muted, letterSpacing: ".06em", textTransform: "uppercase" }}>
-                Ver plano →
-              </p>
+          <div key={i}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <p style={{ margin: 0, fontSize: 12, color: T.ink2, fontFamily: "'Jost',sans-serif",
+                letterSpacing: ".06em", textTransform: "uppercase" }}>{p.label}</p>
+              <a href={p.file} target="_blank" rel="noopener noreferrer"
+                style={{ fontSize: 11, color: T.gold, textDecoration: "none", letterSpacing: ".06em" }}>
+                Abrir PDF ↗
+              </a>
             </div>
-          </a>
+            <iframe
+              src={p.file}
+              title={p.label}
+              style={{ width: "100%", height: 420, border: `1px solid ${T.border2}`, display: "block" }}
+            />
+          </div>
         ))}
       </div>
     </Card>
@@ -209,13 +179,22 @@ export default function BodaPublicView() {
 
   useEffect(() => {
     if (!id) { setError("Link inválido — falta el ID."); setLoading(false); return; }
-    fetchKickoffsFromSheet({ forceRefresh: false })
-      .then(all => {
-        const k = all.find(x => String(x.id) === String(id));
-        if (!k) { setError("No encontramos esta boda. Verifica el link."); return; }
-        const b = parseBoda(k);
-        if (!b) { setError("Este link no corresponde a una boda."); return; }
-        setBoda(b);
+    supabase.from("bodas").select("data").eq("id", id).single()
+      .then(({ data: row, error: err }) => {
+        if (err || !row) { setError("No encontramos esta boda. Verifica el link."); return; }
+        const d = row.data || {};
+        setBoda({
+          id:          d.id          || id,
+          clienteName: d.clienteName || "",
+          weddingDate: d.weddingDate || "",
+          venue:       d.venue       || "",
+          phase:       d.phase       || "Onboarding",
+          status:      d.status      || "Activa",
+          guestCount:  d.guestCount  || "",
+          coverPhoto:  d.coverPhoto  || "",
+          tasks:       Array.isArray(d.tasks)    ? d.tasks    : [],
+          schedule:    Array.isArray(d.schedule) ? d.schedule : [],
+        });
       })
       .catch(e => setError("Error al cargar: " + e.message))
       .finally(() => setLoading(false));

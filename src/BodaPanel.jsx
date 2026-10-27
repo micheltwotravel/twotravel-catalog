@@ -322,8 +322,8 @@ function ProveedoresTab({ boda, onPatch }) {
   const [blank,setBlank]=useState(EMPTY);
 
   async function persist(u){ setSuppliers(u); onPatch({suppliers:u}); await apiSaveNotes(boda.id,{...boda,suppliers:u}); }
-  async function save(){ if(!blank.company.trim()) return; setSaving(true); try{ if(editId){await persist(suppliers.map(s=>s.id===editId?{...blank,id:editId}:s)); setEditId(null);}else{await persist([...suppliers,{...blank,id:uid()}]);} setBlank(EMPTY); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
-  function startEdit(s){ setBlank({...s}); setEditId(s.id); setShow(true); }
+  async function save(){ if(!(blank.company||"").trim()) return; setSaving(true); try{ if(editId){await persist(suppliers.map(s=>s.id===editId?{...blank,id:editId}:s)); setEditId(null);}else{await persist([...suppliers,{...blank,id:uid()}]);} setBlank(EMPTY); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
+  function startEdit(s){ setBlank({...EMPTY,...s}); setEditId(s.id); setShow(true); }
   async function del(id){ try{await persist(suppliers.filter(s=>s.id!==id));}catch{setSuppliers(suppliers);} }
   async function nextStatus(id){ const order=["Cotizando","Contratado","Pagado"]; try{await persist(suppliers.map(s=>{ if(s.id!==id) return s; const i=order.indexOf(s.status); return{...s,status:i>=0&&i<order.length-1?order[i+1]:s.status}; }));}catch{setSuppliers(suppliers);} }
 
@@ -360,7 +360,7 @@ function ProveedoresTab({ boda, onPatch }) {
             <select style={INP_SM} value={blank.venueType} onChange={e=>setBlank(p=>({...p,venueType:e.target.value}))}><option value="">Tipo de evento</option><option value="Pre-boda">Pre-boda</option><option value="Boda">Boda</option></select>
           </div>
           <div style={{display:"flex",gap:8}}>
-            <button onClick={save} disabled={saving||!blank.company.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.company.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":(editId?"Guardar":"Agregar")}</button>
+            <button onClick={save} disabled={saving||!(blank.company||"").trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!(blank.company||"").trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":(editId?"Guardar":"Agregar")}</button>
             <button onClick={()=>{setShow(false);setEditId(null);}} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
           </div>
         </div>
@@ -2079,6 +2079,8 @@ function ContratosTab({ boda, onPatch }) {
   const [body,  setBody]          = useState("");
   const [title, setTitle]         = useState("");
   const [status,setStatus]        = useState("Borrador");
+  const [pdfEditId, setPdfEditId] = useState(null);
+  const [pdfForm,   setPdfForm]   = useState({pdfUrl:"",supplierName:"",contractDate:"",amount:""});
   const editing = contracts.find(c=>c.id===editId)||null;
 
   function openEdit(id) {
@@ -2104,6 +2106,9 @@ function ContratosTab({ boda, onPatch }) {
   }
 
   async function del(id) { try{await persist(contracts.filter(c=>c.id!==id)); if(editId===id)setEditId(null);}catch{setContracts(contracts);} }
+
+  function openPdfEdit(c) { setPdfForm({pdfUrl:c.pdfUrl||"",supplierName:c.supplierName||"",contractDate:c.contractDate||"",amount:c.amount||""}); setPdfEditId(c.id); }
+  async function savePdfMeta() { setSaving(true); try{await persist(contracts.map(c=>c.id===pdfEditId?{...c,...pdfForm}:c)); setPdfEditId(null);}catch(e){alert("Error: "+e.message);} setSaving(false); }
 
   function cycleStatus(id) {
     const u=contracts.map(c=>{if(c.id!==id)return c; const i=(CONTRACT_STATUSES.indexOf(c.status)+1)%CONTRACT_STATUSES.length; return{...c,status:CONTRACT_STATUSES[i]};});
@@ -2599,6 +2604,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
     TMPL.map(t=>({taskName:t.taskName,fase:t.phase||t.fase||"Onboarding",assignedTo:t.assignedTo||"",mode:t.mode||"kickoff",offsetDays:t.offset??t.offsetDays??0,priority:t.priority||"media",notes:t.notes||""}))
   );
   const [templateSaving, setTemplateSaving] = useState(false);
+  const [showPast,      setShowPast]       = useState(false);
 
   // Load users from GAS in background — never blocks bodas from showing.
   const loadUsers = useCallback(() => {
@@ -2708,11 +2714,15 @@ export default function BodaPanel({ currentUser, onLogout }) {
   };
 
   const today=new Date(); today.setHours(0,0,0,0);
-  const filtered=bodas.filter(b=>{
+  const allFiltered=bodas.filter(b=>{
     const q=search.toLowerCase();
     return (!search||b.clienteName?.toLowerCase().includes(q)||b.venue?.toLowerCase().includes(q)||b.responsable?.toLowerCase().includes(q))
         &&(filterStatus==="all"||b.status===filterStatus);
-  }).sort((a,b)=>{ if(a.weddingDate&&b.weddingDate) return new Date(a.weddingDate)-new Date(b.weddingDate); return a.weddingDate?-1:1; });
+  });
+  const isPast=b=>b.weddingDate&&new Date(b.weddingDate+"T12:00:00")<today;
+  const upcoming=allFiltered.filter(b=>!isPast(b)).sort((a,b)=>{ if(a.weddingDate&&b.weddingDate) return new Date(a.weddingDate)-new Date(b.weddingDate); return a.weddingDate?-1:1; });
+  const past=allFiltered.filter(isPast).sort((a,b)=>new Date(b.weddingDate)-new Date(a.weddingDate));
+  const filtered=[...upcoming,...(showPast?past:[])];
 
   if(selected){
     return (
@@ -2768,6 +2778,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
         <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:20}}>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar boda, venue, responsable..." style={{...INP,flex:1,minWidth:200}} />
           <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={{...INP,width:"auto",flex:"0 0 auto"}}><option value="all">Todos los estados</option>{ESTADOS_BODA.map(s=><option key={s}>{s}</option>)}</select>
+          {past.length>0&&<button onClick={()=>setShowPast(v=>!v)} style={{background:"transparent",border:`1px solid ${R.border}`,borderRadius:2,padding:"7px 14px",fontSize:11,color:showPast?R.accent:R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif",whiteSpace:"nowrap",flexShrink:0}}>{showPast?"Ocultar pasadas":` Ver pasadas (${past.length})`}</button>}
         </div>
         )}
 
