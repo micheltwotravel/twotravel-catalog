@@ -650,7 +650,9 @@ const TL_HIGHLIGHTS=[
   {label:"Lila",value:"#ede9fe"},
 ];
 
-function TimelineEventForm({val,setVal,saving,onSubmit,onCancel,submitLabel}){
+function TimelineEventForm({val,setVal,saving,onSubmit,onCancel,submitLabel,availableSuppliers}){
+  const evSuppliers=val.suppliers||[];
+  function toggleSup(name){setVal(p=>{const cur=p.suppliers||[];return{...p,suppliers:cur.includes(name)?cur.filter(s=>s!==name):[...cur,name]};});}
   return(
     <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
@@ -660,6 +662,20 @@ function TimelineEventForm({val,setVal,saving,onSubmit,onCancel,submitLabel}){
         <input style={INP_SM} value={val.assignedTo} onChange={e=>setVal(p=>({...p,assignedTo:e.target.value}))} placeholder="Responsable" />
         <input style={INP_SM} value={val.notes} onChange={e=>setVal(p=>({...p,notes:e.target.value}))} placeholder="Notas" />
         <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={val.url||""} onChange={e=>setVal(p=>({...p,url:e.target.value}))} placeholder="URL (opcional) — ej. Google Maps, Drive, Spotify…" /></div>
+        {availableSuppliers&&availableSuppliers.length>0&&(
+          <div style={{gridColumn:"span 2"}}>
+            <p style={{fontSize:10,color:R.muted,margin:"0 0 5px",fontWeight:600,textTransform:"uppercase",letterSpacing:".06em"}}>Proveedores</p>
+            <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+              {availableSuppliers.filter(s=>s.name).map(s=>{
+                const on=evSuppliers.includes(s.name);
+                return(<button key={s.id||s.name} type="button" onClick={()=>toggleSup(s.name)}
+                  style={{fontSize:11,padding:"3px 10px",borderRadius:99,border:`1px solid ${on?R.accent:R.border}`,background:on?R.accent:"transparent",color:on?"#fff":R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif",transition:"all .15s"}}>
+                  {s.name}{s.category?` · ${s.category}`:""}
+                </button>);
+              })}
+            </div>
+          </div>
+        )}
         <div style={{gridColumn:"span 2",display:"flex",flexWrap:"wrap",gap:10,alignItems:"center"}}>
           <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={val.isInternal} onChange={e=>setVal(p=>({...p,isInternal:e.target.checked}))} /> Solo interno</label>
           <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={val.isHighlight} onChange={e=>setVal(p=>({...p,isHighlight:e.target.checked}))} /> ⭐ Destacado</label>
@@ -687,7 +703,7 @@ function TimelineTab({ boda, onScheduleChange }) {
   const [editing,setEditing]=useState(null);
   const [view,setView]=useState("interno");
   const [showPresets,setShowPresets]=useState(false);
-  const BLANK={time:"",description:"",assignedTo:"",notes:"",url:"",category:"General",isInternal:false,isHighlight:false,highlightColor:""};
+  const BLANK={time:"",description:"",assignedTo:"",notes:"",url:"",suppliers:[],category:"General",isInternal:false,isHighlight:false,highlightColor:""};
   const [blank,setBlank]=useState(BLANK);
   const sorted=[...schedule].sort((a,b)=>(a.time||"").localeCompare(b.time||""));
   const visible=view==="cliente"?sorted.filter(e=>!e.isInternal):sorted;
@@ -727,8 +743,8 @@ function TimelineTab({ boda, onScheduleChange }) {
           </div>
         </div>
       )}
-      {show&&!editing&&<TimelineEventForm val={blank} setVal={setBlank} saving={saving} onSubmit={add} onCancel={()=>setShow(false)} submitLabel="Agregar" />}
-      {editing&&<TimelineEventForm val={editing} setVal={v=>setEditing(p=>({...p,...(typeof v==="function"?v(p):v)}))} saving={saving} onSubmit={saveEdit} onCancel={()=>setEditing(null)} submitLabel="Guardar" />}
+      {show&&!editing&&<TimelineEventForm val={blank} setVal={setBlank} saving={saving} onSubmit={add} onCancel={()=>setShow(false)} submitLabel="Agregar" availableSuppliers={boda.suppliers||[]} />}
+      {editing&&<TimelineEventForm val={editing} setVal={v=>setEditing(p=>({...p,...(typeof v==="function"?v(p):v)}))} saving={saving} onSubmit={saveEdit} onCancel={()=>setEditing(null)} submitLabel="Guardar" availableSuppliers={boda.suppliers||[]} />}
       {visible.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>{sorted.length===0?"Sin eventos. Agrega el primero arriba.":"No hay eventos para la vista cliente."}</p>}
       <div style={{position:"relative"}}>
         {visible.length>0&&<div style={{position:"absolute",left:55,top:8,bottom:8,width:1,background:R.border}} />}
@@ -755,6 +771,7 @@ function TimelineTab({ boda, onScheduleChange }) {
                       {ev.assignedTo&&<p style={{fontSize:11,color:R.muted,margin:"3px 0 0"}}>👤 {ev.assignedTo}</p>}
                       {ev.notes     &&<p style={{fontSize:11,color:R.muted,margin:"2px 0 0"}}>{ev.notes}</p>}
                       {ev.url       &&<a href={ev.url} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:11,color:R.accent,margin:"3px 0 0",display:"inline-block",wordBreak:"break-all",textDecoration:"underline"}}>🔗 {ev.url.replace(/^https?:\/\/(www\.)?/,"").split("/")[0]}</a>}
+                      {(ev.suppliers&&ev.suppliers.length>0)&&<div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:5}}>{ev.suppliers.map(s=><span key={s} style={{fontSize:10,padding:"2px 8px",borderRadius:99,background:R.light,border:`1px solid ${R.border}`,color:R.muted}}>🏢 {s}</span>)}</div>}
                     </div>
                     <div style={{display:"flex",gap:4,flexShrink:0}}>
                       <button onClick={()=>{setEditing({...ev});setShow(false);}} style={{color:R.muted,background:"none",border:"none",cursor:"pointer",fontSize:12,padding:"0 3px"}}>✏️</button>
