@@ -328,7 +328,16 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 </div>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec';
+const SB_URL  = 'https://zcgisoigfzytpanoaomq.supabase.co';
+const SB_KEY  = 'sb_publishable_7k9A4WP1x7hDQdrsHY52jQ_Rpj3ASjU';
+const HO_ID   = 'handoffs_v1';
+
+async function sbFetch(path, opts={}){
+  return fetch(SB_URL + path, {
+    ...opts,
+    headers: { apikey:SB_KEY, Authorization:'Bearer '+SB_KEY, 'Content-Type':'application/json', ...(opts.headers||{}) }
+  });
+}
 
 const STATUSES = {
   todo:   {label:'Por hacer',          color:'#aaaaaa'},
@@ -394,37 +403,49 @@ function weekOrder(weekKey){
 }
 
 /* ── STORAGE ── */
-function save(){
-  localStorage.setItem('tt_handoffs', JSON.stringify(handoffs));
-  syncToGAS();
-}
-function load(){
-  const saved = localStorage.getItem('tt_handoffs');
-  if(saved){ try{ handoffs=JSON.parse(saved); }catch{} }
-}
-async function syncToGAS(){
-  try{
-    await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({action:'saveHandoffs',payload:{handoffs}})});
-  }catch{}
-}
-async function loadFromGAS(){
+let _sbCtx = null;
+
+async function loadFromSB(){
   setSyncInfo('Sincronizando...');
   try{
-    const r = await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({action:'getHandoffs'})});
-    const d = await r.json();
-    if(d.data?.length){
-      handoffs = d.data;
-      localStorage.setItem('tt_handoffs', JSON.stringify(handoffs));
-      setSyncInfo('Sincronizado · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
+    const r = await sbFetch(`/rest/v1/kickoffs?id=eq.${HO_ID}&select=data`);
+    const arr = await r.json();
+    if(arr.length){
+      const d = arr[0].data || {};
+      const notes = typeof d.internalNotes === 'string' ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
+      _sbCtx = { existing: true, notes, d };
+      handoffs = notes.handoffs || [];
     } else {
-      setSyncInfo('Sin datos remotos');
+      _sbCtx = { existing: false, notes: {}, d: {} };
+      handoffs = [];
     }
-  }catch{
+    localStorage.setItem('tt_handoffs', JSON.stringify(handoffs));
+    setSyncInfo('Sincronizado · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
+  } catch {
     setSyncInfo('Local (sin conexión)');
+    const saved = localStorage.getItem('tt_handoffs');
+    if(saved){ try{ handoffs=JSON.parse(saved); }catch{} }
   }
   render();
+}
+
+async function saveToSB(){
+  if(!_sbCtx) return;
+  try{
+    const merged = { ..._sbCtx.d, internalNotes: JSON.stringify({ ..._sbCtx.notes, handoffs }) };
+    const method = _sbCtx.existing ? 'PATCH' : 'POST';
+    const path   = _sbCtx.existing ? `/rest/v1/kickoffs?id=eq.${HO_ID}` : `/rest/v1/kickoffs`;
+    const body   = _sbCtx.existing ? { data: merged } : { id: HO_ID, data: merged };
+    await sbFetch(path, { method, headers:{'Prefer':'return=minimal'}, body: JSON.stringify(body) });
+    _sbCtx.existing = true;
+    _sbCtx.notes.handoffs = handoffs;
+    setSyncInfo('Guardado · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
+  } catch { setSyncInfo('Error al guardar'); }
+}
+
+function save(){
+  localStorage.setItem('tt_handoffs', JSON.stringify(handoffs));
+  saveToSB();
 }
 function setSyncInfo(t){ document.getElementById('sync-info').textContent = t; }
 
@@ -821,25 +842,21 @@ async function createTaskFromHandoff(handoffId){
   closeTaskModal();
   if(!taskName) return;
   const h = handoffs.find(x=>x.id===handoffId);
-  const task = {
-    taskName,
-    assignedTo:   h?.person || '',
-    dueDate:      h?.date   ? h.date.slice(0,10) : '',
-    status:       'pending',
-    notes:        `Handoff: ${h?.client||''} · ${h?.activity||''}`,
-    handoffId:    handoffId,
-    createdAt:    new Date().toISOString(),
-  };
   try{
-    const r = await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({action:'saveTask',payload:task})});
-    const d = await r.json();
-    if(d.ok){
-      showToast('Tarea creada ✓');
-    } else {
-      showToast('Error al crear tarea: ' + (d.error||''));
-    }
-  } catch(err){
+    const r = await sbFetch('/rest/v1/tasks', {
+      method:'POST',
+      headers:{'Prefer':'return=minimal'},
+      body: JSON.stringify({
+        title:       taskName,
+        assigned_to: h?.person || null,
+        due_date:    h?.date   ? h.date.slice(0,10) : null,
+        status:      'pending',
+        notes:       `Handoff: ${h?.client||''} · ${h?.activity||''}`,
+        created_at:  new Date().toISOString(),
+      })
+    });
+    showToast(r.ok ? 'Tarea creada ✓' : 'Error al crear tarea');
+  } catch{
     showToast('Sin conexión — tarea no guardada');
   }
 }
@@ -974,10 +991,9 @@ function createHandoff(){
 }
 
 /* ── INIT ── */
-load(); checkUrlParams();
+checkUrlParams();
 render();
-setSyncInfo('Cargando desde servidor...');
-loadFromGAS();
+loadFromSB();
 </script>
 <script src="/lang.js"></script>
 </body>
