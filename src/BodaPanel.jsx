@@ -659,6 +659,7 @@ function TimelineEventForm({val,setVal,saving,onSubmit,onCancel,submitLabel}){
         <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={val.description} onChange={e=>setVal(p=>({...p,description:e.target.value}))} placeholder="Descripción del evento *" /></div>
         <input style={INP_SM} value={val.assignedTo} onChange={e=>setVal(p=>({...p,assignedTo:e.target.value}))} placeholder="Responsable" />
         <input style={INP_SM} value={val.notes} onChange={e=>setVal(p=>({...p,notes:e.target.value}))} placeholder="Notas" />
+        <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={val.url||""} onChange={e=>setVal(p=>({...p,url:e.target.value}))} placeholder="URL (opcional) — ej. Google Maps, Drive, Spotify…" /></div>
         <div style={{gridColumn:"span 2",display:"flex",flexWrap:"wrap",gap:10,alignItems:"center"}}>
           <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={val.isInternal} onChange={e=>setVal(p=>({...p,isInternal:e.target.checked}))} /> Solo interno</label>
           <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={val.isHighlight} onChange={e=>setVal(p=>({...p,isHighlight:e.target.checked}))} /> ⭐ Destacado</label>
@@ -686,7 +687,7 @@ function TimelineTab({ boda, onScheduleChange }) {
   const [editing,setEditing]=useState(null);
   const [view,setView]=useState("interno");
   const [showPresets,setShowPresets]=useState(false);
-  const BLANK={time:"",description:"",assignedTo:"",notes:"",category:"General",isInternal:false,isHighlight:false,highlightColor:""};
+  const BLANK={time:"",description:"",assignedTo:"",notes:"",url:"",category:"General",isInternal:false,isHighlight:false,highlightColor:""};
   const [blank,setBlank]=useState(BLANK);
   const sorted=[...schedule].sort((a,b)=>(a.time||"").localeCompare(b.time||""));
   const visible=view==="cliente"?sorted.filter(e=>!e.isInternal):sorted;
@@ -753,6 +754,7 @@ function TimelineTab({ boda, onScheduleChange }) {
                       </div>
                       {ev.assignedTo&&<p style={{fontSize:11,color:R.muted,margin:"3px 0 0"}}>👤 {ev.assignedTo}</p>}
                       {ev.notes     &&<p style={{fontSize:11,color:R.muted,margin:"2px 0 0"}}>{ev.notes}</p>}
+                      {ev.url       &&<a href={ev.url} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:11,color:R.accent,margin:"3px 0 0",display:"inline-block",wordBreak:"break-all",textDecoration:"underline"}}>🔗 {ev.url.replace(/^https?:\/\/(www\.)?/,"").split("/")[0]}</a>}
                     </div>
                     <div style={{display:"flex",gap:4,flexShrink:0}}>
                       <button onClick={()=>{setEditing({...ev});setShow(false);}} style={{color:R.muted,background:"none",border:"none",cursor:"pointer",fontSize:12,padding:"0 3px"}}>✏️</button>
@@ -2913,7 +2915,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
       <div style={{maxWidth:900,margin:"0 auto",padding:"24px 16px 60px"}}>
         {/* Main nav tabs */}
         <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:20,borderBottom:`1px solid ${R.border}`}}>
-          {[{id:"dashboard",label:"📊 Dashboard"},{id:"calendario",label:"📆 Calendario"},{id:"lista",label:"💍 Lista"},{id:"tareas",label:"📋 Tareas"}].map(v=>(
+          {[{id:"dashboard",label:"📊 Dashboard"},{id:"calendario",label:"📆 Calendario"},{id:"lista",label:"💍 Lista"},{id:"tareas",label:"📋 Tareas"},{id:"directorio",label:"📋 Directorio"}].map(v=>(
             <button key={v.id} onClick={()=>setMainView(v.id)}
               style={{padding:"12px 22px",border:"none",borderBottom:mainView===v.id?`2.5px solid ${R.gold}`:"2.5px solid transparent",background:"transparent",fontSize:13,fontWeight:mainView===v.id?600:400,color:mainView===v.id?R.text:R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif",transition:"color .15s",letterSpacing:mainView===v.id?".01em":"normal"}}>
               {v.label}
@@ -2948,6 +2950,16 @@ export default function BodaPanel({ currentUser, onLogout }) {
         {mainView==="dashboard"&&!loading&&<GlobalDashboard bodas={bodas} onSelectBoda={b=>{setSelected(b);}} />}
         {mainView==="calendario"&&!loading&&<CalendarioView bodas={bodas} onSelectBoda={b=>{setSelected(b);}} />}
         {mainView==="tareas"&&!loading&&<GlobalTasksView bodas={bodas} users={users} onSelectBoda={b=>{setSelected(b);}} onAddTask={async(bodaId,task)=>{ const b=bodas.find(x=>x.id===bodaId); if(!b) return; const newTasks=[...(b.tasks||[]),task]; await apiSaveNotes(bodaId,{...b,tasks:newTasks}); setBodas(prev=>prev.map(x=>x.id===bodaId?{...x,tasks:newTasks}:x)); }} />}
+        {mainView==="directorio"&&(
+          <div style={{textAlign:"center",padding:"60px 0"}}>
+            <p style={{fontSize:32,margin:"0 0 12px"}}>📋</p>
+            <p style={{fontSize:15,color:R.text,marginBottom:8}}>Directorio de Proveedores y Venues</p>
+            <a href="/?mode=bodas-directorio" target="_blank" rel="noopener noreferrer"
+              style={{display:"inline-block",background:R.accent,color:"#fff",textDecoration:"none",borderRadius:8,padding:"10px 24px",fontSize:13,fontFamily:"'Jost',sans-serif",fontWeight:600}}>
+              Abrir Directorio →
+            </a>
+          </div>
+        )}
 
         {(mainView==="dashboard"||mainView==="calendario"||mainView==="tareas")&&loading&&(
           <div style={{textAlign:"center",padding:"60px 0"}}>

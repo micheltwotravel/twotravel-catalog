@@ -23,6 +23,7 @@ const BookingPageLazy  = lazyWithReload(() => import("./BookingPage").then(m => 
 const BodaPanel        = lazyWithReload(() => import("./BodaPanel"));
 const BodaPublicView   = lazyWithReload(() => import("./BodaPublicView"));
 const TareasPanel      = lazyWithReload(() => import("./TareasPanel"));
+const DirectorioBodas  = lazyWithReload(() => import("./DirectorioBodas"));
 const FinanceCashFlow      = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinanceCashFlow })));
 const FinanceMovimientos   = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinanceMovimientos })));
 const FinanceCierre        = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinanceCierre })));
@@ -6513,11 +6514,11 @@ const ROLE_ACCESS = {
   junior:    ["dashboard","f-checkin","f-transporte",...PAGOS_MODES],
   finance:   ["pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"],
   marketing: ["dashboard",...PAGOS_MODES],
-  bodas:     ["bodas","tareas-bodas","tasks","dashboard",...PAGOS_MODES],
+  bodas:     ["bodas","tareas-bodas","bodas-directorio","tasks","dashboard",...PAGOS_MODES],
   pending:   [...PAGOS_MODES],
 };
 
-const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"]);
+const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","bodas-directorio","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"]);
 
 // ─── ITINERARY CATALOG (client-facing viewer) ─────────────────────
 const GAS_URL_IC = import.meta.env.VITE_GAS_URL;
@@ -7389,8 +7390,9 @@ function App() {
     if (mode === "f-checkin")       return <S><ErrorBoundary><FinanceCheckin /></ErrorBoundary></S>;
     if (mode === "f-transporte")    return <S><ErrorBoundary><FinanceTransporte /></ErrorBoundary></S>;
     if (mode === "concierge") return <S><ErrorBoundary><ConciergePanel onLogout={logout} currentUser={user} /></ErrorBoundary></S>;
-    if (mode === "bodas")        return <S><ErrorBoundary><BodaPanel currentUser={user} onLogout={logout} /></ErrorBoundary></S>;
-    if (mode === "tareas-bodas") return <S><ErrorBoundary><TareasPanel currentUser={user} onLogout={logout} /></ErrorBoundary></S>;
+    if (mode === "bodas")             return <S><ErrorBoundary><BodaPanel currentUser={user} onLogout={logout} /></ErrorBoundary></S>;
+    if (mode === "tareas-bodas")      return <S><ErrorBoundary><TareasPanel currentUser={user} onLogout={logout} /></ErrorBoundary></S>;
+    if (mode === "bodas-directorio")  return <S><ErrorBoundary><DirectorioBodas currentUser={user} onLogout={logout} /></ErrorBoundary></S>;
     if (mode === "soporte")   return <ErrorBoundary><SoportePage /></ErrorBoundary>;
     if (mode === "soporte-dashboard") return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
     if (mode === "tasks")     return <ErrorBoundary><TaskTracker currentUser={user} /></ErrorBoundary>;
