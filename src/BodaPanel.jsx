@@ -88,6 +88,38 @@ function clearBodasCache() {
   try { sessionStorage.removeItem(BODAS_CACHE_KEY); } catch {}
 }
 
+// Sync boda tasks to the shared `tasks` table so TareasPanel can see them
+async function syncBodaTasks(boda, taskList) {
+  try {
+    if (taskList.length > 0) {
+      await supabase.from("tasks").upsert(
+        taskList.map(t => ({
+          id: t.id,
+          data: {
+            kickoffName: boda.clienteName,
+            kickoffId: boda.id,
+            source: "bodas",
+            taskName: t.taskName || "",
+            assignedTo: t.assignedTo || "",
+            fase: t.phase || t.fase || "General",
+            dueDate: t.dueDate || "",
+            status: t.status || "Pendiente",
+            notes: t.notes || "",
+          }
+        }))
+      );
+    }
+    // Delete tasks removed from the boda
+    const { data: existing } = await supabase.from("tasks").select("id")
+      .filter("data->>kickoffId", "eq", boda.id);
+    if (existing?.length) {
+      const keep = new Set(taskList.map(t => t.id));
+      const toDelete = existing.map(r => r.id).filter(id => !keep.has(id));
+      if (toDelete.length) await supabase.from("tasks").delete().in("id", toDelete);
+    }
+  } catch(e) { console.warn("syncBodaTasks:", e.message); }
+}
+
 // GAS kept only for email and user listing
 async function gasPost(body) {
   const r = await fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) });
@@ -208,7 +240,7 @@ function TasksTab({ boda, users, onPatch }) {
   const [filterSort,setFilterSort]=useState("due");
   const today=new Date(); today.setHours(0,0,0,0);
   function cat(t) { if(!t.dueDate) return "up"; const d=new Date(t.dueDate+"T12:00:00"); d.setHours(0,0,0,0); if(d<today) return "late"; if(d.getTime()===today.getTime()) return "today"; return "up"; }
-  async function persist(u){ setTasks(u); onPatch({tasks:u}); try{ await apiSaveNotes(boda.id,{...boda,tasks:u}); } catch(e){ setSaveErr("No se pudo guardar: "+e.message); setTimeout(()=>setSaveErr(""),6000); } }
+  async function persist(u){ setTasks(u); onPatch({tasks:u}); try{ await apiSaveNotes(boda.id,{...boda,tasks:u}); } catch(e){ setSaveErr("No se pudo guardar: "+e.message); setTimeout(()=>setSaveErr(""),6000); } syncBodaTasks(boda,u).catch(()=>{}); }
   async function sendTaskEmail(taskName, dueDate, isReminder) {
     const emails = [boda.coupleEmail, boda.coupleEmail2].filter(e => e && e.includes("@"));
     if (!emails.length) return;
