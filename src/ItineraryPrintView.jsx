@@ -2519,10 +2519,10 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         )}
 
         {/* Cancellation */}
-        {it.cancellation && (
+        {(it.cancellation || /airport.transfer|traslado.*aeropuerto|traslado.*villa/i.test(it.name_en||it.name||"")) && (
           <div className="ev-terms">
             <b>{isEs ? "Cancelación: " : "Cancellation: "}</b>
-            <Editable value={it.cancellation} editMode={editMode} onChange={v => patchItem?.("cancellation", v)} />
+            <Editable value={it.cancellation || "Cancellations made less than 24 hours before the scheduled pickup are non-refundable."} editMode={editMode} onChange={v => patchItem?.("cancellation", v)} />
           </div>
         )}
 
