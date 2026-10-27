@@ -232,7 +232,7 @@ function TasksTab({ boda, users, onPatch }) {
     <div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
         <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{allActive.length} activa{allActive.length!==1?"s":""}</span>
-        <button onClick={()=>setShow(v=>!v)} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Nueva tarea</button>
+        <button onClick={()=>setShow(v=>!v)} style={{background:show?R.accent:"#1a0812",color:"#fff",border:"none",borderRadius:8,padding:"7px 16px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".04em"}}>+ Nueva tarea</button>
       </div>
       {allActive.length>1&&(
         <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
@@ -621,6 +621,23 @@ function LlamadasTab({ boda, onPatch }) {
 
 // ─── TIMELINE ────────────────────────────────────────────────────────────────
 const M_CATS=["General","Novios","Proveedores","Coordinación","Música","Fotos/Video","Protocolo"];
+const TIMELINE_PRESETS=[
+  {d:"Llegada del equipo",      cat:"Coordinación"},
+  {d:"Preparación de la novia", cat:"Novios"},
+  {d:"Sesión de fotos",         cat:"Fotos/Video"},
+  {d:"Llegada de invitados",    cat:"General"},
+  {d:"Inicio de la ceremonia",  cat:"Protocolo"},
+  {d:"Salida de novios",        cat:"Novios"},
+  {d:"Cocktail",                cat:"General"},
+  {d:"Ingreso al salón",        cat:"General"},
+  {d:"Primer baile",            cat:"Novios"},
+  {d:"Brindis",                 cat:"Protocolo"},
+  {d:"Cena / Banquete",         cat:"General"},
+  {d:"Corte del pastel",        cat:"Novios"},
+  {d:"Pista de baile",          cat:"Música"},
+  {d:"Hora loca",               cat:"Música"},
+  {d:"Cierre del evento",       cat:"Coordinación"},
+];
 const M_COLORS={"General":{bg:"#f5f5f4",color:"#57534e"},"Novios":{bg:"#fff0f3",color:"#be123c"},"Proveedores":{bg:"#fffbeb",color:"#b45309"},"Coordinación":{bg:"#eff6ff",color:"#1d4ed8"},"Música":{bg:"#f5f3ff",color:"#7c3aed"},"Fotos/Video":{bg:"#f0fdfa",color:"#0f766e"},"Protocolo":{bg:"#fff7ed",color:"#c2410c"}};
 
 const TL_HIGHLIGHTS=[
@@ -667,6 +684,7 @@ function TimelineTab({ boda, onScheduleChange }) {
   const [saving,setSaving]=useState(false);
   const [editing,setEditing]=useState(null);
   const [view,setView]=useState("interno");
+  const [showPresets,setShowPresets]=useState(false);
   const BLANK={time:"",description:"",assignedTo:"",notes:"",category:"General",isInternal:false,isHighlight:false,highlightColor:""};
   const [blank,setBlank]=useState(BLANK);
   const sorted=[...schedule].sort((a,b)=>(a.time||"").localeCompare(b.time||""));
@@ -688,9 +706,25 @@ function TimelineTab({ boda, onScheduleChange }) {
         </div>
         <div style={{display:"flex",gap:8}}>
           {sorted.length>0&&<button onClick={()=>window.print()} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>🖨</button>}
-          <button onClick={()=>{setShow(v=>!v);setEditing(null);}} style={{background:show?R.accent:"#1a0812",color:"#fff",border:"none",borderRadius:8,padding:"7px 18px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".03em"}}>+ Evento</button>
+          <button onClick={()=>{setShowPresets(v=>!v);setShow(false);setEditing(null);}} style={{background:showPresets?R.gold:"transparent",color:showPresets?"#fff":R.muted,border:`1px solid ${showPresets?R.gold:R.border}`,borderRadius:8,padding:"7px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".03em"}}>⚡ Rápidos</button>
+          <button onClick={()=>{setShow(v=>!v);setEditing(null);setShowPresets(false);}} style={{background:show?R.accent:"#1a0812",color:"#fff",border:"none",borderRadius:8,padding:"7px 18px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".03em"}}>+ Evento</button>
         </div>
       </div>
+      {showPresets&&(
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
+          <p style={{fontSize:11,fontWeight:700,color:R.muted,textTransform:"uppercase",letterSpacing:".07em",margin:"0 0 10px"}}>Eventos del día — clic para agregar</p>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+            {TIMELINE_PRESETS.map(p=>(
+              <button key={p.d} onClick={()=>{setBlank(b=>({...b,description:p.d,category:p.cat}));setShow(true);setShowPresets(false);}}
+                style={{fontSize:11,padding:"4px 12px",borderRadius:99,background:R.white,border:`1px solid ${R.border}`,cursor:"pointer",color:R.text,fontFamily:"'Jost',sans-serif",transition:"border-color .15s"}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=R.accent;e.currentTarget.style.color=R.accent;}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=R.border;e.currentTarget.style.color=R.text;}}>
+                {p.d}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {show&&!editing&&<TimelineEventForm val={blank} setVal={setBlank} saving={saving} onSubmit={add} onCancel={()=>setShow(false)} submitLabel="Agregar" />}
       {editing&&<TimelineEventForm val={editing} setVal={v=>setEditing(p=>({...p,...(typeof v==="function"?v(p):v)}))} saving={saving} onSubmit={saveEdit} onCancel={()=>setEditing(null)} submitLabel="Guardar" />}
       {visible.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>{sorted.length===0?"Sin eventos. Agrega el primero arriba.":"No hay eventos para la vista cliente."}</p>}
@@ -1820,6 +1854,7 @@ ${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).joi
 
   const TABS=[
     {id:"resumen",      label:"Resumen"},
+    {id:"tareas",       label:`Tareas (${(boda.tasks||[]).length})`},
     {id:"presupuesto",  label:`Presupuesto (${(boda.budgetItems||[]).length})`},
     {id:"pagos",        label:`Pagos (${(boda.payments||[]).length})`},
     {id:"contratos",    label:`Contratos (${(boda.contracts||[]).length})`},
@@ -1936,6 +1971,7 @@ ${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).joi
           {tab==="musica"     &&<MusicTab       boda={boda} onPatch={handlePatch} />}
           {tab==="fotos"      &&<FotosTab       boda={boda} onPatch={handlePatch} />}
           {tab==="llamadas"   &&<LlamadasTab    boda={boda} onPatch={handlePatch} />}
+          {tab==="tareas"     &&<TasksTab       boda={boda} users={users} onPatch={handlePatch} />}
         </div>
       </div>
     </div>
@@ -2221,6 +2257,7 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask }) {
   const [addBodaId,setAddBodaId]=useState("");
   const [addName,setAddName]=useState("");
   const [addDate,setAddDate]=useState("");
+  const [addAssignee,setAddAssignee]=useState("");
   const [saving,setSaving]=useState(false);
 
   const allTasks=bodas.flatMap(b=>(b.tasks||[]).map(t=>({...t,bodaName:b.clienteName,bodaId:b.id})));
@@ -2260,6 +2297,15 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask }) {
     }catch(e){alert("Error: "+e.message);}
     setSaving(false);
   }
+  async function addEquipoTask(){
+    if(!addBodaId||!addName.trim()) return;
+    setSaving(true);
+    try{
+      await onAddTask(addBodaId,{id:uid(),taskName:addName,assignedTo:addAssignee||"",dueDate:addDate,status:"Pendiente",phase:"General",notes:""});
+      setAddName(""); setAddDate(""); setAddBodaId(""); setAddAssignee(""); setShowAdd(false);
+    }catch(e){alert("Error: "+e.message);}
+    setSaving(false);
+  }
 
   const TAB_BTN=(id,label,count)=>(
     <button onClick={()=>{setSection(id);setFilterPerson("");setFilterBoda("");setShowAdd(false);}}
@@ -2276,11 +2322,11 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask }) {
           {TAB_BTN("equipo","👥 Equipo",equipoCount)}
           {TAB_BTN("novios","💍 Novios",noviosCount)}
         </div>
-        {section==="novios"&&<button onClick={()=>setShowAdd(v=>!v)} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"5px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,marginBottom:4}}>+ Tarea para novios</button>}
+        <button onClick={()=>setShowAdd(v=>!v)} style={{background:showAdd?R.accent:"#1a0812",color:"#fff",border:"none",borderRadius:8,padding:"5px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,marginBottom:4}}>+ Tarea {section==="novios"?"para novios":"para equipo"}</button>
       </div>
 
-      {/* Add novios task form */}
-      {section==="novios"&&showAdd&&(
+      {/* Add task form (equipo or novios) */}
+      {showAdd&&(
         <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:14}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
             <select style={{...INP_SM,gridColumn:"span 2"}} value={addBodaId} onChange={e=>setAddBodaId(e.target.value)}>
@@ -2289,9 +2335,15 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask }) {
             </select>
             <input style={{...INP_SM,gridColumn:"span 2"}} value={addName} onChange={e=>setAddName(e.target.value)} placeholder="Descripción de la tarea *" />
             <input type="date" style={INP_SM} value={addDate} onChange={e=>setAddDate(e.target.value)} />
+            {section==="equipo"&&(
+              <select style={INP_SM} value={addAssignee} onChange={e=>setAddAssignee(e.target.value)}>
+                <option value="">👤 Asignar a...</option>
+                {(users||[]).filter(u=>u.name).map(u=><option key={u.id||u.name} value={u.name}>{u.name}</option>)}
+              </select>
+            )}
           </div>
           <div style={{display:"flex",gap:8}}>
-            <button onClick={addNoviosTask} disabled={saving||!addBodaId||!addName.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!addBodaId||!addName.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Agregar"}</button>
+            <button onClick={section==="novios"?addNoviosTask:addEquipoTask} disabled={saving||!addBodaId||!addName.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!addBodaId||!addName.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Agregar"}</button>
             <button onClick={()=>setShowAdd(false)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
           </div>
         </div>
