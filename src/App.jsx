@@ -7049,7 +7049,7 @@ function FinanceLanding({ user, onLogout }) {
     {
       group: "Operaciones",
       items: [
-        { icon:"📈", label:"Planner", desc:"Ingresos esperados y comisiones de ventas", href:"/?mode=f-reservaciones", live:true },
+        { icon:"📈", label:"Board de Reservas", desc:"Ingresos esperados, comisiones y estado de reservas", href:"/?mode=f-reservaciones", live:true },
         { icon:"🤝", label:"Check-In & Concierge",   desc:"Servicios de check-in y concierge con margen", href:"/?mode=f-checkin",   live:true },
         { icon:"🚗", label:"Transporte",              desc:"Transfers y logística de transporte con margen", href:"/?mode=f-transporte", live:true },
         { icon:"💰", label:"Estimados",               desc:"Herramienta de cotizaciones para ventas",   href:"/estimates.html",        live:true },
