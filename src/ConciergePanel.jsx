@@ -3262,9 +3262,14 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
 
       const newRows = [];
       for (const item of selectedItems) {
-        const alreadyExported = rows.some(r => r._kickoffId === kickoffId && r._itemUid === item._uid);
-        if (alreadyExported) continue;
         const itemName = item.name || item.name_es || item.name_en || "";
+        const alreadyExported = rows.some(r =>
+          r._kickoffId === kickoffId &&
+          (r._itemUid
+            ? r._itemUid === item._uid
+            : r.provider === itemName && r.name === guestName)
+        );
+        if (alreadyExported) continue;
         newRows.push({
           _kickoffId:          kickoffId,
           _itemUid:            item._uid,
