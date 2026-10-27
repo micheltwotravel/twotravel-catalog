@@ -252,7 +252,9 @@ function TasksTab({ boda, users, onPatch }) {
             <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.taskName} onChange={e=>setBlank(p=>({...p,taskName:e.target.value}))} placeholder="Descripción de la tarea *" /></div>
             <select style={INP_SM} value={blank.assignedTo} onChange={e=>setBlank(p=>({...p,assignedTo:e.target.value}))}>
               <option value="">— responsable —</option>
-              <option value="Novios">💍 Novios</option>
+              <option value="Ambos">💍 Ambos</option>
+              {(boda.clienteName||"").split(/[&\/,]/).map(n=>n.trim()).filter(Boolean).map(n=><option key={n} value={n}>{n}</option>)}
+              {(boda.suppliers||[]).filter(s=>s.name).map(s=><option key={s.id||s.name} value={s.name}>{s.name}{s.category?` (${s.category})`:""}</option>)}
             </select>
             <input type="date" style={INP_SM} value={blank.dueDate} onChange={e=>setBlank(p=>({...p,dueDate:e.target.value}))} />
             <select style={INP_SM} value={blank.phase} onChange={e=>setBlank(p=>({...p,phase:e.target.value}))}>{["General",...FASES].map(ph=><option key={ph}>{ph}</option>)}</select>
