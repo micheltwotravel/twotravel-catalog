@@ -1420,8 +1420,9 @@ function TableViz({table, tGuests, isSelected}) {
           return <circle key={i} cx={cx+Rc*Math.cos(a)} cy={cy+Rc*Math.sin(a)} r={rc} fill={i<filled?chairCol:emptyCol} stroke="rgba(0,0,0,.12)" strokeWidth={0.5}/>;
         })}
         <circle cx={cx} cy={cy} r={Rt} fill={tableBg} stroke={stroke} strokeWidth={isSelected?2:1.5}/>
-        <text x={cx} y={cy-3} textAnchor="middle" fontSize={8} fontFamily="'Jost',sans-serif" fontWeight="700" fill={R.text}>{nameText}</text>
-        <text x={cx} y={cy+8} textAnchor="middle" fontSize={7} fontFamily="'Jost',sans-serif" fill={R.muted}>{filled}/{total}</text>
+        <text x={cx} y={cy-5} textAnchor="middle" fontSize={8} fontFamily="'Jost',sans-serif" fontWeight="700" fill={R.text}>{nameText}</text>
+        <text x={cx} y={cy+6} textAnchor="middle" fontSize={7} fontFamily="'Jost',sans-serif" fill={R.muted}>{filled}/{total}</text>
+        {table.size&&<text x={cx} y={cy+16} textAnchor="middle" fontSize={6} fontFamily="'Jost',sans-serif" fill={R.gold}>{table.size}</text>}
       </svg>
     );
   }
@@ -1437,8 +1438,9 @@ function TableViz({table, tGuests, isSelected}) {
       {Array.from({length:perTop},(_,i)=><rect key={`t${i}`} x={4+i*(cw+gap)} y={2} width={cw} height={ch} rx={2} fill={i<Math.ceil(filled/2)?chairCol:emptyCol} stroke="rgba(0,0,0,.12)" strokeWidth={0.5}/>)}
       {Array.from({length:perBot},(_,i)=><rect key={`b${i}`} x={4+i*(cw+gap)} y={ty+tableH+gap} width={cw} height={ch} rx={2} fill={perTop+i<filled?chairCol:emptyCol} stroke="rgba(0,0,0,.12)" strokeWidth={0.5}/>)}
       <rect x={2} y={ty} width={tableW} height={tableH} rx={table.shape==="Imperial"?3:5} fill={tableBg} stroke={stroke} strokeWidth={isSelected?2:1.5}/>
-      <text x={2+tableW/2} y={ty+tableH/2-2} textAnchor="middle" fontSize={7} fontFamily="'Jost',sans-serif" fontWeight="700" fill={R.text}>{nameText}</text>
-      <text x={2+tableW/2} y={ty+tableH/2+7} textAnchor="middle" fontSize={6} fontFamily="'Jost',sans-serif" fill={R.muted}>{filled}/{total}</text>
+      <text x={2+tableW/2} y={ty+tableH/2-3} textAnchor="middle" fontSize={7} fontFamily="'Jost',sans-serif" fontWeight="700" fill={R.text}>{nameText}</text>
+      <text x={2+tableW/2} y={ty+tableH/2+5} textAnchor="middle" fontSize={6} fontFamily="'Jost',sans-serif" fill={R.muted}>{filled}/{total}</text>
+      {table.size&&<text x={2+tableW/2} y={ty+tableH/2+13} textAnchor="middle" fontSize={5.5} fontFamily="'Jost',sans-serif" fill={R.gold}>{table.size}</text>}
     </svg>
   );
 }
@@ -1521,6 +1523,8 @@ function SeatingTab({ boda, onPatch }) {
   const [selected,setSelected]=useState(null);
   const [pendingGuest,setPendingGuest]=useState(null);
   const [drag,setDrag]=useState(null);
+  const [showGrid,setShowGrid]=useState(true);
+  const [gridScale,setGridScale]=useState(100); // cm per grid square
   const canvasRef=useRef(null);
   const seatingRef=useRef(seating);
   seatingRef.current=seating;
@@ -1587,10 +1591,26 @@ function SeatingTab({ boda, onPatch }) {
   return (
     <div>
       {/* Toolbar */}
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"wrap"}}>
         <span style={{fontSize:11,color:R.muted,letterSpacing:".03em"}}>{seating.length} mesa{seating.length!==1?"s":""} · {assigned.length}/{guests.length} asignados</span>
         <div style={{flex:1}}/>
-        <button onClick={()=>setShowFloor(v=>!v)} style={BTN_SM}>Plano personalizado</button>
+        {/* Grid toggle + scale */}
+        <button onClick={()=>setShowGrid(v=>!v)} style={{...BTN_SM,background:showGrid?R.light:"transparent",borderColor:showGrid?R.accent:R.border,color:showGrid?R.accent:R.muted}}>
+          # Cuadrícula
+        </button>
+        {showGrid&&(
+          <select value={gridScale} onChange={e=>setGridScale(Number(e.target.value))}
+            style={{fontSize:11,border:`1px solid ${R.border}`,borderRadius:6,padding:"4px 8px",background:R.card,color:R.text,fontFamily:"'Jost',sans-serif",cursor:"pointer"}}>
+            <option value={50}>1 cuadro = 50 cm</option>
+            <option value={100}>1 cuadro = 1 m</option>
+            <option value={200}>1 cuadro = 2 m</option>
+          </select>
+        )}
+        <button onClick={()=>setShowFloor(v=>!v)} style={BTN_SM}>Plano</button>
+        <button onClick={()=>{
+          const url=`${window.location.origin}/?mode=bodas-mesas&id=${boda.id}`;
+          window.open(url,"_blank","width=1200,height=800");
+        }} style={BTN_SM} title="Abrir en ventana grande">⤢ Ventana</button>
         <button onClick={()=>{setShowNew(v=>!v);setSelected(null);setPendingGuest(null);}}
           style={{background:R.accent,color:"#fff",border:"none",borderRadius:2,padding:"6px 16px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".04em"}}>+ Mesa</button>
       </div>
@@ -1648,14 +1668,28 @@ function SeatingTab({ boda, onPatch }) {
       <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
 
         {/* Canvas */}
+        <div style={{flex:1,overflow:"auto",border:`1px solid ${R.border}`,borderRadius:0,maxHeight:680}}>
         <div
           ref={canvasRef}
-          style={{flex:1,position:"relative",minHeight:500,background:"#FAF8F5",borderRadius:0,border:`1px solid ${R.border}`,overflow:"hidden",cursor:drag?"grabbing":"default",userSelect:"none"}}
+          style={{
+            position:"relative",width:1100,height:780,
+            background:"#FAF8F5",
+            backgroundImage:showGrid?`repeating-linear-gradient(0deg,transparent,transparent ${gridScale-1}px,rgba(0,0,0,.07) ${gridScale-1}px,rgba(0,0,0,.07) ${gridScale}px),repeating-linear-gradient(90deg,transparent,transparent ${gridScale-1}px,rgba(0,0,0,.07) ${gridScale-1}px,rgba(0,0,0,.07) ${gridScale}px)`:"none",
+            backgroundSize:showGrid?`${gridScale}px ${gridScale}px`:"auto",
+            cursor:drag?"grabbing":"default",userSelect:"none",flexShrink:0,
+          }}
           onMouseMove={onCanvasMove}
           onMouseUp={onCanvasUp}
           onMouseLeave={onCanvasUp}
           onClick={()=>{ setSelected(null); if(!drag) setPendingGuest(null); }}
         >
+          {/* Grid scale label */}
+          {showGrid&&(
+            <div style={{position:"absolute",bottom:8,right:10,fontSize:9,color:"rgba(0,0,0,.3)",fontFamily:"'Jost',sans-serif",letterSpacing:".05em",pointerEvents:"none",userSelect:"none"}}>
+              1 cuadro = {gridScale} cm
+            </div>
+          )}
+
           {/* Default room SVG sketch */}
           {!floorUrl&&<div style={{position:"absolute",inset:0,pointerEvents:"none",opacity:.22}} dangerouslySetInnerHTML={{__html:DEFAULT_FLOOR_SVG}}/>}
 
@@ -1714,6 +1748,7 @@ function SeatingTab({ boda, onPatch }) {
               </div>
             ))}
           </div>
+        </div>
         </div>
 
         {/* Side panel */}
