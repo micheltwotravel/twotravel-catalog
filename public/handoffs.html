@@ -810,7 +810,7 @@ function renderTable(){
     if(!groups[wk]) groups[wk] = [];
     groups[wk].push(h);
   });
-  const weekKeys = Object.keys(groups).sort((a,b) => weekOrder(a) < weekOrder(b) ? -1 : 1);
+  const weekKeys = Object.keys(groups).sort((a,b) => weekOrder(a) > weekOrder(b) ? -1 : 1);
 
   let html = '';
   let colorIdx = 0;
