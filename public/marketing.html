@@ -433,16 +433,103 @@ tr:hover td{background:var(--sand)}
 </div>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwVj2nl99gFJB0ZeFIm_WrS2TepT2mu3m-tAoEy0Wc5-oO9Rj33i16nAp0jFBqLSI665A/exec';
+const SB_URL = 'https://zcgisoigfzytpanoaomq.supabase.co';
+const SB_KEY = 'sb_publishable_7k9A4WP1x7hDQdrsHY52jQ_Rpj3ASjU';
+const MKT_ROW = 'marketing_v1';
+
 let kickoffs = [];
 let calYear, calMonth;
+let _mktData = null; // cached marketing row data
 
 // ─── STORAGE HELPERS ─────────────────────────────────
 function lsGet(key, def) { try { return JSON.parse(localStorage.getItem(key)) ?? def; } catch { return def; } }
 function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
-function saveFeedbackNotes(val) { lsSet('marketing_feedback_notes', val); }
-function initFeedbackNotes() { const el = document.getElementById('feedback-notes'); if (el) el.value = lsGet('marketing_feedback_notes', ''); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+async function sbGet(path) {
+  const r = await fetch(SB_URL + path, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+  return r.ok ? r.json() : null;
+}
+async function sbPatch(path, body) {
+  return fetch(SB_URL + path, {
+    method: 'PATCH',
+    headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify(body),
+  });
+}
+async function sbUpsert(path, body) {
+  return fetch(SB_URL + path, {
+    method: 'POST',
+    headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(body),
+  });
+}
+
+async function loadMktData() {
+  if (_mktData) return _mktData;
+  const rows = await sbGet(`/rest/v1/kickoffs?id=eq.${MKT_ROW}&select=data`);
+  _mktData = (rows?.[0]?.data) || {};
+  return _mktData;
+}
+async function saveMktField(field, value) {
+  const d = await loadMktData();
+  d[field] = value;
+  await sbUpsert('/rest/v1/kickoffs', { id: MKT_ROW, data: d });
+}
+
+// Filming notes (per kickoff, per activity)
+async function getFilmingNotes() {
+  const d = await loadMktData();
+  return d.filmingNotes || {};
+}
+async function saveActivityNoteToSB(key, val, kickoffId) {
+  const d = await loadMktData();
+  const notes = d.filmingNotes || {};
+  if (val.trim()) notes[key] = val.trim(); else delete notes[key];
+  d.filmingNotes = notes;
+  await sbUpsert('/rest/v1/kickoffs', { id: MKT_ROW, data: d });
+}
+async function getFilmingNotesTrip(kickoffId) {
+  const d = await loadMktData();
+  return d['filmingNotes_' + kickoffId] || '';
+}
+async function saveFilmingNoteTrip(kickoffId, val) {
+  const d = await loadMktData();
+  d['filmingNotes_' + kickoffId] = val;
+  await sbUpsert('/rest/v1/kickoffs', { id: MKT_ROW, data: d });
+}
+async function getFeedbackNotes() {
+  const d = await loadMktData();
+  return d.feedbackNotes || '';
+}
+async function saveFeedbackNotes(val) {
+  const d = await loadMktData();
+  d.feedbackNotes = val;
+  await sbUpsert('/rest/v1/kickoffs', { id: MKT_ROW, data: d });
+}
+async function initFeedbackNotes() {
+  const val = await getFeedbackNotes();
+  const el = document.getElementById('feedback-notes');
+  if (el) el.value = val;
+}
+async function getCalItems() {
+  const d = await loadMktData();
+  return d.calItems || [];
+}
+async function saveCalItems(items) {
+  const d = await loadMktData();
+  d.calItems = items;
+  await sbUpsert('/rest/v1/kickoffs', { id: MKT_ROW, data: d });
+}
+async function getMetrics() {
+  const d = await loadMktData();
+  return d.metrics || [];
+}
+async function saveMetrics(items) {
+  const d = await loadMktData();
+  d.metrics = items;
+  await sbUpsert('/rest/v1/kickoffs', { id: MKT_ROW, data: d });
+}
 
 // ─── TABS ────────────────────────────────────────────
 function showTab(name) {
@@ -534,7 +621,7 @@ function renderTripItinerary(k, today) {
   // Compact summary for the card
   const activityCount = [...byDay.values()].reduce((s,a)=>s+a.length,0);
   const dayCount = byDay.size;
-  const filmNotes = lsGet('marketing_activity_notes', {});
+  const filmNotes = (_mktData && _mktData.filmingNotes) || {};
   const notedCount = [...byDay.entries()].reduce((s,[dl,its]) =>
     s + its.filter((_,idx) => filmNotes[`${k.id}_${dl}_${idx}`]).length, 0);
 
@@ -565,13 +652,11 @@ function renderTripItinerary(k, today) {
     </div>`;
 }
 
-function saveActivityNote(key, val) {
-  const notes = lsGet('marketing_activity_notes', {});
-  if (val.trim()) notes[key] = val.trim(); else delete notes[key];
-  lsSet('marketing_activity_notes', notes);
+function saveActivityNote(key, val, kickoffId) {
+  saveActivityNoteToSB(key, val, kickoffId);
 }
 
-function openItinModal(kickoffId) {
+async function openItinModal(kickoffId) {
   const k = kickoffs.find(x => x.id === kickoffId);
   if (!k) return;
   const city = [k.city, k.city2].filter(Boolean).join(' → ');
@@ -581,7 +666,7 @@ function openItinModal(kickoffId) {
 
   document.getElementById('modal-itin-name').textContent = k.guestName || k.tripName || '—';
   document.getElementById('modal-itin-meta').textContent = [city, (arr||dep)?arr+' → '+dep:''].filter(Boolean).join(' · ') + pax;
-  document.getElementById('modal-itin-link').href = `/?mode=itinerary&kickoffId=${encodeURIComponent(kickoffId)}`;
+  document.getElementById('modal-itin-link').href = `/?mode=concierge&kickoffId=${encodeURIComponent(kickoffId)}`;
 
   const cart = parseCart(k);
   const byDay = new Map();
@@ -591,7 +676,8 @@ function openItinModal(kickoffId) {
     byDay.get(label).push(it);
   });
 
-  const filmNotes = lsGet('marketing_activity_notes', {});
+  const mktD = await loadMktData();
+  const filmNotes = mktD.filmingNotes || {};
   const CAT_COLORS = {
     'actividad':'#7c3aed','tour':'#1d4ed8','food':'#854d0e',
     'restaurante':'#854d0e','drink':'#854d0e','boating':'#0e7490',
@@ -652,7 +738,7 @@ function closeItinModal() {
 }
 
 function saveActivityNoteModal(key, val, kickoffId) {
-  saveActivityNote(key, val);
+  saveActivityNoteToSB(key, val, kickoffId);
 }
 
 function fmtDay(dateStr) {
@@ -667,9 +753,10 @@ function fmtDay(dateStr) {
 // ─── KICKOFFS ────────────────────────────────────────
 async function loadKickoffs() {
   try {
-    const r = await fetch(GAS_URL + '?action=listKickoffs');
-    const data = await r.json();
-    kickoffs = Array.isArray(data) ? data : (data.kickoffs || data.data || []);
+    const rows = await sbGet('/rest/v1/kickoffs?select=id,data&id=neq.finance_reservations_v1&id=neq.marketing_v1&order=id.asc&limit=500');
+    kickoffs = (rows || [])
+      .filter(r => r.id && !r.id.startsWith('finance_') && !r.id.startsWith('marketing_'))
+      .map(r => ({ id: r.id, ...(r.data || {}) }));
   } catch (e) {
     kickoffs = [];
   }
@@ -679,7 +766,7 @@ async function loadKickoffs() {
 // ══════════════════════════════════════════════════════
 // TAB 1: FILMACIÓN
 // ══════════════════════════════════════════════════════
-function renderFilming() {
+async function renderFilming() {
   const el = document.getElementById('filming-list');
   if (!kickoffs.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🎬</div><div>No se encontraron trips activos.</div></div>'; return; }
 
@@ -696,10 +783,9 @@ function renderFilming() {
 
   if (!active.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🎬</div><div>No hay trips próximos con datos disponibles.</div></div>'; return; }
 
-  const notes = lsGet('marketing_filming_notes', {});
-
+  const d = await loadMktData();
   el.innerHTML = active.map(k => {
-    const note = notes[k.id] || '';
+    const note = d['filmingNotes_' + k.id] || '';
     const city = [k.city, k.city2].filter(Boolean).join(' · ');
     const dateStr = [k.arrivalDate, k.departureDate].filter(Boolean).join(' → ');
     const pax = k.groupSize || '';
@@ -729,18 +815,19 @@ function renderFilming() {
 }
 
 function renderItineraryItems(k) {
-  let items = [];
-  try { items = JSON.parse(k.cartItems || k.itinerary || '[]'); } catch {}
-  if (!Array.isArray(items) || !items.length) return '';
-
-  // flatten days
+  let cart = [];
+  try {
+    const raw = k.cart;
+    if (typeof raw === 'string') cart = JSON.parse(raw);
+    else if (Array.isArray(raw)) cart = raw;
+  } catch {}
+  // Flatten nested days structure
   let flat = [];
-  items.forEach(item => {
-    if (item.items && Array.isArray(item.items)) flat = flat.concat(item.items.map(i=>({...i, _day: item.day || item.date || ''})));
+  cart.forEach(item => {
+    if (item.items && Array.isArray(item.items)) flat = flat.concat(item.items);
     else flat.push(item);
   });
-
-  const named = flat.filter(i => i.name || i.name_es).slice(0,12);
+  const named = flat.filter(i => i && (i.name || i.name_es) && i.type !== 'block').slice(0, 12);
   if (!named.length) return '';
   return `<div style="margin-top:12px">
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);margin-bottom:8px">Actividades del itinerario</div>
@@ -751,9 +838,7 @@ function renderItineraryItems(k) {
 }
 
 function saveFilmingNote(id, val) {
-  const notes = lsGet('marketing_filming_notes', {});
-  notes[id] = val;
-  lsSet('marketing_filming_notes', notes);
+  saveFilmingNoteTrip(id, val);
 }
 
 function chipStatus(s) {
@@ -773,7 +858,7 @@ function chipStatus(s) {
 async function loadBehavior() {
   if (!kickoffs.length) await loadKickoffs();
   renderBehavior();
-  initFeedbackNotes();
+  await initFeedbackNotes();
 }
 
 function renderBehavior() {
@@ -853,7 +938,7 @@ function initCal() {
   calMonth = now.getMonth();
 }
 
-function renderCal() {
+async function renderCal() {
   if (calYear === undefined) initCal();
   const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const DAYS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -867,7 +952,7 @@ function renderCal() {
   const startDow = first.getDay();
   const totalCells = Math.ceil((startDow + last.getDate()) / 7) * 7;
 
-  const items = lsGet('marketing_cal_items', []);
+  const items = await getCalItems();
   const today = new Date(); today.setHours(0,0,0,0);
 
   let html = '';
@@ -891,10 +976,10 @@ function calPrev() { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCa
 function calNext() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCal(); }
 
 let editingContentId = null, editingContentDate = null;
-function openContentModal(date, itemId) {
+async function openContentModal(date, itemId) {
   editingContentDate = date;
   editingContentId = itemId;
-  const items = lsGet('marketing_cal_items', []);
+  const items = await getCalItems();
   const it = itemId ? items.find(x=>x.id===itemId) : null;
   document.getElementById('modal-content-title').textContent = it ? 'Editar contenido' : 'Nuevo contenido';
   document.getElementById('mc-title').value = it?.title || '';
@@ -906,10 +991,10 @@ function openContentModal(date, itemId) {
   document.getElementById('modal-content').classList.add('open');
 }
 function closeContentModal() { document.getElementById('modal-content').classList.remove('open'); }
-function saveContentItem() {
+async function saveContentItem() {
   const title = document.getElementById('mc-title').value.trim();
   if (!title) return;
-  const items = lsGet('marketing_cal_items', []);
+  const items = await getCalItems();
   const item = {
     id: editingContentId || uid(),
     title,
@@ -921,7 +1006,7 @@ function saveContentItem() {
   };
   const idx = items.findIndex(x=>x.id===item.id);
   if (idx>=0) items[idx]=item; else items.push(item);
-  lsSet('marketing_cal_items', items);
+  await saveCalItems(items);
   closeContentModal();
   renderCal();
 }
@@ -930,9 +1015,9 @@ function saveContentItem() {
 // TAB 4: MÉTRICAS
 // ══════════════════════════════════════════════════════
 let editingMetricId = null;
-function openMetricModal(id) {
+async function openMetricModal(id) {
   editingMetricId = id;
-  const metrics = lsGet('marketing_metrics', []);
+  const metrics = await getMetrics();
   const m = id ? metrics.find(x=>x.id===id) : null;
   document.getElementById('modal-metric-title').textContent = m ? 'Editar publicación' : 'Nueva publicación';
   document.getElementById('mm-title').value    = m?.title    || '';
@@ -947,10 +1032,10 @@ function openMetricModal(id) {
   document.getElementById('modal-metric').classList.add('open');
 }
 function closeMetricModal() { document.getElementById('modal-metric').classList.remove('open'); }
-function saveMetric() {
+async function saveMetric() {
   const title = document.getElementById('mm-title').value.trim();
   if (!title) return;
-  const metrics = lsGet('marketing_metrics', []);
+  const metrics = await getMetrics();
   const m = {
     id:       editingMetricId || uid(),
     title,
@@ -965,20 +1050,20 @@ function saveMetric() {
   };
   const idx = metrics.findIndex(x=>x.id===m.id);
   if (idx>=0) metrics[idx]=m; else metrics.push(m);
-  lsSet('marketing_metrics', metrics);
+  await saveMetrics(metrics);
   closeMetricModal();
   renderMetrics();
 }
 
-function deleteMetric(id) {
+async function deleteMetric(id) {
   if (!confirm('¿Eliminar esta publicación?')) return;
-  const metrics = lsGet('marketing_metrics', []).filter(x=>x.id!==id);
-  lsSet('marketing_metrics', metrics);
+  const metrics = (await getMetrics()).filter(x=>x.id!==id);
+  await saveMetrics(metrics);
   renderMetrics();
 }
 
-function renderMetrics() {
-  let metrics = lsGet('marketing_metrics', []);
+async function renderMetrics() {
+  let metrics = await getMetrics();
   const fPlatform = document.getElementById('filter-platform')?.value || '';
   const fType     = document.getElementById('filter-type')?.value || '';
   if (fPlatform) metrics = metrics.filter(m=>m.platform===fPlatform);
@@ -992,7 +1077,7 @@ function renderMetrics() {
   empty.style.display='none';
 
   // KPIs
-  const allM = lsGet('marketing_metrics', []);
+  const allM = await getMetrics();
   const totReach = allM.reduce((s,m)=>s+m.reach,0);
   const totLikes = allM.reduce((s,m)=>s+m.likes,0);
   const avgEng   = allM.length ? allM.reduce((s,m)=>s+(m.reach?((m.likes+m.comments+m.shares+m.saves)/m.reach*100):0),0)/allM.length : 0;
@@ -1033,7 +1118,7 @@ function fmt(n){ return (n||0).toLocaleString('es-CO'); }
 
 // ─── INIT ─────────────────────────────────────────────
 setLiveRange('all');
-loadKickoffs();
+loadMktData().then(() => loadKickoffs());
 document.getElementById('modal-content').addEventListener('click', e => { if(e.target===e.currentTarget) closeContentModal(); });
 document.getElementById('modal-metric').addEventListener('click', e => { if(e.target===e.currentTarget) closeMetricModal(); });
 document.getElementById('modal-itinerary').addEventListener('click', e => { if(e.target===e.currentTarget) closeItinModal(); });
