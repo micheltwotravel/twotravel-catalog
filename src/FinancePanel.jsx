@@ -1279,6 +1279,7 @@ export function FinanceReservaciones() {
 
   const sorted = [...filteredIdxs].sort((ai,bi)=>{
     const a=rows[ai][sortCol]??"", b=rows[bi][sortCol]??"";
+    if (!a && b) return 1; if (a && !b) return -1;
     return a<b?-sortDir:a>b?sortDir:0;
   });
 
