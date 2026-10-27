@@ -439,7 +439,8 @@ window.addEventListener('scroll', () => {
   const now = new Date(); now.setHours(0,0,0,0);
   const tmr = new Date(now); tmr.setDate(tmr.getDate()+1);
 
-  const atrasadas = tasks.filter(t => t.dueDate && new Date(t.dueDate) < now);
+  const cutoff21 = new Date(now); cutoff21.setDate(cutoff21.getDate()-21);
+  const atrasadas = tasks.filter(t => t.dueDate && new Date(t.dueDate) < now && new Date(t.dueDate) >= cutoff21);
   const hoy       = tasks.filter(t => t.dueDate && new Date(t.dueDate) >= now && new Date(t.dueDate) < tmr);
   const proximas  = tasks.filter(t => !t.dueDate || new Date(t.dueDate) >= tmr)
     .sort((a,b) => {

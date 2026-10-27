@@ -948,7 +948,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     return;
   }
 
-  // ── slack: upload via GAS ────────────────────────────────────
+  // ── slack + supabase: upload via GAS and get public URL ────────────────────
   const pdfBlob   = doc.output("blob");
   const pdfSize   = pdfBlob.size;
   const pdfBase64 = await new Promise(res => {
@@ -956,6 +956,20 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     r.onload = () => res(r.result.split(",")[1]);
     r.readAsDataURL(pdfBlob);
   });
+
+  // Upload to Supabase storage for a shareable public link
+  let publicUrl = null;
+  try {
+    const storagePath = `facturas/${kickoff.id || Date.now()}-${Date.now()}.pdf`;
+    const { data: upData, error: upErr } = await supabase.storage
+      .from("billing-pdfs")
+      .upload(storagePath, pdfBlob, { upsert: true, contentType: "application/pdf" });
+    if (!upErr) {
+      const { data: urlData } = supabase.storage.from("billing-pdfs").getPublicUrl(storagePath);
+      publicUrl = urlData?.publicUrl || null;
+    }
+  } catch(_) {}
+
   const resp = await fetch(BILLING_GAS_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -976,6 +990,7 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
     throw new Error("GAS devolvió respuesta inválida (posible error de cuota o deployment)");
   }
   if (!data.ok) throw new Error(data.error || "Error enviando a Slack");
+  return publicUrl;
 }
 
 /* =========================================
@@ -5307,6 +5322,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const drinkOrder = kickoff?.drinkOrder || "";
   const [billingCurrency, setBillingCurrency] = useState("USD");
   const [billingSending, setBillingSending] = useState(false);
+  const [billingPdfUrl, setBillingPdfUrl] = useState(kickoff?.billingPdfUrl || null);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
   const [saving, setSaving] = useState(false);
   const [savedOk, setSavedOk] = useState(false);
@@ -6938,7 +6954,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   setBillingSending(true);
                   try {
                     // Merge live EditDrawer + canvas state so cart/dayMeta/city are always current
-                    await sendItineraryPdfToSlack({
+                    const pdfUrl = await sendItineraryPdfToSlack({
                       ...kickoff,
                       cart:    canvasCartRef.current    != null ? canvasCartRef.current    : kickoff.cart,
                       dayMeta: canvasDayMetaRef.current != null ? canvasDayMetaRef.current : kickoff.dayMeta,
@@ -6951,7 +6967,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                       tripName: tripName || kickoff.tripName || "",
                       checkIn, checkOut, conciergeTitle,
                     }, kickoff.lang || "en", billingCurrency, "slack", liveFxRate);
-                    alert("✅ PDF enviado a Slack");
+                    if (pdfUrl) setBillingPdfUrl(pdfUrl);
+                    alert("✅ PDF enviado a Slack" + (pdfUrl ? " · Link copiado arriba" : ""));
                   } catch (e) {
                     alert("❌ " + e.message);
                   } finally {
@@ -6991,6 +7008,19 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 title="Descargar PDF"
               >
                 {billingSending ? "…" : "⬇"}
+              </button>
+            </div>
+          )}
+          {billingPdfUrl && (
+            <div className="flex items-center gap-2 mt-1 px-1">
+              <span className="text-[10px] text-neutral-400 shrink-0">📄 Factura:</span>
+              <a href={billingPdfUrl} target="_blank" rel="noreferrer"
+                className="text-[10px] text-indigo-600 underline truncate max-w-[180px]" title={billingPdfUrl}>
+                Ver PDF
+              </a>
+              <button type="button" onClick={() => navigator.clipboard.writeText(billingPdfUrl).catch(()=>{})}
+                className="text-[10px] px-1.5 py-0.5 border border-indigo-200 rounded bg-indigo-50 text-indigo-600 shrink-0">
+                📋
               </button>
             </div>
           )}
