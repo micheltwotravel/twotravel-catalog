@@ -440,7 +440,9 @@ export default function TareasPanel({ currentUser, onLogout }) {
   const [modal, setModal]         = useState(null);
   const [vista, setVista]         = useState("lista"); // "lista" | "calendario"
   const [scope, setScope]         = useState("mine"); // "all" | "mine"
-  const [filterCliente, setFilterCliente] = useState("");
+  const [filterCliente, setFilterCliente] = useState(()=>{
+    try{ return new URLSearchParams(window.location.search).get("cliente")||""; }catch{ return ""; }
+  });
   const [filterResp, setFilterResp]       = useState("");
   const [filterQ, setFilterQ]             = useState("");
   const [showDone, setShowDone]       = useState(false);

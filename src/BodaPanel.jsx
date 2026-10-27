@@ -1996,8 +1996,6 @@ ${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).joi
   const TABS=[
     {id:"resumen",      label:"Resumen"},
     {id:"tareas",       label:`Tareas (${(boda.tasks||[]).length})`},
-    {id:"presupuesto",  label:`Presupuesto (${(boda.budgetItems||[]).length})`},
-    {id:"pagos",        label:`Pagos (${(boda.payments||[]).length})`},
     {id:"contratos",    label:`Contratos (${(boda.contracts||[]).length})`},
     {id:"timeline",     label:"Timeline"},
     {id:"invitados",    label:`Invitados (${(boda.guests||[]).length})`},
