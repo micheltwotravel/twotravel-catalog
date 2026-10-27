@@ -931,7 +931,7 @@ function renderRow(h){
     <td><div class="cell" style="font-size:11px">${h.supportFile ? `<a href="${esc(h.supportFile)}" target="_blank" rel="noreferrer" style="color:var(--accent)">📎 Link</a>` : `<span ondblclick="editCell(this.parentNode,'${h.id}','supportFile')" style="color:var(--ink3)">—</span>`}</div></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','banco')" style="font-size:11px;color:var(--ink2)">${esc(h.banco||'—')}</div></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','currency')" style="font-size:11px;color:var(--ink2)">${esc(h.currency||'COP')}</div></td>
-    <td style="text-align:center"><span style="font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;background:${h.hasCommission?'#22c55e22':'#ef444422'};color:${h.hasCommission?'#16a34a':'#dc2626'}">${h.hasCommission?'Sí':'No'}</span></td>
+    <td style="text-align:center"><span onclick="toggleCommission('${h.id}')" style="font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;cursor:pointer;background:${h.hasCommission?'#22c55e22':'#ef444422'};color:${h.hasCommission?'#16a34a':'#dc2626'}">${h.hasCommission?'Sí':'No'}</span></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','commissionPct')" style="font-size:11px;color:var(--ink2);text-align:right">${h.commissionPct ? (h.commissionPct*100).toFixed(0)+'%' : '—'}</div></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','totalCommission')" style="font-size:11px;color:var(--ink2);text-align:right">${h.totalCommission ? '$'+Number(h.totalCommission).toLocaleString('es') : '—'}</div></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','servicesStatus')" style="font-size:11px;color:var(--ink2)">${esc(h.servicesStatus||'—')}</div></td>
@@ -986,6 +986,14 @@ function editCell(cell, id, field){
   cell.appendChild(input);
   input.focus();
   if(input.type === 'text' || input.tagName === 'INPUT') input.select();
+}
+
+function toggleCommission(id){
+  const h = handoffs.find(x=>x.id===id);
+  if(!h) return;
+  h.hasCommission = !h.hasCommission;
+  save();
+  render();
 }
 
 function openConfirmToggle(id, e){
