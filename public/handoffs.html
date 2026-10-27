@@ -858,13 +858,24 @@ function renderTable(){
           <th>En vivo</th>
           <th>Precio Cliente</th>
           <th>Precio Prov.</th>
+          <th>Gan. Bruta</th>
+          <th>Margen</th>
+          <th>Consumos</th>
+          <th>Total USD</th>
+          <th>Support File</th>
+          <th>Banco</th>
+          <th>Currency</th>
+          <th>¿Comisión?</th>
+          <th>%</th>
+          <th>Total Comisión</th>
+          <th>Services Status</th>
           <th>Notas</th>
           <th>Estado</th>
         </tr></thead>
         <tbody>`;
       rows.forEach(h => { html += renderRow(h); });
       html += `<tr class="add-row" onclick="openNewModal('${wk}')">
-        <td colspan="15">+ Agregar handoff</td>
+        <td colspan="26">+ Agregar handoff</td>
       </tr>`;
       html += `</tbody></table></div>`;
     }
@@ -913,6 +924,17 @@ function renderRow(h){
     <td><div class="persons-cell" onclick="openPersonPopup('${h.id}','personLive',event)">${personAvatar(h.personLive)}</div></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','precioCliente')" style="font-size:11px;color:var(--ink2);text-align:right">${h.precioCliente ? '$'+Number(h.precioCliente).toLocaleString('es') : '—'}</div></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','precioProveedor')" style="font-size:11px;color:var(--ink2);text-align:right">${h.precioProveedor ? '$'+Number(h.precioProveedor).toLocaleString('es') : '—'}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','gananciaBruta')" style="font-size:11px;color:var(--ink2);text-align:right">${h.gananciaBruta ? '$'+Number(h.gananciaBruta).toLocaleString('es') : '—'}</div></td>
+    <td><div class="cell" style="font-size:11px;color:var(--ink2);text-align:right">${h.margen ? (h.margen*100).toFixed(1)+'%' : '—'}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','consumos')" style="font-size:11px;color:var(--ink2);text-align:right">${h.consumos ? '$'+Number(h.consumos).toLocaleString('es') : '—'}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','clientTotalAmountUSD')" style="font-size:11px;color:var(--ink2);text-align:right">${h.clientTotalAmountUSD ? '$'+Number(h.clientTotalAmountUSD).toLocaleString('es') : '—'}</div></td>
+    <td><div class="cell" style="font-size:11px">${h.supportFile ? `<a href="${esc(h.supportFile)}" target="_blank" rel="noreferrer" style="color:var(--accent)">📎 Link</a>` : `<span ondblclick="editCell(this.parentNode,'${h.id}','supportFile')" style="color:var(--ink3)">—</span>`}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','banco')" style="font-size:11px;color:var(--ink2)">${esc(h.banco||'—')}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','currency')" style="font-size:11px;color:var(--ink2)">${esc(h.currency||'COP')}</div></td>
+    <td style="text-align:center"><span style="font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;background:${h.hasCommission?'#22c55e22':'#ef444422'};color:${h.hasCommission?'#16a34a':'#dc2626'}">${h.hasCommission?'Sí':'No'}</span></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','commissionPct')" style="font-size:11px;color:var(--ink2);text-align:right">${h.commissionPct ? (h.commissionPct*100).toFixed(0)+'%' : '—'}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','totalCommission')" style="font-size:11px;color:var(--ink2);text-align:right">${h.totalCommission ? '$'+Number(h.totalCommission).toLocaleString('es') : '—'}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','servicesStatus')" style="font-size:11px;color:var(--ink2)">${esc(h.servicesStatus||'—')}</div></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','notes')" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--ink3)">${esc(h.notes||'')}</div></td>
     <td class="status-wrap"><span class="status-chip" style="background:${st.color}" onclick="openStatusPopup('${h.id}',event)">${st.label}</span></td>
   </tr>`;
@@ -951,8 +973,9 @@ function editCell(cell, id, field){
 
   input.style.cssText = 'width:100%;border:none;outline:none;font-family:Jost,sans-serif;font-size:12px;color:var(--ink);background:rgba(154,125,82,0.08);padding:6px 10px;height:38px';
 
+  const NUMERIC_FIELDS = ['precioCliente','precioProveedor','gananciaBruta','consumos','clientTotalAmountUSD','commissionPct','totalCommission'];
   const done = () => {
-    h[field] = input.value;
+    h[field] = NUMERIC_FIELDS.includes(field) ? (parseFloat(String(input.value).replace(/[^0-9.-]/g,''))||0) : input.value;
     save();
     render();
   };
