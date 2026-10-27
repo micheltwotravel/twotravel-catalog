@@ -1794,6 +1794,29 @@ function SeatingTab({ boda, onPatch }) {
           )}
         </div>
       </div>
+
+      {/* ── Medidas de referencia ── */}
+      <div style={{marginTop:20,background:R.light,border:`1px solid ${R.border}`,borderRadius:10,padding:"14px 16px"}}>
+        <p style={{fontSize:10,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",color:R.muted,margin:"0 0 10px"}}>Medidas de referencia · mesas</p>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:8}}>
+          {[
+            {tipo:"Redonda",medida:"Ø 120 cm",sillas:"6–8 personas"},
+            {tipo:"Redonda",medida:"Ø 150 cm",sillas:"8–10 personas"},
+            {tipo:"Redonda",medida:"Ø 180 cm",sillas:"10–12 personas"},
+            {tipo:"Rectangular",medida:"180 × 75 cm",sillas:"6–8 personas"},
+            {tipo:"Rectangular",medida:"240 × 75 cm",sillas:"8–10 personas"},
+            {tipo:"Rectangular",medida:"300 × 75 cm",sillas:"10–12 personas"},
+            {tipo:"Sweetheart",medida:"90 × 75 cm",sillas:"2 personas"},
+            {tipo:"Cabecera",medida:"300 × 75 cm",sillas:"8–10 personas"},
+          ].map((r,i)=>(
+            <div key={i} style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:7,padding:"8px 12px"}}>
+              <p style={{margin:0,fontSize:10,letterSpacing:".06em",textTransform:"uppercase",color:R.muted}}>{r.tipo}</p>
+              <p style={{margin:"2px 0 0",fontSize:13,fontWeight:600,color:R.text,fontFamily:"'Jost',sans-serif"}}>{r.medida}</p>
+              <p style={{margin:"1px 0 0",fontSize:10,color:R.muted}}>{r.sillas}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
