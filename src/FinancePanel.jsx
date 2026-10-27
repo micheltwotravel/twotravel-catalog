@@ -1865,40 +1865,41 @@ export function FinancePagosProveedores() {
                     <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                       <thead>
                         <tr style={{background:BG,borderBottom:`1px solid ${BRD}`}}>
-                          {["Proveedor ID","Nombre","Monto","Concepto","Cliente","Área","Clase","Prior.","Fecha Vcto","Estado","Contable","Soporte",""].map(h=>(
-                            <th key={h} style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:MUT,fontSize:10,textTransform:"uppercase",letterSpacing:.4,whiteSpace:"nowrap"}}>{h}</th>
+                          {["ID","Nombre","Monto","Concepto","Cliente","Área","Clase","Prior.","Vcto","Estado","Contable","Soporte",""].map(h=>(
+                            <th key={h} style={{padding:"5px 6px",textAlign:"left",fontWeight:600,color:MUT,fontSize:10,textTransform:"uppercase",letterSpacing:.3,whiteSpace:"nowrap"}}>{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {loteRows.map((r,i) => {
                           const st = STATUS_PROV[r.status] || STATUS_PROV.pendiente;
+                          const pid = r.provId ? String(r.provId).slice(-6) : "—";
                           return (
                             <tr key={r.id} style={{borderBottom:`1px solid ${BRD}`,background:i%2===0?WHT:BG}}>
-                              <td style={{padding:"8px 10px",color:MUT,fontFamily:"monospace",fontSize:11,whiteSpace:"nowrap"}}>{r.provId||"—"}</td>
-                              <td style={{padding:"8px 10px",fontWeight:600,color:DARK,whiteSpace:"nowrap",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis"}}>{r.provNombre||"—"}</td>
-                              <td style={{padding:"8px 10px",fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontWeight:600}}>{pFmt(r.amount,r.currency)}</td>
-                              <td style={{padding:"8px 10px",color:DARK,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={r.concepto}>{r.concepto||"—"}</td>
-                              <td style={{padding:"8px 10px",color:MUT,whiteSpace:"nowrap",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis"}} title={r.client}>{r.client||"—"}</td>
-                              <td style={{padding:"8px 10px",color:MUT,whiteSpace:"nowrap"}}>{r.area||"—"}</td>
-                              <td style={{padding:"8px 10px",color:MUT,whiteSpace:"nowrap",fontSize:11}}>{(r.clase||"").replace("Colombia: ","CO:").replace("Mexico: ","MX:")}</td>
-                              <td style={{padding:"8px 10px"}}>
-                                <span style={{padding:"2px 7px",borderRadius:3,fontSize:10,fontWeight:700,background:r.priority==="Alta"?"#fee2e2":r.priority==="Media"?"#fef3c7":"#f0f9ff",color:r.priority==="Alta"?"#991b1b":r.priority==="Media"?"#92400e":"#0369a1"}}>{r.priority||"Normal"}</span>
+                              <td style={{padding:"5px 6px",color:MUT,fontFamily:"monospace",fontSize:10,whiteSpace:"nowrap"}} title={r.provId||""}>{pid}</td>
+                              <td style={{padding:"5px 6px",fontWeight:600,color:DARK,whiteSpace:"nowrap",maxWidth:140,overflow:"hidden",textOverflow:"ellipsis"}}>{r.provNombre||"—"}</td>
+                              <td style={{padding:"5px 6px",fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontWeight:600,fontSize:11}}>{pFmt(r.amount,r.currency)}</td>
+                              <td style={{padding:"5px 6px",color:DARK,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:11}} title={r.concepto}>{r.concepto||"—"}</td>
+                              <td style={{padding:"5px 6px",color:MUT,whiteSpace:"nowrap",maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",fontSize:11}} title={r.client}>{r.client||"—"}</td>
+                              <td style={{padding:"5px 6px",color:MUT,whiteSpace:"nowrap",fontSize:11}}>{r.area||"—"}</td>
+                              <td style={{padding:"5px 6px",color:MUT,whiteSpace:"nowrap",fontSize:10}}>{(r.clase||"").replace("Colombia: ","CO:").replace("Mexico: ","MX:")}</td>
+                              <td style={{padding:"5px 6px"}}>
+                                <span style={{padding:"1px 5px",borderRadius:3,fontSize:10,fontWeight:700,background:r.priority==="Alta"?"#fee2e2":r.priority==="Media"?"#fef3c7":"#f0f9ff",color:r.priority==="Alta"?"#991b1b":r.priority==="Media"?"#92400e":"#0369a1"}}>{r.priority||"Normal"}</span>
                               </td>
-                              <td style={{padding:"8px 10px",color:MUT,whiteSpace:"nowrap",fontSize:11}}>{r.dueDate||"—"}</td>
-                              <td style={{padding:"8px 10px"}}>
+                              <td style={{padding:"5px 6px",color:MUT,whiteSpace:"nowrap",fontSize:10}}>{r.dueDate||"—"}</td>
+                              <td style={{padding:"5px 6px"}}>
                                 <select value={r.status||"pendiente"} onChange={e=>setStatus(r.id,e.target.value)}
-                                  style={{padding:"2px 6px",border:`1px solid ${BRD}`,borderRadius:3,fontSize:11,fontFamily:"'Jost',sans-serif",background:st.color,color:st.text,fontWeight:600}}>
+                                  style={{padding:"2px 4px",border:`1px solid ${BRD}`,borderRadius:3,fontSize:10,fontFamily:"'Jost',sans-serif",background:st.color,color:st.text,fontWeight:600}}>
                                   {Object.entries(STATUS_PROV).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
                                 </select>
                               </td>
-                              <td style={{padding:"8px 10px"}}>
+                              <td style={{padding:"5px 6px"}}>
                                 <select value={r.estadoContable||""} onChange={e=>setEstadoContable(r.id,e.target.value)}
-                                  style={{padding:"2px 6px",border:`1px solid ${BRD}`,borderRadius:3,fontSize:11,fontFamily:"'Jost',sans-serif",background:STATUS_CONTABLE[r.estadoContable||""]?.color,color:STATUS_CONTABLE[r.estadoContable||""]?.text,fontWeight:600}}>
+                                  style={{padding:"2px 4px",border:`1px solid ${BRD}`,borderRadius:3,fontSize:10,fontFamily:"'Jost',sans-serif",background:STATUS_CONTABLE[r.estadoContable||""]?.color,color:STATUS_CONTABLE[r.estadoContable||""]?.text,fontWeight:600}}>
                                   {Object.entries(STATUS_CONTABLE).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
                                 </select>
                               </td>
-                              <td style={{padding:"8px 10px",whiteSpace:"nowrap",textAlign:"center",display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}>
+                              <td style={{padding:"5px 6px",whiteSpace:"nowrap",textAlign:"center",display:"flex",alignItems:"center",gap:3,justifyContent:"center"}}>
                                 {r.invoiceUrl ? (
                                   <a href={r.invoiceUrl} target="_blank" rel="noreferrer"
                                     style={{fontSize:15,textDecoration:"none"}} title="Ver factura / cuenta de cobro">📄</a>
@@ -1917,14 +1918,14 @@ export function FinancePagosProveedores() {
                                   </label>
                                 )}
                               </td>
-                              <td style={{padding:"8px 10px",whiteSpace:"nowrap"}}>
-                                <button onClick={()=>openEdit(r.id)} style={{fontSize:10,padding:"3px 8px",border:`1px solid ${BRD}`,borderRadius:3,background:WHT,cursor:"pointer",marginRight:4,fontFamily:"'Jost',sans-serif"}}>✏️</button>
-                                <button onClick={()=>copyRow(r)} title="Copiar a otro lote" style={{fontSize:10,padding:"3px 8px",border:"1px solid #c7d2fe",borderRadius:3,background:"#eef2ff",color:"#4338ca",cursor:"pointer",marginRight:4,fontFamily:"'Jost',sans-serif"}}>📋</button>
+                              <td style={{padding:"5px 6px",whiteSpace:"nowrap"}}>
+                                <button onClick={()=>openEdit(r.id)} style={{fontSize:10,padding:"2px 5px",border:`1px solid ${BRD}`,borderRadius:3,background:WHT,cursor:"pointer",marginRight:2,fontFamily:"'Jost',sans-serif"}}>✏️</button>
+                                <button onClick={()=>copyRow(r)} title="Copiar a otro lote" style={{fontSize:10,padding:"2px 5px",border:"1px solid #c7d2fe",borderRadius:3,background:"#eef2ff",color:"#4338ca",cursor:"pointer",marginRight:2,fontFamily:"'Jost',sans-serif"}}>📋</button>
                                 {r.status==="aprobada" && (
                                   <button onClick={()=>notifyApproval(r)} title="Copiar mensaje de aprobación"
-                                    style={{fontSize:10,padding:"3px 8px",border:"1px solid #86efac",borderRadius:3,background:"#f0fdf4",color:"#166534",cursor:"pointer",marginRight:4,fontFamily:"'Jost',sans-serif"}}>📲</button>
+                                    style={{fontSize:10,padding:"2px 5px",border:"1px solid #86efac",borderRadius:3,background:"#f0fdf4",color:"#166534",cursor:"pointer",marginRight:2,fontFamily:"'Jost',sans-serif"}}>📲</button>
                                 )}
-                                <button onClick={()=>deleteRow(r.id)} style={{fontSize:10,padding:"3px 8px",border:"1px solid #fca5a5",borderRadius:3,background:"#fff5f5",color:"#dc2626",cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>✕</button>
+                                <button onClick={()=>deleteRow(r.id)} style={{fontSize:10,padding:"2px 5px",border:"1px solid #fca5a5",borderRadius:3,background:"#fff5f5",color:"#dc2626",cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>✕</button>
                               </td>
                             </tr>
                           );
