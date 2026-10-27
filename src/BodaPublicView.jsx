@@ -264,7 +264,7 @@ export default function BodaPublicView() {
     </div>
   );
 
-  const tasks    = boda.tasks || [];
+  const tasks    = (boda.tasks || []).filter(t => t.assignedTo === "Novios");
   const done     = tasks.filter(t => ["Terminado", "Cancelado"].includes(t.status));
   const pending  = tasks.filter(t => !["Terminado", "Cancelado"].includes(t.status));
   const pct      = tasks.length ? Math.round((done.length / tasks.length) * 100) : 0;
