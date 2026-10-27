@@ -1799,6 +1799,23 @@ function WelcomePage({ kickoff, lang, page, total, editMode, localPreTrip, setLo
             </a>
           </div>
         )}
+        {(() => {
+          let docs = [];
+          try { docs = JSON.parse(kickoff.documents || "[]"); } catch {}
+          const validDocs = docs.filter(d => d.url && d.title);
+          if (!validDocs.length) return null;
+          return (
+            <div className="info-block">
+              <div className="info-h3">{isEs ? "Documentos" : "Documents"}</div>
+              {validDocs.map((doc, i) => (
+                <a key={i} href={driveViewUrl(doc.url)} target="_blank" rel="noreferrer"
+                  style={{ display: "block", color: "#1d4ed8", fontWeight: 600, fontSize: 12, textDecoration: "underline", wordBreak: "break-all", marginBottom: 4 }}>
+                  📄 {doc.title} →
+                </a>
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       <PF n={page} total={total}/>

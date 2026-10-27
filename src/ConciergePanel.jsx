@@ -1710,6 +1710,12 @@ function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availabl
               {item.category}
             </span>
           )}
+          {item.pdf_url && (
+            <a href={item.pdf_url} target="_blank" rel="noreferrer"
+              className="text-[9px] text-blue-500 hover:text-blue-700 underline leading-none">
+              📄 PDF
+            </a>
+          )}
         </div>
         {/* Price */}
         <div className="col-span-3">
@@ -5404,6 +5410,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [checkIn,            setCheckIn]            = useState(kickoff?.checkIn            || "3:00 PM");
   const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "11:00 AM");
   const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=sharing");
+  const [documents, setDocuments] = useState(() => { try { return JSON.parse(kickoff?.documents || "[]"); } catch { return []; } });
   const [preTripContent,     setPreTripContent]     = useState(kickoff?.preTripContent     || (kickoff?.lang === "es" ? DEFAULT_PRE_TRIP_ES : DEFAULT_PRE_TRIP));
 
   // When language changes, swap pre-trip template if the user hasn't customized it (#28)
@@ -5482,6 +5489,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     checkIn:           checkIn.trim(),
     checkOut:          checkOut.trim(),
     welcomePdfUrl:     welcomePdfUrl.trim(),
+    documents:         JSON.stringify(documents),
     // Timestamps — only set first time each status is reached
     ...(autoStatus === "concierge_editing" && !kickoff.conciergeEditingAt ? { conciergeEditingAt: now } : {}),
     ...(autoStatus === "sent_to_travify"   && !kickoff.sentToTravifyAt    ? { sentToTravifyAt: now }    : {}),
@@ -6239,6 +6247,24 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 <input value={welcomePdfUrl} onChange={(e) => setWelcomePdfUrl(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="https://drive.google.com/file/d/.../view" />
+              </div>
+
+              <div className="col-span-2">
+                <label className="text-[11px] text-neutral-500 mb-1 block">Documentos para el cliente (aparecen en el itinerario)</label>
+                {documents.map((doc, i) => (
+                  <div key={i} className="mt-2 flex gap-2 items-center">
+                    <input value={doc.title} onChange={e => { const nd=[...documents]; nd[i]={...nd[i],title:e.target.value}; setDocuments(nd); }}
+                      placeholder="Título (ej: Guía Welcome Package)" className="flex-1 border rounded-lg px-3 py-2 text-sm bg-white" />
+                    <input value={doc.url} onChange={e => { const nd=[...documents]; nd[i]={...nd[i],url:e.target.value}; setDocuments(nd); }}
+                      placeholder="https://drive.google.com/…" className="flex-1 border rounded-lg px-3 py-2 text-sm bg-white" />
+                    <button type="button" onClick={() => setDocuments(documents.filter((_,j)=>j!==i))}
+                      className="text-red-400 hover:text-red-600 text-lg leading-none flex-shrink-0">✕</button>
+                  </div>
+                ))}
+                <button type="button" onClick={() => setDocuments([...documents, { title: "", url: "", addedAt: new Date().toISOString() }])}
+                  className="mt-2 text-xs text-violet-600 hover:text-violet-800 border border-violet-200 rounded px-2 py-1">
+                  + Agregar documento
+                </button>
               </div>
 
             </div>
