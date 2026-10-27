@@ -620,7 +620,7 @@ function LlamadasTab({ boda, onPatch }) {
 }
 
 // ─── TIMELINE ────────────────────────────────────────────────────────────────
-const M_CATS=["General","Novios","Proveedores","Coordinación","Música","Fotos/Video","Protocolo"];
+const M_CATS=["General","Novios","Proveedores","Coordinación","Música","Fotos/Video","Protocolo","⚠️ Alerta"];
 const TIMELINE_PRESETS=[
   {d:"Llegada del equipo",      cat:"Coordinación"},
   {d:"Preparación de la novia", cat:"Novios"},
@@ -638,7 +638,7 @@ const TIMELINE_PRESETS=[
   {d:"Hora loca",               cat:"Música"},
   {d:"Cierre del evento",       cat:"Coordinación"},
 ];
-const M_COLORS={"General":{bg:"#f5f5f4",color:"#57534e"},"Novios":{bg:"#fff0f3",color:"#be123c"},"Proveedores":{bg:"#fffbeb",color:"#b45309"},"Coordinación":{bg:"#eff6ff",color:"#1d4ed8"},"Música":{bg:"#f5f3ff",color:"#7c3aed"},"Fotos/Video":{bg:"#f0fdfa",color:"#0f766e"},"Protocolo":{bg:"#fff7ed",color:"#c2410c"}};
+const M_COLORS={"General":{bg:"#f5f5f4",color:"#57534e"},"Novios":{bg:"#fff0f3",color:"#be123c"},"Proveedores":{bg:"#fffbeb",color:"#b45309"},"Coordinación":{bg:"#eff6ff",color:"#1d4ed8"},"Música":{bg:"#f5f3ff",color:"#7c3aed"},"Fotos/Video":{bg:"#f0fdfa",color:"#0f766e"},"Protocolo":{bg:"#fff7ed",color:"#c2410c"},"⚠️ Alerta":{bg:"#fef2f2",color:"#dc2626"}};
 
 const TL_HIGHLIGHTS=[
   {label:"Sin resaltar",value:""},
@@ -732,9 +732,10 @@ function TimelineTab({ boda, onScheduleChange }) {
         {visible.length>0&&<div style={{position:"absolute",left:55,top:8,bottom:8,width:1,background:R.border}} />}
         {visible.map(ev=>{
           const cs=M_COLORS[ev.category]||M_COLORS["General"];
+          const isAlerta=ev.category==="⚠️ Alerta";
           const hl=!!ev.isHighlight;
-          const hlBg=ev.highlightColor||(hl?"#fffbf0":ev.isInternal?"#fafafa":R.white);
-          const hlBd=ev.highlightColor?R.gold:hl?R.gold:ev.isInternal?"#e5e7eb":R.border;
+          const hlBg=ev.highlightColor||(isAlerta?"#fef2f2":hl?"#fffbf0":ev.isInternal?"#fafafa":R.white);
+          const hlBd=ev.highlightColor||(isAlerta?"#fca5a5":hl?R.gold:ev.isInternal?"#e5e7eb":R.border);
           return (
             <div key={ev.id} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:10}}>
               <div style={{width:54,textAlign:"right",flexShrink:0,paddingTop:10}}><span style={{fontSize:12,fontFamily:"'Jost',sans-serif",fontWeight:600,color:R.text,letterSpacing:".02em",fontVariantNumeric:"tabular-nums"}}>{ev.time}</span></div>
@@ -1107,7 +1108,7 @@ function PresupuestoTab({ boda, onPatch }) {
   const [show,   setShow]   = useState(false);
   const [saving, setSaving] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [blank,  setBlank]  = useState({ category:BUDGET_CATS[0], budgetAmount:"", actualCost:"", supplier:"", paymentStatus:"Pendiente", notes:"" });
+  const [blank,  setBlank]  = useState({ category:BUDGET_CATS[0], budgetAmount:"", actualCost:"", supplier:"", paymentStatus:"Pendiente", paymentDate:"", notes:"" });
 
   async function persist(u) { setItems(u); onPatch({ budgetItems:u }); await apiSaveNotes(boda.id,{...boda,budgetItems:u}); }
   async function add() {
@@ -1115,7 +1116,7 @@ function PresupuestoTab({ boda, onPatch }) {
     try {
       if (editId) { await persist(items.map(it=>it.id===editId?{...blank,id:editId}:it)); }
       else        { await persist([...items,{...blank,id:uid()}]); }
-      setBlank({category:BUDGET_CATS[0],budgetAmount:"",actualCost:"",supplier:"",paymentStatus:"Pendiente",notes:""});
+      setBlank({category:BUDGET_CATS[0],budgetAmount:"",actualCost:"",supplier:"",paymentStatus:"Pendiente",paymentDate:"",notes:""});
       setShow(false); setEditId(null);
     } catch(e){alert("Error: "+e.message);} setSaving(false);
   }
@@ -1159,7 +1160,8 @@ function PresupuestoTab({ boda, onPatch }) {
             <input style={INP_SM} type="number" value={blank.budgetAmount} onChange={e=>setBlank(p=>({...p,budgetAmount:e.target.value}))} placeholder="Presupuesto USD" />
             <input style={INP_SM} type="number" value={blank.actualCost}   onChange={e=>setBlank(p=>({...p,actualCost:e.target.value}))}   placeholder="Costo real USD" />
             <input style={INP_SM} value={blank.supplier} onChange={e=>setBlank(p=>({...p,supplier:e.target.value}))} placeholder="Proveedor" />
-            <input style={INP_SM} value={blank.notes}    onChange={e=>setBlank(p=>({...p,notes:e.target.value}))}    placeholder="Notas" />
+            <input type="date" style={INP_SM} value={blank.paymentDate} onChange={e=>setBlank(p=>({...p,paymentDate:e.target.value}))} title="Fecha de pago acordada" />
+            <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.notes} onChange={e=>setBlank(p=>({...p,notes:e.target.value}))} placeholder="Notas" /></div>
           </div>
           <div style={{display:"flex",gap:8}}>
             <button onClick={add} disabled={saving} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:saving?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":editId?"Guardar":"Agregar"}</button>
@@ -1185,6 +1187,7 @@ function PresupuestoTab({ boda, onPatch }) {
                     {b>0&&<span>💰 Ppto: <strong>${fmt$(b)}</strong></span>}
                     {a>0&&<span>🧾 Real: <strong>${fmt$(a)}</strong></span>}
                     {b>0&&a>0&&<span style={{color:a<=b?"#166534":"#dc2626"}}>{a<=b?`✅ $${fmt$(b-a)} libre`:`⚠️ $${fmt$(a-b)} extra`}</span>}
+                    {it.paymentDate&&<span style={{color:R.muted}}>📅 {it.paymentDate}</span>}
                   </div>
                   {b>0&&<div style={{height:4,background:R.light,borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:pct>=100?"#dc2626":pct>=80?"#f59e0b":"#22c55e",borderRadius:99}} /></div>}
                   {it.notes&&<p style={{fontSize:11,color:R.muted,margin:"4px 0 0"}}>{it.notes}</p>}
@@ -1295,7 +1298,7 @@ function PagosTab({ boda, onPatch }) {
 }
 
 // ─── DESIGN STUDIO ───────────────────────────────────────────────────────────
-const STUDIO_CATS=["Fotografía","Video","Flores","Decoración","Venue","Catering","Música","Iluminación","Papelería","Vestido","Inspiración","Otro"];
+const STUDIO_CATS=["Fotografía","Video","Flores","Decoración","Venue","Planos / Layout","Catering","Música","Iluminación","Papelería","Vestido","Inspiración","Otro"];
 
 function DesignStudioTab({ boda, onPatch }) {
   const [items,setItems]=useState(boda.studio||[]);
