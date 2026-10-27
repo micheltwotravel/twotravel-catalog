@@ -1525,7 +1525,7 @@ function SeatingTab({ boda, onPatch }) {
   const seatingRef=useRef(seating);
   seatingRef.current=seating;
 
-  const BLANK={name:"",shape:"Redonda",seats:8};
+  const BLANK={name:"",shape:"Redonda",seats:8,size:""};
   const [blank,setBlank]=useState(BLANK);
 
   async function saveSeating(s){ setSeating(s); onPatch({seating:s}); await apiSaveNotes(boda.id,{...boda,seating:s}); }
@@ -1631,10 +1631,11 @@ function SeatingTab({ boda, onPatch }) {
       {/* New table form */}
       {showNew&&(
         <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:12}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 72px",gap:8,marginBottom:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 72px 100px",gap:8,marginBottom:10}}>
             <input style={INP_SM} value={blank.name} onChange={e=>setBlank(p=>({...p,name:e.target.value}))} placeholder="Nombre de la mesa *" autoFocus />
             <select style={INP_SM} value={blank.shape} onChange={e=>setBlank(p=>({...p,shape:e.target.value}))}>{TABLE_SHAPES.map(s=><option key={s}>{s}</option>)}</select>
             <input type="number" style={INP_SM} value={blank.seats} onChange={e=>setBlank(p=>({...p,seats:Math.max(1,parseInt(e.target.value)||8)}))} min={1} max={40} placeholder="Sillas" />
+            <input style={INP_SM} value={blank.size||""} onChange={e=>setBlank(p=>({...p,size:e.target.value}))} placeholder="Medida (ej. Ø150)" />
           </div>
           <div style={{display:"flex",gap:8}}>
             <button onClick={addTable} disabled={saving||!blank.name.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 16px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.name.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"Guardando…":"Crear mesa"}</button>
@@ -1722,7 +1723,7 @@ function SeatingTab({ boda, onPatch }) {
               <div style={{background:R.dark,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div>
                   <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:16,fontWeight:400,fontStyle:"italic",color:R.white,margin:0}}>{selTable.name}</p>
-                  <p style={{fontSize:9,color:R.gold,margin:"2px 0 0",textTransform:"uppercase",letterSpacing:".07em"}}>{selTable.shape} · {selGuests.length}/{selTable.seats} puestos</p>
+                  <p style={{fontSize:9,color:R.gold,margin:"2px 0 0",textTransform:"uppercase",letterSpacing:".07em"}}>{selTable.shape} · {selGuests.length}/{selTable.seats} puestos{selTable.size?` · ${selTable.size}`:""}</p>
                 </div>
                 <button onClick={()=>delTable(selTable.id)} style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(255,255,255,.55)",cursor:"pointer",fontSize:11,borderRadius:6,padding:"3px 7px",fontFamily:"'Jost',sans-serif"}}>Borrar</button>
               </div>
@@ -1934,6 +1935,11 @@ ${activeTasks_.map(t=>`<tr><td>${t.taskName}</td><td>${t.assignedTo||""}</td><td
 ${contracts.length?`<h2>Contratos (${contracts.length})</h2>
 <table><thead><tr><th>Título</th><th>Estado</th><th>Fecha</th></tr></thead><tbody>
 ${contracts.map(c=>`<tr><td>${c.title||""}</td><td><span class="cst-badge">${c.status||""}</span></td><td>${c.createdAt||""}</td></tr>`).join("")}
+</tbody></table>`:""}
+
+${(boda.seating||[]).length?`<h2>Distribución de mesas (${(boda.seating||[]).length})</h2>
+<table><thead><tr><th>Mesa</th><th>Forma</th><th>Medida</th><th>Capacidad</th><th>Asignados</th></tr></thead><tbody>
+${(boda.seating||[]).map(t=>{const tG=(boda.guests||[]).filter(g=>g.tableId===t.id);return`<tr><td>${t.name}</td><td>${t.shape||""}</td><td>${t.size||"—"}</td><td>${t.seats}</td><td>${tG.length}</td></tr>`;}).join("")}
 </tbody></table>`:""}
 
 ${doneTasks.length?`<h2>Tareas completadas (${doneTasks.length})</h2>
