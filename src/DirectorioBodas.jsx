@@ -19,11 +19,14 @@ const BTN = (accent) => ({ background:accent?R.accent:"transparent", color:accen
 
 const uid = () => Math.random().toString(36).slice(2,10);
 
-const PROV_CATS = ["Fotografía","Video","Flores","Decoración","Venue","Catering","Música",
-  "Iluminación","Papelería","Vestido","Transporte","Torta","DJ","Hair & Makeup","Joyería",
-  "Sonido","Animación","Ceremonias","Coordinación","Otro"];
+const PROV_CATS = ["Maquillaje y peinado","Fotografía y video","DJ","Decoración",
+  "Producción","Mulatas y tamboreros","Música en vivo","Tarimas","Pirotecnia",
+  "Carros antiguos","Experiencias","Tortas y postres","Fotocabina","Hora loca",
+  "Transporte","Coordinación","Catering","Otro"];
 
 const CITIES = ["CTG","MDE","BOG","CDMX","BAQ","CAL","SMR","Otro"];
+
+const VENUE_EVENT_TYPES = ["Boda","Pre-boda","Welcome cocktail","Ensayo","Otro"];
 
 const VENUE_TYPES = ["Hacienda","Casa colonial","Museo","Restaurante","Hotel","Playa",
   "Rooftop","Club campestre","Villa","Salón","Otro"];
@@ -31,7 +34,7 @@ const VENUE_TYPES = ["Hacienda","Casa colonial","Museo","Restaurante","Hotel","P
 const PROV_EMPTY = { company:"", category:"", contact:"", phone:"", email:"",
   city:"CTG", rating:"", notes:"", web:"" };
 
-const VENUE_EMPTY = { name:"", city:"CTG", type:"", capacity:"", contact:"",
+const VENUE_EMPTY = { name:"", city:"CTG", type:"", eventoTipo:"", capacity:"", contact:"",
   phone:"", email:"", web:"", notes:"" };
 
 /* ── Rating stars ── */
@@ -249,6 +252,10 @@ function VenuesSection({ items, setItems, persist }) {
               <input style={INP_SM} value={blank.name} onChange={e=>set("name",e.target.value)}
                 placeholder="Nombre del venue *" autoFocus />
             </div>
+            <select style={INP_SM} value={blank.eventoTipo} onChange={e=>set("eventoTipo",e.target.value)}>
+              <option value="">Tipo de evento</option>
+              {VENUE_EVENT_TYPES.map(t=><option key={t}>{t}</option>)}
+            </select>
             <select style={INP_SM} value={blank.type} onChange={e=>set("type",e.target.value)}>
               <option value="">Tipo de espacio</option>
               {VENUE_TYPES.map(t=><option key={t}>{t}</option>)}
@@ -277,14 +284,19 @@ function VenuesSection({ items, setItems, persist }) {
         </div>
       )}
 
-      {/* List */}
+      {/* List grouped by eventoTipo */}
       {visible.length === 0 && (
         <p style={{ fontSize:12, color:R.muted, textAlign:"center", padding:"32px 0", fontStyle:"italic" }}>
           {search||filterCity ? "Sin resultados" : "Sin venues aún — agrega el primero"}
         </p>
       )}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:10 }}>
-        {visible.map(v => (
+      {VENUE_EVENT_TYPES.concat([""]).map(et=>{
+        const group=visible.filter(v=>(v.eventoTipo||"")===(et));
+        if(!group.length) return null;
+        return(<div key={et||"sin-tipo"} style={{marginBottom:20}}>
+          <p style={{fontSize:11,fontWeight:700,color:R.muted,textTransform:"uppercase",letterSpacing:".07em",margin:"0 0 8px"}}>{et||"Sin clasificar"}</p>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:10 }}>
+        {group.map(v => (
           <div key={v.id} onClick={()=>startEdit(v)}
             style={{ background:R.card, border:`1px solid ${R.border}`, borderRadius:10,
               padding:"14px 16px", cursor:"pointer", transition:"box-shadow .15s" }}
@@ -295,7 +307,7 @@ function VenuesSection({ items, setItems, persist }) {
                 <p style={{ margin:0, fontSize:14, fontWeight:600, color:R.text,
                   overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{v.name}</p>
                 <p style={{ margin:"2px 0 0", fontSize:10, color:R.accent, textTransform:"uppercase",
-                  letterSpacing:".07em" }}>{v.type}{v.city?` · ${v.city}`:""}{v.capacity?` · ${v.capacity} pax`:""}</p>
+                  letterSpacing:".07em" }}>{v.eventoTipo&&<span style={{background:"#f0e8d8",color:R.accent,padding:"1px 6px",borderRadius:99,marginRight:6,fontSize:9}}>{v.eventoTipo}</span>}{v.type}{v.city?` · ${v.city}`:""}{v.capacity?` · ${v.capacity} pax`:""}</p>
               </div>
             </div>
             {(v.contact||v.phone) && (
@@ -310,7 +322,9 @@ function VenuesSection({ items, setItems, persist }) {
             )}
           </div>
         ))}
-      </div>
+          </div>
+        </div>);
+      })}
     </div>
   );
 }
