@@ -472,7 +472,7 @@ function matchCart(cartRaw, catalog, kickoff) {
     // Keep boat details in sync with kickoff fields — build rich _boatData
     const _descForBoat = item.description_en || item.description_es || item.description || "";
     // Only flag as boat-trip if name has "boat/bote" + a trip-specific keyword, OR explicit badge/marker
-    const _boatFoodEx = /lunch|box|food|catering|snack|chef|comida|almuerzo|photographer|photo/i;
+    const _boatFoodEx = /lunch|box|food|catering|snack|chef|comida|almuerzo|photographer|photo|massage|masaje|spa|drink|bebida/i;
     const _boatTripKw = /\b(trip|tour|excursion|excursión|charter|rosario|barú|baru|transfer|isla|island|day trip|viaje)\b/i;
     const _nameMatchesBoat = (/bote|\bboat\b/i.test(item.name) || /bote|\bboat\b/i.test(item.name_en)) &&
                              !_boatFoodEx.test(item.name) && !_boatFoodEx.test(item.name_en) &&

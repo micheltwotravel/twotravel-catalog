@@ -2308,6 +2308,21 @@ function DaySection({ label, meta, items, loadingServices, availableDays,
                 className="text-xs text-emerald-700 hover:text-emerald-900 border border-emerald-200 hover:border-emerald-400 rounded-lg px-2.5 py-1 bg-emerald-50 transition-colors">
                 📍 Nota
               </button>
+              {[
+                { key: "rec_desayuno",    label: "☕ Desayuno" },
+                { key: "rec_brunch",      label: "🥞 Brunch" },
+                { key: "rec_almuerzo",    label: "🍽 Almuerzo" },
+                { key: "rec_cena",        label: "🌙 Cena" },
+                { key: "rec_bares",       label: "🍷 Bares" },
+                { key: "rec_rooftops",    label: "🌅 Rooftops" },
+                { key: "rec_clubs",       label: "🎵 Clubs" },
+                { key: "rec_actividades", label: "🏄 Actividades" },
+              ].map(({ key, label: pl }) => (
+                <button key={key} type="button" onClick={() => onAddPreset?.(key)}
+                  className="text-xs text-violet-700 hover:text-violet-900 border border-violet-200 hover:border-violet-400 rounded-lg px-2.5 py-1 bg-violet-50 transition-colors">
+                  {pl}
+                </button>
+              ))}
             </div>
             {/* AGREGAR */}
             <div className="flex flex-wrap items-center gap-1.5">
@@ -3076,6 +3091,94 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
           description_es: descEs,
           description_en: descEn,
         };
+      })(),
+      rec_desayuno: (() => {
+        const c = (kickoff?.city || "").toLowerCase();
+        const isCtg = /ctg|cartagena/.test(c), isMde = /mde|medell/.test(c);
+        const en = isCtg ? `☕ **Coffee & Breakfast**\nCafe San Alberto · Libertario · Epoca Cafe Bar · La Manchuria · Ely`
+          : isMde ? `☕ **Coffee & Breakfast**\nCafé Velvet · Pergamino · Azahar · Urbania`
+          : `☕ **Coffee & Breakfast**\nCafé Nin · Quentin Bakery · Lalo · Cardinal`;
+        const es = isCtg ? `☕ **Cafés y Desayunos**\nCafe San Alberto · Libertario · Epoca Cafe Bar · La Manchuria · Ely`
+          : isMde ? `☕ **Cafés y Desayunos**\nCafé Velvet · Pergamino · Azahar · Urbania`
+          : `☕ **Cafés y Desayunos**\nCafé Nin · Quentin Bakery · Lalo · Cardinal`;
+        return { name: "Nota", name_en: "Note", name_es: "Nota", category: "recommendations", timeLabel: "", description_en: en, description_es: es };
+      })(),
+      rec_brunch: (() => {
+        const c = (kickoff?.city || "").toLowerCase();
+        const isCtg = /ctg|cartagena/.test(c), isMde = /mde|medell/.test(c);
+        const en = isCtg ? `🥞 **Brunch**\nAl Alma · Ely Centro Histórico · Epoca Cafe Bar · Townhouse Cartagena`
+          : isMde ? `🥞 **Brunch**\nCafé Velvet · Pergamino · El Social · Urbania`
+          : `🥞 **Brunch**\nLalo · El Parnita · Rosetta · Fonda Fina`;
+        const es = isCtg ? `🥞 **Brunch**\nAl Alma · Ely Centro Histórico · Epoca Cafe Bar · Townhouse Cartagena`
+          : isMde ? `🥞 **Brunch**\nCafé Velvet · Pergamino · El Social · Urbania`
+          : `🥞 **Brunch**\nLalo · El Parnita · Rosetta · Fonda Fina`;
+        return { name: "Nota", name_en: "Note", name_es: "Nota", category: "recommendations", timeLabel: "", description_en: en, description_es: es };
+      })(),
+      rec_almuerzo: (() => {
+        const c = (kickoff?.city || "").toLowerCase();
+        const isCtg = /ctg|cartagena/.test(c), isMde = /mde|medell/.test(c);
+        const en = isCtg ? `🍽️ **Lunch**\nPezetarian · Kona · Buena Vida Marisquería · Cande · La Cevichería`
+          : isMde ? `🍽️ **Lunch**\nEl Cielo · Carmen · Santō · Alambique · Parce`
+          : `🍽️ **Lunch**\nLimosneros · Contramar · Quintonil · Pujol · Baltra`;
+        const es = isCtg ? `🍽️ **Almuerzo**\nPezetarian · Kona · Buena Vida Marisquería · Cande · La Cevichería`
+          : isMde ? `🍽️ **Almuerzo**\nEl Cielo · Carmen · Santō · Alambique · Parce`
+          : `🍽️ **Almuerzo**\nLimosneros · Contramar · Quintonil · Pujol · Baltra`;
+        return { name: "Nota", name_en: "Note", name_es: "Nota", category: "recommendations", timeLabel: "", description_en: en, description_es: es };
+      })(),
+      rec_cena: (() => {
+        const c = (kickoff?.city || "").toLowerCase();
+        const isCtg = /ctg|cartagena/.test(c), isMde = /mde|medell/.test(c);
+        const en = isCtg ? `🌙 **Dinner**\nLa Vitrola · Cande · Getsemaní Steak House · El Santísimo · Cúrate`
+          : isMde ? `🌙 **Dinner**\nEl Cielo · Carmen · Oci.mde · La Provincia · Bonuar`
+          : `🌙 **Dinner**\nPujol · Quintonil · Sartoria · Máximo Bistrot · Rosetta`;
+        const es = isCtg ? `🌙 **Cena**\nLa Vitrola · Cande · Getsemaní Steak House · El Santísimo · Cúrate`
+          : isMde ? `🌙 **Cena**\nEl Cielo · Carmen · Oci.mde · La Provincia · Bonuar`
+          : `🌙 **Cena**\nPujol · Quintonil · Sartoria · Máximo Bistrot · Rosetta`;
+        return { name: "Nota", name_en: "Note", name_es: "Nota", category: "recommendations", timeLabel: "", description_en: en, description_es: es };
+      })(),
+      rec_bares: (() => {
+        const c = (kickoff?.city || "").toLowerCase();
+        const isCtg = /ctg|cartagena/.test(c), isMde = /mde|medell/.test(c);
+        const en = isCtg ? `🍷 **Bars**\nEl Barón · Abaco · Demente · Mirador del Castillo · La Boquilla`
+          : isMde ? `🍷 **Bars**\nBotánica · Barrio Colombia · El Almacén · Salon Amador`
+          : `🍷 **Bars**\nParlamento · Bar Oriente · Hanky Panky · Baltra · Bósforo`;
+        const es = isCtg ? `🍷 **Bares**\nEl Barón · Abaco · Demente · Mirador del Castillo · La Boquilla`
+          : isMde ? `🍷 **Bares**\nBotánica · Barrio Colombia · El Almacén · Salon Amador`
+          : `🍷 **Bares**\nParlamento · Bar Oriente · Hanky Panky · Baltra · Bósforo`;
+        return { name: "Nota", name_en: "Note", name_es: "Nota", category: "recommendations", timeLabel: "", description_en: en, description_es: es };
+      })(),
+      rec_rooftops: (() => {
+        const c = (kickoff?.city || "").toLowerCase();
+        const isCtg = /ctg|cartagena/.test(c), isMde = /mde|medell/.test(c);
+        const en = isCtg ? `🌅 **Rooftops**\nTownhouse Cartagena · Apogeo · Buena Vida · Mirador del Castillo`
+          : isMde ? `🌅 **Rooftops**\nBarrio Colombia · Botánica · El Social`
+          : `🌅 **Rooftops**\nMansalva · Nômade · Terraza Cha Cha Chá · Bar Oriente`;
+        const es = isCtg ? `🌅 **Rooftops**\nTownhouse Cartagena · Apogeo · Buena Vida · Mirador del Castillo`
+          : isMde ? `🌅 **Rooftops**\nBarrio Colombia · Botánica · El Social`
+          : `🌅 **Rooftops**\nMansalva · Nômade · Terraza Cha Cha Chá · Bar Oriente`;
+        return { name: "Nota", name_en: "Note", name_es: "Nota", category: "recommendations", timeLabel: "", description_en: en, description_es: es };
+      })(),
+      rec_clubs: (() => {
+        const c = (kickoff?.city || "").toLowerCase();
+        const isCtg = /ctg|cartagena/.test(c), isMde = /mde|medell/.test(c);
+        const en = isCtg ? `🎵 **Night Clubs**\nEXO · Mister Babilla · Noches de Diciembre · La Carbonera`
+          : isMde ? `🎵 **Night Clubs**\nEl Eslabon Prendido · Danzón · El Social · Bonuar`
+          : `🎵 **Night Clubs**\nPatrica · La Purísima · El Imperial · Congo Bar`;
+        const es = isCtg ? `🎵 **Night Clubs**\nEXO · Mister Babilla · Noches de Diciembre · La Carbonera`
+          : isMde ? `🎵 **Night Clubs**\nEl Eslabon Prendido · Danzón · El Social · Bonuar`
+          : `🎵 **Night Clubs**\nPatrica · La Purísima · El Imperial · Congo Bar`;
+        return { name: "Nota", name_en: "Note", name_es: "Nota", category: "recommendations", timeLabel: "", description_en: en, description_es: es };
+      })(),
+      rec_actividades: (() => {
+        const c = (kickoff?.city || "").toLowerCase();
+        const isCtg = /ctg|cartagena/.test(c), isMde = /mde|medell/.test(c);
+        const en = isCtg ? `🏄 **Activities & Places to Visit**\nPlaza Santo Domingo · Castillo de San Felipe · Museo del Oro Zenú · San Pedro Claver Church · Walled City walking tour · Getsemaní neighborhood · La Boquilla`
+          : isMde ? `🏄 **Activities & Places to Visit**\nEl Poblado · Laureles · Jardín Botánico · Plaza Botero · Museo de Antioquia · Comunas cable car`
+          : `🏄 **Activities & Places to Visit**\nCondesa · Roma Norte · Coyoacán · Zócalo · Palacio de Bellas Artes · Museo Frida Kahlo · Xochimilco`;
+        const es = isCtg ? `🏄 **Actividades y Lugares para Visitar**\nPlaza Santo Domingo · Castillo de San Felipe · Museo del Oro Zenú · Iglesia San Pedro Claver · Tour Ciudad Amurallada · Getsemaní · La Boquilla`
+          : isMde ? `🏄 **Actividades y Lugares para Visitar**\nEl Poblado · Laureles · Jardín Botánico · Plaza Botero · Museo de Antioquia · Teleférico Comunas`
+          : `🏄 **Actividades y Lugares para Visitar**\nCondesa · Roma Norte · Coyoacán · Zócalo · Palacio de Bellas Artes · Museo Frida Kahlo · Xochimilco`;
+        return { name: "Nota", name_en: "Note", name_es: "Nota", category: "recommendations", timeLabel: "", description_en: en, description_es: es };
       })(),
     };
     const p = presets[preset];
@@ -5249,7 +5352,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
       // Pre-mark boat items so ItineraryPrintView renders BoatDetailCard even on old deployments
       let rawCart = kickoff.cart;
       if (typeof rawCart === "string") { try { rawCart = JSON.parse(rawCart); } catch { rawCart = []; } }
-      const _boatFoodEx = /lunch|box|food|catering|snack|chef|comida|almuerzo|photographer|photo/i;
+      const _boatFoodEx = /lunch|box|food|catering|snack|chef|comida|almuerzo|photographer|photo|massage|masaje|spa|drink|bebida/i;
       const _boatTripKw = /\b(trip|tour|excursion|excursi[oó]n|charter|rosario|bar[uú]|transfer|isla|island|day\s*trip|viaje)\b/i;
       const patchedCart = (Array.isArray(rawCart) ? rawCart : []).map(item => {
         const nameRaw = item.name || "";
