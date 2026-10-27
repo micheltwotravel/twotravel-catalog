@@ -3083,22 +3083,33 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
     }
   };
 
-  /* ── Generate reservation ── */
-  const [generating, setGenerating] = useState(false);
+  /* ── Export reservations — item picker ── */
+  const [exportModal, setExportModal] = useState(false);
+  const [exportSelected, setExportSelected] = useState(new Set());
+  const [exportingItems, setExportingItems] = useState(false);
 
-  const handleGenerateReservation = async () => {
-    const guestName  = kickoff?.guestName  || kickoff?.tripName || "";
-    const concierge  = kickoff?.assignedConciergeName || kickoff?.assignedConcierge || "";
-    const city       = kickoff?.city || "";
-    const checkIn    = kickoff?.arrivalDate   || kickoff?.checkIn  || "";
-    const checkOut   = kickoff?.departureDate || kickoff?.checkOut || "";
-    const qty        = kickoff?.groupSize || "";
+  const handleGenerateReservation = () => {
+    const allUids = days
+      .flatMap(d => d.items.filter(it => it.type !== "block" && it._uid).map(it => it._uid));
+    setExportSelected(new Set(allUids));
+    setExportModal(true);
+  };
 
-    if (!guestName) return alert("El kickoff no tiene nombre del cliente.");
+  const handleExportConfirm = async () => {
+    const guestName = kickoff?.guestName || kickoff?.tripName || "";
+    const concierge = kickoff?.assignedConciergeName || kickoff?.assignedConcierge || "";
+    const city      = kickoff?.city || "";
+    const kickoffId = kickoff?.id  || "";
 
-    setGenerating(true);
+    if (!guestName) { alert("El kickoff no tiene nombre del cliente."); return; }
+
+    const selectedItems = days
+      .flatMap(d => d.items.filter(it => it.type !== "block" && it._uid && exportSelected.has(it._uid)));
+
+    if (selectedItems.length === 0) { alert("Selecciona al menos un item."); return; }
+
+    setExportingItems(true);
     try {
-      // Read existing reservations from kickoffs table (maybeSingle so missing row doesn't throw)
       const { data: existing, error: readErr } = await supabase
         .from("kickoffs").select("data").eq("id", "finance_reservations_v1").maybeSingle();
       if (readErr) throw new Error(readErr.message);
@@ -3107,48 +3118,62 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
         ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
       const rows = notes.reservations || [];
 
-      // Prevent duplicate (same kickoff id already in list)
-      const kickoffId = kickoff?.id || "";
-      if (kickoffId && rows.some(r => r._kickoffId === kickoffId)) {
-        setGenerating(false);
-        return alert(`⚠️ Ya existe una reserva para ${guestName} en el Tablero de Reservas.`);
+      const newRows = [];
+      for (const item of selectedItems) {
+        const alreadyExported = rows.some(r => r._kickoffId === kickoffId && r._itemUid === item._uid);
+        if (alreadyExported) continue;
+        const itemName = item.name || item.name_es || item.name_en || "";
+        newRows.push({
+          _kickoffId:          kickoffId,
+          _itemUid:            item._uid,
+          name:                guestName,
+          conciergeRep:        concierge,
+          logisticRep:         "",
+          areaCustomerType:    "Concierge",
+          fecha:               kickoff?.arrivalDate || kickoff?.checkIn || "",
+          provider:            itemName,
+          serviceCategory:     item.category || "",
+          city,
+          serviceDescription:  item.name_en || item.name_es || item.name || "",
+          qty:                 kickoff?.groupSize || "",
+          hora:                item.timeLabel || "",
+          precioCOP:           "",
+          precioProveedor:     "",
+          consumos:            "",
+          clientTotalUSD:      "",
+          banco:               "",
+          currency:            "COP",
+          hasCommission:       "",
+          commissionPct:       "",
+          totalCommission:     "",
+          servicesStatus:      "Pending",
+          reflejo:             itemName,
+        });
       }
 
-      const newRow = {
-        _kickoffId:   kickoffId,
-        name:         guestName,
-        salesRep:     concierge,
-        dealSource:   "Panel",
-        type:         "",
-        checkIn,
-        checkOut,
-        property:     "",
-        city,
-        qty,
-        rate:         "",
-        tax:          "",
-        total:        "",
-        commission:   "",
-        ourPrice:     "",
-        status:       "Confirmed",
-        confirmedAt:  new Date().toISOString().slice(0, 10),
-      };
+      if (newRows.length === 0) {
+        setExportingItems(false);
+        setExportModal(false);
+        alert("Todos los items seleccionados ya están en el Tablero de Reservas.");
+        return;
+      }
 
       const merged = {
         ...d,
-        internalNotes: JSON.stringify({ ...notes, reservations: [newRow, ...rows] }),
+        internalNotes: JSON.stringify({ ...notes, reservations: [...newRows, ...rows] }),
       };
-      // upsert handles both "row exists" and "row missing" — update silently drops when row is absent
       const { error } = await supabase
         .from("kickoffs").upsert({ id: "finance_reservations_v1", data: merged }, { onConflict: "id" });
-
       if (error) throw new Error(error.message);
-      alert(`✅ Reserva de ${guestName} creada en el Tablero de Reservas.`);
+
+      setExportModal(false);
+      const n = newRows.length;
+      alert(`✅ ${n} item${n !== 1 ? "s" : ""} de ${guestName} exportado${n !== 1 ? "s" : ""} al Tablero de Reservas.`);
     } catch (e) {
-      console.error("generateReservation error:", e);
-      alert("Error creando la reserva: " + e.message);
+      console.error("exportReservation error:", e);
+      alert("Error exportando: " + e.message);
     }
-    setGenerating(false);
+    setExportingItems(false);
   };
 
   /* ── Save ── */
@@ -3196,10 +3221,10 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
             className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs hover:bg-amber-100">
             🗓️ Fechas + defaults
           </button>
-          <button type="button" onClick={handleGenerateReservation} disabled={generating}
-            title="Crea una fila en el Tablero de Reservas con los datos de este kickoff"
+          <button type="button" onClick={handleGenerateReservation} disabled={exportingItems}
+            title="Selecciona items del itinerario para enviar al Tablero de Reservas"
             className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs hover:bg-blue-100 disabled:opacity-40 transition">
-            {generating ? "Exportando…" : "📤 Exportar reservas"}
+            📤 Exportar reservas
           </button>
           {/* Save handled by main EditDrawer "Guardar" button above — canvas state syncs via onCartChange */}
         </div>
@@ -3271,6 +3296,80 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
           + Agregar día
         </button>
       )}
+
+      {/* Export reservations picker modal */}
+      {exportModal && (() => {
+        const exportableItems = days.flatMap(d =>
+          d.items.filter(it => it.type !== "block" && it._uid).map(it => ({ ...it, _dayLabel: d.label }))
+        );
+        const allSelected = exportableItems.length > 0 && exportableItems.every(it => exportSelected.has(it._uid));
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+              <div className="px-5 py-4 border-b flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-sm text-neutral-900">Exportar reservas</p>
+                  <p className="text-xs text-neutral-400">Selecciona los items a enviar al Tablero de Reservas</p>
+                </div>
+                <button onClick={() => setExportModal(false)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 text-neutral-500 text-sm">✕</button>
+              </div>
+              <div className="flex-1 overflow-auto p-4 space-y-4">
+                {exportableItems.length === 0 ? (
+                  <p className="text-xs text-neutral-400 text-center py-6">No hay items exportables en este itinerario.</p>
+                ) : days.map(({ label, items }) => {
+                  const dayItems = items.filter(it => it.type !== "block" && it._uid);
+                  if (dayItems.length === 0) return null;
+                  return (
+                    <div key={label}>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-2">{label}</p>
+                      <div className="space-y-1">
+                        {dayItems.map(item => {
+                          const itemName = item.name || item.name_es || item.name_en || "(sin nombre)";
+                          const sel = exportSelected.has(item._uid);
+                          return (
+                            <label key={item._uid} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-neutral-50 cursor-pointer">
+                              <input type="checkbox" checked={sel}
+                                onChange={() => setExportSelected(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(item._uid)) next.delete(item._uid); else next.add(item._uid);
+                                  return next;
+                                })}
+                                className="w-4 h-4 accent-blue-600 shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-medium text-neutral-800 truncate">{itemName}</p>
+                                {(item.timeLabel || item.category) && (
+                                  <p className="text-[10px] text-neutral-400">{[item.timeLabel, item.category].filter(Boolean).join(" · ")}</p>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="px-5 py-3 border-t flex items-center justify-between gap-2">
+                <button onClick={() => {
+                  const uids = exportableItems.map(it => it._uid);
+                  setExportSelected(allSelected ? new Set() : new Set(uids));
+                }} className="text-xs text-neutral-500 hover:text-neutral-700 underline">
+                  {allSelected ? "Deseleccionar todo" : "Seleccionar todo"}
+                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => setExportModal(false)} className="px-3 py-1.5 rounded-lg border border-neutral-200 text-xs text-neutral-600 hover:bg-neutral-50">
+                    Cancelar
+                  </button>
+                  <button onClick={handleExportConfirm} disabled={exportingItems || exportSelected.size === 0}
+                    className="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xs hover:bg-blue-700 disabled:opacity-40 transition">
+                    {exportingItems ? "Exportando…" : `Exportar${exportSelected.size > 0 ? ` (${exportSelected.size})` : ""}`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Catalog picker modal (per-day) */}
       {catalogTargetDay && (
@@ -5088,6 +5187,9 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // Pre-seeded from kickoff so they're never null even if onCartChange hasn't fired yet
   const canvasCartRef    = useRef(Array.isArray(kickoff?.cart)    ? kickoff.cart    : []);
   const canvasDayMetaRef = useRef(Array.isArray(kickoff?.dayMeta) ? kickoff.dayMeta : []);
+  // Incremented after saves that merged iframe inline-edits, forcing canvas to re-init
+  // from the updated kickoff so subsequent canvas edits start from the correct cart.
+  const [canvasKey, setCanvasKey] = useState(0);
   const [liveFxRate, setLiveFxRate] = useState(3013); // TRM agosto 2026 - 2%
   useEffect(() => {
     fetch("https://open.er-api.com/v6/latest/USD")
@@ -5531,6 +5633,17 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   }
   await onSave(kickoff.id, updates);
   setStatus(autoStatus);
+  // Sync canvasCartRef/canvasDayMetaRef with the saved cart so future saves
+  // don't overwrite inline edits that were merged from the iframe (iframeCartModified).
+  try {
+    const savedCart = typeof updates.cart === "string" ? JSON.parse(updates.cart) : updates.cart;
+    if (Array.isArray(savedCart)) canvasCartRef.current = savedCart;
+    const savedMeta = typeof updates.dayMeta === "string" ? JSON.parse(updates.dayMeta) : updates.dayMeta;
+    if (Array.isArray(savedMeta)) canvasDayMetaRef.current = savedMeta;
+  } catch {}
+  // If the iframe contributed inline edits, bump canvasKey to force ItineraryCanvas to
+  // re-init from the merged kickoff so the user sees the correct descriptions/fields.
+  if (iframeCartModified) setCanvasKey(k => k + 1);
   try {
     // Merge with current cache (not stale `kickoff`) so iframe's cart/dayMeta edits are preserved.
     const prevRaw = localStorage.getItem(`tt_kp_${kickoff.id}`);
@@ -6116,6 +6229,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           <DrawerSection title="📅 Itinerario" accent="indigo" defaultOpen={true}>
             <div className="-mt-1 mb-1" />
             <ItineraryCanvas
+              key={canvasKey}
               kickoff={kickoff}
               clientTypeOverride={clientType}
               onCartChange={(newCart, newDayMeta) => {

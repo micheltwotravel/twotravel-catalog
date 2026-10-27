@@ -557,8 +557,11 @@ function monthLabel(ym) {
 }
 
 // Fixed option lists for Planner inline editing
-const CUSTOMER_TYPE_OPTS = ["B2C Sales","B2B Corporate","Wedding","Group","Repeat Client","Corporate","Referral","Agency","Direct","Other"];
-const DEAL_SOURCE_OPTS   = ["HubSpot","Panel","Referral","Website","Social Media","Direct","Agency","Organic","Word of Mouth"];
+const AREA_TYPE_OPTS    = ["Concierge","Check in only",""];
+const SERVICE_CAT_OPTS  = ["Tours","Activity","Massage","Restaurant","Beach Club","Cake","Decoracion","Cook Service","Transfer","Other"];
+const BANCO_OPTS        = ["Zelle","Credit Card / Quickbooks (Lyna)","Cash","Transfer","Nequi","Bancolombia","Other"];
+const CURRENCY_OPTS     = ["COP","USD","MXN"];
+const COMMISSION_OPTS   = ["Yes","No",""];
 
 function isoToPayana(iso) {
   if (!iso) return "";
@@ -586,50 +589,84 @@ function typeColor(type) {
   return TYPE_PALETTE[h % TYPE_PALETTE.length];
 }
 
+// Normalize legacy rows (old schema → new Monday schema)
+function normalizeRow(r) {
+  if (!r) return r;
+  const n = { ...r };
+  if (!n.fecha         && n.checkIn)        n.fecha           = n.checkIn;
+  if (!n.conciergeRep  && n.salesRep)       n.conciergeRep    = n.salesRep;
+  if (!n.areaCustomerType && n.type)        n.areaCustomerType= n.type;
+  if (!n.provider      && n.property)       n.provider        = n.property;
+  if (!n.precioCOP     && n.rate)           n.precioCOP       = n.rate;
+  if (!n.precioProveedor && n.ourPrice)     n.precioProveedor = n.ourPrice;
+  if (!n.clientTotalUSD && n.total)         n.clientTotalUSD  = n.total;
+  if (!n.totalCommission && n.commission)   n.totalCommission = n.commission;
+  if (!n.servicesStatus && n.status)        n.servicesStatus  = n.status;
+  if (!n.currency)                          n.currency        = "COP";
+  return n;
+}
+
 const ALL_COLS = [
-  { key:"name",        label:"Cliente",         w:160, num:false },
-  { key:"salesRep",    label:"Sales Rep",        w:110, num:false, optKey:"salesRep" },
-  { key:"dealSource",  label:"Deal Source",      w:110, num:false, optKey:"dealSource" },
-  { key:"type",        label:"Customer Type",    w:120, num:false, optKey:"type" },
-  { key:"checkIn",     label:"Check In",         w:100, num:false, date:true },
-  { key:"checkOut",    label:"Check Out",        w:100, num:false, date:true },
-  { key:"property",    label:"Property",         w:120, num:false },
-  { key:"city",        label:"City",             w:90,  num:false },
-  { key:"qty",         label:"Cant.",            w:60,  num:true  },
-  { key:"rate",        label:"Rate",             w:80,  num:true  },
-  { key:"tax",         label:"Tax",              w:70,  num:true  },
-  { key:"total",       label:"Total Amount",     w:100, num:true  },
-  { key:"commission",  label:"Commission",       w:100, num:true  },
-  { key:"ourPrice",    label:"Our Price",        w:90,  num:true  },
-  { key:"status",      label:"Status",           w:100, num:false },
-  { key:"confirmedAt", label:"Fecha Confirm.",   w:110, num:false, date:true },
+  { key:"name",             label:"Cliente",           w:160, num:false },
+  { key:"conciergeRep",     label:"Concierge Rep",     w:120, num:false, optKey:"conciergeRep" },
+  { key:"logisticRep",      label:"Logistic Rep",      w:110, num:false },
+  { key:"areaCustomerType", label:"Area / Tipo",       w:110, num:false, optKey:"areaCustomerType" },
+  { key:"fecha",            label:"Fecha",             w:100, num:false, date:true },
+  { key:"provider",         label:"Provider",          w:130, num:false },
+  { key:"serviceCategory",  label:"Categoría",         w:110, num:false, optKey:"serviceCategory" },
+  { key:"city",             label:"City",              w:100, num:false },
+  { key:"serviceDescription",label:"Descripción",      w:140, num:false },
+  { key:"qty",              label:"# Personas",        w:70,  num:true  },
+  { key:"hora",             label:"Hora",              w:80,  num:false },
+  { key:"precioCOP",        label:"Precio Cliente COP",w:120, num:true  },
+  { key:"precioProveedor",  label:"Precio Proveedor",  w:120, num:true  },
+  { key:"gananciaBruta",    label:"Ganancia Bruta",    w:110, num:true,  readOnly:true },
+  { key:"margen",           label:"Margen %",          w:80,  num:true,  readOnly:true },
+  { key:"consumos",         label:"Consumos",          w:90,  num:true  },
+  { key:"clientTotalUSD",   label:"Total USD",         w:90,  num:true  },
+  { key:"banco",            label:"Banco",             w:120, num:false, optKey:"banco" },
+  { key:"currency",         label:"Moneda",            w:70,  num:false, optKey:"currency" },
+  { key:"hasCommission",    label:"¿Comisión?",        w:80,  num:false, optKey:"hasCommission" },
+  { key:"commissionPct",    label:"% Comisión",        w:80,  num:true  },
+  { key:"totalCommission",  label:"Total Comisión",    w:110, num:true,  readOnly:true },
+  { key:"servicesStatus",   label:"Status",            w:100, num:false },
+  { key:"reflejo",          label:"Reflejo",           w:120, num:false },
 ];
 
-const STATUS_OPTS = ["Confirmed","Cancelled",""];
+const STATUS_OPTS = ["Confirmed","Pending","Cancelled",""];
 
-function EditCell({ value, field, onSave, isNum, isDate, options }) {
+function EditCell({ value, field, onSave, isNum, isDate, options, readOnly }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(value ?? "");
   const ref = useRef();
   const dlId = useRef(`dl-${field}-${Math.random().toString(36).slice(2)}`).current;
 
+  const copFields = ["precioCOP","precioProveedor","gananciaBruta","consumos","totalCommission"];
+  const usdFields = ["clientTotalUSD"];
+
   if (!editing) {
     const display = isNum && val !== "" && val !== null
-      ? (["total","commission","rate","ourPrice","tax"].includes(field) ? fmt$(parseFloat(val)||0) : val)
+      ? (copFields.includes(field) ? `$${(parseFloat(val)||0).toLocaleString("es-CO",{minimumFractionDigits:0,maximumFractionDigits:0})}`
+        : usdFields.includes(field) ? fmt$(parseFloat(val)||0)
+        : field==="margen" ? `${Math.round(parseFloat(val)||0)}%`
+        : val)
       : (val || "");
     return (
-      <div onClick={()=>{ setVal(value??""); setEditing(true); }}
-        style={{minWidth:isNum?60:80, cursor:"text", padding:"2px 4px", borderRadius:4,
+      <div onClick={()=>{ if(readOnly) return; setVal(value??""); setEditing(true); }}
+        style={{minWidth:isNum?60:80, cursor:readOnly?"default":"text", padding:"2px 4px", borderRadius:4,
           whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
-          color: field==="status" ? (val==="Confirmed"?"#065f46":val==="Cancelled"?"#991b1b":DARK) : (isNum?DARK:MUT),
-          fontWeight: ["total","name"].includes(field)?600:400,
-          background:"transparent",
+          color: field==="servicesStatus"
+            ? (val==="Confirmed"?"#065f46":val==="Cancelled"?"#991b1b":val==="Pending"?"#92400e":DARK)
+            : (isNum?DARK:MUT),
+          fontWeight: ["precioCOP","name"].includes(field)?600:400,
+          background: readOnly ? "rgba(0,0,0,.025)" : "transparent",
+          fontStyle: readOnly ? "italic" : "normal",
         }}
         title={String(val||"")}>
-        {field==="status"
+        {field==="servicesStatus"
           ? <span style={{display:"inline-flex",alignItems:"center",gap:4}}>
               <span style={{width:6,height:6,borderRadius:"50%",display:"inline-block",flexShrink:0,
-                background:val==="Confirmed"?"#10b981":val==="Cancelled"?"#f87171":"#d1d5db"}}/>
+                background:val==="Confirmed"?"#10b981":val==="Cancelled"?"#f87171":val==="Pending"?"#fbbf24":"#d1d5db"}}/>
               {val||"—"}
             </span>
           : (display || <span style={{color:"#d1d5db",fontSize:11}}>—</span>)
@@ -643,7 +680,7 @@ function EditCell({ value, field, onSave, isNum, isDate, options }) {
     if (String(val??"") !== String(value??"")) onSave(val);
   };
 
-  if (field === "status") {
+  if (field === "servicesStatus") {
     return (
       <select autoFocus value={val} onChange={e=>setVal(e.target.value)} onBlur={finish}
         style={{fontSize:11,border:"1px solid "+GOLD,borderRadius:4,padding:"2px 4px",background:WHT,fontFamily:"'Jost',sans-serif",outline:"none",minWidth:100}}>
@@ -695,21 +732,14 @@ function ReservationsCalendar({ rows }) {
   const next = () => { if(month===11){setMonth(0);setYear(y=>y+1);}else setMonth(m=>m+1); };
 
   const visible = rows.filter(r => {
-    const ci = r.checkIn?.slice(0,7);
-    const co = r.checkOut?.slice(0,7);
-    return ci <= ym && (!co || co >= ym);
-  }).sort((a,b)=>(a.checkIn||"").localeCompare(b.checkIn||""));
+    const f = (r.fecha || r.checkIn || "")?.slice(0,7);
+    return f === ym;
+  }).sort((a,b)=>((a.fecha||a.checkIn||"")).localeCompare((b.fecha||b.checkIn||"")));
 
   const statusDot = s => s==="Confirmed"?"#10b981":s==="Cancelled"?"#f87171":"#fbbf24";
 
-  const nights = (ci,co) => {
-    if (!ci||!co) return "—";
-    const d = (new Date(co+"T12:00:00")-new Date(ci+"T12:00:00"))/(1000*60*60*24);
-    return d>0 ? d+"n" : "—";
-  };
-
-  // All unique types in visible rows — for legend
-  const allTypes = [...new Set(rows.map(r=>r.type).filter(Boolean))].sort();
+  // All unique area types in visible rows — for legend
+  const allTypes = [...new Set(rows.map(r=>r.areaCustomerType||r.type).filter(Boolean))].sort();
 
   return (
     <div>
@@ -719,7 +749,7 @@ function ReservationsCalendar({ rows }) {
         <span style={{fontWeight:700,fontSize:15,color:DARK,minWidth:180,textAlign:"center"}}>{MONTH_NAMES[month]} {year}</span>
         <button onClick={next} style={{padding:"6px 12px",fontSize:13,background:"transparent",color:DARK,border:`1px solid ${BRD}`,borderRadius:8,cursor:"pointer"}}>›</button>
         <div style={{marginLeft:16,display:"flex",background:WHT,border:`1px solid ${BRD}`,borderRadius:8,overflow:"hidden"}}>
-          {[["mes","Mes"],["lista","Lista"],["gantt","Gantt"]].map(([v,l])=>(
+          {[["mes","Mes"],["lista","Lista"]].map(([v,l])=>(
             <button key={v} onClick={()=>setCalView(v)}
               style={{padding:"6px 14px",fontSize:11,fontWeight:600,
                 background:calView===v?DARK:"transparent",color:calView===v?WHT:MUT,
@@ -751,50 +781,24 @@ function ReservationsCalendar({ rows }) {
         </div>
       )}
 
-      {/* ── Mes (spanning-bar calendar) view ── */}
+      {/* ── Mes view — single-date dots per day ── */}
       {calView==="mes" && (() => {
         const firstDow = new Date(`${ym}-01T12:00:00`).getDay();
         const totalCells = Math.ceil((firstDow + daysInMonth) / 7) * 7;
-        const dayNums = Array.from({length:totalCells},(_,i)=>{
+        const cells = Array.from({length:totalCells},(_,i)=>{
           const d = i - firstDow + 1;
           return d >= 1 && d <= daysInMonth ? d : null;
         });
+        const byDay = {};
+        visible.forEach(r=>{
+          const d = parseInt((r.fecha||r.checkIn||"").slice(-2));
+          if(d) (byDay[d]||(byDay[d]=[])).push(r);
+        });
         const weeks = [];
-        for (let i=0;i<dayNums.length;i+=7) weeks.push(dayNums.slice(i,i+7));
-
-        // Returns {startSlot,endSlot,isStart,isCont} for event in this week, or null
-        const eventSlot = (r, weekDays) => {
-          const ci = r.checkIn?.slice(0,10);
-          const co = r.checkOut?.slice(0,10);
-          if (!ci) return null;
-          const valid = weekDays.map((d,i)=>d?{d,i}:null).filter(Boolean);
-          if (!valid.length) return null;
-          const wFirst = `${ym}-${String(valid[0].d).padStart(2,"0")}`;
-          const wLast  = `${ym}-${String(valid[valid.length-1].d).padStart(2,"0")}`;
-          if (ci > wLast) return null;
-          if (co && co <= wFirst) return null;
-          const dispStartDate = ci < wFirst ? wFirst : ci;
-          const dispStartDay  = parseInt(dispStartDate.slice(-2));
-          const startSlot = weekDays.indexOf(dispStartDay);
-          if (startSlot === -1) return null;
-          let dispEndDay;
-          if (!co || co > wLast) {
-            dispEndDay = valid[valid.length-1].d;
-          } else {
-            dispEndDay = parseInt(co.slice(-2)) - 1;
-            if (dispEndDay < valid[0].d) return null;
-            if (dispEndDay > valid[valid.length-1].d) dispEndDay = valid[valid.length-1].d;
-          }
-          let endSlot = weekDays.indexOf(dispEndDay);
-          if (endSlot === -1) endSlot = valid[valid.length-1].i;
-          return { startSlot, endSlot, isStart:ci>=wFirst, isCont:!co||co>wLast };
-        };
-
-        const LANE_H = 24, DAY_H = 26, PAD = 3;
+        for (let i=0;i<cells.length;i+=7) weeks.push(cells.slice(i,i+7));
 
         return (
           <div style={{background:WHT,border:`1px solid ${BRD}`,borderRadius:12,overflow:"hidden"}}>
-            {/* Day-of-week header */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",background:BG,borderBottom:`2px solid ${BRD}`}}>
               {["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"].map((d,i)=>(
                 <div key={d} style={{padding:"8px 0",textAlign:"center",fontSize:10,fontWeight:700,
@@ -805,85 +809,38 @@ function ReservationsCalendar({ rows }) {
                 </div>
               ))}
             </div>
-
-            {weeks.map((weekDays,wi)=>{
-              // Assign events to lanes
-              const weekEvts = visible.filter(r=>eventSlot(r,weekDays)!==null)
-                .sort((a,b)=>(a.checkIn||"").localeCompare(b.checkIn||""));
-              const laneEnds = [];
-              const asgn = new Map();
-              weekEvts.forEach(ev=>{
-                const s = eventSlot(ev,weekDays);
-                if (!s) return;
-                let lane = laneEnds.findIndex(e=>e<s.startSlot);
-                if (lane===-1){lane=laneEnds.length;laneEnds.push(-1);}
-                laneEnds[lane]=s.endSlot;
-                asgn.set(ev,{lane,...s});
-              });
-              const numLanes = laneEnds.length;
-              const rowH = DAY_H + PAD + numLanes*(LANE_H+2) + PAD;
-
-              return (
-                <div key={wi} style={{
-                  position:"relative",height:rowH,
-                  borderBottom:wi<weeks.length-1?`1px solid ${BRD}`:"none",
-                }}>
-                  {/* Day number cells */}
-                  {weekDays.map((d,di)=>{
-                    const isToday=d===now.getDate()&&month===now.getMonth()&&year===now.getFullYear();
-                    const ds = d?`${ym}-${String(d).padStart(2,"0")}`:"";
-                    const dow = d?new Date(ds+"T12:00:00").getDay():di;
-                    const isWeekend = dow===0||dow===6;
-                    return (
-                      <div key={di} style={{
-                        position:"absolute",top:0,left:`${di/7*100}%`,
-                        width:`${100/7}%`,height:DAY_H,
-                        background:!d?"rgba(0,0,0,.02)":isToday?"rgba(192,160,98,.1)":isWeekend?"rgba(0,0,0,.02)":"transparent",
-                        borderRight:di<6?`1px solid ${BRD}`:undefined,
-                        display:"flex",alignItems:"center",justifyContent:"flex-end",
-                        padding:"0 7px",
-                        boxSizing:"border-box",
-                      }}>
-                        {d&&<span style={{fontSize:11,fontWeight:isToday?800:400,color:isToday?GOLD:MUT}}>{d}</span>}
-                      </div>
-                    );
-                  })}
-                  {/* Column grid lines (extend full row height) */}
-                  {[0,1,2,3,4,5].map(di=>(
-                    <div key={di} style={{position:"absolute",top:0,bottom:0,
-                      left:`${(di+1)/7*100}%`,width:1,background:BRD,zIndex:0}}/>
-                  ))}
-                  {/* Event bars */}
-                  {[...asgn.entries()].map(([ev,{lane,startSlot,endSlot,isStart,isCont}])=>{
-                    const tc = typeColor(ev.type);
-                    const barTop = DAY_H + PAD + lane*(LANE_H+2);
-                    return (
-                      <div key={(ev.name||"")+ev.checkIn}
-                        title={`${ev.name||""}${ev.type?" · "+ev.type:""}${ev.status?" · "+ev.status:""}`}
-                        style={{
-                          position:"absolute",
-                          left:`calc(${startSlot/7*100}% + ${isStart?2:0}px)`,
-                          width:`calc(${(endSlot-startSlot+1)/7*100}% - ${isStart?4:2}px)`,
-                          top:barTop, height:LANE_H,
-                          background:tc.bg,
-                          border:`1px solid ${tc.border}80`,
-                          borderLeft:isStart?`3px solid ${tc.border}`:`1px solid ${tc.border}30`,
-                          borderRight:isCont?0:`1px solid ${tc.border}80`,
-                          borderRadius:`${isStart?4:0}px ${isCont?0:4}px ${isCont?0:4}px ${isStart?4:0}px`,
-                          color:tc.text,fontSize:10,fontWeight:700,
-                          padding:"0 6px",display:"flex",alignItems:"center",
-                          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-                          opacity:ev.status==="Cancelled"?.45:1,
-                          zIndex:1,cursor:"default",
-                          boxSizing:"border-box",
-                        }}>
-                        {ev.name || ev.property || "?"}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
+            {weeks.map((weekDays,wi)=>(
+              <div key={wi} style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:wi<weeks.length-1?`1px solid ${BRD}`:"none"}}>
+                {weekDays.map((d,di)=>{
+                  const isToday=d===now.getDate()&&month===now.getMonth()&&year===now.getFullYear();
+                  const evts = d ? (byDay[d]||[]) : [];
+                  return (
+                    <div key={di} style={{
+                      minHeight:80,padding:"5px 6px",
+                      background:!d?"rgba(0,0,0,.02)":isToday?"rgba(192,160,98,.06)":"transparent",
+                      borderRight:di<6?`1px solid ${BRD}`:undefined,
+                      verticalAlign:"top",
+                    }}>
+                      {d && <div style={{fontSize:11,fontWeight:isToday?800:400,color:isToday?GOLD:MUT,marginBottom:4,textAlign:"right"}}>{d}</div>}
+                      {evts.slice(0,3).map((ev,ei)=>{
+                        const tc = typeColor(ev.areaCustomerType||ev.type);
+                        return (
+                          <div key={ei}
+                            title={`${ev.name||""} · ${ev.provider||""} · ${ev.servicesStatus||ev.status||""}`}
+                            style={{fontSize:9,fontWeight:600,padding:"2px 5px",borderRadius:3,marginBottom:2,
+                              background:tc.bg,color:tc.text,border:`1px solid ${tc.border}50`,
+                              overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                              opacity:(ev.servicesStatus||ev.status)==="Cancelled"?.45:1}}>
+                            {ev.name||ev.provider||"?"}
+                          </div>
+                        );
+                      })}
+                      {evts.length>3 && <div style={{fontSize:9,color:MUT,fontWeight:600}}>+{evts.length-3} más</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         );
       })()}
@@ -894,7 +851,7 @@ function ReservationsCalendar({ rows }) {
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
             <thead>
               <tr style={{background:BG}}>
-                {["","Cliente","Customer Type","Check In","Check Out","Noches","Property","Sales Rep","Status","Revenue"].map(h=>(
+                {["","Cliente","Tipo","Fecha","Provider","Categoría","Concierge","Status","Precio COP"].map(h=>(
                   <th key={h} style={{padding:"9px 12px",textAlign:"left",fontWeight:600,
                     color:DARK,fontSize:11,borderBottom:`1px solid ${BRD}`,whiteSpace:"nowrap"}}>{h}</th>
                 ))}
@@ -902,43 +859,38 @@ function ReservationsCalendar({ rows }) {
             </thead>
             <tbody>
               {visible.map((r,i)=>{
-                const tc = typeColor(r.type);
+                const tc = typeColor(r.areaCustomerType||r.type);
+                const st = r.servicesStatus||r.status||"";
                 return (
                   <tr key={i} style={{borderBottom:`1px solid rgba(26,24,20,.05)`,
                     background:i%2===0?"transparent":"rgba(247,244,239,.4)"}}>
                     <td style={{padding:"0 0 0 4px",width:4}}>
                       <div style={{width:4,height:"100%",minHeight:38,background:tc.border,borderRadius:2}}/>
                     </td>
-                    <td style={{padding:"8px 12px",fontWeight:600,color:DARK}}>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:6}}>
-                        {r.name || r.property || "—"}
-                        {r.needsReview && <span style={{fontSize:9,fontWeight:700,letterSpacing:".06em",background:"#fef3c7",color:"#92400e",border:"1px solid #fcd34d",padding:"1px 6px",borderRadius:10,flexShrink:0}}>HS NUEVO</span>}
-                      </span>
-                    </td>
+                    <td style={{padding:"8px 12px",fontWeight:600,color:DARK}}>{r.name||"—"}</td>
                     <td style={{padding:"8px 12px"}}>
-                      {r.type ? (
+                      {(r.areaCustomerType||r.type) ? (
                         <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,
                           background:tc.bg,color:tc.text,border:`1px solid ${tc.border}`}}>
-                          {r.type}
+                          {r.areaCustomerType||r.type}
                         </span>
                       ) : <span style={{color:"#d1d5db",fontSize:11}}>—</span>}
                     </td>
-                    <td style={{padding:"8px 12px",color:MUT,whiteSpace:"nowrap"}}>{fmtDate(r.checkIn)}</td>
-                    <td style={{padding:"8px 12px",color:MUT,whiteSpace:"nowrap"}}>{fmtDate(r.checkOut)}</td>
-                    <td style={{padding:"8px 12px",color:MUT,textAlign:"center"}}>{nights(r.checkIn,r.checkOut)}</td>
-                    <td style={{padding:"8px 12px",color:MUT}}>{r.property||"—"}</td>
-                    <td style={{padding:"8px 12px",color:MUT}}>{resolveSalesRep(r.salesRep)}</td>
+                    <td style={{padding:"8px 12px",color:MUT,whiteSpace:"nowrap"}}>{fmtDate(r.fecha||r.checkIn)}</td>
+                    <td style={{padding:"8px 12px",color:MUT}}>{r.provider||r.property||"—"}</td>
+                    <td style={{padding:"8px 12px",color:MUT}}>{r.serviceCategory||"—"}</td>
+                    <td style={{padding:"8px 12px",color:MUT}}>{r.conciergeRep||r.salesRep||"—"}</td>
                     <td style={{padding:"8px 12px"}}>
                       <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontWeight:600,
-                        color:r.status==="Confirmed"?"#065f46":r.status==="Cancelled"?"#991b1b":"#92400e",
-                        background:r.status==="Confirmed"?"#d1fae5":r.status==="Cancelled"?"#fee2e2":"#fef3c7",
+                        color:st==="Confirmed"?"#065f46":st==="Cancelled"?"#991b1b":"#92400e",
+                        background:st==="Confirmed"?"#d1fae5":st==="Cancelled"?"#fee2e2":"#fef3c7",
                         padding:"2px 8px",borderRadius:20}}>
-                        <span style={{width:6,height:6,borderRadius:"50%",background:statusDot(r.status),display:"inline-block"}}/>
-                        {r.status||"—"}
+                        <span style={{width:6,height:6,borderRadius:"50%",background:statusDot(st),display:"inline-block"}}/>
+                        {st||"—"}
                       </span>
                     </td>
                     <td style={{padding:"8px 12px",textAlign:"right",fontWeight:700,color:DARK,fontVariantNumeric:"tabular-nums"}}>
-                      {r.total ? fmt$(parseFloat(r.total)) : "—"}
+                      {r.precioCOP ? `$${(parseFloat(r.precioCOP)||0).toLocaleString("es-CO")}` : "—"}
                     </td>
                   </tr>
                 );
@@ -946,112 +898,76 @@ function ReservationsCalendar({ rows }) {
             </tbody>
             <tfoot>
               <tr style={{background:BG,borderTop:`2px solid ${BRD}`}}>
-                <td colSpan={9} style={{padding:"9px 12px",fontSize:11,fontWeight:600,color:MUT}}>
-                  TOTAL MES · {visible.filter(r=>r.status==="Confirmed").length} confirmadas
+                <td colSpan={8} style={{padding:"9px 12px",fontSize:11,fontWeight:600,color:MUT}}>
+                  TOTAL MES · {visible.filter(r=>(r.servicesStatus||r.status)==="Confirmed").length} confirmadas
                 </td>
                 <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:DARK,fontVariantNumeric:"tabular-nums"}}>
-                  {fmt$(visible.filter(r=>r.status==="Confirmed").reduce((s,r)=>s+(parseFloat(r.total)||0),0))}
+                  ${visible.filter(r=>(r.servicesStatus||r.status)==="Confirmed")
+                    .reduce((s,r)=>s+(parseFloat(r.precioCOP)||0),0)
+                    .toLocaleString("es-CO")}
                 </td>
               </tr>
             </tfoot>
           </table>
         </div>
       )}
-
-      {/* ── Gantt view ── */}
-      {calView==="gantt" && visible.length>0 && (
-        <div style={{overflowX:"auto"}}>
-          <div style={{minWidth:200+daysInMonth*30}}>
-            <div style={{display:"flex",marginBottom:4}}>
-              <div style={{width:200,flexShrink:0}}/>
-              {days.map(d=>{
-                const dow=new Date(`${ym}-${String(d).padStart(2,"0")}T12:00:00`).getDay();
-                const isToday=d===now.getDate()&&month===now.getMonth()&&year===now.getFullYear();
-                return (
-                  <div key={d} style={{width:30,flexShrink:0,textAlign:"center",fontSize:10,
-                    fontWeight:isToday?700:400,color:isToday?GOLD:dow===0||dow===6?"#9ca3af":MUT,
-                    padding:"3px 0",background:isToday?"rgba(192,160,98,.12)":"transparent",borderRadius:4}}>
-                    {d}
-                  </div>
-                );
-              })}
-            </div>
-            {visible.map((r,ri)=>{
-              const tc = typeColor(r.type);
-              return (
-                <div key={ri} style={{display:"flex",alignItems:"center",marginBottom:3,minHeight:26}}>
-                  <div style={{width:200,flexShrink:0,fontSize:11,fontWeight:600,color:DARK,
-                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:10}}>
-                    {r.name || r.property || "—"}
-                    {r.type && <span style={{fontSize:9,fontWeight:700,marginLeft:5,padding:"1px 5px",
-                      borderRadius:10,background:tc.bg,color:tc.text,border:`1px solid ${tc.border}`}}>{r.type}</span>}
-                  </div>
-                  {days.map(d=>{
-                    const ds=`${ym}-${String(d).padStart(2,"0")}`;
-                    const inRange=r.checkIn&&r.checkOut&&ds>=r.checkIn.slice(0,10)&&ds<r.checkOut.slice(0,10);
-                    const isStart=ds===r.checkIn?.slice(0,10);
-                    const isEnd  =r.checkOut && `${ym}-${String(d).padStart(2,"0")}`===r.checkOut.slice(0,10);
-                    const dow=new Date(ds+"T12:00:00").getDay();
-                    return (
-                      <div key={d} style={{width:30,flexShrink:0,height:22,
-                        background:inRange?tc.bg:dow===0||dow===6?"rgba(0,0,0,.025)":"transparent",
-                        borderTop:inRange?`1px solid ${tc.border}`:undefined,
-                        borderBottom:inRange?`1px solid ${tc.border}`:undefined,
-                        borderLeft:isStart?`3px solid ${tc.border}`:undefined,
-                        opacity:r.status==="Cancelled"?0.45:1,
-                        borderRadius:isStart?"6px 0 0 6px":0,
-                      }}/>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
+// ── Dashboard (Monday-style reports) ─────────────────────────────────────────
 const REP_COLORS = ["#6366f1","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#f97316","#ec4899"];
 
 function ReservationsDashboard({ rows }) {
   const thisYear = new Date().getFullYear();
-  const confirmed   = rows.filter(r=>r.status==="Confirmed");
-  const cancelled   = rows.filter(r=>r.status==="Cancelled");
-  const totalRev    = confirmed.reduce((s,r)=>s+(parseFloat(r.total)||0),0);
-  const totalComm   = confirmed.reduce((s,r)=>s+(parseFloat(r.commission)||0),0);
-  const avgDeal     = confirmed.length ? totalRev/confirmed.length : 0;
-  const convRate    = rows.length ? Math.round(confirmed.length/rows.length*100) : 0;
 
-  // By month (only years that look valid)
-  const byMonth={}, byRep={}, byType={}, bySource={}, byCity={};
+  // normalize legacy rows
+  const data = rows.map(normalizeRow);
+  const confirmed = data.filter(r=>(r.servicesStatus||r.status)==="Confirmed");
+  const pending   = data.filter(r=>(r.servicesStatus||r.status)==="Pending");
+  const cancelled = data.filter(r=>(r.servicesStatus||r.status)==="Cancelled");
+
+  const totalRev    = confirmed.reduce((s,r)=>s+(parseFloat(r.precioCOP)||0),0);
+  const totalProv   = confirmed.reduce((s,r)=>s+(parseFloat(r.precioProveedor)||0),0);
+  const grossProfit = totalRev - totalProv;
+  const totalComm   = confirmed.reduce((s,r)=>s+(parseFloat(r.totalCommission)||0),0);
+  const netProfit   = grossProfit - totalComm;
+
+  // By service category: precioCOP + gananciaBruta
+  const byCat = {};
   confirmed.forEach(r=>{
-    const m=r.checkIn?.slice(0,7);
-    if(m) {
-      const y=parseInt(m.slice(0,4));
-      if(y>=2020&&y<=thisYear+3) byMonth[m]=(byMonth[m]||0)+(parseFloat(r.total)||0);
-    }
-    const rep=r.salesRep||"Sin asignar"; byRep[rep]=(byRep[rep]||{rev:0,cnt:0});
-    byRep[rep].rev+=(parseFloat(r.total)||0); byRep[rep].cnt++;
-    const tp=r.type||"Sin tipo"; byType[tp]=(byType[tp]||0)+1;
-    const src=r.dealSource||"Sin fuente"; bySource[src]=(bySource[src]||0)+1;
-    const ct=r.city||"Sin ciudad"; byCity[ct]=(byCity[ct]||{rev:0,cnt:0});
-    byCity[ct].rev+=(parseFloat(r.total)||0); byCity[ct].cnt++;
+    const k = r.serviceCategory || "Otro";
+    if(!byCat[k]) byCat[k]={rev:0,gp:0,cnt:0};
+    byCat[k].rev += parseFloat(r.precioCOP)||0;
+    byCat[k].gp  += (parseFloat(r.precioCOP)||0)-(parseFloat(r.precioProveedor)||0);
+    byCat[k].cnt++;
   });
+  const catEntries = Object.entries(byCat).sort((a,b)=>b[1].rev-a[1].rev);
+  const maxCatRev  = Math.max(1,...catEntries.map(([,{rev}])=>rev));
 
-  const monthEntries  = Object.entries(byMonth).sort((a,b)=>a[0].localeCompare(b[0]));
-  const repEntries    = Object.entries(byRep).sort((a,b)=>b[1].rev-a[1].rev);
-  const typeEntries   = Object.entries(byType).sort((a,b)=>b[1]-a[1]);
-  const sourceEntries = Object.entries(bySource).sort((a,b)=>b[1]-a[1]);
-  const cityEntries   = Object.entries(byCity).sort((a,b)=>b[1].rev-a[1].rev);
-  const totalType     = typeEntries.reduce((s,[,v])=>s+v,0)||1;
-  const totalSrc      = sourceEntries.reduce((s,[,v])=>s+v,0)||1;
-  const maxCity       = Math.max(1,...cityEntries.map(([,{rev}])=>rev));
+  // By client: count of services
+  const byClient = {};
+  data.forEach(r=>{
+    const k = r.name || "Sin nombre";
+    byClient[k] = (byClient[k]||0)+1;
+  });
+  const clientEntries = Object.entries(byClient).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxClientCnt  = Math.max(1,...clientEntries.map(([,v])=>v));
 
-  const maxM = Math.max(1,...monthEntries.map(([,v])=>v));
-  const maxR = Math.max(1,...repEntries.map(([,{rev}])=>rev));
+  // By client + category: gross profit
+  const byClientCat = {};
+  confirmed.forEach(r=>{
+    const c = r.name||"Sin nombre";
+    const k = r.serviceCategory||"Otro";
+    if(!byClientCat[c]) byClientCat[c]={};
+    byClientCat[c][k] = (byClientCat[c][k]||0) + (parseFloat(r.precioCOP)||0)-(parseFloat(r.precioProveedor)||0);
+  });
+  const topClients = Object.entries(byClientCat)
+    .map(([name,cats])=>({name, total:Object.values(cats).reduce((s,v)=>s+v,0), cats}))
+    .sort((a,b)=>b.total-a.total).slice(0,8);
+  const allCats = [...new Set(confirmed.map(r=>r.serviceCategory||"Otro"))].sort();
+  const CAT_COLORS = ["#6366f1","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#f97316","#ec4899"];
+  const catColorMap = Object.fromEntries(allCats.map((c,i)=>[c,CAT_COLORS[i%CAT_COLORS.length]]));
 
   const Card = ({children,style={}}) => (
     <div style={{background:WHT,border:`1px solid ${BRD}`,borderRadius:14,padding:22,...style}}>
@@ -1063,68 +979,102 @@ function ReservationsDashboard({ rows }) {
       textTransform:"uppercase",marginBottom:16}}>{children}</div>
   );
 
-  const initials = name => (name||"?").split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  const fmtCOP = v => `$${Math.round(v).toLocaleString("es-CO")}`;
 
   return (
     <div style={{display:"grid",gap:16}}>
       {/* Row 1: KPIs */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
         {[
-          {label:"Confirmadas",  val:confirmed.length,          sub:`${convRate}% conversión`,  color:"#059669", bg:"#d1fae5"},
-          {label:"Revenue Total",val:fmt$(totalRev),             sub:`${confirmed.length} deals`, color:GOLD,      bg:"#fef3c7"},
-          {label:"Comisiones",   val:fmt$(totalComm),            sub:`${Math.round(totalComm/Math.max(totalRev,1)*100)}% del revenue`, color:"#6366f1", bg:"#ede9fe"},
-          {label:"Deal Promedio",val:fmt$(avgDeal),              sub:`${cancelled.length} canceladas`, color:"#0ea5e9", bg:"#e0f2fe"},
+          {label:"Revenue Total (COP)",  val:fmtCOP(totalRev),    sub:`${confirmed.length} servicios confirmados`, color:"#059669", bg:"#d1fae5"},
+          {label:"Ganancia Bruta",       val:fmtCOP(grossProfit), sub:`${totalRev?Math.round(grossProfit/totalRev*100):0}% margen`,  color:GOLD,    bg:"#fef3c7"},
+          {label:"Net Profit",           val:fmtCOP(netProfit),   sub:`Comisiones: ${fmtCOP(totalComm)}`,          color:"#6366f1", bg:"#ede9fe"},
+          {label:"# Servicios",          val:data.length,         sub:`${pending.length} pendientes · ${cancelled.length} cancelados`, color:"#0ea5e9", bg:"#e0f2fe"},
         ].map(({label,val,sub,color,bg})=>(
           <Card key={label} style={{borderTop:`4px solid ${color}`}}>
             <div style={{fontSize:11,fontWeight:600,color:MUT,textTransform:"uppercase",letterSpacing:.4,marginBottom:8}}>{label}</div>
-            <div style={{fontSize:26,fontWeight:800,color:DARK,lineHeight:1,marginBottom:6,fontVariantNumeric:"tabular-nums"}}>{val}</div>
+            <div style={{fontSize:22,fontWeight:800,color:DARK,lineHeight:1,marginBottom:6,fontVariantNumeric:"tabular-nums"}}>{val}</div>
             <div style={{fontSize:11,color:MUT}}>{sub}</div>
           </Card>
         ))}
       </div>
 
-      {/* Row 2: Month chart + Rep leaderboard */}
+      {/* Row 2: Revenue vs Gross Profit by Service Category */}
+      <Card>
+        <CardTitle>Revenue vs. Ganancia Bruta por Categoría</CardTitle>
+        {catEntries.length===0
+          ? <div style={{color:MUT,fontSize:12}}>Sin datos de categoría de servicio</div>
+          : (
+            <>
+              <div style={{display:"flex",gap:16,marginBottom:12}}>
+                <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,color:MUT}}>
+                  <span style={{width:12,height:12,background:GOLD,borderRadius:2,display:"inline-block"}}/>Precio Cliente
+                </span>
+                <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,color:MUT}}>
+                  <span style={{width:12,height:12,background:"#6366f1",borderRadius:2,display:"inline-block"}}/>Ganancia Bruta
+                </span>
+              </div>
+              <div style={{overflowX:"auto"}}>
+                <div style={{display:"flex",gap:12,alignItems:"flex-end",minWidth:catEntries.length*80,paddingBottom:4}}>
+                  {catEntries.map(([cat,{rev,gp,cnt}])=>{
+                    const revH = Math.max(4,rev/maxCatRev*140);
+                    const gpH  = Math.max(4,Math.max(0,gp)/maxCatRev*140);
+                    return (
+                      <div key={cat} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,flex:"1 0 70px",minWidth:70}}>
+                        <div style={{fontSize:9,fontWeight:700,color:DARK,textAlign:"center",lineHeight:1.2,marginBottom:2}}>
+                          {fmtCOP(rev/1000>=1?rev/1000:rev)}{rev/1000>=1?"k":""}
+                        </div>
+                        <div style={{display:"flex",alignItems:"flex-end",gap:2,height:140}}>
+                          <div style={{width:18,background:GOLD,borderRadius:"4px 4px 0 0",height:revH,transition:"height .3s"}}/>
+                          <div style={{width:18,background:"#6366f1",borderRadius:"4px 4px 0 0",height:gpH,transition:"height .3s"}}/>
+                        </div>
+                        <div style={{fontSize:9,color:MUT,textAlign:"center",lineHeight:1.3,maxWidth:68,wordBreak:"break-word"}}>{cat}</div>
+                        <div style={{fontSize:9,color:MUT,opacity:.7}}>{cnt}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )
+        }
+      </Card>
+
+      {/* Row 3: Services by client + Status breakdown */}
       <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:16}}>
-        {/* Column chart: revenue by month */}
+        {/* Services sold by client */}
         <Card>
-          <CardTitle>Revenue por Mes</CardTitle>
-          {monthEntries.length===0
-            ? <div style={{color:MUT,fontSize:12}}>Sin datos</div>
+          <CardTitle>Servicios por Cliente</CardTitle>
+          {clientEntries.length===0
+            ? <div style={{fontSize:12,color:MUT}}>Sin datos</div>
             : (
-              <div style={{display:"flex",alignItems:"flex-end",gap:6,height:160,overflowX:"auto",paddingBottom:4}}>
-                {monthEntries.map(([m,v])=>{
-                  const pct = v/maxM;
-                  const isCurrentM = m===`${thisYear}-${String(new Date().getMonth()+1).padStart(2,"0")}`;
-                  return (
-                    <div key={m} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,minWidth:48,flex:"1 0 auto"}}>
-                      <div style={{fontSize:10,fontWeight:700,color:GOLD,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap"}}>
-                        {v>=1000?`$${Math.round(v/1000)}k`:fmt$(v)}
-                      </div>
-                      <div style={{width:"100%",maxWidth:52,borderRadius:"6px 6px 0 0",
-                        background:isCurrentM?GOLD:"rgba(154,125,82,.35)",
-                        height:`${Math.max(4,pct*120)}px`,transition:"height .3s"}}/>
-                      <div style={{fontSize:9,color:MUT,textAlign:"center",lineHeight:1.2}}>
-                        {MONTH_NAMES[parseInt(m.slice(5))-1].slice(0,3)}
-                        <br/><span style={{color:isCurrentM?GOLD:MUT}}>{m.slice(0,4)}</span>
-                      </div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {clientEntries.map(([name,cnt],i)=>(
+                  <div key={name}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                      <span style={{fontSize:11,color:DARK,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"70%"}}>{name}</span>
+                      <span style={{fontSize:11,fontWeight:700,color:DARK}}>{cnt}</span>
                     </div>
-                  );
-                })}
+                    <div style={{height:8,background:"rgba(0,0,0,.05)",borderRadius:4,overflow:"hidden"}}>
+                      <div style={{width:`${cnt/maxClientCnt*100}%`,height:"100%",background:REP_COLORS[i%REP_COLORS.length],borderRadius:4}}/>
+                    </div>
+                  </div>
+                ))}
               </div>
             )
           }
         </Card>
 
-        {/* Status donut */}
+        {/* Status breakdown */}
         <Card>
-          <CardTitle>Estado de Deals</CardTitle>
+          <CardTitle>Estado de Servicios</CardTitle>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {[
-              {label:"Confirmed", count:confirmed.length,  color:"#10b981", bg:"#d1fae5"},
-              {label:"Cancelled", count:cancelled.length,  color:"#f87171", bg:"#fee2e2"},
-              {label:"Sin estado",count:rows.filter(r=>!r.status||r.status==="").length, color:"#d1d5db", bg:"#f3f4f6"},
-            ].map(({label,count,color,bg})=>{
-              const pct = rows.length ? Math.round(count/rows.length*100) : 0;
+              {label:"Confirmed", count:confirmed.length, color:"#10b981"},
+              {label:"Pending",   count:pending.length,   color:"#fbbf24"},
+              {label:"Cancelled", count:cancelled.length, color:"#f87171"},
+            ].map(({label,count,color})=>{
+              const pct = data.length ? Math.round(count/data.length*100) : 0;
               return (
                 <div key={label}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
@@ -1141,109 +1091,43 @@ function ReservationsDashboard({ rows }) {
         </Card>
       </div>
 
-      {/* Row 3: Rep leaderboard + Type + Source */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16}}>
-        {/* Sales Rep */}
-        <Card>
-          <CardTitle>Sales Rep — Revenue</CardTitle>
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {repEntries.map(([name,{rev,cnt}],idx)=>(
-              <div key={name}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                  <div style={{width:28,height:28,borderRadius:"50%",background:REP_COLORS[idx%REP_COLORS.length],
-                    color:WHT,fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                    {initials(name)}
-                  </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:11,fontWeight:600,color:DARK,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div>
-                    <div style={{fontSize:10,color:MUT}}>{cnt} deal{cnt!==1?"s":""}</div>
-                  </div>
-                  <div style={{fontSize:11,fontWeight:700,color:DARK,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap"}}>
-                    {rev>=1000?`$${Math.round(rev/1000)}k`:fmt$(rev)}
-                  </div>
-                </div>
-                <div style={{height:6,background:"rgba(0,0,0,.05)",borderRadius:4,overflow:"hidden"}}>
-                  <div style={{width:`${(rev/maxR)*100}%`,height:"100%",background:REP_COLORS[idx%REP_COLORS.length],borderRadius:4}}/>
-                </div>
-              </div>
-            ))}
-            {repEntries.length===0&&<div style={{fontSize:12,color:MUT}}>Sin datos</div>}
-          </div>
-        </Card>
-
-        {/* Customer Type */}
-        <Card>
-          <CardTitle>Customer Type</CardTitle>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {typeEntries.map(([k,v],i)=>{
-              const pct=Math.round(v/totalType*100);
-              const COLS=["#6366f1","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4"];
-              return (
-                <div key={k}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                    <span style={{fontSize:11,color:MUT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"65%"}}>{k}</span>
-                    <span style={{fontSize:11,fontWeight:700,color:DARK}}>{v} <span style={{color:MUT,fontWeight:400,fontSize:10}}>({pct}%)</span></span>
-                  </div>
-                  <div style={{height:8,background:"rgba(0,0,0,.05)",borderRadius:4,overflow:"hidden"}}>
-                    <div style={{width:`${pct}%`,height:"100%",background:COLS[i%COLS.length],borderRadius:4}}/>
-                  </div>
-                </div>
-              );
-            })}
-            {typeEntries.length===0&&<div style={{fontSize:12,color:MUT}}>Sin datos</div>}
-          </div>
-        </Card>
-
-        {/* Deal Source */}
-        <Card>
-          <CardTitle>Deal Source</CardTitle>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {sourceEntries.map(([k,v],i)=>{
-              const pct=Math.round(v/totalSrc*100);
-              const COLS=["#f59e0b","#10b981","#6366f1","#ef4444","#8b5cf6","#06b6d4"];
-              return (
-                <div key={k}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                    <span style={{fontSize:11,color:MUT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"65%"}}>{k}</span>
-                    <span style={{fontSize:11,fontWeight:700,color:DARK}}>{v} <span style={{color:MUT,fontWeight:400,fontSize:10}}>({pct}%)</span></span>
-                  </div>
-                  <div style={{height:8,background:"rgba(0,0,0,.05)",borderRadius:4,overflow:"hidden"}}>
-                    <div style={{width:`${pct}%`,height:"100%",background:COLS[i%COLS.length],borderRadius:4}}/>
-                  </div>
-                </div>
-              );
-            })}
-            {sourceEntries.length===0&&<div style={{fontSize:12,color:MUT}}>Sin datos</div>}
-          </div>
-        </Card>
-      </div>
-
-      {/* Row 4: Revenue por Ciudad */}
+      {/* Row 4: Gross Profit by Client by Category */}
       <Card>
-        <CardTitle>Revenue por Ciudad</CardTitle>
-        {cityEntries.length===0
-          ? <div style={{fontSize:12,color:MUT}}>Sin datos — agrega la columna "City" en las filas del Planner</div>
+        <CardTitle>Ganancia Bruta por Cliente · por Categoría</CardTitle>
+        {topClients.length===0
+          ? <div style={{fontSize:12,color:MUT}}>Sin datos confirmados con precio proveedor</div>
           : (
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:14}}>
-              {cityEntries.map(([city,{rev,cnt}],i)=>{
-                const pct = Math.round(rev/maxCity*100);
-                const color = REP_COLORS[i%REP_COLORS.length];
-                return (
-                  <div key={city} style={{background:BG,borderRadius:10,padding:"14px 16px",borderLeft:`4px solid ${color}`}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                      <div style={{fontSize:13,fontWeight:700,color:DARK}}>{city}</div>
-                      <div style={{fontSize:10,color:MUT,background:WHT,border:`1px solid ${BRD}`,borderRadius:20,padding:"1px 7px",whiteSpace:"nowrap"}}>{cnt} deal{cnt!==1?"s":""}</div>
+            <>
+              {/* Category legend */}
+              <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
+                {allCats.map(c=>(
+                  <span key={c} style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:10,color:MUT}}>
+                    <span style={{width:10,height:10,background:catColorMap[c],borderRadius:2,display:"inline-block",flexShrink:0}}/>
+                    {c}
+                  </span>
+                ))}
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                {topClients.map(({name,total,cats})=>{
+                  const maxGP = Math.max(1,...topClients.map(c=>c.total));
+                  return (
+                    <div key={name}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                        <span style={{fontSize:11,fontWeight:600,color:DARK,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"60%"}}>{name}</span>
+                        <span style={{fontSize:11,fontWeight:700,color:DARK,fontVariantNumeric:"tabular-nums"}}>{fmtCOP(total)}</span>
+                      </div>
+                      <div style={{height:14,background:"rgba(0,0,0,.04)",borderRadius:4,overflow:"hidden",display:"flex"}}>
+                        {Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([cat,gp])=>(
+                          <div key={cat} title={`${cat}: ${fmtCOP(gp)}`}
+                            style={{width:`${Math.max(0,gp)/maxGP*100}%`,height:"100%",
+                              background:catColorMap[cat]||"#94a3b8",flexShrink:0}}/>
+                        ))}
+                      </div>
                     </div>
-                    <div style={{fontSize:20,fontWeight:800,color,fontVariantNumeric:"tabular-nums",marginBottom:8}}>
-                      {rev>=1000?`$${Math.round(rev/1000)}k`:fmt$(rev)}
-                    </div>
-                    <div style={{height:6,background:"rgba(0,0,0,.06)",borderRadius:4,overflow:"hidden"}}>
-                      <div style={{width:`${pct}%`,height:"100%",background:color,borderRadius:4}}/>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            </>
           )
         }
       </Card>
@@ -1266,7 +1150,7 @@ export function FinanceReservaciones() {
   const [monthF,     setMonthF]     = useState("all");
   const [dateFrom,   setDateFrom]   = useState("");
   const [dateTo,     setDateTo]     = useState("");
-  const [sortCol,    setSortCol]    = useState("checkIn");
+  const [sortCol,    setSortCol]    = useState("fecha");
   const [sortDir,    setSortDir]    = useState(1);
   const [ownerNames, setOwnerNames] = useState({});
   const rowsRef = useRef(rows);
@@ -1274,7 +1158,7 @@ export function FinanceReservaciones() {
 
   const load = useCallback(async () => {
     setLoading(true); setErr(""); setIsDirty(false);
-    try { setRows(await loadReservations()); }
+    try { setRows((await loadReservations()).map(normalizeRow)); }
     catch(e) { setErr("Error cargando: "+e.message); }
     setLoading(false);
   }, []);
@@ -1314,9 +1198,13 @@ export function FinanceReservaciones() {
   }, []);
 
   const addRow = () => {
-    const blank = { name:"", salesRep:"", dealSource:"", type:"", checkIn:"", checkOut:"",
-      property:"", city:"", qty:"", rate:"", tax:"", total:"", commission:"", ourPrice:"",
-      status:"Confirmed", confirmedAt:"" };
+    const blank = {
+      name:"", conciergeRep:"", logisticRep:"", areaCustomerType:"Concierge",
+      fecha:"", provider:"", serviceCategory:"", city:"", serviceDescription:"",
+      qty:"", hora:"", precioCOP:"", precioProveedor:"", consumos:"",
+      clientTotalUSD:"", banco:"", currency:"COP", hasCommission:"", commissionPct:"",
+      totalCommission:"", servicesStatus:"Pending", reflejo:"",
+    };
     setRows(prev => [blank, ...prev]);
     setIsDirty(true);
   };
@@ -1330,7 +1218,7 @@ export function FinanceReservaciones() {
   const confirmRow = useCallback(async (rowIdx) => {
     const today = new Date().toISOString().slice(0,10);
     const updated = rowsRef.current.map((r,i) =>
-      i===rowIdx ? {...r, needsReview:false, confirmedAt:r.confirmedAt||today} : r
+      i===rowIdx ? {...r, needsReview:false, servicesStatus:"Confirmed"} : r
     );
     setRows(updated);
     setErr("");
@@ -1341,32 +1229,43 @@ export function FinanceReservaciones() {
     } catch(e) { setErr("Error confirmando: "+e.message); setIsDirty(true); }
   }, []);
 
-  const repOpts    = [...new Set(rows.map(r=>r.salesRep).filter(Boolean))].sort();
-  const sourceOpts = [...new Set([...DEAL_SOURCE_OPTS, ...rows.map(r=>r.dealSource).filter(Boolean)])].sort();
-  const typeOpts   = [...new Set([...CUSTOMER_TYPE_OPTS, ...rows.map(r=>r.type).filter(Boolean)])].sort();
-  const cellOpts   = { salesRep:repOpts, dealSource:sourceOpts, type:typeOpts };
+  const repOpts  = [...new Set(rows.map(r=>r.conciergeRep||r.salesRep).filter(Boolean))].sort();
+  const typeOpts = [...new Set([...AREA_TYPE_OPTS, ...rows.map(r=>r.areaCustomerType||r.type).filter(Boolean)])].filter(Boolean).sort();
+  const cellOpts = {
+    conciergeRep: repOpts,
+    areaCustomerType: AREA_TYPE_OPTS.filter(Boolean),
+    serviceCategory: SERVICE_CAT_OPTS,
+    banco: BANCO_OPTS,
+    currency: CURRENCY_OPTS,
+    hasCommission: COMMISSION_OPTS.filter(Boolean),
+  };
   const resolveSalesRep = v => (v && ownerNames[String(v)]) ? ownerNames[String(v)] : (v||"—");
 
-  const months = ["all",...[...new Set(rows.map(r=>r.checkIn?.slice(0,7)).filter(Boolean))].sort()];
+  const months = ["all",...[...new Set(rows.map(r=>(r.fecha||r.checkIn)?.slice(0,7)).filter(Boolean))].sort()];
 
   // Monday.com group-separator rows — no real client data
-  const isSeparator = r => /reservations?\s*[\/]\s*sales|two travel\s*:/i.test(r.name||"") && !r.checkIn && !r.total;
+  const isSeparator = r => /reservations?\s*[\/]\s*sales|two travel\s*:/i.test(r.name||"") && !r.fecha && !r.precioCOP;
 
   const filteredIdxs = rows.reduce((acc,r,i)=>{
-    if (isSeparator(r)) return acc;  // skip Monday.com group headers
+    if (isSeparator(r)) return acc;
+    const st = r.servicesStatus||r.status||"";
     if (statusF==="hs_pending") { if (!r.needsReview) return acc; }
-    else if (statusF!=="all" && r.status!==statusF) return acc;
-    if (typeF!=="all"   && r.type!==typeF)     return acc;
-    if (repF!=="all"    && r.salesRep!==repF)  return acc;
-    if (monthF!=="all"  && r.checkIn?.slice(0,7)!==monthF) return acc;
-    if (dateFrom && r.checkIn && r.checkIn < dateFrom) return acc;
-    if (dateTo   && r.checkIn && r.checkIn > dateTo)   return acc;
+    else if (statusF!=="all" && st!==statusF) return acc;
+    const tp = r.areaCustomerType||r.type||"";
+    if (typeF!=="all"   && tp!==typeF)   return acc;
+    const rep = r.conciergeRep||r.salesRep||"";
+    if (repF!=="all"    && rep!==repF)   return acc;
+    const fecha = r.fecha||r.checkIn||"";
+    if (monthF!=="all"  && fecha?.slice(0,7)!==monthF) return acc;
+    if (dateFrom && fecha && fecha < dateFrom) return acc;
+    if (dateTo   && fecha && fecha > dateTo)   return acc;
     if (search) {
       const q=search.toLowerCase();
       if (!(r.name||"").toLowerCase().includes(q) &&
-          !(r.salesRep||"").toLowerCase().includes(q) &&
-          !(r.type||"").toLowerCase().includes(q) &&
-          !(r.property||"").toLowerCase().includes(q) &&
+          !(rep).toLowerCase().includes(q) &&
+          !(tp).toLowerCase().includes(q) &&
+          !(r.provider||r.property||"").toLowerCase().includes(q) &&
+          !(r.serviceCategory||"").toLowerCase().includes(q) &&
           !(r.city||"").toLowerCase().includes(q)) return acc;
     }
     acc.push(i);
@@ -1378,10 +1277,11 @@ export function FinanceReservaciones() {
     return a<b?-sortDir:a>b?sortDir:0;
   });
 
-  const confirmed = sorted.filter(i=>rows[i].status==="Confirmed");
-  const totalRev  = confirmed.reduce((s,i)=>s+(parseFloat(rows[i].total)||0),0);
-  const totalComm = confirmed.reduce((s,i)=>s+(parseFloat(rows[i].commission)||0),0);
-  const totalTax  = confirmed.reduce((s,i)=>s+(parseFloat(rows[i].tax)||0),0);
+  const confirmed    = sorted.filter(i=>(rows[i].servicesStatus||rows[i].status)==="Confirmed");
+  const totalRev     = confirmed.reduce((s,i)=>s+(parseFloat(rows[i].precioCOP)||0),0);
+  const totalProv    = confirmed.reduce((s,i)=>s+(parseFloat(rows[i].precioProveedor)||0),0);
+  const totalGP      = totalRev - totalProv;
+  const totalComm    = confirmed.reduce((s,i)=>s+(parseFloat(rows[i].totalCommission)||0),0);
 
   const thStyle = (col) => ({
     padding:"9px 10px", textAlign:"left", fontWeight:600, color:DARK, whiteSpace:"nowrap",
@@ -1390,11 +1290,11 @@ export function FinanceReservaciones() {
   });
   const sortBy = (col) => { if(sortCol===col) setSortDir(d=>-d); else { setSortCol(col); setSortDir(1); } };
 
-  // Group by check-in month for table view
+  // Group by service month for table view
   const groups = [];
   let curMk = null;
   sorted.forEach(rowIdx => {
-    const mk = rows[rowIdx].checkIn?.slice(0,7) || "";
+    const mk = (rows[rowIdx].fecha||rows[rowIdx].checkIn||"")?.slice(0,7) || "";
     if (mk !== curMk) { curMk = mk; groups.push({mk, idxs:[]}); }
     groups[groups.length-1].idxs.push(rowIdx);
   });
@@ -1415,7 +1315,7 @@ export function FinanceReservaciones() {
       {err&&<Err msg={err} onRetry={load} />}
       {/* Bad-date warning */}
       {(() => {
-        const badRows = rows.filter(r=>{ const y=parseInt((r.checkIn||r.checkOut||"").slice(0,4)); return y>new Date().getFullYear()+5; });
+        const badRows = rows.filter(r=>{ const y=parseInt((r.fecha||r.checkIn||"").slice(0,4)); return y>new Date().getFullYear()+5; });
         if(!badRows.length) return null;
         return (
           <div style={{background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:10,padding:"10px 14px",
@@ -1469,12 +1369,12 @@ export function FinanceReservaciones() {
         </div>
         <select value={typeF} onChange={e=>setTypeF(e.target.value)}
           style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:130}}>
-          <option value="all">Customer Type</option>
+          <option value="all">Área / Tipo</option>
           {typeOpts.map(t=><option key={t} value={t}>{t}</option>)}
         </select>
         <select value={repF} onChange={e=>setRepF(e.target.value)}
-          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:120}}>
-          <option value="all">Sales Rep</option>
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:130}}>
+          <option value="all">Concierge Rep</option>
           {repOpts.map(r=><option key={r} value={r}>{r}</option>)}
         </select>
         <select value={monthF} onChange={e=>setMonthF(e.target.value)}
@@ -1510,9 +1410,9 @@ export function FinanceReservaciones() {
           {/* KPIs */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
             <KPICard label="Confirmadas" val={confirmed.length} color="#065f46" />
-            <KPICard label="Revenue total" val={fmt$(totalRev)} color={GOLD} />
-            <KPICard label="Comisiones" val={fmt$(totalComm)} color="#1d4ed8" />
-            <KPICard label="Tax total" val={fmt$(totalTax)} color={MUT} />
+            <KPICard label="Precio Cliente COP" val={`$${Math.round(totalRev).toLocaleString("es-CO")}`} color={GOLD} />
+            <KPICard label="Ganancia Bruta" val={`$${Math.round(totalGP).toLocaleString("es-CO")}`} color="#059669" />
+            <KPICard label="Comisiones" val={`$${Math.round(totalComm).toLocaleString("es-CO")}`} color="#1d4ed8" />
           </div>
 
           {/* Table */}
@@ -1545,10 +1445,11 @@ export function FinanceReservaciones() {
                                   {monthLabel(mk)}
                                 </span>
                                 <span style={{fontSize:11,color:"rgba(255,255,255,.75)"}}>
-                                  {idxs.length} reservaciones · {idxs.filter(i=>rows[i].status==="Confirmed").length} confirmadas
+                                  {idxs.length} servicios · {idxs.filter(i=>(rows[i].servicesStatus||rows[i].status)==="Confirmed").length} confirmados
                                 </span>
                                 <span style={{marginLeft:"auto",fontSize:11,color:"rgba(255,255,255,.85)",fontWeight:600}}>
-                                  {fmt$(idxs.filter(i=>rows[i].status==="Confirmed").reduce((s,i)=>s+(parseFloat(rows[i].total)||0),0))}
+                                  ${Math.round(idxs.filter(i=>(rows[i].servicesStatus||rows[i].status)==="Confirmed")
+                                    .reduce((s,i)=>s+(parseFloat(rows[i].precioCOP)||0),0)).toLocaleString("es-CO")}
                                 </span>
                               </div>
                             </td>
@@ -1556,21 +1457,32 @@ export function FinanceReservaciones() {
                         )}
                         {idxs.map((rowIdx,vi)=>{
                           const isHS = !!rows[rowIdx].needsReview;
+                          const r = rows[rowIdx];
+                          // computed fields
+                          const gb = (parseFloat(r.precioCOP)||0) - (parseFloat(r.precioProveedor)||0);
+                          const mg = r.precioCOP ? Math.round(gb/(parseFloat(r.precioCOP)||1)*100) : 0;
+                          const tc = r.hasCommission==="Yes" && r.commissionPct
+                            ? Math.round((parseFloat(r.precioCOP)||0) * (parseFloat(r.commissionPct)||0) / 100)
+                            : (parseFloat(r.totalCommission)||0);
+                          const computed = { gananciaBruta: gb||"", margen: mg||"", totalCommission: tc||"" };
                           return (
                           <tr key={rowIdx} style={{borderBottom:`1px solid rgba(26,24,20,.04)`,
                             background:isHS?"#fffbeb":vi%2===0?"transparent":"rgba(247,244,239,.35)"}}>
-                            {ALL_COLS.map(c=>(
+                            {ALL_COLS.map(c=>{
+                              const val = c.readOnly ? computed[c.key] : r[c.key];
+                              return (
                               <td key={c.key} style={{padding:"5px 8px",verticalAlign:"middle",maxWidth:c.w+40}}>
                                 {c.key==="name" && isHS ? (
                                   <div style={{display:"flex",alignItems:"center",gap:5}}>
-                                    <EditCell value={rows[rowIdx][c.key]} field={c.key} isNum={c.num} isDate={c.date} options={cellOpts[c.key]} onSave={val=>patchRow(rowIdx,c.key,val)} />
+                                    <EditCell value={val} field={c.key} isNum={c.num} isDate={c.date} options={cellOpts[c.optKey]} readOnly={c.readOnly} onSave={v=>patchRow(rowIdx,c.key,v)} />
                                     <span style={{fontSize:9,fontWeight:700,letterSpacing:".06em",background:"#fef3c7",color:"#92400e",border:"1px solid #fcd34d",padding:"1px 6px",borderRadius:10,flexShrink:0,whiteSpace:"nowrap"}}>HS NUEVO</span>
                                   </div>
                                 ) : (
-                                  <EditCell value={rows[rowIdx][c.key]} field={c.key} isNum={c.num} isDate={c.date} options={cellOpts[c.key]} onSave={val=>patchRow(rowIdx,c.key,val)} />
+                                  <EditCell value={val} field={c.key} isNum={c.num} isDate={c.date} options={cellOpts[c.optKey]} readOnly={c.readOnly} onSave={v=>patchRow(rowIdx,c.key,v)} />
                                 )}
                               </td>
-                            ))}
+                              );
+                            })}
                             <td style={{padding:"5px 8px",textAlign:"center",verticalAlign:"middle",whiteSpace:"nowrap"}}>
                               {isHS && (
                                 <button onClick={()=>confirmRow(rowIdx)}
@@ -1593,12 +1505,19 @@ export function FinanceReservaciones() {
                   </tbody>
                   <tfoot>
                     <tr style={{background:BG,borderTop:`2px solid ${BRD}`,position:"sticky",bottom:0}}>
-                      <td colSpan={11} style={{padding:"9px 10px",color:MUT,fontSize:11,fontWeight:600}}>
+                      <td colSpan={12} style={{padding:"9px 10px",color:MUT,fontSize:11,fontWeight:600}}>
                         TOTALES — {confirmed.length} confirmadas de {sorted.length} visibles
                       </td>
-                      <td style={{padding:"9px 10px",color:DARK,textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap"}}>{fmt$(totalRev)}</td>
-                      <td style={{padding:"9px 10px",color:"#1d4ed8",textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap"}}>{fmt$(totalComm)}</td>
-                      <td colSpan={4}/>
+                      <td style={{padding:"9px 10px",color:DARK,textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontSize:11}}>
+                        ${Math.round(totalRev).toLocaleString("es-CO")}
+                      </td>
+                      <td style={{padding:"9px 10px",color:"#6b7280",textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontSize:11}}>
+                        ${Math.round(totalProv).toLocaleString("es-CO")}
+                      </td>
+                      <td style={{padding:"9px 10px",color:"#059669",textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontSize:11}}>
+                        ${Math.round(totalGP).toLocaleString("es-CO")}
+                      </td>
+                      <td colSpan={9}/>
                     </tr>
                   </tfoot>
                 </table>
