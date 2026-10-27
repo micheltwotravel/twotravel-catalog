@@ -17,7 +17,7 @@ const R = {
 };
 const HDR = { background: R.dark, padding:"20px 26px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, borderBottom:`1px solid rgba(255,255,255,0.07)` };
 const GOLD_BAR = { height:2, background:`linear-gradient(90deg,transparent,${R.accent} 30%,${R.gold} 50%,${R.accent} 70%,transparent)`, flexShrink:0 };
-const CARD = { background:R.white, border:`1px solid rgba(26,24,20,0.09)`, borderRadius:0, overflow:"hidden" };
+const CARD = { background:R.white, border:`1px solid rgba(26,24,20,0.09)`, borderRadius:0 };
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function parseDate(d) { if(!d) return null; const dt=new Date(typeof d==="string"&&d.length===10?d+"T12:00:00":d); return isNaN(dt)?null:dt; }
@@ -671,7 +671,7 @@ function TimelineEventForm({val,setVal,saving,onSubmit,onCancel,submitLabel}){
         </div>
       </div>
       <div style={{display:"flex",gap:8}}>
-        <button onClick={onSubmit} disabled={saving||!val.time||!val.description.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!val.time||!val.description.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":submitLabel}</button>
+        <button onClick={onSubmit} disabled={saving||!val.time||!val.description.trim()} title={(!val.time||!val.description.trim())?"Completa la hora y descripción para continuar":""} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:(saving||!val.time||!val.description.trim())?"not-allowed":"pointer",opacity:(saving||!val.time||!val.description.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":submitLabel}</button>
         <button onClick={onCancel} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
       </div>
     </div>
@@ -1738,6 +1738,13 @@ function BodaDetail({ boda:init, users, onBack, onRefresh }) {
   const [editing,setEditing]=useState(false);
   const [saving,setSaving]=useState(false);
   const [copied,setCopied]=useState(false);
+  const contentRef=useRef(null);
+  useEffect(()=>{
+    if(!contentRef.current) return;
+    const rect=contentRef.current.getBoundingClientRect();
+    // If content top is behind the sticky tab bar (~99px from top), scroll it into view
+    if(rect.top < 110) window.scrollTo({top:window.scrollY+rect.top-70,behavior:"instant"});
+  },[tab]);
   function shareLink() {
     const url=`${window.location.origin}/?mode=bodas-cliente&id=${boda.id}`;
     navigator.clipboard.writeText(url).then(()=>{ setCopied(true); setTimeout(()=>setCopied(false),2200); });
@@ -1918,7 +1925,7 @@ ${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).joi
             ))}
           </div>
         </div>
-        <div style={{padding:20}}>
+        <div ref={contentRef} style={{padding:20}}>
           {tab==="resumen"&&(
             <div>
               {/* Info fields */}
