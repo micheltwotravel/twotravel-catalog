@@ -3253,50 +3253,52 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
     setExportingItems(true);
     try {
       const { data: existing, error: readErr } = await supabase
-        .from("kickoffs").select("data").eq("id", "handoffs_v1").maybeSingle();
+        .from("kickoffs").select("data").eq("id", "finance_reservations_v1").maybeSingle();
       if (readErr) throw new Error(readErr.message);
       const d = existing?.data || {};
       const notes = typeof d.internalNotes === "string"
         ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
-      const rows = notes.handoffs || [];
+      const rows = notes.reservations || [];
 
       const newRows = [];
       for (const item of selectedItems) {
         const itemName = item.name || item.name_es || item.name_en || "";
         const alreadyExported = rows.some(r =>
           r._kickoffId === kickoffId &&
-          (r._itemUid ? r._itemUid === item._uid : r.activity === itemName && r.client === guestName)
+          (r._itemUid
+            ? r._itemUid === item._uid
+            : r.provider === itemName && r.name === guestName)
         );
         if (alreadyExported) continue;
-        const baseDate = kickoff?.arrivalDate || kickoff?.checkIn || "";
-        const timeStr  = item.timeLabel || "";
-        const dateVal  = baseDate ? (timeStr ? `${baseDate}T${timeStr}` : `${baseDate}T10:00`) : "";
         newRows.push({
-          id:              `core_${kickoffId}_${item._uid || Date.now()}`,
-          _kickoffId:      kickoffId,
-          _itemUid:        item._uid,
-          client:          guestName,
-          date:            dateVal,
-          activity:        itemName,
-          operator:        itemName,
-          serviceCategory: item.category || "",
-          bookingWhere:    city,
-          pax:             String(kickoff?.groupSize || ""),
-          person:          concierge,
-          personLive:      "",
-          travefy:         "",
-          confirmation:    false,
-          confirmPhoto:    "",
-          notes:           "",
-          status:          "todo",
-          precioCliente:   0,
-          precioProveedor: 0,
-          gananciaBruta:   0,
-          margen:          0,
-          currency:        "COP",
-          hasCommission:   false,
-          commissionPct:   0,
-          totalCommission: 0,
+          _kickoffId:          kickoffId,
+          _itemUid:            item._uid,
+          name:                guestName,
+          conciergeRep:        concierge,
+          logisticRep:         "",
+          dealSource:          "",
+          areaCustomerType:    "Concierge",
+          fecha:               kickoff?.arrivalDate || kickoff?.checkIn || "",
+          checkOut:            kickoff?.departureDate || kickoff?.checkOut || "",
+          fechaConfirmacion:   new Date().toISOString().slice(0,10),
+          provider:            itemName,
+          serviceCategory:     item.category || "",
+          city,
+          serviceDescription:  item.name_en || item.name_es || item.name || "",
+          qty:                 kickoff?.groupSize || "",
+          hora:                item.timeLabel || "",
+          precioCOP:           "",
+          tax:                 "",
+          precioProveedor:     "",
+          consumos:            "",
+          clientTotalUSD:      "",
+          banco:               "",
+          currency:            "COP",
+          hasCommission:       "",
+          commissionPct:       "",
+          totalCommission:     "",
+          servicesStatus:      "Pending",
+          reflejo:             itemName,
         });
       }
 
@@ -3309,10 +3311,10 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
 
       const merged = {
         ...d,
-        internalNotes: JSON.stringify({ ...notes, handoffs: [...newRows, ...rows] }),
+        internalNotes: JSON.stringify({ ...notes, reservations: [...newRows, ...rows] }),
       };
       const { error } = await supabase
-        .from("kickoffs").upsert({ id: "handoffs_v1", data: merged }, { onConflict: "id" });
+        .from("kickoffs").upsert({ id: "finance_reservations_v1", data: merged }, { onConflict: "id" });
       if (error) throw new Error(error.message);
 
       setExportModal(false);
