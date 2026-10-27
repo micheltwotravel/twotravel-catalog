@@ -166,8 +166,21 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 .cal-empty{font-size:11px;color:var(--ink3);font-style:italic;text-align:center;padding:20px 0;opacity:.6}
 .cal-add{font-size:10px;color:var(--ink3);cursor:pointer;padding:3px 5px;text-align:center;border:1px dashed var(--border2);margin-top:2px;letter-spacing:.04em}
 .cal-add:hover{color:var(--gold);border-color:var(--gold)}
+/* ANALYTICS */
+.analytics-wrap{padding:20px 22px}
+.kpi-row{display:flex;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+.kpi-card{background:var(--white);border:1px solid var(--border);padding:18px 20px;flex:1 1 160px;min-width:140px}
+.kpi-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.kpi-value{font-size:22px;font-weight:300;color:var(--ink);letter-spacing:-.01em}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.chart-card{background:var(--white);border:1px solid var(--border);padding:18px 20px}
+.chart-card.full{grid-column:1/-1}
+.chart-title{font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px}
+.chart-wrap{position:relative;height:220px}
+@media(max-width:700px){.charts-grid{grid-template-columns:1fr}.chart-card.full{grid-column:1}}
 </style>
 </head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <body>
 
 <div class="header">
@@ -216,6 +229,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
   <div class="view-toggle">
     <button id="btn-table" class="active" onclick="setView('table')">☰ Tabla</button>
     <button id="btn-cal" onclick="setView('cal')">📅 Calendario</button>
+    <button id="btn-analytics" onclick="setView('analytics')">📊 Analytics</button>
   </div>
   <span class="sync-info" id="sync-info">Cargando...</span>
 </div>
@@ -370,6 +384,7 @@ function setView(v){
   currentView = v;
   document.getElementById('btn-table').classList.toggle('active', v==='table');
   document.getElementById('btn-cal').classList.toggle('active', v==='cal');
+  document.getElementById('btn-analytics').classList.toggle('active', v==='analytics');
   render();
 }
 
@@ -471,7 +486,183 @@ const collapsedWeeks = new Set();
 
 function render(){
   if(currentView === 'cal'){ renderCalendar(); return; }
+  if(currentView === 'analytics'){ renderAnalytics(); return; }
   renderTable();
+}
+
+/* ── ANALYTICS ── */
+let _charts = {};
+function destroyCharts(){
+  Object.values(_charts).forEach(c=>{ try{c.destroy()}catch{} });
+  _charts = {};
+}
+
+function fmt(n){ return n>=1e6 ? '$'+(n/1e6).toFixed(2)+'M' : n>=1e3 ? '$'+(n/1e3).toFixed(1)+'K' : '$'+Math.round(n); }
+function pct(n){ return (n*100).toFixed(1)+'%'; }
+
+function renderAnalytics(){
+  destroyCharts();
+  const main = document.getElementById('main');
+  const src = handoffs.filter(h => h.precioCliente > 0 && h.status !== 'cancel');
+
+  // KPIs
+  const totalRev   = src.reduce((s,h)=>s+(h.precioCliente||0),0);
+  const totalGross = src.reduce((s,h)=>s+(h.gananciaBruta||0),0);
+  const totalComm  = src.reduce((s,h)=>s+(h.totalCommission||0),0);
+  const netProfit  = totalGross + totalComm;
+  const avgMargen  = src.length ? src.reduce((s,h)=>s+(h.margen||0),0)/src.length : 0;
+
+  // Group helpers
+  const groupBy = (arr, key) => arr.reduce((acc,h)=>{
+    const k = h[key]||'Otro'; acc[k]=acc[k]||[]; acc[k].push(h); return acc;
+  },{});
+
+  // By service category
+  const byService = groupBy(src,'serviceCategory');
+  const serviceKeys = Object.keys(byService).sort((a,b)=>
+    byService[b].reduce((s,h)=>s+(h.precioCliente||0),0) - byService[a].reduce((s,h)=>s+(h.precioCliente||0),0)
+  ).slice(0,10);
+
+  // By city
+  const byCity = groupBy(src,'bookingWhere');
+  const cityKeys = Object.keys(byCity).sort((a,b)=>
+    byCity[b].reduce((s,h)=>s+(h.precioCliente||0),0) - byCity[a].reduce((s,h)=>s+(h.precioCliente||0),0)
+  );
+
+  // By client (top 10)
+  const byClient = groupBy(src,'client');
+  const clientKeys = Object.keys(byClient).sort((a,b)=>
+    byClient[b].reduce((s,h)=>s+(h.precioCliente||0),0) - byClient[a].reduce((s,h)=>s+(h.precioCliente||0),0)
+  ).slice(0,10);
+
+  // By month
+  const byMonth = {};
+  src.forEach(h=>{
+    if(!h.date) return;
+    const k = h.date.slice(0,7);
+    byMonth[k] = byMonth[k]||{rev:0,gross:0};
+    byMonth[k].rev += h.precioCliente||0;
+    byMonth[k].gross += h.gananciaBruta||0;
+  });
+  const monthKeys = Object.keys(byMonth).sort();
+
+  const PALETTE = ['#9a7d52','#3d5a8a','#5a3d8a','#3d8a5a','#8a5a3d','#5a8a3d','#c4a272','#5c8ae0','#5cb87a','#e0905c'];
+  const chartDefaults = { font:{ family:"'Jost', sans-serif", size:11 }, color:'#7a7570' };
+
+  main.innerHTML = `
+  <div class="analytics-wrap">
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="kpi-label">Ingresos Totales</div><div class="kpi-value">${fmt(totalRev)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Ganancia Bruta</div><div class="kpi-value">${fmt(totalGross)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Comisión Total</div><div class="kpi-value">${fmt(totalComm)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Ganancia Neta</div><div class="kpi-value">${fmt(netProfit)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Margen Promedio</div><div class="kpi-value">${pct(avgMargen)}</div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card full"><div class="chart-title">Ingresos vs Ganancia Bruta por Servicio</div><div class="chart-wrap"><canvas id="ch-service"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Servicios Vendidos por Cliente (Top 10)</div><div class="chart-wrap"><canvas id="ch-client-count"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Ganancia Bruta por Cliente (Top 10)</div><div class="chart-wrap"><canvas id="ch-client-gross"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Revenue por Ciudad (Pie)</div><div class="chart-wrap"><canvas id="ch-city-pie"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Revenue por Ciudad (Bar)</div><div class="chart-wrap"><canvas id="ch-city-bar"></canvas></div></div>
+      <div class="chart-card full"><div class="chart-title">Tendencia de Revenue — Check In</div><div class="chart-wrap"><canvas id="ch-trend"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Margen Promedio por Servicio</div><div class="chart-wrap"><canvas id="ch-margin"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Comisión por Ciudad</div><div class="chart-wrap"><canvas id="ch-comm-city"></canvas></div></div>
+    </div>
+  </div>`;
+
+  if(typeof Chart === 'undefined') return;
+  Chart.defaults.font = chartDefaults.font;
+  Chart.defaults.color = chartDefaults.color;
+
+  const gridColor = 'rgba(26,24,20,0.07)';
+  const axisOpts = { grid:{color:gridColor}, ticks:{maxRotation:35} };
+
+  // 1. Revenue vs Gross by Service
+  _charts.service = new Chart(document.getElementById('ch-service'), {
+    type:'bar',
+    data:{
+      labels: serviceKeys,
+      datasets:[
+        { label:'Ingreso', data: serviceKeys.map(k=>byService[k].reduce((s,h)=>s+(h.precioCliente||0),0)), backgroundColor: PALETTE[0]+'cc' },
+        { label:'Ganancia Bruta', data: serviceKeys.map(k=>byService[k].reduce((s,h)=>s+(h.gananciaBruta||0),0)), backgroundColor: PALETTE[1]+'cc' }
+      ]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{ x:axisOpts, y:{...axisOpts, ticks:{callback:v=>fmt(v)}} } }
+  });
+
+  // 2. Services sold by client (count)
+  _charts.clientCount = new Chart(document.getElementById('ch-client-count'), {
+    type:'bar',
+    data:{
+      labels: clientKeys,
+      datasets:[{ label:'Servicios', data: clientKeys.map(k=>byClient[k].length), backgroundColor: PALETTE[2]+'cc' }]
+    },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{...axisOpts}, y:{...axisOpts, ticks:{maxRotation:0}} } }
+  });
+
+  // 3. Gross profit by client
+  _charts.clientGross = new Chart(document.getElementById('ch-client-gross'), {
+    type:'bar',
+    data:{
+      labels: clientKeys,
+      datasets:[{ label:'Ganancia Bruta', data: clientKeys.map(k=>byClient[k].reduce((s,h)=>s+(h.gananciaBruta||0),0)), backgroundColor: PALETTE[3]+'cc' }]
+    },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{...axisOpts, ticks:{callback:v=>fmt(v)}}, y:{...axisOpts, ticks:{maxRotation:0}} } }
+  });
+
+  // 4. Revenue share by city (pie)
+  _charts.cityPie = new Chart(document.getElementById('ch-city-pie'), {
+    type:'pie',
+    data:{
+      labels: cityKeys,
+      datasets:[{ data: cityKeys.map(k=>byCity[k].reduce((s,h)=>s+(h.precioCliente||0),0)), backgroundColor: PALETTE.map(c=>c+'dd') }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'right', labels:{font:{size:10},boxWidth:12}} } }
+  });
+
+  // 5. Revenue by city (bar)
+  _charts.cityBar = new Chart(document.getElementById('ch-city-bar'), {
+    type:'bar',
+    data:{
+      labels: cityKeys,
+      datasets:[{ label:'Ingreso', data: cityKeys.map(k=>byCity[k].reduce((s,h)=>s+(h.precioCliente||0),0)), backgroundColor: PALETTE[4]+'cc' }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:axisOpts, y:{...axisOpts, ticks:{callback:v=>fmt(v)}} } }
+  });
+
+  // 6. Revenue trend by month
+  _charts.trend = new Chart(document.getElementById('ch-trend'), {
+    type:'line',
+    data:{
+      labels: monthKeys.map(k=>{ const [y,m]=k.split('-'); return new Date(+y,+m-1).toLocaleString('es',{month:'short',year:'2-digit'}); }),
+      datasets:[
+        { label:'Ingreso', data: monthKeys.map(k=>byMonth[k].rev), borderColor:PALETTE[0], backgroundColor:PALETTE[0]+'22', fill:true, tension:.35 },
+        { label:'Ganancia Bruta', data: monthKeys.map(k=>byMonth[k].gross), borderColor:PALETTE[1], backgroundColor:PALETTE[1]+'22', fill:true, tension:.35 }
+      ]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{ x:axisOpts, y:{...axisOpts, ticks:{callback:v=>fmt(v)}} } }
+  });
+
+  // 7. Avg margin by service
+  const serviceMargins = serviceKeys.map(k=>{ const arr=byService[k]; return arr.reduce((s,h)=>s+(h.margen||0),0)/arr.length; });
+  _charts.margin = new Chart(document.getElementById('ch-margin'), {
+    type:'bar',
+    data:{
+      labels: serviceKeys,
+      datasets:[{ label:'Margen Promedio', data: serviceMargins, backgroundColor: PALETTE[5]+'cc' }]
+    },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{...axisOpts, ticks:{callback:v=>pct(v)}, min:0, max:1}, y:{...axisOpts, ticks:{maxRotation:0}} } }
+  });
+
+  // 8. Commission by city
+  _charts.commCity = new Chart(document.getElementById('ch-comm-city'), {
+    type:'bar',
+    data:{
+      labels: cityKeys,
+      datasets:[{ label:'Comisión', data: cityKeys.map(k=>byCity[k].reduce((s,h)=>s+(h.totalCommission||0),0)), backgroundColor: PALETTE[6]+'cc' }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:axisOpts, y:{...axisOpts, ticks:{callback:v=>fmt(v)}} } }
+  });
 }
 
 function renderCalendar(){
