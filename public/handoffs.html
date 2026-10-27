@@ -841,13 +841,15 @@ function renderTable(){
           <th>Confirmación</th>
           <th>Encargada</th>
           <th>En vivo</th>
+          <th>Precio Cliente</th>
+          <th>Precio Prov.</th>
           <th>Notas</th>
           <th>Estado</th>
         </tr></thead>
         <tbody>`;
       rows.forEach(h => { html += renderRow(h); });
       html += `<tr class="add-row" onclick="openNewModal('${wk}')">
-        <td colspan="13">+ Agregar handoff</td>
+        <td colspan="15">+ Agregar handoff</td>
       </tr>`;
       html += `</tbody></table></div>`;
     }
@@ -894,6 +896,8 @@ function renderRow(h){
     </div></td>
     <td><div class="persons-cell" onclick="openPersonPopup('${h.id}','person',event)">${personAvatar(h.person)}</div></td>
     <td><div class="persons-cell" onclick="openPersonPopup('${h.id}','personLive',event)">${personAvatar(h.personLive)}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','precioCliente')" style="font-size:11px;color:var(--ink2);text-align:right">${h.precioCliente ? '$'+Number(h.precioCliente).toLocaleString('es') : '—'}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','precioProveedor')" style="font-size:11px;color:var(--ink2);text-align:right">${h.precioProveedor ? '$'+Number(h.precioProveedor).toLocaleString('es') : '—'}</div></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','notes')" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--ink3)">${esc(h.notes||'')}</div></td>
     <td class="status-wrap"><span class="status-chip" style="background:${st.color}" onclick="openStatusPopup('${h.id}',event)">${st.label}</span></td>
   </tr>`;
