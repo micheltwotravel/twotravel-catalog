@@ -1335,6 +1335,12 @@ export function FinanceReservaciones() {
         <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
           {saved && <span style={{fontSize:12,color:"#059669",fontWeight:600}}>✓ Guardado</span>}
           {isDirty && !saving && <span style={{fontSize:11,color:GOLD}}>Cambios sin guardar</span>}
+          <button onClick={load} disabled={loading||isDirty}
+            title={isDirty?"Guarda primero los cambios":"Recargar datos desde Supabase"}
+            style={{padding:"8px 12px",fontSize:13,fontWeight:700,border:`1px solid ${BRD}`,borderRadius:8,
+              background:WHT,color:isDirty?MUT:DARK,cursor:isDirty?"not-allowed":"pointer"}}>
+            {loading?"⏳":"🔄"}
+          </button>
           <button onClick={handleSave} disabled={saving||(!isDirty&&!saved)}
             style={{padding:"8px 20px",fontSize:13,fontWeight:700,whiteSpace:"nowrap",border:"none",borderRadius:8,
               cursor:isDirty||saving?"pointer":"default",transition:"background .2s",
