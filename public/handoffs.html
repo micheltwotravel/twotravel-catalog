@@ -226,6 +226,9 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
     <option value="next">Próxima semana</option>
     <option value="past">Pasados</option>
   </select>
+  <select class="form-select" id="year-filter" style="font-size:11px;padding:4px 8px;border-color:var(--border2)" onchange="filterYear=this.value;render()">
+    <option value="">Todos los años</option>
+  </select>
   <div class="view-toggle">
     <button id="btn-table" class="active" onclick="setView('table')">☰ Tabla</button>
     <button id="btn-cal" onclick="setView('cal')">📅 Calendario</button>
@@ -375,6 +378,7 @@ let filterPerson = '';
 let filterStatus = '';
 let filterConfirm = '';
 let filterDate = '';
+let filterYear = '';
 let activePopup = null;
 let currentView = 'table';
 let calWeekStart = getMondayOf(new Date());
@@ -464,6 +468,14 @@ function save(){
 }
 function setSyncInfo(t){ document.getElementById('sync-info').textContent = t; }
 
+function populateYearFilter(){
+  const sel = document.getElementById('year-filter');
+  if(!sel) return;
+  const years = [...new Set(handoffs.filter(h=>h.date).map(h=>h.date.slice(0,4)))].sort((a,b)=>b-a);
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Todos los años</option>' + years.map(y=>`<option value="${y}"${y===cur?' selected':''}>${y}</option>`).join('');
+}
+
 function sampleData(){
   const today = new Date();
   const dt = (daysOffset, h=10, m=0) => {
@@ -485,6 +497,7 @@ function sampleData(){
 const collapsedWeeks = new Set();
 
 function render(){
+  populateYearFilter();
   if(currentView === 'cal'){ renderCalendar(); return; }
   if(currentView === 'analytics'){ renderAnalytics(); return; }
   renderTable();
@@ -700,7 +713,8 @@ function renderCalendar(){
       else if(filterDate==='next') matchD = hd>=nextMon && hd<=nextSun;
       else if(filterDate==='past') matchD = hd<tod;
     }
-    return matchQ && matchP && matchS && matchC && matchD;
+    const matchY = !filterYear || (h.date && h.date.slice(0,4) === filterYear);
+    return matchQ && matchP && matchS && matchC && matchD && matchY;
   });
 
   // Map handoffs to days
@@ -800,7 +814,8 @@ function renderTable(){
       else if(filterDate==='next') matchD = hd>=nextMon && hd<=nextSun;
       else if(filterDate==='past') matchD = hd<tod;
     }
-    return matchQ && matchP && matchS && matchC && matchD;
+    const matchY = !filterYear || (h.date && h.date.slice(0,4) === filterYear);
+    return matchQ && matchP && matchS && matchC && matchD && matchY;
   });
 
   // Group by week
