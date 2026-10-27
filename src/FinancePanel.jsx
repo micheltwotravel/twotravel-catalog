@@ -1585,6 +1585,7 @@ const TIPO_CTA = ["Cuenta de Ahorro","Cuenta Corriente"];
 const CATS     = ["A/P Casa Moneda:Cleaning Products","A/P Casa Moneda:Maintenance","A/P Casa Moneda:Services","Cartagena:Yachts","Cartagena:Tours","Cartagena:F&B","Medellín:Actividades","México:Actividades","Marketing","HR","Admin"];
 const FREQS    = ["Única","Mensual","Quincenal","Semanal","Eventual"];
 const STATUS_PROV = { pendiente:{label:"Pendiente",color:"#fef3c7",text:"#92400e"}, aprobada:{label:"Aprobada",color:"#dcfce7",text:"#166534"}, pagada:{label:"Pagada",color:"#dbeafe",text:"#1e3a8a"}, rechazada:{label:"Rechazada",color:"#fee2e2",text:"#991b1b"} };
+const STATUS_CONTABLE = { "":{label:"—",color:"#f3f4f6",text:"#6b7280"}, contabilizado:{label:"Contabilizado",color:"#dcfce7",text:"#166534"}, en_curso:{label:"En curso",color:"#fef3c7",text:"#92400e"}, bloqueado:{label:"Bloqueado",color:"#fee2e2",text:"#991b1b"} };
 
 function emptyProvForm(today) {
   return { concepto:"", provId:"", provNombre:"", provTipoId:"NIT", banco:"BANCOLOMBIA", tipoCuenta:"Cuenta de Ahorro", numeroCuenta:"", amount:"", currency:"COP", category:"", area:"Concierge", clase:"Colombia: Cartagena", priority:"Media", dueDate:today, client:"", notes:"", requestedBy:"", assignedTo:"", payFreq:"Única", invoiceUrl:"", soporteUrl:"", prebill:false, lote:today };
@@ -1699,6 +1700,23 @@ export function FinancePagosProveedores() {
     const updated = rows.map(r=>r.id===id?{...r,status:st}:r);
     setRows(updated);
     try { await saveSolicitudes(updated); showToastMsg("Estado actualizado"); }
+    catch(ex) { showToastMsg("Error: "+ex.message); }
+  }
+
+  async function setEstadoContable(id, val) {
+    const updated = rows.map(r=>r.id===id?{...r,estadoContable:val}:r);
+    setRows(updated);
+    try { await saveSolicitudes(updated); showToastMsg("Estado contable actualizado"); }
+    catch(ex) { showToastMsg("Error: "+ex.message); }
+  }
+
+  async function copyRow(r) {
+    const newLote = prompt("Lote destino (YYYY-MM-DD):", today) || today;
+    const newId = Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+    const copy = {...r, id:newId, lote:newLote, createdAt:today, status:"pendiente", estadoContable:""};
+    const updated = [copy, ...rows];
+    setRows(updated);
+    try { await saveSolicitudes(updated); showToastMsg("✅ Copiada al lote "+newLote); }
     catch(ex) { showToastMsg("Error: "+ex.message); }
   }
 
@@ -1829,12 +1847,14 @@ export function FinancePagosProveedores() {
                     <span style={{fontSize:13,fontWeight:700,color:WHT}}>{fmtLote(lk)}</span>
                     <span style={{fontSize:11,color:"rgba(255,255,255,.8)"}}>{loteRows.length} solicitudes · {loteApproved} aprobadas</span>
                     <span style={{marginLeft:"auto",fontSize:12,fontWeight:700,color:WHT,fontVariantNumeric:"tabular-nums"}}>{pFmt(loteTotal,cur)}</span>
+                    <button onClick={()=>{ setEditId(null); setForm({...emptyProvForm(today),lote:lk}); setProvSearch(""); setProvSugs([]); setShowForm(true); }} title="Agregar solicitud a este lote"
+                      style={{fontSize:12,padding:"3px 10px",border:"1px solid rgba(255,255,255,.5)",borderRadius:3,background:"rgba(255,255,255,.2)",color:WHT,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:700}}>＋</button>
                   </div>
                   <div style={{overflowX:"auto"}}>
                     <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                       <thead>
                         <tr style={{background:BG,borderBottom:`1px solid ${BRD}`}}>
-                          {["Proveedor ID","Nombre","Monto","Concepto","Área","Clase","Prior.","Fecha Vcto","Estado","Soporte",""].map(h=>(
+                          {["Proveedor ID","Nombre","Monto","Concepto","Cliente","Área","Clase","Prior.","Fecha Vcto","Estado","Contable","Soporte",""].map(h=>(
                             <th key={h} style={{padding:"8px 10px",textAlign:"left",fontWeight:600,color:MUT,fontSize:10,textTransform:"uppercase",letterSpacing:.4,whiteSpace:"nowrap"}}>{h}</th>
                           ))}
                         </tr>
@@ -1848,6 +1868,7 @@ export function FinancePagosProveedores() {
                               <td style={{padding:"8px 10px",fontWeight:600,color:DARK,whiteSpace:"nowrap",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis"}}>{r.provNombre||"—"}</td>
                               <td style={{padding:"8px 10px",fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontWeight:600}}>{pFmt(r.amount,r.currency)}</td>
                               <td style={{padding:"8px 10px",color:DARK,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={r.concepto}>{r.concepto||"—"}</td>
+                              <td style={{padding:"8px 10px",color:MUT,whiteSpace:"nowrap",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis"}} title={r.client}>{r.client||"—"}</td>
                               <td style={{padding:"8px 10px",color:MUT,whiteSpace:"nowrap"}}>{r.area||"—"}</td>
                               <td style={{padding:"8px 10px",color:MUT,whiteSpace:"nowrap",fontSize:11}}>{(r.clase||"").replace("Colombia: ","CO:").replace("Mexico: ","MX:")}</td>
                               <td style={{padding:"8px 10px"}}>
@@ -1858,6 +1879,12 @@ export function FinancePagosProveedores() {
                                 <select value={r.status||"pendiente"} onChange={e=>setStatus(r.id,e.target.value)}
                                   style={{padding:"2px 6px",border:`1px solid ${BRD}`,borderRadius:3,fontSize:11,fontFamily:"'Jost',sans-serif",background:st.color,color:st.text,fontWeight:600}}>
                                   {Object.entries(STATUS_PROV).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+                                </select>
+                              </td>
+                              <td style={{padding:"8px 10px"}}>
+                                <select value={r.estadoContable||""} onChange={e=>setEstadoContable(r.id,e.target.value)}
+                                  style={{padding:"2px 6px",border:`1px solid ${BRD}`,borderRadius:3,fontSize:11,fontFamily:"'Jost',sans-serif",background:STATUS_CONTABLE[r.estadoContable||""]?.color,color:STATUS_CONTABLE[r.estadoContable||""]?.text,fontWeight:600}}>
+                                  {Object.entries(STATUS_CONTABLE).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
                                 </select>
                               </td>
                               <td style={{padding:"8px 10px",whiteSpace:"nowrap",textAlign:"center",display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}>
@@ -1881,6 +1908,7 @@ export function FinancePagosProveedores() {
                               </td>
                               <td style={{padding:"8px 10px",whiteSpace:"nowrap"}}>
                                 <button onClick={()=>openEdit(r.id)} style={{fontSize:10,padding:"3px 8px",border:`1px solid ${BRD}`,borderRadius:3,background:WHT,cursor:"pointer",marginRight:4,fontFamily:"'Jost',sans-serif"}}>✏️</button>
+                                <button onClick={()=>copyRow(r)} title="Copiar a otro lote" style={{fontSize:10,padding:"3px 8px",border:"1px solid #c7d2fe",borderRadius:3,background:"#eef2ff",color:"#4338ca",cursor:"pointer",marginRight:4,fontFamily:"'Jost',sans-serif"}}>📋</button>
                                 {r.status==="aprobada" && (
                                   <button onClick={()=>notifyApproval(r)} title="Copiar mensaje de aprobación"
                                     style={{fontSize:10,padding:"3px 8px",border:"1px solid #86efac",borderRadius:3,background:"#f0fdf4",color:"#166534",cursor:"pointer",marginRight:4,fontFamily:"'Jost',sans-serif"}}>📲</button>
@@ -1891,6 +1919,13 @@ export function FinancePagosProveedores() {
                           );
                         })}
                       </tbody>
+                      <tfoot>
+                        <tr style={{background:"#fef9ec",borderTop:`2px solid ${GOLD}`}}>
+                          <td colSpan={2} style={{padding:"8px 10px",fontWeight:700,fontSize:11,color:GOLD,textTransform:"uppercase",letterSpacing:.4}}>Total lote</td>
+                          <td style={{padding:"8px 10px",fontVariantNumeric:"tabular-nums",fontWeight:700,fontSize:12,color:GOLD}}>{pFmt(loteTotal,cur)}</td>
+                          <td colSpan={10}/>
+                        </tr>
+                      </tfoot>
                     </table>
                   </div>
                 </div>
