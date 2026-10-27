@@ -594,6 +594,7 @@ function normalizeRow(r) {
   if (!r) return r;
   const n = { ...r };
   if (!n.fecha         && n.checkIn)        n.fecha           = n.checkIn;
+  if (!n.checkOut      && n.checkOutDate)   n.checkOut        = n.checkOutDate;
   if (!n.conciergeRep  && n.salesRep)       n.conciergeRep    = n.salesRep;
   if (!n.areaCustomerType && n.type)        n.areaCustomerType= n.type;
   if (!n.provider      && n.property)       n.provider        = n.property;
@@ -610,8 +611,11 @@ const ALL_COLS = [
   { key:"name",             label:"Cliente",           w:160, num:false },
   { key:"conciergeRep",     label:"Concierge Rep",     w:120, num:false, optKey:"conciergeRep" },
   { key:"logisticRep",      label:"Logistic Rep",      w:110, num:false },
+  { key:"dealSource",       label:"Deal Source",       w:130, num:false },
   { key:"areaCustomerType", label:"Area / Tipo",       w:110, num:false, optKey:"areaCustomerType" },
-  { key:"fecha",            label:"Fecha",             w:100, num:false, date:true },
+  { key:"fecha",            label:"Check In",          w:100, num:false, date:true },
+  { key:"checkOut",         label:"Check Out",         w:100, num:false, date:true },
+  { key:"fechaConfirmacion",label:"Fecha Confirm.",    w:110, num:false, date:true },
   { key:"provider",         label:"Provider",          w:130, num:false },
   { key:"serviceCategory",  label:"Categoría",         w:110, num:false, optKey:"serviceCategory" },
   { key:"city",             label:"City",              w:100, num:false },
@@ -619,6 +623,7 @@ const ALL_COLS = [
   { key:"qty",              label:"# Personas",        w:70,  num:true  },
   { key:"hora",             label:"Hora",              w:80,  num:false },
   { key:"precioCOP",        label:"Precio Cliente COP",w:120, num:true  },
+  { key:"tax",              label:"Tax",               w:80,  num:true  },
   { key:"precioProveedor",  label:"Precio Proveedor",  w:120, num:true  },
   { key:"gananciaBruta",    label:"Ganancia Bruta",    w:110, num:true,  readOnly:true },
   { key:"margen",           label:"Margen %",          w:80,  num:true,  readOnly:true },
@@ -1199,11 +1204,11 @@ export function FinanceReservaciones() {
 
   const addRow = () => {
     const blank = {
-      name:"", conciergeRep:"", logisticRep:"", areaCustomerType:"Concierge",
-      fecha:"", provider:"", serviceCategory:"", city:"", serviceDescription:"",
-      qty:"", hora:"", precioCOP:"", precioProveedor:"", consumos:"",
-      clientTotalUSD:"", banco:"", currency:"COP", hasCommission:"", commissionPct:"",
-      totalCommission:"", servicesStatus:"Pending", reflejo:"",
+      name:"", conciergeRep:"", logisticRep:"", dealSource:"", areaCustomerType:"Concierge",
+      fecha:"", checkOut:"", fechaConfirmacion:"", provider:"", serviceCategory:"", city:"",
+      serviceDescription:"", qty:"", hora:"", precioCOP:"", tax:"", precioProveedor:"",
+      consumos:"", clientTotalUSD:"", banco:"", currency:"COP", hasCommission:"",
+      commissionPct:"", totalCommission:"", servicesStatus:"Pending", reflejo:"",
     };
     setRows(prev => [blank, ...prev]);
     setIsDirty(true);
