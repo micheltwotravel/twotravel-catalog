@@ -253,7 +253,7 @@ function TasksTab({ boda, users, onPatch }) {
             <select style={INP_SM} value={blank.assignedTo} onChange={e=>setBlank(p=>({...p,assignedTo:e.target.value}))}>
               <option value="">— responsable —</option>
               <option value="Novios">💍 Novios</option>
-              {users.map(u=><option key={u.email} value={u.name||u.email}>{u.name||u.email}</option>)}
+              {(users||[]).map(u=><option key={u.email} value={u.name||u.email}>{u.name||u.email}</option>)}
             </select>
             <input type="date" style={INP_SM} value={blank.dueDate} onChange={e=>setBlank(p=>({...p,dueDate:e.target.value}))} />
             <select style={INP_SM} value={blank.phase} onChange={e=>setBlank(p=>({...p,phase:e.target.value}))}>{["General",...FASES].map(ph=><option key={ph}>{ph}</option>)}</select>
@@ -2065,7 +2065,16 @@ function ContratosTab({ boda, onPatch }) {
   const [contracts, setContracts] = useState(boda.contracts || []);
   const [editId, setEditId]       = useState(null);
   const [saving, setSaving]       = useState(false);
+  const [body,  setBody]          = useState("");
+  const [title, setTitle]         = useState("");
+  const [status,setStatus]        = useState("Borrador");
   const editing = contracts.find(c=>c.id===editId)||null;
+
+  function openEdit(id) {
+    const c = contracts.find(x=>x.id===id);
+    if(c){ setBody(c.body||""); setTitle(c.title||""); setStatus(c.status||"Borrador"); }
+    setEditId(id);
+  }
 
   async function persist(u) { setContracts(u); onPatch({contracts:u}); await apiSaveNotes(boda.id,{...boda,contracts:u}); }
 
@@ -2073,7 +2082,7 @@ function ContratosTab({ boda, onPatch }) {
     const c = { id:uid(), title:`Contrato — ${boda.clienteName}`, status:"Borrador", body:makeContractBody(boda), createdAt:new Date().toISOString().slice(0,10) };
     const u = [...contracts, c];
     setContracts(u); onPatch({contracts:u});
-    setEditId(c.id);
+    openEdit(c.id);
   }
 
   async function save(patch) {
@@ -2091,9 +2100,6 @@ function ContratosTab({ boda, onPatch }) {
   }
 
   if (editing) {
-    const [body,  setBody]  = useState(editing.body);
-    const [title, setTitle] = useState(editing.title);
-    const [status,setStatus]= useState(editing.status);
     return (
       <div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
@@ -2136,7 +2142,7 @@ function ContratosTab({ boda, onPatch }) {
               </div>
               <button onClick={()=>cycleStatus(c.id)} style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:st.bg,color:st.color,border:"none",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,fontFamily:"'Jost',sans-serif"}}>{c.status}</button>
               <button onClick={()=>printContract(c,boda)} title="Imprimir / PDF" style={{background:"none",border:"none",cursor:"pointer",fontSize:14,flexShrink:0}}>🖨</button>
-              <button onClick={()=>setEditId(c.id)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:R.muted,flexShrink:0}}>✏️</button>
+              <button onClick={()=>openEdit(c.id)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:R.muted,flexShrink:0}}>✏️</button>
               <button onClick={()=>del(c.id)}       style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:R.border,flexShrink:0}}>✕</button>
             </div>
           );
