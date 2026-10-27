@@ -2409,7 +2409,7 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
 
         {/* Description — hidden for arrive-at-airport items (#49) */}
         {it.description && it.category !== "recommendations" && !_isArriveItem && (
-          <Editable value={it.description.replace(/\*\*([^*]*)\*\*/g, "$1")} tag="p" className="ev-desc" editMode={editMode} onChange={v => patchItem?.("description", v)} multiline />
+          <Editable value={it.description} tag="p" className="ev-desc" editMode={editMode} onChange={v => patchItem?.("description", v)} multiline />
         )}
 
         {/* Recommendations: rendered as section cards */}
