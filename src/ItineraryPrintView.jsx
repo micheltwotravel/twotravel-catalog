@@ -2271,8 +2271,8 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
         {isConfirmed && (() => {
           const n = (it.title || "").toLowerCase();
           const cat = (it.category || "").toLowerCase();
-          if (/check.?in/.test(n) || /check.?in/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de Llegada y Salida":"Arrival and Departure Information"}</div>;
-          if (/check.?out/.test(n) || /check.?out/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de Llegada y Salida":"Arrival and Departure Information"}</div>;
+          if (/check.?in/.test(n) || /check.?in/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de Llegada":"Arrival Information"}</div>;
+          if (/check.?out/.test(n) || /check.?out/.test(cat)) return <div style={{fontSize:9,color:"#9a7d52",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>ℹ️ {isEs?"Información de Salida":"Departure Information"}</div>;
           if (/breakfast|desayuno/.test(n)) return null;
           return null;
         })()}
