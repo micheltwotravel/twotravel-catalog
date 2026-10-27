@@ -2085,7 +2085,7 @@ function ContratosTab({ boda, onPatch }) {
     const c = { id:uid(), title:`Contrato — ${boda.clienteName}`, status:"Borrador", body:makeContractBody(boda), createdAt:new Date().toISOString().slice(0,10) };
     const u = [...contracts, c];
     setContracts(u); onPatch({contracts:u});
-    openEdit(c.id);
+    setBody(c.body); setTitle(c.title); setStatus(c.status); setEditId(c.id);
   }
 
   async function save(patch) {
