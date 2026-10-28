@@ -628,15 +628,15 @@ function buildDays(matched, lang, dayMeta, tripCityRaw, clientType = 1) {
     map.get(key).push({
       sort         : Number(cartItem.sortOrder ?? idx),
       time         : cl(cartItem.timeLabel || cartItem.time || cartItem.startTime || ""),
-      schedule     : cl(cartItem.schedule || service.schedule || ""),
+      schedule     : cl(cartItem.schedule !== undefined ? cartItem.schedule : (service.schedule || "")),
       duration     : cl(cartItem.duration || service.duration || ""),
       title        : cl(lang === "en"
         ? (cartItem.displayName || cartItem.name_en || service.name_en || service.name || cartItem.name || "")
         : (cartItem.displayName || cartItem.name    || service.name    || "")),
       description  : desc,
-      highlights   : lang === "es"
-        ? (service.highlights    || [])
-        : (service.highlights_en || service.highlights || []),
+      highlights   : cartItem.highlights !== undefined
+        ? cartItem.highlights
+        : (lang === "es" ? (service.highlights || []) : (service.highlights_en || service.highlights || [])),
       includes     : service.includes   || "",
       location     : cityMatches ? rawLoc : "",
       address      : service.address    || "",
@@ -647,8 +647,8 @@ function buildDays(matched, lang, dayMeta, tripCityRaw, clientType = 1) {
       priceUsd     : cartItem.priceUsd != null ? num(cartItem.priceUsd) : (cityMatches ? num(service.price_tier_1 || service.priceTier1 || 0) : 0),
       priceUnit    : cartItem.priceUnit || service.priceUnit || "",
       pax          : Number(cartItem.pax || 0),
-      deposit      : cartItem.deposit || service.deposit || "",
-      cancellation : cartItem.cancellation || service.cancellation || "",
+      deposit      : cartItem.deposit      !== undefined ? cartItem.deposit      : (service.deposit      || ""),
+      cancellation : cartItem.cancellation !== undefined ? cartItem.cancellation : (service.cancellation || ""),
       menuUrl      : service.menuUrl    || "",
       mapsUrl      : service.mapsUrl    || "",
       image        : service.image || driveImgUrl(cartItem.image || "") || "",
@@ -666,8 +666,8 @@ function buildDays(matched, lang, dayMeta, tripCityRaw, clientType = 1) {
       category     : service.category   || cartItem.category || "",
       familyFriendly: !!(service.family_friendly),
       dressCode    : cl(lang === "en"
-        ? (cartItem.dressCode_en || service.dressCode_en || service.dress_code_en || "")
-        : (cartItem.dressCode || service.dressCode || service.dress_code || "")),
+        ? (cartItem.dressCode_en !== undefined ? cartItem.dressCode_en : (service.dressCode_en || service.dress_code_en || ""))
+        : (cartItem.dressCode    !== undefined ? cartItem.dressCode    : (service.dressCode    || service.dress_code    || ""))),
       confirmed    : cartItem.confirmed === true ? true : cartItem.confirmed === false ? false : null,
       tbc          : cartItem.tbc === true,
       confirmation : cartItem.confirmation || "",
@@ -3326,6 +3326,7 @@ export default function ItineraryPrintView() {
             else if (field === "schedule")     cartMirror.schedule = val;
             else if (field === "deposit")      cartMirror.deposit = val;
             else if (field === "dressCode")    { cartMirror.dressCode = val; cartMirror.dressCode_en = val; }
+            else if (field === "highlights")   { cartMirror.highlights = val; cartMirror.highlights_en = val; }
             else if (field === "location")     cartMirror.location = val;
             else if (field === "priceTiers")   cartMirror.priceTiers = val;
             else if (field === "passengers")   cartMirror.passengers = val;
