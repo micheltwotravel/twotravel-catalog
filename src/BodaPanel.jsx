@@ -1011,6 +1011,58 @@ td{padding:6px 8px;border:1px solid #d4cfc9;vertical-align:top;font-size:11px;li
   }
 
   const responsables=[...new Set(sorted.flatMap(e=>[e.assignedTo,...(e.suppliers||[])]).filter(Boolean))].sort();
+  const dayGroupsAll=(()=>{const g=[];sorted.forEach(e=>{const di=e.dayIndex||1;if(!g.length||g[g.length-1].di!==di){g.push({di,label:e.dayLabel||`Día ${di}`,events:[]});}g[g.length-1].events.push(e);});return g;})();
+
+  function printByDay(di){
+    const toprint=view==="cliente"?sorted.filter(e=>!e.isInternal):sorted;
+    const evts=toprint.filter(e=>(e.dayIndex||1)===di);
+    if(!evts.length){alert("Sin eventos para este día");return;}
+    const label=dayGroupsAll.find(g=>g.di===di)?.label||`Día ${di}`;
+    const sups=(boda.suppliers||[]).filter(s=>s.name);
+    const w=window.open("","_blank","width=1000,height=1100");
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${label} — ${boda.clienteName}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:11px;color:#1a1814;padding:24px 28px}
+.main-title{text-align:center;font-weight:bold;font-size:13px;border:2px solid #1a1814;padding:8px;margin-bottom:4px;letter-spacing:.05em;text-transform:uppercase}
+.day-title{text-align:center;font-size:11px;color:#b4975a;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px}
+.info-block{margin-bottom:14px;font-size:11px;line-height:1.7}
+.info-row{display:flex;gap:8px;margin-bottom:1px}
+.info-label{font-weight:bold;min-width:120px;text-transform:uppercase}
+.prov-title{font-weight:bold;text-decoration:underline;margin:14px 0 6px;font-size:11px;text-transform:uppercase}
+.prov-item{margin-bottom:3px;line-height:1.5}
+.prov-name{font-weight:bold}
+table{width:100%;border-collapse:collapse;margin-top:20px}
+th{background:#1a0812;color:#c9a96e;padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;border:1px solid #1a0812}
+td{padding:6px 8px;border:1px solid #d4cfc9;vertical-align:top;font-size:11px;line-height:1.45}
+.hora{color:#b4975a;font-weight:700;white-space:nowrap;width:72px}
+.acto{width:200px;font-weight:500}
+.resp{width:160px;color:#444}
+.notes{color:#333}
+a{color:#b4975a}
+.foot{font-size:9px;color:#aaa;margin-top:24px;text-align:right;border-top:1px solid #eee;padding-top:8px}
+@media print{@page{margin:10mm 12mm;size:A4 landscape}button{display:none}}
+</style></head><body>
+<div class="main-title">MINUTO A MINUTO BODA — ${boda.clienteName.toUpperCase()}</div>
+<div class="day-title">${label.toUpperCase()}</div>
+<div class="info-block">
+  <div class="info-row"><span class="info-label">BODA:</span><span>${boda.clienteName}</span></div>
+  ${boda.weddingDate?`<div class="info-row"><span class="info-label">FECHA:</span><span>${boda.weddingDate}</span></div>`:""}
+  ${boda.guestCount?`<div class="info-row"><span class="info-label">PAX:</span><span>${boda.guestCount} PAX</span></div>`:""}
+  ${boda.venue?`<div class="info-row"><span class="info-label">CEREMONIA:</span><span>${boda.venue}</span></div>`:""}
+</div>
+${sups.length?`<div class="prov-title">PROVEEDORES</div>${sups.map(s=>`<div class="prov-item"><span class="prov-name">${s.name}</span>${s.category?` — ${s.category}`:""}${s.phone?` — Cel. ${s.phone}`:""}</div>`).join("")}`:""}
+<table>
+  <thead><tr><th style="width:72px">HORA</th><th style="width:200px">ACTO</th><th style="width:160px">RESPONSABLE</th><th>NOTAS</th></tr></thead>
+  <tbody>
+    ${evts.map(e=>`<tr><td class="hora">${e.time||""}</td><td class="acto">${(e.description||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")}</td><td class="resp">${[e.assignedTo,...(e.suppliers||[])].filter(Boolean).join("<br/>")}</td><td class="notes">${(e.notes||"").replace(/\n/g,"<br/>").replace(/&/g,"&amp;")}${e.url?`<br/><a href="${e.url}">${e.url}</a>`:""}</td></tr>`).join("")}
+  </tbody>
+</table>
+<div class="foot">Two Lovers — Two Travel &nbsp;·&nbsp; ${new Date().toLocaleDateString("es-CO")} &nbsp;·&nbsp; ${label}</div>
+<script>window.onload=()=>window.print();</script>
+</body></html>`);
+    w.document.close();
+  }
 
   return (
     <div>
@@ -1028,6 +1080,12 @@ td{padding:6px 8px;border:1px solid #d4cfc9;vertical-align:top;font-size:11px;li
             <select style={{...INP_SM,height:32,borderRadius:8,fontSize:11}} onChange={e=>{if(e.target.value)printByResponsable(e.target.value);e.target.value="";}} defaultValue="">
               <option value="">📄 PDF por responsable…</option>
               {responsables.map(r=><option key={r} value={r}>{r}</option>)}
+            </select>
+          )}
+          {dayGroupsAll.length>1&&(
+            <select style={{...INP_SM,height:32,borderRadius:8,fontSize:11}} onChange={e=>{if(e.target.value)printByDay(Number(e.target.value));e.target.value="";}} defaultValue="">
+              <option value="">📅 PDF por día…</option>
+              {dayGroupsAll.map(g=><option key={g.di} value={g.di}>{g.label}</option>)}
             </select>
           )}
           <button onClick={()=>{setShowPresets(v=>!v);setShow(false);setEditing(null);}} style={{background:showPresets?R.gold:"transparent",color:showPresets?"#fff":R.muted,border:`1px solid ${showPresets?R.gold:R.border}`,borderRadius:8,padding:"7px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".03em"}}>⚡ Rápidos</button>
@@ -1296,6 +1354,23 @@ ${list.map((g,i)=>`<tr><td>${i+1}</td><td>${g.name}</td><td class="${g.rsvp==="C
     w.document.close();
   }
 
+  function printAllergies(){
+    const list=guests.filter(g=>(g.notes&&g.notes.trim())||(g.meal&&g.meal!=="Sin especificar"));
+    if(!list.length){alert("Sin restricciones dietéticas registradas.");return;}
+    const w=window.open("","_blank","width=900,height=1000");
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Alergias Chef — ${boda.clienteName}</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;color:#1a1814;padding:24px 28px}.title{text-align:center;font-weight:bold;font-size:13px;border:2px solid #1a1814;padding:8px;margin-bottom:6px;letter-spacing:.05em;text-transform:uppercase}.sub{text-align:center;font-size:11px;color:#666;margin-bottom:18px}.note{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;margin-bottom:16px;font-size:10px;color:#92400e}table{width:100%;border-collapse:collapse}th{background:#1a0812;color:#c9a96e;padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em}td{padding:6px 8px;border-bottom:1px solid #e5e7eb;font-size:11px;vertical-align:top}.name{font-weight:600}.meal-tag{display:inline-block;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:99px;padding:2px 8px;font-size:10px}.foot{font-size:9px;color:#aaa;margin-top:24px;text-align:right;border-top:1px solid #eee;padding-top:8px}@media print{@page{margin:10mm 12mm;size:A4 portrait}}</style></head><body>
+<div class="title">RESTRICCIONES DIETÉTICAS Y ALERGIAS</div>
+<div class="sub">${boda.clienteName}${boda.weddingDate?" · "+boda.weddingDate:""} &nbsp;·&nbsp; ${list.length} personas con restricciones</div>
+<div class="note">⚠️ Este listado es confidencial y de uso exclusivo para el equipo de cocina. Verificar con cada invitado ante la menor duda.</div>
+<table><thead><tr><th>#</th><th>Invitado</th><th>Menú especial</th><th>Alergia / Restricción</th></tr></thead><tbody>
+${list.map((g,i)=>`<tr><td>${i+1}</td><td class="name">${g.name}</td><td>${g.meal&&g.meal!=="Sin especificar"?`<span class="meal-tag">${g.meal}</span>`:"–"}</td><td>${(g.notes||"").replace(/&/g,"&amp;").replace(/\n/g,"<br/>")}</td></tr>`).join("")}
+</tbody></table>
+<div class="foot">Two Travel &nbsp;·&nbsp; ${new Date().toLocaleDateString("es-CO")} &nbsp;·&nbsp; CONFIDENCIAL — Solo cocina</div>
+<script>window.onload=()=>window.print();</script></body></html>`);
+    w.document.close();
+  }
+
   function printAllGuests(){
     if(!guests.length){alert("Sin invitados.");return;}
     const confirmed=guests.filter(g=>g.rsvp==="Confirmado").length;
@@ -1413,6 +1488,10 @@ ${guests.map((g,i)=>{
           <button onClick={printAllGuests} title="PDF lista completa"
             style={{padding:"3px 9px",borderRadius:8,border:`1px solid ${R.accent}`,background:R.white,color:R.accent,fontSize:10,cursor:"pointer",fontFamily:"'Jost',sans-serif",whiteSpace:"nowrap",fontWeight:600}}>
             📄 Lista completa
+          </button>
+          <button onClick={printAllergies} title="PDF de alergias y restricciones para el chef"
+            style={{padding:"3px 9px",borderRadius:8,border:`1px solid #15803d`,background:R.white,color:"#15803d",fontSize:10,cursor:"pointer",fontFamily:"'Jost',sans-serif",whiteSpace:"nowrap",fontWeight:600}}>
+            🌿 Chef
           </button>
         </div>
       </div>
@@ -2619,7 +2698,7 @@ ${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).joi
   ];
 
   return (
-    <div style={{maxWidth:700,margin:"0 auto"}}>
+    <div style={{maxWidth:tab==="mesas"?"none":700,margin:"0 auto"}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
         <button onClick={onBack} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:12,padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em",textTransform:"uppercase"}}>← Bodas</button>
         <span style={{color:R.border,fontSize:12}}>/</span>
