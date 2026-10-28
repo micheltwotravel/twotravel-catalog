@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { supabase } from "./supabaseClient.js";
+const DirectorioBodas = lazy(() => import("./DirectorioBodas.jsx"));
 
 // ─── BRAND ───────────────────────────────────────────────────────────────────
 const R = {
@@ -239,6 +240,32 @@ function TasksTab({ boda, users, onPatch }) {
   const [filterPerson,setFilterPerson]=useState("");
   const [filterSort,setFilterSort]=useState("due");
   const today=new Date(); today.setHours(0,0,0,0);
+  // Merge tasks from TareasPanel (tasks table) that belong to this boda
+  useEffect(()=>{
+    (async()=>{
+      try{
+        const {data}=await supabase.from("tasks").select("*");
+        if(!data) return;
+        const flat=data.map(r=>({id:r.id,...(r.data||{})}));
+        const mine=flat.filter(t=>t.taskName&&(
+          t.kickoffId===boda.id||
+          (t.kickoffName&&t.kickoffName.toLowerCase()===boda.clienteName.toLowerCase())
+        ));
+        if(!mine.length) return;
+        setTasks(prev=>{
+          const ids=new Set(prev.map(t=>t.id));
+          const toAdd=mine.filter(t=>!ids.has(t.id));
+          if(!toAdd.length) return prev;
+          const merged=[...prev,...toAdd];
+          // persist merged list back to boda.tasks
+          onPatch({tasks:merged});
+          apiSaveNotes(boda.id,{...boda,tasks:merged}).catch(()=>{});
+          return merged;
+        });
+      }catch(e){console.warn("load remote tasks:",e.message);}
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[boda.id]);
   function cat(t) { if(!t.dueDate) return "up"; const d=new Date(t.dueDate+"T12:00:00"); d.setHours(0,0,0,0); if(d<today) return "late"; if(d.getTime()===today.getTime()) return "today"; return "up"; }
   async function persist(u){ setTasks(u); onPatch({tasks:u}); try{ await apiSaveNotes(boda.id,{...boda,tasks:u}); } catch(e){ setSaveErr("No se pudo guardar: "+e.message); setTimeout(()=>setSaveErr(""),6000); } syncBodaTasks(boda,u).catch(()=>{}); }
   async function sendTaskEmail(taskName, dueDate, isReminder) {
@@ -3000,14 +3027,9 @@ export default function BodaPanel({ currentUser, onLogout }) {
         {mainView==="calendario"&&!loading&&<CalendarioView bodas={bodas} onSelectBoda={b=>{setSelected(b);}} />}
         {mainView==="tareas"&&!loading&&<GlobalTasksView bodas={bodas} users={users} onSelectBoda={b=>{setSelected(b);}} onAddTask={async(bodaId,task)=>{ const b=bodas.find(x=>x.id===bodaId); if(!b) return; const newTasks=[...(b.tasks||[]),task]; await apiSaveNotes(bodaId,{...b,tasks:newTasks}); setBodas(prev=>prev.map(x=>x.id===bodaId?{...x,tasks:newTasks}:x)); }} />}
         {mainView==="directorio"&&(
-          <div style={{textAlign:"center",padding:"60px 0"}}>
-            <p style={{fontSize:32,margin:"0 0 12px"}}>📋</p>
-            <p style={{fontSize:15,color:R.text,marginBottom:8}}>Directorio de Proveedores y Venues</p>
-            <a href="/?mode=bodas-directorio" target="_blank" rel="noopener noreferrer"
-              style={{display:"inline-block",background:R.accent,color:"#fff",textDecoration:"none",borderRadius:8,padding:"10px 24px",fontSize:13,fontFamily:"'Jost',sans-serif",fontWeight:600}}>
-              Abrir Directorio →
-            </a>
-          </div>
+          <Suspense fallback={<div style={{textAlign:"center",padding:"60px 0",color:R.muted,fontSize:13}}>Cargando directorio…</div>}>
+            <DirectorioBodas currentUser={currentUser} embedded />
+          </Suspense>
         )}
 
         {(mainView==="dashboard"||mainView==="calendario"||mainView==="tareas")&&loading&&(

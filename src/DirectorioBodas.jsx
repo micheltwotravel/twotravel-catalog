@@ -339,7 +339,7 @@ function VenuesCitySection({ items, setItems, persist, eventFilter }) {
 }
 
 /* ── Main component ── */
-export default function DirectorioBodas({ currentUser, onLogout }) {
+export default function DirectorioBodas({ currentUser, onLogout, embedded }) {
   const [tab, setTab] = useState("venues");
   const [proveedores, setProveedores] = useState([]);
   const [venues, setVenues] = useState([]);
@@ -386,26 +386,28 @@ export default function DirectorioBodas({ currentUser, onLogout }) {
   ];
 
   return (
-    <div style={{ minHeight:"100vh", background:R.bg, fontFamily:"'Jost',sans-serif" }}>
+    <div style={{ minHeight: embedded ? "auto" : "100vh", background:R.bg, fontFamily:"'Jost',sans-serif" }}>
 
-      {/* Header */}
-      <div style={{ background:R.dark, padding:"20px 28px", display:"flex",
-        alignItems:"center", justifyContent:"space-between", gap:16 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-          <a href="/?mode=bodas" style={{ color:"rgba(255,255,255,.45)", fontSize:12,
-            textDecoration:"none", letterSpacing:".04em" }}>← Bodas</a>
-          <span style={{ color:"rgba(255,255,255,.2)" }}>|</span>
-          <p style={{ margin:0, fontFamily:"'Cormorant Garamond',serif", fontSize:20,
-            color:"#fff", fontStyle:"italic", letterSpacing:".04em" }}>
-            Directorio · Two Lovers
-          </p>
+      {/* Header — solo en standalone */}
+      {!embedded && (
+        <div style={{ background:R.dark, padding:"20px 28px", display:"flex",
+          alignItems:"center", justifyContent:"space-between", gap:16 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+            <a href="/?mode=bodas" style={{ color:"rgba(255,255,255,.45)", fontSize:12,
+              textDecoration:"none", letterSpacing:".04em" }}>← Bodas</a>
+            <span style={{ color:"rgba(255,255,255,.2)" }}>|</span>
+            <p style={{ margin:0, fontFamily:"'Cormorant Garamond',serif", fontSize:20,
+              color:"#fff", fontStyle:"italic", letterSpacing:".04em" }}>
+              Directorio · Two Lovers
+            </p>
+          </div>
+          {onLogout && (
+            <button onClick={onLogout} style={{ background:"none", border:"1px solid rgba(255,255,255,.2)",
+              color:"rgba(255,255,255,.5)", cursor:"pointer", fontSize:11, borderRadius:6,
+              padding:"4px 12px", fontFamily:"'Jost',sans-serif" }}>Salir</button>
+          )}
         </div>
-        {onLogout && (
-          <button onClick={onLogout} style={{ background:"none", border:"1px solid rgba(255,255,255,.2)",
-            color:"rgba(255,255,255,.5)", cursor:"pointer", fontSize:11, borderRadius:6,
-            padding:"4px 12px", fontFamily:"'Jost',sans-serif" }}>Salir</button>
-        )}
-      </div>
+      )}
 
       {/* Tabs */}
       <div style={{ background:"#fff", borderBottom:`1px solid ${R.border}`,
@@ -422,7 +424,7 @@ export default function DirectorioBodas({ currentUser, onLogout }) {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth:1200, margin:"0 auto", padding:"28px 24px" }}>
+      <div style={{ maxWidth:1200, margin:"0 auto", padding: embedded ? "20px 0" : "28px 24px" }}>
         {loading && (
           <p style={{ textAlign:"center", color:R.muted, fontSize:13, padding:"40px 0" }}>Cargando…</p>
         )}
