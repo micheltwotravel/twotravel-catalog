@@ -5537,6 +5537,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [checkIn,            setCheckIn]            = useState(kickoff?.checkIn            || "3:00 PM");
   const [checkOut,           setCheckOut]           = useState(kickoff?.checkOut           || "11:00 AM");
   const [welcomePdfUrl,      setWelcomePdfUrl]      = useState(kickoff?.welcomePdfUrl      || "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=sharing");
+  const [hidePreCheckin,    setHidePreCheckin]    = useState(kickoff?.hidePreCheckin    || false);
+  const [hideDrinks,        setHideDrinks]        = useState(kickoff?.hideDrinks        || false);
+  const [hideGroceries,     setHideGroceries]     = useState(kickoff?.hideGroceries     || false);
+  const [hideBreakfast,     setHideBreakfast]     = useState(kickoff?.hideBreakfast     || false);
   const [documents, setDocuments] = useState(() => { try { return JSON.parse(kickoff?.documents || "[]"); } catch { return []; } });
   const [preTripContent,     setPreTripContent]     = useState(kickoff?.preTripContent     || (kickoff?.lang === "es" ? DEFAULT_PRE_TRIP_ES : DEFAULT_PRE_TRIP));
 
@@ -5617,6 +5621,10 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     checkOut:          checkOut.trim(),
     welcomePdfUrl:     welcomePdfUrl.trim(),
     documents:         JSON.stringify(documents),
+    hidePreCheckin,
+    hideDrinks,
+    hideGroceries,
+    hideBreakfast,
     // Timestamps — only set first time each status is reached
     ...(autoStatus === "concierge_editing" && !kickoff.conciergeEditingAt ? { conciergeEditingAt: now } : {}),
     ...(autoStatus === "sent_to_travify"   && !kickoff.sentToTravifyAt    ? { sentToTravifyAt: now }    : {}),
@@ -6374,6 +6382,27 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 <input value={welcomePdfUrl} onChange={(e) => setWelcomePdfUrl(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
                   placeholder="https://drive.google.com/file/d/.../view" />
+              </div>
+
+              <div className="col-span-2">
+                <label className="text-[11px] text-neutral-500 mb-2 block">Secciones del itinerario — ocultar para clientes de hotel</label>
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    [hidePreCheckin, setHidePreCheckin, "📋 Pre Check-in Form"],
+                    [hideDrinks,     setHideDrinks,     "🍹 Bebidas"],
+                    [hideGroceries,  setHideGroceries,  "🛒 Mercado"],
+                    [hideBreakfast,  setHideBreakfast,  "🍳 Desayuno"],
+                  ].map(([val, setter, label]) => (
+                    <label key={label} className="flex items-center gap-2 cursor-pointer select-none text-sm">
+                      <input type="checkbox" checked={!!val} onChange={e => setter(e.target.checked)}
+                        className="w-4 h-4 rounded accent-red-500" />
+                      <span className={val ? "line-through text-neutral-400" : "text-neutral-700"}>{label}</span>
+                    </label>
+                  ))}
+                </div>
+                {(hidePreCheckin || hideDrinks || hideGroceries || hideBreakfast) && (
+                  <p className="mt-1 text-[11px] text-amber-600">⚠️ Las secciones tachadas no aparecerán en el itinerario del cliente.</p>
+                )}
               </div>
 
               <div className="col-span-2">

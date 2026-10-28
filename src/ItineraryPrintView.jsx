@@ -1393,7 +1393,7 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
         )}
 
         {/* PRE Check-in form — always show CTA card; badge shows response count when filled */}
-        {(a.checkInFormUrl || a.id) ? (
+        {!a.hidePreCheckin && (a.checkInFormUrl || a.id) ? (
           <a href={a.checkInFormUrl || `https://twotravelvip.com/ci/${a.id}`} target="_blank" rel="noreferrer" style={{
             display: "block", textDecoration: "none", background: "#faf5ff",
             border: "1px solid #d8b4fe", borderRadius: 10, padding: "12px 16px", marginBottom: 10,
@@ -1442,32 +1442,15 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
               </div>
             </a>
           );
+          const cards = [
+            !a.hideDrinks    && card(`https://twotravelvip.com/d/${a.id}?lang=${lang}`,"#e9d5ff","https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=140&fit=crop&auto=format","#7c3aed",isEs?"Calculadora de Bebidas":"Drink Calculator",isEs?"Personaliza tus bebidas para la casa y el bote.":"Select your drinks for the house and boat."),
+            !a.hideGroceries && card(`https://twotravelvip.com/g/${a.id}?lang=${lang}`,"#bbf7d0","https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=140&fit=crop&auto=format","#15803d",isEs?"Mercado":"Groceries",isEs?"Personaliza tu lista de mercado para la estadía.":"Customize your grocery list for the stay."),
+            !a.hideBreakfast && card(`https://twotravelvip.com/b/${a.id}?lang=${lang}`,"#fde68a","https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=400&h=140&fit=crop&auto=format","#b45309",isEs?"Desayuno":"Breakfast",isEs?"Elige tu desayuno para cada mañana de tu estadía.":"Choose your breakfast for each morning."),
+          ].filter(Boolean);
+          if (!cards.length) return null;
           return (
-            <div style={{ marginBottom: 16, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-              {card(
-                `https://twotravelvip.com/d/${a.id}?lang=${lang}`,
-                "#e9d5ff",
-                "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=140&fit=crop&auto=format",
-                "#7c3aed",
-                isEs ? "Calculadora de Bebidas" : "Drink Calculator",
-                isEs ? "Personaliza tus bebidas para la casa y el bote." : "Select your drinks for the house and boat."
-              )}
-              {card(
-                `https://twotravelvip.com/g/${a.id}?lang=${lang}`,
-                "#bbf7d0",
-                "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=140&fit=crop&auto=format",
-                "#15803d",
-                isEs ? "Mercado" : "Groceries",
-                isEs ? "Personaliza tu lista de mercado para la estadía." : "Customize your grocery list for the stay."
-              )}
-              {card(
-                `https://twotravelvip.com/b/${a.id}?lang=${lang}`,
-                "#fde68a",
-                "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=400&h=140&fit=crop&auto=format",
-                "#b45309",
-                isEs ? "Desayuno" : "Breakfast",
-                isEs ? "Elige tu desayuno para cada mañana de tu estadía." : "Choose your breakfast for each morning."
-              )}
+            <div style={{ marginBottom: 16, display: "grid", gridTemplateColumns: `repeat(${cards.length}, 1fr)`, gap: 8 }}>
+              {cards}
             </div>
           );
         })()}
