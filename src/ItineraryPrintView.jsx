@@ -2451,7 +2451,8 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
               {isEs ? "Destacados" : "Highlights"}
             </div>
             {hiList.map((h, i) => (
-              <Editable key={i} value={h} tag="div" className="ev-list-item" editMode={editMode} />
+              <Editable key={i} value={h} tag="div" className="ev-list-item" editMode={editMode}
+                onChange={v => { const u=[...hiList]; u[i]=v; patchItem?.("highlights", u); }} />
             ))}
           </div>
         )}
