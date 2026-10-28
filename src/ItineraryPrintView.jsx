@@ -3276,12 +3276,13 @@ export default function ItineraryPrintView() {
 
   /* ── Edit-mode mutation helpers ── */
   const _upd = (updater) => {
-    editDaysModifiedRef.current = true; // user made an inline edit
-    setEditDays(prev => {
-      const next = updater(prev);
-      editDaysRef.current = next;
-      return next;
-    });
+    editDaysModifiedRef.current = true;
+    // Compute next state synchronously from the ref (always current, unlike React state
+    // which may be stale inside a batch). Updating the ref here — before setEditDays —
+    // guarantees saveSnapshot reads the latest value even when called in the same event.
+    const next = updater(editDaysRef.current);
+    editDaysRef.current = next;
+    setEditDays(next);
   };
 
   const removeDay = (di) =>

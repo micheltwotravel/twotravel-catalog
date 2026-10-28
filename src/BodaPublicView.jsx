@@ -269,6 +269,7 @@ export default function BodaPublicView() {
       .then(({ data: row, error: err }) => {
         if (err || !row) { setError("No encontramos esta boda. Verifica el link."); return; }
         const d = row.data || {};
+        const parseJ = (v, def) => { try { return Array.isArray(v) ? v : (typeof v === "string" ? JSON.parse(v) : def); } catch { return def; } };
         setBoda({
           id:            d.id            || id,
           clienteName:   d.clienteName   || "",
@@ -278,12 +279,17 @@ export default function BodaPublicView() {
           status:        d.status        || "Activa",
           guestCount:    d.guestCount    || "",
           coverPhoto:    d.coverPhoto    || "",
+          notes:         d.notes         || "",
           tasks:         Array.isArray(d.tasks)         ? d.tasks         : [],
           schedule:      Array.isArray(d.schedule)      ? d.schedule      : [],
           suppliers:     Array.isArray(d.suppliers)     ? d.suppliers     : [],
           guests:        Array.isArray(d.guests)        ? d.guests        : [],
           seating:       Array.isArray(d.seating)       ? d.seating       : [],
           weddingEvents: Array.isArray(d.weddingEvents) ? d.weddingEvents : [],
+          contracts:     parseJ(d.contracts, []),
+          palette:       parseJ(d.palette,   []),
+          songs:         parseJ(d.songs,     []),
+          photos:        parseJ(d.photos,    []),
         });
       })
       .catch(e => setError("Error al cargar: " + e.message))
@@ -323,11 +329,21 @@ export default function BodaPublicView() {
   const guests   = boda.guests || [];
   const seating  = boda.seating || [];
 
+  const contracts = boda.contracts || [];
+  const palette   = boda.palette   || [];
+  const songs     = boda.songs     || [];
+  const photos    = boda.photos    || [];
+
   const TABS = [
     { id: "inicio",    label: "Inicio" },
     { id: "timeline",  label: "Timeline" },
     ...(guests.length > 0 ? [{ id: "invitados", label: `Invitados (${guests.length})` }] : []),
     ...(seating.length > 0 ? [{ id: "mesas", label: "Mesas" }] : []),
+    ...(contracts.length > 0 ? [{ id: "contratos", label: "Contratos" }] : []),
+    ...(palette.length > 0   ? [{ id: "paleta",    label: "Paleta" }]    : []),
+    ...(songs.length > 0     ? [{ id: "musica",    label: "Música" }]    : []),
+    ...(photos.length > 0    ? [{ id: "fotos",     label: "Fotos" }]     : []),
+    ...(boda.notes           ? [{ id: "notas",     label: "Notas" }]     : []),
   ];
 
   return (
@@ -609,6 +625,168 @@ export default function BodaPublicView() {
                   );
                 })}
               </div>
+            )}
+          </Card>
+        )}
+
+        {/* ── CONTRATOS tab ── */}
+        {tab === "contratos" && (
+          <Card>
+            <SectionHead>Contratos</SectionHead>
+            {contracts.length === 0 ? (
+              <p style={{ fontSize: 13, color: T.muted, fontStyle: "italic", textAlign: "center", padding: "20px 0" }}>Sin contratos registrados.</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {contracts.map(c => {
+                  const statusColor = c.status === "Firmado" ? "#15803d" : c.status === "Enviado" ? T.gold : c.status === "Cancelado" ? "#9ca3af" : T.muted;
+                  return (
+                    <div key={c.id} style={{ border: `1px solid ${T.border}`, borderRadius: 8, padding: "14px 16px" }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontSize: 14, color: T.ink, fontFamily: "'Jost',sans-serif", fontWeight: 500 }}>{c.title}</p>
+                          {c.supplierName && <p style={{ margin: "3px 0 0", fontSize: 11, color: T.muted }}>{c.supplierName}</p>}
+                          {c.contractDate && <p style={{ margin: "2px 0 0", fontSize: 11, color: T.muted }}>{c.contractDate}</p>}
+                          {c.amount && <p style={{ margin: "3px 0 0", fontSize: 12, color: T.gold, fontWeight: 500 }}>{c.amount}</p>}
+                          {c.notes && <p style={{ margin: "6px 0 0", fontSize: 12, color: T.ink2, whiteSpace: "pre-line", lineHeight: 1.5 }}>{c.notes}</p>}
+                        </div>
+                        <span style={{ fontSize: 10, color: statusColor, border: `1px solid ${statusColor}`, borderRadius: 99, padding: "2px 10px", flexShrink: 0, letterSpacing: ".04em" }}>{c.status || "Borrador"}</span>
+                      </div>
+                      {c.pdfUrl && (
+                        <a href={c.pdfUrl} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 10, fontSize: 11, color: T.gold, textDecoration: "none", letterSpacing: ".04em" }}>
+                          📄 Ver PDF
+                        </a>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* ── PALETA tab ── */}
+        {tab === "paleta" && (
+          <Card>
+            <SectionHead>Paleta de Colores</SectionHead>
+            {palette.length === 0 ? (
+              <p style={{ fontSize: 13, color: T.muted, fontStyle: "italic", textAlign: "center", padding: "20px 0" }}>Sin paleta definida aún.</p>
+            ) : (<>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 }}>
+                {palette.map(p => (
+                  <div key={p.id} style={{ textAlign: "center" }}>
+                    <div style={{ width: 64, height: 64, borderRadius: "50%", background: p.color || "#ccc", border: `2px solid ${T.border2}`, margin: "0 auto 6px" }} />
+                    {p.name && <p style={{ margin: 0, fontSize: 10, color: T.muted, letterSpacing: ".04em", maxWidth: 72 }}>{p.name}</p>}
+                    <p style={{ margin: "2px 0 0", fontSize: 9, color: T.muted, fontFamily: "monospace" }}>{p.color}</p>
+                  </div>
+                ))}
+              </div>
+              {palette.some(p => p.notes) && (
+                <div style={{ marginTop: 4 }}>
+                  {palette.filter(p => p.notes).map(p => (
+                    <div key={p.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", borderTop: `1px solid ${T.border}` }}>
+                      <div style={{ width: 14, height: 14, borderRadius: "50%", background: p.color || "#ccc", flexShrink: 0, marginTop: 2 }} />
+                      <p style={{ margin: 0, fontSize: 12, color: T.ink2 }}>{p.notes}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>)}
+          </Card>
+        )}
+
+        {/* ── MÚSICA tab ── */}
+        {tab === "musica" && (
+          <Card>
+            <SectionHead>Playlist</SectionHead>
+            {songs.length === 0 ? (
+              <p style={{ fontSize: 13, color: T.muted, fontStyle: "italic", textAlign: "center", padding: "20px 0" }}>Sin canciones registradas.</p>
+            ) : (() => {
+              const moments = [...new Set(songs.map(s => s.moment).filter(Boolean))];
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                  {moments.map(moment => (
+                    <div key={moment}>
+                      <p style={{ margin: "0 0 8px", fontSize: 9, letterSpacing: ".14em", textTransform: "uppercase", color: T.gold, fontWeight: 600 }}>{moment}</p>
+                      {songs.filter(s => s.moment === moment).map(s => (
+                        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 0", borderBottom: `1px solid ${T.border}` }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: 0, fontSize: 13, color: T.ink, fontFamily: "'Jost',sans-serif" }}>{s.title}</p>
+                            {s.artist && <p style={{ margin: "2px 0 0", fontSize: 11, color: T.muted }}>{s.artist}</p>}
+                            {s.notes && <p style={{ margin: "2px 0 0", fontSize: 11, color: T.muted, fontStyle: "italic" }}>{s.notes}</p>}
+                          </div>
+                          {s.url && (
+                            <a href={s.url} target="_blank" rel="noreferrer" style={{ fontSize: 16, textDecoration: "none", flexShrink: 0 }}>▶</a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                  {songs.filter(s => !s.moment).length > 0 && (
+                    <div>
+                      {songs.filter(s => !s.moment).map(s => (
+                        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 0", borderBottom: `1px solid ${T.border}` }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: 0, fontSize: 13, color: T.ink }}>{s.title}</p>
+                            {s.artist && <p style={{ margin: "2px 0 0", fontSize: 11, color: T.muted }}>{s.artist}</p>}
+                          </div>
+                          {s.url && <a href={s.url} target="_blank" rel="noreferrer" style={{ fontSize: 16, textDecoration: "none", flexShrink: 0 }}>▶</a>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </Card>
+        )}
+
+        {/* ── FOTOS tab ── */}
+        {tab === "fotos" && (
+          <Card>
+            <SectionHead>Referencias de Fotos</SectionHead>
+            {photos.length === 0 ? (
+              <p style={{ fontSize: 13, color: T.muted, fontStyle: "italic", textAlign: "center", padding: "20px 0" }}>Sin fotos de referencia aún.</p>
+            ) : (() => {
+              const cats = [...new Set(photos.map(p => p.category || "General"))];
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                  {cats.map(cat => (
+                    <div key={cat}>
+                      <p style={{ margin: "0 0 10px", fontSize: 9, letterSpacing: ".14em", textTransform: "uppercase", color: T.gold, fontWeight: 600 }}>{cat}</p>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 10 }}>
+                        {photos.filter(p => (p.category || "General") === cat).map(p => (
+                          <div key={p.id} style={{ borderRadius: 6, overflow: "hidden", border: `1px solid ${T.border}` }}>
+                            {p.url && (
+                              <a href={p.url} target="_blank" rel="noreferrer">
+                                <img src={p.url} alt={p.label || ""} style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", display: "block" }}
+                                  onError={e => { e.target.style.display = "none"; }} />
+                              </a>
+                            )}
+                            {(p.label || p.notes) && (
+                              <div style={{ padding: "6px 8px" }}>
+                                {p.label && <p style={{ margin: 0, fontSize: 11, color: T.ink2, fontWeight: 500 }}>{p.label}</p>}
+                                {p.notes && <p style={{ margin: "2px 0 0", fontSize: 10, color: T.muted }}>{p.notes}</p>}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </Card>
+        )}
+
+        {/* ── NOTAS tab ── */}
+        {tab === "notas" && (
+          <Card>
+            <SectionHead>Notas</SectionHead>
+            {boda.notes ? (
+              <p style={{ margin: 0, fontSize: 13, color: T.ink2, lineHeight: 1.7, whiteSpace: "pre-line" }}>{boda.notes}</p>
+            ) : (
+              <p style={{ fontSize: 13, color: T.muted, fontStyle: "italic", textAlign: "center", padding: "20px 0" }}>Sin notas disponibles.</p>
             )}
           </Card>
         )}
