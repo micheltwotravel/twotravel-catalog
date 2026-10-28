@@ -9309,14 +9309,19 @@ const loadKickoffs = async (forceRefresh = false) => {
 
   const cityOptions = useMemo(() => {
     const FULL_TO_CODE = { CARTAGENA:"CTG", MEDELLÍN:"MDE", MEDELLIN:"MDE", "CIUDAD DE MÉXICO":"CDMX", "CIUDAD DE MEXICO":"CDMX", "MEXICO CITY":"CDMX", CDMX:"CDMX", TULUM:"TUL", "LOS CABOS":"CAB", CABOS:"CAB", CAB:"CAB", BOGOTÁ:"BOG", BOGOTA:"BOG", CALI:"CLO" };
-    const seen = new Set();
+    const LATAM = ["CTG","MDE","CDMX","TUL","CAB","BOG","CLO"];
+    const LATAM_SET = new Set(LATAM);
+    const seen = new Map(); // code → count
     kickoffs.forEach(k => {
       String(k.city || "").split(",").map(c => c.trim().toUpperCase()).filter(Boolean).forEach(raw => {
         const code = FULL_TO_CODE[raw] || raw;
-        if (code) seen.add(code);
+        if (code) seen.set(code, (seen.get(code) || 0) + 1);
       });
     });
-    return ["all", ...["CTG","MDE","CDMX","TUL","CAB","BOG","CLO"].filter(c => seen.has(c))];
+    const latam = LATAM.filter(c => seen.has(c));
+    // Other cities sorted alphabetically, shown only if ≥1 client has it
+    const others = [...seen.keys()].filter(c => !LATAM_SET.has(c)).sort();
+    return ["all", ...latam, ...others];
   }, [kickoffs]);
 
   const toggleSelect = (id) => {
@@ -9704,7 +9709,8 @@ const loadKickoffs = async (forceRefresh = false) => {
             {cityOptions.length > 2 && (
               <div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"}}>
                 {cityOptions.map((code) => {
-                  const label = code === "all" ? "Todas las ciudades" : (CITY_NAMES[code] || code);
+                  const toTitle = s => s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+                  const label = code === "all" ? "Todas las ciudades" : (CITY_NAMES[code] || toTitle(code));
                   const active = filterCity === code;
                   const CITY_COLORS = { CTG:"#dbeafe", MDE:"#dcfce7", CDMX:"#ffedd5", TUL:"#ccfbf1", CAB:"#fce7f3", BOG:"#f3e8ff", CLO:"#fef9c3" };
                   const CITY_TEXT   = { CTG:"#1d4ed8", MDE:"#16a34a", CDMX:"#ea580c", TUL:"#0f766e", CAB:"#9d174d", BOG:"#7c3aed", CLO:"#854d0e" };
@@ -10085,7 +10091,7 @@ const loadKickoffs = async (forceRefresh = false) => {
                           <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
                             {codes.map(code => (
                               <span key={code} style={{padding:"2px 7px",borderRadius:3,background:CITY_BG[code]||"var(--border-soft)",color:CITY_TEXT_C[code]||"var(--text-2)",fontSize:10.5,fontWeight:600}}>
-                                {CITY_NAMES[code] || code}
+                                {CITY_NAMES[code] || code.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
                               </span>
                             ))}
                           </div>
