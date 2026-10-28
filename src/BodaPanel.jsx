@@ -913,14 +913,17 @@ function TimelineTab({ boda, onScheduleChange, onPatch }) {
   const [editing,setEditing]=useState(null);
   const [view,setView]=useState("interno");
   const [showPresets,setShowPresets]=useState(false);
-  const BLANK={time:"",description:"",assignedTo:"",notes:"",url:"",suppliers:[],category:"General",isInternal:false,isHighlight:false,highlightColor:"",dayIndex:1,dayLabel:""};
+  const weddingEventsAll=boda.weddingEvents||[{id:"ceremony",name:"Ceremonia"},{id:"cocktail",name:"Cóctel"},{id:"reception",name:"Recepción"}];
+  const [activeDayIdx,setActiveDayIdx]=useState(1);
+  const activeDayLabel=weddingEventsAll[activeDayIdx-1]?.name||"";
+  const BLANK={time:"",description:"",assignedTo:"",notes:"",url:"",suppliers:[],category:"General",isInternal:false,isHighlight:false,highlightColor:"",dayIndex:activeDayIdx,dayLabel:activeDayLabel};
   const [blank,setBlank]=useState(BLANK);
   const sorted=[...schedule].sort((a,b)=>{const di=(a.dayIndex||1)-(b.dayIndex||1);if(di!==0)return di;return(a.time||"").localeCompare(b.time||"");});
   const visible=view==="cliente"?sorted.filter(e=>!e.isInternal&&dayModes[e.dayIndex||1]!=="interno"):sorted;
   async function persist(u){ setSchedule(u); onScheduleChange(u); await apiUpdateSchedule(boda.id,u); }
   async function persistDayModes(dm){ setDayModes(dm); onPatch&&onPatch({dayModes:dm}); await apiSaveNotes(boda.id,{...boda,dayModes:dm}); }
   function toggleDayMode(di){ persistDayModes({...dayModes,[di]:dayModes[di]==="interno"?"ambos":"interno"}); }
-  async function add(){ if(!blank.time||!blank.description.trim()) return; setSaving(true); try{await persist([...schedule,{...blank,id:uid()}]); setBlank(BLANK); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
+  async function add(){ if(!blank.time||!blank.description.trim()) return; setSaving(true); try{await persist([...schedule,{...blank,id:uid()}]); setBlank({...BLANK,dayIndex:activeDayIdx,dayLabel:activeDayLabel}); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
   async function saveEdit(){ if(!editing||!editing.time||!editing.description.trim()) return; setSaving(true); try{await persist(schedule.map(e=>e.id===editing.id?editing:e)); setEditing(null);}catch(e){alert("Error: "+e.message);} setSaving(false); }
   async function del(id){ try{await persist(schedule.filter(e=>e.id!==id));}catch{setSchedule(schedule);} }
 
@@ -1088,8 +1091,14 @@ ${sups.length?`<div class="prov-title">PROVEEDORES</div>${sups.map(s=>`<div clas
               {dayGroupsAll.map(g=><option key={g.di} value={g.di}>{g.label}</option>)}
             </select>
           )}
+          {weddingEventsAll.length>0&&(
+            <select value={activeDayIdx} onChange={e=>{const idx=Number(e.target.value);setActiveDayIdx(idx);setBlank(b=>({...b,dayIndex:idx,dayLabel:weddingEventsAll[idx-1]?.name||""}));}}
+              style={{...INP_SM,height:32,borderRadius:8,fontSize:11,fontWeight:600,color:R.accent,border:`1px solid ${R.accent}`,background:"rgba(201,169,110,.07)"}}>
+              {weddingEventsAll.map((ev,i)=><option key={ev.id||i} value={i+1}>{ev.name}</option>)}
+            </select>
+          )}
           <button onClick={()=>{setShowPresets(v=>!v);setShow(false);setEditing(null);}} style={{background:showPresets?R.gold:"transparent",color:showPresets?"#fff":R.muted,border:`1px solid ${showPresets?R.gold:R.border}`,borderRadius:8,padding:"7px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".03em"}}>⚡ Rápidos</button>
-          <button onClick={()=>{setShow(v=>!v);setEditing(null);setShowPresets(false);}} style={{background:show?R.accent:"#1a0812",color:"#fff",border:"none",borderRadius:8,padding:"7px 18px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".03em"}}>+ Evento</button>
+          <button onClick={()=>{setBlank(b=>({...b,dayIndex:activeDayIdx,dayLabel:activeDayLabel}));setShow(v=>!v);setEditing(null);setShowPresets(false);}} style={{background:show?R.accent:"#1a0812",color:"#fff",border:"none",borderRadius:8,padding:"7px 18px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".03em"}}>+ Evento</button>
         </div>
       </div>
       {showPresets&&(
@@ -1097,7 +1106,7 @@ ${sups.length?`<div class="prov-title">PROVEEDORES</div>${sups.map(s=>`<div clas
           <p style={{fontSize:11,fontWeight:700,color:R.muted,textTransform:"uppercase",letterSpacing:".07em",margin:"0 0 10px"}}>Eventos del día — clic para agregar</p>
           <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
             {TIMELINE_PRESETS.map(p=>(
-              <button key={p.d} onClick={()=>{setBlank(b=>({...b,description:p.d,category:p.cat}));setShow(true);setShowPresets(false);}}
+              <button key={p.d} onClick={()=>{setBlank(b=>({...b,description:p.d,category:p.cat,dayIndex:activeDayIdx,dayLabel:activeDayLabel}));setShow(true);setShowPresets(false);}}
                 style={{fontSize:11,padding:"4px 12px",borderRadius:99,background:R.white,border:`1px solid ${R.border}`,cursor:"pointer",color:R.text,fontFamily:"'Jost',sans-serif",transition:"border-color .15s"}}
                 onMouseEnter={e=>{e.currentTarget.style.borderColor=R.accent;e.currentTarget.style.color=R.accent;}}
                 onMouseLeave={e=>{e.currentTarget.style.borderColor=R.border;e.currentTarget.style.color=R.text;}}>
