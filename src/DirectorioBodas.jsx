@@ -187,15 +187,31 @@ function ProveedoresSection({ items, setItems, persist }) {
   );
 }
 
-/* ── Sección venues ── */
-function VenuesSection({ items, setItems, persist }) {
+
+/* ── Venues by city (for Venues & Welcome Cocktail tabs) ── */
+function VenuesCitySection({ items, setItems, persist, eventFilter }) {
+  const filtered = items.filter(v =>
+    eventFilter === "wc"
+      ? (v.eventoTipo || "").toLowerCase().includes("welcome")
+      : !(v.eventoTipo || "").toLowerCase().includes("welcome")
+  );
+
+  const [cityTab, setCityTab] = useState("all");
+  const [search, setSearch] = useState("");
   const [show, setShow] = useState(false);
   const [editId, setEditId] = useState(null);
   const [blank, setBlank] = useState(VENUE_EMPTY);
-  const [search, setSearch] = useState("");
-  const [filterCity, setFilterCity] = useState("");
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setBlank(p => ({ ...p, [k]: v }));
+
+  const cities = ["all", ...([...new Set(filtered.map(x => x.city).filter(Boolean))].sort())];
+
+  const visible = filtered.filter(v => {
+    const q = search.toLowerCase();
+    const matchQ = !q || [v.name, v.contact, v.city, v.notes].some(f => f?.toLowerCase().includes(q));
+    const matchCity = cityTab === "all" || v.city === cityTab;
+    return matchQ && matchCity;
+  }).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
   function startEdit(item) { setBlank({ ...VENUE_EMPTY, ...item }); setEditId(item.id); setShow(true); }
   function startNew() { setBlank(VENUE_EMPTY); setEditId(null); setShow(true); }
@@ -217,26 +233,26 @@ function VenuesSection({ items, setItems, persist }) {
     await persist(updated); setItems(updated);
   }
 
-  const cities = [...new Set(items.map(x => x.city).filter(Boolean))].sort();
-  const visible = items.filter(x => {
-    const q = search.toLowerCase();
-    const matchQ = !q || [x.name,x.contact,x.city,x.notes].some(f=>f?.toLowerCase().includes(q));
-    const matchCity = !filterCity || x.city === filterCity;
-    return matchQ && matchCity;
-  }).sort((a,b) => (a.name||"").localeCompare(b.name||""));
+  const CITY_LABEL = { all: "Todos", CTG: "Cartagena", MDE: "Medellín", CDMX: "CDMX", TUL: "Tulum" };
 
   return (
     <div>
-      {/* Toolbar */}
-      <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
-        <input value={search} onChange={e=>setSearch(e.target.value)}
-          placeholder="Buscar venue…" style={{ ...INP_SM, flex:1, minWidth:180 }} />
-        <select value={filterCity} onChange={e=>setFilterCity(e.target.value)}
-          style={{ ...INP_SM, width:"auto" }}>
-          <option value="">Todas las ciudades</option>
-          {cities.map(c => <option key={c}>{c}</option>)}
-        </select>
-        <button onClick={startNew} style={{ ...BTN(true), whiteSpace:"nowrap" }}>+ Venue</button>
+      {/* City pills */}
+      <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
+        {cities.map(c => (
+          <button key={c} onClick={() => setCityTab(c)}
+            style={{ background:cityTab===c?R.accent:"transparent", color:cityTab===c?"#fff":R.muted,
+              border:`1px solid ${cityTab===c?R.accent:R.border2}`, borderRadius:99,
+              padding:"5px 14px", fontSize:11, cursor:"pointer", fontFamily:"'Jost',sans-serif",
+              fontWeight:cityTab===c?600:400, transition:"all .15s" }}>
+            {CITY_LABEL[c] || c}
+          </button>
+        ))}
+        <div style={{ marginLeft:"auto", display:"flex", gap:8 }}>
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar venue…" style={{ ...INP_SM, width:180 }} />
+          <button onClick={startNew} style={{ ...BTN(true), whiteSpace:"nowrap" }}>+ Venue</button>
+        </div>
       </div>
 
       {/* Form */}
@@ -249,70 +265,65 @@ function VenuesSection({ items, setItems, persist }) {
           </p>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
             <div style={{ gridColumn:"span 2" }}>
-              <input style={INP_SM} value={blank.name} onChange={e=>set("name",e.target.value)}
+              <input style={INP_SM} value={blank.name} onChange={e => set("name", e.target.value)}
                 placeholder="Nombre del venue *" autoFocus />
             </div>
-            <select style={INP_SM} value={blank.eventoTipo} onChange={e=>set("eventoTipo",e.target.value)}>
+            <select style={INP_SM} value={blank.eventoTipo} onChange={e => set("eventoTipo", e.target.value)}>
               <option value="">Tipo de evento</option>
-              {VENUE_EVENT_TYPES.map(t=><option key={t}>{t}</option>)}
+              {VENUE_EVENT_TYPES.map(t => <option key={t}>{t}</option>)}
             </select>
-            <select style={INP_SM} value={blank.type} onChange={e=>set("type",e.target.value)}>
+            <select style={INP_SM} value={blank.type} onChange={e => set("type", e.target.value)}>
               <option value="">Tipo de espacio</option>
-              {VENUE_TYPES.map(t=><option key={t}>{t}</option>)}
+              {VENUE_TYPES.map(t => <option key={t}>{t}</option>)}
             </select>
-            <select style={INP_SM} value={blank.city} onChange={e=>set("city",e.target.value)}>
-              {CITIES.map(c=><option key={c}>{c}</option>)}
+            <select style={INP_SM} value={blank.city} onChange={e => set("city", e.target.value)}>
+              {CITIES.map(c => <option key={c}>{c}</option>)}
             </select>
-            <input style={INP_SM} value={blank.capacity} onChange={e=>set("capacity",e.target.value)} placeholder="Capacidad (personas)" />
-            <input style={INP_SM} value={blank.contact}  onChange={e=>set("contact",e.target.value)}  placeholder="Contacto" />
-            <input style={INP_SM} value={blank.phone}    onChange={e=>set("phone",e.target.value)}    placeholder="Teléfono / WhatsApp" />
-            <input style={INP_SM} value={blank.email}    onChange={e=>set("email",e.target.value)}    placeholder="Email" />
+            <input style={INP_SM} value={blank.capacity} onChange={e => set("capacity", e.target.value)} placeholder="Capacidad (personas)" />
+            <input style={INP_SM} value={blank.contact}  onChange={e => set("contact", e.target.value)}  placeholder="Contacto" />
+            <input style={INP_SM} value={blank.phone}    onChange={e => set("phone", e.target.value)}    placeholder="Teléfono / WhatsApp" />
+            <input style={INP_SM} value={blank.email}    onChange={e => set("email", e.target.value)}    placeholder="Email" />
             <div style={{ gridColumn:"span 2" }}>
-              <input style={{ ...INP_SM, marginBottom:8 }} value={blank.web} onChange={e=>set("web",e.target.value)} placeholder="Web / Instagram" />
+              <input style={{ ...INP_SM, marginBottom:8 }} value={blank.web} onChange={e => set("web", e.target.value)} placeholder="Web / Instagram" />
               <textarea style={{ ...INP_SM, resize:"vertical", minHeight:56 }}
-                value={blank.notes} onChange={e=>set("notes",e.target.value)}
+                value={blank.notes} onChange={e => set("notes", e.target.value)}
                 placeholder="Notas: servicios incluidos, catering propio, restricciones, experiencia…" />
             </div>
           </div>
           <div style={{ display:"flex", gap:8 }}>
-            <button onClick={save} disabled={saving||!blank.name?.trim()} style={BTN(true)}>
-              {saving?"Guardando…":"Guardar"}
+            <button onClick={save} disabled={saving || !blank.name?.trim()} style={BTN(true)}>
+              {saving ? "Guardando…" : "Guardar"}
             </button>
-            <button onClick={()=>{setShow(false);setEditId(null);}} style={BTN(false)}>Cancelar</button>
-            {editId && <button onClick={()=>del(editId)} style={{...BTN(false),color:"#dc2626",borderColor:"#fca5a5",marginLeft:"auto"}}>Eliminar</button>}
+            <button onClick={() => { setShow(false); setEditId(null); }} style={BTN(false)}>Cancelar</button>
+            {editId && <button onClick={() => del(editId)} style={{ ...BTN(false), color:"#dc2626", borderColor:"#fca5a5", marginLeft:"auto" }}>Eliminar</button>}
           </div>
         </div>
       )}
 
-      {/* List grouped by eventoTipo */}
       {visible.length === 0 && (
         <p style={{ fontSize:12, color:R.muted, textAlign:"center", padding:"32px 0", fontStyle:"italic" }}>
-          {search||filterCity ? "Sin resultados" : "Sin venues aún — agrega el primero"}
+          {search || cityTab !== "all" ? "Sin resultados" : "Sin venues aún"}
         </p>
       )}
-      {VENUE_EVENT_TYPES.concat([""]).map(et=>{
-        const group=visible.filter(v=>(v.eventoTipo||"")===(et));
-        if(!group.length) return null;
-        return(<div key={et||"sin-tipo"} style={{marginBottom:20}}>
-          <p style={{fontSize:11,fontWeight:700,color:R.muted,textTransform:"uppercase",letterSpacing:".07em",margin:"0 0 8px"}}>{et||"Sin clasificar"}</p>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:10 }}>
-        {group.map(v => (
-          <div key={v.id} onClick={()=>startEdit(v)}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:10 }}>
+        {visible.map(v => (
+          <div key={v.id} onClick={() => startEdit(v)}
             style={{ background:R.card, border:`1px solid ${R.border}`, borderRadius:10,
               padding:"14px 16px", cursor:"pointer", transition:"box-shadow .15s" }}
-            onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.08)"}
-            onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+            onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,.08)"}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
               <div style={{ minWidth:0 }}>
                 <p style={{ margin:0, fontSize:14, fontWeight:600, color:R.text,
                   overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{v.name}</p>
-                <p style={{ margin:"2px 0 0", fontSize:10, color:R.accent, textTransform:"uppercase",
-                  letterSpacing:".07em" }}>{v.eventoTipo&&<span style={{background:"#f0e8d8",color:R.accent,padding:"1px 6px",borderRadius:99,marginRight:6,fontSize:9}}>{v.eventoTipo}</span>}{v.type}{v.city?` · ${v.city}`:""}{v.capacity?` · ${v.capacity} pax`:""}</p>
+                <p style={{ margin:"2px 0 0", fontSize:10, color:R.accent, textTransform:"uppercase", letterSpacing:".07em" }}>
+                  {v.type}{v.city ? ` · ${v.city}` : ""}{v.capacity ? ` · ${v.capacity} pax` : ""}
+                </p>
               </div>
             </div>
-            {(v.contact||v.phone) && (
+            {(v.contact || v.phone) && (
               <p style={{ margin:"8px 0 0", fontSize:11, color:R.text2 }}>
-                {v.contact}{v.contact&&v.phone?" · ":""}{v.phone}
+                {v.contact}{v.contact && v.phone ? " · " : ""}{v.phone}
               </p>
             )}
             {v.email && <p style={{ margin:"2px 0 0", fontSize:11, color:R.muted }}>{v.email}</p>}
@@ -322,16 +333,14 @@ function VenuesSection({ items, setItems, persist }) {
             )}
           </div>
         ))}
-          </div>
-        </div>);
-      })}
+      </div>
     </div>
   );
 }
 
 /* ── Main component ── */
 export default function DirectorioBodas({ currentUser, onLogout }) {
-  const [tab, setTab] = useState("proveedores");
+  const [tab, setTab] = useState("venues");
   const [proveedores, setProveedores] = useState([]);
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -350,7 +359,7 @@ export default function DirectorioBodas({ currentUser, onLogout }) {
         setProveedores(Array.isArray(pRow?.data) ? pRow.data : []);
         setVenues(Array.isArray(vRow?.data) ? vRow.data : []);
       } catch (e) {
-        setError("Error al cargar: " + e.message + ". Puede que la tabla aún no exista.");
+        setError("Error al cargar: " + e.message);
       } finally {
         setLoading(false);
       }
@@ -367,9 +376,13 @@ export default function DirectorioBodas({ currentUser, onLogout }) {
       .upsert({ id: "venues", data: items }, { onConflict: "id" });
   }, []);
 
+  const wcCount = venues.filter(v => (v.eventoTipo || "").toLowerCase().includes("welcome")).length;
+  const venueCount = venues.length - wcCount;
+
   const TABS = [
-    { id: "proveedores", label: `Proveedores (${proveedores.length})` },
-    { id: "venues",      label: `Venues (${venues.length})` },
+    { id: "venues",    label: `Venues (${venueCount})` },
+    { id: "wc",        label: `Welcome Cocktail (${wcCount})` },
+    { id: "providers", label: `Providers (${proveedores.length})` },
   ];
 
   return (
@@ -409,36 +422,25 @@ export default function DirectorioBodas({ currentUser, onLogout }) {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth:1100, margin:"0 auto", padding:"28px 24px" }}>
+      <div style={{ maxWidth:1200, margin:"0 auto", padding:"28px 24px" }}>
         {loading && (
           <p style={{ textAlign:"center", color:R.muted, fontSize:13, padding:"40px 0" }}>Cargando…</p>
         )}
         {error && (
           <div style={{ background:"#fef2f2", border:"1px solid #fca5a5", borderRadius:10,
             padding:"16px 20px", marginBottom:20 }}>
-            <p style={{ margin:"0 0 8px", fontSize:13, color:"#991b1b", fontWeight:600 }}>{error}</p>
-            <p style={{ margin:0, fontSize:12, color:"#991b1b" }}>
-              Crea la tabla en Supabase con este SQL:
-            </p>
-            <pre style={{ margin:"8px 0 0", fontSize:11, background:"#fff", padding:10,
-              borderRadius:6, border:"1px solid #fca5a5", overflowX:"auto" }}>
-{`create table if not exists directorio_bodas (
-  id text primary key,
-  data jsonb not null default '[]'
-);
-alter table directorio_bodas enable row level security;
-create policy "auth read"  on directorio_bodas for select using (auth.role()='authenticated');
-create policy "auth write" on directorio_bodas for all    using (auth.role()='authenticated');`}
-            </pre>
+            <p style={{ margin:0, fontSize:13, color:"#991b1b", fontWeight:600 }}>{error}</p>
           </div>
         )}
-        {!loading && !error && tab === "proveedores" && (
+        {!loading && !error && tab === "venues" && (
+          <VenuesCitySection items={venues} setItems={setVenues} persist={persistVenues} eventFilter="bodas" />
+        )}
+        {!loading && !error && tab === "wc" && (
+          <VenuesCitySection items={venues} setItems={setVenues} persist={persistVenues} eventFilter="wc" />
+        )}
+        {!loading && !error && tab === "providers" && (
           <ProveedoresSection
             items={proveedores} setItems={setProveedores} persist={persistProveedores} />
-        )}
-        {!loading && !error && tab === "venues" && (
-          <VenuesSection
-            items={venues} setItems={setVenues} persist={persistVenues} />
         )}
       </div>
     </div>
