@@ -22,6 +22,7 @@ const TwoTravelCatalog = lazyWithReload(() => import("./TwoTravelCatalog"));
 const BookingPageLazy  = lazyWithReload(() => import("./BookingPage").then(m => ({ default: m.BookingPage })));
 const BodaPanel        = lazyWithReload(() => import("./BodaPanel"));
 const BodaPublicView   = lazyWithReload(() => import("./BodaPublicView"));
+const BodaRsvpPage     = lazyWithReload(() => import("./BodaRsvpPage"));
 const TareasPanel      = lazyWithReload(() => import("./TareasPanel"));
 const DirectorioBodas  = lazyWithReload(() => import("./DirectorioBodas"));
 const FinanceCashFlow      = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinanceCashFlow })));
@@ -6509,16 +6510,16 @@ const ROLE_META = {
 // Modes each role can access
 const PAGOS_MODES = ["pagos","f-proveedores"];
 const ROLE_ACCESS = {
-  admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","bodas-directorio","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"],
+  admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","bodas-mesas","tareas-bodas","bodas-directorio","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"],
   concierge: ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","f-checkin","f-transporte",...PAGOS_MODES],
   junior:    ["dashboard","f-checkin","f-transporte",...PAGOS_MODES],
   finance:   ["pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"],
   marketing: ["dashboard",...PAGOS_MODES],
-  bodas:     ["bodas","tareas-bodas","bodas-directorio","tasks","dashboard",...PAGOS_MODES],
+  bodas:     ["bodas","bodas-mesas","tareas-bodas","bodas-directorio","tasks","dashboard",...PAGOS_MODES],
   pending:   [...PAGOS_MODES],
 };
 
-const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","tareas-bodas","bodas-directorio","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"]);
+const PROTECTED_MODES = new Set(["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","bodas-mesas","tareas-bodas","bodas-directorio","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"]);
 
 // ─── ITINERARY CATALOG (client-facing viewer) ─────────────────────
 const GAS_URL_IC = import.meta.env.VITE_GAS_URL;
@@ -7344,6 +7345,7 @@ function App() {
   if (mode === "itinerary") return <S><ErrorBoundary><ItineraryPrintView /></ErrorBoundary></S>;
   if (mode === "trip")      return <ItineraryCatalog />;
   if (mode === "bodas-cliente") return <S><BodaPublicView /></S>;
+  if (mode === "bodas-rsvp")   return <S><BodaRsvpPage /></S>;
   if (mode === "book") {
     const params = new URLSearchParams(window.location.search);
     return <S><BookingPageLazy
@@ -7391,6 +7393,7 @@ function App() {
     if (mode === "f-transporte")    return <S><ErrorBoundary><FinanceTransporte /></ErrorBoundary></S>;
     if (mode === "concierge") return <S><ErrorBoundary><ConciergePanel onLogout={logout} currentUser={user} /></ErrorBoundary></S>;
     if (mode === "bodas")             return <S><ErrorBoundary><BodaPanel currentUser={user} onLogout={logout} /></ErrorBoundary></S>;
+    if (mode === "bodas-mesas")       return <S><ErrorBoundary><BodaPanel currentUser={user} onLogout={logout} initialBodaId={params.get("id")||""} initialTab="mesas" /></ErrorBoundary></S>;
     if (mode === "tareas-bodas")      return <S><ErrorBoundary><TareasPanel currentUser={user} onLogout={logout} /></ErrorBoundary></S>;
     if (mode === "bodas-directorio")  return <S><ErrorBoundary><DirectorioBodas currentUser={user} onLogout={logout} /></ErrorBoundary></S>;
     if (mode === "soporte")   return <ErrorBoundary><SoportePage /></ErrorBoundary>;

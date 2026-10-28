@@ -239,7 +239,9 @@ function TasksTab({ boda, users, onPatch }) {
   const [blank,setBlank]=useState({taskName:"",assignedTo:"",dueDate:"",status:"Pendiente",phase:"General",notes:""});
   const [filterPerson,setFilterPerson]=useState("");
   const [filterSort,setFilterSort]=useState("due");
+  const [section,setSection]=useState("equipo");
   const today=new Date(); today.setHours(0,0,0,0);
+  const isNoviosTask=t=>(t.assignedTo||"")==="Novios";
   // Merge tasks from TareasPanel (tasks table) that belong to this boda
   useEffect(()=>{
     (async()=>{
@@ -277,23 +279,34 @@ function TasksTab({ boda, users, onPatch }) {
       }
     } catch(e) { console.warn("Email error:", e.message); }
   }
-  async function add(){ if(!blank.taskName.trim()) return; setSaving(true); const newTask={...blank,id:uid(),createdAt:new Date().toISOString()}; await persist([...tasks,newTask]); if(blank.assignedTo==="Novios") await sendTaskEmail(blank.taskName, blank.dueDate, false); setBlank({taskName:"",assignedTo:"",dueDate:"",status:"Pendiente",phase:"General",notes:""}); setShow(false); setSaving(false); }
+  async function add(){ if(!blank.taskName.trim()) return; setSaving(true); const assignedTo=section==="novios"?"Novios":blank.assignedTo; const newTask={...blank,assignedTo,id:uid(),createdAt:new Date().toISOString()}; await persist([...tasks,newTask]); if(assignedTo==="Novios") await sendTaskEmail(blank.taskName, blank.dueDate, false); setBlank({taskName:"",assignedTo:"",dueDate:"",status:"Pendiente",phase:"General",notes:""}); setShow(false); setSaving(false); }
   async function toggle(id){ const u=tasks.map(t=>t.id===id?{...t,status:t.status==="Terminado"?"Pendiente":"Terminado"}:t); try{await persist(u);}catch{setTasks(tasks);} }
   async function remove(id){ try{await persist(tasks.filter(t=>t.id!==id));}catch{setTasks(tasks);} }
   const allActive=tasks.filter(t=>!["Terminado","Cancelado"].includes(t.status));
-  const persons=[...new Set(allActive.map(t=>t.assignedTo).filter(Boolean))];
-  const active=(filterPerson?allActive.filter(t=>(t.assignedTo||"")===filterPerson):allActive)
+  const noviosCount=allActive.filter(isNoviosTask).length;
+  const equipoCount=allActive.filter(t=>!isNoviosTask(t)).length;
+  const sectionActive=section==="novios"?allActive.filter(isNoviosTask):allActive.filter(t=>!isNoviosTask(t));
+  const persons=[...new Set(sectionActive.map(t=>t.assignedTo).filter(Boolean))];
+  const active=(filterPerson?sectionActive.filter(t=>(t.assignedTo||"")===filterPerson):sectionActive)
     .sort((a,b)=>{if(filterSort!=="due")return 0;const da=a.dueDate||"9999";const db=b.dueDate||"9999";return da>db?1:da<db?-1:0;});
-  const done  =tasks.filter(t=> ["Terminado","Cancelado"].includes(t.status));
+  const done  =tasks.filter(t=>["Terminado","Cancelado"].includes(t.status)&&(section==="novios"?isNoviosTask(t):!isNoviosTask(t)));
   const rowBg=(t)=>({late:"#fff5f5",today:"#fffbeb",up:R.white}[cat(t)]);
   const rowBd=(t)=>({late:"#fca5a5",today:"#fcd34d",up:R.border}[cat(t)]);
   return (
     <div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-        <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{allActive.length} activa{allActive.length!==1?"s":""}</span>
-        <button onClick={()=>setShow(v=>!v)} style={{background:show?R.accent:"#1a0812",color:"#fff",border:"none",borderRadius:8,padding:"7px 16px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".04em"}}>+ Nueva tarea</button>
+      {/* Section tabs */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:8}}>
+        <div style={{display:"flex",gap:6}}>
+          {[["equipo","👥 Equipo",equipoCount],["novios","💍 Novios",noviosCount]].map(([v,l,c])=>(
+            <button key={v} onClick={()=>{setSection(v);setFilterPerson("");setShow(false);}}
+              style={{padding:"5px 14px",borderRadius:2,border:`1px solid ${section===v?R.accent:R.border}`,background:section===v?R.accent:"transparent",color:section===v?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".03em"}}>
+              {l} {c>0&&<span style={{background:section===v?"rgba(255,255,255,.25)":"#f3f4f6",borderRadius:99,padding:"0 6px",fontSize:10,marginLeft:4}}>{c}</span>}
+            </button>
+          ))}
+        </div>
+        <button onClick={()=>setShow(v=>!v)} style={{background:show?R.accent:"#1a0812",color:"#fff",border:"none",borderRadius:8,padding:"7px 16px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".04em"}}>+ Tarea {section==="novios"?"novios":"equipo"}</button>
       </div>
-      {allActive.length>1&&(
+      {sectionActive.length>1&&section==="equipo"&&(
         <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
           <select value={filterPerson} onChange={e=>setFilterPerson(e.target.value)} style={{...INP_SM,flex:1,minWidth:120}}>
             <option value="">👤 Todos</option>
@@ -311,9 +324,9 @@ function TasksTab({ boda, users, onPatch }) {
             <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.taskName} onChange={e=>setBlank(p=>({...p,taskName:e.target.value}))} placeholder="Descripción de la tarea *" /></div>
             <select style={INP_SM} value={blank.assignedTo} onChange={e=>setBlank(p=>({...p,assignedTo:e.target.value}))}>
               <option value="">— responsable —</option>
-              <option value="Ambos">💍 Ambos</option>
+              {section==="novios"?<option value="Novios" selected>💍 Novios</option>:<option value="Ambos">💍 Ambos</option>}
               {(boda.clienteName||"").split(/[&\/,]/).map(n=>n.trim()).filter(Boolean).map(n=><option key={n} value={n}>{n}</option>)}
-              {(boda.suppliers||[]).filter(s=>s.name).map(s=><option key={s.id||s.name} value={s.name}>{s.name}{s.category?` (${s.category})`:""}</option>)}
+              {section==="equipo"&&(boda.suppliers||[]).filter(s=>s.name).map(s=><option key={s.id||s.name} value={s.name}>{s.name}{s.category?` (${s.category})`:""}</option>)}
             </select>
             <input type="date" style={INP_SM} value={blank.dueDate} onChange={e=>setBlank(p=>({...p,dueDate:e.target.value}))} />
             <select style={INP_SM} value={blank.phase} onChange={e=>setBlank(p=>({...p,phase:e.target.value}))}>{["General",...FASES].map(ph=><option key={ph}>{ph}</option>)}</select>
@@ -379,6 +392,23 @@ function ProveedoresTab({ boda, onPatch }) {
   const [editId,setEditId]=useState(null);
   const EMPTY={category:"Fotografía y video",city:"",company:"",contact:"",phone:"",email:"",status:"Cotizando",quote:"",currency:"USD",commission:"",venueType:"",notes:"",instagram:""};
   const [blank,setBlank]=useState(EMPTY);
+  const [dirProvs,setDirProvs]=useState(null);
+  const [provSearch,setProvSearch]=useState("");
+  const [provOpen,setProvOpen]=useState(false);
+
+  useEffect(()=>{
+    if(dirProvs!==null) return;
+    supabase.from("directorio_bodas").select("*").eq("id","proveedores").single()
+      .then(({data})=>{ setDirProvs(data?.data||[]); }).catch(()=>setDirProvs([]));
+  },[dirProvs]);
+
+  const provMatches = provSearch.trim().length<2 ? [] :
+    (dirProvs||[]).filter(p=>[p.company,p.contact,p.category].some(f=>f?.toLowerCase().includes(provSearch.toLowerCase()))).slice(0,8);
+
+  function pickProv(p){
+    setBlank(b=>({...b,company:p.company||b.company,contact:p.contact||b.contact,phone:p.phone||b.phone,email:p.email||b.email,instagram:p.instagram||b.instagram,category:p.category||b.category,city:p.city||b.city}));
+    setProvSearch(""); setProvOpen(false);
+  }
 
   async function persist(u){ setSuppliers(u); onPatch({suppliers:u}); await apiSaveNotes(boda.id,{...boda,suppliers:u}); }
   async function save(){ if(!(blank.company||"").trim()) return; setSaving(true); try{ if(editId){await persist(suppliers.map(s=>s.id===editId?{...blank,id:editId}:s)); setEditId(null);}else{await persist([...suppliers,{...blank,id:uid()}]);} setBlank(EMPTY); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
@@ -401,6 +431,26 @@ function ProveedoresTab({ boda, onPatch }) {
 
       {show&&(
         <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
+          {/* Directory search */}
+          <div style={{position:"relative",marginBottom:8}}>
+            <input style={{...INP_SM,width:"100%",boxSizing:"border-box",paddingLeft:28}} value={provSearch}
+              onChange={e=>{setProvSearch(e.target.value);setProvOpen(true);}}
+              onFocus={()=>setProvOpen(true)}
+              onBlur={()=>setTimeout(()=>setProvOpen(false),180)}
+              placeholder="🔍 Buscar en directorio (2+ letras)..." />
+            {provOpen&&provMatches.length>0&&(
+              <div style={{position:"absolute",top:"100%",left:0,right:0,background:R.white,border:`1px solid ${R.border}`,borderRadius:8,zIndex:99,boxShadow:"0 4px 16px rgba(0,0,0,.10)",maxHeight:200,overflowY:"auto"}}>
+                {provMatches.map((p,i)=>(
+                  <button key={i} onMouseDown={()=>pickProv(p)}
+                    style={{display:"block",width:"100%",textAlign:"left",padding:"8px 12px",background:"transparent",border:"none",cursor:"pointer",fontFamily:"'Jost',sans-serif",borderBottom:i<provMatches.length-1?`1px solid ${R.border}`:"none"}}>
+                    <span style={{fontSize:13,fontWeight:500,color:R.text}}>{p.company}</span>
+                    {p.category&&<span style={{fontSize:11,color:R.muted,marginLeft:8}}>{p.category}</span>}
+                    {p.city&&<span style={{fontSize:11,color:R.muted,marginLeft:6}}>· {p.city}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
             <select style={INP_SM} value={blank.city}     onChange={e=>setBlank(p=>({...p,city:e.target.value}))}    ><option value="">🌎 Ciudad</option>{SUP_CITIES.filter(Boolean).map(c=><option key={c}>{c}</option>)}</select>
             <select style={INP_SM} value={blank.category} onChange={e=>setBlank(p=>({...p,category:e.target.value}))}>{SUP_CATS.map(c=><option key={c}>{c}</option>)}</select>
@@ -513,19 +563,27 @@ const SONG_MOMENTS=["Entrada novios","Entrada novia","Primer baile","Vals con pa
 
 function MusicTab({ boda, onPatch }) {
   const [songs,setSongs]=useState(boda.songs||[]);
+  const [meetings,setMeetings]=useState(boda.musicMeetings||[]);
   const [show,setShow]=useState(false);
+  const [showMeet,setShowMeet]=useState(false);
   const [saving,setSaving]=useState(false);
-  const [blank,setBlank]=useState({moment:"Primer baile",title:"",artist:"",notes:""});
+  const [savingMeet,setSavingMeet]=useState(false);
+  const [blank,setBlank]=useState({moment:"Primer baile",title:"",artist:"",url:"",notes:""});
+  const [blankMeet,setBlankMeet]=useState({date:new Date().toISOString().slice(0,10),topic:"",notes:""});
 
   async function persist(u){ setSongs(u); onPatch({songs:u}); await apiSaveNotes(boda.id,{...boda,songs:u}); }
-  async function add(){ if(!blank.title.trim()) return; setSaving(true); try{await persist([...songs,{...blank,id:uid()}]); setBlank({moment:"Primer baile",title:"",artist:"",notes:""}); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
+  async function persistMeet(u){ setMeetings(u); onPatch({musicMeetings:u}); await apiSaveNotes(boda.id,{...boda,musicMeetings:u}); }
+  async function add(){ if(!blank.title.trim()) return; setSaving(true); try{await persist([...songs,{...blank,id:uid()}]); setBlank({moment:"Primer baile",title:"",artist:"",url:"",notes:""}); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
   async function del(id){ try{await persist(songs.filter(s=>s.id!==id));}catch{setSongs(songs);} }
+  async function addMeet(){ if(!blankMeet.notes.trim()) return; setSavingMeet(true); try{await persistMeet([{...blankMeet,id:uid()},...meetings]); setBlankMeet({date:new Date().toISOString().slice(0,10),topic:"",notes:""}); setShowMeet(false);}catch(e){alert("Error: "+e.message);} setSavingMeet(false); }
+  async function delMeet(id){ try{await persistMeet(meetings.filter(m=>m.id!==id));}catch{setMeetings(meetings);} }
 
   return (
     <div>
+      {/* ── Canciones ── */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
         <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{songs.length} canción{songs.length!==1?"es":""}</span>
-        <button onClick={()=>setShow(v=>!v)} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Agregar</button>
+        <button onClick={()=>setShow(v=>!v)} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Canción</button>
       </div>
       {show&&(
         <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
@@ -533,7 +591,8 @@ function MusicTab({ boda, onPatch }) {
             <div style={{gridColumn:"span 2"}}><select style={INP_SM} value={blank.moment} onChange={e=>setBlank(p=>({...p,moment:e.target.value}))}>{SONG_MOMENTS.map(m=><option key={m}>{m}</option>)}</select></div>
             <input style={INP_SM} value={blank.title}  onChange={e=>setBlank(p=>({...p,title:e.target.value}))}  placeholder="Nombre de la canción *" />
             <input style={INP_SM} value={blank.artist} onChange={e=>setBlank(p=>({...p,artist:e.target.value}))} placeholder="Artista" />
-            <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.notes} onChange={e=>setBlank(p=>({...p,notes:e.target.value}))} placeholder="Notas (versión, link Spotify, instrucciones DJ...)" /></div>
+            <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.url} onChange={e=>setBlank(p=>({...p,url:e.target.value}))} placeholder="🎧 Link Spotify / YouTube..." /></div>
+            <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.notes} onChange={e=>setBlank(p=>({...p,notes:e.target.value}))} placeholder="Notas (versión, instrucciones DJ...)" /></div>
           </div>
           <div style={{display:"flex",gap:8}}>
             <button onClick={add} disabled={saving||!blank.title.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.title.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Agregar"}</button>
@@ -553,11 +612,44 @@ function MusicTab({ boda, onPatch }) {
               <div style={{flex:1}}>
                 <p style={{fontSize:13,fontWeight:500,color:R.text,margin:0}}>{s.title}</p>
                 {s.artist&&<p style={{fontSize:11,color:R.muted,margin:"2px 0 0"}}>— {s.artist}</p>}
-                {s.notes &&<p style={{fontSize:11,color:R.text2,margin:"3px 0 0"}}>{s.notes}</p>}
+                {s.url&&<p style={{fontSize:11,margin:"3px 0 0"}}><a href={s.url} target="_blank" rel="noreferrer" style={{color:R.accent,textDecoration:"none"}}>🎧 Escuchar</a></p>}
+                {s.notes&&<p style={{fontSize:11,color:R.text2,margin:"3px 0 0"}}>{s.notes}</p>}
               </div>
               <button onClick={()=>del(s.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:13}}>✕</button>
             </div>
           ))}
+        </div>
+      ))}
+
+      {/* ── Reuniones con músicos ── */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:24,marginBottom:12,paddingTop:16,borderTop:`1px solid ${R.border}`}}>
+        <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>🎹 Reuniones</span>
+        <button onClick={()=>setShowMeet(v=>!v)} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Reunión</button>
+      </div>
+      {showMeet&&(
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+            <input type="date" style={INP_SM} value={blankMeet.date} onChange={e=>setBlankMeet(p=>({...p,date:e.target.value}))} />
+            <input style={INP_SM} value={blankMeet.topic} onChange={e=>setBlankMeet(p=>({...p,topic:e.target.value}))} placeholder="Tema (ej: Reunión con DJ)" />
+            <div style={{gridColumn:"span 2"}}><textarea style={{...INP_SM,resize:"vertical"}} rows={3} value={blankMeet.notes} onChange={e=>setBlankMeet(p=>({...p,notes:e.target.value}))} placeholder="Notas / acuerdos de la reunión *" /></div>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={addMeet} disabled={savingMeet||!blankMeet.notes.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",opacity:(savingMeet||!blankMeet.notes.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{savingMeet?"...":"Guardar"}</button>
+            <button onClick={()=>setShowMeet(false)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+          </div>
+        </div>
+      )}
+      {meetings.length===0&&!showMeet&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"4px 0 8px"}}>Sin reuniones aún.</p>}
+      {meetings.map(m=>(
+        <div key={m.id} style={{borderLeft:`3px solid ${R.accent}`,borderRadius:"0 10px 10px 0",background:R.white,padding:"12px 14px",marginBottom:8,border:`1px solid ${R.border}`,borderLeftColor:R.accent,borderLeftWidth:3}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              {m.topic&&<span style={{fontSize:13,fontWeight:600,color:R.text}}>{m.topic}</span>}
+              <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:"rgba(201,169,110,.12)",color:R.accent}}>{fmtDate(m.date)}</span>
+            </div>
+            <button onClick={()=>delMeet(m.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:13}}>✕</button>
+          </div>
+          <p style={{fontSize:13,color:R.text2,margin:0,whiteSpace:"pre-line",lineHeight:1.6}}>{m.notes}</p>
         </div>
       ))}
     </div>
@@ -656,20 +748,23 @@ function LlamadasTab({ boda, onPatch }) {
       )}
       {calls.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin notas de llamadas aún.</p>}
       {calls.map(c=>(
-        <div key={c.id} style={{border:`1px solid ${R.border}`,borderRadius:12,padding:"12px 16px",marginBottom:8,background:R.white}}>
-          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,marginBottom:6}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div key={c.id} style={{borderLeft:`3px solid ${R.accent}`,background:R.white,borderRadius:"0 12px 12px 0",border:`1px solid ${R.border}`,borderLeftColor:R.accent,borderLeftWidth:3,padding:"14px 16px",marginBottom:10,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,marginBottom:8}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:99,background:"rgba(201,169,110,.12)",color:R.accent,letterSpacing:".04em"}}>{fmtDate(c.date)}</span>
               {c.topic&&<span style={{fontSize:13,fontWeight:600,color:R.text}}>{c.topic}</span>}
-              <span style={{fontSize:11,color:R.muted}}>{fmtDate(c.date)}</span>
             </div>
-            <button onClick={()=>del(c.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:13,flexShrink:0}}>✕</button>
+            <button onClick={()=>del(c.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:13,flexShrink:0,marginTop:2}}>✕</button>
           </div>
-          <p style={{fontSize:13,color:R.text2,margin:0,whiteSpace:"pre-line",lineHeight:1.6}}>{c.summary}</p>
+          <p style={{fontSize:13,color:R.text2,margin:0,whiteSpace:"pre-line",lineHeight:1.65}}>{c.summary}</p>
           {c.followUps&&(
-            <div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${R.border}`}}>
-              <p style={{fontSize:11,fontWeight:700,color:R.muted,margin:"0 0 4px",textTransform:"uppercase",letterSpacing:".04em"}}>⚡ Pendientes</p>
+            <div style={{marginTop:10,paddingTop:10,borderTop:`1px dashed ${R.border}`}}>
+              <p style={{fontSize:10,fontWeight:700,color:R.accent,margin:"0 0 6px",textTransform:"uppercase",letterSpacing:".06em"}}>Pendientes</p>
               {c.followUps.split("\n").filter(Boolean).map((f,i)=>(
-                <p key={i} style={{fontSize:12,color:R.text,margin:"2px 0",paddingLeft:12}}>• {f}</p>
+                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:4}}>
+                  <span style={{width:6,height:6,borderRadius:"50%",background:R.accent,marginTop:5,flexShrink:0}} />
+                  <p style={{fontSize:12,color:R.text,margin:0,lineHeight:1.5}}>{f}</p>
+                </div>
               ))}
             </div>
           )}
@@ -681,6 +776,7 @@ function LlamadasTab({ boda, onPatch }) {
 
 // ─── TIMELINE ────────────────────────────────────────────────────────────────
 const M_CATS=["General","Novios","Proveedores","Coordinación","Música","Fotos/Video","Protocolo","⚠️ Alerta"];
+const TW_TEAM=["Caro","Alexandra","Michel","Ray","Daniela","Valentina","Sofía","Mariana","Camila","Juliana"];
 const TIMELINE_PRESETS=[
   {d:"Llegada del equipo",      cat:"Coordinación"},
   {d:"Preparación de la novia", cat:"Novios"},
@@ -709,7 +805,7 @@ const TL_HIGHLIGHTS=[
   {label:"Lila",value:"#ede9fe"},
 ];
 
-function TimelineEventForm({val,setVal,saving,onSubmit,onCancel,submitLabel,availableSuppliers}){
+function TimelineEventForm({val,setVal,saving,onSubmit,onCancel,submitLabel,availableSuppliers,weddingEvents=[]}){
   const evSuppliers=val.suppliers||[];
   function toggleSup(name){setVal(p=>{const cur=p.suppliers||[];return{...p,suppliers:cur.includes(name)?cur.filter(s=>s!==name):[...cur,name]};});}
   return(
@@ -718,9 +814,40 @@ function TimelineEventForm({val,setVal,saving,onSubmit,onCancel,submitLabel,avai
         <input type="time" style={INP_SM} value={val.time} onChange={e=>setVal(p=>({...p,time:e.target.value}))} />
         <select style={INP_SM} value={val.category} onChange={e=>setVal(p=>({...p,category:e.target.value}))}>{M_CATS.map(c=><option key={c}>{c}</option>)}</select>
         <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={val.description} onChange={e=>setVal(p=>({...p,description:e.target.value}))} placeholder="Descripción del evento *" /></div>
-        <input style={INP_SM} value={val.assignedTo} onChange={e=>setVal(p=>({...p,assignedTo:e.target.value}))} placeholder="Responsable" />
+        <select style={INP_SM} value={val.assignedTo} onChange={e=>setVal(p=>({...p,assignedTo:e.target.value}))}>
+          <option value="">— responsable —</option>
+          <optgroup label="Equipo Two Travel">
+            {TW_TEAM.map(m=><option key={m} value={m}>{m}</option>)}
+          </optgroup>
+          {availableSuppliers&&availableSuppliers.filter(s=>s.name).length>0&&(
+            <optgroup label="Proveedores">
+              {availableSuppliers.filter(s=>s.name).map(s=><option key={s.id||s.name} value={s.name}>{s.name}{s.category?` (${s.category})`:""}</option>)}
+            </optgroup>
+          )}
+        </select>
         <input style={INP_SM} value={val.notes} onChange={e=>setVal(p=>({...p,notes:e.target.value}))} placeholder="Notas" />
         <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={val.url||""} onChange={e=>setVal(p=>({...p,url:e.target.value}))} placeholder="URL (opcional) — ej. Google Maps, Drive, Spotify…" /></div>
+        <div style={{gridColumn:"span 2",display:"flex",gap:8}}>
+          {weddingEvents.length>0?(
+            <select style={{...INP_SM,flex:1}}
+              value={weddingEvents.findIndex((_,i)=>(i+1)===(val.dayIndex||1))>-1?val.dayIndex||1:""}
+              onChange={e=>{
+                const idx=Number(e.target.value);
+                const ev=weddingEvents[idx-1];
+                setVal(p=>({...p,dayIndex:idx,dayLabel:ev?ev.name:""}));
+              }}>
+              <option value="">— Evento de la boda —</option>
+              {weddingEvents.map((ev,i)=><option key={ev.id||i} value={i+1}>{ev.name}</option>)}
+            </select>
+          ):(
+            <>
+              <select style={{...INP_SM,flex:"0 0 90px"}} value={val.dayIndex||1} onChange={e=>setVal(p=>({...p,dayIndex:Number(e.target.value)}))}>
+                {[1,2,3,4,5].map(d=><option key={d} value={d}>Día {d}</option>)}
+              </select>
+              <input style={INP_SM} value={val.dayLabel||""} onChange={e=>setVal(p=>({...p,dayLabel:e.target.value}))} placeholder="Etiqueta (ej: Jueves 28 Jun · Pre-Wedding)" />
+            </>
+          )}
+        </div>
         {availableSuppliers&&availableSuppliers.length>0&&(
           <div style={{gridColumn:"span 2"}}>
             <p style={{fontSize:10,color:R.muted,margin:"0 0 5px",fontWeight:600,textTransform:"uppercase",letterSpacing:".06em"}}>Proveedores</p>
@@ -755,21 +882,112 @@ function TimelineEventForm({val,setVal,saving,onSubmit,onCancel,submitLabel,avai
   );
 }
 
-function TimelineTab({ boda, onScheduleChange }) {
+function TimelineTab({ boda, onScheduleChange, onPatch }) {
   const [schedule,setSchedule]=useState(boda.schedule||[]);
+  const [dayModes,setDayModes]=useState(boda.dayModes||{});
   const [show,setShow]=useState(false);
   const [saving,setSaving]=useState(false);
   const [editing,setEditing]=useState(null);
   const [view,setView]=useState("interno");
   const [showPresets,setShowPresets]=useState(false);
-  const BLANK={time:"",description:"",assignedTo:"",notes:"",url:"",suppliers:[],category:"General",isInternal:false,isHighlight:false,highlightColor:""};
+  const BLANK={time:"",description:"",assignedTo:"",notes:"",url:"",suppliers:[],category:"General",isInternal:false,isHighlight:false,highlightColor:"",dayIndex:1,dayLabel:""};
   const [blank,setBlank]=useState(BLANK);
-  const sorted=[...schedule].sort((a,b)=>(a.time||"").localeCompare(b.time||""));
-  const visible=view==="cliente"?sorted.filter(e=>!e.isInternal):sorted;
+  const sorted=[...schedule].sort((a,b)=>{const di=(a.dayIndex||1)-(b.dayIndex||1);if(di!==0)return di;return(a.time||"").localeCompare(b.time||"");});
+  const visible=view==="cliente"?sorted.filter(e=>!e.isInternal&&dayModes[e.dayIndex||1]!=="interno"):sorted;
   async function persist(u){ setSchedule(u); onScheduleChange(u); await apiUpdateSchedule(boda.id,u); }
+  async function persistDayModes(dm){ setDayModes(dm); onPatch&&onPatch({dayModes:dm}); await apiSaveNotes(boda.id,{...boda,dayModes:dm}); }
+  function toggleDayMode(di){ persistDayModes({...dayModes,[di]:dayModes[di]==="interno"?"ambos":"interno"}); }
   async function add(){ if(!blank.time||!blank.description.trim()) return; setSaving(true); try{await persist([...schedule,{...blank,id:uid()}]); setBlank(BLANK); setShow(false);}catch(e){alert("Error: "+e.message);} setSaving(false); }
   async function saveEdit(){ if(!editing||!editing.time||!editing.description.trim()) return; setSaving(true); try{await persist(schedule.map(e=>e.id===editing.id?editing:e)); setEditing(null);}catch(e){alert("Error: "+e.message);} setSaving(false); }
   async function del(id){ try{await persist(schedule.filter(e=>e.id!==id));}catch{setSchedule(schedule);} }
+
+  const multiDay=sorted.some(e=>(e.dayIndex||1)>1);
+
+  function printMinutoAMinuto(){
+    const toprint=view==="cliente"?sorted.filter(e=>!e.isInternal):sorted;
+    const dayGroups=[];
+    toprint.forEach(e=>{
+      const di=e.dayIndex||1;
+      if(!dayGroups.length||dayGroups[dayGroups.length-1].di!==di){
+        dayGroups.push({di,label:e.dayLabel||`Día ${di}`,events:[]});
+      }
+      dayGroups[dayGroups.length-1].events.push(e);
+    });
+    const sups=(boda.suppliers||[]).filter(s=>s.name);
+    const w=window.open("","_blank","width=1000,height=1100");
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Minuto a Minuto — ${boda.clienteName}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:11px;color:#1a1814;padding:24px 28px}
+.main-title{text-align:center;font-weight:bold;font-size:13px;border:2px solid #1a1814;padding:8px;margin-bottom:16px;letter-spacing:.05em;text-transform:uppercase}
+.info-block{margin-bottom:14px;font-size:11px;line-height:1.7}
+.info-row{display:flex;gap:8px;margin-bottom:1px}
+.info-label{font-weight:bold;min-width:120px;text-transform:uppercase}
+.prov-title{font-weight:bold;text-decoration:underline;margin:14px 0 6px;font-size:11px;text-transform:uppercase}
+.prov-item{margin-bottom:3px;line-height:1.5}
+.prov-name{font-weight:bold}
+table{width:100%;border-collapse:collapse;margin-top:20px}
+th{background:#1a0812;color:#c9a96e;padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;border:1px solid #1a0812}
+td{padding:6px 8px;border:1px solid #d4cfc9;vertical-align:top;font-size:11px;line-height:1.45}
+.day-row td{background:#c9a96e;color:#fff;font-weight:bold;text-align:center;font-size:11px;letter-spacing:.06em;border:1px solid #b89050;padding:6px}
+.hora{color:#b4975a;font-weight:700;white-space:nowrap;width:72px}
+.acto{width:200px;font-weight:500}
+.resp{width:160px;color:#444}
+.notes{color:#333}
+a{color:#b4975a}
+.foot{font-size:9px;color:#aaa;margin-top:24px;text-align:right;border-top:1px solid #eee;padding-top:8px}
+@media print{@page{margin:10mm 12mm;size:A4 landscape}button{display:none}}
+</style></head><body>
+<div class="main-title">MINUTO A MINUTO BODA — ${boda.clienteName.toUpperCase()}</div>
+<div class="info-block">
+  <div class="info-row"><span class="info-label">BODA:</span><span>${boda.clienteName}</span></div>
+  ${boda.weddingDate?`<div class="info-row"><span class="info-label">FECHA:</span><span>${boda.weddingDate}</span></div>`:""}
+  ${boda.guestCount?`<div class="info-row"><span class="info-label">PAX:</span><span>${boda.guestCount} PAX</span></div>`:""}
+  ${boda.venue?`<div class="info-row"><span class="info-label">CEREMONIA:</span><span>${boda.venue}</span></div>`:""}
+</div>
+${sups.length?`<div class="prov-title">PROVEEDORES</div>${sups.map(s=>`<div class="prov-item"><span class="prov-name">${s.name}</span>${s.category?` — ${s.category}`:""}${s.phone?` — Cel. ${s.phone}`:""}</div>`).join("")}`:""}
+<table>
+  <thead><tr><th style="width:72px">HORA</th><th style="width:200px">ACTO</th><th style="width:160px">RESPONSABLE</th><th>NOTAS</th></tr></thead>
+  <tbody>
+    ${dayGroups.map(g=>`<tr class="day-row"><td colspan="4">${g.label.toUpperCase()}</td></tr>${g.events.map(e=>`<tr><td class="hora">${e.time||""}</td><td class="acto">${(e.description||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")}</td><td class="resp">${[e.assignedTo,...(e.suppliers||[])].filter(Boolean).join("<br/>")}</td><td class="notes">${(e.notes||"").replace(/\n/g,"<br/>").replace(/&/g,"&amp;")}${e.url?`<br/><a href="${e.url}">${e.url}</a>`:""}</td></tr>`).join("")}`).join("")}
+  </tbody>
+</table>
+<div class="foot">Two Lovers — Two Travel &nbsp;·&nbsp; ${new Date().toLocaleDateString("es-CO")} &nbsp;·&nbsp; Vista: ${view}</div>
+<script>window.onload=()=>window.print();</script>
+</body></html>`);
+    w.document.close();
+  }
+
+  function printByResponsable(name){
+    const evts=sorted.filter(e=>e.assignedTo===name||(e.suppliers||[]).includes(name));
+    if(!evts.length){alert(`Sin eventos para ${name}`);return;}
+    const w=window.open("","_blank","width=900,height=1000");
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Eventos — ${name}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:11px;color:#1a1814;padding:24px 28px}
+.title{text-align:center;font-weight:bold;font-size:13px;border:2px solid #1a1814;padding:8px;margin-bottom:16px;letter-spacing:.05em;text-transform:uppercase}
+.sub{text-align:center;font-size:11px;color:#666;margin-bottom:18px}
+table{width:100%;border-collapse:collapse}
+th{background:#1a0812;color:#c9a96e;padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;border:1px solid #1a0812}
+td{padding:6px 8px;border:1px solid #d4cfc9;vertical-align:top;font-size:11px;line-height:1.45}
+.hora{color:#b4975a;font-weight:700;white-space:nowrap;width:72px}
+.foot{font-size:9px;color:#aaa;margin-top:24px;text-align:right;border-top:1px solid #eee;padding-top:8px}
+@media print{@page{margin:10mm 12mm;size:A4 portrait}button{display:none}}
+</style></head><body>
+<div class="title">EVENTOS — ${name.toUpperCase()}</div>
+<div class="sub">${boda.clienteName}${boda.weddingDate?` · ${boda.weddingDate}`:""}</div>
+<table>
+  <thead><tr><th style="width:72px">HORA</th><th>EVENTO</th><th>NOTAS</th></tr></thead>
+  <tbody>${evts.map(e=>`<tr><td class="hora">${e.time||""}</td><td>${(e.description||"").replace(/&/g,"&amp;")}</td><td>${(e.notes||"").replace(/\n/g,"<br/>").replace(/&/g,"&amp;")}${e.url?`<br/><a href="${e.url}">${e.url}</a>`:""}</td></tr>`).join("")}</tbody>
+</table>
+<div class="foot">Two Travel &nbsp;·&nbsp; ${new Date().toLocaleDateString("es-CO")}</div>
+<script>window.onload=()=>window.print();</script>
+</body></html>`);
+    w.document.close();
+  }
+
+  const responsables=[...new Set(sorted.flatMap(e=>[e.assignedTo,...(e.suppliers||[])]).filter(Boolean))].sort();
 
   return (
     <div>
@@ -782,7 +1000,13 @@ function TimelineTab({ boda, onScheduleChange }) {
           ))}
         </div>
         <div style={{display:"flex",gap:8}}>
-          {sorted.length>0&&<button onClick={()=>window.print()} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>🖨</button>}
+          {sorted.length>0&&<button onClick={printMinutoAMinuto} title="Imprimir Minuto a Minuto" style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>🖨 M×M</button>}
+          {responsables.length>0&&(
+            <select style={{...INP_SM,height:32,borderRadius:8,fontSize:11}} onChange={e=>{if(e.target.value)printByResponsable(e.target.value);e.target.value="";}} defaultValue="">
+              <option value="">📄 PDF por responsable…</option>
+              {responsables.map(r=><option key={r} value={r}>{r}</option>)}
+            </select>
+          )}
           <button onClick={()=>{setShowPresets(v=>!v);setShow(false);setEditing(null);}} style={{background:showPresets?R.gold:"transparent",color:showPresets?"#fff":R.muted,border:`1px solid ${showPresets?R.gold:R.border}`,borderRadius:8,padding:"7px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".03em"}}>⚡ Rápidos</button>
           <button onClick={()=>{setShow(v=>!v);setEditing(null);setShowPresets(false);}} style={{background:show?R.accent:"#1a0812",color:"#fff",border:"none",borderRadius:8,padding:"7px 18px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".03em"}}>+ Evento</button>
         </div>
@@ -802,19 +1026,30 @@ function TimelineTab({ boda, onScheduleChange }) {
           </div>
         </div>
       )}
-      {show&&!editing&&<TimelineEventForm val={blank} setVal={setBlank} saving={saving} onSubmit={add} onCancel={()=>setShow(false)} submitLabel="Agregar" availableSuppliers={boda.suppliers||[]} />}
-      {editing&&<TimelineEventForm val={editing} setVal={v=>setEditing(p=>({...p,...(typeof v==="function"?v(p):v)}))} saving={saving} onSubmit={saveEdit} onCancel={()=>setEditing(null)} submitLabel="Guardar" availableSuppliers={boda.suppliers||[]} />}
+      {show&&!editing&&<TimelineEventForm val={blank} setVal={setBlank} saving={saving} onSubmit={add} onCancel={()=>setShow(false)} submitLabel="Agregar" availableSuppliers={boda.suppliers||[]} weddingEvents={boda.weddingEvents||[{id:"ceremony",name:"Ceremonia"},{id:"cocktail",name:"Cóctel"},{id:"reception",name:"Recepción"}]} />}
+      {editing&&<TimelineEventForm val={editing} setVal={v=>setEditing(p=>({...p,...(typeof v==="function"?v(p):v)}))} saving={saving} onSubmit={saveEdit} onCancel={()=>setEditing(null)} submitLabel="Guardar" availableSuppliers={boda.suppliers||[]} weddingEvents={boda.weddingEvents||[{id:"ceremony",name:"Ceremonia"},{id:"cocktail",name:"Cóctel"},{id:"reception",name:"Recepción"}]} />}
       {visible.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>{sorted.length===0?"Sin eventos. Agrega el primero arriba.":"No hay eventos para la vista cliente."}</p>}
       <div style={{position:"relative"}}>
         {visible.length>0&&<div style={{position:"absolute",left:55,top:8,bottom:8,width:1,background:R.border}} />}
-        {visible.map(ev=>{
+        {visible.map((ev,idx)=>{
           const cs=M_COLORS[ev.category]||M_COLORS["General"];
           const isAlerta=ev.category==="⚠️ Alerta";
           const hl=!!ev.isHighlight;
           const hlBg=ev.highlightColor||(isAlerta?"#fef2f2":hl?"#fffbf0":ev.isInternal?"#fafafa":R.white);
           const hlBd=ev.highlightColor||(isAlerta?"#fca5a5":hl?R.gold:ev.isInternal?"#e5e7eb":R.border);
+          const prevDay=idx>0?(visible[idx-1].dayIndex||1):null;
+          const currDay=ev.dayIndex||1;
+          const showDay=multiDay&&prevDay!==currDay;
+          const dayLbl=ev.dayLabel||`Día ${currDay}`;
           return (
-            <div key={ev.id} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:10}}>
+            <React.Fragment key={ev.id}>
+              {showDay&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,marginLeft:66,flexWrap:"wrap"}}>
+                <div style={{background:R.gold,color:"#fff",padding:"5px 16px",borderRadius:8,fontSize:11,fontWeight:700,letterSpacing:".05em",textTransform:"uppercase"}}>{dayLbl}</div>
+                <button onClick={()=>toggleDayMode(currDay)} title="Alternar visibilidad de este día en la vista cliente" style={{fontSize:10,padding:"3px 10px",borderRadius:99,border:`1px solid ${dayModes[currDay]==="interno"?R.border:R.gold}`,background:dayModes[currDay]==="interno"?"#f3f4f6":"rgba(201,169,110,.1)",color:dayModes[currDay]==="interno"?"#6b7280":R.accent,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600}}>
+                  {dayModes[currDay]==="interno"?"🔐 Solo interno":"🌐 Visible cliente"}
+                </button>
+              </div>}
+            <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:10}}>
               <div style={{width:54,textAlign:"right",flexShrink:0,paddingTop:10}}><span style={{fontSize:12,fontFamily:"'Jost',sans-serif",fontWeight:600,color:R.text,letterSpacing:".02em",fontVariantNumeric:"tabular-nums"}}>{ev.time}</span></div>
               <div style={{display:"flex",alignItems:"flex-start",gap:10,flex:1,minWidth:0}}>
                 <div style={{width:10,height:10,borderRadius:"50%",background:hl||ev.highlightColor?R.gold:R.accent,flexShrink:0,marginTop:12,zIndex:1,boxShadow:`0 0 0 3px ${hl||ev.highlightColor?"rgba(201,169,110,.2)":R.light}`}} />
@@ -832,7 +1067,10 @@ function TimelineTab({ boda, onScheduleChange }) {
                       {ev.url       &&<a href={ev.url} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:11,color:R.accent,margin:"3px 0 0",display:"inline-block",wordBreak:"break-all",textDecoration:"underline"}}>🔗 {ev.url.replace(/^https?:\/\/(www\.)?/,"").split("/")[0]}</a>}
                       {(ev.suppliers&&ev.suppliers.length>0)&&<div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:5}}>{ev.suppliers.map(s=><span key={s} style={{fontSize:10,padding:"2px 8px",borderRadius:99,background:R.light,border:`1px solid ${R.border}`,color:R.muted}}>🏢 {s}</span>)}</div>}
                     </div>
-                    <div style={{display:"flex",gap:4,flexShrink:0}}>
+                    <div style={{display:"flex",gap:4,flexShrink:0,alignItems:"center"}}>
+                      <button onClick={()=>persist(schedule.map(e=>e.id===ev.id?{...e,isInternal:!e.isInternal}:e))} title={ev.isInternal?"Solo interno — clic para hacer visible al cliente":"Visible al cliente — clic para marcar como interno"} style={{fontSize:11,padding:"2px 7px",borderRadius:99,border:`1px solid ${ev.isInternal?R.border:R.gold}`,background:ev.isInternal?"#f3f4f6":"rgba(201,169,110,.12)",color:ev.isInternal?"#6b7280":R.accent,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,lineHeight:1.4}}>
+                        {ev.isInternal?"🔐":"🌐"}
+                      </button>
                       <button onClick={()=>{setEditing({...ev});setShow(false);}} style={{color:R.muted,background:"none",border:"none",cursor:"pointer",fontSize:12,padding:"0 3px"}}>✏️</button>
                       <button onClick={()=>del(ev.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:14,padding:"0 2px"}}>✕</button>
                     </div>
@@ -840,6 +1078,7 @@ function TimelineTab({ boda, onScheduleChange }) {
                 </div>
               </div>
             </div>
+            </React.Fragment>
           );
         })}
       </div>
@@ -972,43 +1211,123 @@ function PaletteTab({ boda, onPatch }) {
 
 // ─── INVITADOS TAB ───────────────────────────────────────────────────────────
 const RSVP_STATES=["Pendiente","Confirmado","No asiste"];
+const DEFAULT_W_EVENTS=[{id:"ceremony",name:"Ceremonia"},{id:"cocktail",name:"Cóctel"},{id:"reception",name:"Recepción"}];
 const RSVP_STYLE={"Pendiente":{bg:"#fff7ed",color:"#c2410c"},"Confirmado":{bg:"#f0fdf4",color:"#15803d"},"No asiste":{bg:"#f1f5f9",color:"#64748b"}};
 const G_EVENTS=[["ceremony","⛪","Ceremonia"],["cocktail","🥂","Cóctel"],["reception","🎊","Recepción"]];
 const MEAL_OPTIONS=["Sin especificar","Carne","Pescado","Vegetariano","Vegano","Sin gluten","Infantil"];
 
 function GuestTab({ boda, onPatch }) {
   const [guests,setGuests]=useState(boda.guests||[]);
+  const [wEvents,setWEvents]=useState(boda.weddingEvents||DEFAULT_W_EVENTS);
   const [show,setShow]=useState(false);
+  const [showEvents,setShowEvents]=useState(false);
   const [saving,setSaving]=useState(false);
   const [filter,setFilter]=useState("todos");
+  const [filterEvent,setFilterEvent]=useState("todos");
   const [view,setView]=useState("lista");
   const [editId,setEditId]=useState(null);
-  const BLANK={name:"",contact:"",table:"",tableId:"",rsvp:"Pendiente",ceremony:true,cocktail:true,reception:true,meal:"Sin especificar",notes:""};
+  const [newEvName,setNewEvName]=useState("");
+  const [copied,setCopied]=useState(false);
+
+  const BLANK={name:"",contact:"",email:"",table:"",tableId:"",rsvp:"Pendiente",eventIds:wEvents.map(e=>e.id),meal:"Sin especificar",notes:""};
   const [blank,setBlank]=useState(BLANK);
 
-  async function persist(u){ setGuests(u); onPatch({guests:u}); await apiSaveNotes(boda.id,{...boda,guests:u}); }
+  function gInEvent(g,evId){ return (g.eventIds||[]).includes(evId)||(evId==="ceremony"&&g.ceremony)||(evId==="cocktail"&&g.cocktail)||(evId==="reception"&&g.reception); }
+  function toggleEvId(evId){ setBlank(p=>{const cur=p.eventIds||[];return{...p,eventIds:cur.includes(evId)?cur.filter(x=>x!==evId):[...cur,evId]};});}
+
+  async function persistGuests(u){ setGuests(u); onPatch({guests:u}); await apiSaveNotes(boda.id,{...boda,guests:u,weddingEvents:wEvents}); }
+  async function persistEvents(ev){ setWEvents(ev); onPatch({weddingEvents:ev}); await apiSaveNotes(boda.id,{...boda,guests,weddingEvents:ev}); }
+
   async function add(){
     if(!blank.name.trim()) return;
     setSaving(true);
     try{
-      if(editId){ await persist(guests.map(g=>g.id===editId?{...blank,id:editId}:g)); setEditId(null); }
-      else { await persist([...guests,{...blank,id:uid()}]); }
-      setBlank(BLANK); setShow(false);
+      if(editId){ await persistGuests(guests.map(g=>g.id===editId?{...blank,id:editId}:g)); setEditId(null); }
+      else { await persistGuests([...guests,{...blank,id:uid()}]); }
+      setBlank({...BLANK,eventIds:wEvents.map(e=>e.id)}); setShow(false);
     }catch(e){alert("Error: "+e.message);} setSaving(false);
   }
-  function startEdit(g){ setBlank({...BLANK,...g}); setEditId(g.id); setShow(true); }
-  async function del(id){ try{await persist(guests.filter(g=>g.id!==id));}catch{setGuests(guests);} }
-  async function cycleRsvp(id){ const u=guests.map(g=>{if(g.id!==id)return g; const idx=(RSVP_STATES.indexOf(g.rsvp||"Pendiente")+1)%RSVP_STATES.length; return {...g,rsvp:RSVP_STATES[idx]};}); try{await persist(u);}catch{setGuests(guests);} }
+  function startEdit(g){ setBlank({...BLANK,...g,eventIds:g.eventIds||(wEvents.filter(e=>g[e.id]!==false).map(e=>e.id))}); setEditId(g.id); setShow(true); }
+  async function del(id){ try{await persistGuests(guests.filter(g=>g.id!==id));}catch{setGuests(guests);} }
+  async function cycleRsvp(id){ const u=guests.map(g=>{if(g.id!==id)return g; const idx=(RSVP_STATES.indexOf(g.rsvp||"Pendiente")+1)%RSVP_STATES.length; return {...g,rsvp:RSVP_STATES[idx]};}); try{await persistGuests(u);}catch{setGuests(guests);} }
+
+  async function addEvent(){ if(!newEvName.trim()) return; const ev={id:uid(),name:newEvName.trim()}; await persistEvents([...wEvents,ev]); setNewEvName(""); }
+  async function delEvent(id){ await persistEvents(wEvents.filter(e=>e.id!==id)); }
+
+  function printByEvent(evId){
+    const ev=wEvents.find(e=>e.id===evId); if(!ev) return;
+    const list=guests.filter(g=>gInEvent(g,evId));
+    if(!list.length){alert(`Sin invitados para ${ev.name}`);return;}
+    const confirmed=list.filter(g=>g.rsvp==="Confirmado").length;
+    const w=window.open("","_blank","width=900,height=1000");
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Lista ${ev.name} — ${boda.clienteName}</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;color:#1a1814;padding:24px 28px}.title{text-align:center;font-weight:bold;font-size:13px;border:2px solid #1a1814;padding:8px;margin-bottom:6px;letter-spacing:.05em;text-transform:uppercase}.sub{text-align:center;font-size:11px;color:#666;margin-bottom:18px}table{width:100%;border-collapse:collapse}th{background:#1a0812;color:#c9a96e;padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em}td{padding:6px 8px;border-bottom:1px solid #e5e7eb;font-size:11px}.rsvp-ok{color:#15803d;font-weight:600}.rsvp-no{color:#6b7280}.foot{font-size:9px;color:#aaa;margin-top:24px;text-align:right;border-top:1px solid #eee;padding-top:8px}@media print{@page{margin:10mm 12mm;size:A4 portrait}}</style></head><body>
+<div class="title">LISTA DE INVITADOS — ${ev.name.toUpperCase()}</div>
+<div class="sub">${boda.clienteName}${boda.weddingDate?" · "+boda.weddingDate:""} &nbsp;·&nbsp; ${list.length} invitados · ${confirmed} confirmados</div>
+<table><thead><tr><th>#</th><th>Nombre</th><th>RSVP</th><th>Menú</th><th>Email / WhatsApp</th><th>Notas</th></tr></thead><tbody>
+${list.map((g,i)=>`<tr><td>${i+1}</td><td>${g.name}</td><td class="${g.rsvp==="Confirmado"?"rsvp-ok":"rsvp-no"}">${g.rsvp||"Pendiente"}</td><td>${g.meal&&g.meal!=="Sin especificar"?g.meal:"–"}</td><td>${g.email||g.contact||""}</td><td>${g.notes||""}</td></tr>`).join("")}
+</tbody></table>
+<div class="foot">Two Travel &nbsp;·&nbsp; ${new Date().toLocaleDateString("es-CO")}</div>
+<script>window.onload=()=>window.print();</script></body></html>`);
+    w.document.close();
+  }
+
+  function printAllGuests(){
+    if(!guests.length){alert("Sin invitados.");return;}
+    const confirmed=guests.filter(g=>g.rsvp==="Confirmado").length;
+    const w=window.open("","_blank","width=900,height=1000");
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Lista completa — ${boda.clienteName}</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;color:#1a1814;padding:24px 28px}.title{text-align:center;font-weight:bold;font-size:13px;border:2px solid #1a1814;padding:8px;margin-bottom:6px;letter-spacing:.05em;text-transform:uppercase}.sub{text-align:center;font-size:11px;color:#666;margin-bottom:18px}table{width:100%;border-collapse:collapse}th{background:#1a0812;color:#c9a96e;padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em}td{padding:6px 8px;border-bottom:1px solid #e5e7eb;font-size:11px}.rsvp-ok{color:#15803d;font-weight:600}.rsvp-no{color:#6b7280}.foot{font-size:9px;color:#aaa;margin-top:24px;text-align:right;border-top:1px solid #eee;padding-top:8px}@media print{@page{margin:10mm 12mm;size:A4 portrait}}</style></head><body>
+<div class="title">LISTA COMPLETA DE INVITADOS</div>
+<div class="sub">${boda.clienteName}${boda.weddingDate?" · "+boda.weddingDate:""} &nbsp;·&nbsp; ${guests.length} invitados · ${confirmed} confirmados</div>
+<table><thead><tr><th>#</th><th>Nombre</th><th>RSVP</th><th>Menú</th><th>Mesa</th><th>Email / WhatsApp</th><th>Notas</th></tr></thead><tbody>
+${guests.map((g,i)=>{
+  const mesa=boda.seating?.find?.(t=>t.id===g.tableId);
+  return `<tr><td>${i+1}</td><td>${g.name}</td><td class="${g.rsvp==="Confirmado"?"rsvp-ok":"rsvp-no"}">${g.rsvp||"Pendiente"}</td><td>${g.meal&&g.meal!=="Sin especificar"?g.meal:"–"}</td><td>${mesa?mesa.name:"–"}</td><td>${g.email||g.contact||""}</td><td>${g.notes||""}</td></tr>`;
+}).join("")}
+</tbody></table>
+<div class="foot">Two Travel &nbsp;·&nbsp; ${new Date().toLocaleDateString("es-CO")}</div>
+<script>window.onload=()=>window.print();</script></body></html>`);
+    w.document.close();
+  }
+
+  const rsvpUrl=`${window.location.origin}/?mode=bodas-rsvp&bodaId=${boda.id}`;
+  function copyRsvp(){ navigator.clipboard.writeText(rsvpUrl).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);}); }
 
   const confirmed=guests.filter(g=>g.rsvp==="Confirmado").length;
   const pending=guests.filter(g=>g.rsvp==="Pendiente"||!g.rsvp).length;
   const noAsiste=guests.filter(g=>g.rsvp==="No asiste").length;
-  const visible=filter==="todos"?guests:guests.filter(g=>(g.rsvp||"Pendiente")===filter);
-
+  const byEvent=filterEvent==="todos"?guests:guests.filter(g=>gInEvent(g,filterEvent));
+  const visible=filter==="todos"?byEvent:byEvent.filter(g=>(g.rsvp||"Pendiente")===filter);
   const mealSummary=MEAL_OPTIONS.filter(m=>m!=="Sin especificar").map(m=>({m,n:guests.filter(g=>g.rsvp==="Confirmado"&&g.meal===m).length})).filter(x=>x.n>0);
+
+  const alertGuests=guests.filter(g=>g.notes&&g.notes.trim());
 
   return (
     <div>
+      {/* Alertas / notas de invitados */}
+      {alertGuests.length>0&&(
+        <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,padding:"10px 14px",marginBottom:12}}>
+          <p style={{fontSize:11,fontWeight:700,color:"#92400e",margin:"0 0 8px",textTransform:"uppercase",letterSpacing:".06em"}}>⚠️ Alertas y notas ({alertGuests.length})</p>
+          <div style={{display:"flex",flexDirection:"column",gap:5}}>
+            {alertGuests.map(g=>(
+              <div key={g.id} style={{display:"flex",alignItems:"flex-start",gap:8,fontSize:11}}>
+                <span style={{fontWeight:600,color:"#78350f",flexShrink:0,minWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</span>
+                <span style={{color:"#92400e",lineHeight:1.4}}>{g.notes}</span>
+                {g.meal&&g.meal!=="Sin especificar"&&<span style={{marginLeft:"auto",flexShrink:0,fontSize:10,padding:"1px 7px",borderRadius:99,background:"#fef3c7",color:"#92400e",border:"1px solid #fde68a"}}>🍽 {g.meal}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* RSVP link */}
+      <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+        <span style={{fontSize:11,color:"#15803d",fontWeight:600}}>🔗 Link RSVP para invitados</span>
+        <code style={{flex:1,fontSize:10,color:"#166534",background:"#dcfce7",padding:"3px 8px",borderRadius:6,wordBreak:"break-all"}}>{rsvpUrl}</code>
+        <button onClick={copyRsvp} style={{background:"#15803d",color:"#fff",border:"none",borderRadius:8,padding:"5px 12px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",flexShrink:0}}>{copied?"✓ Copiado":"Copiar"}</button>
+      </div>
+
       {/* Header */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,flexWrap:"wrap",gap:8}}>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
@@ -1017,46 +1336,92 @@ function GuestTab({ boda, onPatch }) {
           {pending>0&&<span style={{fontSize:11,fontWeight:600,color:"#c2410c",background:"#fff7ed",borderRadius:99,padding:"2px 8px",border:"1px solid #fed7aa"}}>⏳ {pending}</span>}
           {noAsiste>0&&<span style={{fontSize:11,color:"#64748b",background:"#f1f5f9",borderRadius:99,padding:"2px 8px",border:"1px solid #e2e8f0"}}>✕ {noAsiste}</span>}
         </div>
-        <div style={{display:"flex",gap:6}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           {[["lista","☰"],["tabla","⊞"]].map(([v,ic])=>(
-            <button key={v} onClick={()=>setView(v)} title={v==="lista"?"Vista lista":"Vista tabla RSVP"} style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${view===v?R.accent:R.border}`,background:view===v?R.accent:"transparent",color:view===v?"#fff":R.muted,fontSize:13,cursor:"pointer"}}>{ic}</button>
+            <button key={v} onClick={()=>setView(v)} title={v==="lista"?"Vista lista":"Vista tabla"} style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${view===v?R.accent:R.border}`,background:view===v?R.accent:"transparent",color:view===v?"#fff":R.muted,fontSize:13,cursor:"pointer"}}>{ic}</button>
           ))}
-          <button onClick={()=>{setShow(v=>!v);setEditId(null);setBlank(BLANK);}} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Agregar</button>
+          <button onClick={()=>setShowEvents(v=>!v)} style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${showEvents?R.gold:R.border}`,background:showEvents?R.gold:"transparent",color:showEvents?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>⚙️ Eventos</button>
+          <button onClick={()=>{setShow(v=>!v);setEditId(null);setBlank({...BLANK,eventIds:wEvents.map(e=>e.id)});}} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Invitado</button>
         </div>
       </div>
 
-      {/* Filters (list view only) */}
-      {view==="lista"&&(
-        <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
+      {/* Event manager */}
+      {showEvents&&(
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:14}}>
+          <p style={{fontSize:11,fontWeight:700,color:R.muted,textTransform:"uppercase",letterSpacing:".06em",margin:"0 0 10px"}}>Eventos de la boda</p>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
+            {wEvents.map(ev=>(
+              <span key={ev.id} style={{display:"inline-flex",alignItems:"center",gap:6,background:R.white,border:`1px solid ${R.border}`,borderRadius:99,padding:"3px 10px",fontSize:11}}>
+                {ev.name}
+                <button onClick={()=>delEvent(ev.id)} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",padding:0,lineHeight:1,fontSize:12}}>✕</button>
+              </span>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <input style={{...INP_SM,flex:1}} value={newEvName} onChange={e=>setNewEvName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addEvent()} placeholder="Nuevo evento (ej: Cena de práctica, Bote…)" />
+            <button onClick={addEvent} disabled={!newEvName.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"5px 14px",fontSize:12,cursor:"pointer",opacity:!newEvName.trim()?.5:1,fontFamily:"'Jost',sans-serif"}}>Agregar</button>
+          </div>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
           {["todos","Confirmado","Pendiente","No asiste"].map(f=>(
             <button key={f} onClick={()=>setFilter(f)} style={{padding:"3px 10px",borderRadius:2,border:`1px solid ${filter===f?R.accent:R.border}`,background:filter===f?R.accent:"transparent",color:filter===f?"#fff":R.muted,fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
               {f==="todos"?"Todos":f}
             </button>
           ))}
         </div>
-      )}
+        <div style={{display:"flex",gap:4,flexWrap:"wrap",marginLeft:"auto",alignItems:"center"}}>
+          {wEvents.length>0&&(
+            <select value={filterEvent} onChange={e=>setFilterEvent(e.target.value)} style={{...INP_SM,height:28,fontSize:11}}>
+              <option value="todos">Todos los eventos</option>
+              {wEvents.map(ev=><option key={ev.id} value={ev.id}>{ev.name}</option>)}
+            </select>
+          )}
+          {wEvents.map(ev=>(
+            <button key={ev.id} onClick={()=>printByEvent(ev.id)} title={`PDF invitados: ${ev.name}`}
+              style={{padding:"3px 9px",borderRadius:8,border:`1px solid ${R.border}`,background:R.white,color:R.muted,fontSize:10,cursor:"pointer",fontFamily:"'Jost',sans-serif",whiteSpace:"nowrap"}}>
+              📄 {ev.name}
+            </button>
+          ))}
+          <button onClick={printAllGuests} title="PDF lista completa"
+            style={{padding:"3px 9px",borderRadius:8,border:`1px solid ${R.accent}`,background:R.white,color:R.accent,fontSize:10,cursor:"pointer",fontFamily:"'Jost',sans-serif",whiteSpace:"nowrap",fontWeight:600}}>
+            📄 Lista completa
+          </button>
+        </div>
+      </div>
 
       {/* Add/Edit form */}
       {show&&(
         <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
             <input style={INP_SM} value={blank.name}    onChange={e=>setBlank(p=>({...p,name:e.target.value}))}    placeholder="Nombre del invitado *" />
-            <input style={INP_SM} value={blank.contact} onChange={e=>setBlank(p=>({...p,contact:e.target.value}))} placeholder="WhatsApp / email" />
+            <input style={INP_SM} value={blank.contact||""} onChange={e=>setBlank(p=>({...p,contact:e.target.value}))} placeholder="WhatsApp" />
+            <input style={INP_SM} value={blank.email||""}   onChange={e=>setBlank(p=>({...p,email:e.target.value}))}   placeholder="Email" />
             {(boda.seating||[]).length>0?(
               <select style={INP_SM} value={blank.tableId||""} onChange={e=>setBlank(p=>({...p,tableId:e.target.value}))}>
                 <option value="">Sin mesa</option>
                 {(boda.seating||[]).map(t=><option key={t.id} value={t.id}>{t.name} ({t.seats} lugares)</option>)}
               </select>
             ):(
-              <input style={INP_SM} value={blank.table} onChange={e=>setBlank(p=>({...p,table:e.target.value}))} placeholder="Mesa (número o nombre)" />
+              <input style={INP_SM} value={blank.table||""} onChange={e=>setBlank(p=>({...p,table:e.target.value}))} placeholder="Mesa" />
             )}
             <select style={INP_SM} value={blank.rsvp} onChange={e=>setBlank(p=>({...p,rsvp:e.target.value}))}>{RSVP_STATES.map(s=><option key={s}>{s}</option>)}</select>
             <select style={INP_SM} value={blank.meal} onChange={e=>setBlank(p=>({...p,meal:e.target.value}))}>{MEAL_OPTIONS.map(m=><option key={m}>{m}</option>)}</select>
-            <input style={INP_SM} value={blank.notes}   onChange={e=>setBlank(p=>({...p,notes:e.target.value}))}   placeholder="Notas / restricciones" />
-            <div style={{gridColumn:"span 2",display:"flex",gap:16,flexWrap:"wrap"}}>
-              {G_EVENTS.map(([k,ic,l])=>(
-                <label key={k} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:R.muted,cursor:"pointer"}}><input type="checkbox" checked={!!blank[k]} onChange={e=>setBlank(p=>({...p,[k]:e.target.checked}))} /> {ic} {l}</label>
-              ))}
+            <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.notes||""} onChange={e=>setBlank(p=>({...p,notes:e.target.value}))} placeholder="Notas / restricciones" /></div>
+            <div style={{gridColumn:"span 2"}}>
+              <p style={{fontSize:10,color:R.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:".06em",margin:"0 0 6px"}}>Asistirá a:</p>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {wEvents.map(ev=>{
+                  const on=(blank.eventIds||[]).includes(ev.id);
+                  return(<button key={ev.id} type="button" onClick={()=>toggleEvId(ev.id)}
+                    style={{fontSize:11,padding:"3px 12px",borderRadius:99,border:`1px solid ${on?R.accent:R.border}`,background:on?R.accent:"transparent",color:on?"#fff":R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>
+                    {ev.name}
+                  </button>);
+                })}
+              </div>
             </div>
           </div>
           <div style={{display:"flex",gap:8}}>
@@ -1066,7 +1431,7 @@ function GuestTab({ boda, onPatch }) {
         </div>
       )}
 
-      {/* RSVP grid view */}
+      {/* Table view */}
       {view==="tabla"&&(
         <div>
           <div style={{overflowX:"auto",marginBottom:16}}>
@@ -1074,40 +1439,29 @@ function GuestTab({ boda, onPatch }) {
               <thead>
                 <tr style={{background:R.cream}}>
                   <th style={{textAlign:"left",padding:"8px 12px",borderBottom:`1px solid ${R.border}`,fontWeight:600,color:R.text,fontSize:11}}>Invitado</th>
-                  {G_EVENTS.map(([k,ic,l])=><th key={k} style={{padding:"8px 8px",borderBottom:`1px solid ${R.border}`,fontWeight:600,color:R.muted,fontSize:10,textAlign:"center"}}>{ic}<br/>{l}</th>)}
+                  {wEvents.map(ev=><th key={ev.id} style={{padding:"8px 8px",borderBottom:`1px solid ${R.border}`,fontWeight:600,color:R.muted,fontSize:10,textAlign:"center",whiteSpace:"nowrap"}}>{ev.name}</th>)}
                   <th style={{padding:"8px 8px",borderBottom:`1px solid ${R.border}`,fontWeight:600,color:R.muted,fontSize:10,textAlign:"center"}}>Menú</th>
                   <th style={{padding:"8px 8px",borderBottom:`1px solid ${R.border}`,fontWeight:600,color:R.muted,fontSize:10,textAlign:"center"}}>RSVP</th>
-                  <th style={{padding:"8px 8px",borderBottom:`1px solid ${R.border}`,color:R.border,fontSize:10,textAlign:"center"}}>Mesa</th>
                 </tr>
               </thead>
               <tbody>
-                {guests.map((g,i)=>{
+                {visible.map((g,i)=>{
                   const rs=RSVP_STYLE[g.rsvp||"Pendiente"];
                   return (
                     <tr key={g.id} style={{background:i%2===0?R.white:R.cream}}>
                       <td style={{padding:"7px 12px",borderBottom:`1px solid ${R.border}`,color:R.text,fontWeight:500}}>
                         {g.name}
                         {g.contact&&<div style={{fontSize:10,color:R.muted}}>{g.contact}</div>}
+                        {g.email&&<div style={{fontSize:10,color:R.muted}}>{g.email}</div>}
                       </td>
-                      {G_EVENTS.map(([k,ic])=>(
-                        <td key={k} style={{textAlign:"center",padding:"7px 8px",borderBottom:`1px solid ${R.border}`}}>
-                          {g[k]?<span style={{color:"#15803d",fontSize:13}}>✓</span>:<span style={{color:"#e2e8f0",fontSize:13}}>–</span>}
+                      {wEvents.map(ev=>(
+                        <td key={ev.id} style={{textAlign:"center",padding:"7px 8px",borderBottom:`1px solid ${R.border}`}}>
+                          {gInEvent(g,ev.id)?<span style={{color:"#15803d",fontSize:13}}>✓</span>:<span style={{color:"#e2e8f0",fontSize:13}}>–</span>}
                         </td>
                       ))}
                       <td style={{textAlign:"center",padding:"7px 8px",borderBottom:`1px solid ${R.border}`,fontSize:11,color:R.muted}}>{g.meal&&g.meal!=="Sin especificar"?g.meal:"–"}</td>
                       <td style={{textAlign:"center",padding:"7px 8px",borderBottom:`1px solid ${R.border}`}}>
                         <button onClick={()=>cycleRsvp(g.id)} style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:rs.bg,color:rs.color,border:"none",cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'Jost',sans-serif"}}>{g.rsvp||"Pendiente"}</button>
-                      </td>
-                      <td style={{textAlign:"center",padding:"5px 8px",borderBottom:`1px solid ${R.border}`}}>
-                        {(boda.seating||[]).length>0?(
-                          <select value={g.tableId||""} onChange={e=>{const u=guests.map(x=>x.id===g.id?{...x,tableId:e.target.value}:x);persist(u);}}
-                            style={{fontSize:10,border:`1px solid ${R.border}`,borderRadius:7,padding:"3px 5px",background:g.tableId?R.light:R.white,color:g.tableId?R.accent:R.muted,fontFamily:"'Jost',sans-serif",cursor:"pointer",maxWidth:90,fontWeight:g.tableId?600:400}}>
-                            <option value="">– Sin mesa</option>
-                            {(boda.seating||[]).map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
-                          </select>
-                        ):(
-                          <span style={{fontSize:11,color:R.muted}}>{g.table||"–"}</span>
-                        )}
                       </td>
                     </tr>
                   );
@@ -1115,7 +1469,6 @@ function GuestTab({ boda, onPatch }) {
               </tbody>
             </table>
           </div>
-          {/* Meal summary */}
           {mealSummary.length>0&&(
             <div style={{background:R.cream,borderRadius:12,padding:"12px 16px",border:`1px solid ${R.border}`}}>
               <p style={{fontSize:11,fontWeight:700,color:R.muted,textTransform:"uppercase",letterSpacing:".06em",margin:"0 0 10px"}}>Resumen de menú (confirmados)</p>
@@ -1135,7 +1488,7 @@ function GuestTab({ boda, onPatch }) {
       {/* List view */}
       {view==="lista"&&(
         <>
-          {visible.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>{guests.length===0?"Sin invitados. Agrega el primero arriba.":"Sin invitados con ese estado."}</p>}
+          {visible.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>{guests.length===0?"Sin invitados. Agrega el primero arriba.":"Sin invitados con ese filtro."}</p>}
           <div style={{display:"flex",flexDirection:"column",gap:6}}>
             {visible.map(g=>{
               const rs=RSVP_STYLE[g.rsvp||"Pendiente"]||RSVP_STYLE["Pendiente"];
@@ -1144,16 +1497,15 @@ function GuestTab({ boda, onPatch }) {
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                       <span style={{fontSize:13,fontWeight:500,color:R.text}}>{g.name}</span>
-                      {(()=>{const t=(boda.seating||[]).find(t=>t.id===g.tableId);return t?<span style={{fontSize:10,fontWeight:600,padding:"1px 8px",borderRadius:99,background:R.light,color:R.accent}}>{t.name}</span>:g.table?<span style={{fontSize:11,color:R.muted}}>Mesa {g.table}</span>:null;})()}
                       {g.meal&&g.meal!=="Sin especificar"&&<span style={{fontSize:10,padding:"1px 7px",borderRadius:99,background:"#fffbeb",color:"#92400e"}}>🍽 {g.meal}</span>}
-                      <div style={{display:"flex",gap:3}}>
-                        {G_EVENTS.map(([k,ic])=>g[k]&&<span key={k} style={{fontSize:9,padding:"1px 5px",borderRadius:99,background:R.light,color:R.accent}}>{ic}</span>)}
+                      <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+                        {wEvents.filter(ev=>gInEvent(g,ev.id)).map(ev=><span key={ev.id} style={{fontSize:9,padding:"1px 6px",borderRadius:99,background:R.light,color:R.accent}}>{ev.name}</span>)}
                       </div>
                     </div>
-                    {(g.notes||g.contact)&&<p style={{fontSize:11,color:R.muted,margin:"2px 0 0"}}>{[g.contact,g.notes].filter(Boolean).join(" · ")}</p>}
+                    {(g.notes||g.contact||g.email)&&<p style={{fontSize:11,color:R.muted,margin:"2px 0 0"}}>{[g.contact,g.email,g.notes].filter(Boolean).join(" · ")}</p>}
                   </div>
                   <button onClick={()=>cycleRsvp(g.id)} style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:rs.bg,color:rs.color,border:"none",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,fontFamily:"'Jost',sans-serif"}}>{g.rsvp||"Pendiente"}</button>
-                  <button onClick={()=>{startEdit(g);}} style={{color:R.muted,background:"none",border:"none",cursor:"pointer",fontSize:12,flexShrink:0}}>✏️</button>
+                  <button onClick={()=>startEdit(g)} style={{color:R.muted,background:"none",border:"none",cursor:"pointer",fontSize:12,flexShrink:0}}>✏️</button>
                   <button onClick={()=>del(g.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:13,flexShrink:0}}>✕</button>
                 </div>
               );
@@ -1476,6 +1828,8 @@ function DesignStudioTab({ boda, onPatch }) {
 
 // ─── MESAS / SEATING ─────────────────────────────────────────────────────────
 const TABLE_SHAPES=["Redonda","Rectangular","Cuadrada","Imperial"];
+const ELEMENT_TYPES=[{v:"mesa",l:"Mesa"},{v:"decoracion",l:"Decoración"},{v:"dj",l:"DJ Booth"},{v:"barra",l:"Barra"},{v:"pista",l:"Pista de baile"},{v:"otro",l:"Otro"}];
+const ELEMENT_ICONS={decoracion:"🌸",dj:"🎧",barra:"🍸",pista:"💃",otro:"📦"};
 
 // SVG table-with-chairs renderer
 function TableViz({table, tGuests, isSelected}) {
@@ -1486,6 +1840,20 @@ function TableViz({table, tGuests, isSelected}) {
   const stroke=isSelected?R.accent:ratio>=1?"#ef4444":ratio>0?"#22c55e":R.border;
   const tableBg=ratio>=1?"#fef2f2":ratio>0?"#f0fdf4":"#fff";
   const nameText=table.name.length>8?table.name.slice(0,7)+"…":table.name;
+
+  if(table.type&&table.type!=="mesa"){
+    const icons={decoracion:"🌸",dj:"🎧",barra:"🍸",pista:"💃",otro:"📦"};
+    const bw=table.w?Math.min(200,Math.max(60,Number(table.w)*0.5)):80;
+    const bh=table.h?Math.min(120,Math.max(40,Number(table.h)*0.5)):50;
+    return(
+      <svg width={bw+4} height={bh+4} style={{display:"block",overflow:"visible"}}>
+        <rect x={1} y={1} width={bw} height={bh} rx={4} fill="rgba(201,169,110,.08)" stroke={isSelected?R.accent:R.gold} strokeWidth={isSelected?2:1.5} strokeDasharray="6,3"/>
+        <text x={2+bw/2} y={bh/2-2} textAnchor="middle" fontSize={13} style={{userSelect:"none"}}>{icons[table.type]||"📦"}</text>
+        <text x={2+bw/2} y={bh/2+12} textAnchor="middle" fontSize={7} fontFamily="'Jost',sans-serif" fill={R.muted}>{table.name}</text>
+        {(table.w||table.h)&&<text x={2+bw/2} y={bh-3} textAnchor="middle" fontSize={5.5} fontFamily="'Jost',sans-serif" fill={R.gold}>{table.w&&table.h?`${table.w}×${table.h}cm`:table.w?`${table.w}cm`:`${table.h}cm`}</text>}
+      </svg>
+    );
+  }
 
   if(table.shape==="Redonda"){
     const shown=Math.min(total,16);
@@ -1501,6 +1869,7 @@ function TableViz({table, tGuests, isSelected}) {
         <text x={cx} y={cy-5} textAnchor="middle" fontSize={8} fontFamily="'Jost',sans-serif" fontWeight="700" fill={R.text}>{nameText}</text>
         <text x={cx} y={cy+6} textAnchor="middle" fontSize={7} fontFamily="'Jost',sans-serif" fill={R.muted}>{filled}/{total}</text>
         {table.size&&<text x={cx} y={cy+16} textAnchor="middle" fontSize={6} fontFamily="'Jost',sans-serif" fill={R.gold}>{table.size}</text>}
+        {!table.size&&(table.w||table.h)&&<text x={cx} y={cy+16} textAnchor="middle" fontSize={6} fontFamily="'Jost',sans-serif" fill={R.gold}>{table.w&&table.h?`${table.w}×${table.h}cm`:table.w?`Ø${table.w}cm`:""}</text>}
       </svg>
     );
   }
@@ -1519,6 +1888,7 @@ function TableViz({table, tGuests, isSelected}) {
       <text x={2+tableW/2} y={ty+tableH/2-3} textAnchor="middle" fontSize={7} fontFamily="'Jost',sans-serif" fontWeight="700" fill={R.text}>{nameText}</text>
       <text x={2+tableW/2} y={ty+tableH/2+5} textAnchor="middle" fontSize={6} fontFamily="'Jost',sans-serif" fill={R.muted}>{filled}/{total}</text>
       {table.size&&<text x={2+tableW/2} y={ty+tableH/2+13} textAnchor="middle" fontSize={5.5} fontFamily="'Jost',sans-serif" fill={R.gold}>{table.size}</text>}
+      {!table.size&&(table.w||table.h)&&<text x={2+tableW/2} y={ty+tableH/2+13} textAnchor="middle" fontSize={5.5} fontFamily="'Jost',sans-serif" fill={R.gold}>{table.w&&table.h?`${table.w}×${table.h}cm`:table.w?`${table.w}cm`:""}</text>}
     </svg>
   );
 }
@@ -1604,17 +1974,22 @@ function SeatingTab({ boda, onPatch }) {
   const [showGrid,setShowGrid]=useState(true);
   const [gridScale,setGridScale]=useState(100); // cm per grid square
   const canvasRef=useRef(null);
+  const scrollRef=useRef(null);
   const seatingRef=useRef(seating);
   seatingRef.current=seating;
+  const [zoom,setZoom]=useState(1);
+  const [panDrag,setPanDrag]=useState(null);
 
-  const BLANK={name:"",shape:"Redonda",seats:8,size:""};
+  const BLANK={name:"",type:"mesa",shape:"Redonda",seats:8,size:"",w:"",h:"",rotation:0};
   const [blank,setBlank]=useState(BLANK);
+  const [canvasMode,setCanvasMode]=useState("move"); // "move" | "pan"
+  const [presetCat,setPresetCat]=useState("mesas");
 
   async function saveSeating(s){ setSeating(s); onPatch({seating:s}); await apiSaveNotes(boda.id,{...boda,seating:s}); }
   async function saveGuests(g){ setGuests(g); onPatch({guests:g}); await apiSaveNotes(boda.id,{...boda,guests:g}); }
 
   async function addTable(){
-    if(!blank.name.trim()) return; setSaving(true);
+    if((!blank.type||blank.type==="mesa")&&!blank.name.trim()) return; setSaving(true);
     const placed=seatingRef.current;
     const newT={...blank,id:uid(),x:80+(placed.length%4)*170,y:60+Math.floor(placed.length/4)*160};
     try{await saveSeating([...placed,newT]);setBlank(BLANK);setShowNew(false);}catch(e){alert(e.message);}
@@ -1630,23 +2005,46 @@ function SeatingTab({ boda, onPatch }) {
   async function assignGuest(gId,tId){ const u=guests.map(g=>g.id===gId?{...g,tableId:tId}:g); try{await saveGuests(u);}catch{} }
 
   function onTblDown(e,tbl){
+    if(canvasMode==="pan") return; // in pan mode, don't start element drag
     e.preventDefault(); e.stopPropagation();
     if(!canvasRef.current) return;
     const r=canvasRef.current.getBoundingClientRect();
-    setDrag({id:tbl.id,ox:e.clientX-r.left-tbl.x,oy:e.clientY-r.top-tbl.y});
+    const z=zoom;
+    setDrag({id:tbl.id,ox:(e.clientX-r.left)/z-tbl.x,oy:(e.clientY-r.top)/z-tbl.y});
   }
   function onCanvasMove(e){
+    if(panDrag&&scrollRef.current){
+      scrollRef.current.scrollLeft=panDrag.sl-(e.clientX-panDrag.sx);
+      scrollRef.current.scrollTop=panDrag.st-(e.clientY-panDrag.sy);
+    }
     if(!drag||!canvasRef.current) return;
     const r=canvasRef.current.getBoundingClientRect();
-    const nx=Math.max(0,Math.min(r.width-100,e.clientX-r.left-drag.ox));
-    const ny=Math.max(0,Math.min(r.height-80,e.clientY-r.top-drag.oy));
+    const z=zoom;
+    const nx=Math.max(0,Math.min(1100-100,(e.clientX-r.left)/z-drag.ox));
+    const ny=Math.max(0,Math.min(780-80,(e.clientY-r.top)/z-drag.oy));
     setSeating(prev=>prev.map(t=>t.id===drag.id?{...t,x:nx,y:ny}:t));
   }
   async function onCanvasUp(){
+    setPanDrag(null);
     if(!drag) return;
     setDrag(null);
     const s=seatingRef.current;
     onPatch({seating:s});
+    try{await apiSaveNotes(boda.id,{...boda,seating:s});}catch{}
+  }
+
+  function handleWheel(e){
+    if(!e.ctrlKey && !e.metaKey && e.deltaX===0) {
+      // plain vertical scroll — only zoom if the user didn't pin scroll
+      e.preventDefault();
+      const delta=e.deltaY>0?-0.1:0.1;
+      setZoom(z=>Math.round(Math.max(0.3,Math.min(3,z+delta))*10)/10);
+    }
+  }
+
+  async function rotateSelected(deg){
+    const s=seatingRef.current.map(t=>t.id===selected?{...t,rotation:((t.rotation||0)+deg+360)%360}:t);
+    setSeating(s); onPatch({seating:s});
     try{await apiSaveNotes(boda.id,{...boda,seating:s});}catch{}
   }
 
@@ -1689,6 +2087,17 @@ function SeatingTab({ boda, onPatch }) {
           const url=`${window.location.origin}/?mode=bodas-mesas&id=${boda.id}`;
           window.open(url,"_blank","width=1200,height=800");
         }} style={BTN_SM} title="Abrir en ventana grande">⤢ Ventana</button>
+        <div style={{display:"flex",alignItems:"center",background:R.light,borderRadius:8,border:`1px solid ${R.border}`,overflow:"hidden"}}>
+          <button onClick={()=>setZoom(z=>Math.max(0.3,Math.round((z-0.1)*10)/10))} style={{...BTN_SM,border:"none",borderRadius:0,padding:"5px 9px"}}>−</button>
+          <button onClick={()=>setZoom(1)} style={{...BTN_SM,border:"none",borderRadius:0,padding:"5px 4px",minWidth:42,fontSize:10,textAlign:"center"}}>{Math.round(zoom*100)}%</button>
+          <button onClick={()=>setZoom(z=>Math.min(3,Math.round((z+0.1)*10)/10))} style={{...BTN_SM,border:"none",borderRadius:0,padding:"5px 9px"}}>+</button>
+        </div>
+        {/* Mode toggle */}
+        <div style={{display:"flex",alignItems:"center",background:R.light,borderRadius:8,border:`1px solid ${R.border}`,overflow:"hidden"}}>
+          {[["move","🖱 Mover"],["pan","✋ Pan"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setCanvasMode(v)} style={{...BTN_SM,border:"none",borderRadius:0,padding:"5px 10px",background:canvasMode===v?R.accent:"transparent",color:canvasMode===v?"#fff":R.muted}}>{l}</button>
+          ))}
+        </div>
         <button onClick={()=>{setShowNew(v=>!v);setSelected(null);setPendingGuest(null);}}
           style={{background:R.accent,color:"#fff",border:"none",borderRadius:2,padding:"6px 16px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".04em"}}>+ Mesa</button>
       </div>
@@ -1729,33 +2138,44 @@ function SeatingTab({ boda, onPatch }) {
       {/* New table form */}
       {showNew&&(
         <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:12}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 72px 100px",gap:8,marginBottom:10}}>
-            <input style={INP_SM} value={blank.name} onChange={e=>setBlank(p=>({...p,name:e.target.value}))} placeholder="Nombre de la mesa *" autoFocus />
-            <select style={INP_SM} value={blank.shape} onChange={e=>setBlank(p=>({...p,shape:e.target.value}))}>{TABLE_SHAPES.map(s=><option key={s}>{s}</option>)}</select>
-            <input type="number" style={INP_SM} value={blank.seats} onChange={e=>setBlank(p=>({...p,seats:Math.max(1,parseInt(e.target.value)||8)}))} min={1} max={40} placeholder="Sillas" />
-            <input style={INP_SM} value={blank.size||""} onChange={e=>setBlank(p=>({...p,size:e.target.value}))} placeholder="Medida (ej. Ø150)" />
+          <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 68px",gap:8,marginBottom:8}}>
+            <select style={INP_SM} value={blank.type||"mesa"} onChange={e=>setBlank(p=>({...p,type:e.target.value}))}>
+              {ELEMENT_TYPES.map(et=><option key={et.v} value={et.v}>{et.l}</option>)}
+            </select>
+            <input style={INP_SM} value={blank.name} onChange={e=>setBlank(p=>({...p,name:e.target.value}))} placeholder={!blank.type||blank.type==="mesa"?"Nombre de la mesa *":"Nombre (opcional)"} autoFocus />
+            {(!blank.type||blank.type==="mesa")&&<select style={INP_SM} value={blank.shape} onChange={e=>setBlank(p=>({...p,shape:e.target.value}))}>{TABLE_SHAPES.map(s=><option key={s}>{s}</option>)}</select>}
+            {(!blank.type||blank.type==="mesa")&&<input type="number" style={INP_SM} value={blank.seats} onChange={e=>setBlank(p=>({...p,seats:Math.max(1,parseInt(e.target.value)||8)}))} min={1} max={40} placeholder="Sillas" />}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 68px 68px",gap:8,marginBottom:10}}>
+            <input style={INP_SM} value={blank.size||""} onChange={e=>setBlank(p=>({...p,size:e.target.value}))} placeholder={!blank.type||blank.type==="mesa"?"Medida libre (ej. Ø150 cm)":"Medida (ej. 200×60 cm)"} />
+            <input type="number" style={INP_SM} value={blank.w||""} onChange={e=>setBlank(p=>({...p,w:e.target.value}))} placeholder="Ancho" min={0}/>
+            <input type="number" style={INP_SM} value={blank.h||""} onChange={e=>setBlank(p=>({...p,h:e.target.value}))} placeholder="Alto" min={0}/>
           </div>
           <div style={{display:"flex",gap:8}}>
-            <button onClick={addTable} disabled={saving||!blank.name.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 16px",fontSize:12,cursor:"pointer",opacity:(saving||!blank.name.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"Guardando…":"Crear mesa"}</button>
+            <button onClick={addTable} disabled={saving||((!blank.type||blank.type==="mesa")&&!blank.name.trim())} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 16px",fontSize:12,cursor:"pointer",opacity:(saving||((!blank.type||blank.type==="mesa")&&!blank.name.trim()))?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"Guardando…":blank.type&&blank.type!=="mesa"?"Agregar elemento":"Crear mesa"}</button>
             <button onClick={()=>setShowNew(false)} style={BTN_SM}>Cancelar</button>
           </div>
         </div>
       )}
 
       {/* ── CANVAS + SIDE PANEL ── */}
-      <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+      <div style={{display:"flex",gap:14,alignItems:"stretch",height:"calc(100vh - 220px)"}}>
 
         {/* Canvas */}
-        <div style={{flex:1,overflow:"auto",border:`1px solid ${R.border}`,borderRadius:0,maxHeight:680}}>
+        <div ref={scrollRef} onWheel={handleWheel} style={{flex:1,overflow:"auto",border:`1px solid ${R.border}`,borderRadius:0,height:"100%",minHeight:400}}>
+        {/* Spacer establishes scroll area at scaled size */}
+        <div style={{width:1100*zoom,height:780*zoom,position:"relative",flexShrink:0}}>
         <div
           ref={canvasRef}
           style={{
-            position:"relative",width:1100,height:780,
+            position:"absolute",top:0,left:0,width:1100,height:780,
+            transform:`scale(${zoom})`,transformOrigin:"0 0",
             background:"#FAF8F5",
             backgroundImage:showGrid?`repeating-linear-gradient(0deg,transparent,transparent ${gridScale-1}px,rgba(0,0,0,.07) ${gridScale-1}px,rgba(0,0,0,.07) ${gridScale}px),repeating-linear-gradient(90deg,transparent,transparent ${gridScale-1}px,rgba(0,0,0,.07) ${gridScale-1}px,rgba(0,0,0,.07) ${gridScale}px)`:"none",
             backgroundSize:showGrid?`${gridScale}px ${gridScale}px`:"auto",
-            cursor:drag?"grabbing":"default",userSelect:"none",flexShrink:0,
+            cursor:drag?"grabbing":panDrag?"grabbing":"grab",userSelect:"none",flexShrink:0,
           }}
+          onMouseDown={e=>{ if(!drag){ e.preventDefault(); if(canvasMode==="pan"||!e.target.closest("[data-tbl]")) setPanDrag({sx:e.clientX,sy:e.clientY,sl:scrollRef.current?.scrollLeft||0,st:scrollRef.current?.scrollTop||0}); } }}
           onMouseMove={onCanvasMove}
           onMouseUp={onCanvasUp}
           onMouseLeave={onCanvasUp}
@@ -1800,7 +2220,9 @@ function SeatingTab({ boda, onPatch }) {
             const highlight=pendingGuest&&!isFull;
             return (
               <div key={tbl.id}
-                style={{position:"absolute",left:tbl.x||50,top:tbl.y||50,cursor:drag?.id===tbl.id?"grabbing":"grab",zIndex:isSel?10:1,
+                data-tbl="1"
+                style={{position:"absolute",left:tbl.x||50,top:tbl.y||50,cursor:canvasMode==="pan"?"default":drag?.id===tbl.id?"grabbing":"grab",zIndex:isSel?10:1,
+                  transform:tbl.rotation?`rotate(${tbl.rotation}deg)`:"none",
                   filter:isSel?"drop-shadow(0 6px 16px rgba(190,18,60,.35))":highlight?"drop-shadow(0 4px 12px rgba(201,169,110,.5))":"drop-shadow(0 2px 6px rgba(0,0,0,.12))",
                   transition:"filter .15s"}}
                 onMouseDown={e=>onTblDown(e,tbl)}
@@ -1827,18 +2249,43 @@ function SeatingTab({ boda, onPatch }) {
             ))}
           </div>
         </div>
+        </div>{/* spacer */}
         </div>
 
         {/* Side panel */}
-        <div style={{width:210,flexShrink:0,display:"flex",flexDirection:"column",gap:10}}>
+        <div style={{width:230,flexShrink:0,display:"flex",flexDirection:"column",gap:8,height:"100%",minHeight:0,overflowY:"auto"}}>
           {selTable?(
+            selTable.type&&selTable.type!=="mesa"?(
+            <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:0,overflow:"hidden"}}>
+              <div style={{background:R.dark,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div>
+                  <p style={{fontSize:9,color:R.gold,margin:"0 0 2px",textTransform:"uppercase",letterSpacing:".07em"}}>{ELEMENT_TYPES.find(t=>t.v===selTable.type)?.l||selTable.type}</p>
+                  <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:15,fontWeight:400,fontStyle:"italic",color:R.white,margin:0}}>{selTable.name||"(sin nombre)"}</p>
+                  {(selTable.w||selTable.h)&&<p style={{fontSize:9,color:R.gold,margin:"3px 0 0"}}>{selTable.w&&selTable.h?`${selTable.w}×${selTable.h} cm`:selTable.w?`${selTable.w} cm`:""}</p>}
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
+                  <div style={{display:"flex",gap:4}}>
+                    <button onClick={()=>rotateSelected(-15)} title="Rotar ←15°" style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.18)",color:"#fff",cursor:"pointer",fontSize:13,borderRadius:5,padding:"2px 7px"}}>↺</button>
+                    <button onClick={()=>rotateSelected(15)}  title="Rotar →15°" style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.18)",color:"#fff",cursor:"pointer",fontSize:13,borderRadius:5,padding:"2px 7px"}}>↻</button>
+                  </div>
+                  <button onClick={()=>delTable(selTable.id)} style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(255,255,255,.55)",cursor:"pointer",fontSize:11,borderRadius:6,padding:"3px 7px",fontFamily:"'Jost',sans-serif"}}>Borrar</button>
+                </div>
+              </div>
+            </div>
+            ):(
             <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:0,overflow:"hidden"}}>
               <div style={{background:R.dark,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div>
                   <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:16,fontWeight:400,fontStyle:"italic",color:R.white,margin:0}}>{selTable.name}</p>
                   <p style={{fontSize:9,color:R.gold,margin:"2px 0 0",textTransform:"uppercase",letterSpacing:".07em"}}>{selTable.shape} · {selGuests.length}/{selTable.seats} puestos{selTable.size?` · ${selTable.size}`:""}</p>
                 </div>
-                <button onClick={()=>delTable(selTable.id)} style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(255,255,255,.55)",cursor:"pointer",fontSize:11,borderRadius:6,padding:"3px 7px",fontFamily:"'Jost',sans-serif"}}>Borrar</button>
+                <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
+                  <div style={{display:"flex",gap:4}}>
+                    <button onClick={()=>rotateSelected(-15)} title="Rotar ←15°" style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.18)",color:"#fff",cursor:"pointer",fontSize:13,borderRadius:5,padding:"2px 7px"}}>↺</button>
+                    <button onClick={()=>rotateSelected(15)}  title="Rotar →15°" style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.18)",color:"#fff",cursor:"pointer",fontSize:13,borderRadius:5,padding:"2px 7px"}}>↻</button>
+                  </div>
+                  <button onClick={()=>delTable(selTable.id)} style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(255,255,255,.55)",cursor:"pointer",fontSize:11,borderRadius:6,padding:"3px 7px",fontFamily:"'Jost',sans-serif"}}>Borrar</button>
+                </div>
               </div>
               <div style={{padding:"10px 12px",maxHeight:340,overflowY:"auto"}}>
                 {selGuests.map(g=>(
@@ -1877,72 +2324,132 @@ function SeatingTab({ boda, onPatch }) {
                 ):null}
               </div>
             </div>
+            )
           ):(
-            <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:0,overflow:"hidden"}}>
-              <div style={{padding:"12px 14px",borderBottom:`1px solid ${R.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <p style={{fontSize:11,fontWeight:600,color:R.text,margin:0,letterSpacing:".02em"}}>Sin mesa <span style={{color:R.muted,fontWeight:400}}>({unassigned.length})</span></p>
-                {pendingGuest&&<button onClick={()=>setPendingGuest(null)} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:11,fontFamily:"'Jost',sans-serif"}}>Cancelar</button>}
+            <>
+              {/* Sin mesa */}
+              <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:0,overflow:"hidden",flexShrink:0}}>
+                <div style={{padding:"10px 14px",borderBottom:`1px solid ${R.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <p style={{fontSize:11,fontWeight:600,color:R.text,margin:0}}>Sin mesa <span style={{color:R.muted,fontWeight:400}}>({unassigned.length})</span></p>
+                  {pendingGuest&&<button onClick={()=>setPendingGuest(null)} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:11,fontFamily:"'Jost',sans-serif"}}>Cancelar</button>}
+                </div>
+                <div style={{padding:"8px 10px",maxHeight:160,overflowY:"auto"}}>
+                  {pendingGuest&&(
+                    <div style={{background:"rgba(201,169,110,.1)",border:`1px solid rgba(201,169,110,.4)`,borderRadius:8,padding:"7px 10px",marginBottom:8,fontSize:11,color:R.text2,fontStyle:"italic"}}>
+                      Haz clic en una mesa para asignar
+                    </div>
+                  )}
+                  {unassigned.length===0?(
+                    <p style={{fontSize:11,color:R.muted,fontStyle:"italic",margin:0,textAlign:"center",padding:"8px 0"}}>Todos asignados</p>
+                  ):unassigned.map(g=>{
+                    const isActive=pendingGuest===g.id;
+                    return (
+                      <button key={g.id} onClick={()=>setPendingGuest(isActive?null:g.id)}
+                        style={{width:"100%",textAlign:"left",background:isActive?R.gold:"transparent",border:`1px solid ${isActive?R.gold:R.border}`,borderRadius:9,padding:"5px 10px",fontSize:11,color:isActive?R.dark:R.text,cursor:"pointer",marginBottom:3,fontFamily:"'Jost',sans-serif",fontWeight:isActive?600:400,display:"flex",alignItems:"center",gap:6}}
+                        onMouseEnter={e=>{if(!isActive){e.currentTarget.style.background=R.cream;e.currentTarget.style.borderColor=R.muted;}}}
+                        onMouseLeave={e=>{if(!isActive){e.currentTarget.style.background="transparent";e.currentTarget.style.borderColor=R.border;}}}>
+                        {isActive&&<span style={{fontSize:12}}>→</span>}
+                        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div style={{padding:"10px 12px",maxHeight:400,overflowY:"auto"}}>
-                {pendingGuest&&(
-                  <div style={{background:"rgba(201,169,110,.1)",border:`1px solid rgba(201,169,110,.4)`,borderRadius:8,padding:"7px 10px",marginBottom:10,fontSize:11,color:R.text2,fontStyle:"italic"}}>
-                    Haz clic en una mesa para asignar
+              {/* Presets visuales */}
+              <div style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:0,overflow:"hidden",flex:1,display:"flex",flexDirection:"column",minHeight:0}}>
+                <div style={{padding:"8px 10px",borderBottom:`1px solid ${R.border}`,display:"flex",alignItems:"center",gap:3,flexWrap:"wrap"}}>
+                  <span style={{fontSize:11,fontWeight:600,color:R.text,flex:1,minWidth:"fit-content"}}>Elementos</span>
+                  {[["mesas","Mesa"],["sillas","Silla"],["venue","Venue"],["deco","Deco"]].map(([cat,lbl])=>(
+                    <button key={cat} onClick={()=>setPresetCat(cat)}
+                      style={{background:presetCat===cat?R.accent:"transparent",color:presetCat===cat?"#fff":R.muted,border:`1px solid ${presetCat===cat?R.accent:R.border}`,borderRadius:6,padding:"2px 7px",fontSize:9,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>{lbl}</button>
+                  ))}
+                </div>
+                <div style={{overflowY:"auto",padding:"6px",flex:1}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5}}>
+                    {[
+                      {cat:"mesas",emoji:"⭕",tipo:"Redonda",   shape:"Redonda",    medida:"Ø 120 cm", seats:8,  w:120,h:120,sillas:"6–8"},
+                      {cat:"mesas",emoji:"⭕",tipo:"Redonda",   shape:"Redonda",    medida:"Ø 150 cm", seats:10, w:150,h:150,sillas:"8–10"},
+                      {cat:"mesas",emoji:"⭕",tipo:"Redonda",   shape:"Redonda",    medida:"Ø 180 cm", seats:12, w:180,h:180,sillas:"10–12"},
+                      {cat:"mesas",emoji:"▬",tipo:"Rect.",      shape:"Rectangular",medida:"180×75 cm",seats:8,  w:180,h:75, sillas:"6–8"},
+                      {cat:"mesas",emoji:"▬",tipo:"Rect.",      shape:"Rectangular",medida:"240×75 cm",seats:10, w:240,h:75, sillas:"8–10"},
+                      {cat:"mesas",emoji:"▬",tipo:"Rect.",      shape:"Rectangular",medida:"300×75 cm",seats:12, w:300,h:75, sillas:"10–12"},
+                      {cat:"mesas",emoji:"▬",tipo:"Imperial",   shape:"Rectangular",medida:"400×100 cm",seats:16,w:400,h:100,sillas:"14+"},
+                      {cat:"mesas",emoji:"💑",tipo:"Sweetheart",shape:"Redonda",    medida:"90×75 cm", seats:2,  w:90,h:75,  sillas:"2"},
+                      {cat:"mesas",emoji:"👑",tipo:"Cabecera",  shape:"Rectangular",medida:"300×75 cm",seats:10, w:300,h:75, sillas:"8–10"},
+                      {cat:"sillas",emoji:"🪑",tipo:"Tiffany",  elType:"decoracion",medida:"45×45 cm", seats:0,  w:45,h:45,  sillas:"1 pers"},
+                      {cat:"sillas",emoji:"🪑",tipo:"Crossback", elType:"decoracion",medida:"50×50 cm", seats:0,  w:50,h:50,  sillas:"1 pers"},
+                      {cat:"sillas",emoji:"🪑",tipo:"Ghost",    elType:"decoracion",medida:"45×90 cm", seats:0,  w:45,h:90,  sillas:"1 pers"},
+                      {cat:"sillas",emoji:"🛋",tipo:"Sofá 2P",  elType:"decoracion",medida:"140×80 cm",seats:0,  w:140,h:80, sillas:"2 pers"},
+                      {cat:"venue",emoji:"🍸",tipo:"Barra",     elType:"barra",     medida:"200×60 cm",seats:0,  w:200,h:60},
+                      {cat:"venue",emoji:"🍸",tipo:"Barra Gde", elType:"barra",     medida:"300×60 cm",seats:0,  w:300,h:60},
+                      {cat:"venue",emoji:"🎧",tipo:"DJ Booth",  elType:"dj",        medida:"150×75 cm",seats:0,  w:150,h:75},
+                      {cat:"venue",emoji:"💃",tipo:"Pista 3×3", elType:"pista",     medida:"300×300 cm",seats:0, w:300,h:300},
+                      {cat:"venue",emoji:"💃",tipo:"Pista 4×4", elType:"pista",     medida:"400×400 cm",seats:0, w:400,h:400},
+                      {cat:"venue",emoji:"💃",tipo:"Pista 6×6", elType:"pista",     medida:"600×600 cm",seats:0, w:600,h:600},
+                      {cat:"venue",emoji:"🎤",tipo:"Escenario", elType:"otro",      medida:"300×200 cm",seats:0, w:300,h:200},
+                      {cat:"venue",emoji:"🎂",tipo:"Pastel",    elType:"otro",      medida:"90×60 cm",  seats:0, w:90,h:60},
+                      {cat:"deco", emoji:"🌸",tipo:"Centro",    elType:"decoracion",medida:"60×60 cm",  seats:0, w:60,h:60},
+                      {cat:"deco", emoji:"🌸",tipo:"Columna",   elType:"decoracion",medida:"30×180 cm", seats:0, w:30,h:180},
+                      {cat:"deco", emoji:"🌿",tipo:"Arco",      elType:"decoracion",medida:"200×220 cm",seats:0, w:200,h:220},
+                      {cat:"deco", emoji:"🕯",tipo:"Candelabro",elType:"decoracion",medida:"30×30 cm",  seats:0, w:30,h:30},
+                      {cat:"deco", emoji:"🏺",tipo:"Jarrón",    elType:"decoracion",medida:"40×40 cm",  seats:0, w:40,h:40},
+                    ].filter(r=>r.cat===presetCat).map((r,i)=>(
+                      <button key={i}
+                        onClick={()=>{
+                          const fill=r.elType
+                            ?{type:r.elType,name:r.tipo,w:String(r.w),h:String(r.h),seats:0,shape:"",size:r.medida}
+                            :{type:"mesa",shape:r.shape||"Redonda",seats:r.seats,size:r.medida,w:String(r.w),h:String(r.h),name:""};
+                          setBlank(p=>({...p,...fill})); setShowNew(true); setSelected(null);
+                        }}
+                        style={{background:R.cream,border:`1px solid ${R.border}`,borderRadius:8,padding:"7px 5px",cursor:"pointer",textAlign:"center",fontFamily:"'Jost',sans-serif",transition:"border-color .12s,background .12s"}}
+                        onMouseEnter={e=>{e.currentTarget.style.borderColor=R.accent;e.currentTarget.style.background=R.white;}}
+                        onMouseLeave={e=>{e.currentTarget.style.borderColor=R.border;e.currentTarget.style.background=R.cream;}}
+                      >
+                        <div style={{fontSize:20,lineHeight:1,marginBottom:2}}>{r.emoji}</div>
+                        <p style={{margin:0,fontSize:8,letterSpacing:".04em",textTransform:"uppercase",color:R.muted,lineHeight:1.3}}>{r.tipo}</p>
+                        <p style={{margin:"2px 0 0",fontSize:9,fontWeight:600,color:R.text}}>{r.medida}</p>
+                        {r.sillas&&<p style={{margin:"1px 0 0",fontSize:8,color:R.muted}}>{r.sillas}</p>}
+                      </button>
+                    ))}
                   </div>
-                )}
-                {unassigned.length===0?(
-                  <p style={{fontSize:11,color:R.muted,fontStyle:"italic",margin:0,textAlign:"center",padding:"12px 0"}}>Todos asignados</p>
-                ):unassigned.map(g=>{
-                  const isActive=pendingGuest===g.id;
-                  return (
-                    <button key={g.id} onClick={()=>setPendingGuest(isActive?null:g.id)}
-                      style={{width:"100%",textAlign:"left",background:isActive?R.gold:"transparent",border:`1px solid ${isActive?R.gold:R.border}`,borderRadius:9,padding:"6px 10px",fontSize:11,color:isActive?R.dark:R.text,cursor:"pointer",marginBottom:4,fontFamily:"'Jost',sans-serif",fontWeight:isActive?600:400,display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}
-                      onMouseEnter={e=>{if(!isActive){e.currentTarget.style.background=R.cream;e.currentTarget.style.borderColor=R.muted;}}}
-                      onMouseLeave={e=>{if(!isActive){e.currentTarget.style.background="transparent";e.currentTarget.style.borderColor=R.border;}}}>
-                      {isActive&&<span style={{fontSize:12}}>→</span>}
-                      <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</span>
-                    </button>
-                  );
-                })}
+                </div>
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
 
-      {/* ── Medidas de referencia ── */}
-      <div style={{marginTop:20,background:R.light,border:`1px solid ${R.border}`,borderRadius:10,padding:"14px 16px"}}>
-        <p style={{fontSize:10,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",color:R.muted,margin:"0 0 10px"}}>Medidas de referencia · mesas</p>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:8}}>
-          {[
-            {tipo:"Redonda",medida:"Ø 120 cm",sillas:"6–8 personas"},
-            {tipo:"Redonda",medida:"Ø 150 cm",sillas:"8–10 personas"},
-            {tipo:"Redonda",medida:"Ø 180 cm",sillas:"10–12 personas"},
-            {tipo:"Rectangular",medida:"180 × 75 cm",sillas:"6–8 personas"},
-            {tipo:"Rectangular",medida:"240 × 75 cm",sillas:"8–10 personas"},
-            {tipo:"Rectangular",medida:"300 × 75 cm",sillas:"10–12 personas"},
-            {tipo:"Sweetheart",medida:"90 × 75 cm",sillas:"2 personas"},
-            {tipo:"Cabecera",medida:"300 × 75 cm",sillas:"8–10 personas"},
-          ].map((r,i)=>(
-            <div key={i} style={{background:R.white,border:`1px solid ${R.border}`,borderRadius:7,padding:"8px 12px"}}>
-              <p style={{margin:0,fontSize:10,letterSpacing:".06em",textTransform:"uppercase",color:R.muted}}>{r.tipo}</p>
-              <p style={{margin:"2px 0 0",fontSize:13,fontWeight:600,color:R.text,fontFamily:"'Jost',sans-serif"}}>{r.medida}</p>
-              <p style={{margin:"1px 0 0",fontSize:10,color:R.muted}}>{r.sillas}</p>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
 
 // ─── BODA DETAIL ─────────────────────────────────────────────────────────────
-function BodaDetail({ boda:init, users, onBack, onRefresh }) {
+function BodaDetail({ boda:init, users, onBack, onRefresh, initialTab="" }) {
   const [boda,setBoda]=useState(init);
-  const [tab,setTab]=useState("resumen");
+  const [tab,setTab]=useState(initialTab||"resumen");
   const [editing,setEditing]=useState(false);
   const [saving,setSaving]=useState(false);
   const [copied,setCopied]=useState(false);
+  const [uploadingCover,setUploadingCover]=useState(false);
   const contentRef=useRef(null);
+  const coverInputRef=useRef(null);
+
+  async function handleCoverUpload(e){
+    const file=e.target.files?.[0]; if(!file) return;
+    setUploadingCover(true);
+    try{
+      const ext=file.name.split('.').pop()||"jpg";
+      const path=`${boda.id}/cover_${uid()}.${ext}`;
+      const {data:upData,error:upErr}=await supabase.storage.from("boda-contratos").upload(path,file,{contentType:file.type,upsert:true});
+      if(upErr) throw upErr;
+      const {data:urlData}=supabase.storage.from("boda-contratos").getPublicUrl(upData.path);
+      const newUrl=urlData.publicUrl;
+      await apiSaveNotes(boda.id,{...boda,coverPhoto:newUrl});
+      setBoda(b=>({...b,coverPhoto:newUrl}));
+    }catch(err){ alert("Error al subir foto: "+err.message); }
+    setUploadingCover(false);
+    if(coverInputRef.current) coverInputRef.current.value="";
+  }
   useEffect(()=>{
     if(!contentRef.current) return;
     const rect=contentRef.current.getBoundingClientRect();
@@ -2095,25 +2602,40 @@ ${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).joi
       </div>
 
       <div style={{...CARD,marginBottom:16}}>
-        <div style={HDR}>
-          <div style={{flex:1,minWidth:0}}>
-            <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:30,fontWeight:400,color:R.white,margin:0,letterSpacing:".05em",fontStyle:"italic",lineHeight:1.1}}>{boda.clienteName}</p>
-            {boda.weddingDate&&<p style={{fontSize:12,color:R.gold,margin:"8px 0 0",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:500}}>💍 {fmtDate(boda.weddingDate)}</p>}
-          </div>
-          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10,flexShrink:0,marginLeft:16}}>
-            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
-              <span style={{fontSize:10,fontWeight:700,padding:"4px 12px",borderRadius:2,background:ph.bg,color:ph.color,letterSpacing:".07em",textTransform:"uppercase"}}>{boda.phase}</span>
-              {days!==null&&(
-                <div style={{background:"rgba(26,24,20,.5)",border:`1px solid rgba(196,162,114,.35)`,borderRadius:2,padding:"4px 12px",textAlign:"center",backdropFilter:"blur(4px)"}}>
-                  <p style={{fontSize:10,color:"rgba(255,255,255,.55)",margin:0,textTransform:"uppercase",letterSpacing:".08em",lineHeight:1}}>{days<0?"celebrada":"faltan"}</p>
-                  <p style={{fontSize:18,fontWeight:700,color:days<=30&&days>=0?"#E8C96A":R.gold,margin:0,fontVariantNumeric:"tabular-nums",lineHeight:1.2}}>{days<0?`${Math.abs(days)}d`:`${days}d`}</p>
-                </div>
-              )}
+        <div style={{...HDR,padding:"0 0 0 0",flexDirection:"column",alignItems:"stretch"}}>
+          {/* Cover photo strip */}
+          {boda.coverPhoto&&(
+            <div style={{height:120,backgroundImage:`url(${boda.coverPhoto})`,backgroundSize:"cover",backgroundPosition:"center top",position:"relative"}}>
+              <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom, rgba(26,24,20,.15) 0%, rgba(26,24,20,.85) 100%)"}} />
             </div>
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={handlePrint} style={{background:"rgba(255,255,255,.08)",color:R.gold,border:`1px solid rgba(196,162,114,.30)`,borderRadius:2,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>📄 PDF</button>
-              <button onClick={shareLink} style={{background:"rgba(255,255,255,.08)",color:copied?"#86efac":R.gold,border:`1px solid ${copied?"rgba(134,239,172,.35)":"rgba(196,162,114,.30)"}`,borderRadius:2,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",transition:"all .2s"}}>{copied?"✓ Copiado":"🔗 Compartir"}</button>
-              <button onClick={()=>setEditing(v=>!v)} style={{background:editing?"rgba(255,255,255,.15)":"rgba(255,255,255,.08)",color:R.white,border:"1px solid rgba(255,255,255,.18)",borderRadius:2,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>{editing?"Cancelar":"✏️ Editar"}</button>
+          )}
+          {/* Main header row */}
+          <div style={{padding:"18px 26px 16px",display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:12,background:boda.coverPhoto?"transparent":R.dark,marginTop:boda.coverPhoto?"-52px":0,position:"relative",zIndex:1}}>
+            <div style={{flex:1,minWidth:0}}>
+              <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:32,fontWeight:400,color:R.white,margin:0,letterSpacing:".04em",fontStyle:"italic",lineHeight:1.1,textShadow:"0 1px 8px rgba(0,0,0,.4)"}}>{boda.clienteName}</p>
+              <div style={{display:"flex",flexWrap:"wrap",gap:"6px 16px",marginTop:6,alignItems:"center"}}>
+                {boda.weddingDate&&<span style={{fontSize:11,color:R.gold,letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:500}}>💍 {fmtDate(boda.weddingDate)}</span>}
+                {boda.status&&<span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:99,background:"rgba(196,162,114,.2)",color:R.gold,letterSpacing:".06em",textTransform:"uppercase",border:"1px solid rgba(196,162,114,.3)"}}>{boda.status}</span>}
+                {boda.venue&&<span style={{fontSize:11,color:"rgba(255,255,255,.55)",fontFamily:"'Jost',sans-serif"}}>📍 {boda.venue}</span>}
+              </div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8,flexShrink:0}}>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:2,background:ph.bg,color:ph.color,letterSpacing:".07em",textTransform:"uppercase"}}>{boda.phase}</span>
+                {days!==null&&(
+                  <div style={{background:"rgba(26,24,20,.5)",border:`1px solid rgba(196,162,114,.35)`,borderRadius:2,padding:"3px 10px",textAlign:"center",backdropFilter:"blur(4px)"}}>
+                    <p style={{fontSize:9,color:"rgba(255,255,255,.55)",margin:0,textTransform:"uppercase",letterSpacing:".08em",lineHeight:1}}>{days<0?"celebrada":"faltan"}</p>
+                    <p style={{fontSize:17,fontWeight:700,color:days<=30&&days>=0?"#E8C96A":R.gold,margin:0,fontVariantNumeric:"tabular-nums",lineHeight:1.2}}>{days<0?`${Math.abs(days)}d`:`${days}d`}</p>
+                  </div>
+                )}
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverUpload} style={{display:"none"}} />
+                <button onClick={handlePrint} style={{background:"rgba(255,255,255,.08)",color:R.gold,border:`1px solid rgba(196,162,114,.30)`,borderRadius:2,padding:"4px 12px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>📄 PDF</button>
+                <button onClick={shareLink} style={{background:"rgba(255,255,255,.08)",color:copied?"#86efac":R.gold,border:`1px solid ${copied?"rgba(134,239,172,.35)":"rgba(196,162,114,.30)"}`,borderRadius:2,padding:"4px 12px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",transition:"all .2s"}}>{copied?"✓ Copiado":"🔗 Compartir"}</button>
+                <button onClick={()=>coverInputRef.current?.click()} disabled={uploadingCover} title="Subir foto de portada" style={{background:"rgba(255,255,255,.08)",color:R.gold,border:`1px solid rgba(196,162,114,.30)`,borderRadius:2,padding:"4px 12px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",opacity:uploadingCover?.6:1}}>{uploadingCover?"⏳":"📷"} Foto</button>
+                <button onClick={()=>setEditing(v=>!v)} style={{background:editing?"rgba(255,255,255,.15)":"rgba(255,255,255,.08)",color:R.white,border:"1px solid rgba(255,255,255,.18)",borderRadius:2,padding:"4px 12px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>{editing?"Cancelar":"✏️ Editar"}</button>
+              </div>
             </div>
           </div>
         </div>
@@ -2179,7 +2701,7 @@ ${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).joi
           {tab==="presupuesto" &&<PresupuestoTab  boda={boda} onPatch={handlePatch} />}
           {tab==="pagos"       &&<PagosTab        boda={boda} onPatch={handlePatch} />}
           {tab==="contratos"   &&<ContratosTab    boda={boda} onPatch={handlePatch} />}
-          {tab==="timeline"    &&<TimelineTab     boda={boda} onScheduleChange={sc=>setBoda(b=>({...b,schedule:sc}))} />}
+          {tab==="timeline"    &&<TimelineTab     boda={boda} onScheduleChange={sc=>setBoda(b=>({...b,schedule:sc}))} onPatch={handlePatch} />}
           {tab==="invitados"  &&<GuestTab         boda={boda} onPatch={handlePatch} />}
           {tab==="mesas"      &&<SeatingTab       boda={boda} onPatch={handlePatch} />}
           {tab==="palette"    &&<PaletteTab       boda={boda} onPatch={handlePatch} />}
@@ -2280,113 +2802,224 @@ function printContract(contract, boda) {
 
 function ContratosTab({ boda, onPatch }) {
   const [contracts, setContracts] = useState(boda.contracts || []);
-  const [editId, setEditId]       = useState(null);
-  const [saving, setSaving]       = useState(false);
-  const [body,  setBody]          = useState("");
-  const [title, setTitle]         = useState("");
-  const [status,setStatus]        = useState("Borrador");
-  const [pdfEditId, setPdfEditId] = useState(null);
-  const [pdfForm,   setPdfForm]   = useState({pdfUrl:"",supplierName:"",contractDate:"",amount:""});
-  const editing = contracts.find(c=>c.id===editId)||null;
+  const [saving,    setSaving]    = useState(false);
+  const [uploading, setUploading] = useState(null); // field name being uploaded
+  const [showNew,   setShowNew]   = useState(false);
+  const [editId,    setEditId]    = useState(null);
 
-  function openEdit(id) {
-    const c = contracts.find(x=>x.id===id);
-    if(c){ setBody(c.body||""); setTitle(c.title||""); setStatus(c.status||"Borrador"); }
-    setEditId(id);
+  const BLANK_C = {title:"",notes:"",supplierName:"",contractDate:"",amount:"",status:"Borrador",pdfUrl:"",imageUrl:""};
+  const [newForm,  setNewForm]  = useState(BLANK_C);
+  const [editForm, setEditForm] = useState(BLANK_C);
+
+  async function uploadFile(file, field, setter) {
+    if(!file) return;
+    setUploading(field);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${boda.id}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("boda-contratos").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("boda-contratos").getPublicUrl(path);
+      setter(p => ({ ...p, [field]: data.publicUrl }));
+    } catch(e) { alert("Error subiendo archivo: " + e.message); }
+    setUploading(null);
   }
 
   async function persist(u) { setContracts(u); onPatch({contracts:u}); await apiSaveNotes(boda.id,{...boda,contracts:u}); }
 
-  function newContract() {
-    const c = { id:uid(), title:`Contrato — ${boda.clienteName}`, status:"Borrador", body:makeContractBody(boda), createdAt:new Date().toISOString().slice(0,10) };
-    const u = [...contracts, c];
-    setContracts(u); onPatch({contracts:u});
-    setBody(c.body); setTitle(c.title); setStatus(c.status); setEditId(c.id);
-  }
-
-  async function save(patch) {
+  async function addContract() {
+    if (!newForm.title.trim()) return;
     setSaving(true);
-    try { await persist(contracts.map(c=>c.id===editId?{...c,...patch}:c)); }
-    catch(e){alert("Error: "+e.message);}
+    const c = { ...newForm, id: uid(), createdAt: new Date().toISOString().slice(0,10) };
+    try { await persist([...contracts, c]); setNewForm(BLANK_C); setShowNew(false); }
+    catch(e) { alert("Error: " + e.message); }
     setSaving(false);
   }
 
-  async function del(id) { try{await persist(contracts.filter(c=>c.id!==id)); if(editId===id)setEditId(null);}catch{setContracts(contracts);} }
+  async function saveEdit() {
+    setSaving(true);
+    try { await persist(contracts.map(c => c.id===editId ? {...c,...editForm} : c)); setEditId(null); }
+    catch(e) { alert("Error: " + e.message); }
+    setSaving(false);
+  }
 
-  function openPdfEdit(c) { setPdfForm({pdfUrl:c.pdfUrl||"",supplierName:c.supplierName||"",contractDate:c.contractDate||"",amount:c.amount||""}); setPdfEditId(c.id); }
-  async function savePdfMeta() { setSaving(true); try{await persist(contracts.map(c=>c.id===pdfEditId?{...c,...pdfForm}:c)); setPdfEditId(null);}catch(e){alert("Error: "+e.message);} setSaving(false); }
+  async function del(id) {
+    if (!window.confirm("¿Eliminar este contrato?")) return;
+    try { await persist(contracts.filter(c=>c.id!==id)); if(editId===id) setEditId(null); } catch {}
+  }
 
   function cycleStatus(id) {
-    const u=contracts.map(c=>{if(c.id!==id)return c; const i=(CONTRACT_STATUSES.indexOf(c.status)+1)%CONTRACT_STATUSES.length; return{...c,status:CONTRACT_STATUSES[i]};});
+    const u = contracts.map(c => { if(c.id!==id) return c; const i=(CONTRACT_STATUSES.indexOf(c.status)+1)%CONTRACT_STATUSES.length; return{...c,status:CONTRACT_STATUSES[i]}; });
     persist(u);
   }
 
-  if (editing) {
+  function openEdit(c) {
+    setEditForm({ title:c.title||"", notes:c.notes||"", supplierName:c.supplierName||"", contractDate:c.contractDate||"", amount:c.amount||"", status:c.status||"Borrador", pdfUrl:c.pdfUrl||"", imageUrl:c.imageUrl||"" });
+    setEditId(c.id);
+    setShowNew(false);
+  }
+
+  function openMergePdfs(){
+    const pdfs=contracts.filter(c=>c.pdfUrl);
+    if(pdfs.length<2){alert("Necesitas al menos 2 contratos con PDF adjunto para combinar.");return;}
+    const w=window.open("","_blank","width=700,height=500");
+    const pdfList=pdfs.map((c,i)=>`<div class="item" data-url="${c.pdfUrl}">
+      <input type="checkbox" id="p${i}" checked>
+      <label for="p${i}">${c.title||c.supplierName||"Contrato "+(i+1)}</label>
+    </div>`).join("");
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Combinar PDFs — ${boda.clienteName}</title>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"><\/script>
+<style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:13px;color:#1a1814;padding:24px;background:#faf8f4}h2{margin:0 0 16px;font-size:16px}
+.item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #e8e2d9}label{cursor:pointer;flex:1}
+button{background:#9b6a37;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;cursor:pointer;margin-top:16px;font-family:Arial,sans-serif}
+button:disabled{opacity:.5;cursor:not-allowed}#status{margin-top:12px;font-size:12px;color:#666}</style>
+</head><body>
+<h2>Combinar PDFs — ${boda.clienteName}</h2>
+<p style="font-size:12px;color:#888;margin:0 0 14px">Selecciona los PDFs a combinar (en el orden mostrado):</p>
+${pdfList}
+<button id="btn" onclick="mergePdfs()">Combinar y descargar</button>
+<div id="status"></div>
+<script>
+async function mergePdfs(){
+  const btn=document.getElementById("btn");const status=document.getElementById("status");
+  btn.disabled=true;
+  const checked=[...document.querySelectorAll(".item input:checked")].map(el=>el.closest(".item").dataset.url);
+  if(checked.length<1){status.textContent="Selecciona al menos 1 PDF.";btn.disabled=false;return;}
+  status.textContent="Cargando PDFs…";
+  try{
+    const {PDFDocument}=PDFLib;const merged=await PDFDocument.create();
+    for(let i=0;i<checked.length;i++){
+      status.textContent="Procesando PDF "+(i+1)+"/"+checked.length+"…";
+      const res=await fetch(checked[i]);if(!res.ok) throw new Error("No se pudo cargar: "+checked[i]);
+      const buf=await res.arrayBuffer();const doc=await PDFDocument.load(buf,{ignoreEncryption:true});
+      const pages=await merged.copyPages(doc,doc.getPageIndices());pages.forEach(p=>merged.addPage(p));
+    }
+    status.textContent="Generando PDF combinado…";
+    const bytes=await merged.save();const blob=new Blob([bytes],{type:"application/pdf"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+    a.download="Contratos_${boda.clienteName.replace(/\\s+/g,"_")}.pdf";a.click();
+    status.textContent="✅ Listo. Revisa tus descargas.";
+  }catch(e){status.textContent="Error: "+e.message;}
+  btn.disabled=false;
+}
+<\/script></body></html>`);
+    w.document.close();
+  }
+
+  // Shared attachment row renderer
+  function AttachRow({ form, setForm, prefix="" }) {
+    const up = uploading;
     return (
-      <div>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
-          <button onClick={()=>setEditId(null)} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:13,padding:0,fontFamily:"'Jost',sans-serif"}}>← Contratos</button>
-          <span style={{color:R.border}}>/</span>
-          <input value={title} onChange={e=>setTitle(e.target.value)} style={{...INP_SM,flex:1}} placeholder="Título del contrato" />
-          <select value={status} onChange={e=>setStatus(e.target.value)} style={{...INP_SM,width:"auto",flexShrink:0}}>
-            {CONTRACT_STATUSES.map(s=><option key={s}>{s}</option>)}
-          </select>
-        </div>
-        <textarea value={body} onChange={e=>setBody(e.target.value)}
-          style={{...INP,height:420,resize:"vertical",fontFamily:"'Courier New',monospace",fontSize:12,lineHeight:1.85}} />
-        <div style={{display:"flex",gap:8,marginTop:10}}>
-          <button onClick={()=>save({body,title,status})} disabled={saving}
-            style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"7px 16px",fontSize:12,cursor:"pointer",opacity:saving?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"Guardando...":"Guardar"}</button>
-          <button onClick={()=>printContract({body},boda)}
-            style={{background:"#1a0812",color:"#fff",border:"none",borderRadius:8,padding:"7px 16px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>🖨 Imprimir / PDF</button>
-          <button onClick={()=>setEditId(null)}
-            style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"7px 16px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
-        </div>
+      <div style={{gridColumn:"span 2",display:"flex",flexWrap:"wrap",gap:8,alignItems:"center"}}>
+        {/* PDF */}
+        <label style={{background:R.dark,color:"#fff",borderRadius:7,padding:"5px 12px",fontSize:11,cursor:up?"not-allowed":"pointer",whiteSpace:"nowrap",fontFamily:"'Jost',sans-serif",opacity:up?.6:1,display:"flex",alignItems:"center",gap:6}}>
+          📎 {up===prefix+"pdfUrl"?"Subiendo…":"Adjuntar PDF"}
+          <input type="file" accept=".pdf,.doc,.docx" style={{display:"none"}} disabled={!!up} onChange={e=>uploadFile(e.target.files?.[0], prefix+"pdfUrl", setForm)} />
+        </label>
+        {/* Image */}
+        <label style={{background:"#1e40af",color:"#fff",borderRadius:7,padding:"5px 12px",fontSize:11,cursor:up?"not-allowed":"pointer",whiteSpace:"nowrap",fontFamily:"'Jost',sans-serif",opacity:up?.6:1,display:"flex",alignItems:"center",gap:6}}>
+          🖼 {up===prefix+"imageUrl"?"Subiendo…":"Adjuntar imagen"}
+          <input type="file" accept="image/*" style={{display:"none"}} disabled={!!up} onChange={e=>uploadFile(e.target.files?.[0], prefix+"imageUrl", setForm)} />
+        </label>
+        {form[prefix+"pdfUrl"]&&<a href={form[prefix+"pdfUrl"]} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:R.accent,textDecoration:"underline"}}>Ver PDF →</a>}
+        {form[prefix+"imageUrl"]&&<a href={form[prefix+"imageUrl"]} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:"#1e40af",textDecoration:"underline"}}>Ver imagen →</a>}
       </div>
     );
   }
 
   return (
     <div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+      {/* Toolbar */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
         <span style={{fontSize:11,fontWeight:600,color:R.muted,textTransform:"uppercase",letterSpacing:".06em"}}>{contracts.length} contrato{contracts.length!==1?"s":""}</span>
-        <button onClick={newContract} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Nuevo contrato</button>
+        <div style={{display:"flex",gap:8}}>
+          {contracts.filter(c=>c.pdfUrl).length>=2&&(
+            <button onClick={openMergePdfs} style={{background:"transparent",color:R.accent,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>📎 Combinar PDFs</button>
+          )}
+          <button onClick={()=>{setShowNew(v=>!v);setEditId(null);}} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Nuevo contrato</button>
+        </div>
       </div>
-      {contracts.length===0&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin contratos. Crea el primero arriba — se pre-llena con los datos de la boda.</p>}
+
+      {/* New contract form */}
+      {showNew&&(
+        <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:16,marginBottom:16}}>
+          <p style={{margin:"0 0 10px",fontSize:11,fontWeight:700,color:R.muted,textTransform:"uppercase",letterSpacing:".07em"}}>Nuevo contrato</p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+            <div style={{gridColumn:"span 2"}}>
+              <input style={INP_SM} value={newForm.title} onChange={e=>setNewForm(p=>({...p,title:e.target.value}))} placeholder="Título *  (ej: Contrato fotógrafo)" autoFocus />
+            </div>
+            <input style={INP_SM} value={newForm.supplierName} onChange={e=>setNewForm(p=>({...p,supplierName:e.target.value}))} placeholder="Proveedor" />
+            <input type="date" style={INP_SM} value={newForm.contractDate} onChange={e=>setNewForm(p=>({...p,contractDate:e.target.value}))} />
+            <input style={INP_SM} value={newForm.amount} onChange={e=>setNewForm(p=>({...p,amount:e.target.value}))} placeholder="Monto (ej: 2500 USD)" />
+            <select style={INP_SM} value={newForm.status} onChange={e=>setNewForm(p=>({...p,status:e.target.value}))}>{CONTRACT_STATUSES.map(s=><option key={s}>{s}</option>)}</select>
+            <div style={{gridColumn:"span 2"}}>
+              <textarea style={{...INP_SM,resize:"vertical",minHeight:60}} value={newForm.notes} onChange={e=>setNewForm(p=>({...p,notes:e.target.value}))} placeholder="Notas / detalles del contrato…" />
+            </div>
+            <AttachRow form={newForm} setForm={setNewForm} />
+          </div>
+          {(newForm.imageUrl)&&<img src={newForm.imageUrl} alt="" style={{maxHeight:120,maxWidth:"100%",borderRadius:8,marginBottom:8,objectFit:"cover"}}/>}
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={addContract} disabled={saving||!newForm.title.trim()} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"7px 16px",fontSize:12,cursor:"pointer",opacity:(saving||!newForm.title.trim())?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"Guardando…":"Agregar"}</button>
+            <button onClick={()=>setShowNew(false)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"7px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {contracts.length===0&&!showNew&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin contratos aún. Presiona "+ Nuevo contrato" para agregar el primero.</p>}
+
+      {/* Contracts list */}
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {contracts.map(c=>{
-          const st=CONTRACT_STATUS_STYLE[c.status]||CONTRACT_STATUS_STYLE["Borrador"];
-          const isEditingPdf=pdfEditId===c.id;
+          const st  = CONTRACT_STATUS_STYLE[c.status]||CONTRACT_STATUS_STYLE["Borrador"];
+          const isE = editId===c.id;
           return (
-            <div key={c.id} style={{border:`1px solid ${R.border}`,borderRadius:12,background:R.white,overflow:"hidden"}}>
-              <div style={{padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
+            <div key={c.id} style={{border:`1px solid ${isE?R.accent:R.border}`,borderRadius:12,background:R.white,overflow:"hidden",transition:"border-color .15s"}}>
+              {/* Card header */}
+              <div style={{padding:"12px 16px",display:"flex",alignItems:"flex-start",gap:12}}>
                 <div style={{flex:1,minWidth:0}}>
-                  <p style={{fontSize:13,fontWeight:600,color:R.text,margin:"0 0 3px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.title}</p>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:"4px 12px",marginTop:2}}>
-                    <span style={{fontSize:11,color:R.muted}}>Creado {c.createdAt||"—"}</span>
+                  <p style={{fontSize:13,fontWeight:600,color:R.text,margin:"0 0 3px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.title}</p>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:"3px 10px"}}>
+                    {c.createdAt&&<span style={{fontSize:11,color:R.muted}}>Creado {c.createdAt}</span>}
                     {c.supplierName&&<span style={{fontSize:11,color:R.muted}}>· {c.supplierName}</span>}
                     {c.contractDate&&<span style={{fontSize:11,color:R.muted}}>· {c.contractDate}</span>}
-                    {c.amount&&<span style={{fontSize:11,color:"#16a34a",fontWeight:600}}>· ${c.amount}</span>}
+                    {c.amount&&<span style={{fontSize:11,color:"#16a34a",fontWeight:600}}>· {c.amount}</span>}
+                  </div>
+                  {c.notes&&<p style={{margin:"5px 0 0",fontSize:11,color:R.muted,lineHeight:1.55,whiteSpace:"pre-line"}}>{c.notes}</p>}
+                  {/* Attachments preview */}
+                  <div style={{display:"flex",gap:8,marginTop:c.notes?6:4,flexWrap:"wrap",alignItems:"center"}}>
+                    {c.pdfUrl&&<a href={c.pdfUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:R.accent,textDecoration:"underline",display:"flex",alignItems:"center",gap:3}}>📎 PDF</a>}
+                    {c.imageUrl&&<a href={c.imageUrl} target="_blank" rel="noopener noreferrer"><img src={c.imageUrl} alt="" style={{height:36,borderRadius:5,objectFit:"cover",border:`1px solid ${R.border}`}}/></a>}
                   </div>
                 </div>
-                {c.pdfUrl&&<a href={c.pdfUrl} target="_blank" rel="noopener noreferrer" title="Ver PDF adjunto" style={{fontSize:18,textDecoration:"none",flexShrink:0}}>📎</a>}
-                <button onClick={()=>isEditingPdf?setPdfEditId(null):openPdfEdit(c)} title="Adjuntar PDF" style={{background:"none",border:`1px solid ${R.border}`,borderRadius:6,cursor:"pointer",fontSize:11,color:isEditingPdf?R.accent:R.muted,padding:"3px 8px",flexShrink:0,fontFamily:"'Jost',sans-serif"}}>PDF</button>
-                <button onClick={()=>cycleStatus(c.id)} style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:st.bg,color:st.color,border:"none",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,fontFamily:"'Jost',sans-serif"}}>{c.status}</button>
-                <button onClick={()=>printContract(c,boda)} title="Imprimir / PDF" style={{background:"none",border:"none",cursor:"pointer",fontSize:14,flexShrink:0}}>🖨</button>
-                <button onClick={()=>openEdit(c.id)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:R.muted,flexShrink:0}}>✏️</button>
-                <button onClick={()=>del(c.id)}       style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:R.border,flexShrink:0}}>✕</button>
-              </div>
-              {isEditingPdf&&(
-                <div style={{borderTop:`1px solid ${R.border}`,padding:"12px 16px",background:R.light,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                  <div style={{gridColumn:"span 2"}}>
-                    <input style={INP_SM} value={pdfForm.pdfUrl} onChange={e=>setPdfForm(p=>({...p,pdfUrl:e.target.value}))} placeholder="URL del PDF (Drive, Dropbox, …)" />
+                <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
+                  <button onClick={()=>cycleStatus(c.id)} style={{fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:99,background:st.bg,color:st.color,border:"none",cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'Jost',sans-serif"}}>{c.status}</button>
+                  <div style={{display:"flex",gap:4}}>
+                    <button onClick={()=>isE?setEditId(null):openEdit(c)} style={{background:"none",border:`1px solid ${R.border}`,borderRadius:6,cursor:"pointer",fontSize:11,color:isE?R.accent:R.muted,padding:"2px 7px",fontFamily:"'Jost',sans-serif"}}>{isE?"Cerrar":"✏️"}</button>
+                    <button onClick={()=>del(c.id)} style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:R.border,padding:"2px 4px"}}>✕</button>
                   </div>
-                  <input style={INP_SM} value={pdfForm.supplierName} onChange={e=>setPdfForm(p=>({...p,supplierName:e.target.value}))} placeholder="Proveedor" />
-                  <input type="date" style={INP_SM} value={pdfForm.contractDate} onChange={e=>setPdfForm(p=>({...p,contractDate:e.target.value}))} />
-                  <input style={INP_SM} value={pdfForm.amount} onChange={e=>setPdfForm(p=>({...p,amount:e.target.value}))} placeholder="Precio (ej: 2500 USD)" />
-                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                    <button onClick={savePdfMeta} disabled={saving} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>{saving?"...":"Guardar"}</button>
-                    <button onClick={()=>setPdfEditId(null)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+                </div>
+              </div>
+
+              {/* Inline edit */}
+              {isE&&(
+                <div style={{borderTop:`1px solid ${R.border}`,padding:"14px 16px",background:R.light}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                    <div style={{gridColumn:"span 2"}}>
+                      <input style={INP_SM} value={editForm.title} onChange={e=>setEditForm(p=>({...p,title:e.target.value}))} placeholder="Título *" />
+                    </div>
+                    <input style={INP_SM} value={editForm.supplierName} onChange={e=>setEditForm(p=>({...p,supplierName:e.target.value}))} placeholder="Proveedor" />
+                    <input type="date" style={INP_SM} value={editForm.contractDate} onChange={e=>setEditForm(p=>({...p,contractDate:e.target.value}))} />
+                    <input style={INP_SM} value={editForm.amount} onChange={e=>setEditForm(p=>({...p,amount:e.target.value}))} placeholder="Monto (ej: 2500 USD)" />
+                    <select style={INP_SM} value={editForm.status} onChange={e=>setEditForm(p=>({...p,status:e.target.value}))}>{CONTRACT_STATUSES.map(s=><option key={s}>{s}</option>)}</select>
+                    <div style={{gridColumn:"span 2"}}>
+                      <textarea style={{...INP_SM,resize:"vertical",minHeight:60}} value={editForm.notes} onChange={e=>setEditForm(p=>({...p,notes:e.target.value}))} placeholder="Notas / detalles del contrato…" />
+                    </div>
+                    <AttachRow form={editForm} setForm={setEditForm} prefix="" />
+                  </div>
+                  {editForm.imageUrl&&<img src={editForm.imageUrl} alt="" style={{maxHeight:100,maxWidth:"100%",borderRadius:8,marginBottom:8,objectFit:"cover"}}/>}
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={saveEdit} disabled={saving} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 16px",fontSize:12,cursor:"pointer",opacity:saving?.5:1,fontFamily:"'Jost',sans-serif"}}>{saving?"Guardando…":"Guardar"}</button>
+                    <button onClick={()=>setEditId(null)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"6px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
                   </div>
                 </div>
               )}
@@ -2630,13 +3263,17 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask }) {
         const c=cat(t);
         const rowBg={late:"#fff5f5",today:"#fffbeb",up:R.white}[c];
         const rowBd={late:"#fca5a5",today:"#fcd34d",up:R.border}[c];
+        const targetBoda=bodas.find(b=>b.id===t.bodaId);
         return (
-          <button key={t.id+t.bodaId} onClick={()=>onSelectBoda(bodas.find(b=>b.id===t.bodaId))}
-            style={{display:"flex",alignItems:"flex-start",gap:10,width:"100%",background:rowBg,border:`1px solid ${rowBd}`,borderRadius:12,padding:"10px 14px",marginBottom:6,cursor:"pointer",textAlign:"left",fontFamily:"'Jost',sans-serif"}}>
+          <div key={t.id+t.bodaId}
+            style={{display:"flex",alignItems:"flex-start",gap:10,width:"100%",background:rowBg,border:`1px solid ${rowBd}`,borderRadius:12,padding:"10px 14px",marginBottom:6,fontFamily:"'Jost',sans-serif"}}>
             <div style={{flex:1,minWidth:0}}>
               <p style={{fontSize:13,fontWeight:500,color:R.text,margin:0}}>{t.taskName}</p>
               <div style={{display:"flex",flexWrap:"wrap",gap:"3px 10px",marginTop:3,fontSize:11,color:R.muted}}>
-                <span style={{color:R.accent,fontWeight:600}}>💍 {t.bodaName}</span>
+                <button onClick={()=>onSelectBoda(targetBoda)} style={{background:"none",border:"none",padding:0,cursor:targetBoda?"pointer":"default",fontFamily:"'Jost',sans-serif",display:"flex",alignItems:"center",gap:4}}>
+                  <span style={{color:R.accent,fontWeight:600}}>💍 {t.bodaName}</span>
+                  {targetBoda&&<span style={{fontSize:10,color:R.accent,background:"rgba(201,169,110,.12)",padding:"1px 6px",borderRadius:99}}>→ Ver</span>}
+                </button>
                 {t.assignedTo&&section==="equipo"&&<span>👤 {t.assignedTo}</span>}
                 {t.dueDate&&<span>📅 {t.dueDate}</span>}
                 {t.phase&&t.phase!=="General"&&<span>{t.phase}</span>}
@@ -2644,7 +3281,7 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask }) {
                 {c==="today"&&<span style={{fontWeight:700,color:"#d97706"}}>🔥 Hoy</span>}
               </div>
             </div>
-          </button>
+          </div>
         );
       })}
     </div>
@@ -2817,13 +3454,14 @@ function calcDate(mode,offset,wd) {
 }
 
 // ─── MAIN PANEL ───────────────────────────────────────────────────────────────
-export default function BodaPanel({ currentUser, onLogout }) {
+export default function BodaPanel({ currentUser, onLogout, initialBodaId="", initialTab="" }) {
   const [bodas,        setBodas]        = useState([]);
   const [users,        setUsers]        = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [refreshing,   setRefreshing]   = useState(false);
   const [err,          setErr]          = useState("");
   const [selected,     setSelected]     = useState(null);
+  const [_initialJumped, setInitialJumped] = useState(false);
   const [showNew,      setShowNew]      = useState(false);
   const [saving,       setSaving]       = useState(false);
   const [search,       setSearch]       = useState("");
@@ -2869,6 +3507,12 @@ export default function BodaPanel({ currentUser, onLogout }) {
     setLoading(false);
   },[loadUsers]);
   useEffect(()=>{load();},[load]);
+
+  useEffect(()=>{
+    if(!initialBodaId||_initialJumped||loading||bodas.length===0) return;
+    const found=bodas.find(b=>b.id===initialBodaId);
+    if(found){ setSelected(found); setInitialJumped(true); }
+  },[initialBodaId,_initialJumped,loading,bodas]);
 
   const forceRefresh=useCallback(async()=>{
     setRefreshing(true);
@@ -2958,7 +3602,7 @@ export default function BodaPanel({ currentUser, onLogout }) {
     return (
       <div style={{minHeight:"100vh",background:R.cream,fontFamily:"'Jost',sans-serif"}}>
         <div style={{maxWidth:760,margin:"0 auto",padding:"24px 16px 60px"}}>
-          <BodaDetail boda={selected} users={users} onBack={()=>setSelected(null)} onRefresh={handleRefresh} />
+          <BodaDetail boda={selected} users={users} onBack={()=>setSelected(null)} onRefresh={handleRefresh} initialTab={initialTab} />
         </div>
       </div>
     );

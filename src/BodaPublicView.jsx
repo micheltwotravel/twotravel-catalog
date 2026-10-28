@@ -261,6 +261,7 @@ export default function BodaPublicView() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
   const [showDone, setShowDone] = useState(false);
+  const [tab, setTab] = useState("inicio");
 
   useEffect(() => {
     if (!id) { setError("Link inválido — falta el ID."); setLoading(false); return; }
@@ -269,17 +270,20 @@ export default function BodaPublicView() {
         if (err || !row) { setError("No encontramos esta boda. Verifica el link."); return; }
         const d = row.data || {};
         setBoda({
-          id:          d.id          || id,
-          clienteName: d.clienteName || "",
-          weddingDate: d.weddingDate || "",
-          venue:       d.venue       || "",
-          phase:       d.phase       || "Onboarding",
-          status:      d.status      || "Activa",
-          guestCount:  d.guestCount  || "",
-          coverPhoto:  d.coverPhoto  || "",
-          tasks:       Array.isArray(d.tasks)     ? d.tasks     : [],
-          schedule:    Array.isArray(d.schedule)  ? d.schedule  : [],
-          suppliers:   Array.isArray(d.suppliers) ? d.suppliers : [],
+          id:            d.id            || id,
+          clienteName:   d.clienteName   || "",
+          weddingDate:   d.weddingDate   || "",
+          venue:         d.venue         || "",
+          phase:         d.phase         || "Onboarding",
+          status:        d.status        || "Activa",
+          guestCount:    d.guestCount    || "",
+          coverPhoto:    d.coverPhoto    || "",
+          tasks:         Array.isArray(d.tasks)         ? d.tasks         : [],
+          schedule:      Array.isArray(d.schedule)      ? d.schedule      : [],
+          suppliers:     Array.isArray(d.suppliers)     ? d.suppliers     : [],
+          guests:        Array.isArray(d.guests)        ? d.guests        : [],
+          seating:       Array.isArray(d.seating)       ? d.seating       : [],
+          weddingEvents: Array.isArray(d.weddingEvents) ? d.weddingEvents : [],
         });
       })
       .catch(e => setError("Error al cargar: " + e.message))
@@ -314,8 +318,17 @@ export default function BodaPublicView() {
   const pending  = tasks.filter(t => !["Terminado", "Cancelado"].includes(t.status));
   const pct      = tasks.length ? Math.round((done.length / tasks.length) * 100) : 0;
   const days     = daysUntil(boda.weddingDate);
-  const schedule = boda.schedule || [];
+  const schedule = (boda.schedule || []).filter(ev => !ev.isInternal);
   const pm       = PHASE_META[boda.phase] || { color: T.muted };
+  const guests   = boda.guests || [];
+  const seating  = boda.seating || [];
+
+  const TABS = [
+    { id: "inicio",    label: "Inicio" },
+    { id: "timeline",  label: "Timeline" },
+    ...(guests.length > 0 ? [{ id: "invitados", label: `Invitados (${guests.length})` }] : []),
+    ...(seating.length > 0 ? [{ id: "mesas", label: "Mesas" }] : []),
+  ];
 
   return (
     <div style={{ minHeight: "100vh", background: T.bg,
@@ -373,123 +386,232 @@ export default function BodaPublicView() {
         </div>
       </div>
 
+      {/* ── Tab bar ── */}
+      {TABS.length > 1 && (
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: T.ink,
+          borderBottom: `1px solid rgba(255,255,255,.08)`, padding: "0 20px" }}>
+          <div style={{ maxWidth: 640, margin: "0 auto", display: "flex", gap: 0 }}>
+            {TABS.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{
+                background: "none", border: "none", borderBottom: `2px solid ${tab === t.id ? T.gold : "transparent"}`,
+                color: tab === t.id ? T.gold : "rgba(255,255,255,.45)",
+                padding: "13px 16px 11px", fontSize: 11, letterSpacing: ".08em",
+                textTransform: "uppercase", cursor: "pointer", fontFamily: "'Jost',sans-serif",
+                fontWeight: tab === t.id ? 600 : 400, transition: "color .15s",
+                whiteSpace: "nowrap",
+              }}>{t.label}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Content ── */}
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "36px 20px 80px" }}>
 
-        {/* Progress */}
-        {tasks.length > 0 && (
-          <Card>
-            <SectionHead>Estado de preparativos</SectionHead>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div>
-                <p style={{ margin: 0, fontSize: 32, fontFamily: "'Cormorant Garamond',serif",
-                  fontWeight: 400, color: T.ink }}>
-                  {done.length}<span style={{ fontSize: 16, color: T.muted }}>/{tasks.length}</span>
-                </p>
-                <p style={{ margin: "4px 0 0", fontSize: 11, color: T.muted,
-                  letterSpacing: ".08em", textTransform: "uppercase" }}>
-                  tareas completadas
-                </p>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <p style={{ margin: 0, fontSize: 32, fontFamily: "'Cormorant Garamond',serif",
-                  fontWeight: 400, color: T.gold }}>
-                  {pending.length}
-                </p>
-                <p style={{ margin: "4px 0 0", fontSize: 11, color: T.muted,
-                  letterSpacing: ".08em", textTransform: "uppercase" }}>
-                  pendientes
-                </p>
-              </div>
-            </div>
-            <ProgressBar pct={pct} />
-          </Card>
-        )}
+        {/* ── INICIO tab ── */}
+        {tab === "inicio" && (<>
 
-        {/* Pending tasks by phase */}
-        {pending.length > 0 && (
-          <Card>
-            <SectionHead>Tareas en proceso</SectionHead>
-            {(() => {
-              const knownPhases = TASK_PHASES;
-              const other = pending.filter(t => !knownPhases.includes(t.phase));
-              return (
-                <>
-                  {knownPhases.map(ph => {
-                    const inPhase = pending.filter(t => t.phase === ph);
-                    if (!inPhase.length) return null;
-                    const phm = PHASE_META[ph] || { color: T.muted };
-                    return (
-                      <div key={ph} style={{ marginBottom: 20 }}>
-                        <p style={{ margin: "0 0 2px", fontSize: 9, letterSpacing: ".14em",
-                          textTransform: "uppercase", color: phm.color, fontWeight: 600 }}>
-                          {ph}
-                        </p>
-                        {inPhase.map(t => <TaskItem key={t.id} task={t} done={false} />)}
+          {/* Progress */}
+          {tasks.length > 0 && (
+            <Card>
+              <SectionHead>Estado de preparativos</SectionHead>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: 32, fontFamily: "'Cormorant Garamond',serif",
+                    fontWeight: 400, color: T.ink }}>
+                    {done.length}<span style={{ fontSize: 16, color: T.muted }}>/{tasks.length}</span>
+                  </p>
+                  <p style={{ margin: "4px 0 0", fontSize: 11, color: T.muted,
+                    letterSpacing: ".08em", textTransform: "uppercase" }}>
+                    tareas completadas
+                  </p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <p style={{ margin: 0, fontSize: 32, fontFamily: "'Cormorant Garamond',serif",
+                    fontWeight: 400, color: T.gold }}>
+                    {pending.length}
+                  </p>
+                  <p style={{ margin: "4px 0 0", fontSize: 11, color: T.muted,
+                    letterSpacing: ".08em", textTransform: "uppercase" }}>
+                    pendientes
+                  </p>
+                </div>
+              </div>
+              <ProgressBar pct={pct} />
+            </Card>
+          )}
+
+          {/* Pending tasks by phase */}
+          {pending.length > 0 && (
+            <Card>
+              <SectionHead>Tareas en proceso</SectionHead>
+              {(() => {
+                const knownPhases = TASK_PHASES;
+                const other = pending.filter(t => !knownPhases.includes(t.phase));
+                return (
+                  <>
+                    {knownPhases.map(ph => {
+                      const inPhase = pending.filter(t => t.phase === ph);
+                      if (!inPhase.length) return null;
+                      const phm = PHASE_META[ph] || { color: T.muted };
+                      return (
+                        <div key={ph} style={{ marginBottom: 20 }}>
+                          <p style={{ margin: "0 0 2px", fontSize: 9, letterSpacing: ".14em",
+                            textTransform: "uppercase", color: phm.color, fontWeight: 600 }}>
+                            {ph}
+                          </p>
+                          {inPhase.map(t => <TaskItem key={t.id} task={t} done={false} />)}
+                        </div>
+                      );
+                    })}
+                    {other.length > 0 && (
+                      <div style={{ marginBottom: 20 }}>
+                        {other.map(t => <TaskItem key={t.id} task={t} done={false} />)}
                       </div>
-                    );
-                  })}
-                  {other.length > 0 && (
-                    <div style={{ marginBottom: 20 }}>
-                      {other.map(t => <TaskItem key={t.id} task={t} done={false} />)}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-          </Card>
-        )}
+                    )}
+                  </>
+                );
+              })()}
+            </Card>
+          )}
 
-        {/* Completed tasks (collapsible) */}
-        {done.length > 0 && (
-          <Card>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-              marginBottom: showDone ? 16 : 0 }}>
-              <SectionHead>Completadas · {done.length}</SectionHead>
-              <button onClick={() => setShowDone(s => !s)}
-                style={{ background: "none", border: `1px solid ${T.border2}`, cursor: "pointer",
-                  fontSize: 10, letterSpacing: ".08em", textTransform: "uppercase",
-                  color: T.muted, padding: "4px 12px", fontFamily: "'Jost',sans-serif",
-                  marginBottom: 20 }}>
-                {showDone ? "Ocultar" : "Ver"}
-              </button>
-            </div>
-            {showDone && done.map(t => <TaskItem key={t.id} task={t} done={true} />)}
-          </Card>
-        )}
+          {/* Completed tasks (collapsible) */}
+          {done.length > 0 && (
+            <Card>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                marginBottom: showDone ? 16 : 0 }}>
+                <SectionHead>Completadas · {done.length}</SectionHead>
+                <button onClick={() => setShowDone(s => !s)}
+                  style={{ background: "none", border: `1px solid ${T.border2}`, cursor: "pointer",
+                    fontSize: 10, letterSpacing: ".08em", textTransform: "uppercase",
+                    color: T.muted, padding: "4px 12px", fontFamily: "'Jost',sans-serif",
+                    marginBottom: 20 }}>
+                  {showDone ? "Ocultar" : "Ver"}
+                </button>
+              </div>
+              {showDone && done.map(t => <TaskItem key={t.id} task={t} done={true} />)}
+            </Card>
+          )}
 
-        {/* Minuto a Minuto */}
-        {schedule.length > 0 && (
+          {/* Confirmed suppliers */}
+          <ProveedoresSection suppliers={boda.suppliers} />
+
+          {/* Venue floor plans */}
+          <VenuePlans venue={boda.venue} />
+
+        </>)}
+
+        {/* ── TIMELINE tab ── */}
+        {tab === "timeline" && (
           <Card>
             <SectionHead>Programa del Día</SectionHead>
-            <div style={{ position: "relative", paddingLeft: 20 }}>
-              <div style={{ position: "absolute", top: 0, left: 7, bottom: 0,
-                width: 1, background: T.border }} />
-              {schedule.map((ev, i) => (
-                <div key={i} style={{ position: "relative", paddingBottom: 20 }}>
-                  <div style={{ position: "absolute", left: -20, top: 4, width: 8, height: 8,
-                    borderRadius: "50%", background: T.gold, border: `2px solid ${T.bg}` }} />
-                  <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: T.gold,
-                    letterSpacing: ".08em", fontFamily: "'Jost',sans-serif" }}>
-                    {ev.time || "--:--"}
-                  </p>
-                  <p style={{ margin: "3px 0 0", fontSize: 13, color: T.ink }}>
-                    {ev.event || ev.title || ""}
-                  </p>
-                  {ev.notes && (
-                    <p style={{ margin: "3px 0 0", fontSize: 11, color: T.muted }}>{ev.notes}</p>
-                  )}
-                </div>
-              ))}
-            </div>
+            {schedule.length === 0 ? (
+              <p style={{ fontSize: 13, color: T.muted, fontStyle: "italic", textAlign: "center", padding: "20px 0" }}>
+                El timeline aún está en preparación.
+              </p>
+            ) : (
+              <div style={{ position: "relative", paddingLeft: 20 }}>
+                <div style={{ position: "absolute", top: 0, left: 7, bottom: 0,
+                  width: 1, background: T.border }} />
+                {schedule.map((ev, i) => (
+                  <div key={i} style={{ position: "relative", paddingBottom: 20 }}>
+                    <div style={{ position: "absolute", left: -20, top: 4, width: 8, height: 8,
+                      borderRadius: "50%", background: T.gold, border: `2px solid ${T.bg}` }} />
+                    <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: T.gold,
+                      letterSpacing: ".08em", fontFamily: "'Jost',sans-serif" }}>
+                      {ev.time || "--:--"}
+                    </p>
+                    <p style={{ margin: "3px 0 0", fontSize: 13, color: T.ink }}>
+                      {ev.description || ev.event || ev.title || ""}
+                    </p>
+                    {ev.notes && (
+                      <p style={{ margin: "3px 0 0", fontSize: 11, color: T.muted }}>{ev.notes}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         )}
 
-        {/* Confirmed suppliers */}
-        <ProveedoresSection suppliers={boda.suppliers} />
+        {/* ── INVITADOS tab ── */}
+        {tab === "invitados" && (
+          <Card>
+            <SectionHead>Lista de Invitados</SectionHead>
+            {guests.length === 0 ? (
+              <p style={{ fontSize: 13, color: T.muted, fontStyle: "italic", textAlign: "center", padding: "20px 0" }}>Sin invitados registrados.</p>
+            ) : (<>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+                {[["Confirmado","#15803d"],["Pendiente","#c2410c"],["No asiste","#6b7280"]].map(([s,c]) => {
+                  const n = guests.filter(g => (g.rsvp||"Pendiente") === s).length;
+                  if (!n) return null;
+                  return <span key={s} style={{ fontSize: 11, color: c, background: "transparent",
+                    border: `1px solid ${c}`, borderRadius: 99, padding: "3px 12px" }}>{s}: {n}</span>;
+                })}
+              </div>
+              <div>
+                {guests.map((g, i) => {
+                  const mesa = seating.find(t => t.id === g.tableId);
+                  const rsvpColor = g.rsvp === "Confirmado" ? "#15803d" : g.rsvp === "No asiste" ? "#9ca3af" : "#c2410c";
+                  return (
+                    <div key={g.id || i} style={{ display: "flex", alignItems: "center", gap: 12,
+                      padding: "10px 0", borderBottom: `1px solid ${T.border}` }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: 13, color: T.ink, fontFamily: "'Jost',sans-serif" }}>{g.name}</p>
+                        {mesa && <p style={{ margin: "2px 0 0", fontSize: 10, color: T.muted }}>Mesa: {mesa.name}</p>}
+                        {g.meal && g.meal !== "Sin especificar" && <p style={{ margin: "1px 0 0", fontSize: 10, color: T.muted }}>{g.meal}</p>}
+                      </div>
+                      <span style={{ fontSize: 10, color: rsvpColor, fontWeight: 600, flexShrink: 0,
+                        letterSpacing: ".04em" }}>{g.rsvp || "Pendiente"}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>)}
+          </Card>
+        )}
 
-        {/* Venue floor plans */}
-        <VenuePlans venue={boda.venue} />
+        {/* ── MESAS tab ── */}
+        {tab === "mesas" && (
+          <Card>
+            <SectionHead>Plan de Mesas</SectionHead>
+            {seating.filter(t => !t.type || t.type === "mesa").length === 0 ? (
+              <p style={{ fontSize: 13, color: T.muted, fontStyle: "italic", textAlign: "center", padding: "20px 0" }}>Sin mesas configuradas.</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {seating.filter(t => !t.type || t.type === "mesa").map(tbl => {
+                  const tGuests = guests.filter(g => g.tableId === tbl.id);
+                  const pct2 = Math.round((tGuests.length / Math.max(1, tbl.seats)) * 100);
+                  return (
+                    <div key={tbl.id} style={{ border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden" }}>
+                      <div style={{ background: T.ink, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div>
+                          <p style={{ margin: 0, fontFamily: "'Cormorant Garamond',serif", fontSize: 15,
+                            fontWeight: 400, fontStyle: "italic", color: T.white }}>{tbl.name}</p>
+                          <p style={{ margin: "1px 0 0", fontSize: 9, color: T.gold2, letterSpacing: ".06em" }}>
+                            {tbl.shape} · {tGuests.length}/{tbl.seats} puestos{tbl.size ? ` · ${tbl.size}` : ""}
+                          </p>
+                        </div>
+                        <span style={{ fontSize: 11, color: pct2 >= 100 ? "#f87171" : T.gold2, fontWeight: 600 }}>{pct2}%</span>
+                      </div>
+                      {tGuests.length > 0 && (
+                        <div style={{ padding: "8px 14px", display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {tGuests.map(g => (
+                            <span key={g.id} style={{ fontSize: 11, color: T.ink2,
+                              background: T.bg, border: `1px solid ${T.border}`,
+                              borderRadius: 99, padding: "2px 10px", fontFamily: "'Jost',sans-serif" }}>
+                              {g.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        )}
 
         {/* Footer */}
         <div style={{ textAlign: "center", marginTop: 48 }}>
