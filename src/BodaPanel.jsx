@@ -201,9 +201,11 @@ const INP    = { width:"100%",border:`1px solid ${R.border}`,borderRadius:2,padd
 const INP_SM = {...INP,padding:"6px 10px",fontSize:12};
 
 // ─── BODA FORM ───────────────────────────────────────────────────────────────
-function BodaForm({ boda, onSave, onCancel, saving, users=[] }) {
+function BodaForm({ boda, onSave, onCancel, saving, users=[], onFileUpload, uploadingCover, coverInputRef }) {
   const [f,setF]=useState({clienteName:boda?.clienteName||"",weddingDate:toDateInput(boda?.weddingDate),venue:boda?.venue||"",responsable:boda?.responsable||"",phase:boda?.phase||"Onboarding",status:boda?.status||"Activa",guestCount:boda?.guestCount||"",budget:boda?.budget||"",notes:boda?.notes||"",contact:boda?.contact||"",coupleEmail:boda?.coupleEmail||"",coupleEmail2:boda?.coupleEmail2||"",ceremonyType:boda?.ceremonyType||"",coverPhoto:boda?.coverPhoto||""});
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  const localFileRef=React.useRef(null);
+  const fileRef=coverInputRef||localFileRef;
   return (
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
       <div style={{gridColumn:"span 2"}}><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Nombre del cliente *</label><input style={INP} value={f.clienteName} onChange={e=>set("clienteName",e.target.value)} placeholder="Ej: Ana & Carlos" /></div>
@@ -216,7 +218,28 @@ function BodaForm({ boda, onSave, onCancel, saving, users=[] }) {
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Email novia/novio 1 💌</label><input type="email" style={INP} value={f.coupleEmail} onChange={e=>set("coupleEmail",e.target.value)} placeholder="Para notificaciones de tareas" /></div>
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Email novia/novio 2 💌</label><input type="email" style={INP} value={f.coupleEmail2} onChange={e=>set("coupleEmail2",e.target.value)} placeholder="Segundo correo (opcional)" /></div>
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Tipo de ceremonia</label><select style={INP} value={f.ceremonyType} onChange={e=>set("ceremonyType",e.target.value)}><option value="">— seleccionar —</option><option>Religiosa</option><option>Civil</option><option>Simbólica</option></select></div>
-      <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Foto de portada (URL)</label><input style={INP} value={f.coverPhoto} onChange={e=>set("coverPhoto",e.target.value)} placeholder="https://…" /></div>
+      <div style={{gridColumn:"span 2"}}>
+        <label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Foto de portada</label>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <input style={{...INP,flex:1}} value={f.coverPhoto} onChange={e=>set("coverPhoto",e.target.value)} placeholder="Pega URL o sube imagen →" />
+          <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}}
+            onChange={e=>{
+              if(onFileUpload) onFileUpload(e,(url)=>set("coverPhoto",url));
+              else{
+                const file=e.target.files?.[0]; if(!file) return;
+                const r=new FileReader(); r.onload=ev=>set("coverPhoto",ev.target.result); r.readAsDataURL(file);
+              }
+            }} />
+          <button type="button" disabled={uploadingCover} onClick={()=>fileRef.current?.click()}
+            style={{background:R.dark,color:R.gold,border:`1px solid ${R.gold}40`,borderRadius:2,padding:"8px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif",whiteSpace:"nowrap",opacity:uploadingCover?.6:1}}>
+            {uploadingCover?"⏳":"📷 Subir"}
+          </button>
+        </div>
+        {f.coverPhoto&&f.coverPhoto.startsWith("http")&&(
+          <img src={f.coverPhoto} alt="preview" onError={e=>e.target.style.display="none"}
+            style={{marginTop:8,height:56,width:"auto",borderRadius:6,objectFit:"cover",border:`1px solid ${R.border}`}} />
+        )}
+      </div>
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Fase</label><select style={INP} value={f.phase} onChange={e=>set("phase",e.target.value)}>{FASES.map(p=><option key={p}>{p}</option>)}</select></div>
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>Estado</label><select style={INP} value={f.status} onChange={e=>set("status",e.target.value)}>{ESTADOS_BODA.map(s=><option key={s}>{s}</option>)}</select></div>
       <div><label style={{fontSize:11,color:R.muted,display:"block",marginBottom:4}}>N° invitados</label><input type="number" style={INP} value={f.guestCount} onChange={e=>set("guestCount",e.target.value)} placeholder="150" /></div>
@@ -1060,6 +1083,7 @@ td{padding:6px 8px;border:1px solid #d4cfc9;vertical-align:top;font-size:11px;li
                         {hl&&<span style={{fontSize:12}}>⭐</span>}
                         <span style={{fontSize:13,fontWeight:hl?600:500,color:R.text}}>{ev.description}</span>
                         <span style={{fontSize:10,padding:"2px 8px",borderRadius:99,fontWeight:500,background:cs.bg,color:cs.color}}>{ev.category}</span>
+                        {ev.dayLabel&&<span style={{fontSize:10,padding:"2px 8px",borderRadius:99,fontWeight:600,background:"rgba(201,169,110,.10)",color:R.accent,border:`1px solid rgba(201,169,110,.30)`}}>💍 {ev.dayLabel}</span>}
                         {ev.isInternal&&<span style={{fontSize:9,padding:"2px 6px",borderRadius:99,background:"#f3f4f6",color:"#6b7280"}}>🔐</span>}
                       </div>
                       {ev.assignedTo&&<p style={{fontSize:11,color:R.muted,margin:"3px 0 0"}}>👤 {ev.assignedTo}</p>}
@@ -2434,7 +2458,7 @@ function BodaDetail({ boda:init, users, onBack, onRefresh, initialTab="" }) {
   const contentRef=useRef(null);
   const coverInputRef=useRef(null);
 
-  async function handleCoverUpload(e){
+  async function handleCoverUpload(e, onSuccess){
     const file=e.target.files?.[0]; if(!file) return;
     setUploadingCover(true);
     try{
@@ -2446,6 +2470,7 @@ function BodaDetail({ boda:init, users, onBack, onRefresh, initialTab="" }) {
       const newUrl=urlData.publicUrl;
       await apiSaveNotes(boda.id,{...boda,coverPhoto:newUrl});
       setBoda(b=>({...b,coverPhoto:newUrl}));
+      if(onSuccess) onSuccess(newUrl);
     }catch(err){ alert("Error al subir foto: "+err.message); }
     setUploadingCover(false);
     if(coverInputRef.current) coverInputRef.current.value="";
@@ -2640,7 +2665,7 @@ ${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).joi
           </div>
         </div>
         <div style={GOLD_BAR} />
-        {editing&&<div style={{padding:20}}><BodaForm boda={boda} onSave={handleSave} onCancel={()=>setEditing(false)} saving={saving} users={users} /></div>}
+        {editing&&<div style={{padding:20}}><BodaForm boda={boda} onSave={handleSave} onCancel={()=>setEditing(false)} saving={saving} users={users} onFileUpload={handleCoverUpload} uploadingCover={uploadingCover} coverInputRef={coverInputRef} /></div>}
       </div>
 
       <div style={CARD}>
