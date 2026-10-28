@@ -425,8 +425,9 @@ function ProveedoresTab({ boda, onPatch }) {
       .then(({data})=>{ setDirProvs(data?.data||[]); }).catch(()=>setDirProvs([]));
   },[dirProvs]);
 
-  const provMatches = provSearch.trim().length<2 ? [] :
-    (dirProvs||[]).filter(p=>[p.company,p.contact,p.category].some(f=>f?.toLowerCase().includes(provSearch.toLowerCase()))).slice(0,8);
+  const provMatches = (dirProvs||[]).filter(p=>
+    !provSearch.trim()||[p.company,p.contact,p.category].some(f=>f?.toLowerCase().includes(provSearch.toLowerCase()))
+  ).slice(0,14);
 
   function pickProv(p){
     setBlank(b=>({...b,company:p.company||b.company,contact:p.contact||b.contact,phone:p.phone||b.phone,email:p.email||b.email,instagram:p.instagram||b.instagram,category:p.category||b.category,city:p.city||b.city}));
@@ -458,17 +459,23 @@ function ProveedoresTab({ boda, onPatch }) {
           <div style={{position:"relative",marginBottom:8}}>
             <input style={{...INP_SM,width:"100%",boxSizing:"border-box",paddingLeft:28}} value={provSearch}
               onChange={e=>{setProvSearch(e.target.value);setProvOpen(true);}}
-              onFocus={()=>setProvOpen(true)}
+              onFocus={()=>{if((dirProvs||[]).length>0)setProvOpen(true);}}
               onBlur={()=>setTimeout(()=>setProvOpen(false),180)}
-              placeholder="🔍 Buscar en directorio (2+ letras)..." />
+              placeholder="🔍 Buscar en directorio..." />
             {provOpen&&provMatches.length>0&&(
-              <div style={{position:"absolute",top:"100%",left:0,right:0,background:R.white,border:`1px solid ${R.border}`,borderRadius:8,zIndex:99,boxShadow:"0 4px 16px rgba(0,0,0,.10)",maxHeight:200,overflowY:"auto"}}>
+              <div style={{position:"absolute",top:"100%",left:0,right:0,background:R.white,border:`1px solid ${R.border}`,borderRadius:8,zIndex:99,boxShadow:"0 6px 20px rgba(0,0,0,.13)",maxHeight:240,overflowY:"auto"}}>
+                {!provSearch.trim()&&<p style={{fontSize:10,fontWeight:700,color:R.accent,textTransform:"uppercase",letterSpacing:".07em",margin:0,padding:"6px 12px 4px",borderBottom:`1px solid ${R.light}`}}>Directorio · {(dirProvs||[]).length} proveedores</p>}
                 {provMatches.map((p,i)=>(
                   <button key={i} onMouseDown={()=>pickProv(p)}
-                    style={{display:"block",width:"100%",textAlign:"left",padding:"8px 12px",background:"transparent",border:"none",cursor:"pointer",fontFamily:"'Jost',sans-serif",borderBottom:i<provMatches.length-1?`1px solid ${R.border}`:"none"}}>
-                    <span style={{fontSize:13,fontWeight:500,color:R.text}}>{p.company}</span>
-                    {p.category&&<span style={{fontSize:11,color:R.muted,marginLeft:8}}>{p.category}</span>}
-                    {p.city&&<span style={{fontSize:11,color:R.muted,marginLeft:6}}>· {p.city}</span>}
+                    style={{display:"flex",alignItems:"center",gap:8,width:"100%",textAlign:"left",padding:"7px 12px",background:"transparent",border:"none",cursor:"pointer",fontFamily:"'Jost',sans-serif",borderBottom:i<provMatches.length-1?`1px solid ${R.light}`:"none"}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <span style={{fontSize:12,fontWeight:500,color:R.text}}>{p.company}</span>
+                      {p.contact&&<span style={{fontSize:11,color:R.muted,marginLeft:6}}>{p.contact}</span>}
+                    </div>
+                    <div style={{flexShrink:0,textAlign:"right"}}>
+                      {p.category&&<span style={{fontSize:10,color:R.accent,display:"block"}}>{p.category}</span>}
+                      {p.city&&<span style={{fontSize:10,color:R.muted}}>{p.city}</span>}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -1943,64 +1950,177 @@ const TABLE_SHAPES=["Redonda","Rectangular","Cuadrada","Imperial"];
 const ELEMENT_TYPES=[{v:"mesa",l:"Mesa"},{v:"decoracion",l:"Decoración"},{v:"dj",l:"DJ Booth"},{v:"barra",l:"Barra"},{v:"pista",l:"Pista de baile"},{v:"otro",l:"Otro"}];
 const ELEMENT_ICONS={decoracion:"🌸",dj:"🎧",barra:"🍸",pista:"💃",otro:"📦"};
 
-// SVG table-with-chairs renderer
+// SVG table-with-chairs renderer — 1 px = 1 cm, real scale
 function TableViz({table, tGuests, isSelected}) {
-  const total=table.seats, filled=tGuests.length;
+  const total=table.seats||0, filled=tGuests.length;
   const ratio=filled/Math.max(1,total);
   const chairCol=ratio>=1?"#ef4444":ratio>0.7?"#f59e0b":"#4ade80";
   const emptyCol="#d1d5db";
   const stroke=isSelected?R.accent:ratio>=1?"#ef4444":ratio>0?"#22c55e":R.border;
   const tableBg=ratio>=1?"#fef2f2":ratio>0?"#f0fdf4":"#fff";
-  const nameText=table.name.length>8?table.name.slice(0,7)+"…":table.name;
+  const nameText=s=>(s||"").length>12?(s||"").slice(0,11)+"…":(s||"");
 
+  /* ── Non-table elements ── */
   if(table.type&&table.type!=="mesa"){
-    const icons={decoracion:"🌸",dj:"🎧",barra:"🍸",pista:"💃",otro:"📦"};
-    const bw=table.w?Math.min(200,Math.max(60,Number(table.w)*0.5)):80;
-    const bh=table.h?Math.min(120,Math.max(40,Number(table.h)*0.5)):50;
+    const bw=Math.max(60,Math.min(400,Number(table.w)||120));
+    const bh=Math.max(40,Math.min(300,Number(table.h)||80));
+    const sel=isSelected?R.accent:R.gold;
+    const lbl=<text x={2+bw/2} y={bh+16} textAnchor="middle" fontSize={8} fontFamily="'Jost',sans-serif" fill={R.muted}>{nameText(table.name)}</text>;
+    const dim=<text x={2+bw/2} y={bh+26} textAnchor="middle" fontSize={7} fontFamily="'Jost',sans-serif" fill={R.gold}>{bw}×{bh}cm</text>;
+
+    if(table.type==="dj"){
+      const cx=2+bw/2, kR=Math.max(3,bh*0.07);
+      return(
+        <svg width={bw+4} height={bh+30} style={{display:"block",overflow:"visible"}}>
+          {/* Body */}
+          <path d={`M${2+bw*0.08},${2} L${2+bw*0.92},${2} L${2+bw},${2+bh} L${2},${2+bh} Z`} fill="#1a0812" stroke={sel} strokeWidth={isSelected?2:1.5}/>
+          {/* Top rail */}
+          <rect x={2+bw*0.1} y={2+bh*0.1} width={bw*0.8} height={bh*0.18} rx={2} fill="#2d1b3d" stroke="#c9a96e" strokeWidth={0.8}/>
+          {/* Faders */}
+          {[0.18,0.3,0.42,0.58,0.7,0.82].map((p,i)=>(
+            <g key={i}>
+              <rect x={2+bw*p-1.5} y={2+bh*0.33} width={3} height={bh*0.22} rx={1} fill="#444"/>
+              <rect x={2+bw*p-4} y={2+bh*(0.37+i%3*0.04)} width={8} height={3} rx={1} fill="#c9a96e"/>
+            </g>
+          ))}
+          {/* Knobs */}
+          {[0.2,0.35,0.65,0.8].map((p,i)=>(
+            <circle key={i} cx={2+bw*p} cy={2+bh*0.62} r={kR} fill="#c9a96e" stroke="#1a0812" strokeWidth={0.5}/>
+          ))}
+          {/* Vinyl platters */}
+          <circle cx={2+bw*0.25} cy={2+bh*0.78} r={bh*0.13} fill="#111" stroke="#c9a96e" strokeWidth={0.8}/>
+          <circle cx={2+bw*0.25} cy={2+bh*0.78} r={bh*0.035} fill="#c9a96e"/>
+          <circle cx={2+bw*0.75} cy={2+bh*0.78} r={bh*0.13} fill="#111" stroke="#c9a96e" strokeWidth={0.8}/>
+          <circle cx={2+bw*0.75} cy={2+bh*0.78} r={bh*0.035} fill="#c9a96e"/>
+          <text x={cx} y={2+bh*0.52} textAnchor="middle" fontSize={Math.max(7,bh*0.12)} fontFamily="'Jost',sans-serif" fontWeight="700" fill="#c9a96e">DJ</text>
+          {lbl}
+        </svg>
+      );
+    }
+
+    if(table.type==="barra"){
+      const btl=Math.floor(bw/22);
+      return(
+        <svg width={bw+4} height={bh+20} style={{display:"block",overflow:"visible"}}>
+          <rect x={2} y={2} width={bw} height={bh} rx={5} fill="#1a0812" stroke={sel} strokeWidth={isSelected?2:1.5}/>
+          <rect x={2} y={2} width={bw} height={bh*0.22} rx={5} fill="#2d1519"/>
+          {Array.from({length:btl},(_,i)=>(
+            <g key={i}>
+              <rect x={2+8+i*22} y={2+bh*0.28} width={12} height={bh*0.45} rx={4} fill={["#c9a96e","#2d5016","#6b1a2e"][i%3]} stroke="rgba(255,255,255,.15)" strokeWidth={0.5}/>
+              <rect x={2+10+i*22} y={2+bh*0.2} width={8} height={bh*0.12} rx={2} fill={["#c9a96e","#2d5016","#6b1a2e"][i%3]}/>
+              <ellipse cx={2+14+i*22} cy={2+bh*0.73} rx={6} ry={2.5} fill="rgba(255,255,255,.12)"/>
+            </g>
+          ))}
+          {lbl}
+        </svg>
+      );
+    }
+
+    if(table.type==="pista"){
+      const nt=Math.max(2,Math.floor(bw/28)), nv=Math.max(2,Math.floor(bh/28));
+      const tw2=bw/nt, th2=bh/nv;
+      return(
+        <svg width={bw+4} height={bh+20} style={{display:"block",overflow:"visible"}}>
+          <rect x={2} y={2} width={bw} height={bh} fill="#f5f0e8" stroke={sel} strokeWidth={isSelected?2:1.5}/>
+          {Array.from({length:nt},(_,i)=>Array.from({length:nv},(_,j)=>(
+            <rect key={`${i}-${j}`} x={2+i*tw2} y={2+j*th2} width={tw2} height={th2}
+              fill={(i+j)%2===0?"rgba(201,169,110,.18)":"rgba(201,169,110,.04)"}
+              stroke="rgba(201,169,110,.25)" strokeWidth={0.5}/>
+          )))}
+          <text x={2+bw/2} y={2+bh/2} textAnchor="middle" dominantBaseline="middle"
+            fontSize={Math.max(9,Math.min(18,bw*0.09))} fontFamily="'Jost',sans-serif"
+            fill="rgba(201,169,110,.5)" fontWeight="700" letterSpacing="3">PISTA</text>
+          {lbl}
+        </svg>
+      );
+    }
+
+    if(table.type==="silla"){
+      /* Single chair, top-view */
+      const cW=bw, cH=bh;
+      return(
+        <svg width={cW+4} height={cH+20} style={{display:"block",overflow:"visible"}}>
+          <rect x={2} y={2+cH*0.12} width={cW} height={cH*0.62} rx={4} fill="#d4b896" stroke={sel} strokeWidth={isSelected?2:1.2}/>
+          <rect x={2+cW*0.08} y={2} width={cW*0.84} height={cH*0.16} rx={3} fill="#b8956e" stroke={sel} strokeWidth={1}/>
+          {lbl}
+        </svg>
+      );
+    }
+
+    /* decoracion / otro */
+    const icons={decoracion:"🌸",otro:"📦"};
     return(
-      <svg width={bw+4} height={bh+4} style={{display:"block",overflow:"visible"}}>
-        <rect x={1} y={1} width={bw} height={bh} rx={4} fill="rgba(201,169,110,.08)" stroke={isSelected?R.accent:R.gold} strokeWidth={isSelected?2:1.5} strokeDasharray="6,3"/>
-        <text x={2+bw/2} y={bh/2-2} textAnchor="middle" fontSize={13} style={{userSelect:"none"}}>{icons[table.type]||"📦"}</text>
-        <text x={2+bw/2} y={bh/2+12} textAnchor="middle" fontSize={7} fontFamily="'Jost',sans-serif" fill={R.muted}>{table.name}</text>
-        {(table.w||table.h)&&<text x={2+bw/2} y={bh-3} textAnchor="middle" fontSize={5.5} fontFamily="'Jost',sans-serif" fill={R.gold}>{table.w&&table.h?`${table.w}×${table.h}cm`:table.w?`${table.w}cm`:`${table.h}cm`}</text>}
+      <svg width={bw+4} height={bh+30} style={{display:"block",overflow:"visible"}}>
+        <rect x={2} y={2} width={bw} height={bh} rx={8} fill="rgba(201,169,110,.08)" stroke={sel} strokeWidth={isSelected?2:1.5} strokeDasharray="6,3"/>
+        <text x={2+bw/2} y={2+bh*0.45} textAnchor="middle" dominantBaseline="middle" fontSize={Math.min(28,bh*0.45)} style={{userSelect:"none"}}>{icons[table.type]||"📦"}</text>
+        <text x={2+bw/2} y={2+bh*0.78} textAnchor="middle" fontSize={Math.max(7,Math.min(10,bw*0.09))} fontFamily="'Jost',sans-serif" fill={R.muted}>{nameText(table.name)}</text>
+        {dim}
       </svg>
     );
   }
 
+  /* ── Round table — real scale ── */
   if(table.shape==="Redonda"){
-    const shown=Math.min(total,16);
-    const Rt=26, Rc=40, rc=5.5;
-    const sz=(Rc+rc+4)*2; const cx=sz/2, cy=sz/2;
+    const dia=Math.max(50,Math.min(280,Number(table.w)||120));
+    const Rt=dia/2;
+    const shown=Math.min(total,20);
+    const rc=Math.max(9,Math.min(16,dia*0.1));
+    const Rc=Rt+5+rc;
+    const sz=(Rc+rc+6)*2; const cx=sz/2, cy=sz/2;
+    const fSize=Math.max(7,Math.min(13,Rt*0.28));
     return (
       <svg width={sz} height={sz} style={{display:"block",overflow:"visible"}}>
         {Array.from({length:shown},(_,i)=>{
           const a=(i/shown)*2*Math.PI-Math.PI/2;
-          return <circle key={i} cx={cx+Rc*Math.cos(a)} cy={cy+Rc*Math.sin(a)} r={rc} fill={i<filled?chairCol:emptyCol} stroke="rgba(0,0,0,.12)" strokeWidth={0.5}/>;
+          const scx=cx+Rc*Math.cos(a), scy=cy+Rc*Math.sin(a);
+          /* draw chair as rounded rect rotated toward table */
+          const ang=Math.atan2(scy-cy,scx-cx)*(180/Math.PI)+90;
+          return(
+            <g key={i} transform={`rotate(${ang},${scx},${scy})`}>
+              <rect x={scx-rc} y={scy-rc} width={rc*2} height={rc*1.7} rx={rc*0.4}
+                fill={i<filled?chairCol:emptyCol} stroke="rgba(0,0,0,.15)" strokeWidth={0.5}/>
+              <rect x={scx-rc*0.7} y={scy-rc-3} width={rc*1.4} height={4} rx={2}
+                fill={i<filled?chairCol:emptyCol} stroke="rgba(0,0,0,.12)" strokeWidth={0.3}/>
+            </g>
+          );
         })}
         <circle cx={cx} cy={cy} r={Rt} fill={tableBg} stroke={stroke} strokeWidth={isSelected?2:1.5}/>
-        <text x={cx} y={cy-5} textAnchor="middle" fontSize={8} fontFamily="'Jost',sans-serif" fontWeight="700" fill={R.text}>{nameText}</text>
-        <text x={cx} y={cy+6} textAnchor="middle" fontSize={7} fontFamily="'Jost',sans-serif" fill={R.muted}>{filled}/{total}</text>
-        {table.size&&<text x={cx} y={cy+16} textAnchor="middle" fontSize={6} fontFamily="'Jost',sans-serif" fill={R.gold}>{table.size}</text>}
-        {!table.size&&(table.w||table.h)&&<text x={cx} y={cy+16} textAnchor="middle" fontSize={6} fontFamily="'Jost',sans-serif" fill={R.gold}>{table.w&&table.h?`${table.w}×${table.h}cm`:table.w?`Ø${table.w}cm`:""}</text>}
+        <text x={cx} y={cy-fSize*0.4} textAnchor="middle" fontSize={fSize} fontFamily="'Jost',sans-serif" fontWeight="700" fill={R.text}>{nameText(table.name)}</text>
+        <text x={cx} y={cy+fSize*0.9} textAnchor="middle" fontSize={Math.max(6,fSize*0.7)} fontFamily="'Jost',sans-serif" fill={R.muted}>{filled}/{total}</text>
+        <text x={cx} y={cy+fSize*1.9} textAnchor="middle" fontSize={Math.max(5,fSize*0.6)} fontFamily="'Jost',sans-serif" fill={R.gold}>Ø{dia}cm</text>
       </svg>
     );
   }
-  // Rectangular / Cuadrada / Imperial
+
+  /* ── Rectangular / Imperial / Cuadrada — real scale ── */
+  const tw=Math.max(60,Math.min(500,Number(table.w)||(table.shape==="Imperial"?400:240)));
+  const th=Math.max(40,Math.min(200,Number(table.h)||75));
   const perTop=Math.ceil(total/2), perBot=total-perTop;
-  const cw=10,ch=7,gap=3;
-  const tableW=table.shape==="Imperial"?Math.max(100,perTop*(cw+gap)+8):Math.max(64,perTop*(cw+gap)+8);
-  const tableH=table.shape==="Imperial"?18:26;
-  const svgW=tableW+8, svgH=tableH+2*(ch+gap+6);
+  const cw=Math.min(30,Math.max(12,tw/Math.max(1,perTop)*0.7));
+  const ch=Math.max(14,Math.min(26,th*0.35));
+  const gap=6;
+  const svgW=tw+8, svgH=th+2*(ch+gap)+8;
   const ty=ch+gap+4;
+  const fSize=Math.max(7,Math.min(13,th*0.22));
+  function chairX(i,n){ return 4+(tw*(i+0.5)/Math.max(1,n))-cw/2; }
   return (
     <svg width={svgW} height={svgH} style={{display:"block",overflow:"visible"}}>
-      {Array.from({length:perTop},(_,i)=><rect key={`t${i}`} x={4+i*(cw+gap)} y={2} width={cw} height={ch} rx={2} fill={i<Math.ceil(filled/2)?chairCol:emptyCol} stroke="rgba(0,0,0,.12)" strokeWidth={0.5}/>)}
-      {Array.from({length:perBot},(_,i)=><rect key={`b${i}`} x={4+i*(cw+gap)} y={ty+tableH+gap} width={cw} height={ch} rx={2} fill={perTop+i<filled?chairCol:emptyCol} stroke="rgba(0,0,0,.12)" strokeWidth={0.5}/>)}
-      <rect x={2} y={ty} width={tableW} height={tableH} rx={table.shape==="Imperial"?3:5} fill={tableBg} stroke={stroke} strokeWidth={isSelected?2:1.5}/>
-      <text x={2+tableW/2} y={ty+tableH/2-3} textAnchor="middle" fontSize={7} fontFamily="'Jost',sans-serif" fontWeight="700" fill={R.text}>{nameText}</text>
-      <text x={2+tableW/2} y={ty+tableH/2+5} textAnchor="middle" fontSize={6} fontFamily="'Jost',sans-serif" fill={R.muted}>{filled}/{total}</text>
-      {table.size&&<text x={2+tableW/2} y={ty+tableH/2+13} textAnchor="middle" fontSize={5.5} fontFamily="'Jost',sans-serif" fill={R.gold}>{table.size}</text>}
-      {!table.size&&(table.w||table.h)&&<text x={2+tableW/2} y={ty+tableH/2+13} textAnchor="middle" fontSize={5.5} fontFamily="'Jost',sans-serif" fill={R.gold}>{table.w&&table.h?`${table.w}×${table.h}cm`:table.w?`${table.w}cm`:""}</text>}
+      {Array.from({length:perTop},(_,i)=>(
+        <g key={`t${i}`}>
+          <rect x={chairX(i,perTop)} y={4} width={cw} height={ch} rx={3} fill={i<Math.ceil(filled/2)?chairCol:emptyCol} stroke="rgba(0,0,0,.12)" strokeWidth={0.5}/>
+          <rect x={chairX(i,perTop)+cw*0.1} y={2} width={cw*0.8} height={4} rx={2} fill={i<Math.ceil(filled/2)?chairCol:emptyCol} stroke="rgba(0,0,0,.1)" strokeWidth={0.3}/>
+        </g>
+      ))}
+      {Array.from({length:perBot},(_,i)=>(
+        <g key={`b${i}`}>
+          <rect x={chairX(i,perBot)} y={ty+th+gap} width={cw} height={ch} rx={3} fill={perTop+i<filled?chairCol:emptyCol} stroke="rgba(0,0,0,.12)" strokeWidth={0.5}/>
+          <rect x={chairX(i,perBot)+cw*0.1} y={ty+th+gap+ch} width={cw*0.8} height={4} rx={2} fill={perTop+i<filled?chairCol:emptyCol} stroke="rgba(0,0,0,.1)" strokeWidth={0.3}/>
+        </g>
+      ))}
+      <rect x={4} y={ty} width={tw} height={th} rx={table.shape==="Imperial"?3:5} fill={tableBg} stroke={stroke} strokeWidth={isSelected?2:1.5}/>
+      <text x={4+tw/2} y={ty+th/2-fSize*0.3} textAnchor="middle" fontSize={fSize} fontFamily="'Jost',sans-serif" fontWeight="700" fill={R.text}>{nameText(table.name)}</text>
+      <text x={4+tw/2} y={ty+th/2+fSize*0.9} textAnchor="middle" fontSize={Math.max(6,fSize*0.75)} fontFamily="'Jost',sans-serif" fill={R.muted}>{filled}/{total}</text>
+      <text x={4+tw/2} y={ty+th/2+fSize*1.9} textAnchor="middle" fontSize={Math.max(5,fSize*0.6)} fontFamily="'Jost',sans-serif" fill={R.gold}>{tw}×{th}cm</text>
     </svg>
   );
 }
@@ -3520,26 +3640,6 @@ function GlobalDashboard({ bodas, onSelectBoda }) {
         </div>
       </div>
 
-      {/* Pagos pendientes */}
-      {pendingPays.length>0&&(
-        <div style={CARD}>
-          <div style={{padding:"12px 16px",borderBottom:`1px solid ${R.border}`}}>
-            <p style={{fontSize:12,fontWeight:600,color:R.muted,margin:0,textTransform:"uppercase",letterSpacing:".07em"}}>💰 Pagos pendientes — ${fmt$(pendingAmt)} total</p>
-          </div>
-          <div style={{padding:"8px 16px 12px",display:"flex",flexDirection:"column",gap:0}}>
-            {pendingPays.sort((a,b)=>num(b.amount)-num(a.amount)).slice(0,8).map(p=>(
-              <button key={p.id} onClick={()=>onSelectBoda(bodas.find(b=>b.id===p.bodaId))} style={{display:"flex",alignItems:"center",gap:10,width:"100%",background:"none",border:"none",borderBottom:`1px solid ${R.light}`,padding:"8px 0",cursor:"pointer",textAlign:"left",fontFamily:"'Jost',sans-serif"}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <p style={{fontSize:12,fontWeight:500,color:R.text,margin:0}}>{p.concept}</p>
-                  <p style={{fontSize:10,color:R.muted,margin:"1px 0 0"}}>{p.bodaName}{p.type?` · ${p.type}`:""}{p.date?` · ${fmtDate(p.date)}`:""}</p>
-                </div>
-                <span style={{fontSize:13,fontWeight:700,color:"#92400e",flexShrink:0,fontVariantNumeric:"tabular-nums"}}>${fmt$(num(p.amount))}</span>
-              </button>
-            ))}
-            {pendingPays.length>8&&<p style={{fontSize:11,color:R.muted,padding:"6px 0 0"}}>+{pendingPays.length-8} más</p>}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
