@@ -2536,9 +2536,10 @@ function SeatingTab({ boda, onPatch }) {
 }
 
 // ─── BODA DETAIL ─────────────────────────────────────────────────────────────
-function BodaDetail({ boda:init, users, onBack, onRefresh, initialTab="" }) {
+function BodaDetail({ boda:init, users, onBack, onRefresh, initialTab="", onTabChange }) {
   const [boda,setBoda]=useState(init);
   const [tab,setTab]=useState(initialTab||"resumen");
+  function changeTab(t){ setTab(t); onTabChange?.(t); }
   const [editing,setEditing]=useState(false);
   const [saving,setSaving]=useState(false);
   const [copied,setCopied]=useState(false);
@@ -2760,7 +2761,7 @@ ${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).joi
         <div style={{overflowX:"auto",borderBottom:`1px solid ${R.border}`,position:"sticky",top:56,zIndex:100,background:R.white}}>
           <div style={{display:"flex",minWidth:"max-content"}}>
             {TABS.map(t=>(
-              <button key={t.id} onClick={()=>setTab(t.id)}
+              <button key={t.id} onClick={()=>changeTab(t.id)}
                 style={{padding:"13px 17px",border:"none",borderBottom:tab===t.id?`2.5px solid ${R.gold}`:"2.5px solid transparent",background:"transparent",fontSize:12,fontWeight:tab===t.id?600:400,color:tab===t.id?R.text:R.muted,cursor:"pointer",fontFamily:"'Jost',sans-serif",whiteSpace:"nowrap",transition:"color .15s",letterSpacing:tab===t.id?".01em":"normal"}}>
                 {t.label}
               </button>
@@ -3586,6 +3587,7 @@ export default function BodaPanel({ currentUser, onLogout, initialBodaId="", ini
   );
   const [templateSaving, setTemplateSaving] = useState(false);
   const [showPast,      setShowPast]       = useState(false);
+  const [detailTab,     setDetailTab]      = useState(initialTab||"resumen");
 
   // Load users from GAS in background — never blocks bodas from showing.
   const loadUsers = useCallback(() => {
@@ -3712,10 +3714,11 @@ export default function BodaPanel({ currentUser, onLogout, initialBodaId="", ini
   const filtered=[...upcoming,...(showPast?past:[])];
 
   if(selected){
+    const isMesas=detailTab==="mesas";
     return (
       <div style={{minHeight:"100vh",background:R.cream,fontFamily:"'Jost',sans-serif"}}>
-        <div style={{maxWidth:760,margin:"0 auto",padding:"24px 16px 60px"}}>
-          <BodaDetail boda={selected} users={users} onBack={()=>setSelected(null)} onRefresh={handleRefresh} initialTab={initialTab} />
+        <div style={{maxWidth:isMesas?"none":760,margin:"0 auto",padding:isMesas?"16px 0 0":"24px 16px 60px"}}>
+          <BodaDetail boda={selected} users={users} onBack={()=>setSelected(null)} onRefresh={handleRefresh} initialTab={initialTab} onTabChange={t=>{setDetailTab(t);}} />
         </div>
       </div>
     );
