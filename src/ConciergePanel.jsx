@@ -1003,6 +1003,7 @@ const CONCIERGE_LIST = [
   { name: "Nataly Cruz",          email: "nataly@two.travel",   phone: "+52 1 55 2337 7241",city: "CDMX", title: "Senior Concierge Mexico City", calendarUrl: "" },
   { name: "Giulia Lorini Serrato",email: "giulia@two.travel",   phone: "+52 1 55 4344 1382",city: "CDMX", title: "Senior Concierge Mexico City", calendarUrl: "" },
   { name: "Natalia Peniche",       email: "natalia@two.travel",  phone: "",                  city: "CDMX", title: "Senior Concierge Mexico City", calendarUrl: "" },
+  { name: "Patricia Capistran",   email: "patricia@two.travel", phone: "",                   city: "",    title: "Concierge", calendarUrl: "" },
   { name: "Michel Sanchez",       email: "michel@two.travel",   phone: "+57 300 0000000",    city: "CTG", title: "Admin", calendarUrl: "", hidden: true },
 ];
 
