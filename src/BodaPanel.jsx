@@ -2799,7 +2799,8 @@ function BodaDetail({ boda:init, users, onBack, onRefresh, initialTab="", onTabC
       if(upErr) throw upErr;
       const {data:urlData}=supabase.storage.from("boda-contratos").getPublicUrl(upData.path);
       const newUrl=urlData.publicUrl;
-      await apiSaveNotes(boda.id,{...boda,coverPhoto:newUrl});
+      const {data:ex}=await supabase.from("bodas").select("data").eq("id",boda.id).single();
+      await supabase.from("bodas").update({data:{...(ex?.data||{}),coverPhoto:newUrl}}).eq("id",boda.id);
       setBoda(b=>({...b,coverPhoto:newUrl}));
       if(onSuccess) onSuccess(newUrl);
     }catch(err){ alert("Error al subir foto: "+err.message); }
