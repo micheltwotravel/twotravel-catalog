@@ -2938,7 +2938,7 @@ ${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).joi
   ];
 
   return (
-    <div style={{maxWidth:tab==="mesas"?"none":700,margin:"0 auto"}}>
+    <div style={{maxWidth:tab==="mesas"?"none":1060,margin:"0 auto"}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
         <button onClick={onBack} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:12,padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em",textTransform:"uppercase"}}>← Bodas</button>
         <span style={{color:R.border,fontSize:12}}>/</span>
@@ -3927,7 +3927,7 @@ export default function BodaPanel({ currentUser, onLogout, initialBodaId="", ini
     const isMesas=detailTab==="mesas";
     return (
       <div style={{minHeight:"100vh",background:R.cream,fontFamily:"'Jost',sans-serif"}}>
-        <div style={{maxWidth:isMesas?"none":760,margin:"0 auto",padding:isMesas?"16px 0 0":"24px 16px 60px"}}>
+        <div style={{maxWidth:isMesas?"none":1100,margin:"0 auto",padding:isMesas?"16px 0 0":"24px 24px 60px"}}>
           <BodaDetail boda={selected} users={users} onBack={()=>setSelected(null)} onRefresh={handleRefresh} initialTab={initialTab} onTabChange={t=>{setDetailTab(t);}} />
         </div>
       </div>
@@ -3958,7 +3958,7 @@ export default function BodaPanel({ currentUser, onLogout, initialBodaId="", ini
         </div>
       </div>
 
-      <div style={{maxWidth:900,margin:"0 auto",padding:"24px 16px 60px"}}>
+      <div style={{maxWidth:1200,margin:"0 auto",padding:"24px 24px 60px"}}>
         {/* Main nav tabs */}
         <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:20,borderBottom:`1px solid ${R.border}`}}>
           {[{id:"dashboard",label:"📊 Dashboard"},{id:"calendario",label:"📆 Calendario"},{id:"lista",label:"💍 Lista"},{id:"tareas",label:"📋 Tareas"},{id:"directorio",label:"📋 Directorio"}].map(v=>(
