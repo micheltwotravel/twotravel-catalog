@@ -2308,6 +2308,7 @@ function SeatingTab({ boda, onPatch }) {
   const [drag,setDrag]=useState(null);
   const [showGrid,setShowGrid]=useState(true);
   const [gridScale,setGridScale]=useState(100); // cm per grid square
+  const [tableVizScale,setTableVizScale]=useState(1); // display scale for table SVGs
   const canvasRef=useRef(null);
   const scrollRef=useRef(null);
   const seatingRef=useRef(seating);
@@ -2417,6 +2418,17 @@ function SeatingTab({ boda, onPatch }) {
             <option value={200}>1 cuadro = 2 m</option>
           </select>
         )}
+        <select value={tableVizScale} onChange={e=>setTableVizScale(Number(e.target.value))}
+          title="Escala visual de las mesas"
+          style={{fontSize:11,border:`1px solid ${R.border}`,borderRadius:6,padding:"4px 8px",background:R.card,color:R.text,fontFamily:"'Jost',sans-serif",cursor:"pointer"}}>
+          <option value={0.15}>Mesas 15%</option>
+          <option value={0.25}>Mesas 25%</option>
+          <option value={0.5}>Mesas 50%</option>
+          <option value={0.75}>Mesas 75%</option>
+          <option value={1}>Mesas 100%</option>
+          <option value={1.5}>Mesas 150%</option>
+          <option value={2}>Mesas 200%</option>
+        </select>
         <button onClick={()=>setShowFloor(v=>!v)} style={BTN_SM}>Plano</button>
         <button onClick={()=>{
           const url=`${window.location.origin}/?mode=bodas-mesas&id=${boda.id}`;
@@ -2557,7 +2569,7 @@ function SeatingTab({ boda, onPatch }) {
               <div key={tbl.id}
                 data-tbl="1"
                 style={{position:"absolute",left:tbl.x||50,top:tbl.y||50,cursor:canvasMode==="pan"?"default":drag?.id===tbl.id?"grabbing":"grab",zIndex:isSel?10:1,
-                  transform:tbl.rotation?`rotate(${tbl.rotation}deg)`:"none",
+                  transform:`${tbl.rotation?`rotate(${tbl.rotation}deg) `:""}scale(${tableVizScale})`,transformOrigin:"top left",
                   filter:isSel?"drop-shadow(0 6px 16px rgba(190,18,60,.35))":highlight?"drop-shadow(0 4px 12px rgba(201,169,110,.5))":"drop-shadow(0 2px 6px rgba(0,0,0,.12))",
                   transition:"filter .15s"}}
                 onMouseDown={e=>onTblDown(e,tbl)}
