@@ -147,23 +147,23 @@ function ProgressBar({ pct }) {
 }
 
 /* ── Task item ──────────────────────────────────────────── */
-function TaskItem({ task, done }) {
+function TaskItem({ task, done, onToggle }) {
   const pm = PHASE_META[task.phase] || { dot: T.muted };
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 14,
       padding: "13px 0", borderBottom: `1px solid ${T.border}` }}>
-      <div style={{
+      <div onClick={onToggle} style={{
         width: 16, height: 16, border: done ? "none" : `1.5px solid ${T.border2}`,
         background: done ? T.gold3 : T.white,
         display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0, marginTop: 2,
+        flexShrink: 0, marginTop: 2, cursor: "pointer", borderRadius: 3,
       }}>
         {done && <span style={{ fontSize: 9, color: T.gold }}>✓</span>}
       </div>
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1 }} onClick={onToggle}>
         <p style={{ margin: 0, fontSize: 13, color: done ? T.muted : T.ink,
           fontWeight: 400, textDecoration: done ? "line-through" : "none",
-          fontFamily: "'Jost',sans-serif" }}>
+          fontFamily: "'Jost',sans-serif", cursor: "pointer" }}>
           {task.taskName}
         </p>
         {task.dueDate && !done && (
@@ -334,6 +334,18 @@ export default function BodaPublicView() {
   const tasks    = (boda.tasks || []).filter(t => t.assignedTo === "Novios");
   const done     = tasks.filter(t => ["Terminado", "Cancelado"].includes(t.status));
   const pending  = tasks.filter(t => !["Terminado", "Cancelado"].includes(t.status));
+
+  async function toggleTask(taskId) {
+    const allTasks = boda.tasks || [];
+    const updated = allTasks.map(t => {
+      if (t.id !== taskId) return t;
+      const isDone = ["Terminado","Cancelado"].includes(t.status);
+      return { ...t, status: isDone ? "Pendiente" : "Terminado" };
+    });
+    setBoda(b => ({ ...b, tasks: updated }));
+    const { data: row } = await supabase.from("bodas").select("data").eq("id", boda.id).single();
+    await supabase.from("bodas").update({ data: { ...(row?.data||{}), tasks: updated } }).eq("id", boda.id);
+  }
   const pct      = tasks.length ? Math.round((done.length / tasks.length) * 100) : 0;
   const days     = daysUntil(boda.weddingDate);
   const schedule = (boda.schedule || []).filter(ev => !ev.isInternal);
@@ -488,13 +500,13 @@ export default function BodaPublicView() {
                             textTransform: "uppercase", color: phm.color, fontWeight: 600 }}>
                             {ph}
                           </p>
-                          {inPhase.map(t => <TaskItem key={t.id} task={t} done={false} />)}
+                          {inPhase.map(t => <TaskItem key={t.id} task={t} done={false} onToggle={() => toggleTask(t.id)} />)}
                         </div>
                       );
                     })}
                     {other.length > 0 && (
                       <div style={{ marginBottom: 20 }}>
-                        {other.map(t => <TaskItem key={t.id} task={t} done={false} />)}
+                        {other.map(t => <TaskItem key={t.id} task={t} done={false} onToggle={() => toggleTask(t.id)} />)}
                       </div>
                     )}
                   </>
@@ -517,7 +529,7 @@ export default function BodaPublicView() {
                   {showDone ? "Ocultar" : "Ver"}
                 </button>
               </div>
-              {showDone && done.map(t => <TaskItem key={t.id} task={t} done={true} />)}
+              {showDone && done.map(t => <TaskItem key={t.id} task={t} done={true} onToggle={() => toggleTask(t.id)} />)}
             </Card>
           )}
 
