@@ -1001,6 +1001,61 @@ ${sups.length?`<div class="prov-title">PROVEEDORES</div>${sups.map(s=>`<div clas
     w.document.close();
   }
 
+  function printMinutoAMinutoEN(){
+    const toprint=view==="cliente"?sorted.filter(e=>!e.isInternal):sorted;
+    const dayGroups=[];
+    toprint.forEach(e=>{
+      const di=e.dayIndex||1;
+      if(!dayGroups.length||dayGroups[dayGroups.length-1].di!==di){
+        dayGroups.push({di,label:e.dayLabel||`Day ${di}`,events:[]});
+      }
+      dayGroups[dayGroups.length-1].events.push(e);
+    });
+    const sups=(boda.suppliers||[]).filter(s=>s.name);
+    const w=window.open("","_blank","width=1000,height=1100");
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Wedding Day Timeline — ${boda.clienteName}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:11px;color:#1a1814;padding:24px 28px}
+.main-title{text-align:center;font-weight:bold;font-size:13px;border:2px solid #1a1814;padding:8px;margin-bottom:16px;letter-spacing:.05em;text-transform:uppercase}
+.info-block{margin-bottom:14px;font-size:11px;line-height:1.7}
+.info-row{display:flex;gap:8px;margin-bottom:1px}
+.info-label{font-weight:bold;min-width:120px;text-transform:uppercase}
+.prov-title{font-weight:bold;text-decoration:underline;margin:14px 0 6px;font-size:11px;text-transform:uppercase}
+.prov-item{margin-bottom:3px;line-height:1.5}
+.prov-name{font-weight:bold}
+table{width:100%;border-collapse:collapse;margin-top:20px}
+th{background:#1a0812;color:#c9a96e;padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;border:1px solid #1a0812}
+td{padding:6px 8px;border:1px solid #d4cfc9;vertical-align:top;font-size:11px;line-height:1.45}
+.day-row td{background:#c9a96e;color:#fff;font-weight:bold;text-align:center;font-size:11px;letter-spacing:.06em;border:1px solid #b89050;padding:6px}
+.hora{color:#b4975a;font-weight:700;white-space:nowrap;width:72px}
+.acto{width:200px;font-weight:500}
+.resp{width:160px;color:#444}
+.notes{color:#333}
+a{color:#b4975a}
+.foot{font-size:9px;color:#aaa;margin-top:24px;text-align:right;border-top:1px solid #eee;padding-top:8px}
+@media print{@page{margin:10mm 12mm;size:A4 landscape}button{display:none}}
+</style></head><body>
+<div class="main-title">WEDDING DAY TIMELINE — ${boda.clienteName.toUpperCase()}</div>
+<div class="info-block">
+  <div class="info-row"><span class="info-label">WEDDING:</span><span>${boda.clienteName}</span></div>
+  ${boda.weddingDate?`<div class="info-row"><span class="info-label">DATE:</span><span>${boda.weddingDate}</span></div>`:""}
+  ${boda.guestCount?`<div class="info-row"><span class="info-label">GUESTS:</span><span>${boda.guestCount} PAX</span></div>`:""}
+  ${boda.venue?`<div class="info-row"><span class="info-label">VENUE:</span><span>${boda.venue}</span></div>`:""}
+</div>
+${sups.length?`<div class="prov-title">VENDORS</div>${sups.map(s=>`<div class="prov-item"><span class="prov-name">${s.name}</span>${s.category?` — ${s.category}`:""}${s.phone?` — Ph. ${s.phone}`:""}</div>`).join("")}`:""}
+<table>
+  <thead><tr><th style="width:72px">TIME</th><th style="width:200px">EVENT</th><th style="width:160px">RESPONSIBLE</th><th>NOTES</th></tr></thead>
+  <tbody>
+    ${dayGroups.map(g=>`<tr class="day-row"><td colspan="4">${g.label.toUpperCase()}</td></tr>${g.events.map(e=>`<tr><td class="hora">${e.time||""}</td><td class="acto">${(e.description||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")}</td><td class="resp">${[e.assignedTo,...(e.suppliers||[])].filter(Boolean).join("<br/>")}</td><td class="notes">${(e.notes||"").replace(/\n/g,"<br/>").replace(/&/g,"&amp;")}${e.url?`<br/><a href="${e.url}">${e.url}</a>`:""}</td></tr>`).join("")}`).join("")}
+  </tbody>
+</table>
+<div class="foot">Two Lovers — Two Travel &nbsp;·&nbsp; ${new Date().toLocaleDateString("en-US")} &nbsp;·&nbsp; View: ${view}</div>
+<script>window.onload=()=>window.print();</script>
+</body></html>`);
+    w.document.close();
+  }
+
   function printByResponsable(name){
     const evts=sorted.filter(e=>e.assignedTo===name||(e.suppliers||[]).includes(name));
     if(!evts.length){alert(`Sin eventos para ${name}`);return;}
@@ -1095,7 +1150,8 @@ ${sups.length?`<div class="prov-title">PROVEEDORES</div>${sups.map(s=>`<div clas
           ))}
         </div>
         <div style={{display:"flex",gap:8}}>
-          {sorted.length>0&&<button onClick={printMinutoAMinuto} title="Imprimir Minuto a Minuto" style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>🖨 M×M</button>}
+          {sorted.length>0&&<button onClick={printMinutoAMinuto} title="Imprimir Minuto a Minuto (ES)" style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>🖨 ES</button>}
+          {sorted.length>0&&<button onClick={printMinutoAMinutoEN} title="Print Timeline (EN)" style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>🖨 EN</button>}
           {responsables.length>0&&(
             <select style={{...INP_SM,height:32,borderRadius:8,fontSize:11}} onChange={e=>{if(e.target.value)printByResponsable(e.target.value);e.target.value="";}} defaultValue="">
               <option value="">📄 PDF por responsable…</option>
@@ -1417,7 +1473,8 @@ ${guests.map((g,i)=>{
   }
 
   const rsvpUrl=`${window.location.origin}/?mode=bodas-rsvp&bodaId=${boda.id}`;
-  function copyRsvp(){ navigator.clipboard.writeText(rsvpUrl).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);}); }
+  const rsvpUrlEn=`${window.location.origin}/?mode=bodas-rsvp&bodaId=${boda.id}&lang=en`;
+  function copyRsvp(which){ const url=which==="en"?rsvpUrlEn:rsvpUrl; navigator.clipboard.writeText(url).then(()=>{setCopied(which);setTimeout(()=>setCopied(false),2000);}); }
 
   const confirmed=guests.filter(g=>g.rsvp==="Confirmado").length;
   const pending=guests.filter(g=>g.rsvp==="Pendiente"||!g.rsvp).length;
@@ -1446,11 +1503,19 @@ ${guests.map((g,i)=>{
         </div>
       )}
 
-      {/* RSVP link */}
-      <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-        <span style={{fontSize:11,color:"#15803d",fontWeight:600}}>🔗 Link RSVP para invitados</span>
-        <code style={{flex:1,fontSize:10,color:"#166534",background:"#dcfce7",padding:"3px 8px",borderRadius:6,wordBreak:"break-all"}}>{rsvpUrl}</code>
-        <button onClick={copyRsvp} style={{background:"#15803d",color:"#fff",border:"none",borderRadius:8,padding:"5px 12px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",flexShrink:0}}>{copied?"✓ Copiado":"Copiar"}</button>
+      {/* RSVP links */}
+      <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:"10px 14px",marginBottom:12,display:"flex",flexDirection:"column",gap:8}}>
+        <span style={{fontSize:11,color:"#15803d",fontWeight:600}}>🔗 Links RSVP para invitados</span>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <span style={{fontSize:10,color:"#166534",fontWeight:600,minWidth:22}}>ES</span>
+          <code style={{flex:1,fontSize:10,color:"#166534",background:"#dcfce7",padding:"3px 8px",borderRadius:6,wordBreak:"break-all"}}>{rsvpUrl}</code>
+          <button onClick={()=>copyRsvp("es")} style={{background:"#15803d",color:"#fff",border:"none",borderRadius:8,padding:"5px 12px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",flexShrink:0}}>{copied==="es"?"✓ Copiado":"Copiar"}</button>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <span style={{fontSize:10,color:"#166534",fontWeight:600,minWidth:22}}>EN</span>
+          <code style={{flex:1,fontSize:10,color:"#166534",background:"#dcfce7",padding:"3px 8px",borderRadius:6,wordBreak:"break-all"}}>{rsvpUrlEn}</code>
+          <button onClick={()=>copyRsvp("en")} style={{background:"#15803d",color:"#fff",border:"none",borderRadius:8,padding:"5px 12px",fontSize:11,cursor:"pointer",fontFamily:"'Jost',sans-serif",flexShrink:0}}>{copied==="en"?"✓ Copied":"Copy"}</button>
+        </div>
       </div>
 
       {/* Header */}

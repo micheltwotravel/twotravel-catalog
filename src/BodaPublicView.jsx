@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient.js";
 
+const GAS_URL = import.meta.env.VITE_GAS_URL;
+
 /* ── Venue floor-plan registry ─────────────────────────── */
 const VENUE_PLANS = {
   "Baluarte SFJ": [
@@ -253,6 +255,13 @@ function ProveedoresSection({ suppliers }) {
   );
 }
 
+/* ── Save schedule back to Supabase ─────────────────────── */
+async function saveBodaSchedule(bodaId, newSchedule) {
+  const { data: row } = await supabase.from("bodas").select("data").eq("id", bodaId).single();
+  const merged = { ...(row?.data || {}), schedule: newSchedule };
+  await supabase.from("bodas").update({ data: merged }).eq("id", bodaId);
+}
+
 /* ── Main component ─────────────────────────────────────── */
 export default function BodaPublicView() {
   const params = new URLSearchParams(window.location.search);
@@ -262,6 +271,9 @@ export default function BodaPublicView() {
   const [error, setError]     = useState(null);
   const [showDone, setShowDone] = useState(false);
   const [tab, setTab] = useState("inicio");
+  const [commentOpen, setCommentOpen] = useState({});
+  const [commentDraft, setCommentDraft] = useState({});
+  const [commentSaving, setCommentSaving] = useState({});
 
   useEffect(() => {
     if (!id) { setError("Link inválido — falta el ID."); setLoading(false); return; }
@@ -529,7 +541,34 @@ export default function BodaPublicView() {
               <div style={{ position: "relative", paddingLeft: 20 }}>
                 <div style={{ position: "absolute", top: 0, left: 7, bottom: 0,
                   width: 1, background: T.border }} />
-                {schedule.map((ev, i) => (
+                {schedule.map((ev, i) => {
+                  const comments = ev.comments || [];
+                  const isOpen = !!commentOpen[i];
+                  async function submitComment(e) {
+                    e.preventDefault();
+                    const text = (commentDraft[i] || "").trim();
+                    if (!text) return;
+                    setCommentSaving(p => ({ ...p, [i]: true }));
+                    try {
+                      const newComment = { text, createdAt: new Date().toISOString(), author: boda.clienteName || "Novios" };
+                      const fullSchedule = boda.schedule || [];
+                      let visibleCount = -1;
+                      const actualIdx = fullSchedule.findIndex(x => { if (!x.isInternal) visibleCount++; return visibleCount === i; });
+                      const newSchedule = fullSchedule.map((x, j) =>
+                        j === actualIdx ? { ...x, comments: [...(x.comments||[]), newComment] } : x
+                      );
+                      await saveBodaSchedule(boda.id, newSchedule);
+                      setBoda(b => ({ ...b, schedule: newSchedule }));
+                      setCommentDraft(p => ({ ...p, [i]: "" }));
+                      setCommentOpen(p => ({ ...p, [i]: false }));
+                      try {
+                        fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ type: "boda_comment", bodaId: boda.id, clienteName: boda.clienteName, event: ev.description || ev.event || ev.title || ev.time, comment: text }) });
+                      } catch(_) {}
+                    } catch(err) { alert("Error al guardar. Intenta de nuevo."); }
+                    setCommentSaving(p => ({ ...p, [i]: false }));
+                  }
+                  return (
                   <div key={i} style={{ position: "relative", paddingBottom: 20 }}>
                     <div style={{ position: "absolute", left: -20, top: 4, width: 8, height: 8,
                       borderRadius: "50%", background: T.gold, border: `2px solid ${T.bg}` }} />
@@ -543,8 +582,55 @@ export default function BodaPublicView() {
                     {ev.notes && (
                       <p style={{ margin: "3px 0 0", fontSize: 11, color: T.muted }}>{ev.notes}</p>
                     )}
+                    {/* existing comments */}
+                    {comments.map((c, ci) => (
+                      <div key={ci} style={{ marginTop: 6, padding: "6px 10px", background: T.gold3,
+                        borderLeft: `2px solid ${T.gold}`, borderRadius: "0 4px 4px 0" }}>
+                        <p style={{ margin: 0, fontSize: 12, color: T.ink2 }}>{c.text}</p>
+                        <p style={{ margin: "3px 0 0", fontSize: 10, color: T.muted }}>
+                          {c.author} · {c.createdAt ? new Date(c.createdAt).toLocaleDateString("es-CO",{day:"numeric",month:"short"}) : ""}
+                        </p>
+                      </div>
+                    ))}
+                    {/* comment toggle + form */}
+                    {!isOpen && (
+                      <button onClick={() => setCommentOpen(p => ({ ...p, [i]: true }))}
+                        style={{ marginTop: 6, background: "none", border: "none", cursor: "pointer",
+                          fontSize: 11, color: T.gold, fontFamily: "'Jost',sans-serif", padding: 0,
+                          letterSpacing: ".04em" }}>
+                        💬 Comentar
+                      </button>
+                    )}
+                    {isOpen && (
+                      <form onSubmit={submitComment} style={{ marginTop: 8, display: "flex", gap: 6, alignItems: "flex-start" }}>
+                        <textarea
+                          value={commentDraft[i] || ""}
+                          onChange={e => setCommentDraft(p => ({ ...p, [i]: e.target.value }))}
+                          placeholder="Escribe tu comentario…"
+                          rows={2}
+                          style={{ flex: 1, fontSize: 12, fontFamily: "'Jost',sans-serif",
+                            border: `1px solid ${T.border2}`, borderRadius: 4, padding: "6px 8px",
+                            resize: "vertical", color: T.ink, background: T.white, outline: "none" }}
+                        />
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <button type="submit" disabled={commentSaving[i] || !(commentDraft[i]||"").trim()}
+                            style={{ fontSize: 11, fontFamily: "'Jost',sans-serif", cursor: "pointer",
+                              background: T.gold, color: T.white, border: "none", borderRadius: 4,
+                              padding: "6px 10px", opacity: commentSaving[i] || !(commentDraft[i]||"").trim() ? .5 : 1 }}>
+                            {commentSaving[i] ? "…" : "Enviar"}
+                          </button>
+                          <button type="button" onClick={() => setCommentOpen(p => ({ ...p, [i]: false }))}
+                            style={{ fontSize: 11, fontFamily: "'Jost',sans-serif", cursor: "pointer",
+                              background: "none", color: T.muted, border: `1px solid ${T.border}`,
+                              borderRadius: 4, padding: "5px 10px" }}>
+                            ✕
+                          </button>
+                        </div>
+                      </form>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>
