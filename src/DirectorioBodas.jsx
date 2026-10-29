@@ -32,10 +32,12 @@ const VENUE_TYPES = ["Hacienda","Casa colonial","Museo","Restaurante","Hotel","P
   "Rooftop","Club campestre","Villa","Salón","Otro"];
 
 const PROV_EMPTY = { company:"", category:"", contact:"", phone:"", email:"",
-  city:"CTG", rating:"", notes:"", web:"" };
+  city:"CTG", rating:"", notes:"", web:"", instagram:"",
+  paymentMethodLocal:"", paymentMethodIntl:"", brochureUrl:"", photosUrl:"",
+  commissionYes:false, commission:"" };
 
-const VENUE_EMPTY = { name:"", city:"CTG", type:"", eventoTipo:"", capacity:"", contact:"",
-  phone:"", email:"", web:"", notes:"" };
+const VENUE_EMPTY = { name:"", city:"CTG", type:"", eventoTipo:"", capacity:"", address:"",
+  contact:"", commercialContact:"", commercialPhone:"", phone:"", email:"", web:"", notes:"" };
 
 /* ── Rating stars ── */
 function Stars({ val, onChange }) {
@@ -57,6 +59,7 @@ function ProveedoresSection({ items, setItems, persist }) {
   const [blank, setBlank] = useState(PROV_EMPTY);
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("");
+  const [filterCity, setFilterCity] = useState("all");
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setBlank(p => ({ ...p, [k]: v }));
 
@@ -86,13 +89,14 @@ function ProveedoresSection({ items, setItems, persist }) {
     const q = search.toLowerCase();
     const matchQ = !q || [x.company,x.contact,x.city,x.notes].some(f=>f?.toLowerCase().includes(q));
     const matchCat = !filterCat || x.category === filterCat;
-    return matchQ && matchCat;
+    const matchCity = filterCity === "all" || x.city === filterCity;
+    return matchQ && matchCat && matchCity;
   }).sort((a,b) => (a.company||"").localeCompare(b.company||""));
 
   return (
     <div>
       {/* Toolbar */}
-      <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
+      <div style={{ display:"flex", gap:8, marginBottom:8, flexWrap:"wrap", alignItems:"center" }}>
         <input value={search} onChange={e=>setSearch(e.target.value)}
           placeholder="Buscar proveedor…"
           style={{ ...INP_SM, flex:1, minWidth:180 }} />
@@ -102,6 +106,17 @@ function ProveedoresSection({ items, setItems, persist }) {
           {cats.map(c => <option key={c}>{c}</option>)}
         </select>
         <button onClick={startNew} style={{ ...BTN(true), whiteSpace:"nowrap" }}>+ Proveedor</button>
+      </div>
+      <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+        {[["all","Todos"],["CTG","Cartagena"],["MDE","Medellín"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setFilterCity(v)}
+            style={{ background:filterCity===v?R.accent:"transparent", color:filterCity===v?"#fff":R.muted,
+              border:`1px solid ${filterCity===v?R.accent:R.border2}`, borderRadius:99,
+              padding:"4px 12px", fontSize:11, cursor:"pointer", fontFamily:"'Jost',sans-serif",
+              fontWeight:filterCity===v?600:400 }}>
+            {l}
+          </button>
+        ))}
       </div>
 
       {/* Form */}
@@ -127,7 +142,25 @@ function ProveedoresSection({ items, setItems, persist }) {
             <input style={INP_SM} value={blank.contact} onChange={e=>set("contact",e.target.value)} placeholder="Contacto" />
             <input style={INP_SM} value={blank.phone}   onChange={e=>set("phone",e.target.value)}   placeholder="Teléfono / WhatsApp" />
             <input style={INP_SM} value={blank.email}   onChange={e=>set("email",e.target.value)}   placeholder="Email" />
-            <input style={INP_SM} value={blank.web}     onChange={e=>set("web",e.target.value)}     placeholder="Web / Instagram" />
+            <input style={INP_SM} value={blank.web}       onChange={e=>set("web",e.target.value)}       placeholder="Sitio web" />
+            <input style={INP_SM} value={blank.instagram} onChange={e=>set("instagram",e.target.value)} placeholder="@instagram" />
+            <input style={INP_SM} value={blank.paymentMethodLocal}  onChange={e=>set("paymentMethodLocal",e.target.value)}  placeholder="Pago local (Nequi, Bancolombia…)" />
+            <input style={INP_SM} value={blank.paymentMethodIntl}   onChange={e=>set("paymentMethodIntl",e.target.value)}   placeholder="Pago internacional (Zelle, PayPal…)" />
+            <input style={INP_SM} value={blank.brochureUrl} onChange={e=>set("brochureUrl",e.target.value)} placeholder="Link brochure" />
+            <input style={INP_SM} value={blank.photosUrl}   onChange={e=>set("photosUrl",e.target.value)}   placeholder="Link fotos" />
+            <div style={{ gridColumn:"span 2", display:"flex", alignItems:"center", gap:12 }}>
+              <label style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer", fontSize:11, color:R.muted }}>
+                <input type="checkbox" checked={!!blank.commissionYes}
+                  onChange={e=>set("commissionYes",e.target.checked)}
+                  style={{ accentColor:R.accent }} />
+                ¿Paga comisión?
+              </label>
+              {blank.commissionYes && (
+                <input style={{ ...INP_SM, width:100 }} type="number" min={0} max={100}
+                  value={blank.commission} onChange={e=>set("commission",e.target.value)}
+                  placeholder="Comisión %" />
+              )}
+            </div>
             <div style={{ gridColumn:"span 2" }}>
               <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:6 }}>
                 <span style={{ fontSize:11, color:R.muted }}>Rating:</span>
@@ -176,6 +209,27 @@ function ProveedoresSection({ items, setItems, persist }) {
               </p>
             )}
             {p.email && <p style={{ margin:"2px 0 0", fontSize:11, color:R.muted }}>{p.email}</p>}
+            {p.instagram && <p style={{ margin:"2px 0 0", fontSize:11, color:R.accent }}>{p.instagram}</p>}
+            {(p.paymentMethodLocal||p.paymentMethodIntl) && (
+              <p style={{ margin:"4px 0 0", fontSize:10, color:R.muted }}>
+                💳 {[p.paymentMethodLocal,p.paymentMethodIntl].filter(Boolean).join(" · ")}
+              </p>
+            )}
+            {(p.brochureUrl||p.photosUrl) && (
+              <div style={{ display:"flex", gap:8, margin:"4px 0 0" }}>
+                {p.brochureUrl && <a href={p.brochureUrl} target="_blank" rel="noreferrer"
+                  onClick={e=>e.stopPropagation()}
+                  style={{ fontSize:10, color:R.accent }}>📄 Brochure</a>}
+                {p.photosUrl && <a href={p.photosUrl} target="_blank" rel="noreferrer"
+                  onClick={e=>e.stopPropagation()}
+                  style={{ fontSize:10, color:R.accent }}>📸 Fotos</a>}
+              </div>
+            )}
+            {p.commissionYes && (
+              <p style={{ margin:"4px 0 0", fontSize:10, color:"#16a34a" }}>
+                ✓ Comisión{p.commission ? ` ${p.commission}%` : ""}
+              </p>
+            )}
             {p.notes && (
               <p style={{ margin:"6px 0 0", fontSize:11, color:R.muted, fontStyle:"italic",
                 overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.notes}</p>
@@ -204,7 +258,8 @@ function VenuesCitySection({ items, setItems, persist, eventFilter }) {
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setBlank(p => ({ ...p, [k]: v }));
 
-  const cities = ["all", ...([...new Set(filtered.map(x => x.city).filter(Boolean))].sort())];
+  const FIXED_CITIES = eventFilter === "wc" ? ["CTG","MDE"] : [];
+  const cities = ["all", ...([...new Set([...FIXED_CITIES, ...filtered.map(x => x.city).filter(Boolean)])].sort())];
 
   const visible = filtered.filter(v => {
     const q = search.toLowerCase();
@@ -280,7 +335,12 @@ function VenuesCitySection({ items, setItems, persist, eventFilter }) {
               {CITIES.map(c => <option key={c}>{c}</option>)}
             </select>
             <input style={INP_SM} value={blank.capacity} onChange={e => set("capacity", e.target.value)} placeholder="Capacidad (personas)" />
-            <input style={INP_SM} value={blank.contact}  onChange={e => set("contact", e.target.value)}  placeholder="Contacto" />
+            <div style={{ gridColumn:"span 2" }}>
+              <input style={INP_SM} value={blank.address||""} onChange={e => set("address", e.target.value)} placeholder="Dirección / Localización" />
+            </div>
+            <input style={INP_SM} value={blank.commercialContact||""} onChange={e => set("commercialContact", e.target.value)} placeholder="Contacto comercial (nombre)" />
+            <input style={INP_SM} value={blank.commercialPhone||""}   onChange={e => set("commercialPhone", e.target.value)}   placeholder="Teléfono comercial" />
+            <input style={INP_SM} value={blank.contact}  onChange={e => set("contact", e.target.value)}  placeholder="Contacto operativo" />
             <input style={INP_SM} value={blank.phone}    onChange={e => set("phone", e.target.value)}    placeholder="Teléfono / WhatsApp" />
             <input style={INP_SM} value={blank.email}    onChange={e => set("email", e.target.value)}    placeholder="Email" />
             <div style={{ gridColumn:"span 2" }}>
@@ -321,8 +381,14 @@ function VenuesCitySection({ items, setItems, persist, eventFilter }) {
                 </p>
               </div>
             </div>
+            {v.address && <p style={{ margin:"6px 0 0", fontSize:10, color:R.muted }}>📍 {v.address}</p>}
+            {(v.commercialContact || v.commercialPhone) && (
+              <p style={{ margin:"4px 0 0", fontSize:11, color:R.text2, fontWeight:500 }}>
+                🤝 {v.commercialContact}{v.commercialContact && v.commercialPhone ? " · " : ""}{v.commercialPhone}
+              </p>
+            )}
             {(v.contact || v.phone) && (
-              <p style={{ margin:"8px 0 0", fontSize:11, color:R.text2 }}>
+              <p style={{ margin:"2px 0 0", fontSize:11, color:R.text2 }}>
                 {v.contact}{v.contact && v.phone ? " · " : ""}{v.phone}
               </p>
             )}

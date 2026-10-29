@@ -347,9 +347,19 @@ function TasksTab({ boda, users, onPatch }) {
             <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.taskName} onChange={e=>setBlank(p=>({...p,taskName:e.target.value}))} placeholder="Descripción de la tarea *" /></div>
             <select style={INP_SM} value={blank.assignedTo} onChange={e=>setBlank(p=>({...p,assignedTo:e.target.value}))}>
               <option value="">— responsable —</option>
-              {section==="novios"?<option value="Novios" selected>💍 Novios</option>:<option value="Ambos">💍 Ambos</option>}
-              {(boda.clienteName||"").split(/[&\/,]/).map(n=>n.trim()).filter(Boolean).map(n=><option key={n} value={n}>{n}</option>)}
-              {section==="equipo"&&(boda.suppliers||[]).filter(s=>s.name).map(s=><option key={s.id||s.name} value={s.name}>{s.name}{s.category?` (${s.category})`:""}</option>)}
+              {section==="novios"
+                ? <>
+                    <option value="Novios">💍 Novios</option>
+                    {(boda.clienteName||"").split(/[&\/,]/).map(n=>n.trim()).filter(Boolean).map(n=><option key={n} value={n}>{n}</option>)}
+                  </>
+                : <>
+                    {users.length>0
+                      ? users.map(u=><option key={u.email} value={u.name||u.email}>{u.name||u.email}</option>)
+                      : <option value="Two Lovers">Two Lovers</option>
+                    }
+                    {(boda.suppliers||[]).filter(s=>s.name).map(s=><option key={s.id||s.name} value={s.name}>{s.name}{s.category?` (${s.category})`:""}</option>)}
+                  </>
+              }
             </select>
             <input type="date" style={INP_SM} value={blank.dueDate} onChange={e=>setBlank(p=>({...p,dueDate:e.target.value}))} />
             <select style={INP_SM} value={blank.phase} onChange={e=>setBlank(p=>({...p,phase:e.target.value}))}>{["General",...FASES].map(ph=><option key={ph}>{ph}</option>)}</select>
@@ -920,7 +930,7 @@ function TimelineTab({ boda, onScheduleChange, onPatch }) {
   const [editing,setEditing]=useState(null);
   const [view,setView]=useState("interno");
   const [showPresets,setShowPresets]=useState(false);
-  const weddingEventsAll=boda.weddingEvents||[{id:"ceremony",name:"Ceremonia"},{id:"cocktail",name:"Cóctel"},{id:"reception",name:"Recepción"}];
+  const weddingEventsAll=boda.weddingEvents||[{id:"preboda",name:"PREBODA"},{id:"boda",name:"BODA"},{id:"postboda",name:"POSTBODA"}];
   const [activeDayIdx,setActiveDayIdx]=useState(1);
   const activeDayLabel=weddingEventsAll[activeDayIdx-1]?.name||"";
   const BLANK={time:"",description:"",assignedTo:"",notes:"",url:"",suppliers:[],category:"General",isInternal:false,isHighlight:false,highlightColor:"",dayIndex:activeDayIdx,dayLabel:activeDayLabel};
@@ -1123,8 +1133,8 @@ ${sups.length?`<div class="prov-title">PROVEEDORES</div>${sups.map(s=>`<div clas
           </div>
         </div>
       )}
-      {show&&!editing&&<TimelineEventForm val={blank} setVal={setBlank} saving={saving} onSubmit={add} onCancel={()=>setShow(false)} submitLabel="Agregar" availableSuppliers={boda.suppliers||[]} weddingEvents={boda.weddingEvents||[{id:"ceremony",name:"Ceremonia"},{id:"cocktail",name:"Cóctel"},{id:"reception",name:"Recepción"}]} />}
-      {editing&&<TimelineEventForm val={editing} setVal={v=>setEditing(p=>({...p,...(typeof v==="function"?v(p):v)}))} saving={saving} onSubmit={saveEdit} onCancel={()=>setEditing(null)} submitLabel="Guardar" availableSuppliers={boda.suppliers||[]} weddingEvents={boda.weddingEvents||[{id:"ceremony",name:"Ceremonia"},{id:"cocktail",name:"Cóctel"},{id:"reception",name:"Recepción"}]} />}
+      {show&&!editing&&<TimelineEventForm val={blank} setVal={setBlank} saving={saving} onSubmit={add} onCancel={()=>setShow(false)} submitLabel="Agregar" availableSuppliers={boda.suppliers||[]} weddingEvents={boda.weddingEvents||[{id:"preboda",name:"PREBODA"},{id:"boda",name:"BODA"},{id:"postboda",name:"POSTBODA"}]} />}
+      {editing&&<TimelineEventForm val={editing} setVal={v=>setEditing(p=>({...p,...(typeof v==="function"?v(p):v)}))} saving={saving} onSubmit={saveEdit} onCancel={()=>setEditing(null)} submitLabel="Guardar" availableSuppliers={boda.suppliers||[]} weddingEvents={boda.weddingEvents||[{id:"preboda",name:"PREBODA"},{id:"boda",name:"BODA"},{id:"postboda",name:"POSTBODA"}]} />}
       {visible.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>{sorted.length===0?"Sin eventos. Agrega el primero arriba.":"No hay eventos para la vista cliente."}</p>}
       <div style={{position:"relative"}}>
         {visible.length>0&&<div style={{position:"absolute",left:55,top:8,bottom:8,width:1,background:R.border}} />}
@@ -1309,9 +1319,9 @@ function PaletteTab({ boda, onPatch }) {
 
 // ─── INVITADOS TAB ───────────────────────────────────────────────────────────
 const RSVP_STATES=["Pendiente","Confirmado","No asiste"];
-const DEFAULT_W_EVENTS=[{id:"ceremony",name:"Ceremonia"},{id:"cocktail",name:"Cóctel"},{id:"reception",name:"Recepción"}];
+const DEFAULT_W_EVENTS=[{id:"preboda",name:"PREBODA"},{id:"boda",name:"BODA"},{id:"postboda",name:"POSTBODA"}];
 const RSVP_STYLE={"Pendiente":{bg:"#fff7ed",color:"#c2410c"},"Confirmado":{bg:"#f0fdf4",color:"#15803d"},"No asiste":{bg:"#f1f5f9",color:"#64748b"}};
-const G_EVENTS=[["ceremony","⛪","Ceremonia"],["cocktail","🥂","Cóctel"],["reception","🎊","Recepción"]];
+const G_EVENTS=[["preboda","🌸","PREBODA"],["boda","💒","BODA"],["postboda","🥂","POSTBODA"]];
 const MEAL_OPTIONS=["Sin especificar","Carne","Pescado","Vegetariano","Vegano","Sin gluten","Infantil"];
 
 function GuestTab({ boda, onPatch }) {
@@ -1327,7 +1337,7 @@ function GuestTab({ boda, onPatch }) {
   const [newEvName,setNewEvName]=useState("");
   const [copied,setCopied]=useState(false);
 
-  const BLANK={name:"",contact:"",email:"",table:"",tableId:"",rsvp:"Pendiente",eventIds:wEvents.map(e=>e.id),meal:"Sin especificar",notes:""};
+  const BLANK={name:"",phoneCode:"+57",contact:"",email:"",table:"",tableId:"",rsvp:"Pendiente",eventIds:wEvents.map(e=>e.id),meal:"Sin especificar",gender:"",notes:"",companions:[]};
   const [blank,setBlank]=useState(BLANK);
 
   function gInEvent(g,evId){ return (g.eventIds||[]).includes(evId)||(evId==="ceremony"&&g.ceremony)||(evId==="cocktail"&&g.cocktail)||(evId==="reception"&&g.reception); }
@@ -1517,7 +1527,18 @@ ${guests.map((g,i)=>{
         <div style={{background:R.light,border:`1px solid ${R.border}`,borderRadius:12,padding:14,marginBottom:16}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
             <input style={INP_SM} value={blank.name}    onChange={e=>setBlank(p=>({...p,name:e.target.value}))}    placeholder="Nombre del invitado *" />
-            <input style={INP_SM} value={blank.contact||""} onChange={e=>setBlank(p=>({...p,contact:e.target.value}))} placeholder="WhatsApp" />
+            <select style={INP_SM} value={blank.gender||""} onChange={e=>setBlank(p=>({...p,gender:e.target.value}))}>
+              <option value="">Género</option>
+              <option value="Hombre">Hombre</option>
+              <option value="Mujer">Mujer</option>
+              <option value="No especificado">No especificado</option>
+            </select>
+            <div style={{display:"flex",gap:4}}>
+              <select style={{...INP_SM,width:80,flex:"0 0 auto"}} value={blank.phoneCode||"+57"} onChange={e=>setBlank(p=>({...p,phoneCode:e.target.value}))}>
+                {["+57","+1","+52","+34","+44","+55","+598","+593"].map(c=><option key={c}>{c}</option>)}
+              </select>
+              <input style={{...INP_SM,flex:1}} value={blank.contact||""} onChange={e=>setBlank(p=>({...p,contact:e.target.value}))} placeholder="WhatsApp" />
+            </div>
             <input style={INP_SM} value={blank.email||""}   onChange={e=>setBlank(p=>({...p,email:e.target.value}))}   placeholder="Email" />
             {(boda.seating||[]).length>0?(
               <select style={INP_SM} value={blank.tableId||""} onChange={e=>setBlank(p=>({...p,tableId:e.target.value}))}>
@@ -1530,6 +1551,23 @@ ${guests.map((g,i)=>{
             <select style={INP_SM} value={blank.rsvp} onChange={e=>setBlank(p=>({...p,rsvp:e.target.value}))}>{RSVP_STATES.map(s=><option key={s}>{s}</option>)}</select>
             <select style={INP_SM} value={blank.meal} onChange={e=>setBlank(p=>({...p,meal:e.target.value}))}>{MEAL_OPTIONS.map(m=><option key={m}>{m}</option>)}</select>
             <div style={{gridColumn:"span 2"}}><input style={INP_SM} value={blank.notes||""} onChange={e=>setBlank(p=>({...p,notes:e.target.value}))} placeholder="Notas / restricciones" /></div>
+            <div style={{gridColumn:"span 2"}}>
+              <p style={{fontSize:10,color:R.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:".06em",margin:"0 0 6px"}}>Acompañantes:</p>
+              {(blank.companions||[]).map((c,ci)=>(
+                <div key={ci} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
+                  <input style={{...INP_SM,flex:2}} value={c.name||""} onChange={e=>{const u=[...(blank.companions||[])];u[ci]={...u[ci],name:e.target.value};setBlank(p=>({...p,companions:u}));}} placeholder="Nombre" />
+                  <select style={{...INP_SM,flex:1}} value={c.gender||""} onChange={e=>{const u=[...(blank.companions||[])];u[ci]={...u[ci],gender:e.target.value};setBlank(p=>({...p,companions:u}));}}>
+                    <option value="">Género</option><option>Hombre</option><option>Mujer</option><option>No especificado</option>
+                  </select>
+                  <select style={{...INP_SM,flex:1}} value={c.type||"Adulto"} onChange={e=>{const u=[...(blank.companions||[])];u[ci]={...u[ci],type:e.target.value};setBlank(p=>({...p,companions:u}));}}>
+                    <option>Adulto</option><option>Niño</option><option>Niña</option>
+                  </select>
+                  <button type="button" onClick={()=>setBlank(p=>({...p,companions:(p.companions||[]).filter((_,i)=>i!==ci)}))} style={{background:"none",border:"none",color:R.muted,cursor:"pointer",fontSize:15,lineHeight:1,flexShrink:0}}>×</button>
+                </div>
+              ))}
+              <button type="button" onClick={()=>setBlank(p=>({...p,companions:[...(p.companions||[]),{name:"",gender:"",type:"Adulto"}]}))}
+                style={{fontSize:11,color:R.accent,background:"none",border:`1px dashed ${R.accent}`,borderRadius:6,padding:"3px 10px",cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>+ Acompañante</button>
+            </div>
             <div style={{gridColumn:"span 2"}}>
               <p style={{fontSize:10,color:R.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:".06em",margin:"0 0 6px"}}>Asistirá a:</p>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -2509,7 +2547,14 @@ function SeatingTab({ boda, onPatch }) {
               <div style={{background:R.dark,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div>
                   <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:16,fontWeight:400,fontStyle:"italic",color:R.white,margin:0}}>{selTable.name}</p>
-                  <p style={{fontSize:9,color:R.gold,margin:"2px 0 0",textTransform:"uppercase",letterSpacing:".07em"}}>{selTable.shape} · {selGuests.length}/{selTable.seats} puestos{selTable.size?` · ${selTable.size}`:""}</p>
+                  <p style={{fontSize:9,color:R.gold,margin:"2px 0 0",textTransform:"uppercase",letterSpacing:".07em",display:"flex",alignItems:"center",gap:6}}>
+                    {selTable.shape} · {selGuests.length}/
+                    <input type="number" min={1} max={40} value={selTable.seats}
+                      onClick={e=>e.stopPropagation()}
+                      onChange={e=>{const v=Math.max(1,parseInt(e.target.value)||1);const u=seating.map(t=>t.id===selTable.id?{...t,seats:v}:t);setSeating(u);saveSeating(u);}}
+                      style={{width:36,background:"rgba(255,255,255,.12)",border:"1px solid rgba(196,162,114,.4)",borderRadius:4,color:R.gold,fontSize:9,padding:"1px 4px",fontFamily:"'Jost',sans-serif",textAlign:"center"}} />
+                    puestos{selTable.size?` · ${selTable.size}`:""}
+                  </p>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
                   <div style={{display:"flex",gap:4}}>
@@ -3051,7 +3096,7 @@ function ContratosTab({ boda, onPatch }) {
     try {
       const ext = file.name.split(".").pop();
       const path = `${boda.id}/${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("boda-contratos").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("boda-contratos").upload(path, file, { contentType: file.type, upsert: true });
       if (error) throw error;
       const { data } = supabase.storage.from("boda-contratos").getPublicUrl(path);
       setter(p => ({ ...p, [field]: data.publicUrl }));
