@@ -9319,9 +9319,7 @@ const loadKickoffs = async (forceRefresh = false) => {
       });
     });
     const latam = LATAM.filter(c => seen.has(c));
-    // Other cities sorted alphabetically, shown only if ≥1 client has it
-    const others = [...seen.keys()].filter(c => !LATAM_SET.has(c)).sort();
-    return ["all", ...latam, ...others];
+    return ["all", ...latam];
   }, [kickoffs]);
 
   const toggleSelect = (id) => {
