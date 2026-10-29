@@ -116,6 +116,42 @@ function SectionHead({ children }) {
 }
 
 /* ── Card wrapper ───────────────────────────────────────── */
+function MesaSearch({ guests, seating, T }) {
+  const [q, setQ] = React.useState("");
+  const lower = q.trim().toLowerCase();
+  const hits = lower.length < 2 ? [] : guests.filter(g => g.name?.toLowerCase().includes(lower));
+  return (
+    <div style={{ marginBottom: 12, background: T.white, border: `1px solid ${T.border}`, padding: "18px 24px" }}>
+      <p style={{ margin: "0 0 10px", fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: T.muted, fontFamily: "'Jost',sans-serif" }}>Busca tu nombre</p>
+      <input
+        value={q} onChange={e => setQ(e.target.value)}
+        placeholder="Escribe tu nombre..."
+        style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${T.border}`, borderRadius: 6, padding: "9px 12px",
+          fontSize: 13, fontFamily: "'Jost',sans-serif", color: T.ink, background: T.bg, outline: "none" }}
+      />
+      {lower.length >= 2 && (
+        <div style={{ marginTop: 10 }}>
+          {hits.length === 0 ? (
+            <p style={{ margin: 0, fontSize: 12, color: T.muted, fontStyle: "italic" }}>No encontrado</p>
+          ) : hits.map(g => {
+            const tbl = seating.find(t => t.id === g.tableId);
+            return (
+              <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0", borderBottom: `1px solid ${T.border}` }}>
+                <span style={{ fontSize: 13, color: T.ink, flex: 1 }}>{g.name}</span>
+                {tbl ? (
+                  <span style={{ fontSize: 12, color: T.gold, fontFamily: "'Cormorant Garamond',serif", fontStyle: "italic" }}>{tbl.name}</span>
+                ) : (
+                  <span style={{ fontSize: 11, color: T.muted }}>Sin mesa asignada</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Card({ children, style }) {
   return (
     <div style={{
@@ -687,44 +723,66 @@ export default function BodaPublicView() {
 
         {/* ── MESAS tab ── */}
         {tab === "mesas" && (
-          <Card>
-            <SectionHead>Plan de Mesas</SectionHead>
-            {seating.filter(t => !t.type || t.type === "mesa").length === 0 ? (
-              <p style={{ fontSize: 13, color: T.muted, fontStyle: "italic", textAlign: "center", padding: "20px 0" }}>Sin mesas configuradas.</p>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {seating.filter(t => !t.type || t.type === "mesa").map(tbl => {
-                  const tGuests = guests.filter(g => g.tableId === tbl.id);
-                  const pct2 = Math.round((tGuests.length / Math.max(1, tbl.seats)) * 100);
-                  return (
-                    <div key={tbl.id} style={{ border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden" }}>
-                      <div style={{ background: T.ink, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <div>
-                          <p style={{ margin: 0, fontFamily: "'Cormorant Garamond',serif", fontSize: 15,
-                            fontWeight: 400, fontStyle: "italic", color: T.white }}>{tbl.name}</p>
-                          <p style={{ margin: "1px 0 0", fontSize: 9, color: T.gold2, letterSpacing: ".06em" }}>
-                            {tbl.shape} · {tGuests.length}/{tbl.seats} puestos{tbl.size ? ` · ${tbl.size}` : ""}
-                          </p>
-                        </div>
-                        <span style={{ fontSize: 11, color: pct2 >= 100 ? "#f87171" : T.gold2, fontWeight: 600 }}>{pct2}%</span>
-                      </div>
-                      {tGuests.length > 0 && (
-                        <div style={{ padding: "8px 14px", display: "flex", flexWrap: "wrap", gap: 6 }}>
-                          {tGuests.map(g => (
-                            <span key={g.id} style={{ fontSize: 11, color: T.ink2,
-                              background: T.bg, border: `1px solid ${T.border}`,
-                              borderRadius: 99, padding: "2px 10px", fontFamily: "'Jost',sans-serif" }}>
-                              {g.name}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+          <>
+            {/* Guest search */}
+            {guests.length > 0 && (
+              <MesaSearch guests={guests} seating={seating} T={T} />
             )}
-          </Card>
+            <Card>
+              <SectionHead>Plan de Mesas</SectionHead>
+              {seating.filter(t => !t.type || t.type === "mesa").length === 0 ? (
+                <p style={{ fontSize: 13, color: T.muted, fontStyle: "italic", textAlign: "center", padding: "20px 0" }}>Sin mesas configuradas.</p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 14 }}>
+                  {seating.filter(t => !t.type || t.type === "mesa").map(tbl => {
+                    const tGuests = guests.filter(g => g.tableId === tbl.id);
+                    const pct2 = Math.round((tGuests.length / Math.max(1, tbl.seats)) * 100);
+                    const full = pct2 >= 100;
+                    return (
+                      <div key={tbl.id} style={{ border: `1px solid ${T.border}`, borderRadius: 10, overflow: "hidden" }}>
+                        <div style={{ background: T.ink, padding: "12px 16px" }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                            <p style={{ margin: 0, fontFamily: "'Cormorant Garamond',serif", fontSize: 17,
+                              fontWeight: 400, fontStyle: "italic", color: T.white }}>{tbl.name}</p>
+                            <span style={{ fontSize: 10, color: full ? "#f87171" : T.gold2, border: `1px solid ${full ? "#f8717160" : T.gold2+"60"}`, borderRadius: 99, padding: "2px 8px", whiteSpace: "nowrap" }}>
+                              {tGuests.length}/{tbl.seats}
+                            </span>
+                          </div>
+                          <p style={{ margin: "3px 0 0", fontSize: 9, color: T.gold2+"99", letterSpacing: ".08em", textTransform: "uppercase" }}>
+                            {tbl.shape}{tbl.size ? ` · ${tbl.size}` : ""}
+                          </p>
+                          {/* seat dots */}
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
+                            {Array.from({ length: tbl.seats || 0 }).map((_, i) => (
+                              <div key={i} style={{ width: 8, height: 8, borderRadius: "50%",
+                                background: i < tGuests.length ? T.gold : "transparent",
+                                border: `1px solid ${i < tGuests.length ? T.gold : T.gold2+"50"}` }} />
+                            ))}
+                          </div>
+                        </div>
+                        {tGuests.length > 0 && (
+                          <div style={{ padding: "10px 14px", display: "flex", flexWrap: "wrap", gap: 6 }}>
+                            {tGuests.map(g => (
+                              <span key={g.id} style={{ fontSize: 11, color: T.ink2,
+                                background: T.bg, border: `1px solid ${T.border}`,
+                                borderRadius: 99, padding: "3px 11px", fontFamily: "'Jost',sans-serif" }}>
+                                {g.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {tGuests.length === 0 && (
+                          <div style={{ padding: "10px 14px" }}>
+                            <p style={{ margin: 0, fontSize: 11, color: T.muted, fontStyle: "italic" }}>Sin invitados asignados</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+          </>
         )}
 
         {/* ── CONTRATOS tab ── */}
