@@ -1532,7 +1532,7 @@ function ClientesTable({ kickoffs, loading }) {
     if (c === "cdmx" || c === "mexico city" || c === "ciudad de mexico" || c === "ciudad de méxico") return "cdmx";
     if (c === "tul" || c === "tulum") return "tulum";
     if (c === "los cabos" || c === "cabos" || c === "loscabos" || c === "cab") return "los cabos";
-    return c;
+    return "";
   }
   const cities = ["all", ...Array.from(new Set(rows.map(r => normCity(r._rowCity)).filter(Boolean)))];
   const concierges = ["all", ...Array.from(new Set(
