@@ -661,24 +661,25 @@ const PDF_GENERAL  = BASE_URL + '/payment-options.pdf';
 const PDF_WEDDINGS = BASE_URL + '/payment-options-weddings.pdf';
 
 const TEMPLATES_EN = {
-  cobro_inicial_concierge: { build: ({firstName, pdfLink, facturaLink}) => [`Hi ${firstName}!`,``,`We're excited to have you with us soon for your Two Travel experience!`,``,`• Attached is your invoice showing the balance for the house. It reflects the payments we've already received, and the 'Total' shows the amount still due.`,`• This balance must be paid prior to the trip.`,facturaLink?`• Here is the link to the invoice, in case you want to pay with a credit card (includes the 4% processing fee): ${facturaLink}`:undefined,``,`You can also complete your payment using any of the other methods available here: ${pdfLink}`,``,`If you have any questions, we're happy to help. See you soon! — Two Travel`].filter(l=>l!==undefined).join('\n') },
-  cobro_inicial_wedding:   { build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [`Hi ${firstName},`,``,`We're so excited to be part of your special day.`,``,desc?`Here's a summary of your pending payment:\n\n${desc}`:`Here's a summary of your pending payment:`,montoStr?`\nTotal: *${montoStr}*`:``,facturaLink?`\nInvoice: ${facturaLink}`:``,``,`You can complete the payment using any of the methods available here:`,pdfLink,``,`With love,`,`— Two Lovers`].filter(l=>l!==undefined).join('\n') },
-  recordatorio_suave:      { build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [`Hi ${firstName},`,``,`Just a gentle reminder that you have a pending payment with us.`,desc?`\n${desc}`:``,montoStr?`\nTotal: *${montoStr}*`:``,facturaLink?`\nInvoice: ${facturaLink}`:``,``,`Payment methods available here:`,pdfLink,``,`Any questions, just let us know. — Two Travel`].filter(l=>l!==undefined).join('\n') },
-  recordatorio_urgente:    { build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [`Hi ${firstName},`,``,`We'd like to let you know that your payment is still pending and we need confirmation to proceed with your reservation.`,desc?`\n${desc}`:``,montoStr?`\nTotal pending: *${montoStr}*`:``,facturaLink?`\nInvoice: ${facturaLink}`:``,``,`Please complete the payment through one of our methods:`,pdfLink,``,`If you've already paid, please send us your receipt. Thank you!`,`— Two Travel`].filter(l=>l!==undefined).join('\n') },
+  cobro_inicial_concierge: { build: ({firstName, pdfLink, facturaLink, qbLink}) => [`Hi ${firstName}!`,``,`We're excited to have you with us soon for your Two Travel experience!`,``,`• Attached is your invoice showing the balance for the house. It reflects the payments we've already received, and the 'Total' shows the amount still due.`,`• This balance must be paid prior to the trip.`,qbLink?`• Here is your QuickBooks invoice: ${qbLink}`:undefined,facturaLink?`• Here is the link to pay with a credit card (includes the 4% processing fee): ${facturaLink}`:undefined,``,`You can also complete your payment using any of the other methods available here: ${pdfLink}`,``,`If you have any questions, we're happy to help. See you soon! — Two Travel`].filter(l=>l!==undefined).join('\n') },
+  cobro_inicial_wedding:   { build: ({firstName, desc, montoStr, pdfLink, facturaLink, qbLink}) => [`Hi ${firstName},`,``,`We're so excited to be part of your special day.`,``,desc?`Here's a summary of your pending payment:\n\n${desc}`:`Here's a summary of your pending payment:`,montoStr?`\nTotal: *${montoStr}*`:``,qbLink?`\nInvoice (QB): ${qbLink}`:``,facturaLink?`\nPay by card: ${facturaLink}`:``,``,`You can complete the payment using any of the methods available here:`,pdfLink,``,`With love,`,`— Two Lovers`].filter(l=>l!==undefined).join('\n') },
+  recordatorio_suave:      { build: ({firstName, desc, montoStr, pdfLink, facturaLink, qbLink}) => [`Hi ${firstName},`,``,`Just a gentle reminder that you have a pending payment with us.`,desc?`\n${desc}`:``,montoStr?`\nTotal: *${montoStr}*`:``,qbLink?`\nInvoice (QB): ${qbLink}`:``,facturaLink?`\nPay by card: ${facturaLink}`:``,``,`Payment methods available here:`,pdfLink,``,`Any questions, just let us know. — Two Travel`].filter(l=>l!==undefined).join('\n') },
+  recordatorio_urgente:    { build: ({firstName, desc, montoStr, pdfLink, facturaLink, qbLink}) => [`Hi ${firstName},`,``,`We'd like to let you know that your payment is still pending and we need confirmation to proceed with your reservation.`,desc?`\n${desc}`:``,montoStr?`\nTotal pending: *${montoStr}*`:``,qbLink?`\nInvoice (QB): ${qbLink}`:``,facturaLink?`\nPay by card: ${facturaLink}`:``,``,`Please complete the payment through one of our methods:`,pdfLink,``,`If you've already paid, please send us your receipt. Thank you!`,`— Two Travel`].filter(l=>l!==undefined).join('\n') },
   confirmacion_pago:       { build: ({firstName, desc, montoStr}) => [`Hi ${firstName},`,``,`We've successfully received your payment.`,desc?`\n${desc}`:``,montoStr?`\nAmount: *${montoStr}*`:``,``,`Your reservation is confirmed. We'll send you all the details shortly.`,``,`See you soon. — Two Travel`].filter(l=>l!==undefined).join('\n') },
 };
 
 const TEMPLATES = {
   cobro_inicial_concierge: {
     label: '💬 Cobro inicial — Check In',
-    build: ({firstName, pdfLink, facturaLink}) => [
+    build: ({firstName, pdfLink, facturaLink, qbLink}) => [
       `¡Hola ${firstName}!`,
       '',
       `Esperamos que estés muy emocionado/a para tu próxima experiencia con Two Travel!`,
       '',
       `• Te adjuntamos tu factura con el balance de la casa. En ella verás reflejados los pagos que ya hemos recibido, y en el 'Total', el monto que queda pendiente.`,
       `• Este balance debe estar pagado antes del viaje.`,
-      facturaLink ? `• Aquí tienes el link de la factura, por si deseas pagar con tarjeta de crédito (incluye el 4% por procesamiento): ${facturaLink}` : undefined,
+      qbLink ? `• Aquí tienes tu factura de QuickBooks: ${qbLink}` : undefined,
+      facturaLink ? `• Aquí tienes el link para pagar con tarjeta de crédito (incluye el 4% por procesamiento): ${facturaLink}` : undefined,
       '',
       `También puedes realizar el pago con cualquiera de los otros métodos disponibles aquí: ${pdfLink}`,
       '',
@@ -687,14 +688,15 @@ const TEMPLATES = {
   },
   cobro_inicial_wedding: {
     label: '💍 Cobro inicial — Bodas',
-    build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [
+    build: ({firstName, desc, montoStr, pdfLink, facturaLink, qbLink}) => [
       `Hola ${firstName},`,
       '',
       `Estamos muy emocionados de acompañarlos en este día tan especial.`,
       '',
       desc ? `Aquí el resumen de su pago pendiente:\n\n${desc}` : 'Aquí el resumen de su pago pendiente:',
       montoStr ? `\nTotal: *${montoStr}*` : '',
-      facturaLink ? `\nFactura: ${facturaLink}` : '',
+      qbLink ? `\nFactura QB: ${qbLink}` : '',
+      facturaLink ? `\nPago con tarjeta: ${facturaLink}` : '',
       '',
       `Pueden realizar el pago con cualquiera de los métodos disponibles aquí:`,
       pdfLink,
@@ -705,13 +707,14 @@ const TEMPLATES = {
   },
   recordatorio_suave: {
     label: '🔔 Recordatorio suave',
-    build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [
+    build: ({firstName, desc, montoStr, pdfLink, facturaLink, qbLink}) => [
       `Hola ${firstName},`,
       '',
       `Queríamos recordarte que tienes un pago pendiente con nosotros.`,
       desc ? `\n${desc}` : '',
       montoStr ? `\nTotal: *${montoStr}*` : '',
-      facturaLink ? `\nFactura: ${facturaLink}` : '',
+      qbLink ? `\nFactura QB: ${qbLink}` : '',
+      facturaLink ? `\nPago con tarjeta: ${facturaLink}` : '',
       '',
       `Métodos de pago disponibles:`,
       pdfLink,
@@ -721,13 +724,14 @@ const TEMPLATES = {
   },
   recordatorio_urgente: {
     label: '⚠️ Recordatorio urgente',
-    build: ({firstName, desc, montoStr, pdfLink, facturaLink}) => [
+    build: ({firstName, desc, montoStr, pdfLink, facturaLink, qbLink}) => [
       `Hola ${firstName},`,
       '',
       `Queremos informarte que tu pago aún está pendiente y necesitamos confirmación para continuar con tu reserva.`,
       desc ? `\n${desc}` : '',
       montoStr ? `\nTotal pendiente: *${montoStr}*` : '',
-      facturaLink ? `\nFactura: ${facturaLink}` : '',
+      qbLink ? `\nFactura QB: ${qbLink}` : '',
+      facturaLink ? `\nPago con tarjeta: ${facturaLink}` : '',
       '',
       `Por favor realiza el pago a través de alguno de nuestros métodos:`,
       pdfLink,
@@ -762,7 +766,7 @@ function getTemplateVars() {
   const firstName  = client.split(/[\s,&]/)[0] || 'cliente';
   const montoStr   = amount ? `${currency} $${parseFloat(amount).toLocaleString('es', {minimumFractionDigits:2, maximumFractionDigits:2})}` : '';
   const pdfLink    = dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
-  return { firstName, desc, montoStr, pdfLink, facturaLink: stripeLink };
+  return { firstName, desc, montoStr, pdfLink, facturaLink: stripeLink, qbLink: '' };
 }
 
 function buildWaMsg() {
@@ -1294,7 +1298,7 @@ function refreshCobro() {
   const pdfLink = dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
   const firstName = (p.client || '').split(/[\s,&]/)[0];
   const montoStr = p.amount ? `${p.currency||'USD'} $${parseFloat(p.amount).toLocaleString('es',{minimumFractionDigits:2})}` : '';
-  const msg = tpl.build({ firstName, desc: p.desc || '', montoStr, pdfLink, facturaLink: p.stripeLink || p.factura || '' });
+  const msg = tpl.build({ firstName, desc: p.desc || '', montoStr, pdfLink, facturaLink: p.stripeLink || p.factura || '', qbLink: p.receipt || '' });
   document.getElementById('cobro-msg').value = msg;
 }
 
@@ -1333,7 +1337,7 @@ async function cobrar(id, tplKey) {
   const pdfLink   = dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
   const firstName = (p.client || '').split(/[\s,&]/)[0];
   const montoStr  = p.amount ? `${p.currency} $${parseFloat(p.amount).toLocaleString('es',{minimumFractionDigits:2})}` : '';
-  const msg = tpl.build({ firstName, desc: p.desc || '', montoStr, pdfLink, facturaLink: p.stripeLink || p.factura || '' });
+  const msg = tpl.build({ firstName, desc: p.desc || '', montoStr, pdfLink, facturaLink: p.stripeLink || p.factura || '', qbLink: p.receipt || '' });
 
   const waUrl = 'https://wa.me/' + p.phone.replace(/\D/g,'') + '?text=' + encodeURIComponent(msg);
   window.open(waUrl, '_blank');
