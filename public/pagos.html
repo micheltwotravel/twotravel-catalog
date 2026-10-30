@@ -1298,7 +1298,8 @@ function refreshCobro() {
   const pdfLink = dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
   const firstName = (p.client || '').split(/[\s,&]/)[0];
   const montoStr = p.amount ? `${p.currency||'USD'} $${parseFloat(p.amount).toLocaleString('es',{minimumFractionDigits:2})}` : '';
-  const msg = tpl.build({ firstName, desc: p.desc || '', montoStr, pdfLink, facturaLink: p.stripeLink || p.factura || '', qbLink: (p.receipt && p.receipt.startsWith('http')) ? p.receipt : '' });
+  const _qb = p.factura || p.receipt || '';
+  const msg = tpl.build({ firstName, desc: p.desc || '', montoStr, pdfLink, facturaLink: p.stripeLink || '', qbLink: (_qb && !_qb.startsWith('data:')) ? _qb : '' });
   document.getElementById('cobro-msg').value = msg;
 }
 
@@ -1337,7 +1338,8 @@ async function cobrar(id, tplKey) {
   const pdfLink   = dept === 'wedding' ? PDF_WEDDINGS : PDF_GENERAL;
   const firstName = (p.client || '').split(/[\s,&]/)[0];
   const montoStr  = p.amount ? `${p.currency} $${parseFloat(p.amount).toLocaleString('es',{minimumFractionDigits:2})}` : '';
-  const msg = tpl.build({ firstName, desc: p.desc || '', montoStr, pdfLink, facturaLink: p.stripeLink || p.factura || '', qbLink: (p.receipt && p.receipt.startsWith('http')) ? p.receipt : '' });
+  const _qb2 = p.factura || p.receipt || '';
+  const msg = tpl.build({ firstName, desc: p.desc || '', montoStr, pdfLink, facturaLink: p.stripeLink || '', qbLink: (_qb2 && !_qb2.startsWith('data:')) ? _qb2 : '' });
 
   const waUrl = 'https://wa.me/' + p.phone.replace(/\D/g,'') + '?text=' + encodeURIComponent(msg);
   window.open(waUrl, '_blank');
