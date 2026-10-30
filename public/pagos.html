@@ -661,7 +661,7 @@ const PDF_GENERAL  = BASE_URL + '/payment-options.pdf';
 const PDF_WEDDINGS = BASE_URL + '/payment-options-weddings.pdf';
 
 const TEMPLATES_EN = {
-  cobro_inicial_concierge: { build: ({firstName, pdfLink, facturaLink, qbLink}) => [`Hi ${firstName}!`,``,`We're excited to have you with us soon for your Two Travel experience!`,``,`• Attached is your invoice showing the balance for the house. It reflects the payments we've already received, and the 'Total' shows the amount still due.`,`• This balance must be paid prior to the trip.`,qbLink?`• Here is your QuickBooks invoice: ${qbLink}`:undefined,facturaLink?`• Here is the link to pay with a credit card (includes the 4% processing fee): ${facturaLink}`:undefined,``,`You can also complete your payment using any of the other methods available here: ${pdfLink}`,``,`If you have any questions, we're happy to help. See you soon! — Two Travel`].filter(l=>l!==undefined).join('\n') },
+  cobro_inicial_concierge: { build: ({firstName, pdfLink, facturaLink, qbLink}) => [`Hi ${firstName}!`,``,`We're excited to have you with us soon for your Two Travel experience!`,``,qbLink?`• Here is your QuickBooks invoice: ${qbLink} — it shows your current balance, reflecting the payments we've already received, and the 'Total' shows the amount still due.`:undefined,`• This balance must be paid prior to the trip.`,`• Payment options: you can complete your payment using any of the methods available here: ${pdfLink} (please note that payments made via Stripe or PayPal include a 4% processing fee).`,facturaLink?`• Here is the direct link to pay with a credit card through Stripe (includes the 4% processing fee): ${facturaLink}`:undefined,``,`If you have any questions, we're happy to help. See you soon! — Two Travel`].filter(l=>l!==undefined).join('\n') },
   cobro_inicial_wedding:   { build: ({firstName, desc, montoStr, pdfLink, facturaLink, qbLink}) => [`Hi ${firstName},`,``,`We're so excited to be part of your special day.`,``,desc?`Here's a summary of your pending payment:\n\n${desc}`:`Here's a summary of your pending payment:`,montoStr?`\nTotal: *${montoStr}*`:``,qbLink?`\nInvoice (QB): ${qbLink}`:``,facturaLink?`\nPay by card: ${facturaLink}`:``,``,`You can complete the payment using any of the methods available here:`,pdfLink,``,`With love,`,`— Two Lovers`].filter(l=>l!==undefined).join('\n') },
   recordatorio_suave:      { build: ({firstName, desc, montoStr, pdfLink, facturaLink, qbLink}) => [`Hi ${firstName},`,``,`Just a gentle reminder that you have a pending payment with us.`,desc?`\n${desc}`:``,montoStr?`\nTotal: *${montoStr}*`:``,qbLink?`\nInvoice (QB): ${qbLink}`:``,facturaLink?`\nPay by card: ${facturaLink}`:``,``,`Payment methods available here:`,pdfLink,``,`Any questions, just let us know. — Two Travel`].filter(l=>l!==undefined).join('\n') },
   recordatorio_urgente:    { build: ({firstName, desc, montoStr, pdfLink, facturaLink, qbLink}) => [`Hi ${firstName},`,``,`We'd like to let you know that your payment is still pending and we need confirmation to proceed with your reservation.`,desc?`\n${desc}`:``,montoStr?`\nTotal pending: *${montoStr}*`:``,qbLink?`\nInvoice (QB): ${qbLink}`:``,facturaLink?`\nPay by card: ${facturaLink}`:``,``,`Please complete the payment through one of our methods:`,pdfLink,``,`If you've already paid, please send us your receipt. Thank you!`,`— Two Travel`].filter(l=>l!==undefined).join('\n') },
@@ -674,16 +674,14 @@ const TEMPLATES = {
     build: ({firstName, pdfLink, facturaLink, qbLink}) => [
       `¡Hola ${firstName}!`,
       '',
-      `Esperamos que estés muy emocionado/a para tu próxima experiencia con Two Travel!`,
+      `¡Estamos muy contentos de tenerte pronto con nosotros para tu experiencia con Two Travel!`,
       '',
-      `• Te adjuntamos tu factura con el balance de la casa. En ella verás reflejados los pagos que ya hemos recibido, y en el 'Total', el monto que queda pendiente.`,
-      `• Este balance debe estar pagado antes del viaje.`,
-      qbLink ? `• Aquí tienes tu factura de QuickBooks: ${qbLink}` : undefined,
-      facturaLink ? `• Aquí tienes el link para pagar con tarjeta de crédito (incluye el 4% por procesamiento): ${facturaLink}` : undefined,
+      qbLink ? `• Aquí está tu factura de QuickBooks: ${qbLink} — muestra tu saldo actual, reflejando los pagos que ya hemos recibido, y el 'Total' indica el monto pendiente.` : undefined,
+      `• Este saldo debe pagarse antes del viaje.`,
+      `• Opciones de pago: puedes completar tu pago usando cualquiera de los métodos disponibles aquí: ${pdfLink} (ten en cuenta que los pagos realizados a través de Stripe o PayPal tienen un cargo adicional del 4%).`,
+      facturaLink ? `• Aquí está el link directo para pagar con tarjeta de crédito a través de Stripe (incluye el 4% de cargo por procesamiento): ${facturaLink}` : undefined,
       '',
-      `También puedes realizar el pago con cualquiera de los otros métodos disponibles aquí: ${pdfLink}`,
-      '',
-      `Cualquier pregunta, con gusto te ayudamos. ¡Hasta pronto! — Two Travel`,
+      `Si tienes alguna pregunta, con gusto te ayudamos. ¡Nos vemos pronto! — Two Travel`,
     ].filter(l => l !== undefined).join('\n'),
   },
   cobro_inicial_wedding: {
