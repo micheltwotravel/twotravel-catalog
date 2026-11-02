@@ -5333,12 +5333,39 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [billingSending, setBillingSending] = useState(false);
   const [billingPdfUrl, setBillingPdfUrl] = useState(kickoff?.billingPdfUrl || null);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
+  const [preInvoiceSnapshot, setPreInvoiceSnapshot] = useState(() => {
+    const v = kickoff?.preInvoiceSnapshot;
+    if (!v) return null;
+    try { return typeof v === "string" ? JSON.parse(v) : v; } catch { return null; }
+  });
+  const [showBillingModal, setShowBillingModal] = useState(false);
+  const [billingModalType, setBillingModalType] = useState("prefactura");
+  const [billingModalItems, setBillingModalItems] = useState(null);
   const [saving, setSaving] = useState(false);
   const [savedOk, setSavedOk] = useState(false);
   // Track latest ItineraryCanvas state so main "Guardar" always includes it
   // Pre-seeded from kickoff so they're never null even if onCartChange hasn't fired yet
   const canvasCartRef    = useRef(Array.isArray(kickoff?.cart)    ? kickoff.cart    : []);
   const canvasDayMetaRef = useRef(Array.isArray(kickoff?.dayMeta) ? kickoff.dayMeta : []);
+  const openBillingModal = (type) => {
+    const rawCart = canvasCartRef.current?.length
+      ? canvasCartRef.current
+      : (Array.isArray(kickoff?.cart) ? kickoff.cart
+        : (() => { try { return JSON.parse(kickoff?.cart || "[]"); } catch { return []; } })());
+    const items = rawCart.map((item, i) => ({
+      key: `${String(item.dayLabel||item.day||"").trim()}__${i}`,
+      dayLabel: String(item.dayLabel || item.day || (kickoff?.lang === "es" ? "Itinerario" : "Itinerary")).trim() || "Itinerario",
+      name: String(item.displayName || item.name || "Servicio").trim(),
+      priceUsd: Number(item.priceUsd ?? 0),
+      pax: Number(item.pax || 1),
+      selected: true,
+      overridePrice: "",
+      _orig: item,
+    }));
+    setBillingModalItems(items);
+    setBillingModalType(type);
+    setShowBillingModal(true);
+  };
   // Incremented after saves that merged iframe inline-edits, forcing canvas to re-init
   // from the updated kickoff so subsequent canvas edits start from the correct cart.
   const [canvasKey, setCanvasKey] = useState(0);
@@ -5720,6 +5747,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   updates.tripAdvisorReviewStars = tripAdvisorReviewStars;
   updates.preBillSentAt          = preBillSentAt;
   updates.lynaInvoiceSentAt      = lynaInvoiceSentAt;
+  updates.preInvoiceSnapshot     = preInvoiceSnapshot ? JSON.stringify(preInvoiceSnapshot) : "";
 
   // Trip-level / itinerary fields
   updates.arrivalDate            = arrivalDate;
@@ -6937,7 +6965,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           })()}
           {/* Pre-set WhatsApp messages */}
           <PresetMessages kickoff={kickoff} lang={lang} />
-          {/* Billing — send to Slack (#46) */}
+          {/* Billing — item-selection modal (#46) */}
           {kickoff?.cart?.length > 0 && (
             <div className="flex items-center gap-1">
               <button
@@ -6950,102 +6978,19 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               </button>
               <button
                 type="button"
-                disabled={billingSending}
-                onClick={async () => {
-                  setBillingSending(true);
-                  try {
-                    const liveKickoff = {
-                      ...kickoff,
-                      ...(canvasCartRef.current    != null ? { cart:    canvasCartRef.current    } : {}),
-                      ...(canvasDayMetaRef.current != null ? { dayMeta: canvasDayMetaRef.current } : {}),
-                      city: cityFullName(city) || city,
-                      tripDates, tripDates2, groupSize,
-                      arrivalDate, departureDate,
-                      arrivalDate2, departureDate2,
-                      accommodationName, accommodationAddr, accommodationUrl,
-                      accommodationName2, accommodationAddr2, accommodationUrl2,
-                      checkIn, checkOut,
-                      conciergeTitle,
-                      tripName: tripName || kickoff.tripName || "",
-                      email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
-                    };
-                    const url = await sendItineraryPdfToSlack(liveKickoff, kickoff.lang || "en", billingCurrency, "preview", liveFxRate);
-                    console.log("PDF preview url:", url);
-                    if (!url) throw new Error("No se generó URL del PDF");
-                    setPdfPreviewUrl(url);
-                  } catch (e) {
-                    console.error("PDF preview error:", e);
-                    alert("❌ Error generando PDF: " + e.message);
-                  } finally {
-                    setBillingSending(false);
-                  }
-                }}
-                className="px-3 py-2 border-t border-b border-indigo-300 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50"
-                title="Ver PDF"
+                onClick={() => openBillingModal("prefactura")}
+                className="px-3 py-2 border-t border-b border-indigo-300 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
+                title="Seleccionar ítems y enviar pre-factura"
               >
-                {billingSending ? "…" : "👁"}
+                📋 Pre-fact.
               </button>
               <button
                 type="button"
-                disabled={billingSending}
-                onClick={async () => {
-                  setBillingSending(true);
-                  try {
-                    // Merge live EditDrawer + canvas state so cart/dayMeta/city are always current
-                    const pdfUrl = await sendItineraryPdfToSlack({
-                      ...kickoff,
-                      cart:    canvasCartRef.current    != null ? canvasCartRef.current    : kickoff.cart,
-                      dayMeta: canvasDayMetaRef.current != null ? canvasDayMetaRef.current : kickoff.dayMeta,
-                      email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
-                      city: cityFullName(city) || city || kickoff.city || "",
-                      tripDates, tripDates2, groupSize, arrivalDate, departureDate,
-                      arrivalDate2, departureDate2,
-                      accommodationName, accommodationAddr, accommodationUrl,
-                      accommodationName2, accommodationAddr2, accommodationUrl2,
-                      tripName: tripName || kickoff.tripName || "",
-                      checkIn, checkOut, conciergeTitle,
-                    }, kickoff.lang || "en", billingCurrency, "slack", liveFxRate);
-                    if (pdfUrl) setBillingPdfUrl(pdfUrl);
-                    alert("✅ PDF enviado a Slack" + (pdfUrl ? " · Link copiado arriba" : ""));
-                  } catch (e) {
-                    alert("❌ " + e.message);
-                  } finally {
-                    setBillingSending(false);
-                  }
-                }}
-                className="px-3 py-2 border-t border-b border-indigo-300 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50"
+                onClick={() => openBillingModal("factura_final")}
+                className="px-3 py-2 rounded-r-lg border border-indigo-300 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
+                title="Seleccionar ítems y enviar factura final"
               >
-                {billingSending ? "Enviando…" : "💰 Facturar"}
-              </button>
-              <button
-                type="button"
-                disabled={billingSending}
-                onClick={async () => {
-                  setBillingSending(true);
-                  try {
-                    await sendItineraryPdfToSlack({
-                      ...kickoff,
-                      cart:    canvasCartRef.current    != null ? canvasCartRef.current    : kickoff.cart,
-                      dayMeta: canvasDayMetaRef.current != null ? canvasDayMetaRef.current : kickoff.dayMeta,
-                      email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
-                      city: cityFullName(city) || city || kickoff.city || "",
-                      tripDates, tripDates2, groupSize, arrivalDate, departureDate,
-                      arrivalDate2, departureDate2,
-                      accommodationName, accommodationAddr, accommodationUrl,
-                      accommodationName2, accommodationAddr2, accommodationUrl2,
-                      tripName: tripName || kickoff.tripName || "",
-                      checkIn, checkOut, conciergeTitle,
-                    }, kickoff.lang || "en", billingCurrency, "download", liveFxRate);
-                  } catch (e) {
-                    alert("❌ " + e.message);
-                  } finally {
-                    setBillingSending(false);
-                  }
-                }}
-                className="px-3 py-2 rounded-r-lg border border-indigo-300 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50"
-                title="Descargar PDF"
-              >
-                {billingSending ? "…" : "⬇"}
+                💰 Final
               </button>
             </div>
           )}
@@ -7067,6 +7012,173 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
 
     </div>
 
+    {/* Billing selection modal */}
+    {showBillingModal && billingModalItems && (() => {
+      const parsePrice = (item) => {
+        const v = String(item.overridePrice ?? "").trim();
+        if (v === "") return item.priceUsd;
+        const n = parseFloat(v.replace(/[^0-9.]/g, ""));
+        return isNaN(n) ? item.priceUsd : n;
+      };
+      const selectedItems = billingModalItems.filter(it => it.selected);
+      const currentTotal  = selectedItems.reduce((s, it) => s + parsePrice(it), 0);
+      const preTotal = Array.isArray(preInvoiceSnapshot)
+        ? preInvoiceSnapshot.reduce((s, it) => s + Number(it.priceUsd || 0), 0) : 0;
+      const delta = billingModalType === "factura_final" ? currentTotal - preTotal : 0;
+
+      const days   = [];
+      const dayMap = new Map();
+      billingModalItems.forEach(item => {
+        if (!dayMap.has(item.dayLabel)) { dayMap.set(item.dayLabel, []); days.push(item.dayLabel); }
+        dayMap.get(item.dayLabel).push(item);
+      });
+
+      const fmtModalAmt = (n) => billingCurrency === "COP"
+        ? `$${Math.round(n * liveFxRate).toLocaleString("es-CO")} COP`
+        : billingCurrency === "MXN"
+        ? `$${Number(n).toLocaleString("es-MX", { maximumFractionDigits: 0 })} MXN`
+        : `$${Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 })} USD`;
+
+      const buildLiveKickoff = (items) => ({
+        ...kickoff,
+        cart: items.map(it => ({ ...it._orig, priceUsd: parsePrice(it) })),
+        dayMeta: canvasDayMetaRef.current ?? kickoff.dayMeta,
+        email: guestEmailState || kickoff.email || kickoff.guestEmail || "",
+        city: cityFullName(city) || city || kickoff.city || "",
+        tripDates, tripDates2, groupSize, arrivalDate, departureDate,
+        arrivalDate2, departureDate2,
+        accommodationName, accommodationAddr, accommodationUrl,
+        accommodationName2, accommodationAddr2, accommodationUrl2,
+        tripName: tripName || kickoff.tripName || "",
+        checkIn, checkOut, conciergeTitle,
+        billingType: billingModalType,
+        preInvoiceSnapshot: preInvoiceSnapshot ? JSON.stringify(preInvoiceSnapshot) : null,
+      });
+
+      const runPdf = async (mode) => {
+        setBillingSending(true);
+        try {
+          const liveKo = buildLiveKickoff(selectedItems);
+          const url = await sendItineraryPdfToSlack(liveKo, kickoff.lang || "en", billingCurrency, mode, liveFxRate);
+          if (mode === "preview") {
+            if (!url) throw new Error("No se generó URL del PDF");
+            setPdfPreviewUrl(url);
+            setShowBillingModal(false);
+          } else if (mode === "slack") {
+            if (url) setBillingPdfUrl(url);
+            if (billingModalType === "prefactura") {
+              const snap = selectedItems.map(it => ({
+                key: it.key, name: it.name, dayLabel: it.dayLabel,
+                priceUsd: parsePrice(it), pax: it.pax,
+              }));
+              setPreInvoiceSnapshot(snap);
+              try { await updateKickoffInSheet(kickoff.id, { preInvoiceSnapshot: JSON.stringify(snap) }); } catch {}
+            }
+            alert("✅ PDF enviado a Slack");
+            setShowBillingModal(false);
+          } else {
+            setShowBillingModal(false);
+          }
+        } catch(e) {
+          alert("❌ " + e.message);
+        } finally {
+          setBillingSending(false);
+        }
+      };
+
+      return (
+        <div key="billing-modal"
+          className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={e => { if (e.target === e.currentTarget) setShowBillingModal(false); }}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-neutral-100">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 mb-0.5">Factura</div>
+                <div className="font-semibold text-neutral-900 text-base">{kickoff.guestName || "Cliente"}</div>
+              </div>
+              <button type="button" onClick={() => setShowBillingModal(false)}
+                className="text-neutral-400 hover:text-neutral-700 text-lg px-2 leading-none">✕</button>
+            </div>
+            <div className="flex gap-2 px-5 py-3 border-b border-neutral-100">
+              {[["prefactura","📋 Pre-factura"],["factura_final","💰 Factura Final"]].map(([t, lbl]) => (
+                <button key={t} type="button" onClick={() => setBillingModalType(t)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${billingModalType === t ? "bg-indigo-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-3 space-y-4 min-h-0">
+              {days.map(dayLabel => (
+                <div key={dayLabel}>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-2">{dayLabel}</div>
+                  <div className="space-y-1.5">
+                    {dayMap.get(dayLabel).map(item => (
+                      <div key={item.key}
+                        className={`flex items-center gap-3 p-2.5 rounded-xl border transition-colors ${item.selected ? "border-indigo-200 bg-indigo-50" : "border-neutral-200 bg-neutral-50"}`}>
+                        <input type="checkbox" checked={item.selected}
+                          onChange={e => setBillingModalItems(prev => prev.map(it => it.key === item.key ? { ...it, selected: e.target.checked } : it))}
+                          className="w-4 h-4 rounded accent-indigo-600 shrink-0" />
+                        <span className={`flex-1 text-sm leading-tight ${item.selected ? "text-neutral-900" : "text-neutral-400"}`}>
+                          {item.name}
+                          {item.pax > 1 && <span className="text-xs text-neutral-400 ml-1">×{item.pax}</span>}
+                        </span>
+                        <input
+                          type="number"
+                          value={item.overridePrice !== "" ? item.overridePrice : item.priceUsd}
+                          onChange={e => setBillingModalItems(prev => prev.map(it => it.key === item.key ? { ...it, overridePrice: e.target.value } : it))}
+                          onFocus={e => { if (item.overridePrice === "") setBillingModalItems(prev => prev.map(it => it.key === item.key ? { ...it, overridePrice: String(it.priceUsd) } : it)); e.target.select(); }}
+                          disabled={!item.selected}
+                          className="w-24 text-right text-sm border border-neutral-300 rounded-lg px-2 py-1 bg-white disabled:bg-transparent disabled:border-transparent disabled:text-neutral-400 focus:border-indigo-400 focus:outline-none"
+                        />
+                        <span className="text-[10px] text-neutral-400 w-7 shrink-0">USD</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="px-5 py-3 border-t border-neutral-100 space-y-1.5 text-sm">
+              {billingModalType === "factura_final" && Array.isArray(preInvoiceSnapshot) && (
+                <>
+                  <div className="flex justify-between text-neutral-500">
+                    <span>Pre-factura</span><span>{fmtModalAmt(preTotal)}</span>
+                  </div>
+                  <div className={`flex justify-between font-medium ${delta >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                    <span>Ajuste</span><span>{delta >= 0 ? "+" : ""}{fmtModalAmt(delta)}</span>
+                  </div>
+                </>
+              )}
+              {billingModalType === "factura_final" && !preInvoiceSnapshot && (
+                <div className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                  Sin pre-factura guardada. Se enviará como factura completa.
+                </div>
+              )}
+              <div className="flex justify-between font-semibold text-neutral-900">
+                <span>Total</span><span>{fmtModalAmt(currentTotal)}</span>
+              </div>
+            </div>
+            <div className="flex gap-2 px-5 pb-5 pt-2">
+              <button type="button" disabled={billingSending || selectedItems.length === 0}
+                onClick={() => runPdf("preview")}
+                className="flex-1 py-2.5 rounded-xl border border-indigo-300 text-sm text-indigo-700 bg-white hover:bg-indigo-50 disabled:opacity-40 font-medium">
+                {billingSending ? "…" : "👁 Preview"}
+              </button>
+              <button type="button" disabled={billingSending || selectedItems.length === 0}
+                onClick={() => runPdf("slack")}
+                className="flex-[2] py-2.5 px-5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-40">
+                {billingSending ? "Enviando…" : "💰 Enviar a Slack"}
+              </button>
+              <button type="button" disabled={billingSending || selectedItems.length === 0}
+                onClick={() => runPdf("download")}
+                className="py-2.5 px-3 rounded-xl border border-neutral-300 text-sm text-neutral-700 bg-white hover:bg-neutral-50 disabled:opacity-40"
+                title="Descargar PDF">
+                ⬇
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
     </div>{/* end overlay */}
     </>
   );
