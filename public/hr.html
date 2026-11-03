@@ -478,7 +478,7 @@ function renderProjects() {
     !searchQ || (p.title||"").toLowerCase().includes(searchQ.toLowerCase())
   );
   const filtered = projSortDate
-    ? [...allFiltered].sort((a,b) => (b.dueDate||"").localeCompare(a.dueDate||""))
+    ? [...allFiltered].sort((a,b) => (a.dueDate||"9999").localeCompare(b.dueDate||"9999"))
     : allFiltered;
 
   const projTable = (list) => `
@@ -486,7 +486,7 @@ function renderProjects() {
       <thead><tr>
         <th>Iniciativa</th>
         <th>Owner</th>
-        <th>Fecha límite</th>
+        <th style="cursor:pointer;user-select:none" onclick="projSortDate=!projSortDate;renderProjects()">Fecha límite ${projSortDate?'↑':''}</th>
         <th>Revisor</th>
         <th>Status</th>
         <th></th>
