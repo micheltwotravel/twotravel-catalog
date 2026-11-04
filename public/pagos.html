@@ -1611,6 +1611,7 @@ const RES_SB_ID = 'co_reservas';
 let reservas = [];
 let resFilterStatus = '';
 let resFilterRep = '';
+let resFilterPeriod = 'nov';
 let _resEditId = null;
 
 const RES_STATUS = {
@@ -1681,7 +1682,8 @@ function renderReservas() {
   let items = reservas.filter(r => {
     const matchS = !resFilterStatus || r.status === resFilterStatus;
     const matchR = !resFilterRep || r.rep === resFilterRep;
-    return matchS && matchR;
+    const matchP = resFilterPeriod !== 'nov' || (r.fechaEntrada||'') >= '2026-11-01';
+    return matchS && matchR && matchP;
   }).sort((a,b) => (a.fechaEntrada||'') > (b.fechaEntrada||'') ? 1 : -1);
 
   const totalPend = reservas.filter(r => r.status !== 'pagado').reduce((s,r) => {
@@ -1699,6 +1701,10 @@ function renderReservas() {
   let html = `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 10px;border-top:2px solid var(--gold);margin-top:24px">
     <span style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)">🏠 Reservas de Alojamiento</span>
     <div style="display:flex;align-items:center;gap:10px">
+      <select class="filter-sel" onchange="resFilterPeriod=this.value;renderReservas()" style="font-size:11px">
+        <option value="nov"${resFilterPeriod==='nov'?' selected':''}>Nov en adelante</option>
+        <option value=""${resFilterPeriod===''?' selected':''}>Todas las fechas</option>
+      </select>
       <select class="filter-sel" onchange="resFilterStatus=this.value;renderReservas()" style="font-size:11px">
         <option value="">Todos los estados</option>
         <option value="pendiente"${resFilterStatus==='pendiente'?' selected':''}>Pendiente</option>
