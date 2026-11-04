@@ -212,6 +212,55 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 
 <div class="main" id="main"></div>
 
+
+<!-- MODAL: Nueva / Editar Reserva -->
+<div class="overlay" id="res-modal" style="display:none" onclick="if(event.target===this)closeResModal()">
+  <div class="modal" style="max-width:580px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <h3 id="res-modal-title" style="margin:0;font-size:16px;font-weight:700">Nueva Reserva</h3>
+      <button onclick="closeResModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink3);line-height:1">×</button>
+    </div>
+    <form onsubmit="saveRes(event)" autocomplete="off">
+      <div style="display:flex;gap:12px;margin-bottom:14px">
+        <div style="flex:1"><label class="form-label">Fecha entrada *</label><input id="r-entrada" type="date" class="form-input" required></div>
+        <div style="flex:1"><label class="form-label">Fecha salida *</label><input id="r-salida" type="date" class="form-input" required></div>
+        <div style="width:80px"><label class="form-label">Pax</label><input id="r-pax" type="number" class="form-input" placeholder="0" min="1"></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:14px">
+        <div style="flex:1"><label class="form-label">Cliente *</label><input id="r-cliente" class="form-input" placeholder="Nombre del cliente" required></div>
+        <div style="flex:1"><label class="form-label">Email</label><input id="r-email" type="email" class="form-input" placeholder="email@ejemplo.com"></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:14px">
+        <div style="flex:1"><label class="form-label">Ciudad</label><input id="r-ciudad" class="form-input" placeholder="Cartagena"></div>
+        <div style="flex:1"><label class="form-label">Propiedad</label><input id="r-propiedad" class="form-input" placeholder="Casa Sebastian"></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:14px">
+        <div style="flex:1"><label class="form-label">Proveedor</label><input id="r-proveedor" class="form-input" placeholder="CVR - Mark"></div>
+        <div style="flex:1"><label class="form-label">Gestionado por</label>
+          <select id="r-rep" class="form-select"><option value="">—</option><option>Alia</option><option>Caro</option><option>Dani</option><option>Lyna</option><option>Michel</option><option>Xilene</option></select>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:14px">
+        <div style="flex:1"><label class="form-label">Precio cliente (USD)</label><input id="r-precio-cliente" type="number" class="form-input" placeholder="3200" min="0"></div>
+        <div style="flex:1"><label class="form-label">Precio nuestro (USD)</label><input id="r-precio-nuestro" type="number" class="form-input" placeholder="2800" min="0"></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:14px">
+        <div style="flex:1"><label class="form-label">Pago recibido (USD)</label><input id="r-pago-recibido" type="number" class="form-input" placeholder="1600" min="0"></div>
+        <div style="flex:1"><label class="form-label">Estado</label>
+          <select id="r-status" class="form-select"><option value="pendiente">Pendiente</option><option value="parcial">Parcial (50%)</option><option value="pagado">Pagado ✓</option></select>
+        </div>
+      </div>
+      <div style="margin-bottom:14px"><label class="form-label">Método de pago</label><input id="r-metodo" class="form-input" placeholder="50% por Venmo — Raymond Rau"></div>
+      <div style="margin-bottom:14px"><label class="form-label">WhatsApp cliente</label><input id="r-phone" class="form-input" placeholder="+1 305 000 0000"></div>
+      <div style="margin-bottom:20px"><label class="form-label">Notas internas</label><textarea id="r-notas" class="form-textarea" rows="2" placeholder="Notas adicionales..."></textarea></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px">
+        <button type="button" class="tbtn" onclick="closeResModal()">Cancelar</button>
+        <button type="submit" class="tbtn primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div id="status-popup" class="status-popup" style="display:none"></div>
 <div id="person-popup" class="person-popup" style="display:none"></div>
 
@@ -890,7 +939,7 @@ function render(){
 
   if(!items.length){
     html += `<div style="text-align:center;padding:60px;color:var(--ink3);font-size:13px">No hay solicitudes. Crea la primera con "+ Nueva solicitud".</div>`;
-    main.innerHTML = html; return;
+    main.innerHTML = html; renderReservas(); return;
   }
 
   html += `<div class="table-wrap"><table class="ptable">
@@ -921,6 +970,7 @@ function render(){
 
   main.innerHTML = html;
   updateBulkBar();
+  renderReservas();
 }
 
 function renderRow(p){
@@ -1556,6 +1606,248 @@ function exportCSV(){
 }
 
 /* ── INIT: apply country mode ── */
+/* ── RESERVAS DE ALOJAMIENTO ── */
+const RES_SB_ID = 'co_reservas';
+let reservas = [];
+let resFilterStatus = '';
+let resFilterRep = '';
+let _resEditId = null;
+
+const RES_STATUS = {
+  pendiente: { label:'Pendiente',    color:'#aaaaaa', bg:'#f5f5f5' },
+  parcial:   { label:'50% parcial',  color:'#d97706', bg:'#fef3c7' },
+  pagado:    { label:'Pagado ✓',     color:'#16a34a', bg:'#dcfce7' },
+};
+
+const INITIAL_RESERVAS = [
+  { id:'res_raymond_rau_jan2027', fechaEntrada:'2027-01-14', fechaSalida:'2027-01-18', pax:5,
+    cliente:'Raymond Rau', email:'raymond.d.rau@gmail.com', ciudad:'Cartagena',
+    propiedad:'Casa Sebastian', proveedor:'CVR - Mark',
+    precioCliente:3200, precioNuestro:2800, pagoRecibido:1600,
+    metodoPago:'50% pagado por Venmo — Raymond Rau', status:'parcial',
+    rep:'Lyna', notas:'Referido por Raymond Kanevsky · Organic Search',
+    phone:'', createdAt:'2026-11-03T14:00:00Z' },
+  { id:'res_vivian_hoffman_jan2027', fechaEntrada:'2027-01-21', fechaSalida:'2027-01-24', pax:30,
+    cliente:'Vivian Hoffman', email:'vivian@whimlove.com', ciudad:'Cartagena',
+    propiedad:'Casa Popular 21', proveedor:'Mark CVR',
+    precioCliente:12000, precioNuestro:10200, pagoRecibido:6000,
+    metodoPago:'50% pagado por Zelle — Vivian Hoffman', status:'parcial',
+    rep:'Lyna', notas:'Direct Traffic (email)',
+    phone:'', createdAt:'2026-11-03T22:51:00Z' },
+];
+
+async function loadReservas() {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/pagos_data?id=eq.${RES_SB_ID}&select=data`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    });
+    const rows = await r.json();
+    if (rows && rows.length > 0 && rows[0].data?.reservas?.length) {
+      reservas = rows[0].data.reservas;
+    } else {
+      reservas = [...INITIAL_RESERVAS];
+      await saveReservas();
+    }
+  } catch(e) {
+    console.error('loadReservas:', e);
+    reservas = [...INITIAL_RESERVAS];
+  }
+  renderReservas();
+}
+
+async function saveReservas() {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/pagos_data`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify({ id: RES_SB_ID, data: { reservas } }),
+    });
+  } catch(e) { console.error('saveReservas:', e); }
+}
+
+function renderReservas() {
+  const mainEl = document.getElementById('main');
+  if (!mainEl) return;
+  let main = document.getElementById('res-section');
+  if (!main) {
+    main = document.createElement('div');
+    main.id = 'res-section';
+    mainEl.appendChild(main);
+  }
+
+  let items = reservas.filter(r => {
+    const matchS = !resFilterStatus || r.status === resFilterStatus;
+    const matchR = !resFilterRep || r.rep === resFilterRep;
+    return matchS && matchR;
+  }).sort((a,b) => (a.fechaEntrada||'') > (b.fechaEntrada||'') ? 1 : -1);
+
+  const totalPend = reservas.filter(r => r.status !== 'pagado').reduce((s,r) => {
+    const pc = parseFloat(r.precioCliente) || 0;
+    const pp = parseFloat(r.pagoRecibido) || 0;
+    return s + Math.max(0, pc - pp);
+  }, 0);
+  const fmtUSD = n => n ? '$' + parseFloat(n).toLocaleString('en', {minimumFractionDigits:0}) : '—';
+  const fmtDate = d => {
+    if (!d) return '—';
+    const dt = new Date(d + 'T12:00:00');
+    return isNaN(dt) ? d : dt.toLocaleDateString('es', {day:'numeric', month:'short', year:'2-digit'});
+  };
+
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 10px;border-top:2px solid var(--gold);margin-top:24px">
+    <span style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)">🏠 Reservas de Alojamiento</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <select class="filter-sel" onchange="resFilterStatus=this.value;renderReservas()" style="font-size:11px">
+        <option value="">Todos los estados</option>
+        <option value="pendiente"${resFilterStatus==='pendiente'?' selected':''}>Pendiente</option>
+        <option value="parcial"${resFilterStatus==='parcial'?' selected':''}>Parcial (50%)</option>
+        <option value="pagado"${resFilterStatus==='pagado'?' selected':''}>Pagado ✓</option>
+      </select>
+      <select class="filter-sel" onchange="resFilterRep=this.value;renderReservas()" style="font-size:11px">
+        <option value="">Todos los reps</option>
+        <option${resFilterRep==='Alia'?' selected':''}>Alia</option><option${resFilterRep==='Caro'?' selected':''}>Caro</option><option${resFilterRep==='Dani'?' selected':''}>Dani</option><option${resFilterRep==='Lyna'?' selected':''}>Lyna</option><option${resFilterRep==='Michel'?' selected':''}>Michel</option><option${resFilterRep==='Xilene'?' selected':''}>Xilene</option>
+      </select>
+      <button class="tbtn primary" onclick="openResModal()">+ Agregar Reserva</button>
+    </div>
+  </div>
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val">${reservas.length}</div><div class="stat-sub">reservas</div></div>
+    <div class="stat-card"><div class="stat-label">Parciales</div><div class="stat-val" style="color:#d97706">${reservas.filter(r=>r.status==='parcial').length}</div><div class="stat-sub">50% pendiente</div></div>
+    <div class="stat-card"><div class="stat-label">Pagadas</div><div class="stat-val" style="color:#16a34a">${reservas.filter(r=>r.status==='pagado').length}</div><div class="stat-sub">completo</div></div>
+    <div class="stat-card"><div class="stat-label">Saldo USD</div><div class="stat-val" style="color:#dc2626;font-size:16px">$${totalPend.toLocaleString('en')}</div><div class="stat-sub">pendiente</div></div>
+  </div>`;
+
+  if (!items.length) {
+    html += `<div style="text-align:center;padding:40px;color:var(--ink3);font-size:13px">Sin resultados.</div>`;
+    main.innerHTML = html; return;
+  }
+
+  html += `<div class="table-wrap"><table class="ptable">
+    <thead><tr>
+      <th>Entrada</th><th>Salida</th>
+      <th style="min-width:140px">Cliente</th>
+      <th>Propiedad</th>
+      <th style="text-align:center">Pax</th>
+      <th>Precio cliente</th><th>Precio nuestro</th><th>Margen</th>
+      <th>Pago recibido</th><th>Saldo pendiente</th>
+      <th>Método pago</th><th>Rep.</th><th>Estado</th><th></th>
+    </tr></thead><tbody>`;
+
+  items.forEach(r => {
+    const st = RES_STATUS[r.status] || RES_STATUS.pendiente;
+    const pc = parseFloat(r.precioCliente) || 0;
+    const pn = parseFloat(r.precioNuestro) || 0;
+    const pp = parseFloat(r.pagoRecibido) || 0;
+    const margen = pc - pn;
+    const saldo = Math.max(0, pc - pp);
+    const m = MEMBERS[r.rep];
+    const avatar = m
+      ? `<span class="person-chip" style="background:${m.bg}" title="${r.rep}">${m.i}</span>`
+      : `<span style="color:var(--ink3);font-size:11px">${r.rep||'—'}</span>`;
+    const waMsg = r.phone
+      ? `Hola ${(r.cliente||'').split(/[\s,]/)[0]}! 👋\n\nTe recordamos que tienes un saldo pendiente de ${fmtUSD(saldo)} USD por tu reserva en ${r.propiedad||''} (${fmtDate(r.fechaEntrada)} – ${fmtDate(r.fechaSalida)}).\n\nPuedes completar el pago con cualquiera de los métodos disponibles aquí:\n${PDF_GENERAL}\n\n¡Gracias! — Two Travel`
+      : '';
+    const waHref = r.phone ? 'https://wa.me/' + r.phone.replace(/\D/g,'') + '?text=' + encodeURIComponent(waMsg) : '';
+
+    html += `<tr>
+      <td><div class="cell">${fmtDate(r.fechaEntrada)}</div></td>
+      <td><div class="cell">${fmtDate(r.fechaSalida)}</div></td>
+      <td><div class="cell" style="font-weight:500">${esc(r.cliente||'')}${r.email?`<div style="font-size:10px;color:var(--ink3)">${esc(r.email)}</div>`:''}</div></td>
+      <td><div class="cell">${esc(r.propiedad||'')}${r.ciudad?`<div style="font-size:10px;color:var(--ink3)">${esc(r.ciudad)}</div>`:''}</div></td>
+      <td style="text-align:center"><div class="cell">${r.pax||'—'}</div></td>
+      <td><div class="cell">${fmtUSD(pc)}</div></td>
+      <td><div class="cell">${fmtUSD(pn)}</div></td>
+      <td><div class="cell" style="color:${margen>0?'#16a34a':'#dc2626'};font-weight:600">${fmtUSD(margen)}</div></td>
+      <td><div class="cell">${fmtUSD(pp)}</div></td>
+      <td><div class="cell" style="color:${saldo>0?'#dc2626':'#16a34a'};font-weight:600">${saldo>0?fmtUSD(saldo):'—'}</div></td>
+      <td><div class="cell" style="font-size:11px;color:var(--ink3);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.metodoPago||'')}</div></td>
+      <td><div class="cell">${avatar}</div></td>
+      <td><div class="cell"><span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;background:${st.bg};color:${st.color}">${st.label}</span></div></td>
+      <td><div class="cell" style="display:flex;gap:5px;padding:4px 8px">
+        <button onclick="openResModal('${r.id}')" style="background:none;border:1px solid var(--border2);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--ink2)" title="Editar">✏</button>
+        ${waHref?`<a href="${waHref}" target="_blank" style="border:1px solid #22c55e;border-radius:4px;padding:3px 8px;font-size:11px;text-decoration:none;color:#16a34a;white-space:nowrap">Cobrar</a>`:''}
+        <button onclick="deleteRes('${r.id}')" style="background:none;border:1px solid var(--border2);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#dc2626" title="Eliminar">✕</button>
+      </div></td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  main.innerHTML = html;
+}
+
+function openResModal(id) {
+  _resEditId = id || null;
+  const r = id ? reservas.find(x => x.id === id) : null;
+  document.getElementById('res-modal-title').textContent = r ? 'Editar Reserva' : 'Nueva Reserva';
+  document.getElementById('r-entrada').value       = r?.fechaEntrada || '';
+  document.getElementById('r-salida').value        = r?.fechaSalida  || '';
+  document.getElementById('r-pax').value           = r?.pax          || '';
+  document.getElementById('r-cliente').value       = r?.cliente      || '';
+  document.getElementById('r-email').value         = r?.email        || '';
+  document.getElementById('r-ciudad').value        = r?.ciudad       || '';
+  document.getElementById('r-propiedad').value     = r?.propiedad    || '';
+  document.getElementById('r-proveedor').value     = r?.proveedor    || '';
+  document.getElementById('r-rep').value           = r?.rep          || '';
+  document.getElementById('r-precio-cliente').value= r?.precioCliente|| '';
+  document.getElementById('r-precio-nuestro').value= r?.precioNuestro|| '';
+  document.getElementById('r-pago-recibido').value = r?.pagoRecibido || '';
+  document.getElementById('r-status').value        = r?.status       || 'pendiente';
+  document.getElementById('r-metodo').value        = r?.metodoPago   || '';
+  document.getElementById('r-phone').value         = r?.phone        || '';
+  document.getElementById('r-notas').value         = r?.notas        || '';
+  document.getElementById('res-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('r-cliente').focus(), 50);
+}
+
+function closeResModal() {
+  document.getElementById('res-modal').style.display = 'none';
+  _resEditId = null;
+}
+
+async function saveRes(e) {
+  e.preventDefault();
+  const existing = _resEditId ? reservas.find(x => x.id === _resEditId) : null;
+  const r = {
+    id:           _resEditId || ('res_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,5)),
+    fechaEntrada: document.getElementById('r-entrada').value,
+    fechaSalida:  document.getElementById('r-salida').value,
+    pax:          parseInt(document.getElementById('r-pax').value) || null,
+    cliente:      document.getElementById('r-cliente').value.trim(),
+    email:        document.getElementById('r-email').value.trim(),
+    ciudad:       document.getElementById('r-ciudad').value.trim(),
+    propiedad:    document.getElementById('r-propiedad').value.trim(),
+    proveedor:    document.getElementById('r-proveedor').value.trim(),
+    rep:          document.getElementById('r-rep').value,
+    precioCliente:parseFloat(document.getElementById('r-precio-cliente').value) || null,
+    precioNuestro:parseFloat(document.getElementById('r-precio-nuestro').value) || null,
+    pagoRecibido: parseFloat(document.getElementById('r-pago-recibido').value) || null,
+    status:       document.getElementById('r-status').value,
+    metodoPago:   document.getElementById('r-metodo').value.trim(),
+    phone:        document.getElementById('r-phone').value.trim(),
+    notas:        document.getElementById('r-notas').value.trim(),
+    createdAt:    existing?.createdAt || new Date().toISOString(),
+  };
+  if (_resEditId) {
+    reservas = reservas.map(x => x.id === _resEditId ? r : x);
+  } else {
+    reservas.unshift(r);
+  }
+  await saveReservas();
+  renderReservas();
+  closeResModal();
+  showToast(`Reserva ${_resEditId ? 'actualizada' : 'creada'} ✓`);
+}
+
+async function deleteRes(id) {
+  if (!confirm('¿Eliminar esta reserva?')) return;
+  reservas = reservas.filter(r => r.id !== id);
+  await saveReservas();
+  renderReservas();
+  showToast('Reserva eliminada');
+}
+
 (function initCountry(){
   const isMX = COUNTRY_MODE === 'mx';
   const color = isMX ? '#c0392b' : '#2e7d32';
@@ -1586,6 +1878,7 @@ loadFromSupabase().then(() => {
     document.getElementById('btn-reminders').style.background = '#fef3c7';
   }
 });
+loadReservas();
 </script>
 <script src="/lang.js"></script>
 </body>
