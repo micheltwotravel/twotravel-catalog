@@ -3515,7 +3515,7 @@ function CalendarioView({ bodas, onSelectBoda }) {
 }
 
 // ─── GLOBAL TASKS VIEW ───────────────────────────────────────────────────────
-function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask }) {
+function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask, onPatchTask }) {
   const today=new Date(); today.setHours(0,0,0,0);
   const [section,setSection]=useState("equipo");
   const [filterPerson,setFilterPerson]=useState("");
@@ -3527,6 +3527,8 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask }) {
   const [addDate,setAddDate]=useState("");
   const [addAssignee,setAddAssignee]=useState("");
   const [saving,setSaving]=useState(false);
+  const [editingKey,setEditingKey]=useState(null);
+  const [editForm,setEditForm]=useState({});
 
   const allTasks=bodas.flatMap(b=>(b.tasks||[]).map(t=>({...t,bodaName:b.clienteName,bodaId:b.id})));
   const isNovios=t=>(t.assignedTo||"")==="Novios";
@@ -3574,6 +3576,8 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask }) {
     }catch(e){alert("Error: "+e.message);}
     setSaving(false);
   }
+  function startEdit(t){ setEditingKey(t.bodaId+":"+t.id); setEditForm({taskName:t.taskName||"",assignedTo:t.assignedTo||"",dueDate:t.dueDate||"",status:t.status||"Pendiente",notes:t.notes||""}); }
+  async function saveEdit(t){ if(!onPatchTask) return; await onPatchTask(t.bodaId,t.id,editForm); setEditingKey(null); }
 
   const TAB_BTN=(id,label,count)=>(
     <button onClick={()=>{setSection(id);setFilterPerson("");setFilterBoda("");setShowAdd(false);}}
@@ -3644,26 +3648,50 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask }) {
       {filtered.length===0&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"16px 0"}}>Sin tareas {section==="novios"?"para novios":"del equipo"}.</p>}
       {filtered.map(t=>{
         const c=cat(t);
+        const eKey=t.bodaId+":"+t.id;
+        const isEditing=editingKey===eKey;
         const rowBg={late:"#fff5f5",today:"#fffbeb",up:R.white}[c];
         const rowBd={late:"#fca5a5",today:"#fcd34d",up:R.border}[c];
         const targetBoda=bodas.find(b=>b.id===t.bodaId);
         return (
           <div key={t.id+t.bodaId}
-            style={{display:"flex",alignItems:"flex-start",gap:10,width:"100%",background:rowBg,border:`1px solid ${rowBd}`,borderRadius:12,padding:"10px 14px",marginBottom:6,fontFamily:"'Jost',sans-serif"}}>
-            <div style={{flex:1,minWidth:0}}>
-              <p style={{fontSize:13,fontWeight:500,color:R.text,margin:0}}>{t.taskName}</p>
-              <div style={{display:"flex",flexWrap:"wrap",gap:"3px 10px",marginTop:3,fontSize:11,color:R.muted}}>
-                <button onClick={()=>onSelectBoda(targetBoda)} style={{background:"none",border:"none",padding:0,cursor:targetBoda?"pointer":"default",fontFamily:"'Jost',sans-serif",display:"flex",alignItems:"center",gap:4}}>
-                  <span style={{color:R.accent,fontWeight:600}}>💍 {t.bodaName}</span>
-                  {targetBoda&&<span style={{fontSize:10,color:R.accent,background:"rgba(201,169,110,.12)",padding:"1px 6px",borderRadius:99}}>→ Ver</span>}
-                </button>
-                {t.assignedTo&&section==="equipo"&&<span>👤 {t.assignedTo}</span>}
-                {t.dueDate&&<span>📅 {t.dueDate}</span>}
-                {t.phase&&t.phase!=="General"&&<span>{t.phase}</span>}
-                {c==="late"&&<span style={{fontWeight:700,color:"#dc2626"}}>⚠️ Atrasada</span>}
-                {c==="today"&&<span style={{fontWeight:700,color:"#d97706"}}>🔥 Hoy</span>}
+            style={{background:isEditing?R.light:rowBg,border:`1px solid ${isEditing?R.accent:rowBd}`,borderRadius:12,padding:"10px 14px",marginBottom:6,fontFamily:"'Jost',sans-serif"}}>
+            {isEditing ? (
+              <div>
+                <input style={{...INP_SM,width:"100%",marginBottom:6,boxSizing:"border-box"}} value={editForm.taskName} onChange={e=>setEditForm(p=>({...p,taskName:e.target.value}))} placeholder="Descripción *" />
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
+                  <select style={INP_SM} value={editForm.assignedTo} onChange={e=>setEditForm(p=>({...p,assignedTo:e.target.value}))}>
+                    <option value="">— responsable —</option>
+                    {(users||[]).filter(u=>u.name).map(u=><option key={u.id||u.name} value={u.name}>{u.name}</option>)}
+                  </select>
+                  <input type="date" style={INP_SM} value={editForm.dueDate} onChange={e=>setEditForm(p=>({...p,dueDate:e.target.value}))} />
+                  <select style={INP_SM} value={editForm.status} onChange={e=>setEditForm(p=>({...p,status:e.target.value}))}>{ESTADOS_TASK.map(s=><option key={s}>{s}</option>)}</select>
+                  <input style={INP_SM} value={editForm.notes} onChange={e=>setEditForm(p=>({...p,notes:e.target.value}))} placeholder="Notas (opcional)" />
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>saveEdit(t)} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"5px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Guardar</button>
+                  <button onClick={()=>setEditingKey(null)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div style={{display:"flex",alignItems:"flex-start",gap:10,width:"100%"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <p style={{fontSize:13,fontWeight:500,color:R.text,margin:0}}>{t.taskName}</p>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:"3px 10px",marginTop:3,fontSize:11,color:R.muted}}>
+                    <button onClick={()=>onSelectBoda(targetBoda)} style={{background:"none",border:"none",padding:0,cursor:targetBoda?"pointer":"default",fontFamily:"'Jost',sans-serif",display:"flex",alignItems:"center",gap:4}}>
+                      <span style={{color:R.accent,fontWeight:600}}>💍 {t.bodaName}</span>
+                      {targetBoda&&<span style={{fontSize:10,color:R.accent,background:"rgba(201,169,110,.12)",padding:"1px 6px",borderRadius:99}}>→ Ver</span>}
+                    </button>
+                    {t.assignedTo&&section==="equipo"&&<span>👤 {t.assignedTo}</span>}
+                    {t.dueDate&&<span>📅 {t.dueDate}</span>}
+                    {t.phase&&t.phase!=="General"&&<span>{t.phase}</span>}
+                    {c==="late"&&<span style={{fontWeight:700,color:"#dc2626"}}>⚠️ Atrasada</span>}
+                    {c==="today"&&<span style={{fontWeight:700,color:"#d97706"}}>🔥 Hoy</span>}
+                  </div>
+                </div>
+                {onPatchTask&&<button onClick={()=>startEdit(t)} style={{color:R.muted,background:"none",border:"none",cursor:"pointer",fontSize:12,padding:"0 2px",flexShrink:0}} title="Editar">✏️</button>}
+              </div>
+            )}
           </div>
         );
       })}
@@ -4040,7 +4068,7 @@ export default function BodaPanel({ currentUser, onLogout, initialBodaId="", ini
         {/* Dashboard view */}
         {mainView==="dashboard"&&!loading&&<GlobalDashboard bodas={bodas} onSelectBoda={b=>{setSelected(b);}} />}
         {mainView==="calendario"&&!loading&&<CalendarioView bodas={bodas} onSelectBoda={b=>{setSelected(b);}} />}
-        {mainView==="tareas"&&!loading&&<GlobalTasksView bodas={bodas} users={users} onSelectBoda={b=>{setSelected(b);}} onAddTask={async(bodaId,task)=>{ const b=bodas.find(x=>x.id===bodaId); if(!b) return; const newTasks=[...(b.tasks||[]),task]; await apiSaveNotes(bodaId,{...b,tasks:newTasks}); setBodas(prev=>prev.map(x=>x.id===bodaId?{...x,tasks:newTasks}:x)); }} />}
+        {mainView==="tareas"&&!loading&&<GlobalTasksView bodas={bodas} users={users} onSelectBoda={b=>{setSelected(b);}} onAddTask={async(bodaId,task)=>{ const b=bodas.find(x=>x.id===bodaId); if(!b) return; const newTasks=[...(b.tasks||[]),task]; await apiSaveNotes(bodaId,{...b,tasks:newTasks}); setBodas(prev=>prev.map(x=>x.id===bodaId?{...x,tasks:newTasks}:x)); }} onPatchTask={async(bodaId,taskId,patch)=>{ const b=bodas.find(x=>x.id===bodaId); if(!b) return; const newTasks=(b.tasks||[]).map(t=>t.id===taskId?{...t,...patch}:t); await apiSaveNotes(bodaId,{...b,tasks:newTasks}); setBodas(prev=>prev.map(x=>x.id===bodaId?{...x,tasks:newTasks}:x)); }} />}
         {mainView==="directorio"&&(
           <Suspense fallback={<div style={{textAlign:"center",padding:"60px 0",color:R.muted,fontSize:13}}>Cargando directorio…</div>}>
             <DirectorioBodas currentUser={currentUser} embedded />
