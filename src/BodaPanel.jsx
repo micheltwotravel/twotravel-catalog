@@ -263,6 +263,8 @@ function TasksTab({ boda, users, onPatch }) {
   const [filterPerson,setFilterPerson]=useState("");
   const [filterSort,setFilterSort]=useState("due");
   const [section,setSection]=useState("equipo");
+  const [editingId,setEditingId]=useState(null);
+  const [editForm,setEditForm]=useState({});
   const today=new Date(); today.setHours(0,0,0,0);
   const isNoviosTask=t=>(t.assignedTo||"")==="Novios";
   // Merge tasks from TareasPanel (tasks table) that belong to this boda
@@ -305,6 +307,8 @@ function TasksTab({ boda, users, onPatch }) {
   async function add(){ if(!blank.taskName.trim()) return; setSaving(true); const assignedTo=section==="novios"?"Novios":blank.assignedTo; const newTask={...blank,assignedTo,id:uid(),createdAt:new Date().toISOString()}; await persist([...tasks,newTask]); if(assignedTo==="Novios") await sendTaskEmail(blank.taskName, blank.dueDate, false); setBlank({taskName:"",assignedTo:"",dueDate:"",status:"Pendiente",phase:"General",notes:""}); setShow(false); setSaving(false); }
   async function toggle(id){ const u=tasks.map(t=>t.id===id?{...t,status:t.status==="Terminado"?"Pendiente":"Terminado"}:t); try{await persist(u);}catch{setTasks(tasks);} }
   async function remove(id){ try{await persist(tasks.filter(t=>t.id!==id));}catch{setTasks(tasks);} }
+  function startEdit(t){ setEditingId(t.id); setEditForm({taskName:t.taskName||"",assignedTo:t.assignedTo||"",dueDate:t.dueDate||"",notes:t.notes||""}); }
+  async function saveEdit(id){ await persist(tasks.map(t=>t.id===id?{...t,...editForm}:t)); setEditingId(null); }
   const allActive=tasks.filter(t=>!["Terminado","Cancelado"].includes(t.status));
   const noviosCount=allActive.filter(isNoviosTask).length;
   const equipoCount=allActive.filter(t=>!isNoviosTask(t)).length;
@@ -375,24 +379,46 @@ function TasksTab({ boda, users, onPatch }) {
       {saveErr&&<p style={{fontSize:11,color:"#b91c1c",background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:8,padding:"6px 12px",marginBottom:8}}>{saveErr}</p>}
       {active.length===0&&!show&&<p style={{fontSize:12,color:R.muted,fontStyle:"italic",padding:"8px 0"}}>Sin tareas activas.</p>}
       {active.map(t=>(
-        <div key={t.id} style={{border:`1px solid ${rowBd(t)}`,borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"flex-start",gap:10,background:rowBg(t),marginBottom:6}}>
-          <button onClick={()=>toggle(t.id)} style={{width:16,height:16,borderRadius:4,border:`1.5px solid ${R.border}`,background:R.white,cursor:"pointer",flexShrink:0,marginTop:2}} />
-          <div style={{flex:1,minWidth:0}}>
-            <p style={{fontSize:13,fontWeight:500,color:R.text,margin:0}}>{t.taskName}</p>
-            <div style={{display:"flex",flexWrap:"wrap",gap:"4px 10px",marginTop:3,fontSize:11,color:R.muted}}>
-              {t.assignedTo&&<span>👤 {t.assignedTo}</span>}
-              {t.dueDate&&<span>📅 {fmtDate(t.dueDate)}</span>}
-              {t.phase&&t.phase!=="General"&&<span style={{color:R.accent}}>{t.phase}</span>}
-              {cat(t)==="late" &&<span style={{fontWeight:600,color:"#dc2626"}}>⚠️ Atrasada</span>}
-              {cat(t)==="today"&&<span style={{fontWeight:600,color:"#d97706"}}>🔥 Hoy</span>}
+        <div key={t.id} style={{border:`1px solid ${editingId===t.id?R.accent:rowBd(t)}`,borderRadius:12,padding:"10px 14px",background:editingId===t.id?R.light:rowBg(t),marginBottom:6}}>
+          {editingId===t.id ? (
+            <div>
+              <input style={{...INP_SM,width:"100%",marginBottom:6}} value={editForm.taskName} onChange={e=>setEditForm(p=>({...p,taskName:e.target.value}))} placeholder="Descripción *" />
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
+                <select style={INP_SM} value={editForm.assignedTo} onChange={e=>setEditForm(p=>({...p,assignedTo:e.target.value}))}>
+                  <option value="">— responsable —</option>
+                  {users.length>0 ? users.map(u=><option key={u.email} value={u.name||u.email}>{u.name||u.email}</option>) : null}
+                </select>
+                <input type="date" style={INP_SM} value={editForm.dueDate} onChange={e=>setEditForm(p=>({...p,dueDate:e.target.value}))} />
+              </div>
+              <input style={{...INP_SM,width:"100%",marginBottom:8}} value={editForm.notes} onChange={e=>setEditForm(p=>({...p,notes:e.target.value}))} placeholder="Notas (opcional)" />
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={()=>saveEdit(t.id)} style={{background:R.accent,color:"#fff",border:"none",borderRadius:8,padding:"5px 14px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Guardar</button>
+                <button onClick={()=>setEditingId(null)} style={{background:"transparent",color:R.muted,border:`1px solid ${R.border}`,borderRadius:8,padding:"5px 12px",fontSize:12,cursor:"pointer",fontFamily:"'Jost',sans-serif"}}>Cancelar</button>
+              </div>
             </div>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
-            {t.assignedTo==="Novios"&&boda.coupleEmail&&(
-              <button onClick={()=>sendTaskEmail(t.taskName,t.dueDate,true)} title="Enviar recordatorio por email" style={{background:"transparent",color:R.gold,border:`1px solid ${R.gold}`,borderRadius:6,padding:"2px 8px",fontSize:10,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'Jost',sans-serif"}}>📧 Recordar</button>
-            )}
-            <button onClick={()=>remove(t.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:14,padding:"0 2px"}}>✕</button>
-          </div>
+          ) : (
+            <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+              <button onClick={()=>toggle(t.id)} style={{width:16,height:16,borderRadius:4,border:`1.5px solid ${R.border}`,background:R.white,cursor:"pointer",flexShrink:0,marginTop:2}} />
+              <div style={{flex:1,minWidth:0}}>
+                <p style={{fontSize:13,fontWeight:500,color:R.text,margin:0}}>{t.taskName}</p>
+                <div style={{display:"flex",flexWrap:"wrap",gap:"4px 10px",marginTop:3,fontSize:11,color:R.muted}}>
+                  {t.assignedTo&&<span>👤 {t.assignedTo}</span>}
+                  {t.dueDate&&<span>📅 {fmtDate(t.dueDate)}</span>}
+                  {t.phase&&t.phase!=="General"&&<span style={{color:R.accent}}>{t.phase}</span>}
+                  {t.notes&&<span style={{fontStyle:"italic"}}>{t.notes}</span>}
+                  {cat(t)==="late" &&<span style={{fontWeight:600,color:"#dc2626"}}>⚠️ Atrasada</span>}
+                  {cat(t)==="today"&&<span style={{fontWeight:600,color:"#d97706"}}>🔥 Hoy</span>}
+                </div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
+                {t.assignedTo==="Novios"&&boda.coupleEmail&&(
+                  <button onClick={()=>sendTaskEmail(t.taskName,t.dueDate,true)} title="Enviar recordatorio por email" style={{background:"transparent",color:R.gold,border:`1px solid ${R.gold}`,borderRadius:6,padding:"2px 8px",fontSize:10,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'Jost',sans-serif"}}>📧 Recordar</button>
+                )}
+                <button onClick={()=>startEdit(t)} style={{color:R.muted,background:"none",border:"none",cursor:"pointer",fontSize:12,padding:"0 2px"}} title="Editar">✏️</button>
+                <button onClick={()=>remove(t.id)} style={{color:R.border,background:"none",border:"none",cursor:"pointer",fontSize:14,padding:"0 2px"}}>✕</button>
+              </div>
+            </div>
+          )}
         </div>
       ))}
       {done.length>0&&(
@@ -3816,7 +3842,13 @@ export default function BodaPanel({ currentUser, onLogout, initialBodaId="", ini
   const loadUsers = useCallback(() => {
     fetch(GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({action:"listUsers"}) })
       .then(r => r.json())
-      .then(uRes => { setUsers(Array.isArray(uRes?.data) ? uRes.data.filter(u => u.active !== "false") : []); })
+      .then(uRes => {
+        const gasUsers = Array.isArray(uRes?.data) ? uRes.data.filter(u => u.active !== "false") : [];
+        const always = [{ name:"Oskalia", email:"oskalia@two.travel" }];
+        const merged = [...gasUsers];
+        always.forEach(a => { if (!merged.some(u => u.email===a.email || u.name===a.name)) merged.push(a); });
+        setUsers(merged);
+      })
       .catch(() => {});
   }, []);
 
