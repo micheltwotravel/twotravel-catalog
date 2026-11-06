@@ -1205,7 +1205,7 @@ export function FinanceReservaciones() {
   const addRow = () => {
     const blank = {
       name:"", conciergeRep:"", logisticRep:"", dealSource:"", areaCustomerType:"Concierge",
-      fecha:monthF!=="all"?monthF+"-01":"", checkOut:"", fechaConfirmacion:"", provider:"", serviceCategory:"", city:"",
+      fecha:monthF!=="all"?monthF+"-01":new Date().toISOString().slice(0,10), checkOut:"", fechaConfirmacion:"", provider:"", serviceCategory:"", city:"",
       serviceDescription:"", qty:"", hora:"", precioCOP:"", tax:"", precioProveedor:"",
       consumos:"", clientTotalUSD:"", banco:"", currency:"COP", hasCommission:"",
       commissionPct:"", totalCommission:"", servicesStatus:"Pending", reflejo:"",
