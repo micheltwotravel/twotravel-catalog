@@ -1600,7 +1600,7 @@ const STATUS_PROV = { pendiente:{label:"Pendiente",color:"#fef3c7",text:"#92400e
 const STATUS_CONTABLE = { "":{label:"—",color:"#f3f4f6",text:"#6b7280"}, contabilizado:{label:"Contabilizado",color:"#dcfce7",text:"#166534"}, en_curso:{label:"En curso",color:"#fef3c7",text:"#92400e"}, bloqueado:{label:"Bloqueado",color:"#fee2e2",text:"#991b1b"} };
 
 function emptyProvForm(today) {
-  return { concepto:"", provId:"", provNombre:"", provTipoId:"NIT", banco:"BANCOLOMBIA", tipoCuenta:"Cuenta de Ahorro", numeroCuenta:"", amount:"", currency:"COP", category:"", area:"Concierge", clase:"Colombia: Cartagena", priority:"Media", dueDate:today, client:"", notes:"", requestedBy:"", assignedTo:"", payFreq:"Única", invoiceUrl:"", soporteUrl:"", prebill:false, lote:today, retencionServicio:false, retencionICA:false };
+  return { concepto:"", provId:"", provNombre:"", provTipoId:"NIT", banco:"BANCOLOMBIA", tipoCuenta:"Cuenta de Ahorro", numeroCuenta:"", amount:"", currency:"COP", category:"", area:"Concierge", clase:"Colombia: Cartagena", priority:"Media", dueDate:today, client:"", notes:"", requestedBy:"", assignedTo:"", payFreq:"Única", invoiceUrl:"", soporteUrl:"", prebill:false, lote:today, retencionTipo:"" };
 }
 
 async function uploadSoporte(file, rowId) {
@@ -1628,6 +1628,45 @@ const FGrp = ({ label, children, half }) => (
   </div>
 );
 const SecHead = ({ children }) => <div style={{fontSize:11,fontWeight:700,color:GOLD,marginBottom:10,textTransform:"uppercase",letterSpacing:.6}}>{children}</div>;
+
+const RETENCIONES_CO = [
+  { key:"compras_decl",       label:"Compras generales (declarantes)",                    rate:0.025,  baseMin:523740 },
+  { key:"compras_no_decl",    label:"Compras generales (no declarantes)",                 rate:0.035,  baseMin:523740 },
+  { key:"tarjeta",            label:"Compras tarjeta débito/crédito",                     rate:0.015,  baseMin:0 },
+  { key:"bienes_agro",        label:"Bienes agrícolas/pecuarios sin procesamiento",       rate:0.015,  baseMin:3666180 },
+  { key:"combustibles",       label:"Combustibles derivados del petróleo",                rate:0.001,  baseMin:0 },
+  { key:"inmueble_viv_1",     label:"Bienes raíces vivienda (≤ 10.000 UVT)",             rate:0.01,   baseMin:0 },
+  { key:"inmueble_viv_2",     label:"Bienes raíces vivienda (> 10.000 UVT)",             rate:0.025,  baseMin:523740000 },
+  { key:"inmueble_otros",     label:"Bienes raíces uso distinto a vivienda",              rate:0.025,  baseMin:0 },
+  { key:"svc_decl",           label:"Servicios generales (declarantes)",                  rate:0.04,   baseMin:104748 },
+  { key:"svc_no_decl",        label:"Servicios generales (no declarantes)",               rate:0.06,   baseMin:104748 },
+  { key:"hotel_rest",         label:"Hoteles, restaurantes y hospedaje",                  rate:0.035,  baseMin:104748 },
+  { key:"transporte_carga",   label:"Transporte de carga",                                rate:0.01,   baseMin:104748 },
+  { key:"transporte_pax_terr",label:"Transporte pasajeros terrestre",                     rate:0.035,  baseMin:523740 },
+  { key:"transporte_pax_aer", label:"Transporte pasajeros aéreo/marítimo",               rate:0.01,   baseMin:104748 },
+  { key:"empleo_temporal",    label:"Servicios temporales de empleo (AIU)",               rate:0.01,   baseMin:104748 },
+  { key:"vigilancia_aseo",    label:"Vigilancia y aseo (AIU)",                            rate:0.02,   baseMin:104748 },
+  { key:"construccion",       label:"Contratos de construcción y urbanización",           rate:0.02,   baseMin:523740 },
+  { key:"arrend_inmueble",    label:"Arrendamiento bienes inmuebles",                     rate:0.035,  baseMin:523740 },
+  { key:"arrend_mueble",      label:"Arrendamiento bienes muebles",                       rate:0.04,   baseMin:0 },
+  { key:"honorarios_jur",     label:"Honorarios/comisiones (pers. jurídica)",             rate:0.11,   baseMin:0 },
+  { key:"honorarios_nat_decl",label:"Honorarios/comisiones (pers. natural declarante)",  rate:0.11,   baseMin:0 },
+  { key:"honorarios_nat_no",  label:"Honorarios/comisiones (pers. natural no decl.)",    rate:0.10,   baseMin:0 },
+  { key:"software",           label:"Software y consultoría informática",                 rate:0.035,  baseMin:0 },
+  { key:"rendimientos",       label:"Rendimientos financieros e intereses",               rate:0.07,   baseMin:0 },
+  { key:"loterias",           label:"Loterías, rifas y apuestas",                        rate:0.20,   baseMin:2513952 },
+  { key:"retelva",            label:"Retelva 15% (base: IVA 19%)",                       rate:0.15,   baseMin:0, baseType:"iva" },
+];
+
+function calcNeto(amount, retencionTipo) {
+  const b = parseFloat(amount) || 0;
+  if (!retencionTipo) return b;
+  const def = RETENCIONES_CO.find(r=>r.key===retencionTipo);
+  if (!def) return b;
+  if (def.baseType === "iva") return Math.round(b - b * 0.19 * def.rate);
+  if (b < def.baseMin) return b;
+  return Math.round(b - b * def.rate);
+}
 
 export function FinancePagosProveedores() {
   const today = new Date().toISOString().slice(0,10);
@@ -1722,8 +1761,8 @@ export function FinancePagosProveedores() {
     catch(ex) { showToastMsg("Error: "+ex.message); }
   }
 
-  async function toggleRetencion(id, field, val) {
-    const updated = rows.map(r=>r.id===id?{...r,[field]:val}:r);
+  async function setRetencion(id, tipo) {
+    const updated = rows.map(r=>r.id===id?{...r,retencionTipo:tipo}:r);
     setRows(updated);
     try { await saveSolicitudes(updated); }
     catch(ex) { showToastMsg("Error: "+ex.message); }
@@ -1873,7 +1912,7 @@ export function FinancePagosProveedores() {
                     <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                       <thead>
                         <tr style={{background:BG,borderBottom:`1px solid ${BRD}`}}>
-                          {["ID","Nombre","Monto bruto","Ret. 3.5%","ICA 0.856%","Neto","Concepto","Cliente","Área","Clase","Prior.","Vcto","Estado","Contable","Soporte",""].map(h=>(
+                          {["ID","Nombre","Monto bruto","Ret. fuente","Neto","Concepto","Cliente","Área","Clase","Prior.","Vcto","Estado","Contable","Soporte",""].map(h=>(
                             <th key={h} style={{padding:"5px 6px",textAlign:"left",fontWeight:600,color:MUT,fontSize:10,textTransform:"uppercase",letterSpacing:.3,whiteSpace:"nowrap"}}>{h}</th>
                           ))}
                         </tr>
@@ -1887,14 +1926,17 @@ export function FinancePagosProveedores() {
                               <td style={{padding:"5px 6px",color:MUT,fontFamily:"monospace",fontSize:10,whiteSpace:"nowrap"}} title={r.provId||""}>{pid}</td>
                               <td style={{padding:"5px 6px",fontWeight:600,color:DARK,whiteSpace:"nowrap",maxWidth:140,overflow:"hidden",textOverflow:"ellipsis"}}>{r.provNombre||"—"}</td>
                               <td style={{padding:"5px 6px",fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontWeight:600,fontSize:11}}>{pFmt(r.amount,r.currency)}</td>
-                              <td style={{padding:"5px 6px",textAlign:"center"}}>
-                                <input type="checkbox" checked={!!r.retencionServicio} onChange={e=>toggleRetencion(r.id,"retencionServicio",e.target.checked)} title="Aplica retención de servicio 3.5%" style={{cursor:"pointer",width:14,height:14}}/>
+                              <td style={{padding:"4px 6px",minWidth:160}}>
+                                <select value={r.retencionTipo||""} onChange={e=>setRetencion(r.id,e.target.value)}
+                                  style={{width:"100%",fontSize:10,padding:"2px 4px",border:`1px solid ${BRD}`,borderRadius:3,background:WHT,color:r.retencionTipo?"#b45309":MUT,cursor:"pointer"}}>
+                                  <option value="">– Sin retención –</option>
+                                  {RETENCIONES_CO.map(rc=>(
+                                    <option key={rc.key} value={rc.key}>{rc.label} ({(rc.rate*100).toFixed(rc.rate<0.01?1:rc.rate===Math.round(rc.rate*10)/10?0:1)}%)</option>
+                                  ))}
+                                </select>
                               </td>
-                              <td style={{padding:"5px 6px",textAlign:"center"}}>
-                                <input type="checkbox" checked={!!r.retencionICA} onChange={e=>toggleRetencion(r.id,"retencionICA",e.target.checked)} title="Aplica ICA 0.856%" style={{cursor:"pointer",width:14,height:14}}/>
-                              </td>
-                              <td style={{padding:"5px 6px",fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontSize:11,color:(r.retencionServicio||r.retencionICA)?"#b45309":MUT}}>
-                                {(()=>{const b=parseFloat(r.amount)||0;const n=b-(r.retencionServicio?b*0.035:0)-(r.retencionICA?b*0.00856:0);return pFmt(Math.round(n),r.currency);})()}
+                              <td style={{padding:"5px 6px",fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontSize:11,color:r.retencionTipo?"#b45309":MUT}}>
+                                {pFmt(calcNeto(r.amount,r.retencionTipo),r.currency)}
                               </td>
                               <td style={{padding:"5px 6px",color:DARK,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:11}} title={r.concepto}>{r.concepto||"—"}</td>
                               <td style={{padding:"5px 6px",color:MUT,whiteSpace:"nowrap",maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",fontSize:11}} title={r.client}>{r.client||"—"}</td>
