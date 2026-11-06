@@ -1722,6 +1722,13 @@ export function FinancePagosProveedores() {
     catch(ex) { showToastMsg("Error: "+ex.message); }
   }
 
+  async function toggleRetencion(id, field, val) {
+    const updated = rows.map(r=>r.id===id?{...r,[field]:val}:r);
+    setRows(updated);
+    try { await saveSolicitudes(updated); }
+    catch(ex) { showToastMsg("Error: "+ex.message); }
+  }
+
   async function copyRow(r) {
     const newLote = prompt("Lote destino (YYYY-MM-DD):", today) || today;
     const newId = Date.now().toString(36)+Math.random().toString(36).slice(2,5);
@@ -1866,7 +1873,7 @@ export function FinancePagosProveedores() {
                     <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                       <thead>
                         <tr style={{background:BG,borderBottom:`1px solid ${BRD}`}}>
-                          {["ID","Nombre","Monto","Concepto","Cliente","Área","Clase","Prior.","Vcto","Estado","Contable","Soporte",""].map(h=>(
+                          {["ID","Nombre","Monto bruto","Ret. 3.5%","ICA 0.856%","Neto","Concepto","Cliente","Área","Clase","Prior.","Vcto","Estado","Contable","Soporte",""].map(h=>(
                             <th key={h} style={{padding:"5px 6px",textAlign:"left",fontWeight:600,color:MUT,fontSize:10,textTransform:"uppercase",letterSpacing:.3,whiteSpace:"nowrap"}}>{h}</th>
                           ))}
                         </tr>
@@ -1879,9 +1886,15 @@ export function FinancePagosProveedores() {
                             <tr key={r.id} style={{borderBottom:`1px solid ${BRD}`,background:i%2===0?WHT:BG}}>
                               <td style={{padding:"5px 6px",color:MUT,fontFamily:"monospace",fontSize:10,whiteSpace:"nowrap"}} title={r.provId||""}>{pid}</td>
                               <td style={{padding:"5px 6px",fontWeight:600,color:DARK,whiteSpace:"nowrap",maxWidth:140,overflow:"hidden",textOverflow:"ellipsis"}}>{r.provNombre||"—"}</td>
-                              <td style={{padding:"5px 6px",whiteSpace:"nowrap"}}>
-                                <div style={{fontVariantNumeric:"tabular-nums",fontWeight:600,fontSize:11}}>{pFmt(r.amount,r.currency)}</div>
-                                {(r.retencionServicio||r.retencionICA)&&(()=>{const b=parseFloat(r.amount)||0;const n=b-(r.retencionServicio?b*0.035:0)-(r.retencionICA?b*0.00856:0);return <div style={{fontSize:9,color:"#b45309",marginTop:1}}>Neto: {pFmt(Math.round(n),r.currency)}</div>;})()}
+                              <td style={{padding:"5px 6px",fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontWeight:600,fontSize:11}}>{pFmt(r.amount,r.currency)}</td>
+                              <td style={{padding:"5px 6px",textAlign:"center"}}>
+                                <input type="checkbox" checked={!!r.retencionServicio} onChange={e=>toggleRetencion(r.id,"retencionServicio",e.target.checked)} title="Aplica retención de servicio 3.5%" style={{cursor:"pointer",width:14,height:14}}/>
+                              </td>
+                              <td style={{padding:"5px 6px",textAlign:"center"}}>
+                                <input type="checkbox" checked={!!r.retencionICA} onChange={e=>toggleRetencion(r.id,"retencionICA",e.target.checked)} title="Aplica ICA 0.856%" style={{cursor:"pointer",width:14,height:14}}/>
+                              </td>
+                              <td style={{padding:"5px 6px",fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontSize:11,color:(r.retencionServicio||r.retencionICA)?"#b45309":MUT}}>
+                                {(()=>{const b=parseFloat(r.amount)||0;const n=b-(r.retencionServicio?b*0.035:0)-(r.retencionICA?b*0.00856:0);return pFmt(Math.round(n),r.currency);})()}
                               </td>
                               <td style={{padding:"5px 6px",color:DARK,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:11}} title={r.concepto}>{r.concepto||"—"}</td>
                               <td style={{padding:"5px 6px",color:MUT,whiteSpace:"nowrap",maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",fontSize:11}} title={r.client}>{r.client||"—"}</td>
@@ -2014,29 +2027,6 @@ export function FinancePagosProveedores() {
                       <FGrp label="Monto *" half><input {...PINP()} type="number" min="0" value={form.amount} onChange={e=>upd("amount",e.target.value)} placeholder="349000" required/></FGrp>
                       <FGrp label="Moneda" half><select {...PSEL()} value={form.currency} onChange={e=>upd("currency",e.target.value)}>{["COP","USD","MXN"].map(c=><option key={c}>{c}</option>)}</select></FGrp>
                     </div>
-                    <div style={{display:"flex",gap:20,flexWrap:"wrap",marginTop:10}}>
-                      <label style={{fontSize:12,display:"flex",alignItems:"center",gap:6,cursor:"pointer"}}>
-                        <input type="checkbox" checked={!!form.retencionServicio} onChange={e=>upd("retencionServicio",e.target.checked)}/> Ret. Servicio 3.5%
-                      </label>
-                      <label style={{fontSize:12,display:"flex",alignItems:"center",gap:6,cursor:"pointer"}}>
-                        <input type="checkbox" checked={!!form.retencionICA} onChange={e=>upd("retencionICA",e.target.checked)}/> ICA 0.856%
-                      </label>
-                    </div>
-                    {(form.retencionServicio||form.retencionICA)&&(()=>{
-                      const bruto=parseFloat(form.amount)||0;
-                      const rServ=form.retencionServicio?bruto*0.035:0;
-                      const rICA=form.retencionICA?bruto*0.00856:0;
-                      const neto=bruto-rServ-rICA;
-                      const fmt=n=>"$"+Math.round(n).toLocaleString("es-CO")+" "+(form.currency||"COP");
-                      return (
-                        <div style={{background:"#fef9ec",border:"1px solid #fde68a",borderRadius:6,padding:"10px 14px",fontSize:12,marginTop:10}}>
-                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:4,color:DARK}}><span>Monto bruto</span><span style={{fontVariantNumeric:"tabular-nums"}}>{fmt(bruto)}</span></div>
-                          {form.retencionServicio&&<div style={{display:"flex",justifyContent:"space-between",marginBottom:4,color:"#b45309"}}><span>− Ret. Servicio (3.5%)</span><span style={{fontVariantNumeric:"tabular-nums"}}>−{fmt(rServ)}</span></div>}
-                          {form.retencionICA&&<div style={{display:"flex",justifyContent:"space-between",marginBottom:8,color:"#b45309"}}><span>− ICA (0.856%)</span><span style={{fontVariantNumeric:"tabular-nums"}}>−{fmt(rICA)}</span></div>}
-                          <div style={{display:"flex",justifyContent:"space-between",fontWeight:700,color:DARK,borderTop:"1px solid #fde68a",paddingTop:6}}><span>Valor neto a pagar</span><span style={{fontVariantNumeric:"tabular-nums"}}>{fmt(neto)}</span></div>
-                        </div>
-                      );
-                    })()}
                   </div>
 
                   <div style={{borderTop:`1px solid ${BRD}`,paddingTop:12}}>
