@@ -1600,7 +1600,7 @@ const STATUS_PROV = { pendiente:{label:"Pendiente",color:"#fef3c7",text:"#92400e
 const STATUS_CONTABLE = { "":{label:"—",color:"#f3f4f6",text:"#6b7280"}, contabilizado:{label:"Contabilizado",color:"#dcfce7",text:"#166534"}, en_curso:{label:"En curso",color:"#fef3c7",text:"#92400e"}, bloqueado:{label:"Bloqueado",color:"#fee2e2",text:"#991b1b"} };
 
 function emptyProvForm(today) {
-  return { concepto:"", provId:"", provNombre:"", provTipoId:"NIT", banco:"BANCOLOMBIA", tipoCuenta:"Cuenta de Ahorro", numeroCuenta:"", amount:"", currency:"COP", category:"", area:"Concierge", clase:"Colombia: Cartagena", priority:"Media", dueDate:today, client:"", notes:"", requestedBy:"", assignedTo:"", payFreq:"Única", invoiceUrl:"", soporteUrl:"", prebill:false, lote:today, retencionTipo:"" };
+  return { concepto:"", provId:"", provNombre:"", provTipoId:"NIT", banco:"BANCOLOMBIA", tipoCuenta:"Cuenta de Ahorro", numeroCuenta:"", amount:"", currency:"COP", category:"", area:"Concierge", clase:"Colombia: Cartagena", priority:"Media", dueDate:today, client:"", notes:"", requestedBy:"", assignedTo:"", payFreq:"Única", invoiceUrl:"", soporteUrl:"", prebill:false, lote:today, retencionTipo:"", retencionBase:"" };
 }
 
 async function uploadSoporte(file, rowId) {
@@ -1655,17 +1655,21 @@ const RETENCIONES_CO = [
   { key:"software",           label:"Software y consultoría informática",                 rate:0.035,  baseMin:0 },
   { key:"rendimientos",       label:"Rendimientos financieros e intereses",               rate:0.07,   baseMin:0 },
   { key:"loterias",           label:"Loterías, rifas y apuestas",                        rate:0.20,   baseMin:2513952 },
-  { key:"retelva",            label:"Retelva 15% (base: IVA 19%)",                       rate:0.15,   baseMin:0, baseType:"iva" },
+  { key:"retelva",            label:"Retelva 15% (sobre valor IVA)",                     rate:0.15,   baseMin:0 },
+  { key:"ica_ctg",            label:"ICA Cartagena (0.856‰)",                             rate:0.00856,baseMin:0 },
+  { key:"ica_bog",            label:"ICA Bogotá (0.966‰)",                               rate:0.00966,baseMin:0 },
+  { key:"ica_med",            label:"ICA Medellín (0.414‰)",                             rate:0.00414,baseMin:0 },
 ];
 
-function calcNeto(amount, retencionTipo) {
-  const b = parseFloat(amount) || 0;
-  if (!retencionTipo) return b;
+// base: monto sobre el que aplica la tarifa (puede ser distinto al total si hay IVA)
+function calcNeto(amount, retencionTipo, retencionBase) {
+  const total = parseFloat(amount) || 0;
+  if (!retencionTipo) return total;
   const def = RETENCIONES_CO.find(r=>r.key===retencionTipo);
-  if (!def) return b;
-  if (def.baseType === "iva") return Math.round(b - b * 0.19 * def.rate);
-  if (b < def.baseMin) return b;
-  return Math.round(b - b * def.rate);
+  if (!def) return total;
+  const base = parseFloat(retencionBase) || total;
+  if (base < def.baseMin) return total;
+  return Math.round(total - base * def.rate);
 }
 
 export function FinancePagosProveedores() {
@@ -1762,9 +1766,18 @@ export function FinancePagosProveedores() {
   }
 
   async function setRetencion(id, tipo) {
-    const updated = rows.map(r=>r.id===id?{...r,retencionTipo:tipo}:r);
+    const updated = rows.map(r=>r.id===id?{...r,retencionTipo:tipo,retencionBase:""}:r);
     setRows(updated);
     try { await saveSolicitudes(updated); }
+    catch(ex) { showToastMsg("Error: "+ex.message); }
+  }
+
+  function editRetencionBase(id, val) {
+    setRows(prev=>prev.map(r=>r.id===id?{...r,retencionBase:val}:r));
+  }
+
+  async function saveRetencionBase(id) {
+    try { await saveSolicitudes(rows); }
     catch(ex) { showToastMsg("Error: "+ex.message); }
   }
 
@@ -1926,17 +1939,26 @@ export function FinancePagosProveedores() {
                               <td style={{padding:"5px 6px",color:MUT,fontFamily:"monospace",fontSize:10,whiteSpace:"nowrap"}} title={r.provId||""}>{pid}</td>
                               <td style={{padding:"5px 6px",fontWeight:600,color:DARK,whiteSpace:"nowrap",maxWidth:140,overflow:"hidden",textOverflow:"ellipsis"}}>{r.provNombre||"—"}</td>
                               <td style={{padding:"5px 6px",fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontWeight:600,fontSize:11}}>{pFmt(r.amount,r.currency)}</td>
-                              <td style={{padding:"4px 6px",minWidth:160}}>
+                              <td style={{padding:"4px 6px",minWidth:170}}>
                                 <select value={r.retencionTipo||""} onChange={e=>setRetencion(r.id,e.target.value)}
                                   style={{width:"100%",fontSize:10,padding:"2px 4px",border:`1px solid ${BRD}`,borderRadius:3,background:WHT,color:r.retencionTipo?"#b45309":MUT,cursor:"pointer"}}>
                                   <option value="">– Sin retención –</option>
                                   {RETENCIONES_CO.map(rc=>(
-                                    <option key={rc.key} value={rc.key}>{rc.label} ({(rc.rate*100).toFixed(rc.rate<0.01?1:rc.rate===Math.round(rc.rate*10)/10?0:1)}%)</option>
+                                    <option key={rc.key} value={rc.key}>{rc.label}</option>
                                   ))}
                                 </select>
+                                {r.retencionTipo&&(
+                                  <input type="text" inputMode="numeric"
+                                    value={r.retencionBase||""}
+                                    onChange={e=>editRetencionBase(r.id,e.target.value)}
+                                    onBlur={()=>saveRetencionBase(r.id)}
+                                    placeholder={`Base: ${(parseFloat(r.amount)||0).toLocaleString("es-CO")}`}
+                                    style={{width:"100%",fontSize:10,marginTop:3,padding:"2px 4px",border:`1px solid ${BRD}`,borderRadius:3,color:"#92400e",background:"#fefce8"}}
+                                    title="Base para calcular la retención (ej: valor sin IVA). Vacío = monto total"/>
+                                )}
                               </td>
                               <td style={{padding:"5px 6px",fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontSize:11,color:r.retencionTipo?"#b45309":MUT}}>
-                                {pFmt(calcNeto(r.amount,r.retencionTipo),r.currency)}
+                                {pFmt(calcNeto(r.amount,r.retencionTipo,r.retencionBase),r.currency)}
                               </td>
                               <td style={{padding:"5px 6px",color:DARK,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:11}} title={r.concepto}>{r.concepto||"—"}</td>
                               <td style={{padding:"5px 6px",color:MUT,whiteSpace:"nowrap",maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",fontSize:11}} title={r.client}>{r.client||"—"}</td>
