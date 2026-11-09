@@ -1386,14 +1386,13 @@ export function FinanceReservaciones({ currentUser }) {
           </button>
         )}
         <button onClick={()=>{
-          const today = new Date().toISOString().slice(0,10);
-          const in90  = new Date(Date.now()+90*864e5).toISOString().slice(0,10);
-          setDateFrom(today); setDateTo(in90);
+          setDateFrom(""); setDateTo("");
           setMonthF("all"); setStatusF("Confirmed");
+          setSortCol("createdAt"); setSortDir(-1);
         }}
           style={{padding:"7px 12px",fontSize:12,fontWeight:600,whiteSpace:"nowrap",
             background:"#eff6ff",color:"#1d4ed8",border:"1px solid #93c5fd",borderRadius:8,cursor:"pointer"}}>
-          📅 Próximos 90d
+          🆕 Recién llegadas
         </button>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar…"
           style={{...INP,width:150,padding:"7px 12px",fontSize:12}} />
