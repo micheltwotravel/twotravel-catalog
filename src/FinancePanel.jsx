@@ -1504,6 +1504,26 @@ export function FinanceReservaciones({ currentUser }) {
                                     marginBottom:4,display:"block",width:"100%",whiteSpace:"nowrap"}}
                                   title="Confirmar esta reservación de HubSpot">✓ OK</button>
                               )}
+                              <button onClick={()=>{
+                                const lines=[
+                                  `Customer: ${r.name||""}`,
+                                  `Check In: ${r.fecha||""}`,
+                                  r.checkOut?`Check Out: ${r.checkOut}`:"",
+                                  r.city?`City: ${r.city}`:"",
+                                  r.serviceDescription?`Item: ${r.serviceDescription}`:"",
+                                  r.provider?`Provider: ${r.provider}`:"",
+                                  r.clientTotalUSD?`Amount: $${r.clientTotalUSD} USD`:"",
+                                  r.qty?`Pax: ${r.qty}`:"",
+                                  r.conciergeRep?`Rep: ${r.conciergeRep}`:"",
+                                  r.dealSource?`Source: ${r.dealSource}`:"",
+                                ].filter(Boolean).join("\n");
+                                navigator.clipboard?.writeText(lines).catch(()=>{});
+                                window.open("https://app.qbo.intuit.com/app/estimate?action=create","_blank");
+                              }}
+                                style={{background:"#eff6ff",border:"1px solid #93c5fd",color:"#1d4ed8",
+                                  cursor:"pointer",fontSize:11,padding:"3px 7px",borderRadius:6,fontWeight:700,
+                                  marginBottom:4,display:"block",width:"100%",whiteSpace:"nowrap"}}
+                                title="Crear estimado en QuickBooks (copia datos al clipboard)">→ QB</button>
                               <button onClick={()=>deleteRow(rowIdx)}
                                 style={{background:"#fee2e2",border:"1px solid #fca5a5",color:"#dc2626",
                                   cursor:"pointer",fontSize:12,lineHeight:1,padding:"3px 7px",
