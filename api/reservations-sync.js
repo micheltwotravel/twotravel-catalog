@@ -110,23 +110,28 @@ export default async function handler(req, res) {
       hsRows.push(dealToRow(deal.id,props,guestName,guestEmail));
     }
 
-    // 3. Load existing Supabase data — keep manual rows (no _source or _source=manual)
+    // 3. Load existing Supabase data — keep manual + slack rows (they take precedence over HubSpot)
     const { data: existing } = await supabase
       .from("kickoffs").select("data").eq("id", SUPABASE_ID).maybeSingle();
     const d = existing?.data||{};
     const notes = typeof d.internalNotes==="string" ? JSON.parse(d.internalNotes) : (d.internalNotes||{});
     const existingRows = notes.reservations||[];
-    const manualRows = existingRows.filter(r=>!r._source||r._source==="manual");
+    const preservedRows = existingRows.filter(r=>!r._source||r._source==="manual"||r._source?.startsWith("slack"));
 
-    // 4. Merge: HubSpot rows + manual rows, sorted by fecha desc
-    const merged = [...hsRows, ...manualRows]
+    // 4. Merge: HubSpot rows + preserved rows; preserved rows win on name+fecha dedup
+    const preservedKeys = new Set(preservedRows.map(r=>`${(r.name||"").toLowerCase().trim()}|${r.fecha||""}`));
+    const filteredHsRows = hsRows.filter(r=>{
+      const k=`${(r.name||"").toLowerCase().trim()}|${r.fecha||""}`;
+      return !preservedKeys.has(k);
+    });
+    const merged = [...filteredHsRows, ...preservedRows]
       .sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
 
     // 5. Save back
     const newData = { ...d, internalNotes: JSON.stringify({...notes, reservations:merged}) };
     await supabase.from("kickoffs").upsert({ id:SUPABASE_ID, data:newData }, { onConflict:"id" });
 
-    res.json({ ok:true, count:merged.length, hubspot:hsRows.length, manual:manualRows.length });
+    res.json({ ok:true, count:merged.length, hubspot:filteredHsRows.length, preserved:preservedRows.length });
   } catch(err) {
     console.error("reservations-sync error:", err);
     res.status(500).json({ error:err.message });

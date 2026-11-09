@@ -1881,7 +1881,9 @@ function crearSolicitudDesdeReserva(id) {
   const desc = [r.item, r.ciudad, r.fechaEntrada ? fmtDateShort(r.fechaEntrada) + (r.fechaSalida ? ' → ' + fmtDateShort(r.fechaSalida) : '') : ''].filter(Boolean).join(' · ');
   document.getElementById('n-desc').value = desc;
   if (r.rep && document.getElementById('n-person')) document.getElementById('n-person').value = r.rep.split(' ')[0] || '';
-  document.getElementById('new-modal').style.display = 'flex';
+  const modal = document.getElementById('new-modal');
+  modal.style.display = 'flex';
+  modal.scrollIntoView({ behavior: 'smooth', block: 'start' });
   loadKickoffsForModal();
   setTimeout(() => regenerateWaMsg(), 100);
 }
