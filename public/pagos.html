@@ -1637,18 +1637,54 @@ const INITIAL_RESERVAS = [
     phone:'', createdAt:'2026-11-03T22:51:00Z' },
 ];
 
+// Payment overrides: { [id]: { status, pagoRecibido, metodoPago, notas } }
+let paymentOverrides = {};
+
 async function loadReservas() {
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/pagos_data?id=eq.${RES_SB_ID}&select=data`, {
+    // Load payment overrides from pagos_data
+    const po = await fetch(`${SUPABASE_URL}/rest/v1/pagos_data?id=eq.${RES_SB_ID}&select=data`, {
       headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
     });
-    const rows = await r.json();
-    if (rows && rows.length > 0 && rows[0].data?.reservas?.length) {
-      reservas = rows[0].data.reservas;
-    } else {
-      reservas = [...INITIAL_RESERVAS];
-      await saveReservas();
-    }
+    const poRows = await po.json();
+    paymentOverrides = poRows?.[0]?.data?.overrides || {};
+
+    // Load reservations from the main reservations board (finance_reservations_v1)
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/kickoffs?id=eq.finance_reservations_v1&select=data`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    });
+    const kRows = await r.json();
+    const d = kRows?.[0]?.data || {};
+    const notes = typeof d.internalNotes === 'string' ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
+    const rawRows = notes.reservations || [];
+
+    // Map reservations fields + merge payment overrides
+    reservas = rawRows
+      .filter(r => r.name && !(/reservations?\s*[\/]\s*sales|two travel\s*:/i.test(r.name||'')))
+      .map(r => {
+        const id = r._hubspotDealId || r._source + '_' + (r.name||'').replace(/\s+/g,'_').toLowerCase() + '_' + (r.fecha||'').slice(0,7);
+        const ov = paymentOverrides[id] || {};
+        return {
+          id,
+          fechaEntrada: r.fecha || r.checkIn || '',
+          fechaSalida:  r.checkOut || '',
+          pax:          r.qty || '',
+          cliente:      r.name || '',
+          email:        r.guestEmail || '',
+          ciudad:       r.city || '',
+          propiedad:    r.serviceDescription || '',
+          proveedor:    r.provider || '',
+          precioCliente: parseFloat(r.clientTotalUSD) || 0,
+          precioNuestro: parseFloat(r.precioProveedor) || 0,
+          pagoRecibido:  ov.pagoRecibido  || 0,
+          metodoPago:    ov.metodoPago    || '',
+          status:        ov.status        || 'pendiente',
+          rep:           r.conciergeRep   || '',
+          notas:         ov.notas         || r.dealSource || '',
+          createdAt:     r.createdAt      || '',
+          _source:       r._source        || '',
+        };
+      });
   } catch(e) {
     console.error('loadReservas:', e);
     reservas = [...INITIAL_RESERVAS];
@@ -1657,6 +1693,14 @@ async function loadReservas() {
 }
 
 async function saveReservas() {
+  // Only save payment overrides (the base data lives in finance_reservations_v1)
+  const overrides = {};
+  reservas.forEach(r => {
+    if (r.pagoRecibido || r.metodoPago || r.status !== 'pendiente' || r.notas) {
+      overrides[r.id] = { status: r.status, pagoRecibido: r.pagoRecibido, metodoPago: r.metodoPago, notas: r.notas };
+    }
+  });
+  paymentOverrides = overrides;
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/pagos_data`, {
       method: 'POST',
@@ -1664,10 +1708,11 @@ async function saveReservas() {
         apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY,
         'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal',
       },
-      body: JSON.stringify({ id: RES_SB_ID, data: { reservas } }),
+      body: JSON.stringify({ id: RES_SB_ID, data: { overrides } }),
     });
   } catch(e) { console.error('saveReservas:', e); }
 }
+
 
 function renderReservas() {
   const mainEl = document.getElementById('main');

@@ -1157,7 +1157,7 @@ export function FinanceReservaciones({ currentUser }) {
   const [dateFrom,   setDateFrom]   = useState("");
   const [dateTo,     setDateTo]     = useState("");
   const [sortCol,    setSortCol]    = useState("fecha");
-  const [sortDir,    setSortDir]    = useState(1);
+  const [sortDir,    setSortDir]    = useState(-1);
   const [ownerNames, setOwnerNames] = useState({});
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
@@ -1247,7 +1247,7 @@ export function FinanceReservaciones({ currentUser }) {
   };
   const resolveSalesRep = v => (v && ownerNames[String(v)]) ? ownerNames[String(v)] : (v||"—");
 
-  const months = ["all",...[...new Set(rows.map(r=>(r.fecha||r.checkIn)?.slice(0,7)).filter(Boolean))].sort()];
+  const months = ["all",...[...new Set(rows.map(r=>(r.fecha||r.checkIn)?.slice(0,7)).filter(Boolean))].sort().reverse()];
 
   // Monday.com group-separator rows — no real client data
   const isSeparator = r => /reservations?\s*[\/]\s*sales|two travel\s*:/i.test(r.name||"") && !r.fecha && !r.precioCOP;
