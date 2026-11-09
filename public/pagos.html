@@ -1612,7 +1612,29 @@ let reservas = [];
 let resFilterStatus = '';
 let resFilterRep = '';
 let resFilterPeriod = 'nov';
+let resShowOTA = false;
 let _resEditId = null;
+
+// Auto-collected OTA bookings (Airbnb, VRBO/HomeAway, bookingengine) — no manual cobro needed
+function isOTABooking(r) {
+  const prov = (r.proveedor||'').toLowerCase();
+  const src  = (r.dealSource||'').toLowerCase();
+  return prov === 'airbnb' || prov === 'vrbo' || prov.includes('homeaway') || prov === 'bookingengine' ||
+         src.includes(' airbnb') || src.includes(' vrbo') || src.includes('homeaway');
+}
+
+// Color badge for reservation source
+function sourceTag(r) {
+  const prov = (r.proveedor||'').toLowerCase();
+  const src  = (r.dealSource||'').toLowerCase();
+  if (prov === 'airbnb' || src.includes(' airbnb')) return '<span style="font-size:9px;padding:1px 5px;background:#ff6b35;color:#fff;border-radius:2px;font-weight:600">AIRBNB</span>';
+  if (prov === 'vrbo' || src.includes(' vrbo') || prov.includes('homeaway')) return '<span style="font-size:9px;padding:1px 5px;background:#3b5998;color:#fff;border-radius:2px;font-weight:600">VRBO</span>';
+  if (prov === 'bookingengine') return '<span style="font-size:9px;padding:1px 5px;background:#6366f1;color:#fff;border-radius:2px;font-weight:600">STRIPE</span>';
+  if (src.includes('paid search')) return '<span style="font-size:9px;padding:1px 5px;background:#0ea5e9;color:#fff;border-radius:2px;font-weight:600">PAID</span>';
+  if (src.includes('organic')) return '<span style="font-size:9px;padding:1px 5px;background:#22c55e;color:#fff;border-radius:2px;font-weight:600">ORG</span>';
+  if (src.includes('direct')) return '<span style="font-size:9px;padding:1px 5px;background:#9a7d52;color:#fff;border-radius:2px;font-weight:600">DIRECT</span>';
+  return '';
+}
 
 const RES_STATUS = {
   pendiente: { label:'Pendiente',    color:'#aaaaaa', bg:'#f5f5f5' },
@@ -1674,15 +1696,17 @@ async function loadReservas() {
           cliente:      r.name || '',
           email:        r.guestEmail || '',
           ciudad:       r.city || '',
+          item:         r.serviceDescription || '',
           propiedad:    r.serviceDescription || '',
           proveedor:    r.provider || '',
+          dealSource:   r.dealSource || '',
           precioCliente: parseFloat(r.clientTotalUSD) || 0,
           precioNuestro: parseFloat(r.precioProveedor) || 0,
           pagoRecibido:  ov.pagoRecibido  || 0,
           metodoPago:    ov.metodoPago    || '',
           status:        ov.status        || 'pendiente',
           rep:           r.conciergeRep   || '',
-          notas:         ov.notas         || r.dealSource || '',
+          notas:         ov.notas         || '',
           createdAt:     r.createdAt      || '',
         };
       });
@@ -1725,7 +1749,9 @@ function renderReservas() {
     mainEl.appendChild(main);
   }
 
+  const otaCount = reservas.filter(isOTABooking).length;
   let items = reservas.filter(r => {
+    if (!resShowOTA && isOTABooking(r)) return false;
     const matchS = !resFilterStatus || r.status === resFilterStatus;
     const matchR = !resFilterRep || r.rep === resFilterRep;
     const matchP = resFilterPeriod !== 'nov' || (r.fechaEntrada||'') >= '2026-11-01';
@@ -1761,6 +1787,7 @@ function renderReservas() {
         <option value="">Todos los reps</option>
         <option${resFilterRep==='Alia'?' selected':''}>Alia</option><option${resFilterRep==='Caro'?' selected':''}>Caro</option><option${resFilterRep==='Dani'?' selected':''}>Dani</option><option${resFilterRep==='Lyna'?' selected':''}>Lyna</option><option${resFilterRep==='Michel'?' selected':''}>Michel</option><option${resFilterRep==='Xilene'?' selected':''}>Xilene</option>
       </select>
+      <button onclick="resShowOTA=!resShowOTA;renderReservas()" style="font-size:11px;padding:4px 10px;border:1px solid ${resShowOTA?'#ff6b35':'var(--border2)'};background:${resShowOTA?'#ff6b35':'transparent'};color:${resShowOTA?'#fff':'var(--ink3)'};cursor:pointer;font-family:Jost,sans-serif;border-radius:2px;white-space:nowrap" title="${resShowOTA?'Ocultar OTA (Airbnb/VRBO/HomeAway)':'Mostrar OTA (Airbnb/VRBO/HomeAway)'}">🏨 ${resShowOTA?'OTA visibles':'OTA ocultas'} (${otaCount})</button>
       <button class="tbtn primary" onclick="openResModal()">+ Agregar Reserva</button>
     </div>
   </div>
@@ -1780,7 +1807,8 @@ function renderReservas() {
     <thead><tr>
       <th>Entrada</th><th>Salida</th>
       <th style="min-width:140px">Cliente</th>
-      <th>Propiedad</th>
+      <th>Ciudad</th>
+      <th>Item</th>
       <th style="text-align:center">Pax</th>
       <th>Precio cliente</th><th>Precio nuestro</th><th>Margen</th>
       <th>Pago recibido</th><th>Saldo pendiente</th>
@@ -1806,8 +1834,14 @@ function renderReservas() {
     html += `<tr>
       <td><div class="cell">${fmtDate(r.fechaEntrada)}</div></td>
       <td><div class="cell">${fmtDate(r.fechaSalida)}</div></td>
-      <td><div class="cell" style="font-weight:500">${esc(r.cliente||'')}${r.email?`<div style="font-size:10px;color:var(--ink3)">${esc(r.email)}</div>`:''}</div></td>
-      <td><div class="cell">${esc(r.propiedad||'')}${r.ciudad?`<div style="font-size:10px;color:var(--ink3)">${esc(r.ciudad)}</div>`:''}</div></td>
+      <td><div class="cell" style="font-weight:500;flex-direction:column;align-items:flex-start;gap:2px">
+        <span>${esc(r.cliente||'')}</span>
+        <div style="display:flex;gap:3px;flex-wrap:wrap">${sourceTag(r)}</div>
+      </div></td>
+      <td><div class="cell" style="font-size:11px;color:var(--ink2)">${esc(r.ciudad||'')}</div></td>
+      <td><div class="cell" style="font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.item||'')}">
+        ${esc(r.item||'')}${r.proveedor?`<div style="font-size:9px;color:var(--ink3)">${esc(r.proveedor)}</div>`:''}
+      </div></td>
       <td style="text-align:center"><div class="cell">${r.pax||'—'}</div></td>
       <td><div class="cell">${fmtUSD(pc)}</div></td>
       <td><div class="cell">${fmtUSD(pn)}</div></td>
@@ -1817,16 +1851,44 @@ function renderReservas() {
       <td><div class="cell" style="font-size:11px;color:var(--ink3);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.metodoPago||'')}</div></td>
       <td><div class="cell">${avatar}</div></td>
       <td><div class="cell"><span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;background:${st.bg};color:${st.color}">${st.label}</span></div></td>
-      <td><div class="cell" style="display:flex;gap:5px;padding:4px 8px">
-        <button onclick="openResModal('${r.id}')" style="background:none;border:1px solid var(--border2);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--ink2)" title="Editar">✏</button>
-        ${waHref?`<a href="${waHref}" target="_blank" style="border:1px solid #22c55e;border-radius:4px;padding:3px 8px;font-size:11px;text-decoration:none;color:#16a34a;white-space:nowrap">Cobrar</a>`:''}
-        <button onclick="deleteRes('${r.id}')" style="background:none;border:1px solid var(--border2);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#dc2626" title="Eliminar">✕</button>
+      <td><div class="cell" style="display:flex;gap:4px;padding:4px 6px;flex-wrap:wrap">
+        <button onclick="crearSolicitudDesdeReserva('${r.id}')" title="Crear solicitud de cobro" style="background:#eff6ff;border:1px solid #93c5fd;border-radius:3px;padding:3px 7px;font-size:10px;cursor:pointer;color:#1d4ed8;white-space:nowrap;font-family:Jost,sans-serif">→ Cobros</button>
+        <button onclick="openResModal('${r.id}')" style="background:none;border:1px solid var(--border2);border-radius:3px;padding:3px 7px;font-size:10px;cursor:pointer;color:var(--ink2)" title="Editar">✏</button>
+        ${waHref?`<a href="${waHref}" target="_blank" style="border:1px solid #22c55e;border-radius:3px;padding:3px 7px;font-size:10px;text-decoration:none;color:#16a34a;white-space:nowrap">📱</a>`:''}
+        <button onclick="deleteRes('${r.id}')" style="background:none;border:1px solid var(--border2);border-radius:3px;padding:3px 7px;font-size:10px;cursor:pointer;color:#dc2626" title="Eliminar">✕</button>
       </div></td>
     </tr>`;
   });
 
   html += `</tbody></table></div>`;
   main.innerHTML = html;
+}
+
+function crearSolicitudDesdeReserva(id) {
+  const r = reservas.find(x => x.id === id);
+  if (!r) return;
+  editingId = null;
+  document.getElementById('modal-title-text').textContent = 'Nuevo Cobro — Reserva';
+  const vdl = document.getElementById('vendor-datalist');
+  if (vdl && !vdl.children.length) vdl.innerHTML = VENDORS.map(v=>`<option value="${v.name}" label="${v.cat}">`).join('');
+  resetModalForm();
+  // Pre-fill from reservation
+  document.getElementById('n-client').value  = r.cliente || '';
+  document.getElementById('n-phone').value   = r.phone   || '';
+  document.getElementById('n-dept').value    = 'concierge';
+  document.getElementById('n-amount').value  = r.precioCliente || '';
+  document.getElementById('n-currency').value= 'USD';
+  const desc = [r.item, r.ciudad, r.fechaEntrada ? fmtDateShort(r.fechaEntrada) + (r.fechaSalida ? ' → ' + fmtDateShort(r.fechaSalida) : '') : ''].filter(Boolean).join(' · ');
+  document.getElementById('n-desc').value = desc;
+  if (r.rep && document.getElementById('n-person')) document.getElementById('n-person').value = r.rep.split(' ')[0] || '';
+  document.getElementById('new-modal').style.display = 'flex';
+  loadKickoffsForModal();
+  setTimeout(() => regenerateWaMsg(), 100);
+}
+function fmtDateShort(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T12:00:00');
+  return isNaN(dt) ? d : dt.toLocaleDateString('es',{day:'numeric',month:'short'});
 }
 
 function openResModal(id) {
@@ -1839,7 +1901,7 @@ function openResModal(id) {
   document.getElementById('r-cliente').value       = r?.cliente      || '';
   document.getElementById('r-email').value         = r?.email        || '';
   document.getElementById('r-ciudad').value        = r?.ciudad       || '';
-  document.getElementById('r-propiedad').value     = r?.propiedad    || '';
+  document.getElementById('r-propiedad').value     = r?.item         || '';
   document.getElementById('r-proveedor').value     = r?.proveedor    || '';
   document.getElementById('r-rep').value           = r?.rep          || '';
   document.getElementById('r-precio-cliente').value= r?.precioCliente|| '';
@@ -1909,7 +1971,7 @@ async function saveRes(e) {
     cliente:      document.getElementById('r-cliente').value.trim(),
     email:        document.getElementById('r-email').value.trim(),
     ciudad:       document.getElementById('r-ciudad').value.trim(),
-    propiedad:    document.getElementById('r-propiedad').value.trim(),
+    item:         document.getElementById('r-propiedad').value.trim(),
     proveedor:    document.getElementById('r-proveedor').value.trim(),
     rep:          document.getElementById('r-rep').value,
     precioCliente:parseFloat(document.getElementById('r-precio-cliente').value) || null,
@@ -1937,7 +1999,7 @@ async function saveRes(e) {
       qty:                r.pax ? String(r.pax) : '',
       guestEmail:         r.email,
       city:               r.ciudad,
-      serviceDescription: r.propiedad,
+      serviceDescription: r.item,
       provider:           r.proveedor,
       conciergeRep:       r.rep,
       clientTotalUSD:     r.precioCliente ? String(r.precioCliente) : '',
