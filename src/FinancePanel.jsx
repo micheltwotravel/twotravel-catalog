@@ -1173,6 +1173,7 @@ export function FinanceReservaciones({ currentUser }) {
   const [monthF,     setMonthF]     = useState("all");
   const [dateFrom,   setDateFrom]   = useState("");
   const [dateTo,     setDateTo]     = useState("");
+  const [slackOnly,  setSlackOnly]  = useState(false);
   const [sortCol,    setSortCol]    = useState("fecha");
   const [sortDir,    setSortDir]    = useState(-1);
   const [ownerNames, setOwnerNames] = useState({});
@@ -1271,6 +1272,7 @@ export function FinanceReservaciones({ currentUser }) {
 
   const filteredIdxs = rows.reduce((acc,r,i)=>{
     if (isSeparator(r)) return acc;
+    if (slackOnly && !(r._source||"").startsWith("slack")) return acc;
     const st = r.servicesStatus||r.status||"";
     if (statusF==="hs_pending") { if (!r.needsReview) return acc; }
     else if (statusF!=="all" && st!==statusF) return acc;
@@ -1386,13 +1388,16 @@ export function FinanceReservaciones({ currentUser }) {
           </button>
         )}
         <button onClick={()=>{
+          setSlackOnly(s=>!s);
           setDateFrom(""); setDateTo("");
-          setMonthF("all"); setStatusF("Confirmed");
-          setSortCol("createdAt"); setSortDir(-1);
+          setMonthF("all"); setStatusF("all"); setTypeF("all"); setRepF("all"); setSearch("");
+          setView("tabla");
         }}
           style={{padding:"7px 12px",fontSize:12,fontWeight:600,whiteSpace:"nowrap",
-            background:"#eff6ff",color:"#1d4ed8",border:"1px solid #93c5fd",borderRadius:8,cursor:"pointer"}}>
-          🆕 Recién llegadas
+            background:slackOnly?"#1d4ed8":"#eff6ff",
+            color:slackOnly?"#fff":"#1d4ed8",
+            border:"1px solid #93c5fd",borderRadius:8,cursor:"pointer"}}>
+          🆕 Slack {slackOnly?"✓":""}
         </button>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar…"
           style={{...INP,width:150,padding:"7px 12px",fontSize:12}} />
@@ -1432,7 +1437,7 @@ export function FinanceReservaciones({ currentUser }) {
             style={{background:"none",border:"none",color:MUT,cursor:"pointer",fontSize:13,padding:"0 2px"}}>✕</button>}
         </div>
         {(search||statusF!=="all"||typeF!=="all"||repF!=="all"||monthF!=="all"||dateFrom||dateTo) && (
-          <button onClick={()=>{setSearch("");setStatusF("all");setTypeF("all");setRepF("all");setMonthF("all");setDateFrom("");setDateTo("");}}
+          <button onClick={()=>{setSearch("");setStatusF("all");setTypeF("all");setRepF("all");setMonthF("all");setDateFrom("");setDateTo("");setSlackOnly(false);}}
             style={{padding:"6px 12px",fontSize:11,background:"transparent",color:MUT,
               border:`1px solid ${BRD}`,borderRadius:6,cursor:"pointer",whiteSpace:"nowrap"}}>
             Limpiar filtros
