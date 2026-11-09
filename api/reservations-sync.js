@@ -1,0 +1,131 @@
+// GET /api/reservations-sync
+// Fetches all HubSpot reservation deals → upserts to Supabase → returns rows
+// Called by FinancePanel on load so the board always reflects HubSpot
+
+import { createClient } from "@supabase/supabase-js";
+const supabase = createClient(
+  process.env.VITE_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
+);
+
+const SUPABASE_ID = "finance_reservations_v1";
+const HS_TOKEN    = process.env.HUBSPOT_PRIVATE_APP_TOKEN;
+
+const STAGES = [
+  "1078513048","1078513049",
+  "closedwon","1081725980","1081725981","1081725982",
+];
+const HS_PROPS = [
+  "dealname","amount","deal_currency_code","arrival_date","departure_date",
+  "city_tt","number_of_people_in_the_reservation","number_of_guests_villa_b",
+  "hubspot_owner_id","head_concierge","source___deal","dealstage",
+  "client_price","cliente_price","client_price___villas","boat_price",
+  "amount___villas","our_price___boat",
+  "provider___villas","provider___boat","provider___airbnb_vrbo","item___airbnb_vrbo",
+  "createdate","hs_lastmodifieddate",
+];
+
+function pick(props, keys) {
+  for (const k of keys) { const v=props[k]; if (v&&v!==""&&v!=="null") return v; }
+  return "";
+}
+async function hs(path, body) {
+  const r = await fetch(`https://api.hubapi.com${path}`, {
+    method: body?"POST":"GET",
+    headers:{ Authorization:`Bearer ${HS_TOKEN}`, "Content-Type":"application/json" },
+    ...(body?{body:JSON.stringify(body)}:{}),
+  });
+  return r.json();
+}
+async function getAllDeals(stageId) {
+  const all=[]; let after;
+  while(true){
+    const d=await hs("/crm/v3/objects/deals/search",{
+      filterGroups:[{filters:[{propertyName:"dealstage",operator:"EQ",value:stageId}]}],
+      properties:HS_PROPS, associations:["contacts"], limit:100,
+      ...(after?{after}:{}),
+    });
+    all.push(...(d.results||[]));
+    if(d.paging?.next?.after) after=d.paging.next.after; else break;
+  }
+  return all;
+}
+const CC={};
+async function getContact(id){
+  if(CC[id]) return CC[id];
+  const d=await hs(`/crm/v3/objects/contacts/${id}?properties=firstname,lastname,email`);
+  const p=d.properties||{};
+  return (CC[id]={name:[p.firstname,p.lastname].filter(Boolean).join(" "),email:p.email||""});
+}
+function dealToRow(dealId, props, guestName, guestEmail) {
+  const provider=pick(props,["provider___villas","provider___boat","provider___airbnb_vrbo"]);
+  const item=pick(props,["item___airbnb_vrbo"]);
+  const clientPrice=pick(props,["client_price___villas","boat_price","cliente_price","client_price","amount"]);
+  const ourPrice=pick(props,["amount___villas","our_price___boat"]);
+  const parts=(props.dealname||"").split(/\s*[-,]\s*/);
+  const concierge = pick(props,["head_concierge"]);
+  return {
+    _hubspotDealId: String(dealId),
+    _source:        "hubspot",
+    name:           guestName||parts[0]?.trim()||props.dealname||"",
+    guestEmail:     guestEmail||"",
+    conciergeRep:   /^\d+$/.test(concierge) ? "" : concierge,
+    fecha:          props.arrival_date||"",
+    checkOut:       props.departure_date||"",
+    city:           pick(props,["city_tt"])||parts[1]?.trim()||"",
+    provider,
+    serviceDescription: item||parts[2]?.trim()||"",
+    qty:            pick(props,["number_of_people_in_the_reservation","number_of_guests_villa_b"]),
+    clientTotalUSD: clientPrice?String(clientPrice):"",
+    precioProveedor:ourPrice?String(ourPrice):"",
+    currency:       props.deal_currency_code||"USD",
+    dealSource:     props.source___deal||"",
+    servicesStatus: "Confirmed",
+    createdAt:      props.createdate||"",
+  };
+}
+
+export default async function handler(req, res) {
+  if (!HS_TOKEN) return res.status(500).json({ error:"Missing HUBSPOT_PRIVATE_APP_TOKEN" });
+
+  try {
+    // 1. Fetch all HubSpot deals
+    const all=[];
+    for (const s of STAGES) {
+      const deals=await getAllDeals(s);
+      all.push(...deals);
+    }
+    const unique=[...new Map(all.map(d=>[d.id,d])).values()];
+
+    // 2. Map to Compass rows
+    const hsRows=[];
+    for (const deal of unique) {
+      const props=deal.properties||{};
+      let guestName="", guestEmail="";
+      const c=deal.associations?.contacts?.results?.[0];
+      if(c){const info=await getContact(c.id);guestName=info.name;guestEmail=info.email;}
+      hsRows.push(dealToRow(deal.id,props,guestName,guestEmail));
+    }
+
+    // 3. Load existing Supabase data — keep manual rows (no _source or _source=manual)
+    const { data: existing } = await supabase
+      .from("kickoffs").select("data").eq("id", SUPABASE_ID).maybeSingle();
+    const d = existing?.data||{};
+    const notes = typeof d.internalNotes==="string" ? JSON.parse(d.internalNotes) : (d.internalNotes||{});
+    const existingRows = notes.reservations||[];
+    const manualRows = existingRows.filter(r=>!r._source||r._source==="manual");
+
+    // 4. Merge: HubSpot rows + manual rows, sorted by fecha desc
+    const merged = [...hsRows, ...manualRows]
+      .sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+
+    // 5. Save back
+    const newData = { ...d, internalNotes: JSON.stringify({...notes, reservations:merged}) };
+    await supabase.from("kickoffs").upsert({ id:SUPABASE_ID, data:newData }, { onConflict:"id" });
+
+    res.json({ ok:true, count:merged.length, hubspot:hsRows.length, manual:manualRows.length });
+  } catch(err) {
+    console.error("reservations-sync error:", err);
+    res.status(500).json({ error:err.message });
+  }
+}

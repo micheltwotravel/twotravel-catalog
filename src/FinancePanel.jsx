@@ -533,6 +533,8 @@ export function FinanceTemplates() {
 
 // ─── RESERVACIONES & VENTAS ───────────────────────────────────────────────────
 async function loadReservations() {
+  // Sync from HubSpot first (best-effort — if it fails, still show cached data)
+  try { await fetch("/api/reservations-sync"); } catch(e) { /* ignore */ }
   const { data, error } = await supabase.from("kickoffs").select("data").eq("id", "finance_reservations_v1").single();
   if (error) throw new Error(error.message);
   const d = data?.data || {};
