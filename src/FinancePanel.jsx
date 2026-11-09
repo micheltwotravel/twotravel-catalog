@@ -604,13 +604,14 @@ function normalizeRow(r) {
   if (!n.totalCommission && n.commission)   n.totalCommission = n.commission;
   if (!n.servicesStatus && n.status)        n.servicesStatus  = n.status;
   if (!n.currency)                          n.currency        = "COP";
+  // Strip raw numeric HubSpot owner IDs from conciergeRep
+  if (n.conciergeRep && /^\d+$/.test(String(n.conciergeRep))) n.conciergeRep = "";
   return n;
 }
 
 const ALL_COLS = [
   { key:"name",             label:"Cliente",           w:160, num:false },
   { key:"conciergeRep",     label:"Concierge Rep",     w:120, num:false, optKey:"conciergeRep" },
-  { key:"logisticRep",      label:"Logistic Rep",      w:110, num:false },
   { key:"dealSource",       label:"Deal Source",       w:130, num:false },
   { key:"areaCustomerType", label:"Area / Tipo",       w:110, num:false, optKey:"areaCustomerType" },
   { key:"fecha",            label:"Check In",          w:100, num:false, date:true },

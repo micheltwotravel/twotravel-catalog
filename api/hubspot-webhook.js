@@ -142,18 +142,27 @@ async function syncReservationToCompass(dealId, props, ownerName, guestName, gue
     createdAt:       new Date().toISOString(),
   };
 
-  // Load existing rows, deduplicate by _hubspotDealId, prepend new row
+  // Load existing rows using correct data structure: data.internalNotes → JSON → .reservations
   const { data: existing } = await supabase
     .from("kickoffs").select("data").eq("id", SUPABASE_ID).maybeSingle();
 
-  const rows = Array.isArray(existing?.data) ? existing.data : [];
+  const existingData = existing?.data || {};
+  const notes = typeof existingData.internalNotes === "string"
+    ? JSON.parse(existingData.internalNotes) : (existingData.internalNotes || {});
+  const rows = notes.reservations || [];
+
   const filtered = rows.filter(r => r._hubspotDealId !== String(dealId));
   const merged   = [newRow, ...filtered];
 
+  const newData = {
+    ...existingData,
+    internalNotes: JSON.stringify({ ...notes, reservations: merged }),
+  };
+
   if (existing) {
-    await supabase.from("kickoffs").update({ data: merged }).eq("id", SUPABASE_ID);
+    await supabase.from("kickoffs").update({ data: newData }).eq("id", SUPABASE_ID);
   } else {
-    await supabase.from("kickoffs").insert({ id: SUPABASE_ID, data: merged });
+    await supabase.from("kickoffs").insert({ id: SUPABASE_ID, data: newData });
   }
 
   console.log(`[reservations] synced deal ${dealId} — ${clientName} (${city})`);
