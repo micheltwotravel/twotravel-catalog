@@ -6509,11 +6509,12 @@ const ROLE_META = {
 
 // Modes each role can access
 const PAGOS_MODES = ["pagos","f-proveedores"];
+const FINANCE_MODES = ["pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"];
 const ROLE_ACCESS = {
-  admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","bodas-mesas","tareas-bodas","bodas-directorio","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"],
-  concierge: ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","f-checkin","f-transporte",...PAGOS_MODES],
-  junior:    ["dashboard","f-checkin","f-transporte",...PAGOS_MODES],
-  finance:   ["pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"],
+  admin:     ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","bodas-mesas","tareas-bodas","bodas-directorio",...FINANCE_MODES],
+  concierge: ["concierge","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","f-checkin","f-transporte",...FINANCE_MODES],
+  junior:    ["dashboard","f-checkin","f-transporte",...FINANCE_MODES],
+  finance:   ["dashboard","concierge","f-checkin","f-transporte",...FINANCE_MODES],
   marketing: ["dashboard",...PAGOS_MODES],
   bodas:     ["bodas","bodas-mesas","tareas-bodas","bodas-directorio","tasks","dashboard",...PAGOS_MODES],
   pending:   [...PAGOS_MODES],
