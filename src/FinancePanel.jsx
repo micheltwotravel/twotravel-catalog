@@ -1943,9 +1943,11 @@ export function FinancePagosProveedores() {
                                 <select value={r.retencionTipo||""} onChange={e=>setRetencion(r.id,e.target.value)}
                                   style={{width:"100%",fontSize:10,padding:"2px 4px",border:`1px solid ${BRD}`,borderRadius:3,background:WHT,color:r.retencionTipo?"#b45309":MUT,cursor:"pointer"}}>
                                   <option value="">– Sin retención –</option>
-                                  {RETENCIONES_CO.map(rc=>(
-                                    <option key={rc.key} value={rc.key}>{rc.label}</option>
-                                  ))}
+                                  {RETENCIONES_CO.map(rc=>{
+                                    const hasRate=/[%‰]/.test(rc.label);
+                                    const pct=hasRate?"":" — "+(+(rc.rate*100).toFixed(2)).toString()+"%";
+                                    return <option key={rc.key} value={rc.key}>{rc.label}{pct}</option>;
+                                  })}
                                 </select>
                                 {r.retencionTipo&&(
                                   <input type="text" inputMode="numeric"
