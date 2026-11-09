@@ -3999,7 +3999,7 @@ export default function BodaPanel({ currentUser, onLogout, initialBodaId="", ini
   if(selected){
     const isMesas=detailTab==="mesas";
     return (
-      <div style={{minHeight:"100vh",background:R.cream,fontFamily:"'Jost',sans-serif"}}>
+      <div style={{minHeight:"100vh",background:R.cream,fontFamily:"'Jost',sans-serif",zoom:1.1}}>
         <div style={{padding:isMesas?"16px 0 0":"24px 32px 60px"}}>
           <BodaDetail boda={selected} users={users} onBack={()=>setSelected(null)} onRefresh={handleRefresh} initialTab={initialTab} onTabChange={t=>{setDetailTab(t);}} />
         </div>
@@ -4008,7 +4008,7 @@ export default function BodaPanel({ currentUser, onLogout, initialBodaId="", ini
   }
 
   return (
-    <div style={{minHeight:"100vh",background:R.cream,fontFamily:"'Jost',sans-serif"}}>
+    <div style={{minHeight:"100vh",background:R.cream,fontFamily:"'Jost',sans-serif",zoom:1.1}}>
       <div style={{background:R.dark,padding:"0 24px",borderBottom:"1px solid rgba(255,255,255,0.07)",position:"sticky",top:0,zIndex:200}}>
         <div style={GOLD_BAR} />
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 0"}}>
