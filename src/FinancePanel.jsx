@@ -589,6 +589,20 @@ function typeColor(type) {
   return TYPE_PALETTE[h % TYPE_PALETTE.length];
 }
 
+// Convert "M/D/YY", "M/D/YYYY", "YYYY-MM-DD" → "YYYY-MM-DD"; returns "" if unparseable
+function toISODate(v) {
+  if (!v) return "";
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  // M/D/YY or M/D/YYYY
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (m) {
+    const yr = m[3].length===2 ? (parseInt(m[3])>50?"19":"20")+m[3] : m[3];
+    return `${yr}-${m[1].padStart(2,"0")}-${m[2].padStart(2,"0")}`;
+  }
+  return s;
+}
+
 // Normalize legacy rows (old schema → new Monday schema)
 function normalizeRow(r) {
   if (!r) return r;
@@ -604,6 +618,9 @@ function normalizeRow(r) {
   if (!n.totalCommission && n.commission)   n.totalCommission = n.commission;
   if (!n.servicesStatus && n.status)        n.servicesStatus  = n.status;
   if (!n.currency)                          n.currency        = "COP";
+  // Normalize dates to ISO format (handles M/D/YY from Monday imports)
+  if (n.fecha)   n.fecha   = toISODate(n.fecha);
+  if (n.checkOut) n.checkOut = toISODate(n.checkOut);
   // Strip raw numeric HubSpot owner IDs from conciergeRep
   if (n.conciergeRep && /^\d+$/.test(String(n.conciergeRep))) n.conciergeRep = "";
   return n;
@@ -1368,6 +1385,16 @@ export function FinanceReservaciones({ currentUser }) {
             + Nueva fila
           </button>
         )}
+        <button onClick={()=>{
+          const today = new Date().toISOString().slice(0,10);
+          const in90  = new Date(Date.now()+90*864e5).toISOString().slice(0,10);
+          setDateFrom(today); setDateTo(in90);
+          setMonthF("all"); setStatusF("Confirmed");
+        }}
+          style={{padding:"7px 12px",fontSize:12,fontWeight:600,whiteSpace:"nowrap",
+            background:"#eff6ff",color:"#1d4ed8",border:"1px solid #93c5fd",borderRadius:8,cursor:"pointer"}}>
+          📅 Próximos 90d
+        </button>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar…"
           style={{...INP,width:150,padding:"7px 12px",fontSize:12}} />
         <div style={{display:"flex",background:BG,border:`1px solid ${BRD}`,borderRadius:8,overflow:"hidden"}}>
