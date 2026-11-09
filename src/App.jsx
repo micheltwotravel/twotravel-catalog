@@ -7385,7 +7385,7 @@ function App() {
     if (mode === "pagos")           return <FinanceLanding user={user} onLogout={logout} />;
     if (mode === "f-cashflow")      return <S><ErrorBoundary><FinanceCashFlow /></ErrorBoundary></S>;
     if (mode === "f-movimientos")   return <S><ErrorBoundary><FinanceMovimientos /></ErrorBoundary></S>;
-    if (mode === "f-reservaciones") return <S><ErrorBoundary><FinanceReservaciones /></ErrorBoundary></S>;
+    if (mode === "f-reservaciones") return <S><ErrorBoundary><FinanceReservaciones currentUser={user} /></ErrorBoundary></S>;
     if (mode === "f-cierre")        return <S><ErrorBoundary><FinanceCierre /></ErrorBoundary></S>;
     if (mode === "f-templates")     return <S><ErrorBoundary><FinanceTemplates /></ErrorBoundary></S>;
     if (mode === "f-proveedores")   return <S><ErrorBoundary><FinancePagosProveedores /></ErrorBoundary></S>;
