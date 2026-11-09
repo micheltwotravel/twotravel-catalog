@@ -3689,7 +3689,7 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask, onPatchTask })
                     {c==="today"&&<span style={{fontWeight:700,color:"#d97706"}}>🔥 Hoy</span>}
                   </div>
                 </div>
-                {onPatchTask&&<button onClick={()=>startEdit(t)} style={{color:R.muted,background:"none",border:"none",cursor:"pointer",fontSize:12,padding:"0 2px",flexShrink:0}} title="Editar">✏️</button>}
+                {onPatchTask&&<button onClick={()=>startEdit(t)} style={{background:"transparent",border:`1px solid ${R.border}`,borderRadius:6,cursor:"pointer",fontSize:11,color:R.muted,padding:"3px 9px",flexShrink:0,fontFamily:"'Jost',sans-serif",whiteSpace:"nowrap"}} title="Editar tarea">✏️ Editar</button>}
               </div>
             )}
           </div>
