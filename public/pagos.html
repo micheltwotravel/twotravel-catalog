@@ -1666,6 +1666,8 @@ async function loadReservas() {
         const ov = paymentOverrides[id] || {};
         return {
           id,
+          _manualId:     r._manualId     || null,
+          _source:       r._source        || '',
           fechaEntrada: r.fecha || r.checkIn || '',
           fechaSalida:  r.checkOut || '',
           pax:          r.qty || '',
@@ -1682,7 +1684,6 @@ async function loadReservas() {
           rep:           r.conciergeRep   || '',
           notas:         ov.notas         || r.dealSource || '',
           createdAt:     r.createdAt      || '',
-          _source:       r._source        || '',
         };
       });
   } catch(e) {
@@ -1857,11 +1858,51 @@ function closeResModal() {
   _resEditId = null;
 }
 
+// Write/update a manual row in finance_reservations_v1
+async function writeManualRowToBoard(rowData) {
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/kickoffs?id=eq.finance_reservations_v1&select=data`, {
+    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+  });
+  const rows = await resp.json();
+  const d = rows?.[0]?.data || {};
+  const notes = typeof d.internalNotes === 'string' ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
+  const existing = notes.reservations || [];
+  const filtered = existing.filter(r => r._manualId !== rowData._manualId);
+  const merged = [rowData, ...filtered].sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+  const newData = { ...d, internalNotes: JSON.stringify({ ...notes, reservations: merged }) };
+  await fetch(`${SUPABASE_URL}/rest/v1/kickoffs?id=eq.finance_reservations_v1`, {
+    method: 'PATCH',
+    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify({ data: newData }),
+  });
+}
+
+async function deleteManualRowFromBoard(manualId) {
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/kickoffs?id=eq.finance_reservations_v1&select=data`, {
+    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+  });
+  const rows = await resp.json();
+  const d = rows?.[0]?.data || {};
+  const notes = typeof d.internalNotes === 'string' ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
+  const existing = notes.reservations || [];
+  const filtered = existing.filter(r => r._manualId !== manualId);
+  const newData = { ...d, internalNotes: JSON.stringify({ ...notes, reservations: filtered }) };
+  await fetch(`${SUPABASE_URL}/rest/v1/kickoffs?id=eq.finance_reservations_v1`, {
+    method: 'PATCH',
+    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify({ data: newData }),
+  });
+}
+
 async function saveRes(e) {
   e.preventDefault();
   const existing = _resEditId ? reservas.find(x => x.id === _resEditId) : null;
+  const isHubSpot = existing && existing._source === 'hubspot';
+  const manualId = existing?._manualId || ('manual_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,5));
   const r = {
-    id:           _resEditId || ('res_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,5)),
+    id:           _resEditId || manualId,
+    _manualId:    isHubSpot ? undefined : manualId,
+    _source:      isHubSpot ? 'hubspot' : 'manual',
     fechaEntrada: document.getElementById('r-entrada').value,
     fechaSalida:  document.getElementById('r-salida').value,
     pax:          parseInt(document.getElementById('r-pax').value) || null,
@@ -1885,6 +1926,28 @@ async function saveRes(e) {
   } else {
     reservas.unshift(r);
   }
+  // For manual rows: persist to finance_reservations_v1
+  if (!isHubSpot) {
+    const boardRow = {
+      _manualId:          manualId,
+      _source:            'manual',
+      name:               r.cliente,
+      fecha:              r.fechaEntrada,
+      checkOut:           r.fechaSalida,
+      qty:                r.pax ? String(r.pax) : '',
+      guestEmail:         r.email,
+      city:               r.ciudad,
+      serviceDescription: r.propiedad,
+      provider:           r.proveedor,
+      conciergeRep:       r.rep,
+      clientTotalUSD:     r.precioCliente ? String(r.precioCliente) : '',
+      precioProveedor:    r.precioNuestro ? String(r.precioNuestro) : '',
+      currency:           'USD',
+      servicesStatus:     'Confirmed',
+      createdAt:          r.createdAt,
+    };
+    await writeManualRowToBoard(boardRow).catch(err => console.error('writeManualRow:', err));
+  }
   await saveReservas();
   renderReservas();
   closeResModal();
@@ -1893,7 +1956,12 @@ async function saveRes(e) {
 
 async function deleteRes(id) {
   if (!confirm('¿Eliminar esta reserva?')) return;
-  reservas = reservas.filter(r => r.id !== id);
+  const r = reservas.find(x => x.id === id);
+  reservas = reservas.filter(x => x.id !== id);
+  // For manual rows: remove from finance_reservations_v1
+  if (r && r._source !== 'hubspot' && r._manualId) {
+    await deleteManualRowFromBoard(r._manualId).catch(err => console.error('deleteManualRow:', err));
+  }
   await saveReservas();
   renderReservas();
   showToast('Reserva eliminada');

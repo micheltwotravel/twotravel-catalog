@@ -64,6 +64,9 @@ function dealToRow(dealId, props, guestName, guestEmail) {
   const ourPrice=pick(props,["amount___villas","our_price___boat"]);
   const parts=(props.dealname||"").split(/\s*[-,]\s*/);
   const concierge = pick(props,["head_concierge"]);
+  // parts[2] is often "November 2026" (month-year) in MX deals — only use it if it doesn't look like a date
+  const part2 = parts[2]?.trim()||"";
+  const isMonthYear = /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s+\d{4}$/i.test(part2);
   return {
     _hubspotDealId: String(dealId),
     _source:        "hubspot",
@@ -74,7 +77,7 @@ function dealToRow(dealId, props, guestName, guestEmail) {
     checkOut:       props.departure_date||"",
     city:           pick(props,["city_tt"])||parts[1]?.trim()||"",
     provider,
-    serviceDescription: item||parts[2]?.trim()||"",
+    serviceDescription: item||(!isMonthYear?part2:"")||"",
     qty:            pick(props,["number_of_people_in_the_reservation","number_of_guests_villa_b"]),
     clientTotalUSD: clientPrice?String(clientPrice):"",
     precioProveedor:ourPrice?String(ourPrice):"",
