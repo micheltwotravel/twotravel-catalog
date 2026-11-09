@@ -1,6 +1,7 @@
-// HubSpot webhook — two behaviors:
+// HubSpot webhook — three behaviors:
 // 1. deal.creation → WhatsApp notification to deal owner
 // 2. deal.propertyChange (dealstage → TARGET_STAGE_ID) → create kickoff in portal
+// 3. deal.propertyChange (dealstage → RESERVATION_STAGE_IDS) → auto-row in Compass reservations board
 
 import { createClient } from "@supabase/supabase-js";
 const supabase = createClient(
@@ -13,6 +14,12 @@ const GAS_URL = process.env.VITE_TASK_API_URL || process.env.GAS_URL
 
 // Only create kickoff when deal enters this stage
 const TARGET_STAGE_ID = "1078723461"; // Introduction Made By Sales Team (Concierge Clients)
+
+// Auto-sync to Compass reservations board when deal enters these stages
+const RESERVATION_STAGE_IDS = new Set([
+  "1078513048", // Reservation Confirmed (Concierge Clients)
+  "1262769729", // Reservations Confirmed (Logistics - Sales)
+]);
 
 // HubSpot owner email → WhatsApp number
 const OWNER_WA_MAP = {
@@ -45,6 +52,12 @@ async function fetchDeal(dealId, token) {
     "city_tt", "number_of_people_in_the_reservation", "number_of_guests_villa_b",
     "head_concierge", "arrival_date", "departure_date", "boat_type",
     "new_invoice_process___concierge", "hubspot_owner_id",
+    // Reservation-specific fields
+    "amount", "deal_currency_code",
+    "client_price", "cliente_price", "client_price___villas", "boat_price",
+    "amount___villas", "our_price___boat",
+    "provider___villas", "provider___boat", "provider___airbnb_vrbo",
+    "item___airbnb_vrbo", "source___deal", "dealstage", "pipeline",
   ].join(",");
 
   const res = await fetch(
@@ -69,6 +82,81 @@ async function fetchOwnerEmail(ownerId, token) {
   );
   const data = await res.json();
   return (data.email || "").toLowerCase();
+}
+
+async function fetchOwnerName(ownerId, token) {
+  const res = await fetch(
+    `https://api.hubapi.com/crm/v3/owners/${ownerId}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const data = await res.json();
+  const first = data.firstName || "";
+  const last  = data.lastName  || "";
+  return [first, last].filter(Boolean).join(" ") || (data.email || "").split("@")[0];
+}
+
+async function syncReservationToCompass(dealId, props, ownerName, guestName, guestEmail) {
+  const SUPABASE_ID = "finance_reservations_v1";
+
+  // Pick provider from whatever field is populated
+  const provider = pickProp(props, [
+    "provider___villas", "provider___boat", "provider___airbnb_vrbo",
+  ]);
+  const item = pickProp(props, ["item___airbnb_vrbo"]);
+
+  // Client price: try specific fields first, fall back to amount
+  const clientPriceRaw = pickProp(props, [
+    "client_price___villas", "boat_price", "cliente_price", "client_price", "amount",
+  ]);
+  // Our price
+  const ourPriceRaw = pickProp(props, ["amount___villas", "our_price___boat"]);
+
+  // Parse deal name: "Client Name - City - Description" or "Client Name, City, Date"
+  const dealName   = props.dealname || "";
+  const nameParts  = dealName.split(/\s*[-,]\s*/);
+  const clientName = guestName || nameParts[0]?.trim() || dealName;
+  const cityFromName = nameParts[1]?.trim() || "";
+
+  const city         = pickProp(props, ["city_tt"]) || cityFromName;
+  const arrival      = props.arrival_date   || "";
+  const departure    = props.departure_date || "";
+  const pax          = pickProp(props, ["number_of_people_in_the_reservation", "number_of_guests_villa_b"]) || "";
+  const currency     = props.deal_currency_code || "USD";
+  const dealSource   = props.source___deal || "";
+
+  const newRow = {
+    _hubspotDealId: String(dealId),
+    name:            clientName,
+    conciergeRep:    ownerName,
+    fecha:           arrival,
+    checkOut:        departure,
+    city,
+    provider,
+    serviceDescription: item || (nameParts[2]?.trim() || ""),
+    qty:             pax,
+    clientTotalUSD:  clientPriceRaw ? String(clientPriceRaw) : "",
+    precioProveedor: ourPriceRaw    ? String(ourPriceRaw)    : "",
+    currency,
+    dealSource,
+    servicesStatus:  "Confirmed",
+    createdAt:       new Date().toISOString(),
+  };
+
+  // Load existing rows, deduplicate by _hubspotDealId, prepend new row
+  const { data: existing } = await supabase
+    .from("kickoffs").select("data").eq("id", SUPABASE_ID).maybeSingle();
+
+  const rows = Array.isArray(existing?.data) ? existing.data : [];
+  const filtered = rows.filter(r => r._hubspotDealId !== String(dealId));
+  const merged   = [newRow, ...filtered];
+
+  if (existing) {
+    await supabase.from("kickoffs").update({ data: merged }).eq("id", SUPABASE_ID);
+  } else {
+    await supabase.from("kickoffs").insert({ id: SUPABASE_ID, data: merged });
+  }
+
+  console.log(`[reservations] synced deal ${dealId} — ${clientName} (${city})`);
 }
 
 async function sendWhatsApp(to, message) {
@@ -149,6 +237,30 @@ export default async function handler(req, res) {
 
             await sendWhatsApp(ownerWa, message);
           }
+        }
+        continue;
+      }
+
+      // 3. Reservation Confirmed → sync row to Compass reservations board
+      if (
+        event.subscriptionType === "deal.propertyChange" &&
+        event.propertyName === "dealstage" &&
+        RESERVATION_STAGE_IDS.has(String(event.propertyValue))
+      ) {
+        const deal = await fetchDeal(dealId, token);
+        if (deal.status !== "error" && deal.properties) {
+          const props   = deal.properties;
+          const ownerId = props.hubspot_owner_id;
+          let ownerName = "", guestName = "", guestEmail = "";
+          if (ownerId) ownerName = await fetchOwnerName(ownerId, token);
+          const contactAssocs = deal.associations?.contacts?.results || [];
+          if (contactAssocs.length) {
+            const contact = await fetchContact(contactAssocs[0].id, token);
+            const cp = contact.properties || {};
+            guestName  = [cp.firstname, cp.lastname].filter(Boolean).join(" ");
+            guestEmail = cp.email || "";
+          }
+          await syncReservationToCompass(dealId, props, ownerName, guestName, guestEmail);
         }
         continue;
       }
