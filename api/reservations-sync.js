@@ -119,10 +119,15 @@ export default async function handler(req, res) {
     const preservedRows = existingRows.filter(r=>!r._source||r._source==="manual"||r._source?.startsWith("slack"));
 
     // 4. Merge: HubSpot rows + preserved rows; preserved rows win on name+fecha dedup
+    // HubSpot deal names often include " - City - Month Year" suffix — strip it for dedup
+    function hsBaseName(name) {
+      return (name||"").replace(/\s*-\s*[A-Za-z ]+\s*-\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s*\d{4}\s*$/i,"").toLowerCase().trim();
+    }
     const preservedKeys = new Set(preservedRows.map(r=>`${(r.name||"").toLowerCase().trim()}|${r.fecha||""}`));
     const filteredHsRows = hsRows.filter(r=>{
-      const k=`${(r.name||"").toLowerCase().trim()}|${r.fecha||""}`;
-      return !preservedKeys.has(k);
+      const exact   = `${(r.name||"").toLowerCase().trim()}|${r.fecha||""}`;
+      const stripped= `${hsBaseName(r.name)}|${r.fecha||""}`;
+      return !preservedKeys.has(exact) && !preservedKeys.has(stripped);
     });
     const merged = [...filteredHsRows, ...preservedRows]
       .sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
