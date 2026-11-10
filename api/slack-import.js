@@ -170,6 +170,15 @@ export default async function handler(req, res) {
   const log = (...a) => { const m=a.join(" "); logs.push(m); console.log(m); };
 
   try {
+    // Log token identity and scopes for diagnostics
+    try {
+      const authTest = await fetch("https://slack.com/api/auth.test", {
+        headers: { Authorization: `Bearer ${process.env.SLACK_RESERVATIONS_BOT_TOKEN || process.env.VITE_SLACK_BOT_TOKEN}` }
+      }).then(r=>r.json());
+      log(`Token: ${authTest.user || "?"} (${authTest.user_id || "?"}), team: ${authTest.team || "?"}`);
+      log(`Scopes: ${authTest["x-oauth-scopes"] || "(check response headers)"}`);
+    } catch {}
+
     log("Finding #reservations-tt channel...");
     const channelId = await findChannel(logs);
     if (!channelId) return res.status(400).json({ error:"channel not found", logs });
