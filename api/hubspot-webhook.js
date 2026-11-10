@@ -15,11 +15,9 @@ const GAS_URL = process.env.VITE_TASK_API_URL || process.env.GAS_URL
 // Only create kickoff when deal enters this stage
 const TARGET_STAGE_ID = "1078723461"; // Introduction Made By Sales Team (Concierge Clients)
 
-// Auto-sync to Compass reservations board when deal enters these stages
-const RESERVATION_STAGE_IDS = new Set([
-  "1078513048", // Reservation Confirmed (Concierge Clients)
-  "1262769729", // Reservations Confirmed (Logistics - Sales)
-]);
+// Reservations board is now fed from Slack Events (/api/slack-events.js)
+// HubSpot webhook no longer syncs reservation rows — Slack is the source of truth
+const RESERVATION_STAGE_IDS = new Set([]);
 
 // HubSpot owner email → WhatsApp number
 const OWNER_WA_MAP = {

@@ -25,6 +25,7 @@
     "api/flight-status.js": { "maxDuration": 10 },
     "api/catalog-csv.js":   { "maxDuration": 15 },
     "api/whatsapp.js":      { "maxDuration": 15 },
-    "api/og.js":            { "maxDuration": 10 }
+    "api/og.js":            { "maxDuration": 10 },
+    "api/slack-events.js":  { "maxDuration": 10 }
   }
 }
