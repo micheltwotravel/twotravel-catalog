@@ -14,8 +14,9 @@ const SUPABASE_ID = "finance_reservations_v1";
 async function slackGet(method, params = {}) {
   const url = new URL(`https://slack.com/api/${method}`);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const token = process.env.SLACK_RESERVATIONS_BOT_TOKEN || process.env.VITE_SLACK_BOT_TOKEN;
   const r = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${process.env.VITE_SLACK_BOT_TOKEN}` },
+    headers: { Authorization: `Bearer ${token}` },
   });
   const d = await r.json();
   if (!d.ok) throw new Error(`Slack ${method}: ${d.error}`);
