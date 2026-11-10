@@ -1858,31 +1858,19 @@ function ActivityRow({ item, onUpdate, onRemove, onDuplicate, onResync, availabl
       </div>
       {/* QB billing row + day selector */}
       <div className="flex gap-3 mt-1 items-center flex-wrap">
-        {/* Move to another day — prev/next arrows */}
-        {availableDays.length > 1 && (() => {
-          const idx = availableDays.indexOf(item.dayLabel || availableDays[0]);
-          const hasPrev = idx > 0;
-          const hasNext = idx < availableDays.length - 1;
-          return (
-            <div className="flex items-center gap-1">
-              <button type="button" disabled={!hasPrev}
-                onClick={() => onUpdate(item._uid, { dayLabel: availableDays[idx - 1] })}
-                title={hasPrev ? `Mover a ${availableDays[idx - 1]}` : ""}
-                className="text-[11px] px-1.5 py-0.5 rounded border border-violet-200 text-violet-500 hover:bg-violet-50 disabled:opacity-20 disabled:cursor-default leading-none">
-                ←
-              </button>
-              <span className="text-[10px] text-violet-600 font-medium max-w-[90px] truncate">
-                {item.dayLabel || availableDays[0]}
-              </span>
-              <button type="button" disabled={!hasNext}
-                onClick={() => onUpdate(item._uid, { dayLabel: availableDays[idx + 1] })}
-                title={hasNext ? `Mover a ${availableDays[idx + 1]}` : ""}
-                className="text-[11px] px-1.5 py-0.5 rounded border border-violet-200 text-violet-500 hover:bg-violet-50 disabled:opacity-20 disabled:cursor-default leading-none">
-                →
-              </button>
-            </div>
-          );
-        })()}
+        {/* Move to another day — dropdown */}
+        {availableDays.length > 1 && (
+          <select
+            value={item.dayLabel || availableDays[0]}
+            onChange={e => onUpdate(item._uid, { dayLabel: e.target.value })}
+            title="Mover a otro día"
+            className="text-[10px] text-violet-600 font-medium border border-violet-200 rounded px-1 py-0.5 bg-white hover:border-violet-400 focus:outline-none focus:border-violet-500 max-w-[120px] cursor-pointer"
+          >
+            {availableDays.map(d => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+        )}
         <input
           value={item.quickbooksCode || ""}
           onChange={e => onUpdate(item._uid, { quickbooksCode: e.target.value.toUpperCase() })}
@@ -2561,12 +2549,16 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
     });
 
   const renameDayLabel = (oldLabel, newLabel) => {
+    // Move all items from oldLabel to newLabel
     setCart(prev => prev.map(i =>
       (i.dayLabel || "Sin día") === oldLabel ? { ...i, dayLabel: newLabel } : i
     ));
-    setDayMeta(prev => prev.map(dm =>
-      dm.label === oldLabel ? { ...dm, label: newLabel } : dm
-    ));
+    setDayMeta(prev => {
+      // If newLabel already exists, merge: remove the old entry (items already moved above)
+      const collision = prev.some(dm => dm.label === newLabel && dm.label !== oldLabel);
+      if (collision) return prev.filter(dm => dm.label !== oldLabel);
+      return prev.map(dm => dm.label === oldLabel ? { ...dm, label: newLabel } : dm);
+    });
   };
 
   const addDay = () => {

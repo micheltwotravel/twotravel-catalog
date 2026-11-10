@@ -47,7 +47,28 @@ async function findChannel(logs) {
       logs.push(`  ${label} (${id}): ${e.message}`);
     }
   }
-  return best;
+  if (best) return best;
+
+  // Fallback: list all channels to find #reservations-tt by name (needs channels:read)
+  logs.push("  Trying conversations.list to find #reservations-tt...");
+  try {
+    let cursor = "";
+    do {
+      const params = { types: "public_channel,private_channel", limit: 200, exclude_archived: true };
+      if (cursor) params.cursor = cursor;
+      const d = await slackGet("conversations.list", params);
+      for (const ch of d.channels || []) {
+        if (ch.name === "reservations-tt" || ch.name.includes("reservat")) {
+          logs.push(`  Found by name: #${ch.name} = ${ch.id}`);
+          return ch.id;
+        }
+      }
+      cursor = d.response_metadata?.next_cursor || "";
+    } while (cursor);
+  } catch (e) {
+    logs.push(`  conversations.list failed: ${e.message}`);
+  }
+  return null;
 }
 
 // ── Parser ─────────────────────────────────────────────────────────────────
