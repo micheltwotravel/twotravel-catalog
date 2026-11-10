@@ -2135,7 +2135,7 @@ function EventBlock({ it, lang, editMode, onRemove, onDuplicate, hasFamilies, pa
   const isConfirmed = it.confirmed !== false; // null (draft) and true both count as "not rejected"
   const isDraft     = it.confirmed === null || it.confirmed === undefined;
   const isTBC       = it.confirmed === false && it.tbc === true;
-  const showPrice = isConfirmed && (
+  const showPrice = (
     it.priceIsOverride ||
     !HIDE_PRICE_CATS.has(String(it.category || "").trim().toLowerCase()) ||
     String(it.priceUnit || "").toLowerCase().includes("day pass")
