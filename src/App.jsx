@@ -7394,7 +7394,8 @@ function App() {
     if (mode === "f-proveedores")   return <S><ErrorBoundary><FinancePagosProveedores /></ErrorBoundary></S>;
     if (mode === "f-checkin")       return <S><ErrorBoundary><FinanceCheckin /></ErrorBoundary></S>;
     if (mode === "f-transporte")    return <S><ErrorBoundary><FinanceTransporte /></ErrorBoundary></S>;
-    if (mode === "concierge" || mode === "clientes-checkin") return <S><ErrorBoundary><ConciergePanel onLogout={logout} currentUser={user} /></ErrorBoundary></S>;
+    if (mode === "concierge")        return <S><ErrorBoundary><ConciergePanel onLogout={logout} currentUser={user} /></ErrorBoundary></S>;
+    if (mode === "clientes-checkin") return <S><ErrorBoundary><ConciergePanel onLogout={logout} currentUser={user} panelMode="clientes-checkin" /></ErrorBoundary></S>;
     if (mode === "bodas")             return <S><ErrorBoundary><BodaPanel currentUser={user} onLogout={logout} /></ErrorBoundary></S>;
     if (mode === "bodas-mesas")       return <S><ErrorBoundary><BodaPanel currentUser={user} onLogout={logout} initialBodaId={params.get("id")||""} initialTab="mesas" /></ErrorBoundary></S>;
     if (mode === "tareas-bodas")      return <S><ErrorBoundary><TareasPanel currentUser={user} onLogout={logout} /></ErrorBoundary></S>;

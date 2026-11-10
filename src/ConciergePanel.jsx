@@ -9240,7 +9240,7 @@ export function MenuAdminPanel() {
   );
 }
 
-export default function ConciergePanel({ onLogout, currentUser }) {
+export default function ConciergePanel({ onLogout, currentUser, panelMode }) {
 
   const [kickoffs, setKickoffs] = useState([]);
   const [selectedKickoffForLink, setSelectedKickoffForLink] = useState(null);
@@ -9312,11 +9312,16 @@ const loadKickoffs = async (forceRefresh = false) => {
       };
     });
 
-    setKickoffs(arr);
+    const filtered = arr.filter(k =>
+      panelMode === "clientes-checkin"
+        ? k.panelContext === "checkin"
+        : k.panelContext !== "checkin"
+    );
+    setKickoffs(filtered);
 
     setSelectedKickoffForLink((prev) => {
   if (!prev) return null;
-  const stillExists = arr.find((x) => x.id === prev.id);
+  const stillExists = filtered.find((x) => x.id === prev.id);
   return stillExists || null;
 });
   } catch (err) {
@@ -9378,11 +9383,11 @@ const loadKickoffs = async (forceRefresh = false) => {
       createdAt: new Date().toISOString(),
       status: "new",
       conciergeSummary: "",
-
       internalNotes: "",
       cart: [],
       welcomePdfUrl: "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=sharing",
       preTripContent: portalLang === "es" ? DEFAULT_PRE_TRIP_ES : DEFAULT_PRE_TRIP,
+      ...(panelMode === "clientes-checkin" ? { panelContext: "checkin" } : {}),
     });
 
     const kickoff = {
@@ -9734,8 +9739,8 @@ const loadKickoffs = async (forceRefresh = false) => {
     <div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",flexDirection:"column"}}>
       <header className="tt-topbar">
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>Compass</span>
-          <span style={{fontSize:11,color:"var(--text-3)",fontWeight:400}}>{cp.subtitle}</span>
+          <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>{panelMode === "clientes-checkin" ? "Clientes Check-In" : "Compass"}</span>
+          <span style={{fontSize:11,color:"var(--text-3)",fontWeight:400}}>{panelMode === "clientes-checkin" ? (portalLang === "es" ? "Pre check-in y seguimiento de huéspedes" : "Pre check-in and guest follow-up") : cp.subtitle}</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
 
