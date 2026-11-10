@@ -7749,7 +7749,14 @@ function PresetMessages({ kickoff, lang }) {
   // Build booking slug: assigned concierge → current user fallback → first non-hidden concierge
   const bookingSlug = (() => {
     const names = String(kickoff.assignedConcierge || "").split(",").map(s => s.trim()).filter(Boolean);
-    const found = names.map(n => CONCIERGE_LIST.find(c => c.name === n)).find(Boolean);
+    const found = names.map(n => {
+      const nl = n.toLowerCase();
+      return CONCIERGE_LIST.find(c =>
+        c.name.toLowerCase() === nl ||
+        c.email.toLowerCase().startsWith(nl + "@") ||
+        c.email.split("@")[0].toLowerCase() === nl
+      );
+    }).find(Boolean);
     if (found) return found.email.split("@")[0].toLowerCase();
     return "";
   })();

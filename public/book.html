@@ -778,10 +778,25 @@ function applyTranslations() {
   document.getElementById("meetLinkBtn").textContent  = t.meetBtn;
 }
 
-renderCalendar();
-applyTranslations();
-// Pre-fetch busy dates for current month so they show greyed from the start
-prefetchBusyDates(viewYear, viewMonth);
+if (!slug) {
+  // No concierge slug — show inline error without crashing the page
+  document.getElementById("step1").innerHTML =
+    `<div style="text-align:center;padding:48px 0">
+       <div style="font-size:36px;margin-bottom:16px">📅</div>
+       <h1 style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:400;color:#1a1814;margin-bottom:12px">
+         ${lang==="es" ? "Enlace inválido" : "Invalid booking link"}
+       </h1>
+       <p style="font-size:14px;color:#6b6055;line-height:1.7;max-width:340px;margin:0 auto">
+         ${lang==="es"
+           ? "Este enlace no es válido o está incompleto. Por favor contacta a tu concierge para obtener un nuevo enlace."
+           : "This link is invalid or incomplete. Please contact your concierge to get a new booking link."}
+       </p>
+     </div>`;
+} else {
+  renderCalendar();
+  applyTranslations();
+  prefetchBusyDates(viewYear, viewMonth);
+}
 </script>
 <script src="/lang.js"></script>
 </body>
