@@ -51,7 +51,7 @@ function verifySlack(req, rawBody) {
 const FIELD_MAP = {
   name:        ["contact name","contact","client name","client","guest name","nombre"],
   dealName:    ["deal name","deal"],
-  fecha:       ["arrival date","arrival","fecha llegada","fecha","check-in","check in"],
+  fecha:       ["arrival date","arrival","fecha llegada","fecha","check-in","check in","reservation date","fecha reserva"],
   checkOut:    ["departure date","departure","fecha salida","checkout","check-out","check out"],
   city:        ["city","city_tt","ciudad","destino","destination"],
   pax:         ["# of guests","guests","pax","personas","number of guests","number of people"],
@@ -72,20 +72,28 @@ function normalizeKey(raw) {
 function parseDate(str) {
   if (!str) return "";
   str = str.trim();
-  // ISO already: 2026-11-11
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-  // MM/DD/YYYY
-  const m1 = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (m1) return `${m1[3]}-${m1[1].padStart(2,"0")}-${m1[2].padStart(2,"0")}`;
-  // Nov 11, 2026
-  const m2 = str.match(/^([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})$/);
+  // M/D/YY or M/D/YYYY
+  const m1 = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  if (m1) {
+    const yr = m1[3].length === 2 ? "20" + m1[3] : m1[3];
+    return `${yr}-${m1[1].padStart(2,"0")}-${m1[2].padStart(2,"0")}`;
+  }
+  const m2 = str.match(/^([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{2}|\d{4})$/);
   if (m2) {
     const months = {jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",
                    jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"};
     const mo = months[m2[1].slice(0,3).toLowerCase()];
-    if (mo) return `${m2[3]}-${mo}-${m2[2].padStart(2,"0")}`;
+    const yr = m2[3].length === 2 ? "20" + m2[3] : m2[3];
+    if (mo) return `${yr}-${mo}-${m2[2].padStart(2,"0")}`;
   }
   return str;
+}
+function parseDateRange(str) {
+  if (!str) return { start:"", end:"" };
+  const parts = str.split(/\s*[-–]\s*/);
+  if (parts.length >= 2) return { start: parseDate(parts[0].trim()), end: parseDate(parts[parts.length-1].trim()) };
+  return { start: parseDate(str), end: "" };
 }
 
 function parseMoney(str) {
@@ -128,9 +136,19 @@ function parseMessage(text) {
     fields.name = parts[0].trim();
     if (!fields.city && parts[1]) fields.city = parts[1].trim();
   }
+  // Strip HubSpot deal suffix: "Kim Eatley - Cartagena - May 2027" → "Kim Eatley"
+  if (fields.name && fields.name.includes(" - ")) {
+    fields.name = fields.name.split(/\s+-\s+/)[0].trim();
+  }
 
-  // Normalize dates and money
-  if (fields.fecha)       fields.fecha       = parseDate(fields.fecha);
+  // Handle range format "5/20/27 - 5/25/27" in fecha field
+  if (fields.fecha && /[-–]/.test(fields.fecha) && !fields.checkOut) {
+    const { start, end } = parseDateRange(fields.fecha);
+    fields.fecha = start;
+    if (end && end !== start) fields.checkOut = end;
+  } else {
+    if (fields.fecha) fields.fecha = parseDate(fields.fecha);
+  }
   if (fields.checkOut)    fields.checkOut    = parseDate(fields.checkOut);
   if (fields.clientTotalUSD) fields.clientTotalUSD = parseMoney(fields.clientTotalUSD);
   if (fields.precioProveedor) fields.precioProveedor = parseMoney(fields.precioProveedor);
