@@ -7050,7 +7050,7 @@ function FinanceLanding({ user, onLogout }) {
       ],
     },
     {
-      group: "Operaciones",
+      group: "Logística",
       items: [
         { icon:"📈", label:"Board de Reservas", desc:"Ingresos esperados, comisiones y estado de reservas", href:"/?mode=f-reservaciones", live:true },
         { icon:"🤝", label:"Check-In & Concierge",   desc:"Servicios de check-in y concierge con margen", href:"/?mode=f-checkin",   live:true },

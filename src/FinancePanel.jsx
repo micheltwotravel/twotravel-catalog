@@ -628,6 +628,7 @@ function normalizeRow(r) {
 }
 
 const ALL_COLS = [
+  { key:"resCode",          label:"Código",            w:90,  num:false, readOnly:false },
   { key:"name",             label:"Cliente",           w:160, num:false },
   { key:"conciergeRep",     label:"Concierge Rep",     w:120, num:false, optKey:"conciergeRep" },
   { key:"dealSource",       label:"Deal Source",       w:130, num:false },
@@ -656,6 +657,7 @@ const ALL_COLS = [
   { key:"servicesStatus",   label:"Status",            w:100, num:false },
   { key:"reflejo",          label:"Reflejo",           w:120, num:false },
   { key:"createdAt",        label:"Recibido",          w:110, num:false, noEdit:true },
+  { key:"itinerarioLink",   label:"Itinerario",        w:140, num:false },
 ];
 
 const STATUS_OPTS = ["Confirmed","Pending","Cancelled",""];
@@ -1230,12 +1232,15 @@ export function FinanceReservaciones({ currentUser }) {
   }, []);
 
   const addRow = () => {
+    const code = "RES-" + Date.now().toString(36).toUpperCase().slice(-6);
     const blank = {
+      resCode: code,
       name:"", conciergeRep:currentUser?.name||"", logisticRep:"", dealSource:"", areaCustomerType:"Concierge",
       fecha:monthF!=="all"?monthF+"-01":new Date().toISOString().slice(0,10), checkOut:"", fechaConfirmacion:"", provider:"", serviceCategory:"", city:"",
       serviceDescription:"", qty:"", hora:"", precioCOP:"", tax:"", precioProveedor:"",
       consumos:"", clientTotalUSD:"", banco:"", currency:"COP", hasCommission:"",
       commissionPct:"", totalCommission:"", servicesStatus:"Pending", reflejo:"",
+      itinerarioLink:"",
     };
     setRows(prev => [blank, ...prev]);
     setIsDirty(true);
@@ -1369,6 +1374,32 @@ export function FinanceReservaciones({ currentUser }) {
         <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
           {saved && <span style={{fontSize:12,color:"#059669",fontWeight:600}}>✓ Guardado</span>}
           {isDirty && !saving && <span style={{fontSize:11,color:GOLD}}>Cambios sin guardar</span>}
+          <button onClick={()=>{
+            const cols = ALL_COLS.filter(c=>!["resCode","gananciaBruta","margen","totalCommission","reflejo","itinerarioLink","createdAt"].includes(c.key));
+            const hdr = cols.map(c=>`<th>${c.label}</th>`).join("");
+            const bodyRows = filteredRows.map(r=>`<tr>${cols.map(c=>{
+              const v = c.key==="conciergeRep"?(r.conciergeRep||""):((r[c.key]??""));
+              return `<td>${v}</td>`;
+            }).join("")}</tr>`).join("");
+            const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reservas Two Travel</title>
+              <style>body{font-family:Arial,sans-serif;font-size:11px;margin:16px}
+              h2{font-size:14px;margin-bottom:8px}
+              table{border-collapse:collapse;width:100%}
+              th,td{border:1px solid #ccc;padding:4px 6px;text-align:left;white-space:nowrap}
+              th{background:#1a1814;color:#fff;font-size:10px;text-transform:uppercase}
+              tr:nth-child(even){background:#f9f8f6}
+              @media print{body{margin:0}}</style></head>
+              <body><h2>Reservas Two Travel — ${new Date().toLocaleDateString("es-CO")}</h2>
+              <table><thead><tr>${hdr}</tr></thead><tbody>${bodyRows}</tbody></table>
+              <script>window.onload=()=>{window.print();}</script></body></html>`;
+            const w=window.open("","_blank");
+            w.document.write(html); w.document.close();
+          }}
+            title="Descargar / imprimir reservas como PDF"
+            style={{padding:"8px 12px",fontSize:13,fontWeight:700,border:`1px solid ${BRD}`,borderRadius:8,
+              background:WHT,color:DARK,cursor:"pointer",whiteSpace:"nowrap"}}>
+            📥 PDF
+          </button>
           <button onClick={load} disabled={loading||isDirty}
             title={isDirty?"Guarda primero los cambios":"Recargar datos desde Supabase"}
             style={{padding:"8px 12px",fontSize:13,fontWeight:700,border:`1px solid ${BRD}`,borderRadius:8,
@@ -1528,6 +1559,12 @@ export function FinanceReservaciones({ currentUser }) {
                                   <span style={{fontSize:11,color:MUT,whiteSpace:"nowrap"}}>
                                     {val ? new Date(val).toLocaleString("es-CO",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}) : ""}
                                   </span>
+                                ) : c.key==="itinerarioLink" && val && (val.startsWith("http")||val.startsWith("/")) ? (
+                                  <a href={val} target="_blank" rel="noreferrer"
+                                    style={{fontSize:11,color:"#1d4ed8",whiteSpace:"nowrap",textDecoration:"underline",display:"flex",alignItems:"center",gap:3}}
+                                    onClick={e=>e.stopPropagation()}>
+                                    🔗 Ver
+                                  </a>
                                 ) : c.key==="name" && isHS ? (
                                   <div style={{display:"flex",alignItems:"center",gap:5}}>
                                     <EditCell value={val} field={c.key} isNum={c.num} isDate={c.date} options={cellOpts[c.optKey]} readOnly={c.readOnly} onSave={v=>patchRow(rowIdx,c.key,v)} />

@@ -3317,6 +3317,33 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
         .from("kickoffs").upsert({ id: "handoffs_v1", data: merged }, { onConflict: "id" });
       if (error) throw new Error(error.message);
 
+      // Also save to finance_reservations_v1 so they appear in the Pagos reservations board
+      try {
+        const { data: finEx } = await supabase.from("kickoffs").select("data").eq("id","finance_reservations_v1").maybeSingle();
+        const finD = finEx?.data || {};
+        const finN = typeof finD.internalNotes === "string" ? JSON.parse(finD.internalNotes) : (finD.internalNotes || {});
+        const finRows = finN.reservations || [];
+        const fecha = kickoff?.arrivalDate || kickoff?.checkIn || "";
+        const checkOut = kickoff?.departureDate || kickoff?.checkOut || "";
+        const finNew = newRows.map(r => ({
+          name: guestName, fecha, checkOut, city,
+          pax: String(kickoff?.groupSize || ""),
+          serviceDescription: r.activity,
+          conciergeRep: concierge,
+          serviceCategory: r.serviceCategory || "",
+          clientTotalUSD: "", precioProveedor: "", currency: "USD",
+          servicesStatus: "Confirmed", _source: "itinerary",
+          _kickoffId: kickoffId, _itemUid: r._itemUid,
+          createdAt: new Date().toISOString(),
+        })).filter(r => !finRows.some(x =>
+          x._kickoffId === kickoffId && x._itemUid === r._itemUid
+        ));
+        if (finNew.length > 0) {
+          const finMerged = { ...finD, internalNotes: JSON.stringify({ ...finN, reservations: [...finNew, ...finRows] }) };
+          await supabase.from("kickoffs").upsert({ id: "finance_reservations_v1", data: finMerged }, { onConflict:"id" });
+        }
+      } catch {}
+
       setExportModal(false);
       const n = newRows.length;
       alert(`✅ ${n} item${n !== 1 ? "s" : ""} de ${guestName} exportado${n !== 1 ? "s" : ""} al Tablero de Reservas.`);
