@@ -22,31 +22,31 @@ async function slackGet(method, params = {}) {
   return d;
 }
 
-async function findChannel() {
-  // Try known channel IDs first
+async function findChannel(logs) {
+  // Try each known channel ID directly with conversations.history
+  // (needs channels:history scope, not channels:read — avoids missing_scope on conversations.list)
+  const oldest = new Date("2026-10-01T00:00:00Z").getTime() / 1000;
   const known = [
-    process.env.SLACK_RESERVATIONS_CHANNEL_ID,
-    process.env.VITE_SLACK_CHANNEL_ID,
-    process.env.VITE_SLACK_ORDERS_CHANNEL_ID,
-  ].filter(Boolean);
-  for (const id of known) {
+    { id: process.env.SLACK_RESERVATIONS_CHANNEL_ID, label:"SLACK_RESERVATIONS_CHANNEL_ID" },
+    { id: process.env.VITE_SLACK_CHANNEL_ID,         label:"VITE_SLACK_CHANNEL_ID" },
+    { id: process.env.VITE_SLACK_ORDERS_CHANNEL_ID,  label:"VITE_SLACK_ORDERS_CHANNEL_ID" },
+    { id: process.env.VITE_SLACK_BILLING_CHANNEL_ID, label:"VITE_SLACK_BILLING_CHANNEL_ID" },
+  ].filter(x => x.id);
+
+  let best = null, bestScore = 0;
+  for (const { id, label } of known) {
     try {
-      const info = await slackGet("conversations.info", { channel: id });
-      if (info.channel.name === "reservations-tt" || info.channel.name.includes("reservat")) return id;
-    } catch {}
-  }
-  // List all channels
-  let cursor = "";
-  do {
-    const p = { types: "public_channel,private_channel", limit: 200, exclude_archived: true };
-    if (cursor) p.cursor = cursor;
-    const d = await slackGet("conversations.list", p);
-    for (const ch of d.channels) {
-      if (ch.name === "reservations-tt" || ch.name.includes("reservat")) return ch.id;
+      const test = await slackGet("conversations.history", { channel: id, limit: 10, oldest: String(oldest) });
+      const msgs = test.messages || [];
+      const resKeywords = /(arrival date|deal name|contact name|city_tt|check.in|departure date|# of guests)/i;
+      const score = msgs.filter(m => resKeywords.test(m.text || "") || (m.attachments||[]).some(a=>resKeywords.test(a.text||a.fallback||""))).length;
+      logs.push(`  ${label} (${id}): accessible, ${msgs.length} msgs, ${score} reservation-like`);
+      if (score > bestScore) { bestScore = score; best = id; }
+    } catch (e) {
+      logs.push(`  ${label} (${id}): ${e.message}`);
     }
-    cursor = d.response_metadata?.next_cursor || "";
-  } while (cursor);
-  return null;
+  }
+  return best;
 }
 
 // ── Parser ─────────────────────────────────────────────────────────────────
@@ -149,7 +149,7 @@ export default async function handler(req, res) {
 
   try {
     log("Finding #reservations-tt channel...");
-    const channelId = await findChannel();
+    const channelId = await findChannel(logs);
     if (!channelId) return res.status(400).json({ error:"channel not found", logs });
     log("Channel:", channelId);
 
