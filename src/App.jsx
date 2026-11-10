@@ -34,6 +34,7 @@ const FinancePagosProveedores = lazyWithReload(() => import("./FinancePanel").th
 const FinanceCheckin          = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinanceCheckin })));
 const FinanceTransporte       = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinanceTransporte })));
 const MenuAdminPanel          = lazyWithReload(() => import("./ConciergePanel").then(m => ({ default: m.MenuAdminPanel })));
+const ClientCheckinPanel      = lazyWithReload(() => import("./ClientCheckinPanel"));
 
 function PageLoader() {
   return (
@@ -7342,7 +7343,8 @@ function App() {
   if (mode === "drinks")    return <DrinksCatalog />;
   if (mode === "groceries") return <GroceryCatalog />;
   if (mode === "breakfast") return <BreakfastCatalog />;
-  if (mode === "checkin")   return <CheckinForm />;
+  if (mode === "checkin")        return <CheckinForm />;
+  if (mode === "client-checkin") return <S><ClientCheckinPanel /></S>;
   if (mode === "itinerary") return <S><ErrorBoundary><ItineraryPrintView /></ErrorBoundary></S>;
   if (mode === "trip")      return <ItineraryCatalog />;
   if (mode === "bodas-cliente") return <S><BodaPublicView /></S>;
