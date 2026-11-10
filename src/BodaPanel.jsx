@@ -3534,6 +3534,7 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask, onPatchTask })
   const [filterPerson,setFilterPerson]=useState("");
   const [filterBoda,setFilterBoda]=useState("");
   const [filterStatus,setFilterStatus]=useState("active");
+  const [filterQ,setFilterQ]=useState("");
   const [showAdd,setShowAdd]=useState(false);
   const [addBodaId,setAddBodaId]=useState("");
   const [addName,setAddName]=useState("");
@@ -3552,10 +3553,12 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask, onPatchTask })
 
   const filtered=sectionTasks
     .filter(t=>{
-      if(filterStatus==="active" && ["Terminado","Cancelado"].includes(t.status)) return false;
-      if(filterStatus==="done"   && !["Terminado","Cancelado"].includes(t.status)) return false;
+      if(filterStatus==="active"  && ["Terminado","Cancelado"].includes(t.status)) return false;
+      if(filterStatus==="done"    && !["Terminado","Cancelado"].includes(t.status)) return false;
+      if(filterStatus==="overdue" && (["Terminado","Cancelado"].includes(t.status) || cat(t)!=="late")) return false;
       if(filterPerson && (t.assignedTo||"")!==filterPerson) return false;
       if(filterBoda   && t.bodaId!==filterBoda) return false;
+      if(filterQ){ const q=filterQ.toLowerCase(); if(![t.taskName,t.bodaName,t.assignedTo,t.notes].some(f=>(f||"").toLowerCase().includes(q))) return false; }
       return true;
     })
     .sort((a,b)=>{
@@ -3635,9 +3638,10 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask, onPatchTask })
       )}
 
       {/* Filters */}
-      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:8}}>
         <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={{...INP_SM,width:"auto"}}>
           <option value="active">Activas</option>
+          <option value="overdue">⚠️ Atrasadas</option>
           <option value="all">Todas</option>
           <option value="done">Terminadas</option>
         </select>
@@ -3649,6 +3653,10 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask, onPatchTask })
           <option value="">💍 Todas las bodas</option>
           {bodas.filter(b=>b.tasks?.some(t=>section==="novios"?isNovios(t):!isNovios(t))).map(b=><option key={b.id} value={b.id}>{b.clienteName}</option>)}
         </select>
+      </div>
+      <div style={{display:"flex",gap:8,marginBottom:14}}>
+        <input value={filterQ} onChange={e=>setFilterQ(e.target.value)} placeholder="🔍 Buscar tarea, proveedor, novios..." style={{...INP_SM,flex:1}} />
+        {filterQ&&<button onClick={()=>setFilterQ("")} style={{...INP_SM,cursor:"pointer",padding:"4px 10px"}}>✕</button>}
       </div>
 
       {/* Summary chips */}
