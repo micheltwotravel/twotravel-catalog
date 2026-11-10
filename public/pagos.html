@@ -1754,7 +1754,7 @@ function renderReservas() {
     if (!resShowOTA && isOTABooking(r)) return false;
     const matchS = !resFilterStatus || r.status === resFilterStatus;
     const matchR = !resFilterRep || r.rep === resFilterRep;
-    const matchP = resFilterPeriod !== 'nov' || (r.fechaEntrada||'') >= '2026-11-01';
+    const matchP = resFilterPeriod !== 'nov' || !r.fechaEntrada || r.fechaEntrada >= '2026-11-01';
     return matchS && matchR && matchP;
   }).sort((a,b) => (a.fechaEntrada||'') > (b.fechaEntrada||'') ? 1 : -1);
 
