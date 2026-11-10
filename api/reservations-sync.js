@@ -129,7 +129,23 @@ export default async function handler(req, res) {
       const stripped= `${hsBaseName(r.name)}|${r.fecha||""}`;
       return !preservedKeys.has(exact) && !preservedKeys.has(stripped);
     });
-    const merged = [...filteredHsRows, ...preservedRows]
+
+    // Dedup within HubSpot rows: same stripped name+fecha → keep the one with a price
+    // (prevents "Client - City - Month YYYY" empty duplicates from showing)
+    const hsDeduped = new Map();
+    for (const r of filteredHsRows) {
+      const k = `${hsBaseName(r.name)}|${r.fecha||""}`;
+      const prev = hsDeduped.get(k);
+      if (!prev) {
+        hsDeduped.set(k, r);
+      } else if (!prev.clientTotalUSD && r.clientTotalUSD) {
+        hsDeduped.set(k, r);                           // replace no-price with priced
+      } else if (prev.clientTotalUSD && r.clientTotalUSD) {
+        hsDeduped.set(`${k}|${r._hubspotDealId}`, r); // both priced → keep both
+      }
+      // prev has price, new doesn't → keep prev (do nothing)
+    }
+    const merged = [...hsDeduped.values(), ...preservedRows]
       .sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
 
     // 5. Save back

@@ -253,6 +253,19 @@ function BodaForm({ boda, onSave, onCancel, saving, users=[], onFileUpload, uplo
   );
 }
 
+function TaskToggleBtn({ isDone, accent, onToggle }) {
+  return (
+    <button onClick={e=>{e.stopPropagation();onToggle();}}
+      title={isDone?"Marcar pendiente":"Marcar terminada"}
+      style={{marginTop:2,width:18,height:18,borderRadius:"50%",flexShrink:0,
+        border:isDone?"2px solid #34a853":`2px solid ${accent||"#9a7d52"}`,
+        background:isDone?"#34a853":"transparent",
+        cursor:"pointer",color:"#fff",fontSize:10,
+        display:"flex",alignItems:"center",justifyContent:"center",padding:0}}
+    >{isDone?"✓":""}</button>
+  );
+}
+
 // ─── TAREAS TAB ───────────────────────────────────────────────────────────────
 function TasksTab({ boda, users, onPatch }) {
   const [tasks,setTasks]=useState(boda.tasks||[]);
@@ -3675,8 +3688,9 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask, onPatchTask })
               </div>
             ) : (
               <div style={{display:"flex",alignItems:"flex-start",gap:10,width:"100%"}}>
+                {onPatchTask&&<TaskToggleBtn isDone={["Terminado","Cancelado"].includes(t.status)} accent={R.accent} onToggle={()=>onPatchTask(t.bodaId,t.id,{status:["Terminado","Cancelado"].includes(t.status)?"Pendiente":"Terminado"})} />}
                 <div style={{flex:1,minWidth:0}}>
-                  <p style={{fontSize:13,fontWeight:500,color:R.text,margin:0}}>{t.taskName}</p>
+                  <p style={{fontSize:13,fontWeight:500,color:R.text,margin:0,textDecoration:["Terminado","Cancelado"].includes(t.status)?"line-through":"none",opacity:["Terminado","Cancelado"].includes(t.status)?0.5:1}}>{t.taskName}</p>
                   <div style={{display:"flex",flexWrap:"wrap",gap:"3px 10px",marginTop:3,fontSize:11,color:R.muted}}>
                     <button onClick={()=>onSelectBoda(targetBoda)} style={{background:"none",border:"none",padding:0,cursor:targetBoda?"pointer":"default",fontFamily:"'Jost',sans-serif",display:"flex",alignItems:"center",gap:4}}>
                       <span style={{color:R.accent,fontWeight:600}}>💍 {t.bodaName}</span>
