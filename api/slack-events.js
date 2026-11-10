@@ -179,7 +179,7 @@ async function saveRow(row) {
     return { skipped: true };
   }
 
-  const newRow  = { ...row, _source: "slack_auto", createdAt: new Date().toISOString() };
+  const newRow  = { ...row, _source: "slack_auto", createdAt: row.slackTs || new Date().toISOString() };
   const merged  = [newRow, ...rows].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
   const newData = { ...d, internalNotes: JSON.stringify({ ...notes, reservations: merged }) };
 
@@ -264,6 +264,9 @@ export default async function handler(req, res) {
     console.log("[slack-events] no reservation parsed from message");
     return res.json({ ok: true, parsed: false });
   }
+
+  // Store actual Slack message timestamp (event.ts = Unix seconds with microseconds)
+  if (event.ts) row.slackTs = new Date(parseFloat(event.ts) * 1000).toISOString();
 
   const result = await saveRow(row);
   return res.json({ ok: true, ...result, name: row.name, fecha: row.fecha });

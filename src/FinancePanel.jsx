@@ -655,6 +655,7 @@ const ALL_COLS = [
   { key:"totalCommission",  label:"Total Comisión",    w:110, num:true,  readOnly:true },
   { key:"servicesStatus",   label:"Status",            w:100, num:false },
   { key:"reflejo",          label:"Reflejo",           w:120, num:false },
+  { key:"createdAt",        label:"Recibido",          w:110, num:false, noEdit:true },
 ];
 
 const STATUS_OPTS = ["Confirmed","Pending","Cancelled",""];
@@ -1189,6 +1190,12 @@ export function FinanceReservaciones({ currentUser }) {
   }, []);
   useEffect(()=>{load();},[load]);
 
+  // Live refresh — poll Supabase every 60 s so new Slack reservations appear automatically
+  useEffect(()=>{
+    const t = setInterval(()=>{ load(); }, 60_000);
+    return ()=>clearInterval(t);
+  },[load]);
+
   // Resolve HubSpot owner IDs → names
   useEffect(() => {
     fetch("/api/hubspot", { method:"POST", headers:{"Content-Type":"application/json"},
@@ -1517,7 +1524,11 @@ export function FinanceReservaciones({ currentUser }) {
                               const val = c.readOnly ? computed[c.key] : r[c.key];
                               return (
                               <td key={c.key} style={{padding:"5px 8px",verticalAlign:"middle",maxWidth:c.w+40}}>
-                                {c.key==="name" && isHS ? (
+                                {c.noEdit ? (
+                                  <span style={{fontSize:11,color:MUT,whiteSpace:"nowrap"}}>
+                                    {val ? new Date(val).toLocaleString("es-CO",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}) : ""}
+                                  </span>
+                                ) : c.key==="name" && isHS ? (
                                   <div style={{display:"flex",alignItems:"center",gap:5}}>
                                     <EditCell value={val} field={c.key} isNum={c.num} isDate={c.date} options={cellOpts[c.optKey]} readOnly={c.readOnly} onSave={v=>patchRow(rowIdx,c.key,v)} />
                                     <span style={{fontSize:9,fontWeight:700,letterSpacing:".06em",background:"#fef3c7",color:"#92400e",border:"1px solid #fcd34d",padding:"1px 6px",borderRadius:10,flexShrink:0,whiteSpace:"nowrap"}}>HS NUEVO</span>
