@@ -179,8 +179,14 @@ export default async function handler(req, res) {
       log(`Scopes: ${authTest["x-oauth-scopes"] || "(check response headers)"}`);
     } catch {}
 
-    log("Finding #reservations-tt channel...");
-    const channelId = await findChannel(logs);
+    // Allow passing the channel ID directly to bypass auto-discovery
+    let channelId = req.query.channel_id || null;
+    if (channelId) {
+      log(`Using provided channel_id: ${channelId}`);
+    } else {
+      log("Finding #reservations-tt channel...");
+      channelId = await findChannel(logs);
+    }
     if (!channelId) return res.status(400).json({ error:"channel not found", logs });
     log("Channel:", channelId);
 
