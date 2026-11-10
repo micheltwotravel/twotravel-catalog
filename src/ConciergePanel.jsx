@@ -8303,10 +8303,28 @@ export function ReunionesPage({ currentUser, initialKickoffId }) {
         return true;
       })
       .sort((a,b) => {
-        // newest-activity first: edited deals bubble above older ones (#57)
+        // 1) Recent platform activity first (edited this week bubbles up)
         const ta = a._updatedAt || a.created_at || a.createdAt || "";
         const tb = b._updatedAt || b.created_at || b.createdAt || "";
-        return tb.localeCompare(ta);
+        const RECENT_DAYS = 7;
+        const cutoff = new Date(Date.now() - RECENT_DAYS * 86400000).toISOString();
+        const aRecent = ta > cutoff;
+        const bRecent = tb > cutoff;
+        if (aRecent !== bRecent) return aRecent ? -1 : 1; // recent activity beats no activity
+        if (aRecent && bRecent) return tb.localeCompare(ta); // both recent → newest edit first
+
+        // 2) Among non-recently-edited, sort by arrivalDate: upcoming first, past last, unknown last
+        const today = new Date().toISOString().slice(0, 10);
+        const da = a.arrivalDate || "";
+        const db = b.arrivalDate || "";
+        const aFuture = da >= today;
+        const bFuture = db >= today;
+        if (aFuture !== bFuture) return aFuture ? -1 : 1; // upcoming beats past/unknown
+        if (!da && !db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        // both future → closest arrival first; both past → most recent past first
+        return aFuture ? da.localeCompare(db) : db.localeCompare(da);
       });
   }, [kickoffs, filterConcierge, search]);
 
