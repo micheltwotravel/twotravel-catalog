@@ -997,7 +997,6 @@ async function sendItineraryPdfToSlack(kickoff, lang = "en", currency = "USD", m
    Lista fija de concierges
    ========================================= */
 const CONCIERGE_LIST = [
-  { name: "Alia Jadad",           email: "alia@two.travel",     phone: "+57 301 7618012",   city: "CTG", title: "Senior Concierge Cartagena", calendarUrl: "" },
   { name: "Carolina Lopez",       email: "caro@two.travel",     phone: "+57 300 8192062",   city: "CTG", title: "Senior Concierge Cartagena", calendarUrl: "https://meetings.hubspot.com/carotwotravel/caro-calendar?uuid=4ba96711-f96d-4fe3-b9eb-12a836826a81" },
   { name: "Daniela Becerra",      email: "daniela@two.travel",  phone: "+57 304 4445285",   city: "MDE", title: "Senior Concierge Medellín",  calendarUrl: "" },
   { name: "Nataly Cruz",          email: "nataly@two.travel",   phone: "+52 1 55 2337 7241",city: "CDMX", title: "Senior Concierge Mexico City", calendarUrl: "" },
@@ -1323,7 +1322,6 @@ const CITY_TO_DESTINATION = {
 
 // Maps full concierge names → dropdown short names
 const CONCIERGE_TO_SHORT = {
-  "Alia Jadad":            "Alia",
   "Carolina Lopez":        "Caro",
   "Daniela Becerra":       "Dani",
   "Nataly Cruz":           "Nataly",
@@ -9340,6 +9338,73 @@ const loadKickoffs = async (forceRefresh = false) => {
   const [newClientKickoff, setNewClientKickoff] = useState(null);
   const _creatingRef = React.useRef(false);
 
+  // ── HubSpot catalog search (clientes-checkin only) ───────────────────────
+  const [showHSSearch, setShowHSSearch] = useState(false);
+  const [hsQuery, setHsQuery] = useState("");
+  const [hsResults, setHsResults] = useState([]);
+  const [hsLoading, setHsLoading] = useState(false);
+  const [hsSelected, setHsSelected] = useState(null);
+  const [hsCatalogLink, setHsCatalogLink] = useState("");
+  const [hsCreating, setHsCreating] = useState(false);
+  const hsSearchTimer = React.useRef(null);
+
+  const hsSearch = (q) => {
+    setHsQuery(q);
+    setHsSelected(null);
+    setHsCatalogLink("");
+    clearTimeout(hsSearchTimer.current);
+    if (!q.trim()) { setHsResults([]); return; }
+    hsSearchTimer.current = setTimeout(async () => {
+      setHsLoading(true);
+      try {
+        const r = await fetch("/api/hubspot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "search_contacts", data: { query: q.trim() } }),
+        });
+        const json = await r.json();
+        setHsResults(json.results || []);
+      } catch { setHsResults([]); }
+      finally { setHsLoading(false); }
+    }, 350);
+  };
+
+  const hsCreateLink = async (contact) => {
+    setHsSelected(contact);
+    setHsCreating(true);
+    setHsCatalogLink("");
+    try {
+      const id = `ko_hs_${contact.id}_${Date.now()}`;
+      const nameParts = (contact.name || "").split(" ");
+      await saveKickoffToSheet({
+        id,
+        guestName: contact.name,
+        email: contact.email,
+        guestEmail: contact.email,
+        guestContact: contact.phone,
+        city: contact.city ? detectCityCode(contact.city) : "",
+        tripName: contact.name,
+        assignedConcierge: "",
+        assignedConciergeName: "",
+        createdAt: new Date().toISOString(),
+        status: "new",
+        conciergeSummary: "",
+        internalNotes: "",
+        cart: [],
+        panelContext: "checkin",
+        welcomePdfUrl: "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=sharing",
+        preTripContent: portalLang === "es" ? DEFAULT_PRE_TRIP_ES : DEFAULT_PRE_TRIP,
+      });
+      const link = buildCatalogLink({ id }, 1, portalLang);
+      setHsCatalogLink(link);
+      loadKickoffs(true);
+    } catch (e) {
+      alert("Error creando kickoff: " + (e?.message || e));
+    } finally {
+      setHsCreating(false);
+    }
+  };
+
   const handleCreateAndOpenLink = async (form) => {
     if (_creatingRef.current) return;
 
@@ -9743,6 +9808,17 @@ const loadKickoffs = async (forceRefresh = false) => {
           <span style={{fontSize:11,color:"var(--text-3)",fontWeight:400}}>{panelMode === "clientes-checkin" ? (portalLang === "es" ? "Pre check-in y seguimiento de huéspedes" : "Pre check-in and guest follow-up") : cp.subtitle}</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
+
+  {panelMode === "clientes-checkin" && (
+    <button
+      className="tt-btn-ghost"
+      style={{gap:5,display:"flex",alignItems:"center"}}
+      onClick={() => { setShowHSSearch(true); setHsQuery(""); setHsResults([]); setHsSelected(null); setHsCatalogLink(""); }}
+      title="Buscar cliente en HubSpot y generar link de catálogo"
+    >
+      🔍 Buscar en HubSpot
+    </button>
+  )}
 
   <a
     href="/?mode=reuniones"
@@ -10556,6 +10632,84 @@ const loadKickoffs = async (forceRefresh = false) => {
       )}
 
     </div>
+
+    {/* ── HubSpot catalog search modal (clientes-checkin only) ── */}
+    {showHSSearch && (
+      <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,.45)",display:"flex",alignItems:"center",justifyContent:"center"}}
+           onClick={e => { if (e.target === e.currentTarget) setShowHSSearch(false); }}>
+        <div className="tt-card" style={{width:"100%",maxWidth:520,maxHeight:"80vh",display:"flex",flexDirection:"column",padding:24,gap:16,overflowY:"auto"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <span style={{fontSize:14,fontWeight:600,color:"var(--text-1)"}}>Buscar cliente en HubSpot</span>
+            <button className="tt-btn-ghost" style={{padding:"4px 10px",fontSize:12}} onClick={() => setShowHSSearch(false)}>✕</button>
+          </div>
+
+          <div style={{position:"relative"}}>
+            <input
+              className="tt-input"
+              style={{width:"100%",boxSizing:"border-box",paddingRight:36}}
+              placeholder="Nombre del cliente..."
+              value={hsQuery}
+              autoFocus
+              onChange={e => hsSearch(e.target.value)}
+            />
+            {hsLoading && (
+              <span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontSize:12,color:"var(--text-3)"}}>⟳</span>
+            )}
+          </div>
+
+          {/* Results list */}
+          {hsResults.length > 0 && !hsSelected && (
+            <div style={{border:"1px solid var(--border)",borderRadius:"var(--radius)",overflow:"hidden"}}>
+              {hsResults.map((c, i) => (
+                <button key={c.id} onClick={() => hsCreateLink(c)}
+                  style={{width:"100%",textAlign:"left",padding:"10px 14px",background:i%2===0?"var(--bg)":"var(--surface)",border:"none",borderBottom: i<hsResults.length-1?"1px solid var(--border-soft)":"none",cursor:"pointer",display:"flex",flexDirection:"column",gap:2}}
+                  onMouseEnter={e => e.currentTarget.style.background="#f0ede8"}
+                  onMouseLeave={e => e.currentTarget.style.background=i%2===0?"var(--bg)":"var(--surface)"}
+                >
+                  <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>{c.name || "(sin nombre)"}</span>
+                  <span style={{fontSize:11,color:"var(--text-3)"}}>{[c.email, c.phone, c.city].filter(Boolean).join(" · ")}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {hsResults.length === 0 && hsQuery.trim() && !hsLoading && (
+            <p style={{fontSize:12,color:"var(--text-3)",textAlign:"center",margin:0}}>Sin resultados para "{hsQuery}"</p>
+          )}
+
+          {/* Creating spinner */}
+          {hsCreating && (
+            <p style={{fontSize:12,color:"var(--text-3)",textAlign:"center",margin:0}}>Creando kickoff...</p>
+          )}
+
+          {/* Catalog link result */}
+          {hsCatalogLink && hsSelected && (
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <p style={{fontSize:13,color:"var(--text-1)",margin:0}}>
+                Link de catálogo para <strong>{hsSelected.name}</strong>:
+              </p>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <input
+                  readOnly
+                  value={hsCatalogLink}
+                  style={{flex:1,fontSize:11,padding:"6px 10px",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",background:"var(--bg)",color:"var(--text-2)",fontFamily:"monospace"}}
+                  onFocus={e => e.target.select()}
+                />
+                <button className="tt-btn-primary" style={{flexShrink:0,fontSize:12,padding:"6px 14px"}}
+                  onClick={() => { navigator.clipboard?.writeText(hsCatalogLink).catch(()=>{}); }}>
+                  Copiar
+                </button>
+              </div>
+              <button className="tt-btn-ghost" style={{fontSize:11,alignSelf:"flex-start"}}
+                onClick={() => { setHsSelected(null); setHsCatalogLink(""); setHsResults([]); setHsQuery(""); }}>
+                ← Buscar otro
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+
   );
 
 

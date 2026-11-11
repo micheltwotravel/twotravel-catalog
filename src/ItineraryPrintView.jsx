@@ -1143,7 +1143,6 @@ const CSS = `
    SHARED PAGE HEADER
 ═══════════════════════════════════════════════════════════ */
 const CONCIERGE_TITLE_MAP = {
-  "Alia Jadad":             "Senior Concierge Cartagena",
   "Carolina Lopez":         "Senior Concierge Cartagena",
   "Daniela Becerra":        "Senior Concierge Medellín",
   "Nataly Cruz":            "Senior Concierge Mexico City",
@@ -1482,7 +1481,6 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
           const SLUG_MAP = {
             "carolina": { slug:"caro",    city:"Cartagena" },
             "caro":     { slug:"caro",    city:"Cartagena" },
-            "alia":     { slug:"alia",    city:"Cartagena" },
             "daniela":  { slug:"daniela", city:"Medellín"  },
             "nataly":   { slug:"nataly",  city:"CDMX"      },
             "giulia":   { slug:"giulia",  city:"CDMX"      },

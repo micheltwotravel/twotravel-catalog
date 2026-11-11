@@ -378,6 +378,28 @@ export default async function handler(req, res) {
       return res.status(200).json({ contacts: enriched, ownerFound: ownerIds.length > 0 });
     }
 
+    if (action === "search_contacts") {
+      const { query = "" } = data || {};
+      if (!query.trim()) return res.status(200).json({ results: [] });
+
+      const searchBody = {
+        query: query.trim(),
+        limit: 20,
+        properties: ["firstname", "lastname", "email", "phone", "hs_lead_status", "city", "where_are_you_traveling_to_"],
+        sorts: [{ propertyName: "lastmodifieddate", direction: "DESCENDING" }],
+      };
+      const r = await hubspotRequest("/crm/v3/objects/contacts/search", "POST", searchBody, token);
+      const results = (r.data?.results || []).map(c => ({
+        id: c.id,
+        name: [c.properties?.firstname, c.properties?.lastname].filter(Boolean).join(" "),
+        email: c.properties?.email || "",
+        phone: c.properties?.phone || "",
+        city: c.properties?.city || c.properties?.where_are_you_traveling_to_ || "",
+        status: c.properties?.hs_lead_status || "",
+      }));
+      return res.status(200).json({ results });
+    }
+
     return res.status(400).json({ error: `Unknown action: ${action}` });
 
   } catch (err) {

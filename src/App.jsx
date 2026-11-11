@@ -172,7 +172,7 @@ const translations = {
 
     options: {
       destinations: ["Cartagena", "CDMX", "Medellín", "Tulum"],
-      concierges: ["Alia", "Caro", "Dani", "Giulia", "Natalia", "Nataly"],
+      concierges: ["Caro", "Dani", "Giulia", "Natalia", "Nataly"],
       occasions: [
         "Anniversary",
         "Bachelor/Bachelorette",
@@ -283,7 +283,7 @@ const translations = {
 
     options: {
       destinations: ["Cartagena", "CDMX", "Medellín", "Tulum"],
-      concierges: ["Alia", "Caro", "Dani", "Giulia", "Natalia", "Nataly"],
+      concierges: ["Caro", "Dani", "Giulia", "Natalia", "Nataly"],
       occasions: [
         "Aniversario",
         "Cumpleaños",
@@ -3470,12 +3470,11 @@ function SoporteDashboard() {
    No additional GAS needed.
 ════════════════════════════════════════════════════════ */
 const CONCIERGE_NAMES = [
-  "Alia Jadad","Carolina Lopez","Daniela Becerra",
+  "Carolina Lopez","Daniela Becerra",
   "Nataly Cruz","Giulia Lorini Serrato","Natalia Peniche",
 ];
 // Email map for task assignment
 const CONCIERGE_EMAILS = {
-  "Alia Jadad":            "alia@two.travel",
   "Carolina Lopez":        "caro@two.travel",
   "Daniela Becerra":       "daniela@two.travel",
   "Nataly Cruz":           "nataly@two.travel",
@@ -3486,7 +3485,6 @@ const CONCIERGE_EMAILS = {
 // ── Full team organized by area ───────────────────────────────────────────────
 const TEAM_AREAS = [
   { key:"concierge", label:"Concierge",  color:"#2563EB", members:[
-    { name:"Alia Jadad",            email:"alia@two.travel" },
     { name:"Carolina Lopez",        email:"caro@two.travel" },
     { name:"Daniela Becerra",       email:"daniela@two.travel" },
     { name:"Nataly Cruz",           email:"nataly@two.travel" },
@@ -3526,7 +3524,6 @@ const TEAM_EMAIL_MAP = Object.fromEntries(TEAM_ALL.map(m => [m.name, m.email]));
 const teamMemberInfo = name => TEAM_ALL.find(m => m.name === name);
 // City map for KPI breakdown
 const CONCIERGE_CITIES = {
-  "Alia Jadad":            "CTG",
   "Carolina Lopez":        "CTG",
   "Daniela Becerra":       "MDE",
   "Nataly Cruz":           "CDMX",
