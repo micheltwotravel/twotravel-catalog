@@ -7410,7 +7410,7 @@ function NewClientLinksModal({ kickoff, lang = "en", onClose }) {
    CreateClientModal — reemplaza el prompt() chain
    ========================================= */
 
-function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
+function CreateClientModal({ open, onClose, onSubmit, kickoffs, panelMode }) {
   const [form, setForm] = React.useState({
     guestName: "",
     email: "",
@@ -7423,6 +7423,46 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
   const [submitting,         setSubmitting]         = React.useState(false);
   const [customCityInput,    setCustomCityInput]    = React.useState("");
   const submittingRef = React.useRef(false);
+
+  // HubSpot name autocomplete (checkin mode only)
+  const [hsDropResults, setHsDropResults] = React.useState([]);
+  const [hsDropLoading, setHsDropLoading] = React.useState(false);
+  const [hsDropOpen,    setHsDropOpen]    = React.useState(false);
+  const hsTimer = React.useRef(null);
+
+  const onNameChange = (e) => {
+    const val = e.target.value;
+    setForm(f => ({ ...f, guestName: val }));
+    if (panelMode !== "clientes-checkin") return;
+    setHsDropOpen(false);
+    clearTimeout(hsTimer.current);
+    if (!val.trim() || val.length < 2) { setHsDropResults([]); return; }
+    hsTimer.current = setTimeout(async () => {
+      setHsDropLoading(true);
+      try {
+        const r = await fetch("/api/hubspot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "search_contacts", data: { query: val.trim() } }),
+        });
+        const json = await r.json();
+        setHsDropResults(json.results || []);
+        setHsDropOpen((json.results || []).length > 0);
+      } catch { setHsDropResults([]); }
+      finally { setHsDropLoading(false); }
+    }, 350);
+  };
+
+  const pickHsContact = (c) => {
+    setForm(f => ({
+      ...f,
+      guestName:    c.name  || f.guestName,
+      email:        c.email || f.email,
+      guestContact: c.phone || f.guestContact,
+    }));
+    setHsDropOpen(false);
+    setHsDropResults([]);
+  };
 
   const toggleConcierge = (name) => {
     setSelectedConcierges(prev => {
@@ -7481,17 +7521,38 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs }) {
 
           {/* Nombre + Email en fila */}
           <div className="grid grid-cols-2 gap-2">
-            <div>
+            <div style={{position:"relative"}}>
               <label className="block text-[11px] font-medium text-neutral-500 mb-1">
                 Nombre <span className="text-red-400">*</span>
+                {panelMode === "clientes-checkin" && <span style={{color:"var(--text-3)",fontWeight:400,marginLeft:4}}>· busca en HubSpot</span>}
               </label>
               <input
                 type="text"
                 value={form.guestName}
-                onChange={handleField("guestName")}
+                onChange={onNameChange}
+                onBlur={() => setTimeout(() => setHsDropOpen(false), 150)}
                 placeholder="María García"
                 className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+                autoComplete="off"
               />
+              {hsDropLoading && (
+                <span style={{position:"absolute",right:10,top:34,fontSize:11,color:"#aaa"}}>⟳</span>
+              )}
+              {hsDropOpen && hsDropResults.length > 0 && (
+                <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:300,background:"#fff",border:"1px solid #e5e5e5",borderRadius:8,boxShadow:"0 4px 16px rgba(0,0,0,.12)",maxHeight:200,overflowY:"auto",marginTop:2}}>
+                  {hsDropResults.map(c => (
+                    <button key={c.id} type="button"
+                      onMouseDown={() => pickHsContact(c)}
+                      style={{width:"100%",textAlign:"left",padding:"8px 12px",background:"transparent",border:"none",borderBottom:"1px solid #f5f5f5",cursor:"pointer",display:"flex",flexDirection:"column",gap:1}}
+                      onMouseEnter={e=>e.currentTarget.style.background="#f8f7f5"}
+                      onMouseLeave={e=>e.currentTarget.style.background="transparent"}
+                    >
+                      <span style={{fontSize:12,fontWeight:600,color:"#111"}}>{c.name||"(sin nombre)"}</span>
+                      <span style={{fontSize:10,color:"#999"}}>{[c.email,c.phone].filter(Boolean).join(" · ")}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-[11px] font-medium text-neutral-500 mb-1">
@@ -10548,6 +10609,7 @@ const loadKickoffs = async (forceRefresh = false) => {
         onClose={() => { setCreateModalOpen(false); setPendingLinkKind(null); }}
         onSubmit={handleCreateAndOpenLink}
         kickoffs={kickoffs}
+        panelMode={panelMode}
       />
 
       {newClientKickoff && (
