@@ -2366,7 +2366,7 @@ function SortableDaySection({ label, ...props }) {
   );
 }
 
-function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTypeOverride }) {
+function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTypeOverride, exportTriggerRef }) {
   // Parse cart/dayMeta whether they arrive as arrays or JSON strings from the Sheet
   const parseArr = (v) => {
     if (Array.isArray(v)) return v;
@@ -3228,6 +3228,8 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
     setExportSelected(new Set(allUids));
     setExportModal(true);
   };
+
+  useEffect(() => { if (exportTriggerRef) exportTriggerRef.current = handleGenerateReservation; });
 
   const handleExportConfirm = async () => {
     const guestName = kickoff?.guestName || kickoff?.tripName || "";
@@ -5366,6 +5368,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   // Pre-seeded from kickoff so they're never null even if onCartChange hasn't fired yet
   const canvasCartRef    = useRef(Array.isArray(kickoff?.cart)    ? kickoff.cart    : []);
   const canvasDayMetaRef = useRef(Array.isArray(kickoff?.dayMeta) ? kickoff.dayMeta : []);
+  const canvasExportRef  = useRef(null);
   const openBillingModal = (type) => {
     const rawCart = canvasCartRef.current?.length
       ? canvasCartRef.current
@@ -6542,6 +6545,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               key={canvasKey}
               kickoff={kickoff}
               clientTypeOverride={clientType}
+              exportTriggerRef={canvasExportRef}
               onCartChange={(newCart, newDayMeta) => {
                 canvasCartRef.current    = newCart;
                 canvasDayMetaRef.current = newDayMeta;
@@ -7046,6 +7050,14 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           })()}
           {/* Pre-set WhatsApp messages */}
           <PresetMessages kickoff={kickoff} lang={lang} />
+          <button
+            type="button"
+            onClick={() => canvasExportRef.current?.()}
+            className="px-3 py-2 rounded-lg border border-blue-300 text-sm text-blue-700 bg-blue-50 hover:bg-blue-100"
+            title="Enviar actividades del itinerario al Tablero de Reservas"
+          >
+            📤 Exportar reservas
+          </button>
           <div className="flex items-center gap-1">
             <button
               type="button"
