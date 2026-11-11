@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import ttLogoPng from "./assets/logo.png";
 import { AvailabilityManager } from "./BookingPage";
 import { DRINK_CATEGORIES as DRINK_CATEGORIES_DEFAULT, GROCERY_CATEGORIES as GROCERY_CATEGORIES_DEFAULT, applyMenuOverrides } from "./menuData";
@@ -7430,7 +7429,6 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs, panelMode }) {
   const [hsDropLoading, setHsDropLoading] = React.useState(false);
   const [hsDropOpen,    setHsDropOpen]    = React.useState(false);
   const hsTimer = React.useRef(null);
-  const hsInputRef = React.useRef(null);
 
   const onNameChange = (e) => {
     const val = e.target.value;
@@ -7521,55 +7519,52 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs, panelMode }) {
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
 
-          {/* Nombre + Email en fila */}
-          <div className="grid grid-cols-2 gap-2">
-            <div style={{position:"relative"}}>
-              <label className="block text-[11px] font-medium text-neutral-500 mb-1">
-                Nombre <span className="text-red-400">*</span>
-                {panelMode === "clientes-checkin" && <span style={{color:"var(--text-3)",fontWeight:400,marginLeft:4}}>· busca en HubSpot</span>}
-              </label>
-              <input
-                ref={hsInputRef}
-                type="text"
-                value={form.guestName}
-                onChange={onNameChange}
-                onBlur={() => setTimeout(() => setHsDropOpen(false), 150)}
-                placeholder="María García"
-                className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
-                autoComplete="off"
-              />
-              {hsDropLoading && (
-                <span style={{position:"absolute",right:10,top:34,fontSize:11,color:"#aaa"}}>⟳</span>
-              )}
-              {hsDropOpen && hsDropResults.length > 0 && hsInputRef.current && createPortal(
-                <div style={{position:"fixed",top:hsInputRef.current.getBoundingClientRect().bottom+2,left:hsInputRef.current.getBoundingClientRect().left,width:hsInputRef.current.getBoundingClientRect().width,zIndex:99999,background:"#fff",border:"1px solid #e5e5e5",borderRadius:8,boxShadow:"0 4px 16px rgba(0,0,0,.12)",maxHeight:220,overflowY:"auto"}}>
-                  {hsDropResults.map(c => (
-                    <button key={c.id} type="button"
-                      onMouseDown={() => pickHsContact(c)}
-                      style={{width:"100%",textAlign:"left",padding:"8px 12px",background:"transparent",border:"none",borderBottom:"1px solid #f5f5f5",cursor:"pointer",display:"flex",flexDirection:"column",gap:2}}
-                      onMouseEnter={e=>e.currentTarget.style.background="#f8f7f5"}
-                      onMouseLeave={e=>e.currentTarget.style.background="transparent"}
-                    >
-                      <span style={{fontSize:12,fontWeight:600,color:"#111"}}>{c.name||"(sin nombre)"}</span>
-                      <span style={{fontSize:10,color:"#888"}}>{[c.email,c.phone].filter(Boolean).join(" · ")}</span>
-                    </button>
-                  ))}
-                </div>,
-                document.body
-              )}
-            </div>
-            <div>
-              <label className="block text-[11px] font-medium text-neutral-500 mb-1">
-                Email <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={handleField("email")}
-                placeholder="maria@email.com"
-                className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10 ${!form.email.trim() ? "border-red-300 bg-red-50" : "border-neutral-300"}`}
-              />
-            </div>
+          {/* Nombre */}
+          <div>
+            <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+              Nombre <span className="text-red-400">*</span>
+              {panelMode === "clientes-checkin" && <span style={{color:"var(--text-3)",fontWeight:400,marginLeft:4}}>· escribe para buscar en HubSpot</span>}
+            </label>
+            <input
+              type="text"
+              value={form.guestName}
+              onChange={onNameChange}
+              placeholder="María García"
+              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+              autoComplete="off"
+            />
+            {hsDropLoading && (
+              <div style={{fontSize:11,color:"#aaa",padding:"4px 2px"}}>Buscando en HubSpot…</div>
+            )}
+            {hsDropOpen && hsDropResults.length > 0 && (
+              <div style={{border:"1px solid #e5e5e5",borderRadius:8,marginTop:4,background:"#fff",boxShadow:"0 2px 8px rgba(0,0,0,.08)",overflow:"hidden"}}>
+                {hsDropResults.slice(0,6).map(c => (
+                  <button key={c.id} type="button"
+                    onClick={() => pickHsContact(c)}
+                    style={{width:"100%",textAlign:"left",padding:"7px 12px",background:"transparent",border:"none",borderBottom:"1px solid #f5f5f5",cursor:"pointer",display:"flex",flexDirection:"column",gap:1}}
+                    onMouseEnter={e=>e.currentTarget.style.background="#f8f7f5"}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}
+                  >
+                    <span style={{fontSize:12,fontWeight:600,color:"#111"}}>{c.name||"(sin nombre)"}</span>
+                    <span style={{fontSize:10,color:"#888"}}>{[c.email,c.phone].filter(Boolean).join(" · ")}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+              Email <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={handleField("email")}
+              placeholder="maria@email.com"
+              className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10 ${!form.email.trim() ? "border-red-300 bg-red-50" : "border-neutral-300"}`}
+            />
           </div>
 
           {/* Ciudad — pills compactos */}
