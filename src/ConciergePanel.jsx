@@ -9442,6 +9442,8 @@ const loadKickoffs = async (forceRefresh = false) => {
 
   // ── Check-in price catalog (clientes-checkin only) ──────────────────────
   const [showCheckinCatalog, setShowCheckinCatalog] = useState(false);
+  // ── Check-in view toggle: "clients" | "reservaciones" ───────────────────
+  const [checkinView, setCheckinView] = useState("clients");
 
   // ── HubSpot catalog search (clientes-checkin only) ───────────────────────
   const [showHSSearch, setShowHSSearch] = useState(false);
@@ -9971,7 +9973,15 @@ const loadKickoffs = async (forceRefresh = false) => {
     {loading ? "Actualizando…" : "Refrescar"}
   </button>
 
-  {panelMode === "clientes-checkin" && currentUser?.role !== "junior" && (
+  {panelMode === "clientes-checkin" && currentUser?.role !== "junior" && (<>
+  <button
+    type="button"
+    onClick={() => setCheckinView(v => v === "reservaciones" ? "clients" : "reservaciones")}
+    className={checkinView === "reservaciones" ? "tt-btn-primary" : "tt-btn-ghost"}
+    title="Ver tablero de reservaciones y servicios"
+  >
+    📊 Reservaciones
+  </button>
   <button
     type="button"
     onClick={() => setShowCheckinCatalog(true)}
@@ -9980,7 +9990,7 @@ const loadKickoffs = async (forceRefresh = false) => {
   >
     📋 Catálogo Check-In
   </button>
-  )}
+  </>)}
 
   {currentUser?.role !== "junior" && (
   <button
@@ -10013,6 +10023,9 @@ const loadKickoffs = async (forceRefresh = false) => {
       </header>
 
       <main style={{flex:1,maxWidth:1680,width:"100%",margin:"0 auto",padding:"16px 24px",display:"flex",flexDirection:"column",gap:12}}>
+      {panelMode === "clientes-checkin" && checkinView === "reservaciones" ? (
+        <CheckinReservationsView kickoffs={kickoffs} currentUser={currentUser} />
+      ) : (<>
         <div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",justifyContent:"space-between"}}>
           <div style={{position:"relative",width:260}}>
             <Search style={{width:14,height:14,color:"var(--text-3)",position:"absolute",left:9,top:"50%",transform:"translateY(-50%)"}} />
@@ -10642,6 +10655,7 @@ const loadKickoffs = async (forceRefresh = false) => {
             </table>
           </div>
         </div>
+      </>)}
       </main>
 
       {selectedForSummary && (
@@ -11036,6 +11050,352 @@ function CheckinCatalogModal({ onClose }) {
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   CheckinReservationsView
+   Tablero de servicios/reservaciones para clientes check-in.
+   Data: Supabase kickoffs row id="checkin_reservations_v1"
+   { items: [{ id, kickoffId, clientName, fecha, proveedor,
+     categoria, ciudad, descripcion, numPersonas, hora,
+     precioClienteCOP, precioProveedorCOP, status,
+     conciergeRep, notas, createdAt }] }
+───────────────────────────────────────────────────────────── */
+function CheckinReservationsView({ kickoffs = [], currentUser }) {
+  const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+  const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  const [items, setItems]           = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [filterClient, setFilterClient] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterCat, setFilterCat]   = useState("");
+  const [filterSearch, setFilterSearch] = useState("");
+  const [showForm, setShowForm]     = useState(false);
+  const [editItem, setEditItem]     = useState(null);
+
+  const STATUSES = ["Pendiente", "Complete", "Complete and Commission", "Detenido"];
+  const SERVICE_CATS = [
+    "Activity","Bakery","Bar","Bartender","Beach Club","Bodyguard","Cake",
+    "Chef","Chef Two Travel","Cleaning","Cook Service","Dance Class","Decoración",
+    "DJ","Hair and Make Up","Hookah","IV Service","Massage","Party","Photographer",
+    "Restaurant","Snorkel","Tours","Transport","Otro",
+  ];
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const { createClient } = await import("@supabase/supabase-js");
+      const sb = createClient(SB_URL, SB_KEY);
+      const { data } = await sb.from("kickoffs").select("data").eq("id", "checkin_reservations_v1").single();
+      setItems(data?.data?.items || []);
+    } catch (e) { console.error("CheckinReservations load:", e); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const persist = async (newItems) => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const sb = createClient(SB_URL, SB_KEY);
+    await sb.from("kickoffs").upsert({ id: "checkin_reservations_v1", data: { items: newItems } });
+    setItems(newItems);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("¿Eliminar este servicio?")) return;
+    await persist(items.filter(i => i.id !== id));
+  };
+
+  const handleSaveItem = async (item) => {
+    const clientName = kickoffs.find(k => k.id === item.kickoffId)?.guestName || item.clientName || "";
+    const enriched = { ...item, clientName };
+    let updated;
+    if (enriched.id && items.find(i => i.id === enriched.id)) {
+      updated = items.map(i => i.id === enriched.id ? enriched : i);
+    } else {
+      updated = [...items, { ...enriched, id: crypto.randomUUID(), createdAt: new Date().toISOString() }];
+    }
+    await persist(updated);
+    setShowForm(false);
+    setEditItem(null);
+  };
+
+  const filtered = items.filter(i => {
+    if (filterClient && i.kickoffId !== filterClient) return false;
+    if (filterStatus && i.status !== filterStatus) return false;
+    if (filterCat && i.categoria !== filterCat) return false;
+    if (filterSearch) {
+      const q = filterSearch.toLowerCase();
+      const hay = [i.clientName,i.descripcion,i.proveedor,i.ciudad,i.categoria].join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  }).sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""));
+
+  const fmtCOP = n => n != null && n !== "" ? new Intl.NumberFormat("es-CO", { style:"currency", currency:"COP", maximumFractionDigits:0 }).format(n) : "—";
+  const ganancia = (item) => ((item.precioClienteCOP || 0) - (item.precioProveedorCOP || 0));
+  const margen   = (item) => item.precioClienteCOP ? Math.round(ganancia(item) / item.precioClienteCOP * 100) : null;
+
+  const statusBg = { "Complete":"#dcfce7", "Complete and Commission":"#bbf7d0", "Detenido":"#fee2e2", "Pendiente":"#f3f4f6" };
+  const statusFg = { "Complete":"#15803d", "Complete and Commission":"#166534", "Detenido":"#b91c1c", "Pendiente":"#6b7280" };
+
+  const canEdit = currentUser?.role !== "junior";
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      {/* Toolbar */}
+      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+        <input
+          value={filterSearch}
+          onChange={e => setFilterSearch(e.target.value)}
+          placeholder="Buscar..."
+          style={{border:"1px solid var(--border)",borderRadius:5,padding:"6px 10px",fontSize:12,background:"var(--surface)",width:180}}
+        />
+        <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
+          style={{border:"1px solid var(--border)",borderRadius:5,padding:"6px 10px",fontSize:12,background:"var(--surface)"}}>
+          <option value="">Todos los clientes</option>
+          {kickoffs.filter(k => !k.deletedAt).map(k => (
+            <option key={k.id} value={k.id}>{k.guestName || k.id}</option>
+          ))}
+        </select>
+        <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
+          style={{border:"1px solid var(--border)",borderRadius:5,padding:"6px 10px",fontSize:12,background:"var(--surface)"}}>
+          <option value="">Todas las categorías</option>
+          {SERVICE_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+          style={{border:"1px solid var(--border)",borderRadius:5,padding:"6px 10px",fontSize:12,background:"var(--surface)"}}>
+          <option value="">Todos los estados</option>
+          {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <div style={{flex:1}}/>
+        <span style={{fontSize:11,color:"var(--text-3)"}}>{filtered.length} servicio{filtered.length!==1?"s":""}</span>
+        {canEdit && (
+          <button className="tt-btn-primary" onClick={() => { setEditItem(null); setShowForm(true); }}>
+            + Agregar servicio
+          </button>
+        )}
+      </div>
+
+      {/* Totals row */}
+      {filtered.length > 0 && (() => {
+        const totalCli = filtered.reduce((s, i) => s + (i.precioClienteCOP || 0), 0);
+        const totalProv = filtered.reduce((s, i) => s + (i.precioProveedorCOP || 0), 0);
+        const totalGan = totalCli - totalProv;
+        const totalMar = totalCli ? Math.round(totalGan / totalCli * 100) : 0;
+        return (
+          <div style={{display:"flex",gap:16,background:"var(--bg)",border:"1px solid var(--border)",borderRadius:7,padding:"8px 16px",flexWrap:"wrap"}}>
+            <span style={{fontSize:12,color:"var(--text-2)"}}>Total cliente: <strong>{fmtCOP(totalCli)}</strong></span>
+            <span style={{fontSize:12,color:"var(--text-2)"}}>Total proveedor: <strong>{fmtCOP(totalProv)}</strong></span>
+            <span style={{fontSize:12,color:"var(--text-2)"}}>Ganancia: <strong style={{color:"#15803d"}}>{fmtCOP(totalGan)}</strong></span>
+            <span style={{fontSize:12,color:"var(--text-2)"}}>Margen: <strong style={{color:"#15803d"}}>{totalMar}%</strong></span>
+          </div>
+        );
+      })()}
+
+      {/* Table */}
+      <div className="tt-card" style={{overflowX:"auto"}}>
+        <table className="tt-table" style={{width:"100%",borderCollapse:"collapse"}}>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Cliente</th>
+              <th>Categoría</th>
+              <th>Descripción</th>
+              <th>Proveedor</th>
+              <th>Ciudad</th>
+              <th style={{textAlign:"right"}}>#</th>
+              <th>Hora</th>
+              <th style={{textAlign:"right"}}>Precio Cliente</th>
+              <th style={{textAlign:"right"}}>Precio Prov.</th>
+              <th style={{textAlign:"right"}}>Ganancia</th>
+              <th style={{textAlign:"right"}}>Margen</th>
+              <th>Status</th>
+              {canEdit && <th></th>}
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={canEdit?14:13} style={{textAlign:"center",color:"var(--text-3)",padding:40}}>Cargando...</td></tr>
+            ) : filtered.length === 0 ? (
+              <tr><td colSpan={canEdit?14:13} style={{textAlign:"center",color:"var(--text-3)",padding:40}}>
+                {items.length === 0 ? "Sin servicios registrados. Haz clic en \"+ Agregar servicio\" para comenzar." : "Sin resultados para los filtros actuales."}
+              </td></tr>
+            ) : filtered.map(item => {
+              const gan = ganancia(item);
+              const mar = margen(item);
+              const clientName = kickoffs.find(k => k.id === item.kickoffId)?.guestName || item.clientName || "—";
+              const st = item.status || "Pendiente";
+              return (
+                <tr key={item.id}>
+                  <td style={{whiteSpace:"nowrap",color:"var(--text-2)",fontSize:12}}>{item.fecha || "—"}</td>
+                  <td style={{fontWeight:500,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{clientName}</td>
+                  <td><span style={{background:"#f0f0ee",borderRadius:4,padding:"1px 7px",fontSize:11,fontWeight:500,whiteSpace:"nowrap"}}>{item.categoria||"—"}</span></td>
+                  <td style={{maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"var(--text-1)"}}>{item.descripcion||"—"}</td>
+                  <td style={{color:"var(--text-2)",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.proveedor||"—"}</td>
+                  <td style={{color:"var(--text-2)",whiteSpace:"nowrap"}}>{item.ciudad||"—"}</td>
+                  <td style={{textAlign:"right",color:"var(--text-2)"}}>{item.numPersonas||"—"}</td>
+                  <td style={{whiteSpace:"nowrap",color:"var(--text-2)"}}>{item.hora||"—"}</td>
+                  <td style={{textAlign:"right",fontWeight:600}}>{fmtCOP(item.precioClienteCOP)}</td>
+                  <td style={{textAlign:"right",color:"var(--text-2)"}}>{fmtCOP(item.precioProveedorCOP)}</td>
+                  <td style={{textAlign:"right",fontWeight:600,color:gan>0?"#15803d":gan<0?"#b91c1c":"var(--text-2)"}}>{fmtCOP(gan)}</td>
+                  <td style={{textAlign:"right",color:mar!=null&&mar>0?"#15803d":mar<0?"#b91c1c":"var(--text-2)"}}>{mar!=null?`${mar}%`:"—"}</td>
+                  <td><span style={{background:statusBg[st]||"#f3f4f6",color:statusFg[st]||"#6b7280",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:500,whiteSpace:"nowrap"}}>{st}</span></td>
+                  {canEdit && (
+                    <td style={{whiteSpace:"nowrap",textAlign:"right"}}>
+                      <button onClick={() => { setEditItem(item); setShowForm(true); }}
+                        style={{background:"none",border:"none",cursor:"pointer",color:"var(--text-3)",fontSize:11,padding:"2px 6px"}}>Editar</button>
+                      <button onClick={() => handleDelete(item.id)}
+                        style={{background:"none",border:"none",cursor:"pointer",color:"#b91c1c",fontSize:11,padding:"2px 6px"}}>✕</button>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {showForm && (
+        <ReservationFormModal
+          item={editItem}
+          kickoffs={kickoffs}
+          onSave={handleSaveItem}
+          onClose={() => { setShowForm(false); setEditItem(null); }}
+          STATUSES={STATUSES}
+          SERVICE_CATS={SERVICE_CATS}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Formulario de reservación (agregar / editar) ───────────── */
+function ReservationFormModal({ item, kickoffs, onSave, onClose, STATUSES, SERVICE_CATS }) {
+  const isEdit = !!item?.id;
+  const [form, setForm] = useState({
+    id:               item?.id || "",
+    kickoffId:        item?.kickoffId || "",
+    fecha:            item?.fecha || new Date().toISOString().slice(0,10),
+    proveedor:        item?.proveedor || "",
+    categoria:        item?.categoria || "",
+    ciudad:           item?.ciudad || "",
+    descripcion:      item?.descripcion || "",
+    numPersonas:      item?.numPersonas != null ? String(item.numPersonas) : "",
+    hora:             item?.hora || "",
+    precioClienteCOP: item?.precioClienteCOP != null ? String(item.precioClienteCOP) : "",
+    precioProveedorCOP: item?.precioProveedorCOP != null ? String(item.precioProveedorCOP) : "",
+    status:           item?.status || "Pendiente",
+    conciergeRep:     item?.conciergeRep || "",
+    notas:            item?.notas || "",
+  });
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const previewGan = (Number(form.precioClienteCOP)||0) - (Number(form.precioProveedorCOP)||0);
+  const previewMar = form.precioClienteCOP ? Math.round(previewGan / Number(form.precioClienteCOP) * 100) : null;
+  const fmtCOP = n => new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(n);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave({
+      ...form,
+      numPersonas:      form.numPersonas ? Number(form.numPersonas) : null,
+      precioClienteCOP: form.precioClienteCOP ? Number(form.precioClienteCOP) : null,
+      precioProveedorCOP: form.precioProveedorCOP ? Number(form.precioProveedorCOP) : null,
+    });
+  };
+
+  const inp = { border:"1px solid var(--border)",borderRadius:5,padding:"6px 9px",fontSize:13,background:"var(--surface)",width:"100%",boxSizing:"border-box" };
+  const lbl = { fontSize:11,fontWeight:600,color:"var(--text-2)",display:"block",marginBottom:3 };
+
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+         onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="tt-card" style={{width:"100%",maxWidth:680,maxHeight:"92vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:"1px solid var(--border)"}}>
+          <div style={{fontSize:14,fontWeight:700,color:"var(--text-1)"}}>{isEdit ? "Editar servicio" : "Agregar servicio"}</div>
+          <button onClick={onClose} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"var(--text-3)"}}>✕</button>
+        </div>
+        <form onSubmit={handleSubmit} style={{overflowY:"auto",flex:1,padding:20,display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div>
+            <label style={lbl}>Cliente *</label>
+            <select required value={form.kickoffId} onChange={e => set("kickoffId",e.target.value)} style={inp}>
+              <option value="">Seleccionar cliente...</option>
+              {kickoffs.filter(k => !k.deletedAt).map(k => (
+                <option key={k.id} value={k.id}>{k.guestName || k.id}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={lbl}>Fecha *</label>
+            <input type="date" required value={form.fecha} onChange={e => set("fecha",e.target.value)} style={inp}/>
+          </div>
+          <div>
+            <label style={lbl}>Categoría</label>
+            <select value={form.categoria} onChange={e => set("categoria",e.target.value)} style={inp}>
+              <option value="">Seleccionar...</option>
+              {SERVICE_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={lbl}>Ciudad</label>
+            <input value={form.ciudad} onChange={e => set("ciudad",e.target.value)} placeholder="Cartagena" style={inp}/>
+          </div>
+          <div style={{gridColumn:"1/-1"}}>
+            <label style={lbl}>Descripción del servicio</label>
+            <input value={form.descripcion} onChange={e => set("descripcion",e.target.value)}
+              placeholder="Ej. Transfer aeropuerto - villa, Tour islas del Rosario..." style={inp}/>
+          </div>
+          <div>
+            <label style={lbl}>Proveedor</label>
+            <input value={form.proveedor} onChange={e => set("proveedor",e.target.value)} placeholder="Nombre del proveedor" style={inp}/>
+          </div>
+          <div>
+            <label style={lbl}>Concierge Rep</label>
+            <input value={form.conciergeRep} onChange={e => set("conciergeRep",e.target.value)} placeholder="Nombre" style={inp}/>
+          </div>
+          <div>
+            <label style={lbl}># Personas</label>
+            <input type="number" min="1" value={form.numPersonas} onChange={e => set("numPersonas",e.target.value)} placeholder="2" style={inp}/>
+          </div>
+          <div>
+            <label style={lbl}>Hora</label>
+            <input type="time" value={form.hora} onChange={e => set("hora",e.target.value)} style={inp}/>
+          </div>
+          <div>
+            <label style={lbl}>Precio Cliente (COP)</label>
+            <input type="number" min="0" value={form.precioClienteCOP} onChange={e => set("precioClienteCOP",e.target.value)} placeholder="0" style={inp}/>
+          </div>
+          <div>
+            <label style={lbl}>Precio Proveedor (COP)</label>
+            <input type="number" min="0" value={form.precioProveedorCOP} onChange={e => set("precioProveedorCOP",e.target.value)} placeholder="0" style={inp}/>
+          </div>
+          {(form.precioClienteCOP || form.precioProveedorCOP) ? (
+            <div style={{gridColumn:"1/-1",background:"var(--bg)",borderRadius:6,padding:"8px 12px",display:"flex",gap:24}}>
+              <span style={{fontSize:12,color:"var(--text-2)"}}>Ganancia: <strong style={{color:previewGan>=0?"#15803d":"#b91c1c"}}>{fmtCOP(previewGan)}</strong></span>
+              {previewMar!=null && <span style={{fontSize:12,color:"var(--text-2)"}}>Margen: <strong style={{color:previewMar>=0?"#15803d":"#b91c1c"}}>{previewMar}%</strong></span>}
+            </div>
+          ) : null}
+          <div>
+            <label style={lbl}>Status</label>
+            <select value={form.status} onChange={e => set("status",e.target.value)} style={inp}>
+              {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={lbl}>Notas</label>
+            <input value={form.notas} onChange={e => set("notas",e.target.value)} placeholder="..." style={inp}/>
+          </div>
+          <div style={{gridColumn:"1/-1",display:"flex",gap:8,justifyContent:"flex-end",paddingTop:4,borderTop:"1px solid var(--border-soft)"}}>
+            <button type="button" onClick={onClose} className="tt-btn-ghost">Cancelar</button>
+            <button type="submit" className="tt-btn-primary">{isEdit ? "Guardar cambios" : "Agregar servicio"}</button>
+          </div>
+        </form>
       </div>
     </div>
   );
