@@ -10695,10 +10695,8 @@ const loadKickoffs = async (forceRefresh = false) => {
         </div>
       )}
 
-    </div>
-
-    {/* ── HubSpot catalog search modal (clientes-checkin only) ── */}
-    {showHSSearch && (
+      {/* ── HubSpot catalog search modal (clientes-checkin only) ── */}
+      {showHSSearch && (
       <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,.45)",display:"flex",alignItems:"center",justifyContent:"center"}}
            onClick={e => { if (e.target === e.currentTarget) setShowHSSearch(false); }}>
         <div className="tt-card" style={{width:"100%",maxWidth:520,maxHeight:"80vh",display:"flex",flexDirection:"column",padding:24,gap:16,overflowY:"auto"}}>
@@ -10790,6 +10788,7 @@ const loadKickoffs = async (forceRefresh = false) => {
       </div>
     )}
 
+    </div>
   );
 
 
