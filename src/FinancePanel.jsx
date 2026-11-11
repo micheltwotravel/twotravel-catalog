@@ -1178,7 +1178,7 @@ export function FinanceReservaciones({ currentUser }) {
   const [dateFrom,   setDateFrom]   = useState("");
   const [dateTo,     setDateTo]     = useState("");
   const [slackOnly,  setSlackOnly]  = useState(false);
-  const [sortCol,    setSortCol]    = useState("fecha");
+  const [sortCol,    setSortCol]    = useState("createdAt");
   const [sortDir,    setSortDir]    = useState(-1);
   const [ownerNames, setOwnerNames] = useState({});
   const rowsRef = useRef(rows);
@@ -1329,14 +1329,20 @@ export function FinanceReservaciones({ currentUser }) {
   });
   const sortBy = (col) => { if(sortCol===col) setSortDir(d=>-d); else { setSortCol(col); setSortDir(1); } };
 
-  // Group by service month for table view
+  // Group by service month for table view (skip grouping when sorted by recientes)
+  const now48hIso = new Date(Date.now() - 48*3600*1000).toISOString();
   const groups = [];
-  let curMk = null;
-  sorted.forEach(rowIdx => {
-    const mk = (rows[rowIdx].fecha||rows[rowIdx].checkIn||"")?.slice(0,7) || "";
-    if (mk !== curMk) { curMk = mk; groups.push({mk, idxs:[]}); }
-    groups[groups.length-1].idxs.push(rowIdx);
-  });
+  if (sortCol === "createdAt") {
+    // Flat list — no month groups
+    if (sorted.length > 0) groups.push({ mk: null, idxs: sorted });
+  } else {
+    let curMk = null;
+    sorted.forEach(rowIdx => {
+      const mk = (rows[rowIdx].fecha||rows[rowIdx].checkIn||"")?.slice(0,7) || "";
+      if (mk !== curMk) { curMk = mk; groups.push({mk, idxs:[]}); }
+      groups[groups.length-1].idxs.push(rowIdx);
+    });
+  }
 
   const TabBtn = ({label,k}) => (
     <button onClick={()=>setView(k)}
@@ -1437,6 +1443,13 @@ export function FinanceReservaciones({ currentUser }) {
             color:slackOnly?"#fff":"#1d4ed8",
             border:"1px solid #93c5fd",borderRadius:8,cursor:"pointer"}}>
           🆕 Slack {slackOnly?"✓":""}
+        </button>
+        <button onClick={()=>{ if(sortCol==="createdAt"){ setSortCol("fecha"); setSortDir(-1); } else { setSortCol("createdAt"); setSortDir(-1); } }}
+          style={{padding:"7px 12px",fontSize:12,fontWeight:600,whiteSpace:"nowrap",
+            background:sortCol==="createdAt"?"#eff6ff":"transparent",
+            color:sortCol==="createdAt"?"#2563eb":"#6b7280",
+            border:`1px solid ${sortCol==="createdAt"?"#93c5fd":"#d1d5db"}`,borderRadius:8,cursor:"pointer"}}>
+          {sortCol==="createdAt"?"🕐 Recientes primero":"📅 Por fecha entrada"}
         </button>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar…"
           style={{...INP,width:150,padding:"7px 12px",fontSize:12}} />
@@ -1541,6 +1554,7 @@ export function FinanceReservaciones({ currentUser }) {
                         {idxs.map((rowIdx,vi)=>{
                           const isHS = !!rows[rowIdx].needsReview;
                           const r = rows[rowIdx];
+                          const isNew = !isHS && r.createdAt && r.createdAt >= now48hIso;
                           // computed fields
                           const gb = (parseFloat(r.precioCOP)||0) - (parseFloat(r.precioProveedor)||0);
                           const mg = r.precioCOP ? Math.round(gb/(parseFloat(r.precioCOP)||1)*100) : 0;
@@ -1550,7 +1564,7 @@ export function FinanceReservaciones({ currentUser }) {
                           const computed = { gananciaBruta: gb||"", margen: mg||"", totalCommission: tc||"" };
                           return (
                           <tr key={rowIdx} style={{borderBottom:`1px solid rgba(26,24,20,.04)`,
-                            background:isHS?"#fffbeb":vi%2===0?"transparent":"rgba(247,244,239,.35)"}}>
+                            background:isHS?"#fffbeb":isNew?"#eff6ff":vi%2===0?"transparent":"rgba(247,244,239,.35)"}}>
                             {ALL_COLS.map(c=>{
                               const val = c.readOnly ? computed[c.key] : r[c.key];
                               return (
@@ -1569,6 +1583,11 @@ export function FinanceReservaciones({ currentUser }) {
                                   <div style={{display:"flex",alignItems:"center",gap:5}}>
                                     <EditCell value={val} field={c.key} isNum={c.num} isDate={c.date} options={cellOpts[c.optKey]} readOnly={c.readOnly} onSave={v=>patchRow(rowIdx,c.key,v)} />
                                     <span style={{fontSize:9,fontWeight:700,letterSpacing:".06em",background:"#fef3c7",color:"#92400e",border:"1px solid #fcd34d",padding:"1px 6px",borderRadius:10,flexShrink:0,whiteSpace:"nowrap"}}>HS NUEVO</span>
+                                  </div>
+                                ) : c.key==="name" && isNew ? (
+                                  <div style={{display:"flex",alignItems:"center",gap:5}}>
+                                    <EditCell value={val} field={c.key} isNum={c.num} isDate={c.date} options={cellOpts[c.optKey]} readOnly={c.readOnly} onSave={v=>patchRow(rowIdx,c.key,v)} />
+                                    <span style={{fontSize:9,fontWeight:700,letterSpacing:".06em",background:"#2563eb",color:"#fff",border:"1px solid #93c5fd",padding:"1px 6px",borderRadius:10,flexShrink:0,whiteSpace:"nowrap"}}>NUEVO</span>
                                   </div>
                                 ) : (
                                   <EditCell value={val} field={c.key} isNum={c.num} isDate={c.date} options={cellOpts[c.optKey]} readOnly={c.readOnly} onSave={v=>patchRow(rowIdx,c.key,v)} />
