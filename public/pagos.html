@@ -850,14 +850,17 @@ let editingId = null;
 const SB_TABLE = 'pagos_data';
 
 function save(){
+  const ts = new Date().toISOString();
   localStorage.setItem(PAGOS_KEY, JSON.stringify(pagos));
-  syncToSupabase();
+  localStorage.setItem(PAGOS_KEY + '_ts', ts);
+  syncToSupabase(ts);
 }
 function loadLocal(){
   const saved = localStorage.getItem(PAGOS_KEY);
   if(saved){ try{ pagos = JSON.parse(saved); }catch{} }
 }
-async function syncToSupabase(){
+async function syncToSupabase(ts){
+  const updated_at = ts || new Date().toISOString();
   try{
     await fetch(`${SUPABASE_URL}/rest/v1/${SB_TABLE}`, {
       method: 'POST',
@@ -867,7 +870,7 @@ async function syncToSupabase(){
         'Content-Type': 'application/json',
         Prefer: 'resolution=merge-duplicates,return=minimal'
       },
-      body: JSON.stringify({ id: COUNTRY_MODE, data: { pagos }, updated_at: new Date().toISOString() })
+      body: JSON.stringify({ id: COUNTRY_MODE, data: { pagos }, updated_at })
     });
   }catch(e){ console.error('syncToSupabase:', e); }
 }
@@ -878,14 +881,24 @@ async function loadFromSupabase(){
       headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
     });
     const rows = await r.json();
-    if(rows && rows.length > 0 && rows[0].data?.pagos?.length){
-      pagos = rows[0].data.pagos;
-      localStorage.setItem(PAGOS_KEY, JSON.stringify(pagos));
-      setSyncInfo('Sincronizado · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
+    if(rows && rows.length > 0 && rows[0].data?.pagos){
+      const sbPagos = rows[0].data.pagos;
+      const sbTs    = rows[0].updated_at || '';
+      const localTs = localStorage.getItem(PAGOS_KEY + '_ts') || '';
+      // If local is strictly newer, keep local data and re-push to Supabase
+      if(localTs > sbTs && pagos.length > 0){
+        await syncToSupabase(localTs);
+        setSyncInfo('Sincronizado · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
+      } else if(sbPagos.length > 0){
+        pagos = sbPagos;
+        localStorage.setItem(PAGOS_KEY, JSON.stringify(pagos));
+        localStorage.setItem(PAGOS_KEY + '_ts', sbTs);
+        setSyncInfo('Sincronizado · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
+      } else {
+        setSyncInfo('Sincronizado · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
+      }
     } else {
       // First run: migrate any local data up to Supabase
-      const local = localStorage.getItem(PAGOS_KEY);
-      if(local){ try{ pagos = JSON.parse(local); }catch{} }
       if(pagos.length > 0){
         await syncToSupabase();
         setSyncInfo('Migrado ✓ · ' + new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}));
