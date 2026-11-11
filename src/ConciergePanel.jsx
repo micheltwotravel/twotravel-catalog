@@ -5267,7 +5267,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [guestName, setGuestName] = useState(kickoff?.guestName || "");
   const [tripName, setTripName] = useState(kickoff?.tripName || "");
   const [lang, setLang] = useState(kickoff?.lang || "en");
-  const [clientType, setClientType] = useState(Number(kickoff?.clientType) === 2 ? 2 : 1);
+  const [clientType, setClientType] = useState(kickoff?.clientType == null ? null : (Number(kickoff?.clientType) === 2 ? 2 : 1));
   const [guestContact, setGuestContact] = useState(kickoff?.guestContact || "");
   const [kickoffCallUrl, setKickoffCallUrl] = useState(kickoff?.kickoffCallUrl || "");
   const [checkInCity,    setCheckInCity]    = useState(() => {
@@ -6013,6 +6013,12 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                   onClick={() => setClientType(2)}
                   className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${clientType === 2 ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-neutral-500 border-neutral-200 hover:border-emerald-400"}`}>
                   Tier 2
+                </button>
+                <button type="button"
+                  onClick={() => { setClientType(null); setHidePreCheckin(true); setHideDrinks(true); setHideGroceries(true); setHideBreakfast(true); }}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${clientType === null ? "bg-neutral-700 text-white border-neutral-700" : "bg-white text-neutral-500 border-neutral-200 hover:border-neutral-400"}`}
+                  title="Solo servicio individual — oculta Pre Check-in Form, Bebidas, Mercado y Desayuno">
+                  Solo serv.
                 </button>
               </div>
             </div>
