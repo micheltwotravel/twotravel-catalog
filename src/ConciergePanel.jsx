@@ -5390,18 +5390,28 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
       ? canvasCartRef.current
       : (Array.isArray(kickoff?.cart) ? kickoff.cart
         : (() => { try { return JSON.parse(kickoff?.cart || "[]"); } catch { return []; } })());
+    const fxRate = liveFxRate || 3900;
     const qbItems = rawCart
       .filter(it => {
         const cat = (it.category || "").toLowerCase().replace(/\s+/g, "-");
         const qbCode = it.quickbooksCode || it.qbCode || "";
         return qbCode && !NO_QB.has(cat);
       })
-      .map(it => ({
-        description: String(it.displayName || it.name || "Servicio").trim(),
-        qty: Number(it.pax || 1),
-        unitPrice: Number(it.priceUsd ?? 0),
-        qbCode: String(it.quickbooksCode || it.qbCode || "").toUpperCase(),
-      }));
+      .map(it => {
+        const pax = Number(it.pax || 1);
+        // Use priceUsd if set; otherwise convert COP to USD
+        let unitPrice = Number(it.priceUsd ?? 0);
+        if (!unitPrice) {
+          const cop = Number(it.priceOverride_cop ?? it.price_cop ?? 0);
+          if (cop > 0) unitPrice = Math.round((cop / fxRate) * 100) / 100;
+        }
+        return {
+          description: String(it.displayName || it.name || "Servicio").trim(),
+          qty: pax,
+          unitPrice,
+          qbCode: String(it.quickbooksCode || it.qbCode || "").toUpperCase(),
+        };
+      });
     if (!qbItems.length) {
       alert("No hay ítems con código QB para estimar. Agrega códigos QB en la sección Facturación de cada ítem.");
       return;
@@ -7030,48 +7040,6 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
           })()}
           {/* Pre-set WhatsApp messages */}
           <PresetMessages kickoff={kickoff} lang={lang} />
-          {/* Billing — item-selection modal (#46) */}
-          {kickoff?.cart?.length > 0 && (
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setBillingCurrency(c => c === "USD" ? "COP" : c === "COP" ? "MXN" : "USD")}
-                className="px-2 py-2 rounded-l-lg border border-r-0 border-indigo-300 text-[11px] font-mono text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
-                title="Cambiar moneda"
-              >
-                {billingCurrency}
-              </button>
-              <button
-                type="button"
-                onClick={() => openBillingModal("prefactura")}
-                className="px-3 py-2 border-t border-b border-indigo-300 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
-                title="Seleccionar ítems y enviar pre-factura"
-              >
-                📋 Pre-fact.
-              </button>
-              <button
-                type="button"
-                onClick={() => openBillingModal("factura_final")}
-                className="px-3 py-2 rounded-r-lg border border-indigo-300 text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
-                title="Seleccionar ítems y enviar factura final"
-              >
-                💰 Final
-              </button>
-            </div>
-          )}
-          {billingPdfUrl && (
-            <div className="flex items-center gap-2 mt-1 px-1">
-              <span className="text-[10px] text-neutral-400 shrink-0">📄 Factura:</span>
-              <a href={billingPdfUrl} target="_blank" rel="noreferrer"
-                className="text-[10px] text-indigo-600 underline truncate max-w-[180px]" title={billingPdfUrl}>
-                Ver PDF
-              </a>
-              <button type="button" onClick={() => navigator.clipboard.writeText(billingPdfUrl).catch(()=>{})}
-                className="text-[10px] px-1.5 py-0.5 border border-indigo-200 rounded bg-indigo-50 text-indigo-600 shrink-0">
-                📋
-              </button>
-            </div>
-          )}
           <div className="flex items-center gap-1">
             <button
               type="button"
