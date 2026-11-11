@@ -5360,6 +5360,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [billingModalItems, setBillingModalItems] = useState(null);
   const [saving, setSaving] = useState(false);
   const [savedOk, setSavedOk] = useState(false);
+  const [qbEstimating, setQbEstimating] = useState(false);
+  const [qbEstimateUrl, setQbEstimateUrl] = useState(null);
   // Track latest ItineraryCanvas state so main "Guardar" always includes it
   // Pre-seeded from kickoff so they're never null even if onCartChange hasn't fired yet
   const canvasCartRef    = useRef(Array.isArray(kickoff?.cart)    ? kickoff.cart    : []);
@@ -5383,6 +5385,52 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     setBillingModalType(type);
     setShowBillingModal(true);
   };
+  const createQbEstimate = async () => {
+    const rawCart = canvasCartRef.current?.length
+      ? canvasCartRef.current
+      : (Array.isArray(kickoff?.cart) ? kickoff.cart
+        : (() => { try { return JSON.parse(kickoff?.cart || "[]"); } catch { return []; } })());
+    const qbItems = rawCart
+      .filter(it => {
+        const cat = (it.category || "").toLowerCase().replace(/\s+/g, "-");
+        const qbCode = it.quickbooksCode || it.qbCode || "";
+        return qbCode && !NO_QB.has(cat);
+      })
+      .map(it => ({
+        description: String(it.displayName || it.name || "Servicio").trim(),
+        qty: Number(it.pax || 1),
+        unitPrice: Number(it.priceUsd ?? 0),
+        qbCode: String(it.quickbooksCode || it.qbCode || "").toUpperCase(),
+      }));
+    if (!qbItems.length) {
+      alert("No hay ítems con código QB para estimar. Agrega códigos QB en la sección Facturación de cada ítem.");
+      return;
+    }
+    setQbEstimating(true);
+    setQbEstimateUrl(null);
+    try {
+      const res = await fetch("/api/quickbooks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create_estimate",
+          customerName: kickoff?.guestName || kickoff?.tripName || "Cliente",
+          items: qbItems,
+          currency: "USD",
+          memo: kickoff?.tripName || "",
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Error creando estimado QB");
+      setQbEstimateUrl(data.qbUrl);
+      window.open(data.qbUrl, "_blank");
+    } catch (e) {
+      alert("Error QB: " + e.message);
+    } finally {
+      setQbEstimating(false);
+    }
+  };
+
   // Incremented after saves that merged iframe inline-edits, forcing canvas to re-init
   // from the updated kickoff so subsequent canvas edits start from the correct cart.
   const [canvasKey, setCanvasKey] = useState(0);
@@ -7022,6 +7070,25 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                 className="text-[10px] px-1.5 py-0.5 border border-indigo-200 rounded bg-indigo-50 text-indigo-600 shrink-0">
                 📋
               </button>
+            </div>
+          )}
+          {kickoff?.cart?.length > 0 && (
+            <div className="flex items-center gap-1 mt-1">
+              <button
+                type="button"
+                onClick={createQbEstimate}
+                disabled={qbEstimating}
+                className="px-3 py-2 rounded-lg border border-emerald-300 text-sm text-emerald-700 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-50"
+                title="Crear estimado en QuickBooks con los ítems del itinerario que tienen código QB"
+              >
+                {qbEstimating ? "⏳ QB…" : "🧾 Estimar en QB"}
+              </button>
+              {qbEstimateUrl && (
+                <a href={qbEstimateUrl} target="_blank" rel="noreferrer"
+                  className="text-[11px] text-emerald-700 underline px-1">
+                  Ver en QB →
+                </a>
+              )}
             </div>
           )}
         </div>
@@ -9330,6 +9397,7 @@ const [portalLang, setPortalLang] = useState(() => {
 const [createModalOpen, setCreateModalOpen] = useState(false);
 const [openMenuId, setOpenMenuId] = useState(null); // row actions dropdown
 const [showRatings, setShowRatings] = useState(false); // ratings summary panel
+const [qbRowLoading, setQbRowLoading] = useState(null); // kickoff id while QB estimate is creating
   const normalizeId = (obj) =>
   obj?.id || obj?.kickoffId || obj?.ID || obj?._id || "";
 
@@ -9871,7 +9939,7 @@ const loadKickoffs = async (forceRefresh = false) => {
           <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>{panelMode === "clientes-checkin" ? "Clientes Check-In" : "Compass"}</span>
           <span style={{fontSize:11,color:"var(--text-3)",fontWeight:400}}>{panelMode === "clientes-checkin" ? (portalLang === "es" ? "Pre check-in y seguimiento de huéspedes" : "Pre check-in and guest follow-up") : cp.subtitle}</span>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:6}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
 
   {panelMode === "clientes-checkin" && (
     <button
@@ -10469,22 +10537,26 @@ const loadKickoffs = async (forceRefresh = false) => {
                     </td>
 
                     <td style={{textAlign:"right"}} onClick={e => e.stopPropagation()}>
-                      <div style={{display:"inline-flex",alignItems:"center",gap:4}}>
+                      <div style={{display:"inline-flex",alignItems:"center",gap:3}}>
                         <button
                           onClick={() => setSelectedForEdit(k)}
-                          className="tt-btn-ghost"
-                          style={{padding:"4px 9px",fontSize:11.5}}
+                          title="Editar itinerario"
+                          style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:30,height:30,borderRadius:8,border:"none",background:"transparent",color:"var(--text-3)",cursor:"pointer",fontSize:14,transition:"all .15s"}}
+                          onMouseEnter={e=>{e.currentTarget.style.background="#F3F4F6";e.currentTarget.style.color="var(--text-1)";}}
+                          onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color="var(--text-3)";}}
                         >
-                          Editar Itinerario
+                          ✏️
                         </button>
 
                         <div style={{position:"relative"}}>
                           <button
                             onClick={() => setOpenMenuId(openMenuId === k.id ? null : k.id)}
-                            className="tt-btn-ghost"
-                            style={{padding:"4px 8px",fontSize:13}}
+                            title="Más acciones"
+                            style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:30,height:30,borderRadius:8,border:"none",background:"transparent",color:"var(--text-3)",cursor:"pointer",fontSize:16,transition:"all .15s",fontWeight:700,letterSpacing:1}}
+                            onMouseEnter={e=>{e.currentTarget.style.background="#F3F4F6";e.currentTarget.style.color="var(--text-1)";}}
+                            onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color="var(--text-3)";}}
                           >
-                            ⋯
+                            ···
                           </button>
                           {openMenuId === k.id && (
                             <div
@@ -10503,6 +10575,29 @@ const loadKickoffs = async (forceRefresh = false) => {
                                 style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"#7c3aed",background:"none",border:"none",cursor:"pointer"}}>
                                 📅 Ir a reuniones
                               </button>
+                              {Array.isArray(k.cart) && k.cart.some(it => (it.quickbooksCode || it.qbCode) && !NO_QB.has((it.category||"").toLowerCase().replace(/\s+/g,"-"))) && (
+                                <button
+                                  disabled={qbRowLoading === k.id}
+                                  onClick={async () => {
+                                    setOpenMenuId(null);
+                                    const rawCart = Array.isArray(k.cart) ? k.cart : (() => { try { return JSON.parse(k.cart||"[]"); } catch { return []; } })();
+                                    const qbItems = rawCart
+                                      .filter(it => { const cat=(it.category||"").toLowerCase().replace(/\s+/g,"-"); return (it.quickbooksCode||it.qbCode) && !NO_QB.has(cat); })
+                                      .map(it => ({ description:String(it.displayName||it.name||"Servicio").trim(), qty:Number(it.pax||1), unitPrice:Number(it.priceUsd??0), qbCode:String(it.quickbooksCode||it.qbCode||"").toUpperCase() }));
+                                    if (!qbItems.length) { alert("No hay ítems con código QB."); return; }
+                                    setQbRowLoading(k.id);
+                                    try {
+                                      const res = await fetch("/api/quickbooks", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ action:"create_estimate", customerName:k.guestName||k.tripName||"Cliente", items:qbItems, currency:"USD", memo:k.tripName||"" }) });
+                                      const data = await res.json();
+                                      if (!data.ok) throw new Error(data.error||"Error QB");
+                                      window.open(data.qbUrl, "_blank");
+                                    } catch(e) { alert("Error QB: "+e.message); }
+                                    finally { setQbRowLoading(null); }
+                                  }}
+                                  style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"#059669",background:"none",border:"none",cursor:"pointer",opacity:qbRowLoading===k.id?0.5:1}}>
+                                  {qbRowLoading===k.id ? "⏳ Creando…" : "🧾 Estimar en QB"}
+                                </button>
+                              )}
                               {(() => {
                                 const conciergeNames = String(k.assignedConcierge || "").split(",").map(s => s.trim()).filter(Boolean);
                                 const concierge = conciergeNames.map(n => CONCIERGE_LIST.find(c => c.name === n)).find(Boolean);
