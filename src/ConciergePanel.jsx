@@ -10891,36 +10891,38 @@ function CheckinCatalogModal({ onClose }) {
   const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
   const [services, setServices] = useState([]);
-  const [prices, setPrices]   = useState({});   // { [sku]: price_cop (number) }
+  // { [sku]: { tier1: number, tier2: number, checkin: number } }
+  const [prices, setPrices]   = useState({});
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
   const [saved,   setSaved]   = useState(false);
   const [search,  setSearch]  = useState("");
 
-  // Categories to skip (no-price or non-service)
   const SKIP_CATS = new Set(["restaurants","bars","nightlife","beach-clubs","beach clubs","beachclubs"]);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        // Load services catalog
         const { fetchServicesFromSheet } = await import("./sheetServices");
         const svcs = (await fetchServicesFromSheet()) || [];
 
-        // Load saved check-in prices from Supabase
         const { createClient } = await import("@supabase/supabase-js");
         const sb = createClient(SB_URL, SB_KEY);
         const { data } = await sb.from("kickoffs").select("data").eq("id", "checkin_prices_v1").single();
-        const saved = data?.data || {};
+        const stored = data?.data || {};
 
         if (!alive) return;
         setServices(svcs);
-        // Build price map: saved override → price_tier_1 → price_cop → 0
         const map = {};
         svcs.forEach(s => {
           if (!s.sku) return;
-          map[s.sku] = saved[s.sku] ?? s.price_tier_1 ?? s.price_cop ?? 0;
+          const prev = stored[s.sku] || {};
+          map[s.sku] = {
+            tier1:   prev.tier1   ?? s.price_tier_1 ?? s.price_cop ?? 0,
+            tier2:   prev.tier2   ?? s.price_tier_2 ?? s.price_cop ?? 0,
+            checkin: prev.checkin ?? s.price_tier_1 ?? s.price_cop ?? 0,
+          };
         });
         setPrices(map);
       } catch (e) { console.error("CheckinCatalog load error:", e); }
@@ -10928,6 +10930,9 @@ function CheckinCatalogModal({ onClose }) {
     })();
     return () => { alive = false; };
   }, []);
+
+  const setField = (sku, field, val) =>
+    setPrices(p => ({ ...p, [sku]: { ...p[sku], [field]: val === "" ? 0 : Number(val) } }));
 
   const handleSave = async () => {
     setSaving(true);
@@ -10942,8 +10947,6 @@ function CheckinCatalogModal({ onClose }) {
     finally { setSaving(false); }
   };
 
-  const fmt = n => n ? Number(n).toLocaleString("es-CO") : "—";
-
   const filtered = services.filter(s => {
     if (!s.sku) return false;
     const cat = (s.category || "").toLowerCase().replace(/\s+/g, "-");
@@ -10952,7 +10955,6 @@ function CheckinCatalogModal({ onClose }) {
     return (s.name || s.name_en || "").toLowerCase().includes(search.toLowerCase());
   });
 
-  // Group by category
   const grouped = {};
   filtered.forEach(s => {
     const cat = s.category || "otros";
@@ -10960,15 +10962,17 @@ function CheckinCatalogModal({ onClose }) {
     grouped[cat].push(s);
   });
 
+  const colStyle = { width: 100, border: "1px solid var(--border)", borderRadius: 5, padding: "3px 7px", fontSize: 12, textAlign: "right", background: "var(--surface)" };
+
   return (
     <div style={{position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center"}}
          onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="tt-card" style={{width:"100%",maxWidth:680,maxHeight:"88vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      <div className="tt-card" style={{width:"100%",maxWidth:800,maxHeight:"88vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
         {/* Header */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:"1px solid var(--border)"}}>
           <div>
             <div style={{fontSize:15,fontWeight:700,color:"var(--text-1)"}}>📋 Catálogo Check-In</div>
-            <div style={{fontSize:11,color:"var(--text-3)",marginTop:2}}>Precios para servicios individuales (clientes check-in sin itinerario completo)</div>
+            <div style={{fontSize:11,color:"var(--text-3)",marginTop:2}}>Precios en COP por servicio — Tier 1, Tier 2 y precio especial Check-In</div>
           </div>
           <button onClick={onClose} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"var(--text-3)"}}>✕</button>
         </div>
@@ -10983,34 +10987,38 @@ function CheckinCatalogModal({ onClose }) {
           />
         </div>
 
+        {/* Column headers */}
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"6px 20px",borderBottom:"1px solid var(--border)",background:"var(--bg)"}}>
+          <div style={{flex:1,fontSize:10,fontWeight:600,color:"var(--text-3)",textTransform:"uppercase",letterSpacing:".05em"}}>Servicio</div>
+          <div style={{width:100,fontSize:10,fontWeight:600,color:"#059669",textTransform:"uppercase",textAlign:"right"}}>Tier 1 COP</div>
+          <div style={{width:100,fontSize:10,fontWeight:600,color:"#2563eb",textTransform:"uppercase",textAlign:"right"}}>Tier 2 COP</div>
+          <div style={{width:100,fontSize:10,fontWeight:600,color:"#7c3aed",textTransform:"uppercase",textAlign:"right"}}>Check-In COP</div>
+        </div>
+
         {/* Body */}
-        <div style={{flex:1,overflowY:"auto",padding:"8px 20px 16px"}}>
+        <div style={{flex:1,overflowY:"auto",padding:"4px 20px 16px"}}>
           {loading ? (
             <div style={{textAlign:"center",padding:40,color:"var(--text-3)",fontSize:13}}>Cargando catálogo…</div>
           ) : (
             Object.entries(grouped).map(([cat, items]) => (
-              <div key={cat} style={{marginBottom:16}}>
-                <div style={{fontSize:10,fontWeight:700,color:"var(--text-3)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:6,marginTop:12}}>
+              <div key={cat}>
+                <div style={{fontSize:10,fontWeight:700,color:"var(--text-3)",textTransform:"uppercase",letterSpacing:".06em",padding:"10px 0 4px"}}>
                   {cat}
                 </div>
-                {items.map(s => (
-                  <div key={s.sku} style={{display:"flex",alignItems:"center",gap:10,padding:"5px 0",borderBottom:"1px solid var(--border-soft)"}}>
-                    <div style={{flex:1,fontSize:12.5,color:"var(--text-1)"}}>{s.name || s.name_en}</div>
-                    <div style={{fontSize:11,color:"var(--text-3)",whiteSpace:"nowrap"}}>
-                      T1: {fmt(s.price_tier_1)} · T2: {fmt(s.price_tier_2)}
+                {items.map(s => {
+                  const p = prices[s.sku] || {};
+                  return (
+                    <div key={s.sku} style={{display:"flex",alignItems:"center",gap:10,padding:"4px 0",borderBottom:"1px solid var(--border-soft)"}}>
+                      <div style={{flex:1,fontSize:12.5,color:"var(--text-1)"}}>{s.name || s.name_en}</div>
+                      <input type="number" value={p.tier1 ?? ""} onChange={e => setField(s.sku, "tier1", e.target.value)}
+                        style={{...colStyle, borderColor:"#bbf7d0"}} placeholder="0" />
+                      <input type="number" value={p.tier2 ?? ""} onChange={e => setField(s.sku, "tier2", e.target.value)}
+                        style={{...colStyle, borderColor:"#bfdbfe"}} placeholder="0" />
+                      <input type="number" value={p.checkin ?? ""} onChange={e => setField(s.sku, "checkin", e.target.value)}
+                        style={{...colStyle, borderColor:"#ddd6fe"}} placeholder="0" />
                     </div>
-                    <div style={{display:"flex",alignItems:"center",gap:4}}>
-                      <span style={{fontSize:10,color:"var(--text-3)"}}>COP</span>
-                      <input
-                        type="number"
-                        value={prices[s.sku] ?? ""}
-                        onChange={e => setPrices(p => ({ ...p, [s.sku]: e.target.value === "" ? 0 : Number(e.target.value) }))}
-                        style={{width:110,border:"1px solid var(--border)",borderRadius:5,padding:"3px 7px",fontSize:12,textAlign:"right",background:"var(--surface)"}}
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ))
           )}
@@ -11019,11 +11027,11 @@ function CheckinCatalogModal({ onClose }) {
         {/* Footer */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 20px",borderTop:"1px solid var(--border)",gap:10}}>
           <span style={{fontSize:11,color:saved?"#059669":"var(--text-3)"}}>
-            {saved ? "✓ Guardado" : "Los precios se guardan globalmente para todos los clientes check-in"}
+            {saved ? "✓ Guardado" : "Cambios se aplican a todos los clientes check-in"}
           </span>
           <div style={{display:"flex",gap:8}}>
             <button onClick={onClose} className="tt-btn-ghost" style={{fontSize:12}}>Cancelar</button>
-            <button onClick={handleSave} disabled={saving || loading} className="tt-btn-primary" style={{fontSize:12,opacity:saving?.6:1}}>
+            <button onClick={handleSave} disabled={saving || loading} className="tt-btn-primary" style={{fontSize:12,opacity:saving?0.6:1}}>
               {saving ? "Guardando…" : "💾 Guardar precios"}
             </button>
           </div>
