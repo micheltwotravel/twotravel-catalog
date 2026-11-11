@@ -7428,7 +7428,9 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs, panelMode }) {
   const [hsDropResults, setHsDropResults] = React.useState([]);
   const [hsDropLoading, setHsDropLoading] = React.useState(false);
   const [hsDropOpen,    setHsDropOpen]    = React.useState(false);
+  const [hsDropRect,    setHsDropRect]    = React.useState(null);
   const hsTimer = React.useRef(null);
+  const hsInputRef = React.useRef(null);
 
   const onNameChange = (e) => {
     const val = e.target.value;
@@ -7439,6 +7441,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs, panelMode }) {
     if (!val.trim() || val.length < 2) { setHsDropResults([]); return; }
     hsTimer.current = setTimeout(async () => {
       setHsDropLoading(true);
+      if (hsInputRef.current) setHsDropRect(hsInputRef.current.getBoundingClientRect());
       try {
         const r = await fetch("/api/hubspot", {
           method: "POST",
@@ -7527,6 +7530,7 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs, panelMode }) {
                 {panelMode === "clientes-checkin" && <span style={{color:"var(--text-3)",fontWeight:400,marginLeft:4}}>· busca en HubSpot</span>}
               </label>
               <input
+                ref={hsInputRef}
                 type="text"
                 value={form.guestName}
                 onChange={onNameChange}
@@ -7538,8 +7542,8 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs, panelMode }) {
               {hsDropLoading && (
                 <span style={{position:"absolute",right:10,top:34,fontSize:11,color:"#aaa"}}>⟳</span>
               )}
-              {hsDropOpen && hsDropResults.length > 0 && (
-                <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:300,background:"#fff",border:"1px solid #e5e5e5",borderRadius:8,boxShadow:"0 4px 16px rgba(0,0,0,.12)",maxHeight:200,overflowY:"auto",marginTop:2}}>
+              {hsDropOpen && hsDropResults.length > 0 && hsDropRect && (
+                <div style={{position:"fixed",top:hsDropRect.bottom+2,left:hsDropRect.left,width:hsDropRect.width,zIndex:9999,background:"#fff",border:"1px solid #e5e5e5",borderRadius:8,boxShadow:"0 4px 16px rgba(0,0,0,.12)",maxHeight:200,overflowY:"auto"}}>
                   {hsDropResults.map(c => (
                     <button key={c.id} type="button"
                       onMouseDown={() => pickHsContact(c)}
