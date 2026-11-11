@@ -9442,8 +9442,6 @@ const loadKickoffs = async (forceRefresh = false) => {
 
   // ── Check-in price catalog (clientes-checkin only) ──────────────────────
   const [showCheckinCatalog, setShowCheckinCatalog] = useState(false);
-  // ── Check-in view toggle: "clients" | "reservaciones" ───────────────────
-  const [checkinView, setCheckinView] = useState("clients");
 
   // ── HubSpot catalog search (clientes-checkin only) ───────────────────────
   const [showHSSearch, setShowHSSearch] = useState(false);
@@ -9976,9 +9974,9 @@ const loadKickoffs = async (forceRefresh = false) => {
   {panelMode === "clientes-checkin" && currentUser?.role !== "junior" && (<>
   <button
     type="button"
-    onClick={() => setCheckinView(v => v === "reservaciones" ? "clients" : "reservaciones")}
-    className={checkinView === "reservaciones" ? "tt-btn-primary" : "tt-btn-ghost"}
-    title="Ver tablero de reservaciones y servicios"
+    onClick={() => window.open('/handoffs.html', '_blank')}
+    className="tt-btn-ghost"
+    title="Abrir tablero de reservaciones y servicios"
   >
     📊 Reservaciones
   </button>
@@ -10023,9 +10021,6 @@ const loadKickoffs = async (forceRefresh = false) => {
       </header>
 
       <main style={{flex:1,maxWidth:1680,width:"100%",margin:"0 auto",padding:"16px 24px",display:"flex",flexDirection:"column",gap:12}}>
-      {panelMode === "clientes-checkin" && checkinView === "reservaciones" ? (
-        <CheckinReservationsView kickoffs={kickoffs} currentUser={currentUser} />
-      ) : (<>
         <div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",justifyContent:"space-between"}}>
           <div style={{position:"relative",width:260}}>
             <Search style={{width:14,height:14,color:"var(--text-3)",position:"absolute",left:9,top:"50%",transform:"translateY(-50%)"}} />
@@ -10597,6 +10592,12 @@ const loadKickoffs = async (forceRefresh = false) => {
                                   {qbRowLoading===k.id ? "⏳ Creando…" : "🧾 Estimar en QB"}
                                 </button>
                               )}
+                              <button onClick={() => {
+                                setOpenMenuId(null);
+                                window.open(`/handoffs.html?client=${encodeURIComponent(k.guestName || k.id)}&new=1`, '_blank');
+                              }} style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"#2563eb",background:"none",border:"none",cursor:"pointer"}}>
+                                🗓 Crear reserva
+                              </button>
                               {(() => {
                                 const conciergeNames = String(k.assignedConcierge || "").split(",").map(s => s.trim()).filter(Boolean);
                                 const concierge = conciergeNames.map(n => CONCIERGE_LIST.find(c => c.name === n)).find(Boolean);
@@ -10655,7 +10656,6 @@ const loadKickoffs = async (forceRefresh = false) => {
             </table>
           </div>
         </div>
-      </>)}
       </main>
 
       {selectedForSummary && (

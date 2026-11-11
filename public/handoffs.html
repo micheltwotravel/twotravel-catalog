@@ -264,7 +264,34 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Actividad</label>
-          <input class="form-input" id="n-activity" placeholder="Ej. Masajes, Almuerzo, IVs...">
+          <select class="form-select" id="n-activity-sel" onchange="syncActivityInput(this)">
+            <option value="">Seleccionar servicio...</option>
+            <option value="Activity">Activity</option>
+            <option value="Bakery">Bakery</option>
+            <option value="Bar">Bar</option>
+            <option value="Bartender">Bartender</option>
+            <option value="Beach Club">Beach Club</option>
+            <option value="Bodyguard">Bodyguard</option>
+            <option value="Cake">Cake</option>
+            <option value="Chef">Chef / Chef Two Travel</option>
+            <option value="Cleaning">Cleaning</option>
+            <option value="Cook Service">Cook Service</option>
+            <option value="Dance Class">Dance Class</option>
+            <option value="Decoración">Decoración</option>
+            <option value="DJ">DJ</option>
+            <option value="Hair and Make Up">Hair and Make Up</option>
+            <option value="Hookah">Hookah</option>
+            <option value="IV Service">IV Service</option>
+            <option value="Massage">Massage</option>
+            <option value="Party">Party</option>
+            <option value="Photographer">Photographer</option>
+            <option value="Restaurant">Restaurant</option>
+            <option value="Snorkel">Snorkel</option>
+            <option value="Tours">Tours</option>
+            <option value="Transport">Transport</option>
+            <option value="_otro">Otro (escribir)...</option>
+          </select>
+          <input class="form-input" id="n-activity" placeholder="Descripción específica..." style="margin-top:6px">
         </div>
         <div class="form-group">
           <label class="form-label">Clientes (quiénes)</label>
@@ -362,7 +389,6 @@ const STATUSES = {
 };
 
 const MEMBERS = {
-  Alia:   {bg:'#9a7d52',i:'AL'},
   Caro:   {bg:'#3d8a5a',i:'CA'},
   Dani:   {bg:'#8a3d5a',i:'DA'},
   Michel: {bg:'#3d5a8a',i:'MI'},
@@ -480,13 +506,13 @@ function sampleData(){
     d.setHours(h,m,0,0); return d.toISOString().slice(0,16);
   };
   return [
-    {id:'h1',client:'Jerome V.',date:dt(-2,10,0),activity:'Masajes',pax:'8 pax',operator:'Dennis',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:true,person:'Alia',personLive:'Alia',notes:'Eran 10 masajes pero al final solo se hicieron 8',status:'cobrar'},
-    {id:'h2',client:'Jerome V.',date:dt(-2,11,0),activity:'IVs',pax:'Tony, Rock & He',operator:'IV MD',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:true,person:'Alia',personLive:'Alia',notes:'Por pagar',status:'cobrar'},
-    {id:'h3',client:'Jerome V.',date:dt(-2,12,30),activity:'Almuerzo',pax:'Todos',operator:'Carmen',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:false,person:'Alia',personLive:'Alia',notes:'pidieron cancelar la reserva de last minute, pero igual el restaurante cobró',status:'cancel'},
+    {id:'h1',client:'Jerome V.',date:dt(-2,10,0),activity:'Masajes',pax:'8 pax',operator:'Dennis',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:true,person:'Caro',personLive:'Caro',notes:'Eran 10 masajes pero al final solo se hicieron 8',status:'cobrar'},
+    {id:'h2',client:'Jerome V.',date:dt(-2,11,0),activity:'IVs',pax:'Tony, Rock & He',operator:'IV MD',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:true,person:'Caro',personLive:'Caro',notes:'Por pagar',status:'cobrar'},
+    {id:'h3',client:'Jerome V.',date:dt(-2,12,30),activity:'Almuerzo',pax:'Todos',operator:'Carmen',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:false,person:'Caro',personLive:'Caro',notes:'pidieron cancelar la reserva de last minute, pero igual el restaurante cobró',status:'cancel'},
     {id:'h4',client:'Jerome V.',date:dt(-2,20,30),activity:'Drinks',pax:'Todos',operator:'Mirador',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:false,person:'Xilene',personLive:'Xilene',notes:'',status:'cancel'},
-    {id:'h5',client:'Jerome V.',date:dt(-1,23,0),activity:'La Jugada',pax:'Todos',operator:'La Jugada',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:false,person:'Alia',personLive:'Alia',notes:'',status:'cancel'},
-    {id:'h6',client:'Jerome V.',date:dt(0,11,0),activity:'Transportation Out',pax:'Todos menos 1',operator:'Sions',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:false,person:'Alia',personLive:'Alia',notes:'',status:'todo'},
-    {id:'h7',client:'Jerome V.',date:dt(0,12,30),activity:'Transportation Out',pax:'Mikey',operator:'Sions',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:false,person:'Alia',personLive:'Alia',notes:'',status:'todo'},
+    {id:'h5',client:'Jerome V.',date:dt(-1,23,0),activity:'La Jugada',pax:'Todos',operator:'La Jugada',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:false,person:'Caro',personLive:'Caro',notes:'',status:'cancel'},
+    {id:'h6',client:'Jerome V.',date:dt(0,11,0),activity:'Transportation Out',pax:'Todos menos 1',operator:'Sions',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:false,person:'Caro',personLive:'Caro',notes:'',status:'todo'},
+    {id:'h7',client:'Jerome V.',date:dt(0,12,30),activity:'Transportation Out',pax:'Mikey',operator:'Sions',bookingWhere:'Grupo de Whatsapp',travefy:'',confirmation:false,person:'Caro',personLive:'Caro',notes:'',status:'todo'},
   ];
 }
 
@@ -1176,6 +1202,21 @@ document.addEventListener('click', closePopups);
 
 /* ── NEW HANDOFF MODAL ── */
 let prefillWeek = null;
+function syncActivityInput(sel){
+  const inp = document.getElementById('n-activity');
+  if(sel.value && sel.value !== '_otro'){
+    inp.value = sel.value;
+    inp.placeholder = 'Descripción específica (opcional)...';
+  } else if(sel.value === '_otro'){
+    inp.value = '';
+    inp.placeholder = 'Escribe la actividad...';
+    inp.focus();
+  } else {
+    inp.value = '';
+    inp.placeholder = 'Descripción específica...';
+  }
+}
+
 function openNewModal(wk, prefillClient, prefillDate){
   prefillWeek = wk || null;
   if(prefillClient) document.getElementById('n-client').value = prefillClient;
@@ -1188,7 +1229,7 @@ function openNewModal(wk, prefillClient, prefillDate){
     document.getElementById('n-date').value = now.toISOString().slice(0,16);
   }
   document.getElementById('new-modal').style.display = 'flex';
-  document.getElementById('n-activity').focus();
+  document.getElementById('n-activity-sel').focus();
 }
 
 
@@ -1200,12 +1241,16 @@ function checkUrlParams(){
     const inp = document.getElementById('search-input');
     if(inp) inp.value = client;
   }
+  if(p.get('new') === '1'){
+    openNewModal(null, client || null, null);
+  }
 }
 function closeNewModal(){
   document.getElementById('new-modal').style.display = 'none';
   ['n-client','n-date','n-activity','n-pax','n-operator','n-travefy','n-notes'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value='';
   });
+  const sel = document.getElementById('n-activity-sel'); if(sel) sel.value='';
   document.getElementById('n-status').value = 'todo';
   document.getElementById('n-person').value = '';
   document.getElementById('n-person-live').value = '';
@@ -1216,7 +1261,7 @@ function createHandoff(){
     id: 'h' + Date.now(),
     client:      document.getElementById('n-client').value.trim(),
     date:        document.getElementById('n-date').value,
-    activity:    document.getElementById('n-activity').value.trim(),
+    activity:    (document.getElementById('n-activity').value.trim() || (document.getElementById('n-activity-sel').value !== '_otro' ? document.getElementById('n-activity-sel').value : '')).trim(),
     pax:         document.getElementById('n-pax').value.trim(),
     operator:    document.getElementById('n-operator').value.trim(),
     bookingWhere:document.getElementById('n-booking-where').value,
