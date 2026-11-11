@@ -135,7 +135,7 @@ async function fetchFreshBodas() {
     .select("*")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  const bodas = (data || []).map(row => rowToBoda(row.data || row));
+  const bodas = (data || []).map(row => ({ ...rowToBoda(row.data || row), id: row.id }));
   setBodasCache(bodas);
   return bodas;
 }
