@@ -389,14 +389,16 @@ export default async function handler(req, res) {
         sorts: [{ propertyName: "lastmodifieddate", direction: "DESCENDING" }],
       };
       const r = await hubspotRequest("/crm/v3/objects/contacts/search", "POST", searchBody, token);
-      const results = (r.data?.results || []).map(c => ({
-        id: c.id,
-        name: [c.properties?.firstname, c.properties?.lastname].filter(Boolean).join(" "),
-        email: c.properties?.email || "",
-        phone: c.properties?.phone || "",
-        city: c.properties?.city || c.properties?.where_are_you_traveling_to_ || "",
-        status: c.properties?.hs_lead_status || "",
-      }));
+      const results = (r.data?.results || [])
+        .filter(c => !c.properties?.email?.toLowerCase().endsWith("@two.travel"))
+        .map(c => ({
+          id: c.id,
+          name: [c.properties?.firstname, c.properties?.lastname].filter(Boolean).join(" "),
+          email: c.properties?.email || "",
+          phone: c.properties?.phone || "",
+          city: c.properties?.city || c.properties?.where_are_you_traveling_to_ || "",
+          status: c.properties?.hs_lead_status || "",
+        }));
       return res.status(200).json({ results });
     }
 
