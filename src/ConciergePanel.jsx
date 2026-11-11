@@ -9370,11 +9370,13 @@ const loadKickoffs = async (forceRefresh = false) => {
       };
     });
 
-    const filtered = arr.filter(k =>
-      panelMode === "clientes-checkin"
+    const SPECIAL_IDS = /^(marketing_v\d|handoffs_v\d|finance_reservations_v\d|handoff_|slack_)/;
+    const filtered = arr.filter(k => {
+      if (SPECIAL_IDS.test(k.id)) return false;
+      return panelMode === "clientes-checkin"
         ? k.panelContext === "checkin"
-        : k.panelContext !== "checkin"
-    );
+        : k.panelContext !== "checkin";
+    });
     setKickoffs(filtered);
 
     setSelectedKickoffForLink((prev) => {
