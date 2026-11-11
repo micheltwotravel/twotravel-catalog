@@ -7072,25 +7072,23 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
               </button>
             </div>
           )}
-          {kickoff?.cart?.length > 0 && (
-            <div className="flex items-center gap-1 mt-1">
-              <button
-                type="button"
-                onClick={createQbEstimate}
-                disabled={qbEstimating}
-                className="px-3 py-2 rounded-lg border border-emerald-300 text-sm text-emerald-700 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-50"
-                title="Crear estimado en QuickBooks con los ítems del itinerario que tienen código QB"
-              >
-                {qbEstimating ? "⏳ QB…" : "🧾 Estimar en QB"}
-              </button>
-              {qbEstimateUrl && (
-                <a href={qbEstimateUrl} target="_blank" rel="noreferrer"
-                  className="text-[11px] text-emerald-700 underline px-1">
-                  Ver en QB →
-                </a>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={createQbEstimate}
+              disabled={qbEstimating}
+              className="px-3 py-2 rounded-lg border border-emerald-300 text-sm text-emerald-700 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-50"
+              title="Crear estimado en QuickBooks con los ítems del itinerario que tienen código QB"
+            >
+              {qbEstimating ? "⏳ QB…" : "🧾 Estimar en QB"}
+            </button>
+            {qbEstimateUrl && (
+              <a href={qbEstimateUrl} target="_blank" rel="noreferrer"
+                className="text-[11px] text-emerald-700 underline px-1">
+                Ver en QB →
+              </a>
+            )}
+          </div>
         </div>
       </div>
 
@@ -10575,7 +10573,7 @@ const loadKickoffs = async (forceRefresh = false) => {
                                 style={{width:"100%",textAlign:"left",padding:"8px 14px",fontSize:12,color:"#7c3aed",background:"none",border:"none",cursor:"pointer"}}>
                                 📅 Ir a reuniones
                               </button>
-                              {Array.isArray(k.cart) && k.cart.some(it => (it.quickbooksCode || it.qbCode) && !NO_QB.has((it.category||"").toLowerCase().replace(/\s+/g,"-"))) && (
+                              {(Array.isArray(k.cart) ? k.cart : (() => { try { return JSON.parse(k.cart||"[]"); } catch { return []; } })()).length > 0 && (
                                 <button
                                   disabled={qbRowLoading === k.id}
                                   onClick={async () => {
