@@ -195,7 +195,6 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
   </select>
   <select class="filter-sel" onchange="filterPerson=this.value;render()">
     <option value="">Todos</option>
-    <option value="Alia">Alia</option>
     <option value="Caro">Caro</option>
     <option value="Dani">Dani</option>
     <option value="Michel">Michel</option>
@@ -237,7 +236,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
       <div style="display:flex;gap:12px;margin-bottom:14px">
         <div style="flex:1"><label class="form-label">Proveedor</label><input id="r-proveedor" class="form-input" placeholder="CVR - Mark"></div>
         <div style="flex:1"><label class="form-label">Gestionado por</label>
-          <select id="r-rep" class="form-select"><option value="">—</option><option>Alia</option><option>Caro</option><option>Dani</option><option>Lyna</option><option>Michel</option><option>Xilene</option></select>
+          <select id="r-rep" class="form-select"><option value="">—</option><option>Caro</option><option>Dani</option><option>Lyna</option><option>Michel</option><option>Xilene</option></select>
         </div>
       </div>
       <div style="display:flex;gap:12px;margin-bottom:14px">
@@ -439,7 +438,6 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
           <label class="form-label">Gestionado por</label>
           <select class="form-select" id="n-person">
             <option value="">—</option>
-            <option value="Alia">Alia</option>
             <option value="Caro">Caro</option>
             <option value="Dani">Dani</option>
             <option value="Lyna">Lyna</option>
@@ -690,7 +688,6 @@ const STATUSES = {
 };
 
 const MEMBERS = {
-  Alia:   {bg:'#9a7d52',i:'AL'},
   Caro:   {bg:'#3d8a5a',i:'CA'},
   Dani:   {bg:'#8a3d5a',i:'DA'},
   Lyna:   {bg:'#c47d2a',i:'LY'},
@@ -1613,6 +1610,7 @@ let resFilterStatus = '';
 let resFilterRep = '';
 let resFilterPeriod = 'nov';
 let resShowOTA = false;
+let resSortBy = 'recent'; // 'recent' | 'entrada'
 let _resEditId = null;
 
 // Auto-collected OTA bookings (Airbnb, VRBO/HomeAway, bookingengine) — no manual cobro needed
@@ -1756,7 +1754,10 @@ function renderReservas() {
     const matchR = !resFilterRep || r.rep === resFilterRep;
     const matchP = resFilterPeriod !== 'nov' || !r.fechaEntrada || r.fechaEntrada >= '2026-11-01';
     return matchS && matchR && matchP;
-  }).sort((a,b) => (a.fechaEntrada||'') > (b.fechaEntrada||'') ? 1 : -1);
+  }).sort((a,b) => {
+    if (resSortBy === 'recent') return (b.createdAt||'') > (a.createdAt||'') ? 1 : -1;
+    return (a.fechaEntrada||'') > (b.fechaEntrada||'') ? 1 : -1;
+  });
 
   const totalPend = reservas.filter(r => r.status !== 'pagado').reduce((s,r) => {
     const pc = parseFloat(r.precioCliente) || 0;
@@ -1785,8 +1786,9 @@ function renderReservas() {
       </select>
       <select class="filter-sel" onchange="resFilterRep=this.value;renderReservas()" style="font-size:11px">
         <option value="">Todos los reps</option>
-        <option${resFilterRep==='Alia'?' selected':''}>Alia</option><option${resFilterRep==='Caro'?' selected':''}>Caro</option><option${resFilterRep==='Dani'?' selected':''}>Dani</option><option${resFilterRep==='Lyna'?' selected':''}>Lyna</option><option${resFilterRep==='Michel'?' selected':''}>Michel</option><option${resFilterRep==='Xilene'?' selected':''}>Xilene</option>
+        <option${resFilterRep==='Caro'?' selected':''}>Caro</option><option${resFilterRep==='Dani'?' selected':''}>Dani</option><option${resFilterRep==='Lyna'?' selected':''}>Lyna</option><option${resFilterRep==='Michel'?' selected':''}>Michel</option><option${resFilterRep==='Xilene'?' selected':''}>Xilene</option>
       </select>
+      <button onclick="resSortBy=resSortBy==='recent'?'entrada':'recent';renderReservas()" style="font-size:11px;padding:4px 10px;border:1px solid ${resSortBy==='recent'?'#2563eb':'var(--border2)'};background:${resSortBy==='recent'?'#eff6ff':'transparent'};color:${resSortBy==='recent'?'#2563eb':'var(--ink3)'};cursor:pointer;font-family:Jost,sans-serif;border-radius:2px;white-space:nowrap" title="Cambiar orden">${resSortBy==='recent'?'🕐 Recientes primero':'📅 Por fecha entrada'}</button>
       <button onclick="resShowOTA=!resShowOTA;renderReservas()" style="font-size:11px;padding:4px 10px;border:1px solid ${resShowOTA?'#ff6b35':'var(--border2)'};background:${resShowOTA?'#ff6b35':'transparent'};color:${resShowOTA?'#fff':'var(--ink3)'};cursor:pointer;font-family:Jost,sans-serif;border-radius:2px;white-space:nowrap" title="${resShowOTA?'Ocultar OTA (Airbnb/VRBO/HomeAway)':'Mostrar OTA (Airbnb/VRBO/HomeAway)'}">🏨 ${resShowOTA?'OTA visibles':'OTA ocultas'} (${otaCount})</button>
       <button class="tbtn primary" onclick="openResModal()">+ Agregar Reserva</button>
     </div>
@@ -1815,7 +1817,9 @@ function renderReservas() {
       <th>Método pago</th><th>Rep.</th><th>Estado</th><th></th>
     </tr></thead><tbody>`;
 
+  const now48h = new Date(Date.now() - 48*3600*1000).toISOString();
   items.forEach(r => {
+    const isNew = r.createdAt && r.createdAt >= now48h;
     const st = RES_STATUS[r.status] || RES_STATUS.pendiente;
     const pc = parseFloat(r.precioCliente) || 0;
     const pn = parseFloat(r.precioNuestro) || 0;
@@ -1831,11 +1835,11 @@ function renderReservas() {
       : '';
     const waHref = r.phone ? 'https://wa.me/' + r.phone.replace(/\D/g,'') + '?text=' + encodeURIComponent(waMsg) : '';
 
-    html += `<tr>
+    html += `<tr${isNew?' style="background:#eff6ff"':''}>
       <td><div class="cell">${fmtDate(r.fechaEntrada)}</div></td>
       <td><div class="cell">${fmtDate(r.fechaSalida)}</div></td>
       <td><div class="cell" style="font-weight:500;flex-direction:column;align-items:flex-start;gap:2px">
-        <span>${esc(r.cliente||'')}</span>
+        <span>${esc(r.cliente||'')}${isNew?' <span style="font-size:9px;background:#2563eb;color:#fff;padding:1px 5px;border-radius:3px;margin-left:4px;font-weight:600;letter-spacing:.04em">NUEVO</span>':''}</span>
         <div style="display:flex;gap:3px;flex-wrap:wrap">${sourceTag(r)}</div>
       </div></td>
       <td><div class="cell" style="font-size:11px;color:var(--ink2)">${esc(r.ciudad||'')}</div></td>
