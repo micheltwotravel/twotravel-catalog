@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import ttLogoPng from "./assets/logo.png";
 import { AvailabilityManager } from "./BookingPage";
 import { DRINK_CATEGORIES as DRINK_CATEGORIES_DEFAULT, GROCERY_CATEGORIES as GROCERY_CATEGORIES_DEFAULT, applyMenuOverrides } from "./menuData";
@@ -7428,7 +7429,6 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs, panelMode }) {
   const [hsDropResults, setHsDropResults] = React.useState([]);
   const [hsDropLoading, setHsDropLoading] = React.useState(false);
   const [hsDropOpen,    setHsDropOpen]    = React.useState(false);
-  const [hsDropRect,    setHsDropRect]    = React.useState(null);
   const hsTimer = React.useRef(null);
   const hsInputRef = React.useRef(null);
 
@@ -7441,7 +7441,6 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs, panelMode }) {
     if (!val.trim() || val.length < 2) { setHsDropResults([]); return; }
     hsTimer.current = setTimeout(async () => {
       setHsDropLoading(true);
-      if (hsInputRef.current) setHsDropRect(hsInputRef.current.getBoundingClientRect());
       try {
         const r = await fetch("/api/hubspot", {
           method: "POST",
@@ -7542,20 +7541,21 @@ function CreateClientModal({ open, onClose, onSubmit, kickoffs, panelMode }) {
               {hsDropLoading && (
                 <span style={{position:"absolute",right:10,top:34,fontSize:11,color:"#aaa"}}>⟳</span>
               )}
-              {hsDropOpen && hsDropResults.length > 0 && hsDropRect && (
-                <div style={{position:"fixed",top:hsDropRect.bottom+2,left:hsDropRect.left,width:hsDropRect.width,zIndex:9999,background:"#fff",border:"1px solid #e5e5e5",borderRadius:8,boxShadow:"0 4px 16px rgba(0,0,0,.12)",maxHeight:200,overflowY:"auto"}}>
+              {hsDropOpen && hsDropResults.length > 0 && hsInputRef.current && createPortal(
+                <div style={{position:"fixed",top:hsInputRef.current.getBoundingClientRect().bottom+2,left:hsInputRef.current.getBoundingClientRect().left,width:hsInputRef.current.getBoundingClientRect().width,zIndex:99999,background:"#fff",border:"1px solid #e5e5e5",borderRadius:8,boxShadow:"0 4px 16px rgba(0,0,0,.12)",maxHeight:220,overflowY:"auto"}}>
                   {hsDropResults.map(c => (
                     <button key={c.id} type="button"
                       onMouseDown={() => pickHsContact(c)}
-                      style={{width:"100%",textAlign:"left",padding:"8px 12px",background:"transparent",border:"none",borderBottom:"1px solid #f5f5f5",cursor:"pointer",display:"flex",flexDirection:"column",gap:1}}
+                      style={{width:"100%",textAlign:"left",padding:"8px 12px",background:"transparent",border:"none",borderBottom:"1px solid #f5f5f5",cursor:"pointer",display:"flex",flexDirection:"column",gap:2}}
                       onMouseEnter={e=>e.currentTarget.style.background="#f8f7f5"}
                       onMouseLeave={e=>e.currentTarget.style.background="transparent"}
                     >
                       <span style={{fontSize:12,fontWeight:600,color:"#111"}}>{c.name||"(sin nombre)"}</span>
-                      <span style={{fontSize:10,color:"#999"}}>{[c.email,c.phone].filter(Boolean).join(" · ")}</span>
+                      <span style={{fontSize:10,color:"#888"}}>{[c.email,c.phone].filter(Boolean).join(" · ")}</span>
                     </button>
                   ))}
-                </div>
+                </div>,
+                document.body
               )}
             </div>
             <div>
