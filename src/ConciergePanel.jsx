@@ -9346,6 +9346,7 @@ const loadKickoffs = async (forceRefresh = false) => {
   const [hsSelected, setHsSelected] = useState(null);
   const [hsCatalogLink, setHsCatalogLink] = useState("");
   const [hsCreating, setHsCreating] = useState(false);
+  const [hsTier, setHsTier] = useState(1);
   const hsSearchTimer = React.useRef(null);
 
   const hsSearch = (q) => {
@@ -9384,6 +9385,7 @@ const loadKickoffs = async (forceRefresh = false) => {
         guestContact: contact.phone,
         city: contact.city ? detectCityCode(contact.city) : "",
         tripName: contact.name,
+        clientType: hsTier,
         assignedConcierge: "",
         assignedConciergeName: "",
         createdAt: new Date().toISOString(),
@@ -9395,7 +9397,7 @@ const loadKickoffs = async (forceRefresh = false) => {
         welcomePdfUrl: "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=sharing",
         preTripContent: portalLang === "es" ? DEFAULT_PRE_TRIP_ES : DEFAULT_PRE_TRIP,
       });
-      const link = buildCatalogLink({ id }, 1, portalLang);
+      const link = buildCatalogLink({ id }, hsTier, portalLang);
       setHsCatalogLink(link);
       loadKickoffs(true);
     } catch (e) {
@@ -9813,7 +9815,7 @@ const loadKickoffs = async (forceRefresh = false) => {
     <button
       className="tt-btn-ghost"
       style={{gap:5,display:"flex",alignItems:"center"}}
-      onClick={() => { setShowHSSearch(true); setHsQuery(""); setHsResults([]); setHsSelected(null); setHsCatalogLink(""); }}
+      onClick={() => { setShowHSSearch(true); setHsQuery(""); setHsResults([]); setHsSelected(null); setHsCatalogLink(""); setHsTier(1); }}
       title="Buscar cliente en HubSpot y generar link de catálogo"
     >
       🔍 Buscar en HubSpot
@@ -10655,6 +10657,22 @@ const loadKickoffs = async (forceRefresh = false) => {
             {hsLoading && (
               <span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontSize:12,color:"var(--text-3)"}}>⟳</span>
             )}
+          </div>
+
+          {/* Tier picker */}
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:12,color:"var(--text-2)",flexShrink:0}}>Tier de precios:</span>
+            <div style={{display:"flex",gap:6}}>
+              {[1,2].map(t => (
+                <button key={t} onClick={() => setHsTier(t)}
+                  style={{padding:"4px 14px",fontSize:12,borderRadius:"var(--radius-sm)",border:"1px solid var(--border)",
+                    background: hsTier===t ? "#111" : "var(--surface)",
+                    color: hsTier===t ? "#fff" : "var(--text-1)",
+                    cursor:"pointer",fontWeight: hsTier===t ? 600 : 400}}>
+                  Tier {t}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Results list */}
