@@ -20,7 +20,7 @@ loadEnv("/Users/michel/twotravel-catalog/.env.production.local");
 loadEnv("/Users/michel/twotravel-catalog/.env.local");
 loadEnv("/Users/michel/twotravel-catalog/.env");
 
-const BOT_TOKEN   = process.env.VITE_SLACK_BOT_TOKEN;
+const BOT_TOKEN   = process.env.SLACK_RESERVATIONS_BOT_TOKEN || process.env.VITE_SLACK_BOT_TOKEN;
 const SUPABASE_URL= process.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY= process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 const SUPABASE_ID = "finance_reservations_v1";
@@ -41,19 +41,22 @@ async function slackGet(method, params = {}) {
 }
 
 async function findReservationsChannel() {
-  // Check known channel IDs first
+  // Use known channel ID directly
   const knownIds = [
+    "C04Q93NR4T0", // #reservations-tt
     process.env.VITE_SLACK_CHANNEL_ID,
     process.env.VITE_SLACK_ORDERS_CHANNEL_ID,
   ].filter(Boolean);
 
   for (const id of knownIds) {
     try {
-      const info = await slackGet("conversations.info", { channel: id });
-      const name = info.channel.name;
-      console.log(`  Channel ${id} = #${name}`);
-      if (name === "reservations-tt" || name.includes("reservat")) return id;
-    } catch {}
+      // Try to read history — if it works the bot is in the channel
+      await slackGet("conversations.history", { channel: id, limit: 1 });
+      console.log(`  Channel ${id}: accessible`);
+      return id;
+    } catch(e) {
+      console.log(`  Channel ${id}: ${e.message}`);
+    }
   }
 
   // Fall back: list all channels
@@ -79,7 +82,7 @@ async function findReservationsChannel() {
 const FIELD_MAP = {
   name:        ["contact name","contact","client name","client","guest name","nombre"],
   dealName:    ["deal name","deal"],
-  fecha:       ["arrival date","arrival","fecha llegada","fecha","check-in","check in"],
+  fecha:       ["arrival date","arrival","fecha llegada","fecha","check-in","check in","reservation date","fecha reserva"],
   checkOut:    ["departure date","departure","fecha salida","checkout","check-out","check out"],
   city:        ["city","city_tt","ciudad","destino","destination"],
   pax:         ["# of guests","guests","pax","personas","number of guests","number of people"],
@@ -99,16 +102,28 @@ function parseDate(str) {
   if (!str) return "";
   str = str.trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-  const m1 = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (m1) return `${m1[3]}-${m1[1].padStart(2,"0")}-${m1[2].padStart(2,"0")}`;
-  const m2 = str.match(/^([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})$/);
+  // M/D/YY or M/D/YYYY
+  const m1 = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  if (m1) {
+    const yr = m1[3].length === 2 ? "20" + m1[3] : m1[3];
+    return `${yr}-${m1[1].padStart(2,"0")}-${m1[2].padStart(2,"0")}`;
+  }
+  const m2 = str.match(/^([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{2}|\d{4})$/);
   if (m2) {
     const months={jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",
                   jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"};
     const mo = months[m2[1].slice(0,3).toLowerCase()];
-    if (mo) return `${m2[3]}-${mo}-${m2[2].padStart(2,"0")}`;
+    const yr = m2[3].length === 2 ? "20" + m2[3] : m2[3];
+    if (mo) return `${yr}-${mo}-${m2[2].padStart(2,"0")}`;
   }
   return str;
+}
+// Parse a date range like "5/20/27 - 5/25/27" → { start, end }
+function parseDateRange(str) {
+  if (!str) return { start:"", end:"" };
+  const parts = str.split(/\s*[-–]\s*/);
+  if (parts.length >= 2) return { start: parseDate(parts[0].trim()), end: parseDate(parts[parts.length-1].trim()) };
+  return { start: parseDate(str), end: "" };
 }
 function parseMoney(str) { return str ? str.replace(/[$,\s]/g,"").trim() : ""; }
 function hsBaseName(name) {
@@ -138,8 +153,19 @@ function parseMessage(text, ts) {
     fields.name = parts[0].trim();
     if (!fields.city && parts[1]) fields.city = parts[1].trim();
   }
+  // Strip HubSpot deal suffix from name: "Kim Eatley - Cartagena - May 2027" → "Kim Eatley"
+  if (fields.name && fields.name.includes(" - ")) {
+    fields.name = fields.name.split(/\s+-\s+/)[0].trim();
+  }
 
-  if (fields.fecha)          fields.fecha          = parseDate(fields.fecha);
+  // Handle range format "5/20/27 - 5/25/27" in fecha field
+  if (fields.fecha && /[-–]/.test(fields.fecha) && !fields.checkOut) {
+    const { start, end } = parseDateRange(fields.fecha);
+    fields.fecha = start;
+    if (end && end !== start) fields.checkOut = end;
+  } else {
+    if (fields.fecha) fields.fecha = parseDate(fields.fecha);
+  }
   if (fields.checkOut)       fields.checkOut       = parseDate(fields.checkOut);
   if (fields.clientTotalUSD) fields.clientTotalUSD = parseMoney(fields.clientTotalUSD);
   if (fields.precioProveedor)fields.precioProveedor= parseMoney(fields.precioProveedor);
@@ -249,23 +275,35 @@ async function main() {
   // Sort newest arrival first
   deduped.sort((a,b) => (b.fecha||"").localeCompare(a.fecha||""));
 
-  // Clear and save to Supabase
-  console.log("\n🗑  Limpiando datos existentes en Supabase...");
-  const emptyData = { internalNotes: JSON.stringify({ reservations: [] }) };
-  const { error: clearErr } = await supabase
-    .from("kickoffs")
-    .upsert({ id: SUPABASE_ID, data: emptyData }, { onConflict: "id" });
-  if (clearErr) { console.error("❌ Error limpiando:", clearErr.message); process.exit(1); }
-  console.log("  ✓ Datos limpiados");
+  // Merge with existing Supabase data (safe — never clears)
+  console.log("\n📂 Cargando reservaciones existentes en Supabase...");
+  const { data: existing } = await supabase
+    .from("kickoffs").select("data").eq("id", SUPABASE_ID).maybeSingle();
+  const exD = existing?.data || {};
+  const exN = typeof exD.internalNotes === "string" ? JSON.parse(exD.internalNotes) : (exD.internalNotes || {});
+  const existingRows = exN.reservations || [];
+  console.log(`  ✓ ${existingRows.length} reservaciones existentes`);
 
-  console.log(`\n💾 Guardando ${deduped.length} reservaciones...`);
-  const newData = { internalNotes: JSON.stringify({ reservations: deduped }) };
+  // Only add rows not already in Supabase
+  const newOnly = deduped.filter(r => {
+    const key = `${hsBaseName(r.name)}|${r.fecha||""}`;
+    return !existingRows.some(x => `${hsBaseName(x.name)}|${x.fecha||""}` === key);
+  });
+  console.log(`  ✓ ${newOnly.length} nuevas a agregar (${deduped.length - newOnly.length} ya existían)`);
+
+  if (newOnly.length === 0) {
+    console.log("\n✅ Nada nuevo — todas las reservaciones ya están en Supabase.");
+    return;
+  }
+
+  const merged = [...newOnly, ...existingRows].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  const newData = { ...exD, internalNotes: JSON.stringify({ ...exN, reservations: merged }) };
   const { error: saveErr } = await supabase
     .from("kickoffs")
     .upsert({ id: SUPABASE_ID, data: newData }, { onConflict: "id" });
   if (saveErr) { console.error("❌ Error guardando:", saveErr.message); process.exit(1); }
 
-  console.log(`\n🎉 Listo! ${deduped.length} reservaciones importadas desde Slack.`);
+  console.log(`\n🎉 Listo! ${newOnly.length} nuevas reservaciones importadas desde Slack.`);
   console.log("   Recarga el FinancePanel para verlas.\n");
 }
 
