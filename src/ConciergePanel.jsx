@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ttLogoPng from "./assets/logo.png";
 import { AvailabilityManager } from "./BookingPage";
 import { DRINK_CATEGORIES as DRINK_CATEGORIES_DEFAULT, GROCERY_CATEGORIES as GROCERY_CATEGORIES_DEFAULT, applyMenuOverrides } from "./menuData";
@@ -2377,7 +2377,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
   };
   const withUid = (arr) => {
     const seen = new Set();
-    return arr.map((item, i) => {
+    return arr.filter(item => item != null && typeof item === "object").map((item, i) => {
       const uid = item._uid || `${item.id ?? "m"}_${i}_${Date.now()}`;
       if (seen.has(uid)) return { ...item, _uid: `${uid}_dup_${i}` };
       seen.add(uid);
@@ -3222,14 +3222,14 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
   const [exportSelected, setExportSelected] = useState(new Set());
   const [exportingItems, setExportingItems] = useState(false);
 
-  const handleGenerateReservation = () => {
+  const handleGenerateReservation = useCallback(() => {
     const allUids = days
       .flatMap(d => d.items.filter(it => it.type !== "block" && it._uid).map(it => it._uid));
     setExportSelected(new Set(allUids));
     setExportModal(true);
-  };
+  }, [days]);
 
-  useEffect(() => { if (exportTriggerRef) exportTriggerRef.current = handleGenerateReservation; });
+  useEffect(() => { if (exportTriggerRef) exportTriggerRef.current = handleGenerateReservation; }, [exportTriggerRef, handleGenerateReservation]);
 
   const handleExportConfirm = async () => {
     const guestName = kickoff?.guestName || kickoff?.tripName || "";
