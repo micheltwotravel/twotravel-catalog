@@ -1,5 +1,5 @@
 /*
-  TicketsPage — Compass internal ticket board
+  TicketsPage — Compass internal Kanban board
   Route: /?mode=tickets
 
   SQL to add assigned_to column (run once if upgrading):
@@ -29,49 +29,44 @@ const TEAM_MAP = Object.fromEntries(TEAM.map(m => [m.value, m]));
 
 const TEXTS = {
   en: {
-    brand: "Two Travel", title: "Tickets · Compass",
+    brand: "Two Travel", title: "Tickets",
     subtitle: "Report a bug, request a feature, or ask a question.",
     newTicket: "+ New Ticket", cancel: "Cancel", send: "Submit", sending: "Submitting…",
     type: "Type", page: "Page / Area", priority: "Priority",
     titleLbl: "Title *", titlePh: "What's broken or what do you need?",
     descLbl: "Description", descPh: "Steps to reproduce, screen, context…",
     assignedTo: "Assigned to",
-    all: "All",
     statuses: { pendiente: "Pending", en_progreso: "In Progress", listo: "Done", cancelado: "Cancelled" },
-    statusIcons: { pendiente: "⏳", en_progreso: "🔄", listo: "✅", cancelado: "❌" },
+    statusColors: { pendiente: "#f59e0b", en_progreso: "#3b82f6", listo: "#10b981", cancelado: "#9ca3af" },
     types: { bug: "Bug", feature: "Feature", change: "Change", question: "Question" },
     typeIcons: { bug: "🐛", feature: "✨", change: "🔧", question: "❓" },
     priorities: { alta: "High", media: "Medium", baja: "Low" },
+    priorityColors: { alta: "#ef4444", media: "#f59e0b", baja: "#10b981" },
     pages: ["Compass","Pagos","Reservas","Bodas","HR","Accesos","Bot","Otro"],
-    noTickets: "No tickets yet.", noMatch: "No tickets with this status.",
+    noTickets: "No tickets yet.", noMatch: "No tickets.",
     submittedBy: "by", errorReq: "Title is required.", errorSend: "Error. Try again.",
-    of: "of", seedBtn: "Seed initial tickets", seeding: "Seeding…", seedDone: "Done!",
+    of: "of", seedBtn: "Load seed tickets", seeding: "Loading…", seedDone: "Done!",
   },
   es: {
-    brand: "Two Travel", title: "Tickets · Compass",
+    brand: "Two Travel", title: "Tickets",
     subtitle: "Reporta un bug, pide una mejora o haz una consulta.",
     newTicket: "+ Nuevo Ticket", cancel: "Cancelar", send: "Enviar", sending: "Enviando…",
     type: "Tipo", page: "Página / Área", priority: "Prioridad",
     titleLbl: "Título *", titlePh: "¿Qué falla o qué necesitas?",
     descLbl: "Descripción", descPh: "Pasos para reproducir, pantalla, contexto…",
     assignedTo: "Responsable",
-    all: "Todos",
     statuses: { pendiente: "Pendiente", en_progreso: "En Progreso", listo: "Listo", cancelado: "Cancelado" },
-    statusIcons: { pendiente: "⏳", en_progreso: "🔄", listo: "✅", cancelado: "❌" },
+    statusColors: { pendiente: "#f59e0b", en_progreso: "#3b82f6", listo: "#10b981", cancelado: "#9ca3af" },
     types: { bug: "Bug", feature: "Mejora", change: "Cambio", question: "Pregunta" },
     typeIcons: { bug: "🐛", feature: "✨", change: "🔧", question: "❓" },
     priorities: { alta: "Alta", media: "Media", baja: "Baja" },
+    priorityColors: { alta: "#ef4444", media: "#f59e0b", baja: "#10b981" },
     pages: ["Compass","Pagos","Reservas","Bodas","HR","Accesos","Bot","Otro"],
-    noTickets: "No hay tickets todavía.", noMatch: "No hay tickets con este estado.",
+    noTickets: "No hay tickets todavía.", noMatch: "Sin tickets.",
     submittedBy: "por", errorReq: "El título es obligatorio.", errorSend: "Error al enviar.",
     of: "de", seedBtn: "Cargar tickets iniciales", seeding: "Cargando…", seedDone: "¡Listo!",
   },
 };
-
-const PRIORITY_BORDER = { alta: "border-l-red-400", media: "border-l-amber-400", baja: "border-l-emerald-400" };
-const PRIORITY_BG     = { alta: "bg-red-50 text-red-700", media: "bg-amber-50 text-amber-700", baja: "bg-emerald-50 text-emerald-700" };
-const STATUS_BG       = { pendiente: "bg-stone-100 text-stone-500", en_progreso: "bg-blue-100 text-blue-700", listo: "bg-emerald-100 text-emerald-700", cancelado: "bg-stone-100 text-stone-400 line-through" };
-const TYPE_BG         = { bug: "bg-red-50 text-red-600", feature: "bg-violet-50 text-violet-700", change: "bg-sky-50 text-sky-700", question: "bg-amber-50 text-amber-700" };
 
 const SEED_TICKETS = [
   { type:"bug",     page:"Compass",  priority:"alta",  title:"Tier 2 pricing — itinerary shows wrong prices",           description:"Clients with Tier 2 see Tier 1 prices in the itinerary canvas." },
@@ -89,13 +84,12 @@ const SEED_TICKETS = [
 
 function Avatar({ name, size = "sm" }) {
   const member = TEAM_MAP[name] || TEAM_MAP[""];
-  const initials = member.name === "Sin asignar" ? "—"
-    : member.name.slice(0, 2).toUpperCase();
-  const dim = size === "sm" ? "w-6 h-6 text-[10px]" : "w-8 h-8 text-xs";
   if (member.name === "Sin asignar") return null;
+  const initials = member.name.slice(0, 2).toUpperCase();
+  const dim = size === "sm" ? "w-6 h-6 text-[10px]" : "w-8 h-8 text-xs";
   return (
     <span
-      className={`${dim} rounded-full inline-flex items-center justify-center font-semibold text-white flex-shrink-0`}
+      className={`${dim} rounded-full inline-flex items-center justify-center font-bold text-white flex-shrink-0`}
       style={{ background: member.color }}
       title={member.name}
     >
@@ -111,7 +105,6 @@ export function TicketsPage({ currentUser }) {
 
   const [tickets, setTickets]     = useState([]);
   const [loading, setLoading]     = useState(true);
-  const [filterStatus, setFilter] = useState("all");
   const [showForm, setShowForm]   = useState(false);
   const [form, setForm]           = useState({ type: "bug", page: "Compass", priority: "media", title: "", desc: "", assigned_to: "" });
   const [saving, setSaving]       = useState(false);
@@ -180,78 +173,49 @@ export function TicketsPage({ currentUser }) {
   }
 
   const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
-  const filtered = filterStatus === "all" ? tickets : tickets.filter(tk => tk.status === filterStatus);
 
-  const counts = {};
-  ["pendiente", "en_progreso", "listo"].forEach(s => { counts[s] = tickets.filter(tk => tk.status === s).length; });
+  const COLUMNS = [
+    { key: "pendiente",   color: "#f59e0b", bg: "#fffbeb", border: "#fde68a" },
+    { key: "en_progreso", color: "#3b82f6", bg: "#eff6ff", border: "#bfdbfe" },
+    { key: "listo",       color: "#10b981", bg: "#ecfdf5", border: "#a7f3d0" },
+    { key: "cancelado",   color: "#9ca3af", bg: "#f9fafb", border: "#e5e7eb" },
+  ];
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-800">
+    <div className="min-h-screen bg-gray-50 text-gray-800" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
       {/* Header */}
-      <div className="bg-white border-b border-stone-100 px-4 py-3 sticky top-0 z-10 shadow-sm">
-        <div className="mx-auto max-w-4xl flex items-center justify-between gap-3 flex-wrap">
+      <div className="bg-white border-b border-gray-200 px-5 py-3 sticky top-0 z-20 shadow-sm">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <span className="text-xl">🎫</span>
+            <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-white text-xs font-bold">TT</div>
             <div>
-              <h1 className="text-sm font-semibold text-stone-800 leading-tight">{t.title}</h1>
-              <p className="text-[10px] text-stone-400 uppercase tracking-widest">{t.brand}</p>
+              <span className="text-sm font-semibold text-gray-900">Compass</span>
+              <span className="mx-2 text-gray-300">·</span>
+              <span className="text-sm font-semibold text-gray-900">{t.title}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex rounded-full border border-stone-200 overflow-hidden text-xs bg-stone-50">
-              <button onClick={() => setLangP("es")} className={`px-3 py-1.5 font-medium transition-colors ${lang === "es" ? "bg-stone-700 text-white" : "text-stone-400 hover:text-stone-600"}`}>ES</button>
-              <button onClick={() => setLangP("en")} className={`px-3 py-1.5 font-medium transition-colors ${lang === "en" ? "bg-stone-700 text-white" : "text-stone-400 hover:text-stone-600"}`}>EN</button>
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+              <button onClick={() => setLangP("es")} className={`px-3 py-1.5 font-medium transition-colors ${lang === "es" ? "bg-gray-900 text-white" : "text-gray-400 hover:text-gray-600 bg-white"}`}>ES</button>
+              <button onClick={() => setLangP("en")} className={`px-3 py-1.5 font-medium transition-colors ${lang === "en" ? "bg-gray-900 text-white" : "text-gray-400 hover:text-gray-600 bg-white"}`}>EN</button>
             </div>
             {currentUser?.name && (
-              <span className="text-xs text-stone-400 bg-stone-50 border border-stone-100 rounded-full px-3 py-1 max-w-[130px] truncate">{currentUser.name}</span>
+              <span className="text-xs text-gray-500 bg-gray-100 rounded-lg px-3 py-1.5 font-medium">{currentUser.name}</span>
             )}
+            <button onClick={() => setShowForm(v => !v)}
+              className="bg-gray-900 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors shadow-sm">
+              {showForm ? t.cancel : t.newTicket}
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-4xl px-4 py-6 space-y-5">
-        {/* Stats strip */}
-        {tickets.length > 0 && (
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { key: "pendiente",   label: t.statuses.pendiente,   color: "border-t-amber-400",  num: counts.pendiente },
-              { key: "en_progreso", label: t.statuses.en_progreso, color: "border-t-blue-400",   num: counts.en_progreso },
-              { key: "listo",       label: t.statuses.listo,       color: "border-t-emerald-400", num: counts.listo },
-            ].map(s => (
-              <button key={s.key} onClick={() => setFilter(filterStatus === s.key ? "all" : s.key)}
-                className={`bg-white rounded-xl border-t-2 ${s.color} border border-stone-100 px-4 py-3 text-left hover:shadow-sm transition-all ${filterStatus === s.key ? "shadow-sm ring-1 ring-stone-200" : ""}`}>
-                <div className="text-2xl font-bold text-stone-800">{s.num}</div>
-                <div className="text-[11px] text-stone-400 mt-0.5">{s.label}</div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Submit bar */}
-        {!showForm ? (
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <p className="text-sm text-stone-400">{t.subtitle}</p>
-            <div className="flex gap-2">
-              {isAdmin && tickets.length === 0 && (
-                <button onClick={seedTickets} disabled={seedState !== "idle"}
-                  className="text-xs text-stone-400 hover:text-stone-600 border border-stone-200 rounded-full px-3 py-1.5 bg-white transition-colors disabled:opacity-50">
-                  {seedState === "seeding" ? t.seeding : seedState === "done" ? t.seedDone : t.seedBtn}
-                </button>
-              )}
-              <button onClick={() => setShowForm(true)}
-                className="bg-stone-800 text-white text-sm font-medium px-4 py-2 rounded-full hover:bg-stone-700 transition-colors shadow-sm">
-                {t.newTicket}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-stone-700">{t.newTicket.replace("+ ", "")}</h2>
-              <button type="button" onClick={() => setShowForm(false)}
-                className="text-xs text-stone-400 hover:text-stone-600 bg-stone-50 rounded-full px-3 py-1">{t.cancel}</button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="px-5 py-5">
+        {/* New ticket form */}
+        {showForm && (
+          <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-5 max-w-3xl">
+            <h2 className="text-sm font-semibold text-gray-700 mb-4">{t.newTicket.replace("+ ", "").replace("+ ", "")}</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
               {[
                 { lbl: t.type, key: "type", opts: Object.entries(t.types).map(([v, l]) => ({ v, l: `${t.typeIcons[v]} ${l}` })) },
                 { lbl: t.page, key: "page", opts: t.pages.map(p => ({ v: p, l: p })) },
@@ -259,68 +223,87 @@ export function TicketsPage({ currentUser }) {
                 { lbl: t.assignedTo, key: "assigned_to", opts: TEAM.map(m => ({ v: m.value, l: m.name })) },
               ].map(({ lbl, key, opts }) => (
                 <div key={key}>
-                  <label className="block text-xs text-stone-400 mb-1">{lbl}</label>
+                  <label className="block text-xs text-gray-400 mb-1 font-medium">{lbl}</label>
                   <select value={form[key]} onChange={e => setF(key, e.target.value)}
-                    className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2 bg-stone-50 focus:outline-none focus:border-stone-400">
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:border-gray-400">
                     {opts.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
                   </select>
                 </div>
               ))}
             </div>
-            <div>
-              <label className="block text-xs text-stone-400 mb-1">{t.titleLbl}</label>
+            <div className="mb-3">
+              <label className="block text-xs text-gray-400 mb-1 font-medium">{t.titleLbl}</label>
               <input value={form.title} onChange={e => setF("title", e.target.value)} placeholder={t.titlePh}
-                className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2 bg-stone-50 focus:outline-none focus:border-stone-400" />
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:border-gray-400" />
             </div>
-            <div>
-              <label className="block text-xs text-stone-400 mb-1">{t.descLbl}</label>
+            <div className="mb-3">
+              <label className="block text-xs text-gray-400 mb-1 font-medium">{t.descLbl}</label>
               <textarea value={form.desc} onChange={e => setF("desc", e.target.value)} placeholder={t.descPh} rows={3}
-                className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2 bg-stone-50 focus:outline-none focus:border-stone-400 resize-y" />
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:border-gray-400 resize-y" />
             </div>
-            {formError && <p className="text-xs text-red-400">{formError}</p>}
-            <div className="flex justify-end">
+            {formError && <p className="text-xs text-red-500 mb-3">{formError}</p>}
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setShowForm(false)}
+                className="text-xs text-gray-500 border border-gray-200 rounded-lg px-4 py-2 hover:bg-gray-50">{t.cancel}</button>
               <button type="submit" disabled={saving}
-                className="bg-stone-800 text-white text-sm font-medium px-5 py-2 rounded-full hover:bg-stone-700 transition-colors disabled:opacity-50 shadow-sm">
+                className="bg-gray-900 text-white text-xs font-semibold px-5 py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50">
                 {saving ? t.sending : t.send}
               </button>
             </div>
           </form>
         )}
 
-        {/* Filters */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2 flex-wrap">
-            {["all", "pendiente", "en_progreso", "listo", "cancelado"].map(s => {
-              const label = s === "all" ? t.all : `${t.statusIcons[s]} ${t.statuses[s]}`;
+        {/* Seed button */}
+        {isAdmin && tickets.length === 0 && !loading && (
+          <div className="mb-5">
+            <button onClick={seedTickets} disabled={seedState !== "idle"}
+              className="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-2 bg-white transition-colors disabled:opacity-50">
+              {seedState === "seeding" ? t.seeding : seedState === "done" ? t.seedDone : t.seedBtn}
+            </button>
+          </div>
+        )}
+
+        {/* Kanban board */}
+        {loading ? (
+          <div className="flex items-center justify-center py-20 text-gray-300 text-sm">···</div>
+        ) : (
+          <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: "60vh" }}>
+            {COLUMNS.map(col => {
+              const colTickets = tickets.filter(tk => tk.status === col.key);
               return (
-                <button key={s} onClick={() => setFilter(s)}
-                  className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${filterStatus === s ? "bg-stone-800 text-white border-stone-800 shadow-sm" : "border-stone-200 text-stone-500 hover:border-stone-400 bg-white"}`}>
-                  {label}
-                </button>
+                <div key={col.key} className="flex-shrink-0 w-72 flex flex-col">
+                  {/* Column header */}
+                  <div className="flex items-center justify-between mb-3 px-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: col.color }} />
+                      <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        {t.statuses[col.key]}
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-white px-2 py-0.5 rounded-full"
+                      style={{ background: col.color }}>
+                      {colTickets.length}
+                    </span>
+                  </div>
+
+                  {/* Column body */}
+                  <div className="flex-1 rounded-xl p-2 flex flex-col gap-2"
+                    style={{ background: col.bg, border: `1px solid ${col.border}` }}>
+                    {colTickets.length === 0 ? (
+                      <div className="flex-1 flex items-center justify-center py-8">
+                        <span className="text-xs text-gray-300">{t.noMatch}</span>
+                      </div>
+                    ) : (
+                      colTickets.map(tk => (
+                        <KanbanCard key={tk.id} tk={tk} t={t} isAdmin={isAdmin}
+                          onStatusChange={changeStatus} onAssigneeChange={changeAssignee}
+                          columns={COLUMNS} />
+                      ))
+                    )}
+                  </div>
+                </div>
               );
             })}
-          </div>
-          {tickets.length > 0 && (
-            <span className="text-xs text-stone-300">{filtered.length} {t.of} {tickets.length}</span>
-          )}
-        </div>
-
-        {/* Ticket list */}
-        {loading ? (
-          <div className="text-center py-16 text-sm text-stone-300">···</div>
-        ) : tickets.length === 0 ? (
-          <div className="text-center py-16 text-stone-400">
-            <div className="text-4xl mb-3">🎫</div>
-            <p className="text-sm">{t.noTickets}</p>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-10 text-sm text-stone-400">{t.noMatch}</div>
-        ) : (
-          <div className="space-y-2">
-            {filtered.map(tk => (
-              <TicketCard key={tk.id} tk={tk} t={t} isAdmin={isAdmin}
-                onStatusChange={changeStatus} onAssigneeChange={changeAssignee} />
-            ))}
           </div>
         )}
       </div>
@@ -328,70 +311,88 @@ export function TicketsPage({ currentUser }) {
   );
 }
 
-function TicketCard({ tk, t, isAdmin, onStatusChange, onAssigneeChange }) {
+function KanbanCard({ tk, t, isAdmin, onStatusChange, onAssigneeChange, columns }) {
   const [open, setOpen] = useState(false);
-  const borderCls  = PRIORITY_BORDER[tk.priority] || "border-l-stone-200";
-  const priorityCls = PRIORITY_BG[tk.priority] || "bg-stone-100 text-stone-500";
-  const statusCls  = STATUS_BG[tk.status] || STATUS_BG.pendiente;
-  const typeCls    = TYPE_BG[tk.type] || "bg-stone-50 text-stone-500";
-  const statusLabel  = `${t.statusIcons[tk.status] || ""} ${t.statuses[tk.status] || tk.status}`;
-  const typeLabel    = `${t.typeIcons[tk.type] || ""} ${t.types[tk.type] || tk.type}`;
+  const priorityColor = t.priorityColors[tk.priority] || "#9ca3af";
   const priorityLabel = t.priorities[tk.priority] || tk.priority;
+  const typeLabel = `${t.typeIcons[tk.type] || ""} ${t.types[tk.type] || tk.type}`;
   const date = tk.created_at ? new Date(tk.created_at).toLocaleDateString("es-CO", { day: "numeric", month: "short" }) : "";
   const assignee = TEAM_MAP[tk.assigned_to || ""] || TEAM_MAP[""];
+  const shortId = tk.id ? "#" + tk.id.slice(-4) : "";
+
+  const typeBg = { bug: "#fef2f2", feature: "#f5f3ff", change: "#eff6ff", question: "#fffbeb" };
+  const typeColor = { bug: "#dc2626", feature: "#7c3aed", change: "#2563eb", question: "#d97706" };
 
   return (
-    <div className={`bg-white rounded-xl border border-stone-100 border-l-4 ${borderCls} overflow-hidden hover:shadow-md hover:border-l-4 transition-all`}>
-      <div className="px-4 py-3">
-        {/* Top: title + priority */}
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <button onClick={() => setOpen(o => !o)} className="text-left flex-1 min-w-0 group">
-            <span className="text-sm font-semibold text-stone-800 group-hover:text-stone-600 transition-colors leading-snug">
-              {tk.title}
-            </span>
-          </button>
-          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${priorityCls}`}>{priorityLabel}</span>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all cursor-pointer"
+      onClick={() => setOpen(o => !o)}>
+      {/* Priority stripe */}
+      <div className="h-1" style={{ background: priorityColor }} />
+
+      <div className="p-3">
+        {/* Top row: type badge + priority badge */}
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md"
+            style={{ background: typeBg[tk.type] || "#f9fafb", color: typeColor[tk.type] || "#6b7280" }}>
+            {typeLabel}
+          </span>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md text-white"
+            style={{ background: priorityColor }}>
+            {priorityLabel}
+          </span>
         </div>
 
-        {/* Tags row */}
-        <div className="flex items-center gap-1.5 flex-wrap mb-2">
-          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${typeCls}`}>{typeLabel}</span>
-          {tk.page && <span className="text-[10px] text-stone-500 bg-stone-100 rounded-full px-2 py-0.5">{tk.page}</span>}
-          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusCls}`}>{statusLabel}</span>
-        </div>
+        {/* Title */}
+        <p className="text-sm font-semibold text-gray-800 leading-snug mb-2 line-clamp-2">{tk.title}</p>
 
-        {/* Footer: avatar + meta + admin controls */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Avatar name={tk.assigned_to} />
-            {assignee.name !== "Sin asignar" && (
-              <span className="text-xs font-medium text-stone-600">{assignee.name}</span>
-            )}
-            <span className="text-[11px] text-stone-300">· {t.submittedBy} {tk.submitted_by_name || "—"} · {date}</span>
+        {/* Page tag */}
+        {tk.page && (
+          <div className="mb-2">
+            <span className="text-[10px] text-gray-400 bg-gray-100 rounded-md px-2 py-0.5 font-medium">{tk.page}</span>
           </div>
-          {isAdmin && (
-            <div className="flex items-center gap-2">
-              <select value={tk.assigned_to || ""} onChange={e => onAssigneeChange(tk.id, e.target.value)}
-                onClick={e => e.stopPropagation()}
-                className="text-[11px] border border-stone-100 rounded-full px-2 py-0.5 bg-stone-50 text-stone-500 cursor-pointer focus:outline-none max-w-[110px]">
-                {TEAM.map(m => <option key={m.value} value={m.value}>{m.name}</option>)}
-              </select>
-              <select value={tk.status} onChange={e => onStatusChange(tk.id, e.target.value)}
-                onClick={e => e.stopPropagation()}
-                className="text-[11px] border border-stone-100 rounded-full px-2 py-0.5 bg-stone-50 text-stone-500 cursor-pointer focus:outline-none">
-                {Object.entries(t.statuses).map(([v, l]) => <option key={v} value={v}>{t.statusIcons[v]} {l}</option>)}
-              </select>
-            </div>
-          )}
-        </div>
-      </div>
+        )}
 
-      {/* Expandable description */}
-      {open && tk.description && (
-        <div className="border-t border-stone-50 px-4 py-3 bg-stone-50/60">
-          <p className="text-sm text-stone-500 leading-relaxed whitespace-pre-wrap">{tk.description}</p>
+        {/* Footer: avatar + meta */}
+        <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-gray-50">
+          <div className="flex items-center gap-1.5">
+            {assignee.name !== "Sin asignar" ? (
+              <>
+                <Avatar name={tk.assigned_to} />
+                <span className="text-[11px] font-medium text-gray-600">{assignee.name}</span>
+              </>
+            ) : (
+              <span className="text-[11px] text-gray-300">{t.submittedBy} {tk.submitted_by_name || "—"}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-gray-300 font-mono">{shortId}</span>
+            <span className="text-[10px] text-gray-300">· {date}</span>
+          </div>
         </div>
-      )}
+
+        {/* Expanded description */}
+        {open && tk.description && (
+          <div className="mt-2 pt-2 border-t border-gray-50">
+            <p className="text-xs text-gray-500 leading-relaxed">{tk.description}</p>
+          </div>
+        )}
+
+        {/* Admin controls */}
+        {isAdmin && open && (
+          <div className="flex items-center gap-2 mt-3 pt-2 border-t border-gray-50" onClick={e => e.stopPropagation()}>
+            <select value={tk.assigned_to || ""} onChange={e => onAssigneeChange(tk.id, e.target.value)}
+              className="flex-1 text-[11px] border border-gray-200 rounded-lg px-2 py-1 bg-gray-50 text-gray-600 cursor-pointer focus:outline-none">
+              {TEAM.map(m => <option key={m.value} value={m.value}>{m.name}</option>)}
+            </select>
+            <select value={tk.status} onChange={e => onStatusChange(tk.id, e.target.value)}
+              className="flex-1 text-[11px] border border-gray-200 rounded-lg px-2 py-1 bg-gray-50 text-gray-600 cursor-pointer focus:outline-none">
+              {columns.map(col => (
+                <option key={col.key} value={col.key}>{t.statuses[col.key]}</option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
