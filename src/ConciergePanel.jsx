@@ -10127,7 +10127,7 @@ const loadKickoffs = async (forceRefresh = false) => {
       all: "Todos",
       colGuest: "Huésped", colTrip: "Viaje", colType: "Tier",
       colContact: "Contacto", colCreated: "Creado",
-      colConcierge: "Concierge", colCity: "Ciudad", colStatus: "Estado", colMeetings: "Reuniones", colNotes: "Notas", colActions: "Acciones",
+      colConcierge: "Concierge", colCity: "Ciudad", colStatus: "Estado", colMeetings: "Reuniones", colFlights: "Vuelos", colNotes: "Notas", colActions: "Acciones",
       loading: "Cargando kick-offs...",
       empty: "No hay kick-offs que coincidan con el filtro.",
       linkCatalog: "Link catálogo", linkFeedback: "Link feedback",
@@ -10140,7 +10140,7 @@ const loadKickoffs = async (forceRefresh = false) => {
       all: "All",
       colGuest: "Guest", colTrip: "Trip", colType: "Tier",
       colContact: "Contact", colCreated: "Created",
-      colConcierge: "Concierge", colCity: "City", colStatus: "Status", colMeetings: "Meetings", colNotes: "Notes", colActions: "Actions",
+      colConcierge: "Concierge", colCity: "City", colStatus: "Status", colMeetings: "Meetings", colFlights: "Flights", colNotes: "Notes", colActions: "Actions",
       loading: "Loading kick-offs...",
       empty: "No kick-offs match the current filter.",
       linkCatalog: "Catalog link", linkFeedback: "Feedback link",
@@ -10549,7 +10549,7 @@ const loadKickoffs = async (forceRefresh = false) => {
                       style={{width:13,height:13,cursor:"pointer"}}
                     />
                   </th>
-                  {["ID", cp.colGuest, cp.colTrip, cp.colType, cp.colContact, cp.colCreated, cp.colConcierge, cp.colCity, cp.colStatus, cp.colMeetings, cp.colNotes].map(h => (
+                  {["ID", cp.colGuest, cp.colTrip, cp.colType, cp.colContact, cp.colCreated, cp.colConcierge, cp.colCity, cp.colStatus, cp.colMeetings, cp.colFlights, cp.colNotes].map(h => (
                     <th key={h} style={{textAlign:"left"}}>{h}</th>
                   ))}
                   <th style={{textAlign:"right"}}>{cp.colActions}</th>
@@ -10558,7 +10558,7 @@ const loadKickoffs = async (forceRefresh = false) => {
               <tbody>
                 {loading && filteredKickoffs.length === 0 && (
                   <tr>
-                    <td colSpan={12} style={{textAlign:"center",padding:"32px 16px",color:"var(--text-3)"}}>
+                    <td colSpan={13} style={{textAlign:"center",padding:"32px 16px",color:"var(--text-3)"}}>
                       {cp.loading}
                     </td>
                   </tr>
@@ -10566,7 +10566,7 @@ const loadKickoffs = async (forceRefresh = false) => {
 
                 {!loading && filteredKickoffs.length === 0 && (
                   <tr>
-                    <td colSpan={11} style={{textAlign:"center",padding:"32px 16px",color:"var(--text-3)"}}>
+                    <td colSpan={12} style={{textAlign:"center",padding:"32px 16px",color:"var(--text-3)"}}>
                       {cp.empty}
                     </td>
                   </tr>
@@ -10757,6 +10757,29 @@ const loadKickoffs = async (forceRefresh = false) => {
                             {lastDone && <div style={{color}}>{daysSinceLast === 0 ? "hoy" : `hace ${daysSinceLast}d`}</div>}
                             {nextSched && <div style={{color:"#9a7d52"}}>📅 {nextSched.date}</div>}
                           </div>
+                        );
+                      })()}
+                    </td>
+
+                    {/* ── Vuelos (pre check-in) ── */}
+                    <td style={{verticalAlign:"top"}}>
+                      {(() => {
+                        let ciResps = [];
+                        try { ciResps = JSON.parse(k.checkInResponses || "[]"); } catch {}
+                        const withFlights = ciResps.filter(r => r.arrivalFlight || r.departureFlight || r.arrivalDate || r.departureDate);
+                        if (!withFlights.length) return <span style={{color:"var(--text-3)",fontStyle:"italic",fontSize:11}}>—</span>;
+                        const text = withFlights.map(r => {
+                          const name = [r.firstName, r.lastName].filter(Boolean).join(" ") || r.name || "?";
+                          const arr = [r.arrivalFlight, r.arrivalDate].filter(Boolean).join(" ");
+                          const dep = [r.departureFlight, r.departureDate].filter(Boolean).join(" ");
+                          return `${name}\n  ✈️↓ ${arr || "—"}\n  ✈️↑ ${dep || "—"}`;
+                        }).join("\n\n");
+                        return (
+                          <span
+                            onClick={e => { e.stopPropagation(); setInfoPopup({ title:"✈️ Vuelos", text }); }}
+                            style={{fontSize:9,background:"#ECFDF5",color:"#065F46",border:"1px solid #A7F3D0",borderRadius:3,padding:"0px 5px",cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}}>
+                            ✈️ {withFlights.length}/{k.groupSize || k.pax || ciResps.length}
+                          </span>
                         );
                       })()}
                     </td>
