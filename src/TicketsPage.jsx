@@ -199,28 +199,30 @@ export function TicketsPage({ currentUser }) {
   const filtered = filterStatus === "all" ? tickets : tickets.filter(tk => tk.status === filterStatus);
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-800">
+    <div className="min-h-screen bg-amber-50/40 text-stone-800">
       {/* ── Header ── */}
-      <div className="bg-white border-b border-stone-200 px-4 py-4 sticky top-0 z-10">
+      <div className="bg-white/80 backdrop-blur border-b border-amber-100 px-4 py-3 sticky top-0 z-10">
         <div className="mx-auto max-w-3xl flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-stone-400">{t.brand}</p>
-            <h1 className="text-xl font-semibold tracking-tight text-stone-800">{t.title}</h1>
+          <div className="flex items-center gap-3">
+            <span className="text-lg">🎫</span>
+            <div>
+              <h1 className="text-base font-semibold text-stone-700 leading-tight">{t.title}</h1>
+              <p className="text-[11px] text-stone-400">{t.brand}</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Language toggle */}
-            <div className="flex items-center rounded-lg border border-stone-200 overflow-hidden text-xs">
+            <div className="flex items-center rounded-full border border-stone-200 overflow-hidden text-xs bg-stone-50">
               <button onClick={() => setLangPersist("es")}
-                className={`px-3 py-1.5 font-medium transition-colors ${lang==="es" ? "bg-stone-800 text-white" : "text-stone-500 hover:bg-stone-50"}`}>
+                className={`px-3 py-1.5 font-medium transition-colors ${lang==="es" ? "bg-amber-700 text-white" : "text-stone-400 hover:text-stone-600"}`}>
                 ES
               </button>
               <button onClick={() => setLangPersist("en")}
-                className={`px-3 py-1.5 font-medium transition-colors ${lang==="en" ? "bg-stone-800 text-white" : "text-stone-500 hover:bg-stone-50"}`}>
+                className={`px-3 py-1.5 font-medium transition-colors ${lang==="en" ? "bg-amber-700 text-white" : "text-stone-400 hover:text-stone-600"}`}>
                 EN
               </button>
             </div>
             {currentUser?.name && (
-              <span className="text-xs text-stone-400 bg-stone-50 border border-stone-200 rounded-full px-3 py-1 max-w-[140px] truncate">
+              <span className="text-xs text-stone-400 bg-stone-50 border border-stone-100 rounded-full px-3 py-1 max-w-[140px] truncate">
                 {currentUser.name}
               </span>
             )}
@@ -228,74 +230,71 @@ export function TicketsPage({ currentUser }) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
+      <div className="mx-auto max-w-3xl px-4 py-6 space-y-5">
         {/* ── Submit form ── */}
         {!showForm ? (
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <p className="text-sm text-stone-500">{t.subtitle}</p>
+            <p className="text-sm text-stone-400">{t.subtitle}</p>
             <div className="flex gap-2">
               {isAdmin && tickets.length === 0 && (
                 <button onClick={seedTickets} disabled={seedState !== "idle"}
-                  className="text-xs text-stone-400 hover:text-stone-600 border border-stone-200 rounded-lg px-3 py-2 transition-colors disabled:opacity-50">
+                  className="text-xs text-stone-400 hover:text-stone-600 border border-stone-200 rounded-full px-3 py-1.5 bg-white transition-colors disabled:opacity-50">
                   {seedState === "seeding" ? t.seeding : seedState === "done" ? t.seedDone : t.seedBtn}
                 </button>
               )}
               <button onClick={() => setShowForm(true)}
-                className="bg-stone-800 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-stone-700 transition-colors">
+                className="bg-amber-700 text-white text-sm font-medium px-4 py-2 rounded-full hover:bg-amber-800 transition-colors shadow-sm">
                 {t.newTicket}
               </button>
             </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit}
-            className="bg-white rounded-[20px] border border-stone-200 shadow-sm p-6 space-y-4">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-sm font-semibold text-stone-700">{t.newTicket.replace("+ ","")}</h2>
+            className="bg-white rounded-2xl border border-amber-100 shadow-sm p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-stone-600">{t.newTicket.replace("+ ","")}</h2>
               <button type="button" onClick={() => setShowForm(false)}
-                className="text-xs text-stone-400 hover:text-stone-600">{t.cancel}</button>
+                className="text-xs text-stone-400 hover:text-stone-600 bg-stone-50 rounded-full px-3 py-1">{t.cancel}</button>
             </div>
-            {/* Row 1 */}
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wide text-stone-400 mb-1">{t.type}</label>
+                <label className="block text-xs text-stone-400 mb-1">{t.type}</label>
                 <select value={form.type} onChange={e => setF("type", e.target.value)}
-                  className="w-full text-sm border border-stone-200 rounded-lg px-3 py-2 bg-stone-50 focus:outline-none focus:border-stone-400">
+                  className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2 bg-stone-50 focus:outline-none focus:border-amber-300">
                   {Object.entries(t.types).map(([v,l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wide text-stone-400 mb-1">{t.page}</label>
+                <label className="block text-xs text-stone-400 mb-1">{t.page}</label>
                 <select value={form.page} onChange={e => setF("page", e.target.value)}
-                  className="w-full text-sm border border-stone-200 rounded-lg px-3 py-2 bg-stone-50 focus:outline-none focus:border-stone-400">
+                  className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2 bg-stone-50 focus:outline-none focus:border-amber-300">
                   {t.pages.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wide text-stone-400 mb-1">{t.priority}</label>
+                <label className="block text-xs text-stone-400 mb-1">{t.priority}</label>
                 <select value={form.priority} onChange={e => setF("priority", e.target.value)}
-                  className="w-full text-sm border border-stone-200 rounded-lg px-3 py-2 bg-stone-50 focus:outline-none focus:border-stone-400">
+                  className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2 bg-stone-50 focus:outline-none focus:border-amber-300">
                   {Object.entries(t.priorities).map(([v,l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
               </div>
             </div>
-            {/* Title */}
             <div>
-              <label className="block text-[10px] font-semibold uppercase tracking-wide text-stone-400 mb-1">{t.titleLbl}</label>
+              <label className="block text-xs text-stone-400 mb-1">{t.titleLbl}</label>
               <input value={form.title} onChange={e => setF("title", e.target.value)}
                 placeholder={t.titlePh}
-                className="w-full text-sm border border-stone-200 rounded-lg px-3 py-2 bg-stone-50 focus:outline-none focus:border-stone-400" />
+                className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2 bg-stone-50 focus:outline-none focus:border-amber-300" />
             </div>
-            {/* Description */}
             <div>
-              <label className="block text-[10px] font-semibold uppercase tracking-wide text-stone-400 mb-1">{t.descLbl}</label>
+              <label className="block text-xs text-stone-400 mb-1">{t.descLbl}</label>
               <textarea value={form.desc} onChange={e => setF("desc", e.target.value)}
                 placeholder={t.descPh} rows={3}
-                className="w-full text-sm border border-stone-200 rounded-lg px-3 py-2 bg-stone-50 focus:outline-none focus:border-stone-400 resize-y" />
+                className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2 bg-stone-50 focus:outline-none focus:border-amber-300 resize-y" />
             </div>
-            {formError && <p className="text-xs text-red-500">{formError}</p>}
+            {formError && <p className="text-xs text-red-400">{formError}</p>}
             <div className="flex justify-end">
               <button type="submit" disabled={saving}
-                className="bg-stone-800 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-stone-700 transition-colors disabled:opacity-50">
+                className="bg-amber-700 text-white text-sm font-medium px-5 py-2 rounded-full hover:bg-amber-800 transition-colors disabled:opacity-50 shadow-sm">
                 {saving ? t.sending : t.send}
               </button>
             </div>
@@ -305,15 +304,14 @@ export function TicketsPage({ currentUser }) {
         {/* ── Filters ── */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-stone-400">{t.filterLabel}</span>
             {["all", "pendiente", "en_progreso", "listo"].map(s => {
               const label = s === "all" ? t.all : t.statuses[s];
               return (
                 <button key={s} onClick={() => setFilter(s)}
-                  className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+                  className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${
                     filterStatus === s
-                      ? "bg-stone-800 text-white border-stone-800"
-                      : "border-stone-200 text-stone-500 hover:border-stone-400 bg-white"
+                      ? "bg-amber-700 text-white border-amber-700 shadow-sm"
+                      : "border-stone-200 text-stone-400 hover:border-amber-300 hover:text-amber-700 bg-white"
                   }`}>
                   {label}
                 </button>
@@ -321,24 +319,24 @@ export function TicketsPage({ currentUser }) {
             })}
           </div>
           {tickets.length > 0 && (
-            <span className="text-xs text-stone-400">
-              {filtered.length} {t.of} {tickets.length} tickets
+            <span className="text-xs text-stone-300">
+              {filtered.length} {t.of} {tickets.length}
             </span>
           )}
         </div>
 
         {/* ── Ticket list ── */}
         {loading ? (
-          <div className="text-center py-16 text-sm text-stone-400">···</div>
+          <div className="text-center py-16 text-sm text-stone-300">···</div>
         ) : tickets.length === 0 ? (
-          <div className="text-center py-16 text-sm text-stone-400">
-            <div className="text-3xl mb-3">🎫</div>
-            {t.noTickets}
+          <div className="text-center py-16 text-stone-400">
+            <div className="text-4xl mb-3">🎫</div>
+            <p className="text-sm">{t.noTickets}</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-10 text-sm text-stone-400">{t.noMatch}</div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {filtered.map(tk => (
               <TicketCard key={tk.id} tk={tk} t={t} isAdmin={isAdmin} onStatusChange={changeStatus} />
             ))}
@@ -359,44 +357,38 @@ function TicketCard({ tk, t, isAdmin, onStatusChange }) {
   const date = tk.created_at ? new Date(tk.created_at).toLocaleDateString("en-US", { day:"numeric", month:"short" }) : "";
 
   return (
-    <div className="bg-white rounded-[16px] border border-stone-200 overflow-hidden hover:border-stone-300 transition-colors">
-      {/* Top row */}
-      <div className="px-5 py-4">
+    <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden hover:border-amber-200 hover:shadow-sm transition-all">
+      <div className="px-4 py-3">
         <div className="flex items-start gap-3 justify-between">
-          <div className="flex-1 min-w-0">
-            <button onClick={() => setOpen(o => !o)}
-              className="text-left w-full group">
-              <span className="text-sm font-semibold text-stone-800 group-hover:text-stone-600 transition-colors">
-                {tk.title}
-              </span>
-            </button>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-            <span className={`text-[10px] font-semibold ${priorityCls}`}>{priorityLabel}</span>
-            <span className="text-[10px] text-stone-400 border border-stone-200 rounded px-1.5 py-0.5 font-medium">{typeLabel}</span>
-            {tk.page && <span className="text-[10px] text-amber-700 border border-amber-200 bg-amber-50 rounded px-1.5 py-0.5 font-medium">{tk.page}</span>}
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeCls}`}>{statusLabel}</span>
+          <button onClick={() => setOpen(o => !o)} className="text-left flex-1 min-w-0 group">
+            <span className="text-sm font-medium text-stone-700 group-hover:text-amber-800 transition-colors leading-snug">
+              {open ? "▾ " : "▸ "}{tk.title}
+            </span>
+          </button>
+          <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
+            <span className={`text-[10px] font-medium ${priorityCls}`}>{priorityLabel}</span>
+            <span className="text-[10px] text-stone-300 border border-stone-100 rounded-full px-2 py-0.5">{typeLabel}</span>
+            {tk.page && <span className="text-[10px] text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">{tk.page}</span>}
+            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${badgeCls}`}>{statusLabel}</span>
           </div>
         </div>
-        {/* Footer */}
-        <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
-          <span className="text-[11px] text-stone-400">
+        <div className="mt-1.5 flex items-center justify-between gap-2 flex-wrap">
+          <span className="text-[11px] text-stone-300">
             {t.submittedBy} {tk.submitted_by_name || "—"} · {date}
           </span>
-          {isAdmin ? (
+          {isAdmin && (
             <select
               value={tk.status}
               onChange={e => onStatusChange(tk.id, e.target.value)}
               onClick={e => e.stopPropagation()}
-              className="text-[11px] border border-stone-200 rounded-lg px-2 py-1 bg-stone-50 text-stone-600 cursor-pointer focus:outline-none">
+              className="text-[11px] border border-stone-100 rounded-full px-2 py-0.5 bg-stone-50 text-stone-500 cursor-pointer focus:outline-none">
               {Object.entries(t.statuses).map(([v,l]) => <option key={v} value={v}>{l}</option>)}
             </select>
-          ) : null}
+          )}
         </div>
       </div>
-      {/* Expandable description */}
       {open && tk.description && (
-        <div className="border-t border-stone-100 px-5 py-3 bg-stone-50">
+        <div className="border-t border-amber-50 px-4 py-3 bg-amber-50/40">
           <p className="text-sm text-stone-500 leading-relaxed whitespace-pre-wrap">{tk.description}</p>
         </div>
       )}
