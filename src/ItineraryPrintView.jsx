@@ -1468,10 +1468,25 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
             const cards = makeCards(code);
             if (!cards.length) return null;
             const cityLabel = CITY_NAMES[code.toUpperCase()] || code;
+            const cityDates = (() => {
+              if (i === 0) {
+                const start = a.arrivalDate;
+                const end = a.arrivalDate2 || a.departureDate;
+                if (start && end) return `${fmtFullDate(start)} – ${fmtFullDate(end)}`;
+                if (start) return fmtFullDate(start);
+              } else {
+                const start = a.arrivalDate2;
+                const end = a.departureDate2 || a.departureDate;
+                if (start && end) return `${fmtFullDate(start)} – ${fmtFullDate(end)}`;
+                if (start) return fmtFullDate(start);
+              }
+              return "";
+            })();
             return (
               <div key={code} style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: 9.5, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
                   {isEs ? `Tu estadía en ${cityLabel}` : `Your stay in ${cityLabel}`}
+                  {cityDates && <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, marginLeft: 6, opacity: 0.75 }}>· {cityDates}</span>}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: `repeat(${cards.length}, 1fr)`, gap: 8 }}>
                   {cards}
