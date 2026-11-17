@@ -373,8 +373,8 @@ function TicketCard({ tk, t, isAdmin, onStatusChange }) {
           </div>
         </div>
         <div className="mt-1.5 flex items-center justify-between gap-2 flex-wrap">
-          <span className="text-[11px] text-stone-300">
-            {t.submittedBy} {tk.submitted_by_name || "—"} · {date}
+          <span className="text-[11px] text-stone-500">
+            {t.submittedBy} <span className="font-medium text-stone-600">{tk.submitted_by_name || "—"}</span> · {date}
           </span>
           {isAdmin && (
             <select
