@@ -5298,9 +5298,10 @@ function useWaReader() {
     esRef.current = es;
     es.onmessage = (e) => {
       const { event, data } = JSON.parse(e.data);
-      if (event === "status") { setStatus(data.status); if (data.qr) setQr(data.qr); if (data.status === "connected") { setQr(null); fetchChats(); } }
+      if (event === "status") { setStatus(data.status); if (data.qr) setQr(data.qr); if (data.status === "connected") { setQr(null); setTimeout(fetchChats, 2000); } }
       if (event === "qr")     { setQr(data.qr); setStatus("qr"); }
       if (event === "message") { fetchChats(); }
+      if (event === "chats_ready") { setChats(data.chats || []); }
     };
     es.onerror = () => {};
     fetchChats();
