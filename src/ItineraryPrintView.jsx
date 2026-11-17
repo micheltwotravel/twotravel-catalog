@@ -1199,9 +1199,12 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
     try { return new Date(iso + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric" }); } catch { return iso; }
   };
   const displayTripDates = (() => {
-    if (a.arrivalDate && a.departureDate) {
-      const yr = new Date(a.departureDate + "T12:00:00").getFullYear();
-      return `${fmtFullDate(a.arrivalDate)} – ${fmtFullDate(a.departureDate)}, ${yr}`;
+    if (a.arrivalDate) {
+      const endDate = (a.departureDate2 && a.departureDate2 > (a.departureDate || "")) ? a.departureDate2 : a.departureDate;
+      if (endDate) {
+        const yr = new Date(endDate + "T12:00:00").getFullYear();
+        return `${fmtFullDate(a.arrivalDate)} – ${fmtFullDate(endDate)}, ${yr}`;
+      }
     }
     return a.tripDates || "";
   })();
@@ -1427,12 +1430,12 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
           </a>
         ) : null}
 
-        {/* Action cards — Drinks, Groceries, Breakfast */}
+        {/* Action cards — Drinks, Groceries, Breakfast (per city for multi-city trips) */}
         {a.id && (() => {
           const cardImg = { borderRadius: "8px 8px 0 0", width: "100%", height: 70, objectFit: "cover", display: "block" };
           const cardBody = { padding: "8px 10px 10px" };
           const card = (href, border, img, titleColor, title, desc) => (
-            <a href={href} target="_blank" rel="noreferrer"
+            <a key={href} href={href} target="_blank" rel="noreferrer"
               style={{ textDecoration: "none", display: "block", border: `1px solid ${border}`, borderRadius: 10, overflow: "hidden" }}>
               <img src={img} alt="" style={cardImg} onError={e=>e.target.style.display='none'} />
               <div style={cardBody}>
@@ -1441,17 +1444,41 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
               </div>
             </a>
           );
-          const cards = [
-            !a.hideDrinks    && card(`https://twotravelvip.com/d/${a.id}?lang=${lang}`,"#e9d5ff","https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=140&fit=crop&auto=format","#7c3aed",isEs?"Calculadora de Bebidas":"Drink Calculator",isEs?"Personaliza tus bebidas para la casa y el bote.":"Select your drinks for the house and boat."),
-            !a.hideGroceries && card(`https://twotravelvip.com/g/${a.id}?lang=${lang}`,"#bbf7d0","https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=140&fit=crop&auto=format","#15803d",isEs?"Mercado":"Groceries",isEs?"Personaliza tu lista de mercado para la estadía.":"Customize your grocery list for the stay."),
-            !a.hideBreakfast && card(`https://twotravelvip.com/b/${a.id}?lang=${lang}`,"#fde68a","https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=400&h=140&fit=crop&auto=format","#b45309",isEs?"Desayuno":"Breakfast",isEs?"Elige tu desayuno para cada mañana de tu estadía.":"Choose your breakfast for each morning."),
-          ].filter(Boolean);
-          if (!cards.length) return null;
-          return (
-            <div style={{ marginBottom: 16, display: "grid", gridTemplateColumns: `repeat(${cards.length}, 1fr)`, gap: 8 }}>
-              {cards}
-            </div>
-          );
+          const CITY_NAMES = { CTG:"Cartagena", MDE:"Medellín", CDMX:"Ciudad de México", TUL:"Tulum", BOG:"Bogotá" };
+          const cityCodes = String(a.city||"").split(",").map(c=>c.trim()).filter(Boolean);
+          const isMultiCity = cityCodes.length > 1;
+          const makeCards = (cityCode) => {
+            const sfx = cityCode ? `&city=${cityCode}` : "";
+            return [
+              !a.hideDrinks    && card(`https://twotravelvip.com/d/${a.id}?lang=${lang}${sfx}`,"#e9d5ff","https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=140&fit=crop&auto=format","#7c3aed",isEs?"Calculadora de Bebidas":"Drink Calculator",isEs?"Personaliza tus bebidas para la casa y el bote.":"Select your drinks for the house and boat."),
+              !a.hideGroceries && card(`https://twotravelvip.com/g/${a.id}?lang=${lang}${sfx}`,"#bbf7d0","https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=140&fit=crop&auto=format","#15803d",isEs?"Mercado":"Groceries",isEs?"Personaliza tu lista de mercado para la estadía.":"Customize your grocery list for the stay."),
+              !a.hideBreakfast && card(`https://twotravelvip.com/b/${a.id}?lang=${lang}${sfx}`,"#fde68a","https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=400&h=140&fit=crop&auto=format","#b45309",isEs?"Desayuno":"Breakfast",isEs?"Elige tu desayuno para cada mañana de tu estadía.":"Choose your breakfast for each morning."),
+            ].filter(Boolean);
+          };
+          if (!isMultiCity) {
+            const cards = makeCards(cityCodes[0] || null);
+            if (!cards.length) return null;
+            return (
+              <div style={{ marginBottom: 16, display: "grid", gridTemplateColumns: `repeat(${cards.length}, 1fr)`, gap: 8 }}>
+                {cards}
+              </div>
+            );
+          }
+          return cityCodes.map((code, i) => {
+            const cards = makeCards(code);
+            if (!cards.length) return null;
+            const cityLabel = CITY_NAMES[code.toUpperCase()] || code;
+            return (
+              <div key={code} style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 9.5, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+                  {isEs ? `Tu estadía en ${cityLabel}` : `Your stay in ${cityLabel}`}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: `repeat(${cards.length}, 1fr)`, gap: 8 }}>
+                  {cards}
+                </div>
+              </div>
+            );
+          });
         })()}
 
         {/* Welcome Guide link — shown if configured */}
