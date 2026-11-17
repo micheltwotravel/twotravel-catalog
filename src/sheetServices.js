@@ -365,10 +365,24 @@ export function getHighlights(service, lang = "en") {
    ============================================================ */
 
 const KICKOFFS_CACHE_KEY = "tt_kickoffs_cache";
-const KICKOFFS_CACHE_TTL = 90 * 1000;
+const KICKOFFS_CACHE_TTL = 5 * 60 * 1000; // 5 min — persists across tabs
 
 export function invalidateKickoffsCache() {
-  try { sessionStorage.removeItem(KICKOFFS_CACHE_KEY); } catch {}
+  try { localStorage.removeItem(KICKOFFS_CACHE_KEY); } catch {}
+  try { sessionStorage.removeItem(KICKOFFS_CACHE_KEY); } catch {} // clear old key too
+}
+
+function _readKickoffsCache() {
+  try {
+    const raw = localStorage.getItem(KICKOFFS_CACHE_KEY);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    return { ts, data, fresh: Date.now() - ts < KICKOFFS_CACHE_TTL };
+  } catch { return null; }
+}
+
+function _writeKickoffsCache(data) {
+  try { localStorage.setItem(KICKOFFS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
 }
 
 function normalizeKickoff(row) {
@@ -398,35 +412,37 @@ function normalizeKickoff(row) {
 }
 
 export async function fetchKickoffById(kickoffId) {
-  try {
-    const raw = sessionStorage.getItem(KICKOFFS_CACHE_KEY);
-    if (raw) {
-      const { ts, data } = JSON.parse(raw);
-      if (Date.now() - ts < KICKOFFS_CACHE_TTL) {
-        const found = data.find(k => String(k.id).trim() === String(kickoffId).trim());
-        if (found) return found;
-      }
-    }
-  } catch {}
+  const cached = _readKickoffsCache();
+  if (cached?.fresh) {
+    const found = cached.data.find(k => String(k.id).trim() === String(kickoffId).trim());
+    if (found) return found;
+  }
   const { data, error } = await supabase.from("kickoffs").select("*").eq("id", kickoffId).single();
   if (error) throw new Error(error.message);
   return normalizeKickoff(data);
 }
 
-export async function fetchKickoffsFromSheet({ forceRefresh = false } = {}) {
-  if (!forceRefresh) {
-    try {
-      const raw = sessionStorage.getItem(KICKOFFS_CACHE_KEY);
-      if (raw) {
-        const { ts, data } = JSON.parse(raw);
-        if (Date.now() - ts < KICKOFFS_CACHE_TTL) return data;
-      }
-    } catch {}
+export async function fetchKickoffsFromSheet({ forceRefresh = false, onStale } = {}) {
+  const cached = _readKickoffsCache();
+
+  // Stale-while-revalidate: return cached data immediately, refresh in background
+  if (!forceRefresh && cached?.data?.length) {
+    if (cached.fresh) return cached.data;
+    // Stale cache: return immediately, refresh in background
+    if (onStale) {
+      _fetchKickoffsFromSupabase().then(onStale).catch(() => {});
+    }
+    return cached.data;
   }
+
+  return _fetchKickoffsFromSupabase();
+}
+
+async function _fetchKickoffsFromSupabase() {
   const { data, error } = await supabase.from("kickoffs").select("*").order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   const result = (data || []).map(normalizeKickoff);
-  try { sessionStorage.setItem(KICKOFFS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}
+  _writeKickoffsCache(result);
   return result;
 }
 

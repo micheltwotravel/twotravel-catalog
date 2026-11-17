@@ -8574,17 +8574,20 @@ export function ReunionesPage({ currentUser, initialKickoffId }) {
   const [editingMeeting,setEditingMeeting]= useState(null); // {kickoffId, meeting}
 
   useEffect(() => {
-    fetchKickoffsFromSheet()
-      .then(data => {
-        const arr = (data || []).map((k, idx) => ({
-          ...k,
-          id: k?.id || k?.kickoffId || k?.ID || `row-${idx}`,
-          guestName: String(k?.guestName || k?.GuestName || "").trim(),
-          assignedConcierge: String(k?.assignedConcierge || k?.AssignedConcierge || "").trim(),
-        }));
-        setKickoffs(arr);
-        if (arr.length > 0 && !initialKickoffId) setSelectedId(arr[0].id);
-      })
+    const applyData = (data) => {
+      const arr = (data || []).map((k, idx) => ({
+        ...k,
+        id: k?.id || k?.kickoffId || k?.ID || `row-${idx}`,
+        guestName: String(k?.guestName || k?.GuestName || "").trim(),
+        assignedConcierge: String(k?.assignedConcierge || k?.AssignedConcierge || "").trim(),
+      }));
+      setKickoffs(arr);
+      if (arr.length > 0 && !initialKickoffId) setSelectedId(arr[0].id);
+    };
+    fetchKickoffsFromSheet({
+      onStale: (freshData) => applyData(freshData), // silent background refresh
+    })
+      .then(data => { applyData(data); })
       .catch(e => setError(String(e?.message || e)))
       .finally(() => setLoading(false));
   }, []);
