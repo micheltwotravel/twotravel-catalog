@@ -5266,203 +5266,220 @@ function FlightRouteHint({ flightNumber, date }) {
 }
 
 // ── Bot Assistant Section ──────────────────────────────────────────────────
-const BOT_API_BASE = import.meta.env.VITE_BOT_API_URL || "";
-const BOT_API_TOKEN = import.meta.env.VITE_BOT_API_TOKEN || "";
+const WA_READER_BASE  = import.meta.env.VITE_WA_READER_URL  || import.meta.env.VITE_BOT_API_URL  || "";
+const WA_READER_TOKEN = import.meta.env.VITE_WA_READER_TOKEN || import.meta.env.VITE_BOT_API_TOKEN || "";
 
-function BotAssistantSection({ kickoff }) {
-  const [groupId, setGroupId]         = useState("");
-  const [clientName, setClientName]   = useState(kickoff?.guestName || "");
-  const [autorespond, setAutorespond] = useState(false);
-  const [monitor, setMonitor]         = useState(true);
-  const [alertHours, setAlertHours]   = useState(2);
-  const [pending, setPending]         = useState([]);
-  const [botPhone, setBotPhone]       = useState("");
-  const [saving, setSaving]           = useState(false);
-  const [savedMsg, setSavedMsg]       = useState("");
-  const [sendText, setSendText]       = useState("");
-  const [sending, setSending]         = useState(false);
+function useWaReader() {
+  const [status, setStatus]   = useState("disconnected"); // disconnected|connecting|qr|connected
+  const [qr, setQr]           = useState(null);
+  const [chats, setChats]     = useState([]);
+  const [loading, setLoading] = useState(false);
+  const esRef = useRef(null);
 
-  const headers = { "Content-Type": "application/json", ...(BOT_API_TOKEN ? { "X-Two-Token": BOT_API_TOKEN } : {}) };
+  const headers = { "Content-Type": "application/json", "x-api-token": WA_READER_TOKEN };
 
-  // Load bot phone number once
-  useEffect(() => {
-    if (!BOT_API_BASE) return;
-    fetch(`${BOT_API_BASE}/bot-info`, { headers }).then(r => r.json()).then(d => {
-      if (d.phone) setBotPhone(d.phone);
-    }).catch(() => {});
+  const fetchChats = useCallback(async () => {
+    if (!WA_READER_BASE) return;
+    try {
+      const r = await fetch(`${WA_READER_BASE}/chats?token=${WA_READER_TOKEN}`);
+      if (r.ok) setChats(await r.json());
+    } catch {}
   }, []);
 
-  // Load group settings when groupId changes
   useEffect(() => {
-    if (!BOT_API_BASE || !groupId.trim()) return;
-    fetch(`${BOT_API_BASE}/group/${encodeURIComponent(groupId)}/settings`, { headers })
-      .then(r => r.json()).then(d => {
-        setAutorespond(!!d.autorespond);
-        setMonitor(d.monitor !== false);
-        setAlertHours(d.alertHours || 2);
-        setClientName(d.clientName || kickoff?.guestName || "");
-      }).catch(() => {});
-    fetch(`${BOT_API_BASE}/group/${encodeURIComponent(groupId)}/pending`, { headers })
-      .then(r => r.json()).then(d => setPending(d.pending || [])).catch(() => {});
-  }, [groupId]);
+    if (!WA_READER_BASE) return;
+    // Initial status
+    fetch(`${WA_READER_BASE}/status?token=${WA_READER_TOKEN}`)
+      .then(r => r.json()).then(d => { setStatus(d.status); if (d.qr) setQr(d.qr); })
+      .catch(() => {});
 
-  const save = async () => {
-    if (!BOT_API_BASE || !groupId.trim()) return;
-    setSaving(true);
+    // SSE for real-time updates
+    const es = new EventSource(`${WA_READER_BASE}/events?token=${WA_READER_TOKEN}`);
+    esRef.current = es;
+    es.onmessage = (e) => {
+      const { event, data } = JSON.parse(e.data);
+      if (event === "status") { setStatus(data.status); if (data.qr) setQr(data.qr); if (data.status === "connected") { setQr(null); fetchChats(); } }
+      if (event === "qr")     { setQr(data.qr); setStatus("qr"); }
+      if (event === "message") { fetchChats(); }
+    };
+    es.onerror = () => {};
+    fetchChats();
+    return () => es.close();
+  }, [fetchChats]);
+
+  const logout = async () => {
+    await fetch(`${WA_READER_BASE}/logout`, { method: "POST", headers });
+    setStatus("disconnected"); setQr(null); setChats([]);
+  };
+
+  return { status, qr, chats, loading, fetchChats, logout, headers };
+}
+
+function ChatView({ jid, name, headers, onBack }) {
+  const [msgs, setMsgs]           = useState([]);
+  const [replyText, setReplyText] = useState("");
+  const [suggestion, setSuggestion] = useState("");
+  const [suggesting, setSuggesting] = useState(false);
+  const [sending, setSending]     = useState(false);
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    if (!WA_READER_BASE || !jid) return;
+    fetch(`${WA_READER_BASE}/chat/${encodeURIComponent(jid)}/messages?token=${WA_READER_TOKEN}`)
+      .then(r => r.json()).then(setMsgs).catch(() => {});
+  }, [jid]);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+
+  const suggest = async () => {
+    setSuggesting(true); setSuggestion("");
     try {
-      await fetch(`${BOT_API_BASE}/group/${encodeURIComponent(groupId)}/settings`, {
-        method: "POST", headers,
-        body: JSON.stringify({
-          monitor, autorespond, alertHours,
-          clientName: clientName || kickoff?.guestName || "",
-          kickoffId: kickoff?.id || "",
-        }),
+      const r = await fetch(`${WA_READER_BASE}/chat/${encodeURIComponent(jid)}/suggest`, {
+        method: "POST", headers, body: JSON.stringify({ messages: msgs.slice(-10) }),
       });
-      setSavedMsg("✓ Guardado");
-      setTimeout(() => setSavedMsg(""), 2500);
+      const d = await r.json();
+      setSuggestion(d.suggestion || "");
+      setReplyText(d.suggestion || "");
     } catch {}
-    setSaving(false);
+    setSuggesting(false);
   };
 
-  const clearPending = async () => {
-    if (!BOT_API_BASE || !groupId.trim()) return;
-    await fetch(`${BOT_API_BASE}/group/${encodeURIComponent(groupId)}/clear-pending`, { method: "POST", headers });
-    setPending([]);
-  };
-
-  const sendToGroup = async () => {
-    if (!BOT_API_BASE || !groupId.trim() || !sendText.trim()) return;
+  const send = async () => {
+    if (!replyText.trim()) return;
     setSending(true);
     try {
-      await fetch(`${BOT_API_BASE}/group/${encodeURIComponent(groupId)}/send`, {
-        method: "POST", headers, body: JSON.stringify({ text: sendText }),
+      await fetch(`${WA_READER_BASE}/chat/${encodeURIComponent(jid)}/send`, {
+        method: "POST", headers, body: JSON.stringify({ text: replyText }),
       });
-      setSendText("");
+      setMsgs(prev => [...prev, { id: Date.now().toString(), ts: Math.floor(Date.now()/1000), fromMe: true, sender: "yo", text: replyText }]);
+      setReplyText(""); setSuggestion("");
     } catch {}
     setSending(false);
   };
 
-  const waLink = botPhone ? `https://wa.me/${botPhone}` : "";
-  const qrUrl  = botPhone
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(waLink)}`
-    : null;
-
   return (
-    <div className="space-y-4 text-sm">
-      {/* QR + link para el concierge */}
-      <div className="flex items-start gap-4">
-        {qrUrl
-          ? <img src={qrUrl} alt="QR Bot WA" className="w-24 h-24 rounded-lg border" />
-          : <div className="w-24 h-24 rounded-lg border bg-neutral-100 flex items-center justify-center text-neutral-400 text-xs text-center px-2">
-              Configura<br/>WA_PHONE_NUMBER<br/>en el bot
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-2 mb-3">
+        <button onClick={onBack} className="text-blue-600 text-xs underline">← Volver</button>
+        <span className="font-semibold text-sm truncate">{name}</span>
+      </div>
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto space-y-1.5 max-h-64 pr-1">
+        {msgs.length === 0 && <p className="text-xs text-neutral-400 text-center pt-6">Sin mensajes recientes</p>}
+        {msgs.map((m, i) => (
+          <div key={i} className={`flex ${m.fromMe ? "justify-end" : "justify-start"}`}>
+            <div className={`max-w-[80%] rounded-xl px-3 py-1.5 text-xs ${m.fromMe ? "bg-green-100 text-green-900" : "bg-neutral-100 text-neutral-800"}`}>
+              {!m.fromMe && <span className="block font-semibold text-neutral-500 text-[10px] mb-0.5">{m.sender}</span>}
+              {m.text}
             </div>
-        }
-        <div className="flex-1 space-y-1">
-          <p className="font-medium text-neutral-800">Escanea para abrir el bot</p>
-          <p className="text-neutral-500 text-xs">El concierge escanea este QR → abre WA con el asistente → puede consultar cualquier cliente.</p>
-          {waLink && (
-            <a href={waLink} target="_blank" rel="noreferrer"
-               className="inline-block text-xs text-blue-600 underline mt-1">
-              {waLink}
-            </a>
-          )}
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+      {/* Suggest + Reply */}
+      <div className="mt-3 space-y-2">
+        <button
+          onClick={suggest} disabled={suggesting || msgs.length === 0}
+          className="w-full text-xs py-1.5 rounded-lg border border-violet-300 text-violet-700 hover:bg-violet-50 disabled:opacity-40 transition-colors"
+        >
+          {suggesting ? "Pensando…" : "✨ Sugerir respuesta con IA"}
+        </button>
+        <div className="flex gap-2">
+          <textarea
+            value={replyText}
+            onChange={e => setReplyText(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+            placeholder="Escribe o edita la respuesta…"
+            rows={2}
+            className="flex-1 border rounded-lg px-3 py-1.5 text-xs resize-none"
+          />
+          <button
+            onClick={send} disabled={sending || !replyText.trim()}
+            className="px-3 rounded-lg bg-green-600 text-white text-sm disabled:opacity-40"
+          >
+            {sending ? "…" : "→"}
+          </button>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Group ID */}
-      <div>
-        <label className="block text-xs font-medium text-neutral-600 mb-1">ID del grupo de WhatsApp</label>
-        <input
-          value={groupId}
-          onChange={e => setGroupId(e.target.value)}
-          placeholder="120363xxxxxxxx@g.us"
-          className="w-full border rounded-lg px-3 py-1.5 text-sm font-mono"
-        />
-        <p className="text-xs text-neutral-400 mt-0.5">El ID del grupo llega en los logs del bot cuando el primer mensaje entra al grupo.</p>
+function BotAssistantSection({ kickoff }) {
+  const { status, qr, chats, fetchChats, logout, headers } = useWaReader();
+  const [selectedChat, setSelectedChat] = useState(null);
+
+  if (!WA_READER_BASE) {
+    return (
+      <div className="text-xs text-neutral-400 space-y-1">
+        <p>Configura <code className="bg-neutral-100 px-1 rounded">VITE_WA_READER_URL</code> en <code>.env.local</code> para activar el asistente.</p>
+        <p className="text-neutral-300">URL del servicio bot-wa-reader desplegado en Render.</p>
+      </div>
+    );
+  }
+
+  if (selectedChat) {
+    return <ChatView jid={selectedChat.jid} name={selectedChat.name} headers={headers} onBack={() => { setSelectedChat(null); fetchChats(); }} />;
+  }
+
+  return (
+    <div className="space-y-3 text-sm">
+      {/* Status bar */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full ${status === "connected" ? "bg-green-500" : status === "qr" ? "bg-amber-400" : "bg-neutral-300"}`} />
+          <span className="text-xs text-neutral-600">
+            {status === "connected" ? "Conectado" : status === "qr" ? "Escanea el QR" : status === "connecting" ? "Conectando…" : "Desconectado"}
+          </span>
+        </div>
+        {status === "connected" && (
+          <button onClick={logout} className="text-xs text-red-500 underline">Desconectar</button>
+        )}
       </div>
 
-      {groupId.trim() && (
-        <>
-          {/* Nombre del cliente */}
-          <div>
-            <label className="block text-xs font-medium text-neutral-600 mb-1">Nombre del grupo / cliente</label>
-            <input
-              value={clientName}
-              onChange={e => setClientName(e.target.value)}
-              placeholder={kickoff?.guestName || "Kim Eatley"}
-              className="w-full border rounded-lg px-3 py-1.5 text-sm"
-            />
+      {/* QR code */}
+      {status === "qr" && qr && (
+        <div className="flex flex-col items-center gap-2 py-2">
+          <img src={qr} alt="WhatsApp QR" className="w-48 h-48 rounded-lg border shadow-sm" />
+          <p className="text-xs text-neutral-500 text-center">Abre WhatsApp → Dispositivos vinculados → Vincular dispositivo → escanea este QR</p>
+        </div>
+      )}
+
+      {/* Waiting for connection */}
+      {(status === "disconnected" || status === "connecting") && !qr && (
+        <div className="text-xs text-neutral-400 text-center py-4">
+          {status === "connecting" ? "Iniciando conexión…" : "Esperando conexión…"}
+        </div>
+      )}
+
+      {/* Chat list */}
+      {status === "connected" && (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-neutral-600">Chats recientes</span>
+            <button onClick={fetchChats} className="text-xs text-blue-500 underline">Actualizar</button>
           </div>
-
-          {/* Toggles */}
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={monitor} onChange={e => setMonitor(e.target.checked)} className="rounded" />
-              <span>Monitoreo</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={autorespond} onChange={e => setAutorespond(e.target.checked)} className="rounded" />
-              <span>Auto-responder</span>
-            </label>
-          </div>
-
-          {/* Alert hours */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-neutral-600 whitespace-nowrap">Alertar si sin respuesta por</label>
-            <input
-              type="number" min="0.5" max="24" step="0.5"
-              value={alertHours}
-              onChange={e => setAlertHours(parseFloat(e.target.value))}
-              className="w-16 border rounded px-2 py-1 text-sm"
-            />
-            <span className="text-xs text-neutral-500">horas</span>
-          </div>
-
-          {/* Save */}
-          <button
-            onClick={save} disabled={saving}
-            className="px-4 py-1.5 rounded-lg bg-neutral-900 text-white text-sm disabled:opacity-50"
-          >
-            {saving ? "Guardando…" : savedMsg || "Guardar configuración"}
-          </button>
-
-          {/* Pending questions */}
-          {pending.length > 0 && (
-            <div className="border rounded-lg p-3 bg-amber-50 border-amber-200">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-amber-800">⚠️ {pending.length} sin responder</span>
-                <button onClick={clearPending} className="text-xs text-amber-600 underline">Marcar resueltos</button>
-              </div>
-              <ul className="space-y-1">
-                {pending.slice(0, 5).map((p, i) => (
-                  <li key={i} className="text-xs text-amber-900">
-                    <span className="font-medium">{p.sender}:</span> {p.text.slice(0, 100)}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Send message to group */}
-          <div>
-            <label className="block text-xs font-medium text-neutral-600 mb-1">Enviar mensaje al grupo</label>
-            <div className="flex gap-2">
-              <input
-                value={sendText}
-                onChange={e => setSendText(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendToGroup()}
-                placeholder="Hola! Recuerden que mañana…"
-                className="flex-1 border rounded-lg px-3 py-1.5 text-sm"
-              />
-              <button
-                onClick={sendToGroup} disabled={sending || !sendText.trim()}
-                className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm disabled:opacity-40"
-              >
-                {sending ? "…" : "→"}
-              </button>
-            </div>
-          </div>
-        </>
+          {chats.length === 0 && <p className="text-xs text-neutral-400 text-center py-3">Sin chats aún — espera que llegue un mensaje</p>}
+          <ul className="space-y-1 max-h-72 overflow-y-auto">
+            {chats.map(c => (
+              <li key={c.jid}>
+                <button
+                  onClick={() => setSelectedChat(c)}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-neutral-50 border border-transparent hover:border-neutral-200 text-left transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-xs truncate">{c.name}</span>
+                      {c.unread > 0 && <span className="bg-green-500 text-white text-[10px] rounded-full px-1.5 py-0.5">{c.unread}</span>}
+                    </div>
+                    {c.lastMsg && <p className="text-[11px] text-neutral-400 truncate">{c.lastMsg.fromMe ? "Tú: " : ""}{c.lastMsg.text}</p>}
+                  </div>
+                  <span className="text-neutral-300 text-xs">›</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
