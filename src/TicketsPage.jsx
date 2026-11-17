@@ -30,6 +30,13 @@ const TEAM_MAP = Object.fromEntries(TEAM.map(m => [m.value, m]));
 // Status order for move buttons (cancelado is a side-step)
 const STATUS_FLOW = ["pendiente", "en_progreso", "listo"];
 
+const PRIORITY_ORDER = { alta: 0, media: 1, baja: 2 };
+
+// Derive team value from email (michel@two.travel → "michel")
+function emailToTeamValue(email) {
+  return (email || "").split("@")[0].toLowerCase();
+}
+
 const TEXTS = {
   en: {
     brand: "Two Travel", title: "Tickets",
@@ -183,6 +190,9 @@ export function TicketsPage({ currentUser }) {
   const [saving, setSaving]       = useState(false);
   const [formError, setFormError] = useState("");
   const [seedState, setSeedState] = useState("idle");
+  const [myTickets, setMyTickets] = useState(false);
+  const [filterPriority, setFilterPriority] = useState("all");
+  const myValue = emailToTeamValue(currentUser?.email);
 
   const setLangP = (l) => { setLang(l); try { localStorage.setItem("tt_lang", l); } catch {} };
 
@@ -223,9 +233,18 @@ export function TicketsPage({ currentUser }) {
 
   async function changeStatus(id, newStatus) {
     if (!isAdmin) return;
+    const ticket = tickets.find(tk => tk.id === id);
     // Optimistic update
     setTickets(prev => prev.map(tk => tk.id === id ? { ...tk, status: newStatus } : tk));
     await supabase.from("compass_tickets").update({ status: newStatus, updated_at: new Date().toISOString() }).eq("id", id);
+    // Email notification (fire and forget)
+    if (ticket) {
+      fetch("/api/ticket-notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticket: { ...ticket, assigned_to: ticket.assigned_to }, newStatus, movedBy: currentUser?.name || currentUser?.email || "Admin" }),
+      }).catch(() => {});
+    }
   }
 
   async function changeAssignees(id, val) {
@@ -352,6 +371,23 @@ export function TicketsPage({ currentUser }) {
           </form>
         )}
 
+        {/* Filter bar */}
+        {tickets.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <button onClick={() => setMyTickets(v => !v)}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${myTickets ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"}`}>
+              {lang === "es" ? "Mis Tickets" : "My Tickets"}
+            </button>
+            {["all","alta","media","baja"].map(p => (
+              <button key={p} onClick={() => setFilterPriority(p)}
+                className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-all ${filterPriority === p ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-400 border-gray-200 hover:border-gray-400"}`}>
+                {p === "all" ? (lang === "es" ? "Todas" : "All") : (t.priorities[p])}
+              </button>
+            ))}
+            <span className="text-xs text-gray-300 ml-auto">{tickets.length} tickets</span>
+          </div>
+        )}
+
         {/* Seed button */}
         {isAdmin && tickets.length === 0 && !loading && (
           <div className="mb-5">
@@ -368,7 +404,10 @@ export function TicketsPage({ currentUser }) {
         ) : (
           <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: "60vh" }}>
             {COLUMNS.map(col => {
-              const colTickets = tickets.filter(tk => tk.status === col.key);
+              let colTickets = tickets.filter(tk => tk.status === col.key);
+              if (myTickets && myValue) colTickets = colTickets.filter(tk => parseAssignees(tk.assigned_to).includes(myValue));
+              if (filterPriority !== "all") colTickets = colTickets.filter(tk => tk.priority === filterPriority);
+              colTickets = [...colTickets].sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9));
               return (
                 <div key={col.key} className="flex-shrink-0 w-72 flex flex-col">
                   <div className="flex items-center justify-between mb-3 px-1">
