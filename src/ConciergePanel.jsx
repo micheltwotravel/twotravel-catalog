@@ -2820,8 +2820,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
           es: `**SUV** (1–3 pax) · $130,000 COP por vehículo\n**Mini Van** (3–6 pax) · $195,000 COP por vehículo\n**Master Van** (6–8 pax) · $255,000 COP por vehículo\n**Sprinter** (9–10 pax) · $370,000 COP por vehículo`,
           note: "Ver opciones de transporte",
         };
-        // Airport name by city
-        const cityRaw = (kickoff?._rowCity || kickoff?.city || "").toLowerCase();
+        // Airport name by city — parse first city code for arrival (multi-city support)
         const AIRPORTS = {
           ctg: { en: "Rafael Núñez International Airport", es: "Aeropuerto Internacional Rafael Núñez", code: "CTG" },
           cartagena: { en: "Rafael Núñez International Airport", es: "Aeropuerto Internacional Rafael Núñez", code: "CTG" },
@@ -2834,6 +2833,8 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
           cdmx: { en: "Benito Juárez International Airport", es: "Aeropuerto Internacional Benito Juárez", code: "MEX" },
           mexico: { en: "Benito Juárez International Airport", es: "Aeropuerto Internacional Benito Juárez", code: "MEX" },
         };
+        const cityRawFull = (kickoff?._rowCity || kickoff?.city || "").toLowerCase();
+        const cityRaw = cityRawFull.split(",")[0].trim(); // first city = arrival city
         const airport = AIRPORTS[cityRaw] || { en: "the airport", es: "el aeropuerto", code: "" };
         // Try to get arrival flight info
         let arrFlight = null;
@@ -2886,8 +2887,7 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
       departure: (() => {
         const guestName = kickoff?.guestName || "";
         const accomEs = kickoff?.accommodationName || "el alojamiento";
-        const cityRaw = (kickoff?._rowCity || kickoff?.city || "").toLowerCase();
-        const AIRPORTS = {
+        const AIRPORTS_DEP = {
           ctg: { en: "Rafael Núñez International Airport", es: "Aeropuerto Internacional Rafael Núñez", code: "CTG" },
           cartagena: { en: "Rafael Núñez International Airport", es: "Aeropuerto Internacional Rafael Núñez", code: "CTG" },
           mde: { en: "José María Córdova International Airport", es: "Aeropuerto Internacional José María Córdova", code: "MDE" },
@@ -2899,7 +2899,10 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
           cdmx: { en: "Benito Juárez International Airport", es: "Aeropuerto Internacional Benito Juárez", code: "MEX" },
           mexico: { en: "Benito Juárez International Airport", es: "Aeropuerto Internacional Benito Juárez", code: "MEX" },
         };
-        const airport = AIRPORTS[cityRaw] || { en: "the airport", es: "el aeropuerto", code: "" };
+        const cityRawFull = (kickoff?._rowCity || kickoff?.city || "").toLowerCase();
+        const cityCodes = cityRawFull.split(",").map(s=>s.trim()).filter(Boolean);
+        const cityRaw = cityCodes[cityCodes.length - 1] || cityRawFull; // last city = departure city
+        const airport = AIRPORTS_DEP[cityRaw] || { en: "the airport", es: "el aeropuerto", code: "" };
         // Try departure flight info
         let depFlight = null;
         try { const dep = JSON.parse(kickoff?.departures || "[]"); depFlight = dep.find(a => a.flightNumber) || null; } catch {}
@@ -3042,27 +3045,32 @@ function ItineraryCanvas({ kickoff, onSave, onCartChange, onLangChange, clientTy
       })(),
       wateractivities: (() => {
         const isWa = s => {
-          const n = (s.name_en || s.name || "").toLowerCase();
-          return n.includes("water activ") || n.includes("fliteboard") || n.includes("jet ski") ||
-                 n.includes("kayak") || n.includes("snorkel") || n.includes("paddleboard") ||
-                 n.includes("wakeboard") || n.includes("kitesurf");
+          const n = (s.name_en || s.name || s.name_es || "").toLowerCase();
+          return n.includes("water activ") || n.includes("flite") || n.includes("jet ski") ||
+                 n.includes("jet-ski") || n.includes("jetski") || n.includes("kayak") ||
+                 n.includes("snorkel") || n.includes("paddleboard") || n.includes("paddle board") ||
+                 n.includes("wakeboard") || n.includes("kitesurf") || n.includes("flyboard") ||
+                 n.includes("kite surf") || n.includes("actividad acuá") || n.includes("actividades acuá");
         };
-        const cityNormWa = (kickoff?.city || "").toLowerCase();
+        const cityNormWa = (kickoff?.city || "").toLowerCase().split(",")[0].trim();
         let catalogItems = services.filter(isWa);
         if (cityNormWa && catalogItems.length > 1) {
           const byCty = catalogItems.filter(s => !s.city || s.city.includes(cityNormWa) || cityNormWa.includes(s.city));
           if (byCty.length > 0) catalogItems = byCty;
         }
+        const fmt = n => new Intl.NumberFormat("es-CO").format(n);
         if (catalogItems.length > 0) {
-          return catalogItems.map(s => ({
-            id: String(s.id || ""), sku: s.sku || "",
-            name: s.name || "Water Activities", name_en: s.name_en || s.name || "Water Activities",
-            category: s.category || "actividades",
-            timeLabel: "10:00 AM",
-            image: s.image || "", menuUrl: s.menuUrl || "",
-            price_cop: s.price_cop || 0,
-            description_es: s.description?.es || "", description_en: s.description?.en || "",
-          }));
+          const optEn = catalogItems.map(s => `• ${s.name_en || s.name}${s.price_cop ? ` — ${fmt(s.price_cop)} COP per person` : ""}`).join("\n");
+          const optEs = catalogItems.map(s => `• ${s.name || s.name_en}${s.price_cop ? ` — ${fmt(s.price_cop)} COP por persona` : ""}`).join("\n");
+          const firstImg = catalogItems.find(s => s.image)?.image || "";
+          return {
+            name: "Water Activities", name_en: "Water Activities", name_es: "Actividades Acuáticas",
+            category: "actividades", timeLabel: "10:00 AM",
+            ...(firstImg ? { image: firstImg } : {}),
+            description_en: `Water activities available during your stay. Please let us know which ones interest you:\n\n${optEn}\n\n_We will coordinate availability, times and logistics in advance._`,
+            description_es: `Actividades acuáticas disponibles durante tu estadía. Dinos cuáles te interesan:\n\n${optEs}\n\n_Coordinamos disponibilidad, horarios y logística con anticipación._`,
+            cancellation: "Water activities require coordination in advance. Cancellations with less than 24 hours notice may not be refundable.",
+          };
         }
         return {
           name: "Water Activities", name_en: "Water Activities", name_es: "Actividades Acuáticas",
