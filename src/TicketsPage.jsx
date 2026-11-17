@@ -6,7 +6,7 @@
   ALTER TABLE compass_tickets ADD COLUMN IF NOT EXISTS assigned_to text default '';
 */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient.js";
 
 const SUPER_ADMINS = ["michel@two.travel","caro@two.travel","ray@two.travel","giulia@two.travel"];
@@ -27,6 +27,9 @@ const TEAM = [
 
 const TEAM_MAP = Object.fromEntries(TEAM.map(m => [m.value, m]));
 
+// Status order for move buttons (cancelado is a side-step)
+const STATUS_FLOW = ["pendiente", "en_progreso", "listo"];
+
 const TEXTS = {
   en: {
     brand: "Two Travel", title: "Tickets",
@@ -46,6 +49,8 @@ const TEXTS = {
     noTickets: "No tickets yet.", noMatch: "No tickets.",
     submittedBy: "by", errorReq: "Title is required.", errorSend: "Error. Try again.",
     of: "of", seedBtn: "Load seed tickets", seeding: "Loading…", seedDone: "Done!",
+    moveNext: "Move →", movePrev: "← Back", cancel2: "Cancel ticket", restore: "Restore",
+    addPerson: "+ Person",
   },
   es: {
     brand: "Two Travel", title: "Tickets",
@@ -65,6 +70,8 @@ const TEXTS = {
     noTickets: "No hay tickets todavía.", noMatch: "Sin tickets.",
     submittedBy: "por", errorReq: "El título es obligatorio.", errorSend: "Error al enviar.",
     of: "de", seedBtn: "Cargar tickets iniciales", seeding: "Cargando…", seedDone: "¡Listo!",
+    moveNext: "Avanzar →", movePrev: "← Regresar", cancel2: "Cancelar ticket", restore: "Restaurar",
+    addPerson: "+ Persona",
   },
 };
 
@@ -82,19 +89,85 @@ const SEED_TICKETS = [
   { type:"feature", page:"Compass",  priority:"baja",  title:"Language toggle — full platform i18n",                    description:"Full React i18n for the platform (EN/ES). Very complex." },
 ];
 
-function Avatar({ name, size = "sm" }) {
-  const member = TEAM_MAP[name] || TEAM_MAP[""];
-  if (member.name === "Sin asignar") return null;
-  const initials = member.name.slice(0, 2).toUpperCase();
-  const dim = size === "sm" ? "w-6 h-6 text-[10px]" : "w-8 h-8 text-xs";
+// Parse comma-separated assignees
+function parseAssignees(val) {
+  return (val || "").split(",").map(s => s.trim()).filter(Boolean);
+}
+
+function AvatarRow({ assignees, max = 4 }) {
+  const shown = assignees.slice(0, max);
+  const extra = assignees.length - max;
   return (
-    <span
-      className={`${dim} rounded-full inline-flex items-center justify-center font-bold text-white flex-shrink-0`}
-      style={{ background: member.color }}
-      title={member.name}
-    >
-      {initials}
-    </span>
+    <div className="flex items-center" style={{ gap: "-4px" }}>
+      {shown.map((val, i) => {
+        const m = TEAM_MAP[val];
+        if (!m || !m.name || m.name === "Sin asignar") return null;
+        const initials = m.name.slice(0, 2).toUpperCase();
+        return (
+          <span key={val}
+            className="w-6 h-6 rounded-full inline-flex items-center justify-center text-[10px] font-bold text-white border-2 border-white"
+            style={{ background: m.color, marginLeft: i > 0 ? "-6px" : "0", zIndex: shown.length - i }}
+            title={m.name}>
+            {initials}
+          </span>
+        );
+      })}
+      {extra > 0 && (
+        <span className="w-6 h-6 rounded-full inline-flex items-center justify-center text-[10px] font-bold bg-gray-200 text-gray-500 border-2 border-white"
+          style={{ marginLeft: "-6px" }}>
+          +{extra}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function AssigneePicker({ assignees, onChange, t }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    if (open) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  function toggle(val) {
+    const next = assignees.includes(val)
+      ? assignees.filter(a => a !== val)
+      : [...assignees, val];
+    onChange(next.join(","));
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
+        className="text-[10px] font-semibold text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full px-2 py-0.5 transition-colors border border-gray-200">
+        {t.addPerson}
+      </button>
+      {open && (
+        <div className="absolute bottom-7 left-0 z-50 bg-white rounded-xl shadow-xl border border-gray-100 p-2 w-44"
+          onClick={e => e.stopPropagation()}>
+          {TEAM.filter(m => m.value !== "").map(m => (
+            <label key={m.value}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input type="checkbox"
+                checked={assignees.includes(m.value)}
+                onChange={() => toggle(m.value)}
+                className="w-3 h-3 accent-gray-700" />
+              <span className="w-5 h-5 rounded-full inline-flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+                style={{ background: m.color }}>
+                {m.name.slice(0, 2).toUpperCase()}
+              </span>
+              <span className="text-xs text-gray-700">{m.name}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -150,11 +223,14 @@ export function TicketsPage({ currentUser }) {
 
   async function changeStatus(id, newStatus) {
     if (!isAdmin) return;
+    // Optimistic update
+    setTickets(prev => prev.map(tk => tk.id === id ? { ...tk, status: newStatus } : tk));
     await supabase.from("compass_tickets").update({ status: newStatus, updated_at: new Date().toISOString() }).eq("id", id);
   }
 
-  async function changeAssignee(id, val) {
+  async function changeAssignees(id, val) {
     if (!isAdmin) return;
+    setTickets(prev => prev.map(tk => tk.id === id ? { ...tk, assigned_to: val } : tk));
     await supabase.from("compass_tickets").update({ assigned_to: val, updated_at: new Date().toISOString() }).eq("id", id);
   }
 
@@ -214,13 +290,12 @@ export function TicketsPage({ currentUser }) {
         {/* New ticket form */}
         {showForm && (
           <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-5 max-w-3xl">
-            <h2 className="text-sm font-semibold text-gray-700 mb-4">{t.newTicket.replace("+ ", "").replace("+ ", "")}</h2>
+            <h2 className="text-sm font-semibold text-gray-700 mb-4">{t.newTicket.replace(/^\+ /, "")}</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
               {[
                 { lbl: t.type, key: "type", opts: Object.entries(t.types).map(([v, l]) => ({ v, l: `${t.typeIcons[v]} ${l}` })) },
                 { lbl: t.page, key: "page", opts: t.pages.map(p => ({ v: p, l: p })) },
                 { lbl: t.priority, key: "priority", opts: Object.entries(t.priorities).map(([v, l]) => ({ v, l })) },
-                { lbl: t.assignedTo, key: "assigned_to", opts: TEAM.map(m => ({ v: m.value, l: m.name })) },
               ].map(({ lbl, key, opts }) => (
                 <div key={key}>
                   <label className="block text-xs text-gray-400 mb-1 font-medium">{lbl}</label>
@@ -230,6 +305,30 @@ export function TicketsPage({ currentUser }) {
                   </select>
                 </div>
               ))}
+              <div>
+                <label className="block text-xs text-gray-400 mb-1 font-medium">{t.assignedTo}</label>
+                <div className="border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 flex flex-wrap gap-1 min-h-[38px]">
+                  {parseAssignees(form.assigned_to).map(val => {
+                    const m = TEAM_MAP[val];
+                    return m ? (
+                      <span key={val}
+                        className="inline-flex items-center gap-1 text-[11px] font-medium text-white rounded-full px-2 py-0.5"
+                        style={{ background: m.color }}>
+                        {m.name}
+                        <button type="button" onClick={() => setF("assigned_to", parseAssignees(form.assigned_to).filter(a => a !== val).join(","))}
+                          className="opacity-70 hover:opacity-100">×</button>
+                      </span>
+                    ) : null;
+                  })}
+                  <select value="" onChange={e => { if (e.target.value) setF("assigned_to", [...new Set([...parseAssignees(form.assigned_to), e.target.value])].join(",")); }}
+                    className="text-xs text-gray-400 bg-transparent focus:outline-none cursor-pointer">
+                    <option value="">+ añadir</option>
+                    {TEAM.filter(m => m.value && !parseAssignees(form.assigned_to).includes(m.value)).map(m => (
+                      <option key={m.value} value={m.value}>{m.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
             <div className="mb-3">
               <label className="block text-xs text-gray-400 mb-1 font-medium">{t.titleLbl}</label>
@@ -272,7 +371,6 @@ export function TicketsPage({ currentUser }) {
               const colTickets = tickets.filter(tk => tk.status === col.key);
               return (
                 <div key={col.key} className="flex-shrink-0 w-72 flex flex-col">
-                  {/* Column header */}
                   <div className="flex items-center justify-between mb-3 px-1">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full" style={{ background: col.color }} />
@@ -286,7 +384,6 @@ export function TicketsPage({ currentUser }) {
                     </span>
                   </div>
 
-                  {/* Column body */}
                   <div className="flex-1 rounded-xl p-2 flex flex-col gap-2"
                     style={{ background: col.bg, border: `1px solid ${col.border}` }}>
                     {colTickets.length === 0 ? (
@@ -296,8 +393,8 @@ export function TicketsPage({ currentUser }) {
                     ) : (
                       colTickets.map(tk => (
                         <KanbanCard key={tk.id} tk={tk} t={t} isAdmin={isAdmin}
-                          onStatusChange={changeStatus} onAssigneeChange={changeAssignee}
-                          columns={COLUMNS} />
+                          onStatusChange={changeStatus}
+                          onAssigneesChange={changeAssignees} />
                       ))
                     )}
                   </div>
@@ -311,26 +408,35 @@ export function TicketsPage({ currentUser }) {
   );
 }
 
-function KanbanCard({ tk, t, isAdmin, onStatusChange, onAssigneeChange, columns }) {
+function KanbanCard({ tk, t, isAdmin, onStatusChange, onAssigneesChange }) {
   const [open, setOpen] = useState(false);
   const priorityColor = t.priorityColors[tk.priority] || "#9ca3af";
   const priorityLabel = t.priorities[tk.priority] || tk.priority;
   const typeLabel = `${t.typeIcons[tk.type] || ""} ${t.types[tk.type] || tk.type}`;
   const date = tk.created_at ? new Date(tk.created_at).toLocaleDateString("es-CO", { day: "numeric", month: "short" }) : "";
-  const assignee = TEAM_MAP[tk.assigned_to || ""] || TEAM_MAP[""];
   const shortId = tk.id ? "#" + tk.id.slice(-4) : "";
+  const assignees = parseAssignees(tk.assigned_to);
 
-  const typeBg = { bug: "#fef2f2", feature: "#f5f3ff", change: "#eff6ff", question: "#fffbeb" };
+  const typeBg    = { bug: "#fef2f2", feature: "#f5f3ff", change: "#eff6ff", question: "#fffbeb" };
   const typeColor = { bug: "#dc2626", feature: "#7c3aed", change: "#2563eb", question: "#d97706" };
 
+  const flowIdx = STATUS_FLOW.indexOf(tk.status);
+  const nextStatus = flowIdx >= 0 && flowIdx < STATUS_FLOW.length - 1 ? STATUS_FLOW[flowIdx + 1] : null;
+  const prevStatus = flowIdx > 0 ? STATUS_FLOW[flowIdx - 1] : null;
+  const isCancelled = tk.status === "cancelado";
+
+  function move(status) {
+    onStatusChange(tk.id, status);
+  }
+
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all cursor-pointer"
-      onClick={() => setOpen(o => !o)}>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all"
+      onClick={() => setOpen(o => !o)} style={{ cursor: "pointer" }}>
       {/* Priority stripe */}
       <div className="h-1" style={{ background: priorityColor }} />
 
       <div className="p-3">
-        {/* Top row: type badge + priority badge */}
+        {/* Top: type badge + priority badge */}
         <div className="flex items-center justify-between gap-2 mb-2">
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md"
             style={{ background: typeBg[tk.type] || "#f9fafb", color: typeColor[tk.type] || "#6b7280" }}>
@@ -345,52 +451,69 @@ function KanbanCard({ tk, t, isAdmin, onStatusChange, onAssigneeChange, columns 
         {/* Title */}
         <p className="text-sm font-semibold text-gray-800 leading-snug mb-2 line-clamp-2">{tk.title}</p>
 
-        {/* Page tag */}
+        {/* Page */}
         {tk.page && (
           <div className="mb-2">
             <span className="text-[10px] text-gray-400 bg-gray-100 rounded-md px-2 py-0.5 font-medium">{tk.page}</span>
           </div>
         )}
 
-        {/* Footer: avatar + meta */}
-        <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-gray-50">
-          <div className="flex items-center gap-1.5">
-            {assignee.name !== "Sin asignar" ? (
-              <>
-                <Avatar name={tk.assigned_to} />
-                <span className="text-[11px] font-medium text-gray-600">{assignee.name}</span>
-              </>
-            ) : (
-              <span className="text-[11px] text-gray-300">{t.submittedBy} {tk.submitted_by_name || "—"}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="text-[10px] text-gray-300 font-mono">{shortId}</span>
-            <span className="text-[10px] text-gray-300">· {date}</span>
-          </div>
+        {/* Assignees row */}
+        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-50">
+          {assignees.length > 0
+            ? <AvatarRow assignees={assignees} />
+            : <span className="text-[11px] text-gray-300">{t.submittedBy} {tk.submitted_by_name || "—"}</span>
+          }
+          {isAdmin && (
+            <AssigneePicker
+              assignees={assignees}
+              onChange={val => onAssigneesChange(tk.id, val)}
+              t={t} />
+          )}
+          <span className="text-[10px] text-gray-300 font-mono ml-auto">{shortId} · {date}</span>
         </div>
 
-        {/* Expanded description */}
-        {open && tk.description && (
-          <div className="mt-2 pt-2 border-t border-gray-50">
-            <p className="text-xs text-gray-500 leading-relaxed">{tk.description}</p>
-          </div>
-        )}
+        {/* Expanded */}
+        {open && (
+          <>
+            {tk.description && (
+              <div className="mt-2 pt-2 border-t border-gray-50">
+                <p className="text-xs text-gray-500 leading-relaxed">{tk.description}</p>
+              </div>
+            )}
 
-        {/* Admin controls */}
-        {isAdmin && open && (
-          <div className="flex items-center gap-2 mt-3 pt-2 border-t border-gray-50" onClick={e => e.stopPropagation()}>
-            <select value={tk.assigned_to || ""} onChange={e => onAssigneeChange(tk.id, e.target.value)}
-              className="flex-1 text-[11px] border border-gray-200 rounded-lg px-2 py-1 bg-gray-50 text-gray-600 cursor-pointer focus:outline-none">
-              {TEAM.map(m => <option key={m.value} value={m.value}>{m.name}</option>)}
-            </select>
-            <select value={tk.status} onChange={e => onStatusChange(tk.id, e.target.value)}
-              className="flex-1 text-[11px] border border-gray-200 rounded-lg px-2 py-1 bg-gray-50 text-gray-600 cursor-pointer focus:outline-none">
-              {columns.map(col => (
-                <option key={col.key} value={col.key}>{t.statuses[col.key]}</option>
-              ))}
-            </select>
-          </div>
+            {/* Move buttons (admin) */}
+            {isAdmin && (
+              <div className="flex items-center gap-1.5 mt-3 pt-2 border-t border-gray-50 flex-wrap"
+                onClick={e => e.stopPropagation()}>
+                {prevStatus && (
+                  <button onClick={() => move(prevStatus)}
+                    className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">
+                    {t.movePrev}
+                  </button>
+                )}
+                {nextStatus && (
+                  <button onClick={() => move(nextStatus)}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-lg text-white transition-colors"
+                    style={{ background: t.statusColors[nextStatus] }}>
+                    {t.statuses[nextStatus]} →
+                  </button>
+                )}
+                {!isCancelled && (
+                  <button onClick={() => move("cancelado")}
+                    className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition-colors ml-auto">
+                    {t.cancel2}
+                  </button>
+                )}
+                {isCancelled && (
+                  <button onClick={() => move("pendiente")}
+                    className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 transition-colors">
+                    {t.restore}
+                  </button>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
