@@ -35,6 +35,7 @@ const FinanceCheckin          = lazyWithReload(() => import("./FinancePanel").th
 const FinanceTransporte       = lazyWithReload(() => import("./FinancePanel").then(m => ({ default: m.FinanceTransporte })));
 const MenuAdminPanel          = lazyWithReload(() => import("./ConciergePanel").then(m => ({ default: m.MenuAdminPanel })));
 const ClientCheckinPanel      = lazyWithReload(() => import("./ClientCheckinPanel"));
+const TicketsPage             = lazyWithReload(() => import("./TicketsPage").then(m => ({ default: m.TicketsPage })));
 
 function PageLoader() {
   return (
@@ -6509,16 +6510,16 @@ const ROLE_META = {
 const PAGOS_MODES = ["pagos","f-proveedores"];
 const FINANCE_MODES = ["pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"];
 const ROLE_ACCESS = {
-  admin:     ["concierge","clientes-checkin","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","bodas-mesas","tareas-bodas","bodas-directorio",...FINANCE_MODES],
-  concierge: ["concierge","clientes-checkin","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","f-checkin","f-transporte",...FINANCE_MODES],
-  junior:    ["clientes-checkin","dashboard","f-checkin","f-transporte",...FINANCE_MODES],
-  finance:   ["dashboard","concierge","clientes-checkin","f-checkin","f-transporte",...FINANCE_MODES],
-  marketing: ["dashboard",...PAGOS_MODES],
-  bodas:     ["bodas","bodas-mesas","tareas-bodas","bodas-directorio","tasks","dashboard",...PAGOS_MODES],
+  admin:     ["concierge","clientes-checkin","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","bodas-mesas","tareas-bodas","bodas-directorio","tickets",...FINANCE_MODES],
+  concierge: ["concierge","clientes-checkin","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","tickets","f-checkin","f-transporte",...FINANCE_MODES],
+  junior:    ["clientes-checkin","dashboard","tickets","f-checkin","f-transporte",...FINANCE_MODES],
+  finance:   ["dashboard","concierge","clientes-checkin","tickets","f-checkin","f-transporte",...FINANCE_MODES],
+  marketing: ["dashboard","tickets",...PAGOS_MODES],
+  bodas:     ["bodas","bodas-mesas","tareas-bodas","bodas-directorio","tasks","dashboard","tickets",...PAGOS_MODES],
   pending:   [...PAGOS_MODES],
 };
 
-const PROTECTED_MODES = new Set(["concierge","clientes-checkin","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","bodas-mesas","tareas-bodas","bodas-directorio","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"]);
+const PROTECTED_MODES = new Set(["concierge","clientes-checkin","dashboard","kpi","tasks","soporte","soporte-dashboard","reuniones","users","bodas","bodas-mesas","tareas-bodas","bodas-directorio","tickets","pagos","f-cashflow","f-movimientos","f-reservaciones","f-cierre","f-templates","f-proveedores","f-checkin","f-transporte"]);
 
 // ─── ITINERARY CATALOG (client-facing viewer) ─────────────────────
 const GAS_URL_IC = import.meta.env.VITE_GAS_URL;
@@ -7399,6 +7400,7 @@ function App() {
     if (mode === "bodas-directorio")  return <S><ErrorBoundary><DirectorioBodas currentUser={user} onLogout={logout} /></ErrorBoundary></S>;
     if (mode === "soporte")   return <ErrorBoundary><SoportePage /></ErrorBoundary>;
     if (mode === "soporte-dashboard") return <ErrorBoundary><SoporteDashboard /></ErrorBoundary>;
+    if (mode === "tickets")  return <S><ErrorBoundary><TicketsPage currentUser={user} /></ErrorBoundary></S>;
     if (mode === "tasks")     return <ErrorBoundary><TaskTracker currentUser={user} /></ErrorBoundary>;
     if (mode === "reuniones") return <S><ErrorBoundary><ReunionesPage currentUser={user} initialKickoffId={params.get("kickoffId") || ""} /></ErrorBoundary></S>;
     if (mode === "dashboard" || mode === "kpi") return <ErrorBoundary><UnifiedDashboard currentUser={user} onLogout={logout} kpiOnly={mode === "kpi"} /></ErrorBoundary>;
