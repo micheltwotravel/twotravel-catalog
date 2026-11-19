@@ -1178,7 +1178,7 @@ export function FinanceReservaciones({ currentUser }) {
   const [dateFrom,   setDateFrom]   = useState("");
   const [dateTo,     setDateTo]     = useState("");
   const [slackOnly,  setSlackOnly]  = useState(false);
-  const [sortCol,    setSortCol]    = useState("createdAt");
+  const [sortCol,    setSortCol]    = useState("fecha");
   const [sortDir,    setSortDir]    = useState(-1);
   const [ownerNames, setOwnerNames] = useState({});
   const rowsRef = useRef(rows);
@@ -1720,7 +1720,7 @@ const STATUS_PROV = { pendiente:{label:"Pendiente",color:"#fef3c7",text:"#92400e
 const STATUS_CONTABLE = { "":{label:"—",color:"#f3f4f6",text:"#6b7280"}, contabilizado:{label:"Contabilizado",color:"#dcfce7",text:"#166534"}, en_curso:{label:"En curso",color:"#fef3c7",text:"#92400e"}, bloqueado:{label:"Bloqueado",color:"#fee2e2",text:"#991b1b"} };
 
 function emptyProvForm(today) {
-  return { concepto:"", provId:"", provNombre:"", provTipoId:"NIT", banco:"BANCOLOMBIA", tipoCuenta:"Cuenta de Ahorro", numeroCuenta:"", amount:"", currency:"COP", category:"", area:"Concierge", clase:"Colombia: Cartagena", priority:"Media", dueDate:today, client:"", notes:"", requestedBy:"", assignedTo:"", payFreq:"Única", invoiceUrl:"", soporteUrl:"", prebill:false, lote:today, retencionTipo:"", retencionBase:"" };
+  return { concepto:"", provId:"", provNombre:"", provTipoId:"NIT", banco:"BANCOLOMBIA", tipoCuenta:"Cuenta de Ahorro", numeroCuenta:"", amount:"", currency:"COP", category:"", area:"Concierge", clase:"Colombia: Cartagena", priority:"Media", dueDate:today, client:"", notes:"", requestedBy:"", assignedTo:"", payFreq:"Única", invoiceUrl:"", soporteUrl:"", prebill:false, lote:today, retencionTipo:"", retencionBase:"", icaTipo:"", icaBase:"" };
 }
 
 async function uploadSoporte(file, rowId) {
@@ -1776,20 +1776,35 @@ const RETENCIONES_CO = [
   { key:"rendimientos",       label:"Rendimientos financieros e intereses",               rate:0.07,   baseMin:0 },
   { key:"loterias",           label:"Loterías, rifas y apuestas",                        rate:0.20,   baseMin:2513952 },
   { key:"retelva",            label:"Retelva 15% (sobre valor IVA)",                     rate:0.15,   baseMin:0 },
-  { key:"ica_ctg",            label:"ICA Cartagena (0.856‰)",                             rate:0.00856,baseMin:0 },
-  { key:"ica_bog",            label:"ICA Bogotá (0.966‰)",                               rate:0.00966,baseMin:0 },
-  { key:"ica_med",            label:"ICA Medellín (0.414‰)",                             rate:0.00414,baseMin:0 },
 ];
 
-// base: monto sobre el que aplica la tarifa (puede ser distinto al total si hay IVA)
-function calcNeto(amount, retencionTipo, retencionBase) {
+const ICA_CO = [
+  { key:"ica_ctg",     label:"ICA Cartagena (0.856‰)",      rate:0.00856 },
+  { key:"ica_ctg_2",   label:"ICA Cartagena — Comercio (1.104‰)", rate:0.001104 },
+  { key:"ica_bog",     label:"ICA Bogotá (0.966‰)",          rate:0.00966 },
+  { key:"ica_bog_svc", label:"ICA Bogotá — Servicios (4.14‰)",  rate:0.00414 },
+  { key:"ica_med",     label:"ICA Medellín (0.414‰)",        rate:0.00414 },
+  { key:"ica_baq",     label:"ICA Barranquilla (0.966‰)",    rate:0.00966 },
+];
+
+function calcNeto(amount, retencionTipo, retencionBase, icaTipo, icaBase) {
   const total = parseFloat(amount) || 0;
-  if (!retencionTipo) return total;
-  const def = RETENCIONES_CO.find(r=>r.key===retencionTipo);
-  if (!def) return total;
-  const base = parseFloat(retencionBase) || total;
-  if (base < def.baseMin) return total;
-  return Math.round(total - base * def.rate);
+  let neto = total;
+  if (retencionTipo) {
+    const def = RETENCIONES_CO.find(r=>r.key===retencionTipo);
+    if (def) {
+      const base = parseFloat(retencionBase) || total;
+      if (base >= def.baseMin) neto = Math.round(neto - base * def.rate);
+    }
+  }
+  if (icaTipo) {
+    const def = ICA_CO.find(r=>r.key===icaTipo);
+    if (def) {
+      const base = parseFloat(icaBase) || total;
+      neto = Math.round(neto - base * def.rate);
+    }
+  }
+  return neto;
 }
 
 export function FinancePagosProveedores() {
@@ -1897,6 +1912,22 @@ export function FinancePagosProveedores() {
   }
 
   async function saveRetencionBase(id) {
+    try { await saveSolicitudes(rows); }
+    catch(ex) { showToastMsg("Error: "+ex.message); }
+  }
+
+  async function setIca(id, tipo) {
+    const updated = rows.map(r=>r.id===id?{...r,icaTipo:tipo,icaBase:""}:r);
+    setRows(updated);
+    try { await saveSolicitudes(updated); }
+    catch(ex) { showToastMsg("Error: "+ex.message); }
+  }
+
+  function editIcaBase(id, val) {
+    setRows(prev=>prev.map(r=>r.id===id?{...r,icaBase:val}:r));
+  }
+
+  async function saveIcaBase(id) {
     try { await saveSolicitudes(rows); }
     catch(ex) { showToastMsg("Error: "+ex.message); }
   }
@@ -2045,7 +2076,7 @@ export function FinancePagosProveedores() {
                     <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                       <thead>
                         <tr style={{background:BG,borderBottom:`1px solid ${BRD}`}}>
-                          {["ID","Nombre","Monto bruto","Ret. fuente","Neto","Concepto","Cliente","Área","Clase","Prior.","Vcto","Estado","Contable","Soporte",""].map(h=>(
+                          {["ID","Nombre","Monto bruto","Ret. fuente","ICA","Neto","Concepto","Cliente","Área","Clase","Prior.","Vcto","Estado","Contable","Soporte",""].map(h=>(
                             <th key={h} style={{padding:"5px 6px",textAlign:"left",fontWeight:600,color:MUT,fontSize:10,textTransform:"uppercase",letterSpacing:.3,whiteSpace:"nowrap"}}>{h}</th>
                           ))}
                         </tr>
@@ -2079,8 +2110,26 @@ export function FinancePagosProveedores() {
                                     title="Base para calcular la retención (ej: valor sin IVA). Vacío = monto total"/>
                                 )}
                               </td>
-                              <td style={{padding:"5px 6px",fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontSize:11,color:r.retencionTipo?"#b45309":MUT}}>
-                                {pFmt(calcNeto(r.amount,r.retencionTipo,r.retencionBase),r.currency)}
+                              <td style={{padding:"4px 6px",minWidth:160}}>
+                                <select value={r.icaTipo||""} onChange={e=>setIca(r.id,e.target.value)}
+                                  style={{width:"100%",fontSize:10,padding:"2px 4px",border:`1px solid ${BRD}`,borderRadius:3,background:WHT,color:r.icaTipo?"#1e40af":MUT,cursor:"pointer"}}>
+                                  <option value="">– Sin ICA –</option>
+                                  {ICA_CO.map(ic=>(
+                                    <option key={ic.key} value={ic.key}>{ic.label}</option>
+                                  ))}
+                                </select>
+                                {r.icaTipo&&(
+                                  <input type="text" inputMode="numeric"
+                                    value={r.icaBase||""}
+                                    onChange={e=>editIcaBase(r.id,e.target.value)}
+                                    onBlur={()=>saveIcaBase(r.id)}
+                                    placeholder={`Base: ${(parseFloat(r.amount)||0).toLocaleString("es-CO")}`}
+                                    style={{width:"100%",fontSize:10,marginTop:3,padding:"2px 4px",border:`1px solid ${BRD}`,borderRadius:3,color:"#1e40af",background:"#eff6ff"}}
+                                    title="Base para calcular ICA. Vacío = monto total"/>
+                                )}
+                              </td>
+                              <td style={{padding:"5px 6px",fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontSize:11,color:(r.retencionTipo||r.icaTipo)?"#b45309":MUT}}>
+                                {pFmt(calcNeto(r.amount,r.retencionTipo,r.retencionBase,r.icaTipo,r.icaBase),r.currency)}
                               </td>
                               <td style={{padding:"5px 6px",color:DARK,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:11}} title={r.concepto}>{r.concepto||"—"}</td>
                               <td style={{padding:"5px 6px",color:MUT,whiteSpace:"nowrap",maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",fontSize:11}} title={r.client}>{r.client||"—"}</td>
@@ -2138,7 +2187,7 @@ export function FinancePagosProveedores() {
                         <tr style={{background:"#fef9ec",borderTop:`2px solid ${GOLD}`}}>
                           <td colSpan={2} style={{padding:"8px 10px",fontWeight:700,fontSize:11,color:GOLD,textTransform:"uppercase",letterSpacing:.4}}>Total lote</td>
                           <td style={{padding:"8px 10px",fontVariantNumeric:"tabular-nums",fontWeight:700,fontSize:12,color:GOLD}}>{pFmt(loteTotal,cur)}</td>
-                          <td colSpan={10}/>
+                          <td colSpan={11}/>
                         </tr>
                       </tfoot>
                     </table>
