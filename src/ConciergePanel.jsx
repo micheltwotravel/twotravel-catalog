@@ -9663,7 +9663,9 @@ const loadKickoffs = async (forceRefresh = false) => {
       if (SPECIAL_IDS.test(k.id)) return false;
       return panelMode === "clientes-checkin"
         ? k.panelContext === "checkin"
-        : k.panelContext !== "checkin";
+        : panelMode === "clientes-bodas"
+          ? k.panelContext === "bodas"
+          : (k.panelContext !== "checkin" && k.panelContext !== "bodas");
     });
     setKickoffs(filtered);
 
@@ -9807,7 +9809,7 @@ const loadKickoffs = async (forceRefresh = false) => {
       cart: [],
       welcomePdfUrl: "https://drive.google.com/file/d/1-FMeJcmJUVz-9ULTXt6-7eIi_lGa0Y2X/view?usp=sharing",
       preTripContent: portalLang === "es" ? DEFAULT_PRE_TRIP_ES : DEFAULT_PRE_TRIP,
-      ...(panelMode === "clientes-checkin" ? { panelContext: "checkin" } : {}),
+      ...(panelMode === "clientes-checkin" ? { panelContext: "checkin" } : panelMode === "clientes-bodas" ? { panelContext: "bodas" } : {}),
     });
 
     const kickoff = {
@@ -10159,8 +10161,8 @@ const loadKickoffs = async (forceRefresh = false) => {
     <div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",flexDirection:"column"}}>
       <header className="tt-topbar">
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>{panelMode === "clientes-checkin" ? "Clientes Check-In" : "Compass"}</span>
-          <span style={{fontSize:11,color:"var(--text-3)",fontWeight:400}}>{panelMode === "clientes-checkin" ? (portalLang === "es" ? "Pre check-in y seguimiento de huéspedes" : "Pre check-in and guest follow-up") : cp.subtitle}</span>
+          <span style={{fontSize:13,fontWeight:600,color:"var(--text-1)"}}>{panelMode === "clientes-checkin" ? "Clientes Check-In" : panelMode === "clientes-bodas" ? "Clientes Bodas" : "Compass"}</span>
+          <span style={{fontSize:11,color:"var(--text-3)",fontWeight:400}}>{panelMode === "clientes-checkin" ? (portalLang === "es" ? "Pre check-in y seguimiento de huéspedes" : "Pre check-in and guest follow-up") : panelMode === "clientes-bodas" ? (portalLang === "es" ? "Pre check-in y seguimiento para bodas" : "Pre check-in and wedding follow-up") : cp.subtitle}</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
 
@@ -10219,7 +10221,7 @@ const loadKickoffs = async (forceRefresh = false) => {
     {loading ? "Actualizando…" : "Refrescar"}
   </button>
 
-  {panelMode === "clientes-checkin" && currentUser?.role !== "junior" && (<>
+  {(panelMode === "clientes-checkin" || panelMode === "clientes-bodas") && currentUser?.role !== "junior" && (<>
   <button
     type="button"
     onClick={() => window.open('/handoffs.html', '_blank')}

@@ -194,6 +194,7 @@ button,input,select,textarea{font-family:'Jost',sans-serif}
   <button class="tab" onclick="switchTab('attendance')">📅 Asistencia</button>
   <button class="tab" onclick="switchTab('cultura')">🌟 Cultura</button>
   <button class="tab" onclick="switchTab('staff')">⚙️ Equipo</button>
+  <button class="tab" onclick="switchTab('turnos')">🕐 Turnos</button>
 </div>
 
 <!-- TOOLBAR (dynamic) -->
@@ -240,7 +241,7 @@ button,input,select,textarea{font-family:'Jost',sans-serif}
 
 <script>
 // ── DATA ──────────────────────────────────────────────────
-const KEY = { candidates: "hr_candidates", projects: "hr_projects", attendance: "hr_attendance", staff: "hr_staff", cultura: "hr_cultura" };
+const KEY = { candidates: "hr_candidates", projects: "hr_projects", attendance: "hr_attendance", staff: "hr_staff", cultura: "hr_cultura", turnos: "hr_turnos" };
 
 function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
@@ -253,13 +254,13 @@ let projects   = load(KEY.projects);
 let attendance = load(KEY.attendance); // [{ personId, date, type, status }]
 let staff      = load(KEY.staff);
 let cultura    = load(KEY.cultura) || { empMonth: null, gallery: [], posts: [] };
+let turnos     = load(KEY.turnos)   || []; // [{ id, staffId, staffName, date, shift, note }]
 // ensure estructura
 if (!cultura.empMonth && !cultura.gallery) cultura = { empMonth: null, gallery: [], posts: [] };
 
 // Default staff if empty
 if (!staff.length) {
   staff = [
-    { id:"s1", name:"Alia", team:"Concierge" },
     { id:"s2", name:"Carolina", team:"Concierge" },
     { id:"s3", name:"Daniela", team:"Concierge" },
     { id:"s4", name:"Nataly", team:"Concierge" },
@@ -345,7 +346,7 @@ function pill(status, map, onclick) {
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll(".tab").forEach((t,i) => {
-    t.classList.toggle("active", ["hiring","projects","attendance","cultura","staff"][i] === tab);
+    t.classList.toggle("active", ["hiring","projects","attendance","cultura","staff","turnos"][i] === tab);
   });
   render();
 }
@@ -357,6 +358,7 @@ function render() {
   else if (currentTab === "attendance") renderAttendance();
   else if (currentTab === "cultura") renderCultura();
   else if (currentTab === "staff") renderStaff();
+  else if (currentTab === "turnos") renderTurnos();
 }
 
 // ══════════════════════════════════════════════
@@ -1211,6 +1213,118 @@ function previewImg(input) {
   reader.readAsDataURL(file);
 }
 
+// ── TURNOS ──────────────────────────────────────────────────
+const SHIFT_TYPES = {
+  M: { label: "Mañana",  color: "#2563eb", bg: "#dbeafe", hours: "8–16" },
+  T: { label: "Tarde",   color: "#7c3aed", bg: "#ede9fe", hours: "12–20" },
+  N: { label: "Noche",   color: "#374151", bg: "#e5e7eb", hours: "20–4"  },
+  E: { label: "Extra",   color: "#ea580c", bg: "#ffedd5", hours: "+"     },
+  R: { label: "Remoto",  color: "#059669", bg: "#d1fae5", hours: "🏠"   },
+  L: { label: "Libre",   color: "#9b59b6", bg: "#ede9fe", hours: "✕"    },
+};
+
+let turnosWeekOffset = 0;
+
+function getTurnosWeek(offset) {
+  const now = new Date();
+  const dow = now.getDay() === 0 ? 6 : now.getDay() - 1; // Mon=0
+  const mon = new Date(now); mon.setDate(now.getDate() - dow + offset * 7);
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mon); d.setDate(mon.getDate() + i);
+    days.push(d.toISOString().slice(0, 10));
+  }
+  return days;
+}
+
+function getTurno(staffId, date) {
+  return turnos.find(t => t.staffId === staffId && t.date === date) || null;
+}
+
+function setTurno(staffId, staffName, date, shift) {
+  const idx = turnos.findIndex(t => t.staffId === staffId && t.date === date);
+  if (shift === '') {
+    if (idx >= 0) turnos.splice(idx, 1);
+  } else {
+    const entry = { id: `tn_${staffId}_${date}`, staffId, staffName, date, shift };
+    if (idx >= 0) turnos[idx] = entry; else turnos.push(entry);
+  }
+  save(KEY.turnos, turnos);
+  renderTurnos();
+}
+
+function renderTurnos() {
+  document.getElementById('toolbar').innerHTML = `
+    <button class="tbtn" onclick="turnosWeekOffset--;renderTurnos()">← Semana anterior</button>
+    <button class="tbtn primary" onclick="turnosWeekOffset=0;renderTurnos()">Esta semana</button>
+    <button class="tbtn" onclick="turnosWeekOffset++;renderTurnos()">Semana siguiente →</button>
+    <div style="margin-left:auto;font-size:11px;color:var(--ink3)">
+      ${Object.entries(SHIFT_TYPES).map(([k,v])=>`<span style="display:inline-flex;align-items:center;gap:4px;margin-left:12px"><span style="width:14px;height:14px;border-radius:3px;background:${v.bg};border:1px solid ${v.color};display:inline-block"></span><span style="color:${v.color};font-weight:500">${k}</span> ${v.label}</span>`).join('')}
+    </div>`;
+
+  const days = getTurnosWeek(turnosWeekOffset);
+  const DAY_NAMES = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const today = new Date().toISOString().slice(0,10);
+
+  const header = `<tr>
+    <th style="background:var(--sand);padding:8px 14px;font-size:11px;text-align:left;border-bottom:1px solid var(--border2);border-right:1px solid var(--border);font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);min-width:120px">Colaborador</th>
+    ${days.map((d,i)=>{
+      const isToday = d === today;
+      const [,mo,dy] = d.split('-');
+      return `<th style="background:${isToday?'#fef9f0':'var(--sand)'};padding:8px;font-size:11px;text-align:center;border-bottom:1px solid var(--border2);border-right:1px solid var(--border);font-weight:${isToday?600:400};color:${isToday?'var(--gold)':'var(--ink3)'};width:90px">
+        <div>${DAY_NAMES[i]}</div>
+        <div style="font-size:13px;font-weight:500;color:${isToday?'var(--gold)':'var(--ink)'}">${parseInt(dy)}</div>
+      </th>`;
+    }).join('')}
+    <th style="background:var(--sand);padding:8px;font-size:11px;text-align:center;border-bottom:1px solid var(--border2);font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Total</th>
+  </tr>`;
+
+  const rows = staff.map(s => {
+    const cells = days.map(d => {
+      const t = getTurno(s.id, d);
+      const sh = t?.shift || '';
+      const def = SHIFT_TYPES[sh];
+      return `<td style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:0;text-align:center;cursor:pointer;${d===today?'background:#fef9f0':''}" onclick="cycleTurno('${s.id}','${s.name}','${d}')">
+        ${sh ? `<span title="${def.label} (${def.hours})" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:6px;background:${def.bg};color:${def.color};font-size:13px;font-weight:600;margin:4px">${sh}</span>` : '<span style="display:inline-block;width:36px;height:36px;margin:4px;opacity:.25;font-size:18px;line-height:36px">·</span>'}
+      </td>`;
+    });
+    const worked = days.filter(d => { const t = getTurno(s.id, d); return t && t.shift !== 'L'; }).length;
+    return `<tr>
+      <td style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:8px 14px;font-size:12px">
+        <div style="font-weight:500;color:var(--ink)">${s.name}</div>
+        <div style="font-size:10px;color:var(--ink3);margin-top:1px">${s.team}</div>
+      </td>
+      ${cells.join('')}
+      <td style="border-bottom:1px solid var(--border);padding:8px;text-align:center;font-size:12px;font-weight:500;color:var(--ink2)">${worked}</td>
+    </tr>`;
+  }).join('');
+
+  const [weekStart, weekEnd] = [days[0], days[6]];
+  const fmtDate = d => { const [,m,dy] = d.split('-'); return `${parseInt(dy)} ${['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][parseInt(m)]}`; };
+
+  document.getElementById('content').innerHTML = `
+    <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <span style="font-size:14px;font-weight:500;color:var(--ink)">Semana ${fmtDate(weekStart)} – ${fmtDate(weekEnd)}</span>
+        ${turnosWeekOffset===0?'<span style="margin-left:8px;font-size:11px;background:var(--gold3);color:var(--gold);padding:2px 7px;border-radius:3px">Esta semana</span>':''}
+      </div>
+      <div style="font-size:11px;color:var(--ink3)">Haz clic en una celda para asignar turno</div>
+    </div>
+    <div style="overflow-x:auto;border:1px solid var(--border);background:var(--white);border-radius:2px">
+      <table style="width:100%;border-collapse:collapse;min-width:720px">
+        <thead>${header}</thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function cycleTurno(staffId, staffName, date) {
+  const order = ['', 'M', 'T', 'N', 'E', 'R', 'L'];
+  const cur = getTurno(staffId, date)?.shift || '';
+  const next = order[(order.indexOf(cur) + 1) % order.length];
+  setTurno(staffId, staffName, date, next);
+}
+
 // ── INIT ────────────────────────────────────────────────────
 // Seed demo data if completely empty
 if (!candidates.length && !projects.length) {
@@ -1234,6 +1348,10 @@ if (!candidates.length && !projects.length) {
   save(KEY.projects, projects);
 }
 
+const _initTab = new URLSearchParams(location.search).get('tab');
+if (_initTab && ["hiring","projects","attendance","cultura","staff","turnos"].includes(_initTab)) {
+  currentTab = _initTab;
+}
 render();
 </script>
 </body>
