@@ -55,11 +55,22 @@ export default async function handler(req, res) {
 
       // QB requires ItemRef on every SalesItemLineDetail.
       // Find or create a QB Item for each unique qbCode, then cache the Id.
+      // QB fetch with retry on 429 ThrottleExceeded (exponential backoff)
+      async function qbFetch(url, opts = {}, retries = 3) {
+        for (let attempt = 0; attempt <= retries; attempt++) {
+          const r = await fetch(url, opts);
+          if (r.status !== 429) return r;
+          if (attempt === retries) return r;
+          await new Promise(res => setTimeout(res, 500 * Math.pow(2, attempt)));
+        }
+      }
+
       const itemRefCache = {};
+      let incomeAcctIdCache = null;
       async function resolveItemRef(qbCode) {
         if (itemRefCache[qbCode]) return itemRefCache[qbCode];
         // Search by name
-        const sq = await fetch(
+        const sq = await qbFetch(
           `${QB_BASE}/${realm_id}/query?query=${encodeURIComponent(`SELECT * FROM Item WHERE Name = '${qbCode.replace(/'/g,"\\'")}'`)}&minorversion=65`,
           { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
         );
@@ -67,17 +78,19 @@ export default async function handler(req, res) {
         let itemId = sj?.QueryResponse?.Item?.[0]?.Id;
         // Create if not found
         if (!itemId) {
-          // Need an IncomeAccountRef — query for first Income account
-          const aq = await fetch(
-            `${QB_BASE}/${realm_id}/query?query=${encodeURIComponent("SELECT * FROM Account WHERE AccountType = 'Income' MAXRESULTS 1")}&minorversion=65`,
-            { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
-          );
-          const aj = await aq.json();
-          const incomeAcctId = aj?.QueryResponse?.Account?.[0]?.Id || "1";
-          const cr = await fetch(`${QB_BASE}/${realm_id}/item?minorversion=65`, {
+          // Query Income account once and cache
+          if (!incomeAcctIdCache) {
+            const aq = await qbFetch(
+              `${QB_BASE}/${realm_id}/query?query=${encodeURIComponent("SELECT * FROM Account WHERE AccountType = 'Income' MAXRESULTS 1")}&minorversion=65`,
+              { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
+            );
+            const aj = await aq.json();
+            incomeAcctIdCache = aj?.QueryResponse?.Account?.[0]?.Id || "1";
+          }
+          const cr = await qbFetch(`${QB_BASE}/${realm_id}/item?minorversion=65`, {
             method: "POST",
             headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "Content-Type": "application/json" },
-            body: JSON.stringify({ Name: qbCode, Type: "Service", IncomeAccountRef: { value: incomeAcctId } }),
+            body: JSON.stringify({ Name: qbCode, Type: "Service", IncomeAccountRef: { value: incomeAcctIdCache } }),
           });
           const cj = await cr.json();
           itemId = cj?.Item?.Id;
@@ -87,10 +100,12 @@ export default async function handler(req, res) {
         return itemRefCache[qbCode];
       }
 
-      // Build line items — resolve ItemRef for each
-      const linePromises = items.map(async (it, i) => {
+      // Build line items — resolve ItemRef sequentially to avoid QB rate limiting
+      const Line = [];
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
         const itemRef = await resolveItemRef(it.qbCode);
-        return {
+        Line.push({
           LineNum:     i + 1,
           Amount:      parseFloat(it.unitPrice || 0) * parseFloat(it.qty || 1),
           DetailType:  "SalesItemLineDetail",
@@ -100,9 +115,8 @@ export default async function handler(req, res) {
             Qty:       parseFloat(it.qty || 1),
             UnitPrice: parseFloat(it.unitPrice || 0),
           },
-        };
-      });
-      const Line = await Promise.all(linePromises);
+        });
+      }
 
       // Find or create customer by name
       const searchRes = await fetch(
