@@ -447,8 +447,6 @@ export default function TareasPanel({ currentUser, onLogout }) {
   const [filterQ, setFilterQ]             = useState("");
   const [showDone, setShowDone]       = useState(false);
   const [showHistorico, setShowHistorico] = useState(false);
-  const searchRef = useRef();
-
   const myName  = currentUser?.name  || "";
   const myEmail = currentUser?.email || "";
 
@@ -556,7 +554,6 @@ export default function TareasPanel({ currentUser, onLogout }) {
 
   function resetFiltros() {
     setFilterCliente(""); setFilterResp(""); setFilterQ(""); setScope("all");
-    if (searchRef.current) searchRef.current.value = "";
   }
 
   const inp = { padding:"7px 10px", border:"1px solid #e5ddd3", borderRadius:8, fontSize:13, background:"#fff" };
@@ -663,7 +660,7 @@ export default function TareasPanel({ currentUser, onLogout }) {
         </div>
         <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
           <div style={{ display:"flex", gap:4, flex:2, minWidth:160 }}>
-            <input ref={searchRef} style={{...inp, flex:1}} placeholder="🔍 Buscar..." onChange={e=>setFilterQ(e.target.value)} />
+            <input value={filterQ} style={{...inp, flex:1}} placeholder="🔍 Buscar..." onChange={e=>setFilterQ(e.target.value)} />
             {(filterCliente||filterResp||filterQ||scope!=="all") && (
               <button onClick={resetFiltros} style={{...inp, cursor:"pointer", padding:"7px 10px"}} title="Limpiar filtros">✕</button>
             )}

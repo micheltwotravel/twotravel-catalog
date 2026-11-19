@@ -120,7 +120,7 @@
 
   /* ── Primary button ── */
   .tt-btn-primary {
-    padding: 5px 13px;
+    padding: 10px 16px;
     font-size: 12px;
     font-weight: 500;
     background: #111;
@@ -134,7 +134,7 @@
 
   /* ── Ghost button ── */
   .tt-btn-ghost {
-    padding: 5px 13px;
+    padding: 10px 16px;
     font-size: 12px;
     font-weight: 500;
     background: transparent;
