@@ -1323,9 +1323,11 @@ export function FinanceReservaciones({ currentUser }) {
   const totalComm    = confirmed.reduce((s,i)=>s+(parseFloat(rows[i].totalCommission)||0),0);
 
   const thStyle = (col) => ({
-    padding:"9px 10px", textAlign:"left", fontWeight:600, color:DARK, whiteSpace:"nowrap",
+    padding:"10px 12px", textAlign:"left", fontWeight:600, color: sortCol===col ? "#2563eb" : "#64748b", whiteSpace:"nowrap",
     fontSize:11, cursor:"pointer", userSelect:"none", position:"sticky", top:0, zIndex:1,
-    background: sortCol===col ? "#e8e0d4" : BG, borderBottom:`1px solid ${BRD}`,
+    background: sortCol===col ? "#eff6ff" : "#f8fafc",
+    borderBottom:`2px solid ${sortCol===col ? "#bfdbfe" : "#e2e8f0"}`,
+    transition:"color .15s,background .15s",
   });
   const sortBy = (col) => { if(sortCol===col) setSortDir(d=>-d); else { setSortCol(col); setSortDir(1); } };
 
@@ -1506,13 +1508,13 @@ export function FinanceReservaciones({ currentUser }) {
           {/* KPIs */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
             <KPICard label="Confirmadas" val={confirmed.length} color="#065f46" />
-            <KPICard label="Precio Cliente COP" val={`$${Math.round(totalRev).toLocaleString("es-CO")}`} color={GOLD} />
+            <KPICard label="Precio Cliente COP" val={`$${Math.round(totalRev).toLocaleString("es-CO")}`} color="#2563eb" />
             <KPICard label="Ganancia Bruta" val={`$${Math.round(totalGP).toLocaleString("es-CO")}`} color="#059669" />
             <KPICard label="Comisiones" val={`$${Math.round(totalComm).toLocaleString("es-CO")}`} color="#1d4ed8" />
           </div>
 
           {/* Table */}
-          <div style={{background:WHT,border:`1px solid ${BRD}`,borderRadius:12,overflow:"hidden"}}>
+          <div style={{background:WHT,border:`1px solid #e2e8f0`,borderRadius:16,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,.06)"}}>
             {loading ? <Spinner/> : sorted.length===0 ? <Empty text="Sin resultados." /> : (
               <div style={{overflowX:"auto",maxHeight:"70vh",overflowY:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
@@ -1531,19 +1533,25 @@ export function FinanceReservaciones({ currentUser }) {
                       <Fragment key={mk||"nodate"}>
                         {mk && (
                           <tr>
-                            <td colSpan={ALL_COLS.length+1} style={{padding:0,paddingTop:8}}>
+                            <td colSpan={ALL_COLS.length+1} style={{padding:"12px 0 0 0"}}>
                               <div style={{
-                                display:"flex",alignItems:"center",gap:12,
-                                padding:"8px 14px",margin:"0 0 2px 0",
-                                background:GOLD,borderRadius:"8px 8px 0 0",
+                                display:"flex",alignItems:"center",gap:16,
+                                padding:"10px 16px",
+                                background:"#0f172a",
                               }}>
-                                <span style={{fontSize:12,fontWeight:700,color:WHT,letterSpacing:.3}}>
+                                <span style={{fontSize:13,fontWeight:700,color:"#f1f5f9",letterSpacing:.2}}>
                                   {monthLabel(mk)}
                                 </span>
-                                <span style={{fontSize:11,color:"rgba(255,255,255,.75)"}}>
-                                  {idxs.length} servicios · {idxs.filter(i=>(rows[i].servicesStatus||rows[i].status)==="Confirmed").length} confirmados
+                                <span style={{fontSize:11,color:"#94a3b8",fontWeight:500}}>
+                                  {idxs.length} servicios
                                 </span>
-                                <span style={{marginLeft:"auto",fontSize:11,color:"rgba(255,255,255,.85)",fontWeight:600}}>
+                                <span style={{
+                                  fontSize:10,fontWeight:600,color:"#4ade80",background:"rgba(74,222,128,.12)",
+                                  border:"1px solid rgba(74,222,128,.2)",padding:"2px 8px",borderRadius:20,
+                                }}>
+                                  {idxs.filter(i=>(rows[i].servicesStatus||rows[i].status)==="Confirmed").length} conf
+                                </span>
+                                <span style={{marginLeft:"auto",fontSize:12,color:"#e2e8f0",fontWeight:700,fontVariantNumeric:"tabular-nums"}}>
                                   ${Math.round(idxs.filter(i=>(rows[i].servicesStatus||rows[i].status)==="Confirmed")
                                     .reduce((s,i)=>s+(parseFloat(rows[i].precioCOP)||0),0)).toLocaleString("es-CO")}
                                 </span>
@@ -1563,8 +1571,8 @@ export function FinanceReservaciones({ currentUser }) {
                             : (parseFloat(r.totalCommission)||0);
                           const computed = { gananciaBruta: gb||"", margen: mg||"", totalCommission: tc||"" };
                           return (
-                          <tr key={rowIdx} style={{borderBottom:`1px solid rgba(26,24,20,.04)`,
-                            background:isHS?"#fffbeb":isNew?"#eff6ff":vi%2===0?"transparent":"rgba(247,244,239,.35)"}}>
+                          <tr key={rowIdx} style={{borderBottom:`1px solid #f1f5f9`,
+                            background:isHS?"#fffbeb":isNew?"#eff6ff":"#ffffff"}}>
                             {ALL_COLS.map(c=>{
                               const val = c.readOnly ? computed[c.key] : r[c.key];
                               return (
@@ -1636,17 +1644,17 @@ export function FinanceReservaciones({ currentUser }) {
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr style={{background:BG,borderTop:`2px solid ${BRD}`,position:"sticky",bottom:0}}>
-                      <td colSpan={12} style={{padding:"9px 10px",color:MUT,fontSize:11,fontWeight:600}}>
+                    <tr style={{background:"#f8fafc",borderTop:`2px solid #e2e8f0`,position:"sticky",bottom:0}}>
+                      <td colSpan={12} style={{padding:"10px 12px",color:"#64748b",fontSize:11,fontWeight:600,letterSpacing:".04em"}}>
                         TOTALES — {confirmed.length} confirmadas de {sorted.length} visibles
                       </td>
-                      <td style={{padding:"9px 10px",color:DARK,textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontSize:11}}>
+                      <td style={{padding:"10px 12px",color:"#1e293b",textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontSize:12}}>
                         ${Math.round(totalRev).toLocaleString("es-CO")}
                       </td>
-                      <td style={{padding:"9px 10px",color:"#6b7280",textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontSize:11}}>
+                      <td style={{padding:"10px 12px",color:"#64748b",textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontSize:12}}>
                         ${Math.round(totalProv).toLocaleString("es-CO")}
                       </td>
-                      <td style={{padding:"9px 10px",color:"#059669",textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontSize:11}}>
+                      <td style={{padding:"10px 12px",color:"#059669",textAlign:"right",fontWeight:700,fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",fontSize:12}}>
                         ${Math.round(totalGP).toLocaleString("es-CO")}
                       </td>
                       <td colSpan={9}/>
