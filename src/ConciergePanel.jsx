@@ -10780,8 +10780,8 @@ const loadKickoffs = async (forceRefresh = false) => {
                         if (!withFlights.length) return <span style={{color:"var(--text-3)",fontStyle:"italic",fontSize:11}}>—</span>;
                         const text = withFlights.map(r => {
                           const name = [r.firstName, r.lastName].filter(Boolean).join(" ") || r.name || "?";
-                          const arr = [r.arrivalFlight, r.arrivalDate].filter(Boolean).join(" ");
-                          const dep = [r.departureFlight, r.departureDate].filter(Boolean).join(" ");
+                          const arr = [r.arrivalFlight, r.arrivalDate, r.arrivalTime].filter(Boolean).join(" ");
+                          const dep = [r.departureFlight, r.departureDate, r.departureTime].filter(Boolean).join(" ");
                           return `${name}\n  ✈️↓ ${arr || "—"}\n  ✈️↑ ${dep || "—"}`;
                         }).join("\n\n");
                         return (
