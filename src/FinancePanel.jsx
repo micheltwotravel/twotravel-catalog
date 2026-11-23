@@ -1178,8 +1178,8 @@ export function FinanceReservaciones({ currentUser }) {
   const [dateFrom,   setDateFrom]   = useState("");
   const [dateTo,     setDateTo]     = useState("");
   const [slackOnly,  setSlackOnly]  = useState(false);
-  const [sortCol,    setSortCol]    = useState("fecha");
-  const [sortDir,    setSortDir]    = useState(1);
+  const [sortCol,    setSortCol]    = useState("createdAt");
+  const [sortDir,    setSortDir]    = useState(-1);
   const [ownerNames, setOwnerNames] = useState({});
   const [syncing,    setSyncing]    = useState(false);
   const [syncMsg,    setSyncMsg]    = useState("");
