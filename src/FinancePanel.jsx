@@ -1339,7 +1339,7 @@ export function FinanceReservaciones({ currentUser }) {
   };
   const resolveSalesRep = v => (v && ownerNames[String(v)]) ? ownerNames[String(v)] : (v||"—");
 
-  const months = ["all",...[...new Set(rows.map(r=>(r.fecha||r.checkIn)?.slice(0,7)).filter(Boolean))].sort().reverse()];
+  const months = ["all",...[...new Set(rows.map(r=>(sortCol==="createdAt"?(r.createdAt||""):(r.fecha||r.checkIn||"")).slice(0,7)).filter(Boolean))].sort().reverse()];
 
   // Monday.com group-separator rows — no real client data
   const isSeparator = r => /reservations?\s*[\/]\s*sales|two travel\s*:/i.test(r.name||"") && !r.fecha && !r.precioCOP;
@@ -1359,7 +1359,8 @@ export function FinanceReservaciones({ currentUser }) {
     const src = r.dealSource||"";
     if (sourceF!=="all" && src!==sourceF) return acc;
     const fecha = r.fecha||r.checkIn||"";
-    if (monthF!=="all"  && fecha?.slice(0,7)!==monthF) return acc;
+    const filterMonth = sortCol==="createdAt" ? (r.createdAt||"").slice(0,7) : fecha?.slice(0,7);
+    if (monthF!=="all"  && filterMonth!==monthF) return acc;
     if (dateFrom && fecha && fecha < dateFrom) return acc;
     if (dateTo   && fecha && fecha > dateTo)   return acc;
     if (search) {
@@ -1540,7 +1541,7 @@ export function FinanceReservaciones({ currentUser }) {
         </select>
         <select value={monthF} onChange={e=>setMonthF(e.target.value)}
           style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:130}}>
-          <option value="all">Mes</option>
+          <option value="all">{sortCol==="createdAt"?"Mes (Slack)":"Mes llegada"}</option>
           {months.filter(m=>m!=="all").map(m=><option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
         <button onClick={()=>setMonthF(monthF===prevMonthYM?"all":prevMonthYM)}
