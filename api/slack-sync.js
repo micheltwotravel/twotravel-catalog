@@ -64,7 +64,26 @@ function parseDate(str) {
 function parseDateRange(str) {
   if (!str) return { start:"", end:"" };
   const parts = str.split(/\s*[-–]\s*/);
-  if (parts.length >= 2) return { start: parseDate(parts[0].trim()), end: parseDate(parts[parts.length-1].trim()) };
+  if (parts.length >= 2) {
+    let s = parseDate(parts[0].trim());
+    let e = parseDate(parts[parts.length-1].trim());
+    // Handle "Sept 12 - 14, 2025": start has month but no year, end has day+year but no month
+    if (!/^\d{4}-/.test(s) && /^\d{4}-/.test(e)) {
+      const monthMatch = parts[0].trim().match(/^([A-Za-z]+)\s+(\d{1,2})$/);
+      const yearMatch  = parts[parts.length-1].trim().match(/^(\d{1,2}),?\s+(\d{4})$/);
+      if (monthMatch && yearMatch) {
+        const months = {jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",
+                       jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"};
+        const mo = months[monthMatch[1].slice(0,3).toLowerCase()];
+        if (mo) {
+          const yr = yearMatch[2];
+          s = `${yr}-${mo}-${monthMatch[2].padStart(2,"0")}`;
+          e = `${yr}-${mo}-${yearMatch[1].padStart(2,"0")}`;
+        }
+      }
+    }
+    return { start: s, end: e };
+  }
   return { start: parseDate(str), end: "" };
 }
 
@@ -139,8 +158,8 @@ function parseMessage(text) {
   if (fields.clientTotalUSD) fields.clientTotalUSD = parseMoney(fields.clientTotalUSD);
   if (fields.precioProveedor)fields.precioProveedor= parseMoney(fields.precioProveedor);
 
-  // Need at least a name + date to be a valid reservation (rejects general chat messages)
-  if (!fields.name || !fields.fecha) return null;
+  // Require name + a properly parsed YYYY-MM-DD date (rejects chat noise with partial/unparseable dates)
+  if (!fields.name || !/^\d{4}-\d{2}-\d{2}$/.test(fields.fecha)) return null;
   return {
     name:              fields.name || "",
     fecha:             fields.fecha || "",
@@ -163,10 +182,13 @@ function parseMessage(text) {
 async function fetchHistory() {
   const all = [];
   let cursor;
+  // Only fetch last 180 days — the channel has years of history we don't want
+  const oldest = String((Date.now() - 180 * 24 * 60 * 60 * 1000) / 1000);
   while (true) {
     const url = new URL("https://slack.com/api/conversations.history");
     url.searchParams.set("channel", CHANNEL_ID);
     url.searchParams.set("limit", "200");
+    url.searchParams.set("oldest", oldest);
     if (cursor) url.searchParams.set("cursor", cursor);
 
     const r = await fetch(url.toString(), {
