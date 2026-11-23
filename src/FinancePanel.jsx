@@ -1181,6 +1181,12 @@ export function FinanceReservaciones({ currentUser }) {
   const [sortCol,    setSortCol]    = useState("fecha");
   const [sortDir,    setSortDir]    = useState(-1);
   const [ownerNames, setOwnerNames] = useState({});
+  const [syncing,    setSyncing]    = useState(false);
+  const [syncMsg,    setSyncMsg]    = useState("");
+  const [qbStatus,   setQbStatus]   = useState(null); // null=unchecked, true=connected, false=not
+  const [qbRows,     setQbRows]     = useState({}); // rowIdx → "loading"|"ok:N"|"err:msg"
+  const [providerF,  setProviderF]  = useState("all");
+  const [sourceF,    setSourceF]    = useState("all");
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
 
@@ -1213,6 +1219,58 @@ export function FinanceReservaciones({ currentUser }) {
     window.addEventListener("beforeunload", handler);
     return ()=>window.removeEventListener("beforeunload", handler);
   },[isDirty]);
+
+  // Check QB connection status on mount
+  useEffect(()=>{
+    fetch("/api/quickbooks", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ action:"status" }) })
+      .then(r=>r.json())
+      .then(d=>setQbStatus(d.connected===true))
+      .catch(()=>setQbStatus(false));
+  },[]);
+
+  const syncSlack = async () => {
+    if (isDirty && !confirm("Hay cambios sin guardar. ¿Continuar y perderlos?")) return;
+    setSyncing(true); setSyncMsg(""); setErr("");
+    try {
+      const r = await fetch("/api/slack-sync");
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error||"Sync falló");
+      setSyncMsg(`✓ ${d.count} reservas (${d.added} nuevas de Slack; ${d.skipped} ya existían; ${d.unparsed} sin parsear)`);
+      await load();
+      setTimeout(()=>setSyncMsg(""), 6000);
+    } catch(e) { setErr("Sync error: "+e.message); }
+    setSyncing(false);
+  };
+
+  const clearAll = () => {
+    if (!confirm(`¿Borrar las ${rows.length} reservas? Esto no se puede deshacer hasta que sincronices de nuevo.`)) return;
+    setRows([]); setIsDirty(true);
+  };
+
+  const createQbEstimate = async (rowIdx, r) => {
+    setQbRows(p=>({...p,[rowIdx]:"loading"}));
+    try {
+      const items = [{
+        description: [r.serviceDescription, r.provider, r.city].filter(Boolean).join(" — "),
+        qty: parseFloat(r.qty)||1,
+        unitPrice: parseFloat(r.clientTotalUSD||r.precioCOP)||0,
+        qbCode: r.serviceCategory||"Concierge Service",
+      }];
+      const res = await fetch("/api/quickbooks", { method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ action:"create_estimate", customerName:r.name||"Cliente",
+          customerEmail:r.guestEmail||"", items, currency:r.currency||"USD",
+          memo:`Check-in: ${r.fecha||"—"} · Rep: ${r.conciergeRep||"—"}` }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error||"QB error");
+      setQbRows(p=>({...p,[rowIdx]:`ok:${d.estimateNum||d.estimateId}`}));
+      window.open(d.qbUrl,"_blank");
+    } catch(e) {
+      setQbRows(p=>({...p,[rowIdx]:`err:${e.message.slice(0,60)}`}));
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true); setErr("");
@@ -1266,8 +1324,11 @@ export function FinanceReservaciones({ currentUser }) {
     } catch(e) { setErr("Error confirmando: "+e.message); setIsDirty(true); }
   }, []);
 
-  const repOpts  = [...new Set(rows.map(r=>r.conciergeRep||r.salesRep).filter(Boolean))].sort();
-  const typeOpts = [...new Set([...AREA_TYPE_OPTS, ...rows.map(r=>r.areaCustomerType||r.type).filter(Boolean)])].filter(Boolean).sort();
+  const repOpts      = [...new Set(rows.map(r=>r.conciergeRep||r.salesRep).filter(Boolean))].sort();
+  const typeOpts     = [...new Set([...AREA_TYPE_OPTS, ...rows.map(r=>r.areaCustomerType||r.type).filter(Boolean)])].filter(Boolean).sort();
+  const providerOpts = [...new Set(rows.map(r=>r.provider||r.property).filter(Boolean))].sort();
+  const sourceOpts   = [...new Set(rows.map(r=>r.dealSource).filter(Boolean))].sort();
+  const prevMonthYM  = (() => { const d=new Date(); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); })();
   const cellOpts = {
     conciergeRep: repOpts,
     areaCustomerType: AREA_TYPE_OPTS.filter(Boolean),
@@ -1293,6 +1354,10 @@ export function FinanceReservaciones({ currentUser }) {
     if (typeF!=="all"   && tp!==typeF)   return acc;
     const rep = r.conciergeRep||r.salesRep||"";
     if (repF!=="all"    && rep!==repF)   return acc;
+    const prov = r.provider||r.property||"";
+    if (providerF!=="all" && prov!==providerF) return acc;
+    const src = r.dealSource||"";
+    if (sourceF!=="all" && src!==sourceF) return acc;
     const fecha = r.fecha||r.checkIn||"";
     if (monthF!=="all"  && fecha?.slice(0,7)!==monthF) return acc;
     if (dateFrom && fecha && fecha < dateFrom) return acc;
@@ -1434,25 +1499,23 @@ export function FinanceReservaciones({ currentUser }) {
             + Nueva fila
           </button>
         )}
-        <button onClick={()=>{
-          setSlackOnly(s=>!s);
-          setDateFrom(""); setDateTo("");
-          setMonthF("all"); setStatusF("all"); setTypeF("all"); setRepF("all"); setSearch("");
-          setView("tabla");
-        }}
+        <button onClick={syncSlack} disabled={syncing}
+          title="Sincronizar reservas desde el canal de Slack #reservaciones-tt"
           style={{padding:"7px 12px",fontSize:12,fontWeight:600,whiteSpace:"nowrap",
-            background:slackOnly?"#1d4ed8":"#eff6ff",
-            color:slackOnly?"#fff":"#1d4ed8",
-            border:"1px solid #93c5fd",borderRadius:8,cursor:"pointer"}}>
-          🆕 Slack {slackOnly?"✓":""}
+            background:syncing?"#e0f2fe":"#0ea5e9",color:"#fff",
+            border:"none",borderRadius:8,cursor:syncing?"not-allowed":"pointer"}}>
+          {syncing?"⏳ Sincronizando…":"🔁 Sync Slack"}
         </button>
-        <button onClick={()=>{ if(sortCol==="createdAt"){ setSortCol("fecha"); setSortDir(-1); } else { setSortCol("createdAt"); setSortDir(-1); } }}
+        <button onClick={clearAll} disabled={rows.length===0}
+          title="Borrar todas las reservas del board"
           style={{padding:"7px 12px",fontSize:12,fontWeight:600,whiteSpace:"nowrap",
-            background:sortCol==="createdAt"?"#eff6ff":"transparent",
-            color:sortCol==="createdAt"?"#2563eb":"#6b7280",
-            border:`1px solid ${sortCol==="createdAt"?"#93c5fd":"#d1d5db"}`,borderRadius:8,cursor:"pointer"}}>
-          {sortCol==="createdAt"?"🕐 Recientes primero":"📅 Por fecha entrada"}
+            background:"#fee2e2",color:"#dc2626",
+            border:"1px solid #fca5a5",borderRadius:8,cursor:rows.length===0?"not-allowed":"pointer"}}>
+          🗑 Limpiar todo
         </button>
+        {syncMsg && <span style={{fontSize:12,color:"#059669",fontWeight:600}}>{syncMsg}</span>}
+        {qbStatus===false && <span style={{fontSize:11,color:"#f59e0b"}}>⚠ QB no conectado — <a href="/api/qb-oauth" target="_blank" style={{color:"#d97706"}}>Conectar</a></span>}
+        {qbStatus===true  && <span style={{fontSize:11,color:"#059669"}}>✓ QB Online</span>}
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar…"
           style={{...INP,width:150,padding:"7px 12px",fontSize:12}} />
         <div style={{display:"flex",background:BG,border:`1px solid ${BRD}`,borderRadius:8,overflow:"hidden"}}>
@@ -1480,6 +1543,23 @@ export function FinanceReservaciones({ currentUser }) {
           <option value="all">Mes</option>
           {months.filter(m=>m!=="all").map(m=><option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
+        <button onClick={()=>setMonthF(monthF===prevMonthYM?"all":prevMonthYM)}
+          style={{padding:"7px 10px",fontSize:11,fontWeight:600,whiteSpace:"nowrap",
+            background:monthF===prevMonthYM?"#7c3aed":"transparent",
+            color:monthF===prevMonthYM?"#fff":"#7c3aed",
+            border:"1px solid #c4b5fd",borderRadius:8,cursor:"pointer"}}>
+          {monthF===prevMonthYM?"✓ Mes pasado":"Mes pasado"}
+        </button>
+        <select value={providerF} onChange={e=>setProviderF(e.target.value)}
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:150}}>
+          <option value="all">🏠 Propiedad</option>
+          {providerOpts.map(p=><option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={sourceF} onChange={e=>setSourceF(e.target.value)}
+          style={{...INP,width:"auto",padding:"7px 10px",fontSize:12,minWidth:130}}>
+          <option value="all">📣 Deal Source</option>
+          {sourceOpts.map(s=><option key={s} value={s}>{s}</option>)}
+        </select>
         <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:MUT,whiteSpace:"nowrap"}}>
           <span>De</span>
           <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
@@ -1490,8 +1570,8 @@ export function FinanceReservaciones({ currentUser }) {
           {(dateFrom||dateTo)&&<button onClick={()=>{setDateFrom("");setDateTo("");}}
             style={{background:"none",border:"none",color:MUT,cursor:"pointer",fontSize:13,padding:"0 2px"}}>✕</button>}
         </div>
-        {(search||statusF!=="all"||typeF!=="all"||repF!=="all"||monthF!=="all"||dateFrom||dateTo) && (
-          <button onClick={()=>{setSearch("");setStatusF("all");setTypeF("all");setRepF("all");setMonthF("all");setDateFrom("");setDateTo("");setSlackOnly(false);}}
+        {(search||statusF!=="all"||typeF!=="all"||repF!=="all"||monthF!=="all"||dateFrom||dateTo||providerF!=="all"||sourceF!=="all") && (
+          <button onClick={()=>{setSearch("");setStatusF("all");setTypeF("all");setRepF("all");setMonthF("all");setDateFrom("");setDateTo("");setSlackOnly(false);setProviderF("all");setSourceF("all");}}
             style={{padding:"6px 12px",fontSize:11,background:"transparent",color:MUT,
               border:`1px solid ${BRD}`,borderRadius:6,cursor:"pointer",whiteSpace:"nowrap"}}>
             Limpiar filtros
@@ -1611,26 +1691,25 @@ export function FinanceReservaciones({ currentUser }) {
                                     marginBottom:4,display:"block",width:"100%",whiteSpace:"nowrap"}}
                                   title="Confirmar esta reservación de HubSpot">✓ OK</button>
                               )}
-                              <button onClick={()=>{
-                                const lines=[
-                                  `Customer: ${r.name||""}`,
-                                  `Check In: ${r.fecha||""}`,
-                                  r.checkOut?`Check Out: ${r.checkOut}`:"",
-                                  r.city?`City: ${r.city}`:"",
-                                  r.serviceDescription?`Item: ${r.serviceDescription}`:"",
-                                  r.provider?`Provider: ${r.provider}`:"",
-                                  r.clientTotalUSD?`Amount: $${r.clientTotalUSD} USD`:"",
-                                  r.qty?`Pax: ${r.qty}`:"",
-                                  r.conciergeRep?`Rep: ${r.conciergeRep}`:"",
-                                  r.dealSource?`Source: ${r.dealSource}`:"",
-                                ].filter(Boolean).join("\n");
-                                navigator.clipboard?.writeText(lines).catch(()=>{});
-                                window.open("https://app.qbo.intuit.com/app/estimate?action=create","_blank");
-                              }}
-                                style={{background:"#eff6ff",border:"1px solid #93c5fd",color:"#1d4ed8",
-                                  cursor:"pointer",fontSize:11,padding:"3px 7px",borderRadius:6,fontWeight:700,
-                                  marginBottom:4,display:"block",width:"100%",whiteSpace:"nowrap"}}
-                                title="Crear estimado en QuickBooks (copia datos al clipboard)">→ QB</button>
+                              {qbRows[rowIdx]==="loading" ? (
+                                <span style={{fontSize:10,color:"#2563eb",display:"block",marginBottom:4}}>⏳ QB…</span>
+                              ) : qbRows[rowIdx]?.startsWith("ok:") ? (
+                                <span style={{fontSize:10,color:"#059669",fontWeight:700,display:"block",marginBottom:4}}>✓ Est.{qbRows[rowIdx].slice(3)}</span>
+                              ) : (
+                                <button
+                                  onClick={()=> qbStatus ? createQbEstimate(rowIdx,r) : window.open("/api/qb-oauth","_blank")}
+                                  style={{background: qbStatus?"#eff6ff":"#fef3c7",
+                                    border:`1px solid ${qbStatus?"#93c5fd":"#fcd34d"}`,
+                                    color: qbStatus?"#1d4ed8":"#92400e",
+                                    cursor:"pointer",fontSize:11,padding:"3px 7px",borderRadius:6,fontWeight:700,
+                                    marginBottom:4,display:"block",width:"100%",whiteSpace:"nowrap"}}
+                                  title={qbStatus?"Crear estimado en QuickBooks vía API":"QB no conectado — clic para conectar"}>
+                                  {qbStatus===false?"⚠ QB":"→ QB"}
+                                </button>
+                              )}
+                              {qbRows[rowIdx]?.startsWith("err:") && (
+                                <span style={{fontSize:9,color:"#dc2626",display:"block",marginBottom:4,maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={qbRows[rowIdx].slice(4)}>⚠ {qbRows[rowIdx].slice(4)}</span>
+                              )}
                               <button onClick={()=>deleteRow(rowIdx)}
                                 style={{background:"#fee2e2",border:"1px solid #fca5a5",color:"#dc2626",
                                   cursor:"pointer",fontSize:12,lineHeight:1,padding:"3px 7px",
