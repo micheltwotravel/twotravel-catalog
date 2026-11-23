@@ -2819,70 +2819,53 @@ function SeatingTab({ boda, onPatch }) {
 }
 
 // ─── DOCUMENTOS TAB ──────────────────────────────────────────────────────────
-const WEDDING_FINANCE_ID    = "1t8tCGnr9OdX2Q1EToO3UxME9QobAqeH-VPNAQLcQlLA";
-const FINANCE_CLIENTE_ID    = "1WkCLeAiit5Q-fdn-bDDpvgrVX5OS2MrZ_MHeObaMkfY";
-const MONDAY_FORM_URL       = "https://forms.monday.com/forms/99c0b5a10e920b746a5299a20243e274?r=use1";
+const MONDAY_FORM_URL = "https://forms.monday.com/forms/99c0b5a10e920b746a5299a20243e274?r=use1";
+
+const DOC_DEFS = [
+  { id:"wedding_finance",   icon:"📊", label:"Wedding Finance Internal", desc:"Presupuesto, proveedores, P&L y comisiones", gasAction:"createWeddingFinanceSheet" },
+  { id:"finance_cliente",   icon:"💰", label:"Finance de Cliente",        desc:"Hoja de finanzas del cliente con pagos y estimados",   gasAction:"createFinanceClienteSheet" },
+  { id:"solicitud_facturas",icon:"📋", label:"Solicitud de Facturas",     desc:"Formulario Monday.com para solicitar facturas",        link: MONDAY_FORM_URL },
+];
 
 function DocumentosTab({ boda, onPatch }) {
-  const [docs, setDocs] = useState(boda.documents || []);
-  const [adding, setAdding] = useState(null);
-  const [urlInput, setUrlInput] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [docs, setDocs]     = useState(boda.documents || []);
+  const [loading, setLoading] = useState({});
+  const [err, setErr]       = useState({});
 
-  const encName = encodeURIComponent(boda.clienteName || "Cliente");
-  const DOC_TYPES = [
-    {
-      id: "wedding_finance",
-      label: "Wedding Finance Internal",
-      desc: "Presupuesto, seguimiento de proveedores, Profit & Loss y comisiones",
-      icon: "📊",
-      createUrl: `https://docs.google.com/spreadsheets/d/${WEDDING_FINANCE_ID}/copy?title=${encodeURIComponent("Wedding Finance - " + (boda.clienteName||"Cliente"))}`,
-    },
-    {
-      id: "finance_cliente",
-      label: "Finance de Cliente",
-      desc: "Hoja de finanzas del cliente con pagos y estimados",
-      icon: "💰",
-      createUrl: `https://docs.google.com/spreadsheets/d/${FINANCE_CLIENTE_ID}/copy?title=${encodeURIComponent("Finance Cliente - " + (boda.clienteName||"Cliente"))}`,
-    },
-    {
-      id: "solicitud_facturas",
-      label: "Solicitud de Facturas",
-      desc: "Formulario Monday.com para solicitar facturas a proveedores",
-      icon: "📋",
-      createUrl: MONDAY_FORM_URL,
-      noSave: true,
-    },
-  ];
-
-  async function saveDoc(typeId, url) {
-    if (!url.trim()) return;
-    setSaving(true);
-    try {
-      const existing = docs.filter(d => d.type !== typeId);
-      const updated = [...existing, { type: typeId, url: url.trim(), createdAt: new Date().toISOString() }];
-      setDocs(updated);
-      await apiSaveNotes(boda.id, { ...boda, documents: updated });
-      onPatch({ documents: updated });
-      setAdding(null);
-      setUrlInput("");
-    } finally { setSaving(false); }
-  }
-
-  async function removeDoc(typeId) {
-    const updated = docs.filter(d => d.type !== typeId);
+  async function persistDocs(updated) {
     setDocs(updated);
     await apiSaveNotes(boda.id, { ...boda, documents: updated });
     onPatch({ documents: updated });
   }
 
+  async function generateDoc(def) {
+    setLoading(l => ({ ...l, [def.id]: true }));
+    setErr(e => ({ ...e, [def.id]: null }));
+    try {
+      const res = await gasPost({ action: def.gasAction, clienteName: boda.clienteName, weddingDate: boda.weddingDate });
+      if (!res.url) throw new Error(res.error || "Sin URL en respuesta");
+      const existing = docs.filter(d => d.type !== def.id);
+      await persistDocs([...existing, { type: def.id, url: res.url, createdAt: new Date().toISOString() }]);
+    } catch(e) {
+      setErr(ev => ({ ...ev, [def.id]: e.message }));
+    } finally {
+      setLoading(l => ({ ...l, [def.id]: false }));
+    }
+  }
+
+  async function removeDoc(typeId) {
+    await persistDocs(docs.filter(d => d.type !== typeId));
+  }
+
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
       <p style={{ margin:"0 0 6px", fontSize:12, color:R.muted, fontFamily:"'Jost',sans-serif" }}>
-        Documentos de esta boda. Crea una copia de cada plantilla, luego pega el link aquí para guardarlo.
+        El botón <strong>Generar</strong> crea el sheet directamente en Google Drive con el nombre del cliente listo.
       </p>
-      {DOC_TYPES.map(dt => {
+      {DOC_DEFS.map(dt => {
         const existing = docs.find(d => d.type === dt.id);
+        const isLoading = loading[dt.id];
+        const error = err[dt.id];
         return (
           <div key={dt.id} style={{ border:`1px solid ${R.border}`, borderRadius:4, padding:"14px 16px" }}>
             <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
@@ -2891,49 +2874,27 @@ function DocumentosTab({ boda, onPatch }) {
                 <p style={{ margin:"0 0 2px", fontSize:13, fontWeight:600, color:R.text, fontFamily:"'Jost',sans-serif" }}>{dt.label}</p>
                 <p style={{ margin:"0 0 10px", fontSize:12, color:R.muted, fontFamily:"'Jost',sans-serif" }}>{dt.desc}</p>
                 {existing ? (
-                  <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+                  <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
                     <a href={existing.url} target="_blank" rel="noopener noreferrer"
-                      style={{ fontSize:12, color:R.accent, textDecoration:"none", fontFamily:"'Jost',sans-serif" }}>
+                      style={{ fontSize:12, color:R.accent, textDecoration:"none", fontFamily:"'Jost',sans-serif", fontWeight:500 }}>
                       🔗 Abrir documento
                     </a>
-                    <span style={{ fontSize:10, color:R.muted, fontFamily:"'Jost',sans-serif" }}>
-                      {new Date(existing.createdAt).toLocaleDateString("es-CO")}
-                    </span>
+                    <span style={{ fontSize:10, color:R.muted }}>{new Date(existing.createdAt).toLocaleDateString("es-CO")}</span>
                     <button onClick={()=>removeDoc(dt.id)}
                       style={{ marginLeft:"auto", background:"none", border:"none", color:"#c0392b", cursor:"pointer", fontSize:12 }}>✕</button>
                   </div>
-                ) : adding === dt.id ? (
-                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                    <input
-                      autoFocus
-                      value={urlInput}
-                      onChange={e=>setUrlInput(e.target.value)}
-                      onKeyDown={e=>e.key==="Enter"&&saveDoc(dt.id,urlInput)}
-                      placeholder="Pega el link del documento creado..."
-                      style={{ flex:1, padding:"5px 8px", border:`1px solid ${R.border}`, borderRadius:2, fontSize:12, fontFamily:"'Jost',sans-serif", outline:"none" }}
-                    />
-                    <button onClick={()=>saveDoc(dt.id,urlInput)} disabled={saving||!urlInput.trim()}
-                      style={{ background:R.accent, color:"#fff", border:"none", borderRadius:2, padding:"5px 12px", fontSize:12, cursor:"pointer", fontFamily:"'Jost',sans-serif", opacity:saving||!urlInput.trim()?.6:1 }}>
-                      {saving?"...":"Guardar"}
-                    </button>
-                    <button onClick={()=>{setAdding(null);setUrlInput("");}}
-                      style={{ background:"none", border:`1px solid ${R.border}`, borderRadius:2, padding:"5px 10px", fontSize:12, cursor:"pointer", color:R.muted, fontFamily:"'Jost',sans-serif" }}>
-                      Cancelar
-                    </button>
-                  </div>
+                ) : dt.link ? (
+                  <a href={dt.link} target="_blank" rel="noopener noreferrer"
+                    style={{ display:"inline-flex", alignItems:"center", gap:4, background:R.dark, color:R.gold, border:`1px solid rgba(196,162,114,.3)`, borderRadius:2, padding:"5px 14px", fontSize:12, textDecoration:"none", fontFamily:"'Jost',sans-serif" }}>
+                    Abrir formulario ↗
+                  </a>
                 ) : (
-                  <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
-                    <a href={dt.createUrl} target="_blank" rel="noopener noreferrer"
-                      onClick={()=>!dt.noSave&&setAdding(dt.id)}
-                      style={{ display:"inline-flex", alignItems:"center", gap:4, background:R.dark, color:R.gold, border:`1px solid rgba(196,162,114,.3)`, borderRadius:2, padding:"5px 14px", fontSize:12, cursor:"pointer", textDecoration:"none", fontFamily:"'Jost',sans-serif", letterSpacing:".03em" }}>
-                      + Crear copia
-                    </a>
-                    {!dt.noSave && (
-                      <button onClick={()=>setAdding(dt.id)}
-                        style={{ background:"none", border:`1px solid ${R.border}`, borderRadius:2, padding:"5px 10px", fontSize:12, cursor:"pointer", color:R.muted, fontFamily:"'Jost',sans-serif" }}>
-                        Pegar link existente
-                      </button>
-                    )}
+                  <div>
+                    <button onClick={()=>generateDoc(dt)} disabled={isLoading}
+                      style={{ display:"inline-flex", alignItems:"center", gap:6, background:R.dark, color:R.gold, border:`1px solid rgba(196,162,114,.3)`, borderRadius:2, padding:"6px 16px", fontSize:12, cursor:isLoading?"wait":"pointer", fontFamily:"'Jost',sans-serif", letterSpacing:".03em", opacity:isLoading?.7:1 }}>
+                      {isLoading ? "⏳ Generando…" : "✨ Generar sheet"}
+                    </button>
+                    {error && <p style={{ margin:"6px 0 0", fontSize:11, color:"#c0392b", fontFamily:"'Jost',sans-serif" }}>Error: {error}</p>}
                   </div>
                 )}
               </div>
