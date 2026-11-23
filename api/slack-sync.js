@@ -27,7 +27,7 @@ const FIELD_MAP = {
   checkOut:    ["departure date","departure","fecha salida","checkout","check-out","check out"],
   city:        ["city","city_tt","ciudad","destino","destination"],
   pax:         ["# of guests","guests","pax","personas","number of guests","number of people"],
-  clientTotalUSD: ["client price","client total","client_price","amount","precio cliente","total","price"],
+  clientTotalUSD: ["client price","client price per person","client total","client_price","amount","precio cliente","total","price"],
   precioProveedor: ["our price","provider price","precio proveedor","our cost","cost"],
   serviceDescription: ["property","item","item___airbnb_vrbo","propiedad","casa","villa","service","servicio"],
   provider:    ["provider","proveedores","source","proveedor"],
@@ -139,7 +139,8 @@ function parseMessage(text) {
   if (fields.clientTotalUSD) fields.clientTotalUSD = parseMoney(fields.clientTotalUSD);
   if (fields.precioProveedor)fields.precioProveedor= parseMoney(fields.precioProveedor);
 
-  if (!fields.name) return null;
+  // Need at least a name + date to be a valid reservation (rejects general chat messages)
+  if (!fields.name || !fields.fecha) return null;
   return {
     name:              fields.name || "",
     fecha:             fields.fecha || "",
@@ -193,15 +194,16 @@ export default async function handler(req, res) {
       .from("kickoffs").select("data").eq("id", SUPABASE_ID).maybeSingle();
     const d     = existing?.data || {};
     const notes = typeof d.internalNotes === "string" ? JSON.parse(d.internalNotes) : (d.internalNotes || {});
-    const rows  = notes.reservations || [];
+    const allRows = notes.reservations || [];
 
-    // Index existing rows for dedup
-    const existingKeys = new Set(
-      rows.map(r => `${hsBaseName(r.name)}|${r.fecha||""}`)
-    );
+    // Keep only manual rows — drop all previous slack_sync rows so each sync is a clean replace
+    const manualRows = allRows.filter(r => !r._source || r._source === "manual");
+
+    // Index manual rows for dedup
+    const manualKeys = new Set(manualRows.map(r => `${hsBaseName(r.name)}|${r.fecha||""}`));
 
     let added = 0, skipped = 0, unparsed = 0;
-    const newRows = [];
+    const slackRows = new Map(); // keyed by name|fecha to dedup within Slack history
 
     for (const msg of messages) {
       // Skip edits and thread replies
@@ -212,10 +214,10 @@ export default async function handler(req, res) {
       if (!row) { unparsed++; continue; }
 
       const key = `${hsBaseName(row.name)}|${row.fecha||""}`;
-      if (existingKeys.has(key)) { skipped++; continue; }
+      if (manualKeys.has(key)) { skipped++; continue; }
+      if (slackRows.has(key))  { skipped++; continue; }
 
-      existingKeys.add(key);
-      newRows.push({
+      slackRows.set(key, {
         ...row,
         _source: "slack_sync",
         createdAt: msg.ts ? new Date(parseFloat(msg.ts) * 1000).toISOString() : new Date().toISOString(),
@@ -223,8 +225,8 @@ export default async function handler(req, res) {
       added++;
     }
 
-    // Merge new rows with existing; sort by fecha desc
-    const merged = [...newRows, ...rows]
+    // Merge: slack rows + manual rows; sort by fecha desc
+    const merged = [...slackRows.values(), ...manualRows]
       .sort((a,b) => (b.fecha||"").localeCompare(a.fecha||""));
 
     const newData = { ...d, internalNotes: JSON.stringify({ ...notes, reservations: merged }) };
