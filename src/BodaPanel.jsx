@@ -76,6 +76,7 @@ function rowToBoda(row) {
     contracts:   parseJ(row.contracts,   []),
     seating:     parseJ(row.seating,     []),
     studio:      parseJ(row.studio,      []),
+    documents:   parseJ(row.documents,   []),
   };
 }
 
@@ -177,6 +178,7 @@ async function apiSaveNotes(id, boda) {
     palette: boda.palette || [], budgetItems: boda.budgetItems || [],
     payments: boda.payments || [], contracts: boda.contracts || [],
     seating: boda.seating || [], studio: boda.studio || [],
+    documents: boda.documents || [],
   };
   const merged = { ...(existing?.data || {}), ...updates };
   const { error } = await supabase.from("bodas").update({ data: merged }).eq("id", id);
@@ -2816,6 +2818,133 @@ function SeatingTab({ boda, onPatch }) {
   );
 }
 
+// ─── DOCUMENTOS TAB ──────────────────────────────────────────────────────────
+const WEDDING_FINANCE_ID    = "1t8tCGnr9OdX2Q1EToO3UxME9QobAqeH-VPNAQLcQlLA";
+const FINANCE_CLIENTE_ID    = "1WkCLeAiit5Q-fdn-bDDpvgrVX5OS2MrZ_MHeObaMkfY";
+const MONDAY_FORM_URL       = "https://forms.monday.com/forms/99c0b5a10e920b746a5299a20243e274?r=use1";
+
+function DocumentosTab({ boda, onPatch }) {
+  const [docs, setDocs] = useState(boda.documents || []);
+  const [adding, setAdding] = useState(null);
+  const [urlInput, setUrlInput] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const encName = encodeURIComponent(boda.clienteName || "Cliente");
+  const DOC_TYPES = [
+    {
+      id: "wedding_finance",
+      label: "Wedding Finance Internal",
+      desc: "Presupuesto, seguimiento de proveedores, Profit & Loss y comisiones",
+      icon: "📊",
+      createUrl: `https://docs.google.com/spreadsheets/d/${WEDDING_FINANCE_ID}/copy?title=${encodeURIComponent("Wedding Finance - " + (boda.clienteName||"Cliente"))}`,
+    },
+    {
+      id: "finance_cliente",
+      label: "Finance de Cliente",
+      desc: "Hoja de finanzas del cliente con pagos y estimados",
+      icon: "💰",
+      createUrl: `https://docs.google.com/spreadsheets/d/${FINANCE_CLIENTE_ID}/copy?title=${encodeURIComponent("Finance Cliente - " + (boda.clienteName||"Cliente"))}`,
+    },
+    {
+      id: "solicitud_facturas",
+      label: "Solicitud de Facturas",
+      desc: "Formulario Monday.com para solicitar facturas a proveedores",
+      icon: "📋",
+      createUrl: MONDAY_FORM_URL,
+      noSave: true,
+    },
+  ];
+
+  async function saveDoc(typeId, url) {
+    if (!url.trim()) return;
+    setSaving(true);
+    try {
+      const existing = docs.filter(d => d.type !== typeId);
+      const updated = [...existing, { type: typeId, url: url.trim(), createdAt: new Date().toISOString() }];
+      setDocs(updated);
+      await apiSaveNotes(boda.id, { ...boda, documents: updated });
+      onPatch({ documents: updated });
+      setAdding(null);
+      setUrlInput("");
+    } finally { setSaving(false); }
+  }
+
+  async function removeDoc(typeId) {
+    const updated = docs.filter(d => d.type !== typeId);
+    setDocs(updated);
+    await apiSaveNotes(boda.id, { ...boda, documents: updated });
+    onPatch({ documents: updated });
+  }
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+      <p style={{ margin:"0 0 6px", fontSize:12, color:R.muted, fontFamily:"'Jost',sans-serif" }}>
+        Documentos de esta boda. Crea una copia de cada plantilla, luego pega el link aquí para guardarlo.
+      </p>
+      {DOC_TYPES.map(dt => {
+        const existing = docs.find(d => d.type === dt.id);
+        return (
+          <div key={dt.id} style={{ border:`1px solid ${R.border}`, borderRadius:4, padding:"14px 16px" }}>
+            <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
+              <span style={{ fontSize:22, lineHeight:1, flexShrink:0 }}>{dt.icon}</span>
+              <div style={{ flex:1 }}>
+                <p style={{ margin:"0 0 2px", fontSize:13, fontWeight:600, color:R.text, fontFamily:"'Jost',sans-serif" }}>{dt.label}</p>
+                <p style={{ margin:"0 0 10px", fontSize:12, color:R.muted, fontFamily:"'Jost',sans-serif" }}>{dt.desc}</p>
+                {existing ? (
+                  <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+                    <a href={existing.url} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize:12, color:R.accent, textDecoration:"none", fontFamily:"'Jost',sans-serif" }}>
+                      🔗 Abrir documento
+                    </a>
+                    <span style={{ fontSize:10, color:R.muted, fontFamily:"'Jost',sans-serif" }}>
+                      {new Date(existing.createdAt).toLocaleDateString("es-CO")}
+                    </span>
+                    <button onClick={()=>removeDoc(dt.id)}
+                      style={{ marginLeft:"auto", background:"none", border:"none", color:"#c0392b", cursor:"pointer", fontSize:12 }}>✕</button>
+                  </div>
+                ) : adding === dt.id ? (
+                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                    <input
+                      autoFocus
+                      value={urlInput}
+                      onChange={e=>setUrlInput(e.target.value)}
+                      onKeyDown={e=>e.key==="Enter"&&saveDoc(dt.id,urlInput)}
+                      placeholder="Pega el link del documento creado..."
+                      style={{ flex:1, padding:"5px 8px", border:`1px solid ${R.border}`, borderRadius:2, fontSize:12, fontFamily:"'Jost',sans-serif", outline:"none" }}
+                    />
+                    <button onClick={()=>saveDoc(dt.id,urlInput)} disabled={saving||!urlInput.trim()}
+                      style={{ background:R.accent, color:"#fff", border:"none", borderRadius:2, padding:"5px 12px", fontSize:12, cursor:"pointer", fontFamily:"'Jost',sans-serif", opacity:saving||!urlInput.trim()?.6:1 }}>
+                      {saving?"...":"Guardar"}
+                    </button>
+                    <button onClick={()=>{setAdding(null);setUrlInput("");}}
+                      style={{ background:"none", border:`1px solid ${R.border}`, borderRadius:2, padding:"5px 10px", fontSize:12, cursor:"pointer", color:R.muted, fontFamily:"'Jost',sans-serif" }}>
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+                    <a href={dt.createUrl} target="_blank" rel="noopener noreferrer"
+                      onClick={()=>!dt.noSave&&setAdding(dt.id)}
+                      style={{ display:"inline-flex", alignItems:"center", gap:4, background:R.dark, color:R.gold, border:`1px solid rgba(196,162,114,.3)`, borderRadius:2, padding:"5px 14px", fontSize:12, cursor:"pointer", textDecoration:"none", fontFamily:"'Jost',sans-serif", letterSpacing:".03em" }}>
+                      + Crear copia
+                    </a>
+                    {!dt.noSave && (
+                      <button onClick={()=>setAdding(dt.id)}
+                        style={{ background:"none", border:`1px solid ${R.border}`, borderRadius:2, padding:"5px 10px", fontSize:12, cursor:"pointer", color:R.muted, fontFamily:"'Jost',sans-serif" }}>
+                        Pegar link existente
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── BODA DETAIL ─────────────────────────────────────────────────────────────
 function BodaDetail({ boda:init, users, onBack, onRefresh, initialTab="", onTabChange }) {
   const [boda,setBoda]=useState(init);
@@ -2987,6 +3116,7 @@ ${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).joi
     {id:"musica",       label:`Música (${(boda.songs||[]).length})`},
     {id:"fotos",        label:`Fotos (${(boda.photos||[]).length})`},
     {id:"llamadas",     label:`Notas (${(boda.calls||[]).length})`},
+    {id:"documentos",   label:"📄 Documentos"},
   ];
 
   return (
@@ -3107,6 +3237,7 @@ ${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).joi
           {tab==="fotos"      &&<FotosTab       boda={boda} onPatch={handlePatch} />}
           {tab==="llamadas"   &&<LlamadasTab    boda={boda} onPatch={handlePatch} />}
           {tab==="tareas"     &&<TasksTab       boda={boda} users={users} onPatch={handlePatch} />}
+          {tab==="documentos" &&<DocumentosTab   boda={boda} onPatch={handlePatch} />}
         </div>
       </div>
     </div>
