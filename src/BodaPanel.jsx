@@ -3106,6 +3106,7 @@ ${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).joi
   const TABS=[
     {id:"resumen",      label:"Resumen"},
     {id:"tareas",       label:`Tareas (${(boda.tasks||[]).length})`},
+    {id:"documentos",   label:"📄 Docs"},
     {id:"contratos",    label:`Contratos (${(boda.contracts||[]).length})`},
     {id:"timeline",     label:"Timeline"},
     {id:"invitados",    label:`Invitados (${(boda.guests||[]).length})`},
@@ -3116,7 +3117,6 @@ ${doneTasks.map(t=>`<tr><td>${t.taskName}</td><td>${t.phase||""}</td></tr>`).joi
     {id:"musica",       label:`Música (${(boda.songs||[]).length})`},
     {id:"fotos",        label:`Fotos (${(boda.photos||[]).length})`},
     {id:"llamadas",     label:`Notas (${(boda.calls||[]).length})`},
-    {id:"documentos",   label:"📄 Documentos"},
   ];
 
   return (
