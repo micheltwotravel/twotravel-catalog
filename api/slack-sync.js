@@ -246,14 +246,17 @@ export default async function handler(req, res) {
       if (!row) { unparsed++; continue; }
 
       const key = `${hsBaseName(row.name)}|${row.fecha||""}`;
+      const newCreatedAt = msg.ts ? new Date(parseFloat(msg.ts) * 1000).toISOString() : new Date().toISOString();
       if (manualKeys.has(key)) { skipped++; continue; }
-      if (slackRows.has(key))  { skipped++; continue; }
+      if (slackRows.has(key)) {
+        // History comes oldest-first; if this message is newer, update createdAt to reflect last Slack post
+        const existing = slackRows.get(key);
+        if (newCreatedAt > (existing.createdAt || "")) existing.createdAt = newCreatedAt;
+        skipped++;
+        continue;
+      }
 
-      slackRows.set(key, {
-        ...row,
-        _source: "slack_sync",
-        createdAt: msg.ts ? new Date(parseFloat(msg.ts) * 1000).toISOString() : new Date().toISOString(),
-      });
+      slackRows.set(key, { ...row, _source: "slack_sync", createdAt: newCreatedAt });
       added++;
     }
 
