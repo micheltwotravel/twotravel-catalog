@@ -852,28 +852,27 @@ function renderTable(){
     return matchQ && matchP && matchS && matchC && matchD && matchY;
   });
 
-  // Group by week
+  // Group by client
   const groups = {};
   items.forEach(h => {
-    const wk = getWeekKey(h.date);
-    if(!groups[wk]) groups[wk] = [];
-    groups[wk].push(h);
+    const key = h.client || 'Sin cliente';
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(h);
   });
-  const weekKeys = Object.keys(groups).sort((a,b) => weekOrder(a) > weekOrder(b) ? -1 : 1);
+  const clientKeys = Object.keys(groups).sort((a,b) => a.localeCompare(b, 'es', {sensitivity:'base'}));
 
   let html = '';
   let colorIdx = 0;
-  weekKeys.forEach(wk => {
-    const rows = groups[wk];
-    const collapsed = collapsedWeeks.has(wk);
-    const label = getWeekLabel(wk);
+  clientKeys.forEach(clientName => {
+    const rows = groups[clientName].slice().sort((a,b) => (b.date||'') > (a.date||'') ? 1 : -1);
+    const collapsed = collapsedWeeks.has(clientName);
     const ci = colorIdx++ % 7;
     html += `
-    <div class="week-group" data-wk="${wk}">
-      <div class="week-header" onclick="toggleWeek('${wk}')">
+    <div class="week-group" data-wk="${esc(clientName)}">
+      <div class="week-header" onclick="toggleWeek('${esc(clientName)}')">
         <div class="week-color wc-${ci}"></div>
         <span class="week-toggle ${collapsed?'closed':'open'}">▼</span>
-        <span class="week-label">${label}</span>
+        <span class="week-label">${esc(clientName)}</span>
         <span class="week-count">${rows.length}</span>
       </div>`;
     if(!collapsed){
@@ -881,7 +880,6 @@ function renderTable(){
         <thead><tr>
           <th></th>
           <th>Tipo</th>
-          <th>Cliente</th>
           <th>Fecha · Hora</th>
           <th>Actividad</th>
           <th>Clientes</th>
@@ -909,15 +907,15 @@ function renderTable(){
         </tr></thead>
         <tbody>`;
       rows.forEach(h => { html += renderRow(h); });
-      html += `<tr class="add-row" onclick="openNewModal('${wk}')">
-        <td colspan="27">+ Agregar handoff</td>
+      html += `<tr class="add-row" onclick="openNewModal(null,'${esc(clientName)}')">
+        <td colspan="26">+ Agregar handoff</td>
       </tr>`;
       html += `</tbody></table></div>`;
     }
     html += `</div>`;
   });
 
-  if(!weekKeys.length){
+  if(!clientKeys.length){
     html = `<div style="text-align:center;padding:60px;color:var(--ink3);font-size:13px">No hay handoffs. Crea el primero con "+ Nuevo handoff".</div>`;
   }
 
@@ -945,7 +943,6 @@ function renderRow(h){
   return `<tr data-id="${h.id}">
     <td class="row-check"><input type="checkbox" onclick="event.stopPropagation()"></td>
     <td><div class="cell" onclick="cycleClientType('${h.id}')" style="cursor:pointer;justify-content:center;padding:4px 8px">${ct ? `<span style="font-size:10px;font-weight:500;padding:2px 7px;border-radius:3px;background:${ctBg[ct]||'#f0ede8'};color:${ctFg[ct]||'#7a7570'};white-space:nowrap;letter-spacing:.03em">${esc(ct)}</span>` : `<span style="font-size:10px;color:var(--ink3)">—</span>`}</div></td>
-    <td><div class="cell" ondblclick="editCell(this,'${h.id}','client')">${esc(h.client||'')}</div></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','date')">${fmtDate(h.date)}</div></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','activity')">${esc(h.activity||'')}</div></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','pax')">${esc(h.pax||'')}</div></td>
