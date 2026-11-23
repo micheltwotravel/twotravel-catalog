@@ -971,7 +971,7 @@ function renderRow(h){
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','banco')" style="font-size:11px;color:var(--ink2)">${esc(h.banco||'—')}</div></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','currency')" style="font-size:11px;color:var(--ink2)">${esc(h.currency||'COP')}</div></td>
     <td style="text-align:center"><span onclick="toggleCommission('${h.id}')" style="font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;cursor:pointer;background:${h.hasCommission?'#22c55e22':'#ef444422'};color:${h.hasCommission?'#16a34a':'#dc2626'}">${h.hasCommission?'Sí':'No'}</span></td>
-    <td><div class="cell" ondblclick="editCell(this,'${h.id}','commissionPct')" style="font-size:11px;color:var(--ink2);text-align:right">${h.commissionPct ? (h.commissionPct*100).toFixed(0)+'%' : '—'}</div></td>
+    <td><div class="cell" ondblclick="editCell(this,'${h.id}','commissionPct')" style="font-size:11px;color:var(--ink2);text-align:right">${h.commissionPct ? h.commissionPct+'%' : '—'}</div></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','totalCommission')" style="font-size:11px;color:var(--ink2);text-align:right">${h.totalCommission ? '$'+Number(h.totalCommission).toLocaleString('es') : '—'}</div></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','servicesStatus')" style="font-size:11px;color:var(--ink2)">${esc(h.servicesStatus||'—')}</div></td>
     <td><div class="cell" ondblclick="editCell(this,'${h.id}','notes')" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--ink3)">${esc(h.notes||'')}</div></td>
@@ -1021,6 +1021,10 @@ function editCell(cell, id, field){
   const NUMERIC_FIELDS = ['precioCliente','precioProveedor','gananciaBruta','consumos','clientTotalAmountUSD','commissionPct','totalCommission'];
   const done = () => {
     h[field] = NUMERIC_FIELDS.includes(field) ? (parseFloat(String(input.value).replace(/[^0-9.-]/g,''))||0) : input.value;
+    // Auto-calculate totalCommission when commissionPct or precioCliente changes
+    if ((field === 'commissionPct' || field === 'precioCliente') && h.hasCommission && h.commissionPct && h.precioCliente) {
+      h.totalCommission = Math.round(h.precioCliente * h.commissionPct / 100);
+    }
     save();
     render();
   };
@@ -1037,6 +1041,9 @@ function toggleCommission(id){
   const h = handoffs.find(x=>x.id===id);
   if(!h) return;
   h.hasCommission = !h.hasCommission;
+  if (h.hasCommission && h.commissionPct && h.precioCliente) {
+    h.totalCommission = Math.round(h.precioCliente * h.commissionPct / 100);
+  }
   save();
   render();
 }
