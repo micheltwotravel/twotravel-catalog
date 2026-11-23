@@ -144,8 +144,18 @@ function parseMessage(text) {
     fields.name = parts[0].trim();
     if (!fields.city && parts[1]) fields.city = parts[1].trim();
   }
-  if (fields.name && fields.name.includes(" - ")) {
-    fields.name = fields.name.split(/\s+-\s+/)[0].trim();
+  if (fields.name) {
+    // Strip "Name / Date Range / Property" format
+    fields.name = fields.name.replace(/\s*\/.*$/, "").trim();
+    // Strip "Name-City-Month YYYY" or "Name - City - Month YYYY" (HubSpot deal name format)
+    fields.name = fields.name.replace(
+      /\s*[-–]\s*[A-Za-z][A-Za-z ]*\s*[-–]\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s*\d{4}\s*$/i,
+      ""
+    ).trim();
+    // Strip trailing "- City" where hyphen is followed by a space + capital word
+    fields.name = fields.name.replace(/[-–]\s+[A-Z][a-z].*$/, "").trim();
+    // Strip remaining " - anything" suffix
+    if (fields.name.includes(" - ")) fields.name = fields.name.split(/\s+-\s+/)[0].trim();
   }
   if (fields.fecha && /[-–]/.test(fields.fecha) && !fields.checkOut) {
     const { start, end } = parseDateRange(fields.fecha);
