@@ -112,9 +112,14 @@ function TaskCard({ task, onStatusChange, onEdit, accentColor }) {
       </div>
 
       <div style={{ textAlign:"right", flexShrink:0 }}>
-        {task.dueDate && (
-          <div style={{ fontSize:11, color: dias!=null&&dias<0?"#c0392b":dias===0?"#e67e22":"#5f6368", fontWeight: dias!=null&&dias<=1?600:400 }}>
-            {dias === null ? "" : dias < 0 ? `${Math.abs(dias)}d atrasada` : dias === 0 ? "Hoy" : `en ${dias}d`}
+        {task.dueDate && dias !== null && dias < 0 && (
+          <div style={{ fontSize:11, fontWeight:700, color:"#fff", background:"#c0392b", borderRadius:10, padding:"2px 7px", marginBottom:2, display:"inline-block" }}>
+            ⚠ {Math.abs(dias)}d atraso
+          </div>
+        )}
+        {task.dueDate && dias !== null && dias >= 0 && (
+          <div style={{ fontSize:11, color: dias===0?"#e67e22":"#5f6368", fontWeight: dias<=1?600:400 }}>
+            {dias === 0 ? "Hoy" : `en ${dias}d`}
           </div>
         )}
         <div style={{ fontSize:10, color:"#aaa", marginTop:2 }}>{fmtDate(task.dueDate)}</div>

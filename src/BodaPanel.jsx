@@ -419,7 +419,7 @@ function TasksTab({ boda, users, onPatch }) {
                   {t.dueDate&&<span>📅 {fmtDate(t.dueDate)}</span>}
                   {t.phase&&t.phase!=="General"&&<span style={{color:R.accent}}>{t.phase}</span>}
                   {t.notes&&<span style={{fontStyle:"italic"}}>{t.notes}</span>}
-                  {cat(t)==="late" &&<span style={{fontWeight:600,color:"#dc2626"}}>⚠️ Atrasada</span>}
+                  {cat(t)==="late" &&<span style={{fontWeight:700,color:"#fff",background:"#dc2626",borderRadius:10,padding:"1px 7px"}}>⚠ {Math.ceil((new Date()-new Date(t.dueDate+"T12:00:00"))/(86400000))}d atraso</span>}
                   {cat(t)==="today"&&<span style={{fontWeight:600,color:"#d97706"}}>🔥 Hoy</span>}
                 </div>
               </div>
@@ -3707,7 +3707,7 @@ function GlobalTasksView({ bodas, users, onSelectBoda, onAddTask, onPatchTask })
                     {t.assignedTo&&section==="equipo"&&<span>👤 {t.assignedTo}</span>}
                     {t.dueDate&&<span>📅 {t.dueDate}</span>}
                     {t.phase&&t.phase!=="General"&&<span>{t.phase}</span>}
-                    {c==="late"&&<span style={{fontWeight:700,color:"#dc2626"}}>⚠️ Atrasada</span>}
+                    {c==="late"&&<span style={{fontWeight:700,color:"#fff",background:"#dc2626",borderRadius:10,padding:"1px 7px"}}>⚠ {Math.ceil((new Date()-new Date(t.dueDate+"T12:00:00"))/(86400000))}d atraso</span>}
                     {c==="today"&&<span style={{fontWeight:700,color:"#d97706"}}>🔥 Hoy</span>}
                   </div>
                 </div>

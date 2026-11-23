@@ -11,10 +11,6 @@ const supabase = createClient(
 const SUPABASE_ID = "finance_reservations_v1";
 const HS_TOKEN    = process.env.HUBSPOT_PRIVATE_APP_TOKEN;
 
-const STAGES = [
-  "1078513048","1078513049",
-  "closedwon","1081725980","1081725981","1081725982",
-];
 const HS_PROPS = [
   "dealname","amount","deal_currency_code","arrival_date","departure_date",
   "city_tt","number_of_people_in_the_reservation","number_of_guests_villa_b",
@@ -24,6 +20,11 @@ const HS_PROPS = [
   "provider___villas","provider___boat","provider___airbnb_vrbo","item___airbnb_vrbo",
   "createdate","hs_lastmodifieddate",
 ];
+
+// Date 90 days ago in ms (HubSpot uses ms timestamps for date properties)
+function ninetyDaysAgoMs() {
+  return Date.now() - 90 * 24 * 60 * 60 * 1000;
+}
 
 function pick(props, keys) {
   for (const k of keys) { const v=props[k]; if (v&&v!==""&&v!=="null") return v; }
@@ -37,11 +38,17 @@ async function hs(path, body) {
   });
   return r.json();
 }
-async function getAllDeals(stageId) {
+
+// Fetch all deals with arrival_date in the last 90 days (no stage filter)
+async function getAllRecentDeals() {
   const all=[]; let after;
   while(true){
     const d=await hs("/crm/v3/objects/deals/search",{
-      filterGroups:[{filters:[{propertyName:"dealstage",operator:"EQ",value:stageId}]}],
+      filterGroups:[{filters:[{
+        propertyName:"arrival_date",
+        operator:"GTE",
+        value: String(ninetyDaysAgoMs()),
+      }]}],
       properties:HS_PROPS, associations:["contacts"], limit:100,
       ...(after?{after}:{}),
     });
@@ -92,12 +99,8 @@ export default async function handler(req, res) {
   if (!HS_TOKEN) return res.status(500).json({ error:"Missing HUBSPOT_PRIVATE_APP_TOKEN" });
 
   try {
-    // 1. Fetch all HubSpot deals
-    const all=[];
-    for (const s of STAGES) {
-      const deals=await getAllDeals(s);
-      all.push(...deals);
-    }
+    // 1. Fetch all HubSpot deals with arrival_date in last 90 days
+    const all = await getAllRecentDeals();
     const unique=[...new Map(all.map(d=>[d.id,d])).values()];
 
     // 2. Map to Compass rows
@@ -152,7 +155,7 @@ export default async function handler(req, res) {
     const newData = { ...d, internalNotes: JSON.stringify({...notes, reservations:merged}) };
     await supabase.from("kickoffs").upsert({ id:SUPABASE_ID, data:newData }, { onConflict:"id" });
 
-    res.json({ ok:true, count:merged.length, hubspot:filteredHsRows.length, preserved:preservedRows.length });
+    res.json({ ok:true, count:merged.length, hubspot:filteredHsRows.length, preserved:preservedRows.length, total_hs_fetched: unique.length });
   } catch(err) {
     console.error("reservations-sync error:", err);
     res.status(500).json({ error:err.message });
