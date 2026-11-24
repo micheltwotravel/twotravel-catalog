@@ -2706,77 +2706,128 @@ function BillingBlock({ kickoff }) {
 /* ═══════════════════════════════════════════════════════════
    CITY GUIDE DATA
 ═══════════════════════════════════════════════════════════ */
-const CITY_GUIDE_SECTIONS = [
-  {
-    id: "dining",
-    icon: "🍽️",
-    title_en: "Dining & Food",
-    title_es: "Gastronomía",
-    items: [
-      { id: "brunch", icon: "☀️", label_en: "Brunch Spots", label_es: "Brunch", desc_en: "Perfect for a relaxed late morning or early afternoon.", desc_es: "Perfecto para una mañana tranquila o inicio de tarde.", url: "https://maps.app.goo.gl/XqbGsW5f3Gb6Bw8GA" },
-      { id: "coffee", icon: "☕", label_en: "Coffee Shops", label_es: "Cafés", desc_en: "Great for a quick pick-me-up or a casual meet-up.", desc_es: "Ideales para un café rápido o un encuentro casual.", url: "https://maps.app.goo.gl/8Sk2eyN5PyKCNAcw5" },
-      { id: "dinner_walled", icon: "🍷", label_en: "Dinner – Walled City", label_es: "Cenas – Ciudad Amurallada", desc_en: "Our top picks for dinner in Cartagena's historic center.", desc_es: "Los mejores lugares para cenar en el centro histórico de Cartagena.", url: "https://maps.app.goo.gl/RpoHDyNRMcyXjyPC6" },
-      { id: "casual_walled", icon: "🥗", label_en: "Casual Dining – Walled City", label_es: "Casual – Ciudad Amurallada", desc_en: "More laid-back options for an easy meal.", desc_es: "Opciones más relajadas para una comida sin complicaciones.", url: "https://maps.app.goo.gl/8D1oCLWroj5mXCvx7" },
-      { id: "getsemani", icon: "🌮", label_en: "Restaurants in Getsemani", label_es: "Restaurantes en Getsemaní", desc_en: "Trendy, local, and vibrant dining options.", desc_es: "Opciones de comida locales, modernas y llenas de ambiente.", url: "https://maps.app.goo.gl/pXCVbUS64qXw7DMs5" },
-      { id: "latenight", icon: "🌙", label_en: "Late-Night Eats", label_es: "Comida de Madrugada", desc_en: "Ideal for post-party bites or late cravings.", desc_es: "Perfecto para comer después de salir o para antojos nocturnos.", url: "https://maps.app.goo.gl/4eycD4YFt4nGEqn58" },
-    ],
-  },
-  {
-    id: "nightlife",
-    icon: "🎭",
-    title_en: "Nightlife & Entertainment",
-    title_es: "Vida Nocturna",
-    items: [
-      { id: "rooftops", icon: "🌅", label_en: "Rooftops", label_es: "Rooftops", desc_en: "Best spots for sunset views and cocktails.", desc_es: "Los mejores lugares para ver el atardecer con cócteles.", url: "https://maps.app.goo.gl/ke3S9xDyKqfAsUky6" },
-      { id: "bars", icon: "🍸", label_en: "Bars & Bar Hopping", label_es: "Bares", desc_en: "From chill drinks to lively atmospheres — perfect for a bar crawl.", desc_es: "Desde tragos tranquilos hasta ambientes animados — perfectos para una noche de bares.", url: "https://maps.app.goo.gl/KAGw1LQBvhWb65XP8" },
-      { id: "nightclubs", icon: "🎉", label_en: "Nightclubs", label_es: "Discotecas", desc_en: "Where to go for a proper night out.", desc_es: "Los mejores lugares para salir de noche.", url: "https://maps.app.goo.gl/QDZTGL5sH2tWaxzb6" },
-      { id: "gentlemens", icon: "🎩", label_en: "Gentleman's Clubs", label_es: "Gentleman's Clubs", desc_en: "Curated options for adult nightlife experiences.", desc_es: "Opciones seleccionadas para la vida nocturna adulta.", url: "https://maps.app.goo.gl/34CwoubwzfiyMr9G8" },
-    ],
-  },
-  {
-    id: "beach",
-    icon: "🏖️",
-    title_en: "Beach & Day Experiences",
-    title_es: "Playa y Experiencias de Día",
-    items: [
-      { id: "beach_clubs", icon: "🏖️", label_en: "Beach Clubs", label_es: "Beach Clubs", desc_en: "The best spots for a day by the water.", desc_es: "Los mejores lugares para un día junto al agua.", url: "https://maps.app.goo.gl/n5Vqe4547qqJUBGSA" },
-    ],
-  },
-  {
-    id: "shopping",
-    icon: "🛍️",
-    title_en: "Shopping & Lifestyle",
-    title_es: "Compras y Estilo de Vida",
-    items: [
-      { id: "shopping", icon: "🛍️", label_en: "Shopping & Souvenirs", label_es: "Compras y Souvenirs", desc_en: "Local boutiques, gifts, and artisan finds.", desc_es: "Boutiques locales, regalos y artesanías.", url: "https://maps.app.goo.gl/HJ3iWCeDoAinNv2L8" },
-      { id: "cigars", icon: "🚬", label_en: "Cigar Shops & Lounges", label_es: "Tiendas de Puros", desc_en: "Premium cigars and relaxed atmospheres.", desc_es: "Puros premium y ambientes relajados.", url: "https://maps.app.goo.gl/SCAChpWjLppZYfd76" },
-      { id: "hair", icon: "✂️", label_en: "Hair & Barber Shops", label_es: "Peluquerías y Barberías", desc_en: "Trusted spots for grooming and quick touch-ups.", desc_es: "Lugares de confianza para arreglarse antes de salir.", url: "https://maps.app.goo.gl/EBF2W9acSgh4aaxaA" },
-    ],
-  },
-  {
-    id: "essentials",
-    icon: "⚙️",
-    title_en: "Essentials & Services",
-    title_es: "Servicios Esenciales",
-    items: [
-      { id: "atms", icon: "💳", label_en: "ATMs", label_es: "Cajeros Automáticos", desc_en: "Convenient locations to withdraw cash.", desc_es: "Ubicaciones convenientes para retirar efectivo.", url: "https://maps.app.goo.gl/H2f4SgGZki4zLhh38" },
-      { id: "pharmacies", icon: "💊", label_en: "24/7 Pharmacies", label_es: "Farmacias 24/7", desc_en: "For any last-minute needs.", desc_es: "Para cualquier necesidad de último momento.", url: "https://maps.app.goo.gl/2snjVdKhHcnpEhJA6" },
-      { id: "emergency", icon: "🏥", label_en: "Hospitals & Police Stations", label_es: "Hospitales y Policía", desc_en: "Nearby emergency services for peace of mind.", desc_es: "Servicios de emergencia cercanos para mayor tranquilidad.", url: "https://maps.app.goo.gl/8yomj1ZFQWF7JuoT6" },
-    ],
-  },
-];
+const CITY_GUIDE_SECTIONS = {
+  CTG: [
+    {
+      id: "dining",
+      icon: "🍽️",
+      title_en: "Dining & Food",
+      title_es: "Gastronomía",
+      items: [
+        { id: "brunch", icon: "☀️", label_en: "Brunch Spots", label_es: "Brunch", desc_en: "Perfect for a relaxed late morning or early afternoon.", desc_es: "Perfecto para una mañana tranquila o inicio de tarde.", url: "https://maps.app.goo.gl/XqbGsW5f3Gb6Bw8GA" },
+        { id: "coffee", icon: "☕", label_en: "Coffee Shops", label_es: "Cafés", desc_en: "Great for a quick pick-me-up or a casual meet-up.", desc_es: "Ideales para un café rápido o un encuentro casual.", url: "https://maps.app.goo.gl/8Sk2eyN5PyKCNAcw5" },
+        { id: "dinner_walled", icon: "🍷", label_en: "Dinner – Walled City", label_es: "Cenas – Ciudad Amurallada", desc_en: "Our top picks for dinner in Cartagena's historic center.", desc_es: "Los mejores lugares para cenar en el centro histórico de Cartagena.", url: "https://maps.app.goo.gl/RpoHDyNRMcyXjyPC6" },
+        { id: "casual_walled", icon: "🥗", label_en: "Casual Dining – Walled City", label_es: "Casual – Ciudad Amurallada", desc_en: "More laid-back options for an easy meal.", desc_es: "Opciones más relajadas para una comida sin complicaciones.", url: "https://maps.app.goo.gl/8D1oCLWroj5mXCvx7" },
+        { id: "getsemani", icon: "🌮", label_en: "Restaurants in Getsemani", label_es: "Restaurantes en Getsemaní", desc_en: "Trendy, local, and vibrant dining options.", desc_es: "Opciones de comida locales, modernas y llenas de ambiente.", url: "https://maps.app.goo.gl/pXCVbUS64qXw7DMs5" },
+        { id: "latenight", icon: "🌙", label_en: "Late-Night Eats", label_es: "Comida de Madrugada", desc_en: "Ideal for post-party bites or late cravings.", desc_es: "Perfecto para comer después de salir o para antojos nocturnos.", url: "https://maps.app.goo.gl/4eycD4YFt4nGEqn58" },
+      ],
+    },
+    {
+      id: "nightlife",
+      icon: "🎭",
+      title_en: "Nightlife & Entertainment",
+      title_es: "Vida Nocturna",
+      items: [
+        { id: "rooftops", icon: "🌅", label_en: "Rooftops", label_es: "Rooftops", desc_en: "Best spots for sunset views and cocktails.", desc_es: "Los mejores lugares para ver el atardecer con cócteles.", url: "https://maps.app.goo.gl/ke3S9xDyKqfAsUky6" },
+        { id: "bars", icon: "🍸", label_en: "Bars & Bar Hopping", label_es: "Bares", desc_en: "From chill drinks to lively atmospheres — perfect for a bar crawl.", desc_es: "Desde tragos tranquilos hasta ambientes animados — perfectos para una noche de bares.", url: "https://maps.app.goo.gl/KAGw1LQBvhWb65XP8" },
+        { id: "nightclubs", icon: "🎉", label_en: "Nightclubs", label_es: "Discotecas", desc_en: "Where to go for a proper night out.", desc_es: "Los mejores lugares para salir de noche.", url: "https://maps.app.goo.gl/QDZTGL5sH2tWaxzb6" },
+        { id: "gentlemens", icon: "🎩", label_en: "Gentleman's Clubs", label_es: "Gentleman's Clubs", desc_en: "Curated options for adult nightlife experiences.", desc_es: "Opciones seleccionadas para la vida nocturna adulta.", url: "https://maps.app.goo.gl/34CwoubwzfiyMr9G8" },
+      ],
+    },
+    {
+      id: "beach",
+      icon: "🏖️",
+      title_en: "Beach & Day Experiences",
+      title_es: "Playa y Experiencias de Día",
+      items: [
+        { id: "beach_clubs", icon: "🏖️", label_en: "Beach Clubs", label_es: "Beach Clubs", desc_en: "The best spots for a day by the water.", desc_es: "Los mejores lugares para un día junto al agua.", url: "https://maps.app.goo.gl/n5Vqe4547qqJUBGSA" },
+      ],
+    },
+    {
+      id: "shopping",
+      icon: "🛍️",
+      title_en: "Shopping & Lifestyle",
+      title_es: "Compras y Estilo de Vida",
+      items: [
+        { id: "shopping", icon: "🛍️", label_en: "Shopping & Souvenirs", label_es: "Compras y Souvenirs", desc_en: "Local boutiques, gifts, and artisan finds.", desc_es: "Boutiques locales, regalos y artesanías.", url: "https://maps.app.goo.gl/HJ3iWCeDoAinNv2L8" },
+        { id: "cigars", icon: "🚬", label_en: "Cigar Shops & Lounges", label_es: "Tiendas de Puros", desc_en: "Premium cigars and relaxed atmospheres.", desc_es: "Puros premium y ambientes relajados.", url: "https://maps.app.goo.gl/SCAChpWjLppZYfd76" },
+        { id: "hair", icon: "✂️", label_en: "Hair & Barber Shops", label_es: "Peluquerías y Barberías", desc_en: "Trusted spots for grooming and quick touch-ups.", desc_es: "Lugares de confianza para arreglarse antes de salir.", url: "https://maps.app.goo.gl/EBF2W9acSgh4aaxaA" },
+      ],
+    },
+    {
+      id: "essentials",
+      icon: "⚙️",
+      title_en: "Essentials & Services",
+      title_es: "Servicios Esenciales",
+      items: [
+        { id: "atms", icon: "💳", label_en: "ATMs", label_es: "Cajeros Automáticos", desc_en: "Convenient locations to withdraw cash.", desc_es: "Ubicaciones convenientes para retirar efectivo.", url: "https://maps.app.goo.gl/H2f4SgGZki4zLhh38" },
+        { id: "pharmacies", icon: "💊", label_en: "24/7 Pharmacies", label_es: "Farmacias 24/7", desc_en: "For any last-minute needs.", desc_es: "Para cualquier necesidad de último momento.", url: "https://maps.app.goo.gl/2snjVdKhHcnpEhJA6" },
+        { id: "emergency", icon: "🏥", label_en: "Hospitals & Police Stations", label_es: "Hospitales y Policía", desc_en: "Nearby emergency services for peace of mind.", desc_es: "Servicios de emergencia cercanos para mayor tranquilidad.", url: "https://maps.app.goo.gl/8yomj1ZFQWF7JuoT6" },
+      ],
+    },
+  ],
+  MDE: [
+    {
+      id: "dining",
+      icon: "🍽️",
+      title_en: "Dining & Food",
+      title_es: "Gastronomía",
+      items: [
+        { id: "brunch", icon: "☀️", label_en: "Breakfast, Brunch & Bakeries", label_es: "Desayuno, Brunch y Panaderías", desc_en: "Artisan coffee, fresh pastries, healthy bowls — Medellín's growing café scene.", desc_es: "Café de especialidad, pasteles frescos, bowls saludables — la escena de cafés en Medellín.", url: "https://maps.app.goo.gl/FqbNbEmvraEn3E5b8" },
+        { id: "chill", icon: "🌿", label_en: "Chill Restaurants", label_es: "Restaurantes Relajados", desc_en: "Cozy atmospheres, greenery, and easygoing vibes — walk-in friendly.", desc_es: "Ambientes acogedores, vegetación y buena energía — sin reservas.", url: "https://maps.app.goo.gl/DSZC742DyFKXZawx7" },
+        { id: "dinner", icon: "🕯️", label_en: "Stylish Dinner Spots", label_es: "Cenas con Ambiente", desc_en: "Beautiful design and elevated dining — perfect for dates and special nights.", desc_es: "Diseño cuidado y experiencias gastronómicas elevadas — ideal para fechas especiales.", url: "https://maps.app.goo.gl/6nUNVL9iyUvVHJ4z9" },
+        { id: "vegetarian", icon: "🥗", label_en: "Vegetarian Restaurants", label_es: "Restaurantes Vegetarianos", desc_en: "100% plant-based menus and spots with strong vegetarian options.", desc_es: "Menús 100% vegetarianos y lugares con excelentes opciones veggie.", url: "https://maps.app.goo.gl/BE1g6j9Wve3uJBdb8" },
+      ],
+    },
+    {
+      id: "nightlife",
+      icon: "🎭",
+      title_en: "Nightlife & Entertainment",
+      title_es: "Vida Nocturna",
+      items: [
+        { id: "rooftops", icon: "🌅", label_en: "Rooftops", label_es: "Rooftops", desc_en: "Best terraces for sunset views and drinks. We can help with reservations.", desc_es: "Las mejores terrazas para el atardecer y cócteles. Podemos ayudar con reservas.", url: "https://maps.app.goo.gl/ENkrm9fNNVUnWNWL8" },
+        { id: "cocktails", icon: "🍸", label_en: "Cocktail Bars", label_es: "Bares de Cócteles", desc_en: "Stylish bars and terraces — perfect for starting the night.", desc_es: "Bares elegantes y terrazas — perfectos para empezar la noche.", url: "https://maps.app.goo.gl/UTt4xCv6yfBoksj58" },
+        { id: "nightclubs", icon: "🎉", label_en: "Night Clubs", label_es: "Discotecas", desc_en: "Upscale venues — elegant interiors, high energy, dress to impress.", desc_es: "Lugares exclusivos — interiores elegantes, alta energía, dress code.", url: "https://maps.app.goo.gl/FTpmnaKcKb7GtJxT6" },
+        { id: "local_clubs", icon: "💃", label_en: "Local Night Clubs", label_es: "Discotecas Locales", desc_en: "Authentic Medellín — reggaeton, salsa, Latin hits, packed dance floors.", desc_es: "El Medellín auténtico — reggaeton, salsa, éxitos latinos y pistas llenas.", url: "https://maps.app.goo.gl/WhpQrEt5qpvji4mN9" },
+        { id: "bachelor", icon: "🎭", label_en: "Bachelor / VIP Clubs", label_es: "Clubs Bachelor / VIP", desc_en: "Table service, shows, personalized experience.", desc_es: "Servicio en mesa, shows y experiencia personalizada.", url: "https://maps.app.goo.gl/XKynyUERJpUVdKWz6" },
+        { id: "lgbt", icon: "🏳️‍🌈", label_en: "Gay Bars & LGBT Venues", label_es: "Bares Gay y LGBT", desc_en: "Great places to dance and socialize in a welcoming environment.", desc_es: "Lugares para bailar y socializar en un ambiente inclusivo.", url: "https://maps.app.goo.gl/197Zx5gHHDNMuNmd7" },
+      ],
+    },
+    {
+      id: "essentials",
+      icon: "⚙️",
+      title_en: "Essentials & Services",
+      title_es: "Servicios Esenciales",
+      items: [
+        { id: "atms", icon: "💳", label_en: "ATMs", label_es: "Cajeros Automáticos", desc_en: "Cash machines throughout the city.", desc_es: "Cajeros automáticos por toda la ciudad.", url: "https://maps.app.goo.gl/e1zPvaZC59aCKqnG8" },
+        { id: "malls", icon: "🛍️", label_en: "Malls & Shopping", label_es: "Centros Comerciales", desc_en: "Main shopping centers around El Poblado.", desc_es: "Principales centros comerciales cerca de El Poblado.", url: "https://maps.app.goo.gl/py9zWU1eQoFXgBCy6" },
+        { id: "pharmacies", icon: "💊", label_en: "Pharmacies 24/7", label_es: "Farmacias 24/7", desc_en: "Round-the-clock pharmacies in El Poblado.", desc_es: "Farmacias disponibles las 24 horas en El Poblado.", url: "https://maps.app.goo.gl/Q45XVrX5YUs5GrX7A" },
+        { id: "emergency", icon: "🏥", label_en: "Hospitals & Police Stations", label_es: "Hospitales y Policía", desc_en: "Nearby emergency services. Police: 123 · Ambulance: 125 · Fire: 119.", desc_es: "Servicios de emergencia cercanos. Policía: 123 · Ambulancia: 125 · Bomberos: 119.", url: "https://maps.app.goo.gl/p3ra3bxP3NjXK5kr7" },
+      ],
+    },
+  ],
+};
 
-const DEFAULT_CITY_GUIDE_INTRO_EN =
-  "A curated collection of additional spots across the city — from hidden culinary gems and vibrant nightlife to essential services. Use these recommendations as your personal guide to explore Cartagena beyond your itinerary.";
-const DEFAULT_CITY_GUIDE_INTRO_ES =
-  "Una selección curada de lugares adicionales en la ciudad — desde joyas gastronómicas escondidas y vida nocturna vibrante hasta servicios esenciales. Usa estas recomendaciones como tu guía personal para explorar Cartagena más allá de tu itinerario.";
+const DEFAULT_CITY_GUIDE_INTRO = {
+  CTG: {
+    en: "A curated collection of additional spots across the city — from hidden culinary gems and vibrant nightlife to essential services. Use these recommendations as your personal guide to explore Cartagena beyond your itinerary.",
+    es: "Una selección curada de lugares adicionales en la ciudad — desde joyas gastronómicas escondidas y vida nocturna vibrante hasta servicios esenciales. Usa estas recomendaciones como tu guía personal para explorar Cartagena más allá de tu itinerario.",
+  },
+  MDE: {
+    en: "A curated collection of additional spots across the city — from artisan cafés and rooftop bars to essential services. Use these recommendations as your personal guide to explore Medellín beyond your itinerary.",
+    es: "Una selección curada de lugares adicionales en la ciudad — desde cafés artesanales y rooftops hasta servicios esenciales. Usa estas recomendaciones como tu guía personal para explorar Medellín más allá de tu itinerario.",
+  },
+};
 
 function CityGuidePage({ kickoff, cityGuideHidden, cityGuideIntro, onIntroChange, page, total, lang, editMode, onToggleHidden }) {
   const isEs = lang === "es";
   const hidden = (cityGuideHidden || "").split(",").map(s => s.trim()).filter(Boolean);
-  const defaultIntro = isEs ? DEFAULT_CITY_GUIDE_INTRO_ES : DEFAULT_CITY_GUIDE_INTRO_EN;
+  const cityCode = (kickoff?.city || "CTG").toUpperCase();
+  const introDefaults = DEFAULT_CITY_GUIDE_INTRO[cityCode] || DEFAULT_CITY_GUIDE_INTRO.CTG;
+  const defaultIntro = isEs ? introDefaults.es : introDefaults.en;
   const intro = cityGuideIntro || defaultIntro;
   const cityName = kickoff.cityName || "Cartagena";
+  const sections = CITY_GUIDE_SECTIONS[cityCode] || CITY_GUIDE_SECTIONS.CTG;
 
   return (
     <div className="page" style={{ position: "relative", background: "#fefcf8", fontFamily: "Georgia, 'Times New Roman', serif" }}>
@@ -2801,7 +2852,7 @@ function CityGuidePage({ kickoff, cityGuideHidden, cityGuideIntro, onIntroChange
 
       {/* ── Two columns ── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0, padding: "0 44px" }}>
-        {CITY_GUIDE_SECTIONS.map((section, si) => {
+        {sections.map((section, si) => {
           const visibleItems = section.items.filter(item => !hidden.includes(item.id));
           if (visibleItems.length === 0 && !editMode) return null;
           return (
