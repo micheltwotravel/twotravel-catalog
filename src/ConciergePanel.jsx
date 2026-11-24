@@ -5876,6 +5876,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
   const [hideDrinks,        setHideDrinks]        = useState(kickoff?.hideDrinks        || false);
   const [hideGroceries,     setHideGroceries]     = useState(kickoff?.hideGroceries     || false);
   const [hideBreakfast,     setHideBreakfast]     = useState(kickoff?.hideBreakfast     || false);
+  const [hideOtros,         setHideOtros]         = useState(kickoff?.hideOtros         || false);
+  const [otrosContent,      setOtrosContent]      = useState(kickoff?.otrosContent      || "");
   const [documents, setDocuments] = useState(() => { try { return JSON.parse(kickoff?.documents || "[]"); } catch { return []; } });
   const [preTripContent,     setPreTripContent]     = useState(kickoff?.preTripContent     || (kickoff?.lang === "es" ? DEFAULT_PRE_TRIP_ES : DEFAULT_PRE_TRIP));
 
@@ -5960,6 +5962,8 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
     hideDrinks,
     hideGroceries,
     hideBreakfast,
+    hideOtros,
+    otrosContent:    otrosContent.trim(),
     // Timestamps — only set first time each status is reached
     ...(autoStatus === "concierge_editing" && !kickoff.conciergeEditingAt ? { conciergeEditingAt: now } : {}),
     ...(autoStatus === "sent_to_travify"   && !kickoff.sentToTravifyAt    ? { sentToTravifyAt: now }    : {}),
@@ -6734,6 +6738,7 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     [hideDrinks,     setHideDrinks,     "🍹 Bebidas"],
                     [hideGroceries,  setHideGroceries,  "🛒 Mercado"],
                     [hideBreakfast,  setHideBreakfast,  "🍳 Desayuno"],
+                    [hideOtros,      setHideOtros,      "📌 Otros"],
                   ].map(([val, setter, label]) => (
                     <label key={label} className="flex items-center gap-2 cursor-pointer select-none text-sm">
                       <input type="checkbox" checked={!!val} onChange={e => setter(e.target.checked)}
@@ -6742,9 +6747,20 @@ function EditDrawer({ kickoff, onClose, onSave, onSilentUpdate }) {
                     </label>
                   ))}
                 </div>
-                {(hidePreCheckin || hideDrinks || hideGroceries || hideBreakfast) && (
+                {(hidePreCheckin || hideDrinks || hideGroceries || hideBreakfast || hideOtros) && (
                   <p className="mt-1 text-[11px] text-amber-600">⚠️ Las secciones tachadas no aparecerán en el itinerario del cliente.</p>
                 )}
+              </div>
+
+              <div className="col-span-2">
+                <label className="text-[11px] text-neutral-500 mb-1 block">📌 Otras recomendaciones (aparece en el itinerario si tiene contenido)</label>
+                <textarea
+                  value={otrosContent}
+                  onChange={e => setOtrosContent(e.target.value)}
+                  rows={3}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-white"
+                  placeholder="Ej: E-bike · Bike tour (rail) · Cacao experience · Comuna 13 · Producción..."
+                />
               </div>
 
               <div className="col-span-2">

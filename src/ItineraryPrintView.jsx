@@ -1496,6 +1496,18 @@ function CoverPage({ kickoff, total, lang, editMode, checkinResponses = [] }) {
           });
         })()}
 
+        {/* Otros / More recommendations */}
+        {a.otrosContent && !a.hideOtros && (
+          <div style={{ background: "#f8f9fa", border: "1px solid #e5e7eb", borderRadius: 10, padding: "11px 16px", marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 4 }}>
+              📌 {isEs ? "Otras recomendaciones" : "More recommendations"}
+            </div>
+            <div style={{ fontSize: 10.5, color: "#6b7280", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+              {a.otrosContent}
+            </div>
+          </div>
+        )}
+
         {/* Welcome Guide link — shown if configured */}
         {a.welcomePdfUrl && (
           <a href={driveViewUrl(a.welcomePdfUrl)} target="_blank" rel="noreferrer" style={{
