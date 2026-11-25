@@ -718,18 +718,11 @@ function EditCell({ value, field, onSave, isNum, isDate, options, readOnly }) {
 
   if (options?.length && !isDate && !isNum) {
     return (
-      <>
-        <input ref={ref} autoFocus value={val} list={dlId}
-          onChange={e=>setVal(e.target.value)}
-          onBlur={finish}
-          onKeyDown={e=>{ if(e.key==="Enter") finish(); if(e.key==="Escape"){ setEditing(false); setVal(value??""); } }}
-          style={{fontSize:11,border:"1px solid "+GOLD,borderRadius:4,padding:"2px 6px",
-            width:"100%",minWidth:100,maxWidth:200,boxSizing:"border-box",
-            background:WHT,fontFamily:"'Jost',sans-serif",outline:"none"}} />
-        <datalist id={dlId}>
-          {options.map(o=><option key={o} value={o}/>)}
-        </datalist>
-      </>
+      <select autoFocus value={val} onChange={e=>setVal(e.target.value)} onBlur={finish}
+        style={{fontSize:11,border:"1px solid "+GOLD,borderRadius:4,padding:"2px 4px",background:WHT,fontFamily:"'Jost',sans-serif",outline:"none",minWidth:100}}>
+        <option value="">—</option>
+        {options.map(o=><option key={o} value={o}>{o}</option>)}
+      </select>
     );
   }
 
