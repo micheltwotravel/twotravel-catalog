@@ -1339,7 +1339,12 @@ export function FinanceReservaciones({ currentUser }) {
   };
   const resolveSalesRep = v => (v && ownerNames[String(v)]) ? ownerNames[String(v)] : (v||"—");
 
-  const months = ["all",...[...new Set(rows.map(r=>(sortCol==="createdAt"?(r.createdAt||""):(r.fecha||r.checkIn||"")).slice(0,7)).filter(Boolean))].sort().reverse()];
+  // Month list: by fecha/checkIn when sorted by date, by createdAt when sorted by recientes.
+  // Fall back to createdAt when fecha is empty so undated rows still appear in the month they were added.
+  const rowMonth = r => sortCol==="createdAt"
+    ? (r.createdAt||"").slice(0,7)
+    : ((r.fecha||r.checkIn||"").slice(0,7) || (r.createdAt||"").slice(0,7));
+  const months = ["all",...[...new Set(rows.map(r=>rowMonth(r)).filter(Boolean))].sort().reverse()];
 
   // Monday.com group-separator rows — no real client data
   const isSeparator = r => /reservations?\s*[\/]\s*sales|two travel\s*:/i.test(r.name||"") && !r.fecha && !r.precioCOP;
@@ -1359,8 +1364,7 @@ export function FinanceReservaciones({ currentUser }) {
     const src = r.dealSource||"";
     if (sourceF!=="all" && src!==sourceF) return acc;
     const fecha = r.fecha||r.checkIn||"";
-    const filterMonth = sortCol==="createdAt" ? (r.createdAt||"").slice(0,7) : fecha?.slice(0,7);
-    if (monthF!=="all"  && filterMonth!==monthF) return acc;
+    if (monthF!=="all"  && rowMonth(r)!==monthF) return acc;
     if (dateFrom && fecha && fecha < dateFrom) return acc;
     if (dateTo   && fecha && fecha > dateTo)   return acc;
     if (search) {
@@ -1406,7 +1410,7 @@ export function FinanceReservaciones({ currentUser }) {
   } else {
     let curMk = null;
     sorted.forEach(rowIdx => {
-      const mk = (rows[rowIdx].fecha||rows[rowIdx].checkIn||"")?.slice(0,7) || "";
+      const mk = rowMonth(rows[rowIdx]);
       if (mk !== curMk) { curMk = mk; groups.push({mk, idxs:[]}); }
       groups[groups.length-1].idxs.push(rowIdx);
     });
