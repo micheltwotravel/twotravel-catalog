@@ -267,14 +267,21 @@ function mapNonCatalogRow(row, index) {
     nameEs,
     category: "services",
     city: "",
-    images: [],
+    images: [
+      normalizeDriveImage(row["image 2"] || row["image2"] || row["foto 2"] || ""),
+      normalizeDriveImage(row["image 3"] || row["image3"] || row["foto 3"] || ""),
+      normalizeDriveImage(row["image 4"] || row["image4"] || row["foto 4"] || ""),
+    ].filter(Boolean),
     video1: "",
     priceLevel: "",
     price_cop: 0,
     price_tier_1: 0,
     price_tier_2: 0,
     priceUnit: "",
-    image: normalizeDriveImage(row.image || ""),
+    image: normalizeDriveImage(
+      row["image_source"] || row["image source"] || row.image ||
+      row.foto || row.photo || row.imagen || row.img || ""
+    ),
     description: { es: row["descripcion esp"] || "", en: row.description || "" },
     travefy: { libraryId: "", libraryName: "", enabled: false, notesTemplate: "", categoryOverride: "" },
     capacity: { min: 1, max: 10 },
@@ -537,7 +544,10 @@ export async function fetchItineraryItems() {
         name_es: row["item nombre$"] || "",
         description: row.description || "",
         description_es: row["descripcion esp"] || "",
-        image: normalizeDriveImage(row.image || ""),
+        image: normalizeDriveImage(
+          row["image_source"] || row["image source"] || row.image ||
+          row.foto || row.photo || row.imagen || row.img || ""
+        ),
       }))
       .filter(row => row.name_en || row.name_es);
     try { sessionStorage.setItem(ITINERARY_ITEMS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}
