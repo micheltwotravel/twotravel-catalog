@@ -195,6 +195,7 @@ button,input,select,textarea{font-family:'Jost',sans-serif}
   <button class="tab" onclick="switchTab('cultura')">🌟 Cultura</button>
   <button class="tab" onclick="switchTab('staff')">⚙️ Equipo</button>
   <button class="tab" onclick="switchTab('turnos')">🕐 Turnos</button>
+  <button class="tab" onclick="switchTab('pagos')">💰 Pagos</button>
 </div>
 
 <!-- TOOLBAR (dynamic) -->
@@ -384,7 +385,7 @@ function pill(status, map, onclick) {
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll(".tab").forEach((t,i) => {
-    t.classList.toggle("active", ["hiring","projects","attendance","cultura","staff","turnos"][i] === tab);
+    t.classList.toggle("active", ["hiring","projects","attendance","cultura","staff","turnos","pagos"][i] === tab);
   });
   render();
 }
@@ -397,6 +398,7 @@ function render() {
   else if (currentTab === "cultura") renderCultura();
   else if (currentTab === "staff") renderStaff();
   else if (currentTab === "turnos") loadWeekEvents();
+  else if (currentTab === "pagos") renderPagos();
 }
 
 // ══════════════════════════════════════════════
@@ -1687,10 +1689,226 @@ const _aliaIdx = staff.findIndex(s => /^(alia|aria)\b/i.test(s.name));
 if (_aliaIdx >= 0) { staff.splice(_aliaIdx, 1); save(KEY.staff, staff); }
 
 const _initTab = new URLSearchParams(location.search).get('tab');
-if (_initTab && ["hiring","projects","attendance","cultura","staff","turnos"].includes(_initTab)) {
+if (_initTab && ["hiring","projects","attendance","cultura","staff","turnos","pagos"].includes(_initTab)) {
   currentTab = _initTab;
 }
 render();
+
+// ══════════════════════════════════════════════
+// PAGOS — Créditos y Pagos por mes
+// ══════════════════════════════════════════════
+const KEY_PAGOS = 'hr_creditos_v1';
+let pagosData = {};
+let pagosActiveMonth = '';
+
+function loadPagosData() {
+  try {
+    const s = localStorage.getItem(KEY_PAGOS);
+    if (s) pagosData = JSON.parse(s);
+  } catch(e) {}
+  if (!Object.keys(pagosData).length) {
+    pagosData = {
+      "2026-10": [
+        { id:"c1", name:"Crédito Ordinaria ibr mensual", bank:"Banco Bancolombia", due:"2026-10-16", amount:3599000, status:"Pago", resp:"Génesis", paid:"2026-10-16", support:"https://two743885.monday.com/protected_static/28056935/resources/3343578160/Detalle_Movimiento_26_Oct_26.pdf" },
+        { id:"c2", name:"Crédito Cesantías ibr", bank:"Banco Bancolombia", due:"2026-10-28", amount:8550000, status:"Pago", resp:"Génesis", paid:"2026-10-28", support:null },
+        { id:"c3", name:"Crédito Credipago v", bank:"Banco Bancolombia", due:"2026-09-07", amount:null, status:"N/A", resp:"Génesis", paid:null, support:null },
+        { id:"c4", name:"Crédito Fijo 7105056600774062", bank:"Banco Davivienda", due:"2026-10-26", amount:11341000, status:"Pago", resp:"Génesis", paid:"2026-10-26", support:"https://two743885.monday.com/protected_static/28056935/resources/3343574116/Comprobante_Transferencia_PSE1793046009944.pdf" },
+        { id:"c5", name:"Crédito Fijo 7105056600676119", bank:"Banco Davivienda", due:"2026-10-20", amount:9001803, status:"Pago", resp:"Génesis", paid:"2026-10-21", support:"https://two743885.monday.com/protected_static/28056935/resources/3333540138/Comprobante_Transferencia_PSE1792615039735.pdf" },
+        { id:"c6", name:"Crédito Express Rotativo 6705056600676131", bank:"Banco Davivienda", due:"2026-10-16", amount:27911516, status:"Pago", resp:"Génesis", paid:"2026-10-15", support:"https://two743885.monday.com/protected_static/28056935/resources/3305550903/Comprobante_Transferencia_PSE1791488840586.pdf" },
+      ]
+    };
+    savePagosData();
+  }
+  if (!pagosActiveMonth || !pagosData[pagosActiveMonth]) {
+    pagosActiveMonth = Object.keys(pagosData).sort().slice(-1)[0] || "2026-10";
+  }
+}
+
+function savePagosData() {
+  try { localStorage.setItem(KEY_PAGOS, JSON.stringify(pagosData)); } catch(e) {}
+}
+
+function pagosMonthLabel(key) {
+  const [y,m] = key.split('-');
+  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  return months[parseInt(m)-1] + ' ' + y;
+}
+function pagosFmtCOP(n) {
+  if (!n && n !== 0) return '—';
+  return '$' + n.toLocaleString('es-CO');
+}
+function pagosFmtDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  const ms = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return parseInt(day)+' '+ms[parseInt(m)-1]+' '+y;
+}
+function pagosBankInitials(b) {
+  if (/bancolombia/i.test(b)) return 'BC';
+  if (/davivienda/i.test(b)) return 'DV';
+  if (/bogot/i.test(b)) return 'BB';
+  return b.substring(0,2).toUpperCase();
+}
+function pagosBankColor(b) {
+  if (/bancolombia/i.test(b)) return 'background:#ffd200;color:#1a1200';
+  if (/davivienda/i.test(b)) return 'background:#e8192c;color:#fff';
+  return 'background:var(--sand2);color:var(--ink2)';
+}
+
+function renderPagos() {
+  loadPagosData();
+  const tb = document.getElementById("toolbar");
+  const ct = document.getElementById("content");
+
+  const months = Object.keys(pagosData).sort();
+  const credits = pagosData[pagosActiveMonth] || [];
+  const totalAll = credits.filter(c=>c.amount).reduce((s,c)=>s+c.amount,0);
+  const totalPaid = credits.filter(c=>c.status==='Pago'&&c.amount).reduce((s,c)=>s+c.amount,0);
+  const totalPend = credits.filter(c=>c.status==='Pendiente'&&c.amount).reduce((s,c)=>s+c.amount,0);
+
+  tb.innerHTML = `
+    <button class="tbtn primary" onclick="pagosOpenAddModal()">+ Agregar crédito</button>
+    <button class="tbtn" onclick="pagosAddMonth()" style="background:var(--sand);color:var(--ink2)">+ Mes nuevo</button>
+  `;
+
+  const tabsHtml = months.map(m =>
+    `<button class="stab${m===pagosActiveMonth?' active':''}" onclick="pagosSetMonth('${m}')">${pagosMonthLabel(m)}</button>`
+  ).join('');
+
+  const statsHtml = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 16px;flex:1;min-width:110px">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Total mes</div>
+        <div style="font-size:18px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums">${pagosFmtCOP(totalAll)}</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 16px;flex:1;min-width:110px">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Pagados</div>
+        <div style="font-size:18px;font-weight:700;margin-top:2px;color:#166534;font-variant-numeric:tabular-nums">${pagosFmtCOP(totalPaid)}</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 16px;flex:1;min-width:110px">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Pendientes</div>
+        <div style="font-size:18px;font-weight:700;margin-top:2px;color:#92400e;font-variant-numeric:tabular-nums">${totalPend ? pagosFmtCOP(totalPend) : '—'}</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 16px;flex:1;min-width:110px">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Créditos</div>
+        <div style="font-size:18px;font-weight:700;margin-top:2px">${credits.length}</div>
+      </div>
+    </div>`;
+
+  const listHtml = credits.length ? credits.map(c => {
+    const statusStyle = c.status==='Pago'
+      ? 'background:#f0fdf4;color:#166534;border:1px solid #bbf7d0'
+      : c.status==='N/A'
+        ? 'background:var(--sand);color:var(--ink3);border:1px solid var(--border)'
+        : 'background:#fffbeb;color:#92400e;border:1px solid #fde68a';
+    const statusLabel = c.status==='Pago' ? '✓ Pagado' : c.status==='N/A' ? '— N/A' : '⏳ Pendiente';
+    return `<div style="background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px">
+      <div style="display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:12px;padding:12px 14px">
+        <div style="width:36px;height:36px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;${pagosBankColor(c.bank)}">${pagosBankInitials(c.bank)}</div>
+        <div style="min-width:0">
+          <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:1px">${c.bank}${c.resp?' · '+c.resp:''}</div>
+          <span style="display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;margin-top:4px;${statusStyle}">${statusLabel}</span>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-weight:700;font-size:14px;font-variant-numeric:tabular-nums">${pagosFmtCOP(c.amount)}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:1px">Vence ${pagosFmtDate(c.due)}</div>
+          ${c.paid&&c.status==='Pago'?`<div style="font-size:11px;color:#166534">Pagado ${pagosFmtDate(c.paid)}</div>`:''}
+        </div>
+      </div>
+      ${c.support?`<a href="${c.support}" target="_blank" rel="noopener" style="display:block;padding:7px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--gold);text-decoration:none;background:var(--sand);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📎 Ver soporte de pago</a>`:''}
+    </div>`;
+  }).join('') : `<div style="text-align:center;padding:40px 20px;color:var(--ink3)">No hay créditos en este mes.<br>Agrega uno con el botón arriba.</div>`;
+
+  ct.innerHTML = `
+    <div style="padding:16px 20px">
+      <div class="sub-tabs" style="margin-bottom:16px;overflow-x:auto;white-space:nowrap">${tabsHtml}</div>
+      ${statsHtml}
+      ${listHtml}
+    </div>
+    <div id="pagosModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;padding:16px">
+      <div style="background:var(--white);border-radius:14px;width:100%;max-width:420px;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
+          <strong>Nuevo crédito</strong>
+          <button onclick="pagosCloseModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink3)">×</button>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+          <div><div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Nombre</div>
+            <input id="pf-name" class="inp" placeholder="ej. Crédito Fijo Bancolombia" style="width:100%"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div><div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Banco</div>
+              <select id="pf-bank" class="inp" style="width:100%">
+                <option>Banco Bancolombia</option><option>Banco Davivienda</option><option>Banco de Bogotá</option><option>BBVA</option><option>Otro</option>
+              </select></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Mes</div>
+              <select id="pf-month" class="inp" style="width:100%"></select></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div><div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Fecha vencimiento</div>
+              <input id="pf-due" type="date" class="inp" style="width:100%"></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Cuota (COP)</div>
+              <input id="pf-amount" type="number" class="inp" placeholder="0" style="width:100%"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div><div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Estado</div>
+              <select id="pf-status" class="inp" style="width:100%"><option value="Pendiente">Pendiente</option><option value="Pago">Pagado</option><option value="N/A">N/A</option></select></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Responsable</div>
+              <input id="pf-resp" class="inp" placeholder="ej. Génesis" style="width:100%"></div>
+          </div>
+        </div>
+        <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="pagosCloseModal()" style="padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:transparent;cursor:pointer;font-size:13px">Cancelar</button>
+          <button onclick="pagosSaveCredit()" style="padding:8px 16px;border:none;border-radius:7px;background:var(--gold);color:#fff;cursor:pointer;font-size:13px;font-weight:600">Guardar</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function pagosSetMonth(m) { pagosActiveMonth = m; renderPagos(); }
+
+function pagosAddMonth() {
+  const all = ["2026-10","2026-11","2026-12","2027-01","2027-02","2027-03","2027-04","2027-05","2027-06","2027-07","2027-08","2027-09","2027-10","2027-11","2027-12"];
+  const existing = Object.keys(pagosData);
+  const next = all.find(m => !existing.includes(m));
+  if (!next) return;
+  pagosData[next] = [];
+  savePagosData();
+  pagosActiveMonth = next;
+  renderPagos();
+}
+
+function pagosOpenAddModal() {
+  const sel = document.getElementById('pf-month');
+  if (!sel) { renderPagos(); setTimeout(pagosOpenAddModal, 50); return; }
+  sel.innerHTML = Object.keys(pagosData).sort().map(m=>`<option value="${m}">${pagosMonthLabel(m)}</option>`).join('');
+  sel.value = pagosActiveMonth;
+  document.getElementById('pagosModal').style.display = 'flex';
+}
+function pagosCloseModal() {
+  const m = document.getElementById('pagosModal');
+  if (m) m.style.display = 'none';
+}
+function pagosSaveCredit() {
+  const name = document.getElementById('pf-name').value.trim();
+  if (!name) { document.getElementById('pf-name').focus(); return; }
+  const month = document.getElementById('pf-month').value;
+  const credit = {
+    id: 'c'+Date.now(),
+    name,
+    bank: document.getElementById('pf-bank').value,
+    due: document.getElementById('pf-due').value || null,
+    amount: parseFloat(document.getElementById('pf-amount').value) || null,
+    status: document.getElementById('pf-status').value,
+    resp: document.getElementById('pf-resp').value.trim() || null,
+    paid: null, support: null
+  };
+  if (!pagosData[month]) pagosData[month] = [];
+  pagosData[month].push(credit);
+  savePagosData();
+  pagosActiveMonth = month;
+  pagosCloseModal();
+  renderPagos();
+}
 </script>
 </body>
 </html>
