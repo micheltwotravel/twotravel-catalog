@@ -12,9 +12,9 @@
   --gold:#9a7d52;--gold2:#c4a272;--gold3:#e8d5b7;
   --white:#ffffff;
   --border:rgba(26,24,20,0.09);--border2:rgba(26,24,20,0.15);
-  --green:#166534;--green-bg:#f0fdf4;--green-b:#bbf7d0;
-  --amber:#92400e;--amber-bg:#fffbeb;--amber-b:#fde68a;
-  --gray:#6b7280;--gray-bg:#f9fafb;--gray-b:#e5e7eb;
+  --s-paid-bg:#f0fdf4;--s-paid:#166534;--s-paid-b:#bbf7d0;
+  --s-pend-bg:#fffbeb;--s-pend:#92400e;--s-pend-b:#fde68a;
+  --s-na-bg:#f9fafb;--s-na:#6b7280;--s-na-b:#e5e7eb;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color:var(--ink);font-weight:300;overflow:hidden}
@@ -27,16 +27,13 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 .back-btn{font-size:11px;color:var(--ink3);text-decoration:none;letter-spacing:.06em;padding:5px 10px;border:1px solid var(--border2);transition:all .12s}
 .back-btn:hover{color:var(--ink);border-color:var(--gold)}
 
-.toolbar{position:fixed;top:54px;left:0;right:0;height:46px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:10px;z-index:99;overflow-x:auto}
+.toolbar{position:fixed;top:54px;left:0;right:0;height:46px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:8px;z-index:99;overflow-x:auto}
 .tbtn{display:flex;align-items:center;gap:5px;padding:5px 12px;font-size:11px;letter-spacing:.05em;border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--ink2);font-family:'Jost',sans-serif;transition:all .12s;white-space:nowrap;flex-shrink:0}
 .tbtn:hover{border-color:var(--gold);color:var(--gold)}
 .tbtn.primary{background:var(--gold);color:var(--white);border-color:var(--gold)}
 .tbtn.primary:hover{background:var(--gold2);border-color:var(--gold2)}
-.tbtn.danger{color:#dc2626;border-color:rgba(220,38,38,.3)}
-.tbtn.danger:hover{background:#fef2f2;border-color:#dc2626}
-
-.month-tabs{display:flex;gap:6px;align-items:center}
-.mtab{padding:4px 14px;font-size:11px;letter-spacing:.05em;border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--ink3);font-family:'Jost',sans-serif;transition:all .12s;white-space:nowrap;flex-shrink:0}
+.month-tabs{display:flex;gap:5px;align-items:center}
+.mtab{padding:3px 13px;font-size:11px;letter-spacing:.05em;border:1px solid var(--border2);background:transparent;cursor:pointer;color:var(--ink3);font-family:'Jost',sans-serif;transition:all .12s;white-space:nowrap;flex-shrink:0}
 .mtab.active{background:var(--gold);color:var(--white);border-color:var(--gold)}
 .mtab:not(.active):hover{border-color:var(--gold);color:var(--gold)}
 
@@ -46,35 +43,38 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 .stat-card{background:var(--white);border:1px solid var(--border);padding:11px 16px;flex:1;min-width:110px}
 .stat-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:3px}
 .stat-val{font-size:20px;font-weight:300;color:var(--ink);font-variant-numeric:tabular-nums}
-.stat-val.paid{color:var(--green)}
-.stat-val.pend{color:var(--amber)}
+.stat-val.paid{color:#166534}
+.stat-val.pend{color:#92400e}
 
-.credit-list{display:flex;flex-direction:column;gap:8px}
-.credit-row{background:var(--white);border:1px solid var(--border);overflow:hidden}
-.credit-inner{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:14px;padding:12px 14px}
-.bank-badge{width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;letter-spacing:-.3px;flex-shrink:0}
-.bank-bc{background:#ffd200;color:#1a1200}
-.bank-dv{background:#e8192c;color:#fff}
-.bank-other{background:var(--sand2);color:var(--ink2)}
-.credit-name{font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.credit-meta{font-size:11px;color:var(--ink3);margin-top:2px}
-.status-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:500;padding:2px 8px;letter-spacing:.03em;margin-top:4px}
-.s-paid{background:var(--green-bg);color:var(--green);border:1px solid var(--green-b)}
-.s-pend{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-b)}
-.s-na{background:var(--gray-bg);color:var(--gray);border:1px solid var(--gray-b)}
-.credit-right{text-align:right;flex-shrink:0}
-.credit-amount{font-size:15px;font-weight:400;font-variant-numeric:tabular-nums}
-.credit-due{font-size:11px;color:var(--ink3);margin-top:1px}
-.credit-paid-date{font-size:11px;color:var(--green)}
-.support-link{display:block;padding:6px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--gold);text-decoration:none;background:var(--sand);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.support-link:hover{color:var(--gold2)}
+.table-wrap{overflow-x:auto;border:1px solid var(--border);background:var(--white);margin-bottom:20px}
+.ctable{width:100%;border-collapse:collapse;min-width:780px}
+.ctable th{background:var(--sand);border-bottom:1px solid var(--border2);border-right:1px solid var(--border);padding:7px 10px;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);white-space:nowrap}
+.ctable th:last-child{border-right:none}
+.ctable td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:0;vertical-align:middle;height:38px;font-size:12px}
+.ctable td:last-child{border-right:none}
+.ctable tr:last-child td{border-bottom:none}
+.ctable tr:hover td{background:rgba(247,244,239,.5)}
+.cell{padding:6px 10px;display:flex;align-items:center;height:38px;gap:6px}
 
-.empty{text-align:center;padding:48px;color:var(--ink3);font-size:13px}
+.bank-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-bc{background:#ffd200}
+.dot-dv{background:#e8192c}
+.dot-other{background:var(--ink3)}
+
+.status-pill{display:inline-flex;align-items:center;font-size:10px;font-weight:500;padding:2px 8px;letter-spacing:.03em;white-space:nowrap}
+.sp-paid{background:var(--s-paid-bg);color:var(--s-paid);border:1px solid var(--s-paid-b)}
+.sp-pend{background:var(--s-pend-bg);color:var(--s-pend);border:1px solid var(--s-pend-b)}
+.sp-na  {background:var(--s-na-bg);color:var(--s-na);border:1px solid var(--s-na-b)}
+
+.support-link{color:var(--gold);text-decoration:none;font-size:11px}
+.support-link:hover{text-decoration:underline}
+
+.empty-row td{text-align:center;padding:32px;color:var(--ink3);font-size:12px}
 
 /* Modal */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:center;justify-content:center;padding:16px}
 .overlay.open{display:flex}
-.modal{background:var(--white);width:100%;max-width:420px;overflow:hidden}
+.modal{background:var(--white);width:100%;max-width:420px}
 .modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
 .modal-hdr strong{font-size:14px;font-weight:500;letter-spacing:.04em}
 .modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink3);line-height:1}
@@ -98,15 +98,32 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
   </div>
 </div>
 
-<div class="toolbar" id="toolbar">
-  <button class="tbtn primary" onclick="openModal()">+ Agregar crédito</button>
+<div class="toolbar">
+  <button class="tbtn primary" onclick="openModal()">+ Agregar</button>
   <div class="month-tabs" id="monthTabs"></div>
-  <button class="tbtn" onclick="addMonth()" style="margin-left:4px">+ Mes</button>
+  <button class="tbtn" onclick="addMonth(true)" title="Copia los créditos del mes activo al siguiente mes">Duplicar mes →</button>
+  <button class="tbtn" onclick="addMonth(false)" title="Mes vacío">+ Mes vacío</button>
 </div>
 
 <div class="main">
   <div class="stats-bar" id="statsBar"></div>
-  <div class="credit-list" id="creditList"></div>
+  <div class="table-wrap">
+    <table class="ctable">
+      <thead>
+        <tr>
+          <th>Crédito</th>
+          <th>Banco</th>
+          <th>Responsable</th>
+          <th>Vencimiento</th>
+          <th style="text-align:right">Cuota</th>
+          <th>Estado</th>
+          <th>Fecha Pago</th>
+          <th>Soporte</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
 </div>
 
 <!-- Modal -->
@@ -154,58 +171,49 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 
 <script>
 const KEY = 'twotravel_creditos_v2';
-
 const DEFAULT = {
   "2026-10": [
-    { id:"c1", name:"Crédito Ordinaria ibr mensual", bank:"Banco Bancolombia", due:"2026-10-16", amount:3599000, status:"Pago", resp:"Génesis", paid:"2026-10-16", support:"https://two743885.monday.com/protected_static/28056935/resources/3343578160/Detalle_Movimiento_26_Oct_26.pdf" },
-    { id:"c2", name:"Crédito Cesantías ibr", bank:"Banco Bancolombia", due:"2026-10-28", amount:8550000, status:"Pago", resp:"Génesis", paid:"2026-10-28", support:null },
-    { id:"c3", name:"Crédito Credipago v", bank:"Banco Bancolombia", due:"2026-09-07", amount:null, status:"N/A", resp:"Génesis", paid:null, support:null },
-    { id:"c4", name:"Crédito Fijo 7105056600774062", bank:"Banco Davivienda", due:"2026-10-26", amount:11341000, status:"Pago", resp:"Génesis", paid:"2026-10-26", support:"https://two743885.monday.com/protected_static/28056935/resources/3343574116/Comprobante_Transferencia_PSE1793046009944.pdf" },
-    { id:"c5", name:"Crédito Fijo 7105056600676119", bank:"Banco Davivienda", due:"2026-10-20", amount:9001803, status:"Pago", resp:"Génesis", paid:"2026-10-21", support:"https://two743885.monday.com/protected_static/28056935/resources/3333540138/Comprobante_Transferencia_PSE1792615039735.pdf" },
+    { id:"c1", name:"Crédito Ordinaria ibr mensual",       bank:"Banco Bancolombia", due:"2026-10-16", amount:3599000,  status:"Pago", resp:"Génesis", paid:"2026-10-16", support:"https://two743885.monday.com/protected_static/28056935/resources/3343578160/Detalle_Movimiento_26_Oct_26.pdf" },
+    { id:"c2", name:"Crédito Cesantías ibr",               bank:"Banco Bancolombia", due:"2026-10-28", amount:8550000,  status:"Pago", resp:"Génesis", paid:"2026-10-28", support:null },
+    { id:"c3", name:"Crédito Credipago v",                 bank:"Banco Bancolombia", due:"2026-09-07", amount:null,     status:"N/A",  resp:"Génesis", paid:null,         support:null },
+    { id:"c4", name:"Crédito Fijo 7105056600774062",       bank:"Banco Davivienda",  due:"2026-10-26", amount:11341000, status:"Pago", resp:"Génesis", paid:"2026-10-26", support:"https://two743885.monday.com/protected_static/28056935/resources/3343574116/Comprobante_Transferencia_PSE1793046009944.pdf" },
+    { id:"c5", name:"Crédito Fijo 7105056600676119",       bank:"Banco Davivienda",  due:"2026-10-20", amount:9001803,  status:"Pago", resp:"Génesis", paid:"2026-10-21", support:"https://two743885.monday.com/protected_static/28056935/resources/3333540138/Comprobante_Transferencia_PSE1792615039735.pdf" },
     { id:"c6", name:"Crédito Express Rotativo 6705056600676131", bank:"Banco Davivienda", due:"2026-10-16", amount:27911516, status:"Pago", resp:"Génesis", paid:"2026-10-15", support:"https://two743885.monday.com/protected_static/28056935/resources/3305550903/Comprobante_Transferencia_PSE1791488840586.pdf" },
   ]
 };
 
 let data = DEFAULT;
 let activeMonth = "2026-10";
-
 try { const s = localStorage.getItem(KEY); if (s) data = JSON.parse(s); } catch(e) {}
 if (!data[activeMonth]) activeMonth = Object.keys(data).sort().slice(-1)[0] || "2026-10";
 
 function save() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch(e) {} }
 
-const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-function mlabel(key) { const [y,m]=key.split('-'); return MONTHS_ES[parseInt(m)-1]+' '+y; }
+const MES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function mlabel(k) { const [y,m]=k.split('-'); return MES[parseInt(m)-1]+' '+y; }
 function fmtCOP(n) { if (!n && n!==0) return '—'; return '$'+n.toLocaleString('es-CO'); }
 function fmtDate(d) {
   if (!d) return '—';
   const [y,m,day]=d.split('-');
   return parseInt(day)+' '+['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][parseInt(m)-1]+' '+y;
 }
-function bankInitials(b) {
-  if (/bancolombia/i.test(b)) return 'BC';
-  if (/davivienda/i.test(b)) return 'DV';
-  return b.substring(0,2).toUpperCase();
-}
-function bankClass(b) {
-  if (/bancolombia/i.test(b)) return 'bank-bc';
-  if (/davivienda/i.test(b)) return 'bank-dv';
-  return 'bank-other';
+function bankDot(b) {
+  if (/bancolombia/i.test(b)) return 'dot-bc';
+  if (/davivienda/i.test(b)) return 'dot-dv';
+  return 'dot-other';
 }
 
 function render() {
   const months = Object.keys(data).sort();
   const credits = data[activeMonth] || [];
-  const totalAll = credits.filter(c=>c.amount).reduce((s,c)=>s+c.amount,0);
+  const totalAll  = credits.filter(c=>c.amount).reduce((s,c)=>s+c.amount,0);
   const totalPaid = credits.filter(c=>c.status==='Pago'&&c.amount).reduce((s,c)=>s+c.amount,0);
   const totalPend = credits.filter(c=>c.status==='Pendiente'&&c.amount).reduce((s,c)=>s+c.amount,0);
 
-  // Month tabs
   document.getElementById('monthTabs').innerHTML = months.map(m=>
     `<button class="mtab${m===activeMonth?' active':''}" onclick="setMonth('${m}')">${mlabel(m)}</button>`
   ).join('');
 
-  // Stats
   document.getElementById('statsBar').innerHTML = `
     <div class="stat-card"><div class="stat-label">Total mes</div><div class="stat-val">${fmtCOP(totalAll)}</div></div>
     <div class="stat-card"><div class="stat-label">Pagados</div><div class="stat-val paid">${fmtCOP(totalPaid)}</div></div>
@@ -213,44 +221,48 @@ function render() {
     <div class="stat-card"><div class="stat-label">Créditos</div><div class="stat-val">${credits.length}</div></div>
   `;
 
-  // List
   if (!credits.length) {
-    document.getElementById('creditList').innerHTML = `<div class="empty">No hay créditos en este mes.<br>Agrega uno con el botón arriba.</div>`;
+    document.getElementById('tableBody').innerHTML = `<tr class="empty-row"><td colspan="8">No hay créditos en este mes. Agrega uno con el botón arriba.</td></tr>`;
     return;
   }
-  document.getElementById('creditList').innerHTML = credits.map(c => {
-    const sc = c.status==='Pago'?'s-paid':c.status==='N/A'?'s-na':'s-pend';
-    const sl = c.status==='Pago'?'✓ Pagado':c.status==='N/A'?'— N/A':'⏳ Pendiente';
-    return `<div class="credit-row">
-      <div class="credit-inner">
-        <div class="bank-badge ${bankClass(c.bank)}">${bankInitials(c.bank)}</div>
-        <div style="min-width:0">
-          <div class="credit-name">${c.name}</div>
-          <div class="credit-meta">${c.bank}${c.resp?' · '+c.resp:''}</div>
-          <span class="status-badge ${sc}">${sl}</span>
-        </div>
-        <div class="credit-right">
-          <div class="credit-amount">${fmtCOP(c.amount)}</div>
-          <div class="credit-due">Vence ${fmtDate(c.due)}</div>
-          ${c.paid&&c.status==='Pago'?`<div class="credit-paid-date">Pagado ${fmtDate(c.paid)}</div>`:''}
-        </div>
-      </div>
-      ${c.support?`<a class="support-link" href="${c.support}" target="_blank" rel="noopener">📎 Ver soporte de pago</a>`:''}
-    </div>`;
+
+  document.getElementById('tableBody').innerHTML = credits.map(c => {
+    const sc = c.status==='Pago'?'sp-paid':c.status==='N/A'?'sp-na':'sp-pend';
+    const sl = c.status==='Pago'?'✓ Pagado':c.status==='N/A'?'N/A':'⏳ Pendiente';
+    return `<tr>
+      <td><div class="cell">${c.name}</div></td>
+      <td><div class="cell"><span class="bank-dot ${bankDot(c.bank)}"></span>${c.bank}</div></td>
+      <td><div class="cell">${c.resp||'—'}</div></td>
+      <td><div class="cell">${fmtDate(c.due)}</div></td>
+      <td><div class="cell" style="justify-content:flex-end;font-variant-numeric:tabular-nums">${fmtCOP(c.amount)}</div></td>
+      <td><div class="cell"><span class="status-pill ${sc}">${sl}</span></div></td>
+      <td><div class="cell" style="color:${c.paid?'#166534':'var(--ink3)'}">${fmtDate(c.paid)}</div></td>
+      <td><div class="cell">${c.support?`<a class="support-link" href="${c.support}" target="_blank" rel="noopener">📎 Ver</a>`:'—'}</div></td>
+    </tr>`;
   }).join('');
 }
 
 function setMonth(m) { activeMonth = m; render(); }
 
-function addMonth() {
+function addMonth(duplicate) {
   const all = ["2026-10","2026-11","2026-12","2027-01","2027-02","2027-03","2027-04","2027-05","2027-06","2027-07","2027-08","2027-09","2027-10","2027-11","2027-12"];
-  const existing = Object.keys(data);
-  const next = all.find(m=>!existing.includes(m));
+  const next = all.find(m=>!Object.keys(data).includes(m));
   if (!next) return;
-  data[next] = [];
-  save();
-  activeMonth = next;
-  render();
+  if (duplicate) {
+    // Clone credits from active month, reset estado/fecha pago
+    const [y,m] = next.split('-');
+    data[next] = (data[activeMonth]||[]).map(c => ({
+      ...c,
+      id: 'c'+Date.now()+Math.random().toString(36).slice(2,6),
+      status: 'Pendiente',
+      paid: null,
+      // Update due date to new month keeping same day
+      due: c.due ? `${y}-${m}-${c.due.split('-')[2]}` : null,
+    }));
+  } else {
+    data[next] = [];
+  }
+  save(); activeMonth = next; render();
 }
 
 function openModal() {
@@ -268,22 +280,16 @@ function saveCredit() {
   const name = document.getElementById('f-name').value.trim();
   if (!name) { document.getElementById('f-name').focus(); return; }
   const month = document.getElementById('f-month').value;
-  const credit = {
-    id: 'c'+Date.now(),
-    name,
-    bank: document.getElementById('f-bank').value,
-    due: document.getElementById('f-due').value||null,
-    amount: parseFloat(document.getElementById('f-amount').value)||null,
-    status: document.getElementById('f-status').value,
-    resp: document.getElementById('f-resp').value.trim()||null,
-    paid: null, support: null
-  };
+  const credit = { id:'c'+Date.now(), name,
+    bank:document.getElementById('f-bank').value,
+    due:document.getElementById('f-due').value||null,
+    amount:parseFloat(document.getElementById('f-amount').value)||null,
+    status:document.getElementById('f-status').value,
+    resp:document.getElementById('f-resp').value.trim()||null,
+    paid:null, support:null };
   if (!data[month]) data[month]=[];
-  data[month].push(credit);
-  save();
-  activeMonth = month;
-  closeModal();
-  render();
+  data[month].push(credit); save();
+  activeMonth = month; closeModal(); render();
 }
 
 render();
