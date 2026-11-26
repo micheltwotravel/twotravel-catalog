@@ -171,6 +171,13 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
         <div class="fg"><label>Responsable</label>
           <input id="f-resp" class="inp" placeholder="ej. Génesis"></div>
       </div>
+      <div class="frow">
+        <div class="fg"><label>Vigencia (meses)</label>
+          <input id="f-months" type="number" min="1" class="inp" placeholder="ej. 12 — vacío = sin límite"></div>
+        <div class="fg" style="justify-content:flex-end;padding-top:14px">
+          <span style="font-size:10px;color:var(--ink3);line-height:1.4">Si se define, el crédito aparece automáticamente en meses nuevos hasta agotar los meses.</span>
+        </div>
+      </div>
     </div>
     <div class="modal-ftr">
       <button class="tbtn" onclick="closeModal()">Cancelar</button>
@@ -240,7 +247,7 @@ function render() {
     const sc = c.status==='Pago'?'sp-paid':c.status==='N/A'?'sp-na':'sp-pend';
     const sl = c.status==='Pago'?'✓ Pagado':c.status==='N/A'?'N/A':'⏳ Pendiente';
     return `<tr>
-      <td><div class="cell editable" onclick="editCell(this,'${c.id}','name')">${c.name}</div></td>
+      <td><div class="cell editable" onclick="editCell(this,'${c.id}','name')">${c.name}${c.months!=null?`<span style="font-size:9px;background:var(--gold3);color:var(--gold);padding:1px 6px;margin-left:6px;white-space:nowrap;flex-shrink:0">${c.months}m</span>`:''}</div></td>
       <td><div class="cell editable" onclick="editSelect(this,'${c.id}','bank',['Banco Bancolombia','Banco Davivienda','Banco de Bogotá','BBVA','Otro'])"><span class="bank-dot ${bankDot(c.bank)}"></span>${c.bank}</div></td>
       <td><div class="cell editable" onclick="editCell(this,'${c.id}','resp')">${c.resp||'—'}</div></td>
       <td><div class="cell editable" onclick="editDate(this,'${c.id}','due')">${fmtDate(c.due)}</div></td>
@@ -262,19 +269,21 @@ function addMonth(duplicate) {
   const all = ["2026-10","2026-11","2026-12","2027-01","2027-02","2027-03","2027-04","2027-05","2027-06","2027-07","2027-08","2027-09","2027-10","2027-11","2027-12"];
   const next = all.find(m=>!Object.keys(data).includes(m));
   if (!next) return;
+  const [y,m] = next.split('-');
+  const source = data[activeMonth]||[];
+  const cloneCredit = c => ({
+    ...c,
+    id: 'c'+Date.now()+Math.random().toString(36).slice(2,6),
+    status: 'Pendiente',
+    paid: null,
+    due: c.due ? `${y}-${m}-${c.due.split('-')[2]}` : null,
+    months: c.months != null ? Math.max(0, c.months - 1) : null,
+  });
   if (duplicate) {
-    // Clone credits from active month, reset estado/fecha pago
-    const [y,m] = next.split('-');
-    data[next] = (data[activeMonth]||[]).map(c => ({
-      ...c,
-      id: 'c'+Date.now()+Math.random().toString(36).slice(2,6),
-      status: 'Pendiente',
-      paid: null,
-      // Update due date to new month keeping same day
-      due: c.due ? `${y}-${m}-${c.due.split('-')[2]}` : null,
-    }));
+    data[next] = source.map(cloneCredit);
   } else {
-    data[next] = [];
+    // Mes vacío: sólo incluir créditos con vigencia restante > 0
+    data[next] = source.filter(c => c.months != null && c.months > 0).map(cloneCredit);
   }
   save(); activeMonth = next; render();
 }
@@ -287,7 +296,7 @@ function openModal() {
 }
 function closeModal() {
   document.getElementById('overlay').classList.remove('open');
-  ['f-name','f-amount','f-resp'].forEach(id=>document.getElementById(id).value='');
+  ['f-name','f-amount','f-resp','f-months'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-status').value='Pendiente';
 }
 function saveCredit() {
@@ -300,7 +309,8 @@ function saveCredit() {
     amount:parseFloat(document.getElementById('f-amount').value)||null,
     status:document.getElementById('f-status').value,
     resp:document.getElementById('f-resp').value.trim()||null,
-    paid:null, support:null };
+    paid:null, support:null,
+    months: parseInt(document.getElementById('f-months').value)||null };
   if (!data[month]) data[month]=[];
   data[month].push(credit); save();
   activeMonth = month; closeModal(); render();
