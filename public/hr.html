@@ -1230,26 +1230,23 @@ function previewImg(input) {
 
 // ── TURNOS ──────────────────────────────────────────────────
 const SHIFT_TYPES = {
-  "STD":  { label:"Estándar",    hours:"09:00–17:00", color:"#2563eb", bg:"#dbeafe" },
-  "MAÑ":  { label:"Mañana",      hours:"08:00–16:00", color:"#0891b2", bg:"#cffafe" },
-  "TAR":  { label:"Tarde/Noche", hours:"12:00–20:00", color:"#d97706", bg:"#fef3c7" },
-  "CIN":  { label:"Check-In",    hours:"10:00–15:00", color:"#059669", bg:"#d1fae5" },
-  "COUT": { label:"Check-Out",   hours:"10:00–14:00", color:"#7c3aed", bg:"#ede9fe" },
-  "NITE": { label:"Noche",       hours:"20:00–",      color:"#374151", bg:"#e5e7eb" },
-  "BOD":  { label:"Boda",        hours:"09:00–21:00", color:"#be185d", bg:"#fce7f3" },
-  "BODN": { label:"Boda+",       hours:"02:00–02:00", color:"#9d174d", bg:"#ffe4e6" },
-  "REM":  { label:"Remoto",      hours:"🏠",          color:"#059669", bg:"#dcfce7" },
-  "OFF":  { label:"Libre",       hours:"✕",           color:"#6b7280", bg:"#f3f4f6" },
+  "DIA":  { label:"Day Time Concierge",    hours:"09:00–17:00", color:"#92400e", bg:"#fef3c7" },
+  "JR":   { label:"Jr Day Time",           hours:"09:00–18:00", color:"#c2410c", bg:"#ffedd5" },
+  "NITE": { label:"Night Time Concierge",  hours:"17:00–01:00", color:"#1e40af", bg:"#dbeafe" },
+  "ADM":  { label:"Día Administrativo",    hours:"10:00–18:00", color:"#9d174d", bg:"#fce7f3" },
+  "OFF":  { label:"Time Off",              hours:"Todo el día", color:"#854d0e", bg:"#fef9c3" },
+  "BOD":  { label:"Boda",                  hours:"09:00–21:00", color:"#6d28d9", bg:"#ede9fe" },
+  "REM":  { label:"Remoto",                hours:"🏠 Remote",   color:"#065f46", bg:"#d1fae5" },
 };
 
 const REGLAS = [
-  "🛥 Día de Bote → ambos Jr Concierge: MAÑ 08:00–16:00",
-  "⚓🏙 Check-In CTG + Check-In MDE mismo día → Logistics: NITE",
-  "🏙 Check-In Medellín → Amaury Rocha: turno de día",
-  "📅 Julián Pardo: STD 09:00–17:00 Lun–Sáb de forma continua (auto ⚡)",
-  "🍽 Miguel – Chef Dinner / BBQ noche → TAR 12:00–20:00 · Chef on board → MAÑ 08:00–16:00",
-  "🔑 Check-Out sin otros clientes → solo Concierge: COUT 10:00–14:00",
-  "📅 Check-In Only sáb/dom → CIN 10:00–15:00 (sujeto a disponibilidad de Logistics)",
+  "🛥 Día de Bote → ambos Jr Concierge: Jr Day Time 09:00–18:00",
+  "⚓🏙 Check-In CTG + Check-In MDE mismo día → Logistics: Night Time 17:00–01:00",
+  "🏙 Check-In Medellín → Amaury Rocha: Day Time 09:00–17:00",
+  "📅 Julián Pardo: Day Time 09:00–17:00 Lun–Sáb de forma continua (auto ⚡)",
+  "🔑 Check-Out sin Check-In → solo Concierge Day Time",
+  "📅 Check-In Only sáb/dom → Day Time (sujeto a disponibilidad de Logistics)",
+  "💒 Boda → turno Boda 09:00–21:00",
 ];
 
 const TEAM_COLORS = {"Concierge":"#2563eb","Jr Concierge":"#0891b2","Concierge MDE":"#7c3aed","Logistics":"#d97706","Chef":"#059669","Finance":"#be185d","Admin":"#374151","Bodas":"#9d174d","Dirección":"#4f46e5","Operations":"#64748b"};
@@ -1266,12 +1263,12 @@ function suggestShift(teamName, name, date, dayEvents) {
   const hasBote= ()     => dayEvents.some(e=>e.type==='bote');
   const isJulian=/juli[aá]n/i.test(name);
   const dow=new Date(date+'T12:00:00').getDay();
-  if (isJulian && dow>=1&&dow<=6) return 'STD';
-  if (teamName==='Jr Concierge' && hasBote()) return 'MAÑ';
+  if (isJulian && dow>=1&&dow<=6) return 'DIA';
+  if (teamName==='Jr Concierge' && hasBote()) return 'JR';
   if (teamName==='Logistics' && hasCI('CTG')&&hasCI('MDE')) return 'NITE';
-  if (teamName==='Concierge MDE' && hasCI('MDE')) return 'STD';
-  if (teamName==='Concierge' && !hasCI()&&hasCO()&&!hasBote()) return 'COUT';
-  if (teamName==='Concierge' && hasCI()&&!hasCO()&&(dow===0||dow===6)) return 'CIN';
+  if (teamName==='Concierge MDE' && hasCI('MDE')) return 'DIA';
+  if (teamName==='Concierge' && !hasCI()&&hasCO()&&!hasBote()) return 'DIA';
+  if (teamName==='Concierge' && hasCI()) return 'DIA';
   return null;
 }
 
@@ -1495,7 +1492,7 @@ function autoFillJulian() {
   let filled=0;
   days.slice(0,6).forEach(d=>{
     if (!getTurno(julian.id,d)) {
-      turnos.push({ id:`tn_${julian.id}_${d}`, staffId:julian.id, staffName:julian.name, date:d, shift:'STD' });
+      turnos.push({ id:`tn_${julian.id}_${d}`, staffId:julian.id, staffName:julian.name, date:d, shift:'DIA' });
       filled++;
     }
   });
