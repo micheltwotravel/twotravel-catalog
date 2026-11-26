@@ -108,7 +108,8 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
     <button class="tbtn" onclick="toggleMesMenu(this)">+ Mes ▾</button>
     <div id="mesMenu" style="display:none;position:absolute;top:100%;left:0;background:var(--white);border:1px solid var(--border2);z-index:200;min-width:160px;margin-top:2px">
       <div onclick="addMonth(true);document.getElementById('mesMenu').style.display='none'" style="padding:8px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--sand)'" onmouseout="this.style.background=''">Duplicar mes actual</div>
-      <div onclick="addMonth(false);document.getElementById('mesMenu').style.display='none'" style="padding:8px 12px;font-size:12px;cursor:pointer" onmouseover="this.style.background='var(--sand)'" onmouseout="this.style.background=''">Mes vacío</div>
+      <div onclick="addMonth(false);document.getElementById('mesMenu').style.display='none'" style="padding:8px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--sand)'" onmouseout="this.style.background=''">Mes vacío</div>
+      <div onclick="deleteMonth();document.getElementById('mesMenu').style.display='none'" style="padding:8px 12px;font-size:12px;cursor:pointer;color:#b91c1c" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background=''">Eliminar este mes</div>
     </div>
   </div>
 </div>
@@ -127,6 +128,7 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
           <th>Estado</th>
           <th>Fecha Pago</th>
           <th>Soporte</th>
+          <th style="width:36px"></th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
@@ -249,6 +251,7 @@ function render() {
         ${c.support?`<a class="support-link" href="${c.support}" target="_blank" rel="noopener" title="${c.supportName||''}">📎 ${c.supportName?c.supportName.substring(0,18)+(c.supportName.length>18?'…':''):'Ver'}</a>`:''}
         <span onclick="uploadSupport('${c.id}')" style="cursor:pointer;font-size:11px;color:var(--ink3);padding:2px 6px;border:1px dashed var(--border2)" title="Adjuntar archivo">${c.support?'↑':'📎 Adjuntar'}</span>
       </div></td>
+      <td><div class="cell" style="justify-content:center"><span onclick="deleteCredit('${c.id}')" style="cursor:pointer;font-size:14px;color:var(--ink3);padding:2px 6px;line-height:1" title="Eliminar fila" onmouseover="this.style.color='#b91c1c'" onmouseout="this.style.color='var(--ink3)'">×</span></div></td>
     </tr>`;
   }).join('');
 }
@@ -367,6 +370,22 @@ function editSelect(el, id, field, options) {
   s.focus();
   s.onchange = () => updateCredit(id, field, s.value);
   s.onblur = () => updateCredit(id, field, s.value);
+}
+
+function deleteCredit(id) {
+  if (!confirm('¿Eliminar este crédito?')) return;
+  data[activeMonth] = (data[activeMonth]||[]).filter(c=>c.id!==id);
+  save(); render();
+}
+
+function deleteMonth() {
+  const months = Object.keys(data).sort();
+  if (months.length <= 1) { alert('No puedes eliminar el único mes.'); return; }
+  if (!confirm('¿Eliminar el mes ' + mlabel(activeMonth) + ' y todos sus créditos?')) return;
+  delete data[activeMonth];
+  const remaining = Object.keys(data).sort();
+  activeMonth = remaining[remaining.length - 1];
+  save(); render();
 }
 
 render();
