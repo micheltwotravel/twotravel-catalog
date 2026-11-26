@@ -785,6 +785,7 @@ function render(){
       <th>Cobrar</th>
       <th>Estado</th>
       <th>Notas</th>
+      ${COUNTRY_MODE !== 'mx' ? '<th>QB</th>' : ''}
       <th></th>
     </tr></thead>
     <tbody>`;
@@ -792,7 +793,7 @@ function render(){
   items.forEach(c => { html += renderRow(c, today); });
 
   html += `<tr class="add-row" onclick="openNewModal()">
-    <td colspan="16">+ Agregar comisión</td>
+    <td colspan="${COUNTRY_MODE !== 'mx' ? 17 : 16}">+ Agregar comisión</td>
   </tr>`;
   html += `</tbody></table></div>`;
 
@@ -844,6 +845,11 @@ function renderRow(c, today){
         : '<span style="color:var(--border2);font-size:11px">—</span>'}
     </div></td>
     <td><div class="cell editable" ondblclick="editField('${c.id}','notes')" style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink3)">${esc(c.notes||'')}</div></td>
+    ${COUNTRY_MODE !== 'mx' ? `<td><div class="cell" style="justify-content:center">
+      ${c.qbId
+        ? `<a href="${esc(c.qbUrl||'')}" target="_blank" title="Ver en QuickBooks" style="display:inline-flex;align-items:center;gap:3px;padding:3px 8px;font-size:10px;background:#e8f5e9;color:#2e7d32;border-radius:3px;text-decoration:none;font-family:Jost,sans-serif">✓ QB#${esc(c.qbNum||c.qbId)}</a>`
+        : `<button onclick="registrarEnQB('${c.id}')" style="padding:3px 9px;font-size:10px;font-family:Jost,sans-serif;background:#1565c0;color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap">→ QB</button>`}
+    </div></td>` : ''}
     <td><div class="cell" style="justify-content:center">
       <button onclick="deleteComision('${c.id}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--border2);font-size:14px;padding:2px 6px;transition:color .12s" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='var(--border2)'">×</button>
     </div></td>
@@ -1059,6 +1065,102 @@ function deleteComision(id){
   comisiones = comisiones.filter(c => c.id !== id);
   save(); render();
   showToast('Comisión eliminada');
+}
+
+/* ── QUICKBOOKS JOURNAL ENTRY ── */
+async function registrarEnQB(id){
+  const c = comisiones.find(x => x.id === id);
+  if(!c) return;
+
+  const base = parseFloat(c.amount) || 0;
+  if(!base){ showToast('⚠️ La comisión no tiene monto'); return; }
+
+  // Show confirmation modal
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:10px;padding:28px 32px;max-width:380px;width:90%;font-family:Jost,sans-serif;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+      <div style="font-size:15px;font-weight:500;margin-bottom:4px;color:#1a1814">Registrar en QuickBooks</div>
+      <div style="font-size:11px;color:#7a7570;margin-bottom:20px">${esc(c.vendor||'')} · ${esc(c.client||'')} · ${fmtDate(c.date)}</div>
+      <div style="display:grid;gap:10px;margin-bottom:18px">
+        <label style="font-size:11px;color:#7a7570">Ciudad (Clase QB)
+          <select id="qb-ciudad" style="display:block;width:100%;margin-top:4px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-family:Jost,sans-serif;font-size:12px">
+            <option value="MDE">Medellín (MDE)</option>
+            <option value="CTG">Cartagena (CTG)</option>
+            <option value="BOG">Bogotá (BOG)</option>
+            <option value="SMR">Santa Marta (SMR)</option>
+            <option value="">Sin clase</option>
+          </select>
+        </label>
+        <label style="font-size:11px;color:#7a7570">Retención de renta
+          <select id="qb-ret" style="display:block;width:100%;margin-top:4px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-family:Jost,sans-serif;font-size:12px">
+            <option value="0.10">10% (pers. natural no declarante)</option>
+            <option value="0.11">11% (pers. natural declarante / jurídica)</option>
+            <option value="0">Sin retención</option>
+          </select>
+        </label>
+      </div>
+      <div id="qb-preview" style="background:#f7f4ef;border-radius:6px;padding:12px 14px;font-size:11px;color:#3d3a35;margin-bottom:20px">
+        Calculando…
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button id="qb-cancel" style="padding:7px 18px;border:1px solid #ddd;border-radius:6px;background:none;font-family:Jost,sans-serif;font-size:12px;cursor:pointer">Cancelar</button>
+        <button id="qb-confirm" style="padding:7px 18px;border:none;border-radius:6px;background:#1565c0;color:#fff;font-family:Jost,sans-serif;font-size:12px;font-weight:500;cursor:pointer">Crear Journal Entry</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  function updatePreview(){
+    const ret = parseFloat(document.getElementById('qb-ret').value)||0;
+    const iva  = Math.round(base * 0.19);
+    const retAmt = Math.round(base * ret);
+    const neto = base + iva - retAmt;
+    document.getElementById('qb-preview').innerHTML =
+      `<div style="display:grid;gap:4px">
+        <div style="display:flex;justify-content:space-between"><span>Comisión base</span><span style="font-weight:500">$${base.toLocaleString('es')}</span></div>
+        <div style="display:flex;justify-content:space-between;color:#7a7570"><span>+ IVA 19%</span><span>$${iva.toLocaleString('es')}</span></div>
+        <div style="display:flex;justify-content:space-between;color:#7a7570"><span>− Retención ${Math.round(ret*100)}%</span><span>($${retAmt.toLocaleString('es')})</span></div>
+        <div style="display:flex;justify-content:space-between;border-top:1px solid #e5ddd3;margin-top:4px;padding-top:4px;font-weight:500"><span>Neto banco (débito)</span><span>$${neto.toLocaleString('es')}</span></div>
+        <div style="color:#9a7570;font-size:10px;margin-top:4px">Moneda: ${c.currency||'COP'}</div>
+      </div>`;
+  }
+  updatePreview();
+  document.getElementById('qb-ret').addEventListener('change', updatePreview);
+
+  document.getElementById('qb-cancel').onclick = () => modal.remove();
+  document.getElementById('qb-confirm').onclick = async () => {
+    const btn = document.getElementById('qb-confirm');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    const ciudad = document.getElementById('qb-ciudad').value;
+    const ret = parseFloat(document.getElementById('qb-ret').value)||0;
+    try {
+      const r = await fetch('/api/quickbooks', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          action: 'create_journal_entry',
+          amount: base,
+          currency: c.currency||'COP',
+          fecha: c.date||new Date().toISOString().slice(0,10),
+          clientName: c.client||'',
+          vendorName: c.vendor||'',
+          ciudad,
+          retencionRate: ret,
+        })
+      });
+      const j = await r.json();
+      if(!j.ok) throw new Error(j.error||'Error QB');
+      c.qbId  = j.jeId;
+      c.qbNum = j.jeNum;
+      c.qbUrl = j.qbUrl;
+      save(); render();
+      modal.remove();
+      showToast(`✅ Journal Entry #${j.jeNum} creado en QB`);
+    } catch(e){
+      btn.disabled = false; btn.textContent = 'Crear Journal Entry';
+      showToast('❌ ' + e.message, 4000);
+    }
+  };
 }
 
 /* ── VIEW TOGGLE ── */

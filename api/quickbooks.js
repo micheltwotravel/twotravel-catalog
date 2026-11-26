@@ -168,6 +168,111 @@ export default async function handler(req, res) {
       });
     }
 
+    // ── CREATE JOURNAL ENTRY (Colombia commissions) ───────────────────────
+    if (action === "create_journal_entry") {
+      const {
+        amount,              // base commission amount (before IVA)
+        currency = "COP",
+        fecha,               // ISO date YYYY-MM-DD
+        clientName = "",
+        vendorName = "",
+        ciudad = "",         // MDE, CTG, BOG, etc. → QB Class
+        retencionRate = 0.10,// retención de renta (default 10%)
+        ivaRate = 0.19,      // IVA rate (default 19%)
+        bankAccount = "Corriente 0250", // partial name to search Bancolombia COP account
+      } = body;
+
+      const base    = Math.round(parseFloat(amount));
+      const iva     = Math.round(base * ivaRate);
+      const ret     = Math.round(base * retencionRate);
+      const netBank = base + iva - ret;
+
+      // Find QB account by partial FullyQualifiedName
+      async function findAccount(partial) {
+        const q = `SELECT * FROM Account WHERE FullyQualifiedName LIKE '%${partial.replace(/'/g,"\\'")}%' MAXRESULTS 1`;
+        const r = await fetch(
+          `${QB_BASE}/${realm_id}/query?query=${encodeURIComponent(q)}&minorversion=65`,
+          { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
+        );
+        const j = await r.json();
+        const acc = j?.QueryResponse?.Account?.[0];
+        if (!acc) throw new Error(`QB account not found: "${partial}"`);
+        return { value: acc.Id, name: acc.FullyQualifiedName };
+      }
+
+      const [incomeAcc, ivaAcc, retAcc, bankAcc] = await Promise.all([
+        findAccount("Concierge Commission"),
+        findAccount("IVA 19%"),
+        findAccount("Retenciones Practicadas"),
+        findAccount(bankAccount),
+      ]);
+
+      const memo = `Comisión ${vendorName}${clientName ? " — " + clientName : ""}`;
+
+      const journalEntry = {
+        TxnDate: fecha || new Date().toISOString().slice(0, 10),
+        CurrencyRef: { value: currency },
+        ...(memo ? { PrivateNote: memo } : {}),
+        Line: [
+          {
+            DetailType: "JournalEntryLineDetail",
+            Amount: base,
+            Description: memo,
+            JournalEntryLineDetail: {
+              PostingType: "Credit",
+              AccountRef: incomeAcc,
+              ...(ciudad ? { ClassRef: { name: ciudad } } : {}),
+              ...(clientName ? { Entity: { Type: "Customer", EntityRef: { name: clientName } } } : {}),
+            },
+          },
+          {
+            DetailType: "JournalEntryLineDetail",
+            Amount: iva,
+            Description: `IVA 19% sobre comisión`,
+            JournalEntryLineDetail: {
+              PostingType: "Credit",
+              AccountRef: ivaAcc,
+            },
+          },
+          {
+            DetailType: "JournalEntryLineDetail",
+            Amount: ret,
+            Description: `Retención renta ${Math.round(retencionRate * 100)}%`,
+            JournalEntryLineDetail: {
+              PostingType: "Debit",
+              AccountRef: retAcc,
+            },
+          },
+          {
+            DetailType: "JournalEntryLineDetail",
+            Amount: netBank,
+            Description: `Pago neto recibido`,
+            JournalEntryLineDetail: {
+              PostingType: "Debit",
+              AccountRef: bankAcc,
+            },
+          },
+        ],
+      };
+
+      const jeRes = await fetch(`${QB_BASE}/${realm_id}/journalentry?minorversion=65`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify(journalEntry),
+      });
+      const jeJson = await jeRes.json();
+      if (!jeRes.ok) throw new Error(`QB JE error: ${JSON.stringify(jeJson)}`);
+
+      const je = jeJson?.JournalEntry;
+      return res.json({
+        ok: true,
+        jeId: je?.Id,
+        jeNum: je?.DocNumber,
+        base, iva, ret, netBank,
+        qbUrl: `https://app.qbo.intuit.com/app/journal?txnId=${je?.Id}`,
+      });
+    }
+
     return res.status(400).json({ error: `Unknown action: ${action}` });
 
   } catch (e) {
