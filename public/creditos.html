@@ -55,6 +55,9 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 .ctable tr:last-child td{border-bottom:none}
 .ctable tr:hover td{background:rgba(247,244,239,.5)}
 .cell{padding:6px 10px;display:flex;align-items:center;height:38px;gap:6px}
+.cell.editable{cursor:pointer}
+.cell.editable:hover{background:rgba(154,125,82,.07)}
+.cell input,.cell select{border:none;background:transparent;outline:none;font-family:'Jost',sans-serif;font-size:12px;color:var(--ink);width:100%;padding:0}
 
 .bank-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .dot-bc{background:#ffd200}
@@ -226,17 +229,17 @@ function render() {
     return;
   }
 
-  document.getElementById('tableBody').innerHTML = credits.map(c => {
+  document.getElementById('tableBody').innerHTML = credits.map((c,i) => {
     const sc = c.status==='Pago'?'sp-paid':c.status==='N/A'?'sp-na':'sp-pend';
     const sl = c.status==='Pago'?'✓ Pagado':c.status==='N/A'?'N/A':'⏳ Pendiente';
     return `<tr>
-      <td><div class="cell">${c.name}</div></td>
-      <td><div class="cell"><span class="bank-dot ${bankDot(c.bank)}"></span>${c.bank}</div></td>
-      <td><div class="cell">${c.resp||'—'}</div></td>
-      <td><div class="cell">${fmtDate(c.due)}</div></td>
-      <td><div class="cell" style="justify-content:flex-end;font-variant-numeric:tabular-nums">${fmtCOP(c.amount)}</div></td>
-      <td><div class="cell"><span class="status-pill ${sc}">${sl}</span></div></td>
-      <td><div class="cell" style="color:${c.paid?'#166534':'var(--ink3)'}">${fmtDate(c.paid)}</div></td>
+      <td><div class="cell editable" onclick="editCell(this,'${c.id}','name')">${c.name}</div></td>
+      <td><div class="cell editable" onclick="editSelect(this,'${c.id}','bank',['Banco Bancolombia','Banco Davivienda','Banco de Bogotá','BBVA','Otro'])"><span class="bank-dot ${bankDot(c.bank)}"></span>${c.bank}</div></td>
+      <td><div class="cell editable" onclick="editCell(this,'${c.id}','resp')">${c.resp||'—'}</div></td>
+      <td><div class="cell editable" onclick="editDate(this,'${c.id}','due')">${fmtDate(c.due)}</div></td>
+      <td><div class="cell editable" style="justify-content:flex-end;font-variant-numeric:tabular-nums" onclick="editAmount(this,'${c.id}')">${fmtCOP(c.amount)}</div></td>
+      <td><div class="cell editable" onclick="editSelect(this,'${c.id}','status',['Pago','Pendiente','N/A'])"><span class="status-pill ${sc}">${sl}</span></div></td>
+      <td><div class="cell editable" onclick="editDate(this,'${c.id}','paid')" style="color:${c.paid?'#166534':'var(--ink3)'}">${fmtDate(c.paid)}</div></td>
       <td><div class="cell">${c.support?`<a class="support-link" href="${c.support}" target="_blank" rel="noopener">📎 Ver</a>`:'—'}</div></td>
     </tr>`;
   }).join('');
@@ -290,6 +293,46 @@ function saveCredit() {
   if (!data[month]) data[month]=[];
   data[month].push(credit); save();
   activeMonth = month; closeModal(); render();
+}
+
+function getCredit(id) {
+  return (data[activeMonth]||[]).find(c=>c.id===id);
+}
+function updateCredit(id, field, value) {
+  const c = getCredit(id); if (!c) return;
+  c[field] = value; save(); render();
+}
+function editCell(el, id, field) {
+  const c = getCredit(id); if (!c) return;
+  el.innerHTML = `<input type="text" value="${(c[field]||'').replace(/"/g,'&quot;')}" style="width:100%;border:none;background:transparent;outline:none;font-family:'Jost',sans-serif;font-size:12px;color:var(--ink)">`;
+  const inp = el.querySelector('input');
+  inp.focus(); inp.select();
+  inp.onblur = () => updateCredit(id, field, inp.value.trim()||null);
+  inp.onkeydown = e => { if (e.key==='Enter') inp.blur(); if (e.key==='Escape') render(); };
+}
+function editAmount(el, id) {
+  const c = getCredit(id); if (!c) return;
+  el.innerHTML = `<input type="number" value="${c.amount||''}" style="width:100%;text-align:right;border:none;background:transparent;outline:none;font-family:'Jost',sans-serif;font-size:12px;color:var(--ink)">`;
+  const inp = el.querySelector('input');
+  inp.focus(); inp.select();
+  inp.onblur = () => updateCredit(id, 'amount', parseFloat(inp.value)||null);
+  inp.onkeydown = e => { if (e.key==='Enter') inp.blur(); if (e.key==='Escape') render(); };
+}
+function editDate(el, id, field) {
+  const c = getCredit(id); if (!c) return;
+  el.innerHTML = `<input type="date" value="${c[field]||''}" style="border:none;background:transparent;outline:none;font-family:'Jost',sans-serif;font-size:12px;color:var(--ink)">`;
+  const inp = el.querySelector('input');
+  inp.focus();
+  inp.onchange = () => updateCredit(id, field, inp.value||null);
+  inp.onblur = () => updateCredit(id, field, inp.value||null);
+}
+function editSelect(el, id, field, options) {
+  const c = getCredit(id); if (!c) return;
+  el.innerHTML = `<select style="border:none;background:transparent;outline:none;font-family:'Jost',sans-serif;font-size:12px;color:var(--ink)">${options.map(o=>`<option value="${o}"${c[field]===o?' selected':''}>${o}</option>`).join('')}</select>`;
+  const s = el.querySelector('select');
+  s.focus();
+  s.onchange = () => updateCredit(id, field, s.value);
+  s.onblur = () => updateCredit(id, field, s.value);
 }
 
 render();
