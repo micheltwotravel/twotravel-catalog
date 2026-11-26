@@ -1320,7 +1320,8 @@ function renderTurnos() {
     <button class="tbtn primary" onclick="turnosWeekOffset=0;loadWeekEvents()">Esta semana</button>
     <button class="tbtn" onclick="turnosWeekOffset++;loadWeekEvents()">Siguiente →</button>
     <button class="tbtn" onclick="autoFillJulian()" title="Aplicar STD a Julián L-S (solo celdas vacías)">⚡ Auto Julián</button>
-    <button class="tbtn" onclick="applyAutoSuggestions()" title="Aplicar turnos sugeridos (celdas vacías con reglas)">💡 Sugerencias</button>
+    <button class="tbtn" onclick="applyAutoSuggestions()" title="Aplicar turnos sugeridos en celdas vacías según reglas" style="background:#fef3c7;color:#92400e;border-color:#d97706">💡 Sugerencias</button>
+    <button class="tbtn" onclick="clearWeek()" title="Borrar todos los turnos de esta semana para empezar de cero" style="color:#dc2626">🗑 Limpiar semana</button>
     <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap;align-items:center">
       ${Object.entries(SHIFT_TYPES).map(([k,v])=>`<span style="display:inline-flex;align-items:center;gap:3px;font-size:9px;white-space:nowrap;background:${v.bg};border:1px solid ${v.color}44;border-radius:3px;padding:1px 5px"><span style="color:${v.color};font-weight:700">${v.label}</span></span>`).join('')}
     </div>`;
@@ -1594,27 +1595,48 @@ function closeClientInfo() {
 
 function applyAutoSuggestions() {
   const days = getTurnosWeek(turnosWeekOffset);
-  let applied = 0;
+  let applied = 0, skipped = 0, noRule = 0;
   staff.forEach(s => {
     days.forEach(d => {
-      if (!getTurno(s.id, d)) {
-        const sug = suggestShift(s.team, s.name, d, _weekEvents[d]||[]);
-        if (sug) {
-          turnos.push({ id:`tn_${s.id}_${d}`, staffId:s.id, staffName:s.name, date:d, shift:sug });
-          applied++;
-        }
-      }
+      const existing = getTurno(s.id, d);
+      if (existing) { skipped++; return; }
+      const sug = suggestShift(s.team, s.name, d, _weekEvents[d]||[]);
+      if (sug) {
+        turnos.push({ id:`tn_${s.id}_${d}`, staffId:s.id, staffName:s.name, date:d, shift:sug });
+        applied++;
+      } else { noRule++; }
     });
   });
-  if (!applied) { alert('No hay sugerencias aplicables esta semana (celdas ya llenas o sin eventos).'); return; }
+  if (applied) {
+    save(KEY.turnos, turnos);
+    renderTurnos();
+  }
+  const lines = [];
+  if (applied) lines.push(`✅ ${applied} turno${applied>1?'s':''} aplicado${applied>1?'s':''}`);
+  if (skipped) lines.push(`⏭ ${skipped} celda${skipped>1?'s':''} ya tenían turno`);
+  if (!applied && !skipped) lines.push('Sin eventos aplicables esta semana');
+  showToast(lines.join(' · '), applied ? '#059669' : '#d97706');
+}
+
+function clearWeek() {
+  const days = getTurnosWeek(turnosWeekOffset);
+  const daySet = new Set(days);
+  const before = turnos.length;
+  turnos = turnos.filter(t => !daySet.has(t.date));
+  if (turnos.length === before) { showToast('Esta semana ya está vacía', '#6b7280'); return; }
   save(KEY.turnos, turnos);
   renderTurnos();
-  const msg = `✅ ${applied} turno${applied>1?'s':''} sugerido${applied>1?'s':''} aplicado${applied>1?'s':''}`;
+  showToast(`🗑 Semana limpiada — ahora usa 💡 Sugerencias`, '#d97706');
+}
+
+function showToast(msg, bg='#374151') {
+  document.querySelectorAll('.hr-toast').forEach(el=>el.remove());
   const toast = document.createElement('div');
-  toast.style.cssText = "position:fixed;bottom:20px;right:20px;background:#059669;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:500;z-index:800;box-shadow:0 4px 16px rgba(0,0,0,.2)";
+  toast.className = 'hr-toast';
+  toast.style.cssText = `position:fixed;bottom:20px;right:20px;background:${bg};color:#fff;padding:11px 20px;border-radius:9px;font-size:13px;font-weight:500;z-index:900;box-shadow:0 4px 20px rgba(0,0,0,.22);max-width:360px`;
   toast.textContent = msg;
   document.body.appendChild(toast);
-  setTimeout(()=>toast.remove(), 3000);
+  setTimeout(()=>toast.remove(), 4000);
 }
 
 // ── INIT ────────────────────────────────────────────────────
