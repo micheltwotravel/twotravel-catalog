@@ -104,8 +104,13 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
 <div class="toolbar">
   <button class="tbtn primary" onclick="openModal()">+ Agregar</button>
   <div class="month-tabs" id="monthTabs"></div>
-  <button class="tbtn" onclick="addMonth(true)" title="Copia los créditos del mes activo al siguiente mes">Duplicar mes →</button>
-  <button class="tbtn" onclick="addMonth(false)" title="Mes vacío">+ Mes vacío</button>
+  <div style="position:relative">
+    <button class="tbtn" onclick="toggleMesMenu(this)">+ Mes ▾</button>
+    <div id="mesMenu" style="display:none;position:absolute;top:100%;left:0;background:var(--white);border:1px solid var(--border2);z-index:200;min-width:160px;margin-top:2px">
+      <div onclick="addMonth(true);document.getElementById('mesMenu').style.display='none'" style="padding:8px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--sand)'" onmouseout="this.style.background=''">Duplicar mes actual</div>
+      <div onclick="addMonth(false);document.getElementById('mesMenu').style.display='none'" style="padding:8px 12px;font-size:12px;cursor:pointer" onmouseover="this.style.background='var(--sand)'" onmouseout="this.style.background=''">Mes vacío</div>
+    </div>
+  </div>
 </div>
 
 <div class="main">
@@ -295,6 +300,13 @@ function saveCredit() {
   activeMonth = month; closeModal(); render();
 }
 
+function toggleMesMenu(btn) {
+  const m = document.getElementById('mesMenu');
+  m.style.display = m.style.display==='none' ? 'block' : 'none';
+  if (m.style.display==='block') {
+    setTimeout(()=>document.addEventListener('click', function h(e){if(!btn.closest('div').contains(e.target)){m.style.display='none';document.removeEventListener('click',h);}},true),0);
+  }
+}
 function getCredit(id) {
   return (data[activeMonth]||[]).find(c=>c.id===id);
 }
