@@ -255,21 +255,32 @@ let attendance = load(KEY.attendance); // [{ personId, date, type, status }]
 let staff      = load(KEY.staff);
 let cultura    = load(KEY.cultura) || { empMonth: null, gallery: [], posts: [] };
 let turnos     = load(KEY.turnos)   || []; // [{ id, staffId, staffName, date, shift, note }]
+let dayEvents  = {}; try { dayEvents = JSON.parse(lsGet('hr_devents') || '{}'); } catch {}
 // ensure estructura
 if (!cultura.empMonth && !cultura.gallery) cultura = { empMonth: null, gallery: [], posts: [] };
 
 // Default staff if empty
 if (!staff.length) {
   staff = [
-    { id:"s2", name:"Carolina", team:"Concierge" },
-    { id:"s3", name:"Daniela", team:"Concierge" },
-    { id:"s4", name:"Nataly", team:"Concierge" },
-    { id:"s5", name:"Giulia", team:"Concierge" },
-    { id:"s6", name:"Natalia", team:"Concierge" },
-    { id:"s7", name:"Michel", team:"Dirección" },
-    { id:"s8", name:"Valentina", team:"Finance" },
-    { id:"s9", name:"Crystal", team:"Finance" },
-    { id:"s10", name:"Armando", team:"Operations" },
+    { id:"s1",  name:"Carolina López",    team:"Concierge" },
+    { id:"s2",  name:"Daniela Becerra",   team:"Concierge" },
+    { id:"s3",  name:"Veronica Zuñiga",   team:"Concierge" },
+    { id:"s4",  name:"Laura Agamez",      team:"Concierge" },
+    { id:"s5",  name:"Yosayro Moncaris",  team:"Jr Concierge" },
+    { id:"s6",  name:"Xilene Beltrán",    team:"Jr Concierge" },
+    { id:"s7",  name:"Amaury Rocha",      team:"Concierge MDE" },
+    { id:"s8",  name:"Julián Pardo",      team:"Logistics" },
+    { id:"s9",  name:"Miguel Cruz",       team:"Chef" },
+    { id:"s10", name:"Genesis Sierra",    team:"Finance" },
+    { id:"s11", name:"Lyna Atencio",      team:"Finance" },
+    { id:"s12", name:"Sebastian Anibal",  team:"Finance" },
+    { id:"s13", name:"Mario Padilla",     team:"Finance" },
+    { id:"s14", name:"Julith Villa",      team:"Finance" },
+    { id:"s15", name:"Michel Sanchez",    team:"Admin" },
+    { id:"s16", name:"Valentina Bedoya",  team:"Admin" },
+    { id:"s17", name:"Alexandra Rey",     team:"Bodas" },
+    { id:"s18", name:"Angélica Cruz",     team:"Bodas" },
+    { id:"s19", name:"Oskalia Valencia",  team:"Bodas" },
   ];
   save(KEY.staff, staff);
 }
@@ -1215,19 +1226,46 @@ function previewImg(input) {
 
 // ── TURNOS ──────────────────────────────────────────────────
 const SHIFT_TYPES = {
-  M: { label: "Mañana",  color: "#2563eb", bg: "#dbeafe", hours: "8–16" },
-  T: { label: "Tarde",   color: "#7c3aed", bg: "#ede9fe", hours: "12–20" },
-  N: { label: "Noche",   color: "#374151", bg: "#e5e7eb", hours: "20–4"  },
-  E: { label: "Extra",   color: "#ea580c", bg: "#ffedd5", hours: "+"     },
-  R: { label: "Remoto",  color: "#059669", bg: "#d1fae5", hours: "🏠"   },
-  L: { label: "Libre",   color: "#9b59b6", bg: "#ede9fe", hours: "✕"    },
+  "STD":  { label:"Estándar",    hours:"09:00–17:00", color:"#2563eb", bg:"#dbeafe" },
+  "MAÑ":  { label:"Mañana",      hours:"08:00–16:00", color:"#0891b2", bg:"#cffafe" },
+  "TAR":  { label:"Tarde/Noche", hours:"12:00–20:00", color:"#d97706", bg:"#fef3c7" },
+  "CIN":  { label:"Check-In",    hours:"10:00–15:00", color:"#059669", bg:"#d1fae5" },
+  "COUT": { label:"Check-Out",   hours:"10:00–14:00", color:"#7c3aed", bg:"#ede9fe" },
+  "NITE": { label:"Noche",       hours:"20:00–",      color:"#374151", bg:"#e5e7eb" },
+  "BOD":  { label:"Boda",        hours:"09:00–21:00", color:"#be185d", bg:"#fce7f3" },
+  "BODN": { label:"Boda+",       hours:"02:00–02:00", color:"#9d174d", bg:"#ffe4e6" },
+  "REM":  { label:"Remoto",      hours:"🏠",          color:"#059669", bg:"#dcfce7" },
+  "OFF":  { label:"Libre",       hours:"✕",           color:"#6b7280", bg:"#f3f4f6" },
 };
 
+const DAY_EVENT_TYPES = {
+  normal:  { label:"Normal",       color:"#6b7280", bg:"#f3f4f6" },
+  bote:    { label:"🛥 Bote",      color:"#0891b2", bg:"#cffafe" },
+  cin_mde: { label:"🏙 C/In MDE",  color:"#059669", bg:"#d1fae5" },
+  cin_ctg: { label:"⚓ C/In CTG",  color:"#2563eb", bg:"#dbeafe" },
+  cout:    { label:"🔑 Check-Out", color:"#7c3aed", bg:"#ede9fe" },
+  boda:    { label:"💒 Boda",      color:"#be185d", bg:"#fce7f3" },
+};
+
+const REGLAS = [
+  "🛥 Día de Bote → ambos Jr Concierge: MAÑ 08:00–16:00",
+  "⚓🏙 C/In CTG + MDE mismo día → Logistics: NITE",
+  "🏙 Check-In Medellín → Amaury Rocha: turno de día",
+  "📅 Julián Pardo: STD 09:00–17:00 Lun–Sáb (auto con ⚡)",
+  "🍽 Miguel – Chef Dinner / BBQ noche → TAR 12:00–20:00",
+  "🍽 Miguel – Chef on board → MAÑ 08:00–16:00",
+  "🔑 Check-Out sin otros clientes → solo Concierge: COUT 10:00–14:00",
+];
+
+const TEAM_ORDER = ["Concierge","Jr Concierge","Concierge MDE","Logistics","Chef","Finance","Admin","Bodas","Dirección","Operations"];
+const TEAM_ICONS = {"Concierge":"👥","Jr Concierge":"👤","Concierge MDE":"🏙","Logistics":"🚗","Chef":"🍽","Finance":"💼","Admin":"📊","Bodas":"💒","Dirección":"⭐","Operations":"⚙"};
+
 let turnosWeekOffset = 0;
+let _reglasOpen = false;
 
 function getTurnosWeek(offset) {
   const now = new Date();
-  const dow = now.getDay() === 0 ? 6 : now.getDay() - 1; // Mon=0
+  const dow = now.getDay() === 0 ? 6 : now.getDay() - 1;
   const mon = new Date(now); mon.setDate(now.getDate() - dow + offset * 7);
   const days = [];
   for (let i = 0; i < 7; i++) {
@@ -1246,7 +1284,7 @@ function setTurno(staffId, staffName, date, shift) {
   if (shift === '') {
     if (idx >= 0) turnos.splice(idx, 1);
   } else {
-    const entry = { id: `tn_${staffId}_${date}`, staffId, staffName, date, shift };
+    const entry = { id:`tn_${staffId}_${date}`, staffId, staffName, date, shift };
     if (idx >= 0) turnos[idx] = entry; else turnos.push(entry);
   }
   save(KEY.turnos, turnos);
@@ -1254,75 +1292,173 @@ function setTurno(staffId, staffName, date, shift) {
 }
 
 function renderTurnos() {
-  document.getElementById('toolbar').innerHTML = `
-    <button class="tbtn" onclick="turnosWeekOffset--;renderTurnos()">← Semana anterior</button>
-    <button class="tbtn primary" onclick="turnosWeekOffset=0;renderTurnos()">Esta semana</button>
-    <button class="tbtn" onclick="turnosWeekOffset++;renderTurnos()">Semana siguiente →</button>
-    <div style="margin-left:auto;font-size:11px;color:var(--ink3)">
-      ${Object.entries(SHIFT_TYPES).map(([k,v])=>`<span style="display:inline-flex;align-items:center;gap:4px;margin-left:12px"><span style="width:14px;height:14px;border-radius:3px;background:${v.bg};border:1px solid ${v.color};display:inline-block"></span><span style="color:${v.color};font-weight:500">${k}</span> ${v.label}</span>`).join('')}
-    </div>`;
-
   const days = getTurnosWeek(turnosWeekOffset);
   const DAY_NAMES = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
   const today = new Date().toISOString().slice(0,10);
+  const fmtWD = d => { const [,m,dy]=d.split('-'); return `${parseInt(dy)} ${['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][parseInt(m)]}`; };
 
-  const header = `<tr>
-    <th style="background:var(--sand);padding:8px 14px;font-size:11px;text-align:left;border-bottom:1px solid var(--border2);border-right:1px solid var(--border);font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);min-width:120px">Colaborador</th>
-    ${days.map((d,i)=>{
-      const isToday = d === today;
-      const [,mo,dy] = d.split('-');
-      return `<th style="background:${isToday?'#fef9f0':'var(--sand)'};padding:8px;font-size:11px;text-align:center;border-bottom:1px solid var(--border2);border-right:1px solid var(--border);font-weight:${isToday?600:400};color:${isToday?'var(--gold)':'var(--ink3)'};width:90px">
-        <div>${DAY_NAMES[i]}</div>
-        <div style="font-size:13px;font-weight:500;color:${isToday?'var(--gold)':'var(--ink)'}">${parseInt(dy)}</div>
-      </th>`;
+  document.getElementById('toolbar').innerHTML = `
+    <button class="tbtn" onclick="turnosWeekOffset--;renderTurnos()">← Anterior</button>
+    <button class="tbtn primary" onclick="turnosWeekOffset=0;renderTurnos()">Esta semana</button>
+    <button class="tbtn" onclick="turnosWeekOffset++;renderTurnos()">Siguiente →</button>
+    <button class="tbtn" onclick="autoFillJulian()" title="Aplicar STD a Julián L-S (solo celdas vacías)">⚡ Auto Julián</button>
+    <div style="margin-left:auto;display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+      ${Object.entries(SHIFT_TYPES).map(([k,v])=>`<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;white-space:nowrap"><span style="width:9px;height:9px;border-radius:2px;background:${v.bg};border:1px solid ${v.color};display:inline-block;flex-shrink:0"></span><span style="color:${v.color};font-weight:600">${k}</span></span>`).join('')}
+    </div>`;
+
+  // Day events row
+  const eventsRow = `<tr style="background:#f8fafc">
+    <td style="padding:4px 10px;font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);border-right:1px solid var(--border);border-bottom:1px solid var(--border2);white-space:nowrap">Tipo de día</td>
+    ${days.map(d=>{
+      const ev = dayEvents[d]||'normal';
+      const def = DAY_EVENT_TYPES[ev];
+      return `<td style="border-bottom:1px solid var(--border2);border-right:1px solid var(--border);padding:2px;text-align:center">
+        <select style="font-size:10px;border:none;background:${def.bg};color:${def.color};border-radius:3px;padding:2px 1px;cursor:pointer;font-family:'Jost',sans-serif;font-weight:600;width:100%;outline:none" onchange="setDayEvent('${d}',this.value)">
+          ${Object.entries(DAY_EVENT_TYPES).map(([k,v])=>`<option value="${k}" ${ev===k?'selected':''}>${v.label}</option>`).join('')}
+        </select>
+      </td>`;
     }).join('')}
-    <th style="background:var(--sand);padding:8px;font-size:11px;text-align:center;border-bottom:1px solid var(--border2);font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)">Total</th>
+    <td style="border-bottom:1px solid var(--border2)"></td>
   </tr>`;
 
-  const rows = staff.map(s => {
-    const cells = days.map(d => {
-      const t = getTurno(s.id, d);
-      const sh = t?.shift || '';
-      const def = SHIFT_TYPES[sh];
-      return `<td style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:0;text-align:center;cursor:pointer;${d===today?'background:#fef9f0':''}" onclick="cycleTurno('${s.id}','${s.name}','${d}')">
-        ${sh ? `<span title="${def.label} (${def.hours})" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:6px;background:${def.bg};color:${def.color};font-size:13px;font-weight:600;margin:4px">${sh}</span>` : '<span style="display:inline-block;width:36px;height:36px;margin:4px;opacity:.25;font-size:18px;line-height:36px">·</span>'}
-      </td>`;
-    });
-    const worked = days.filter(d => { const t = getTurno(s.id, d); return t && t.shift !== 'L'; }).length;
-    return `<tr>
-      <td style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:8px 14px;font-size:12px">
-        <div style="font-weight:500;color:var(--ink)">${s.name}</div>
-        <div style="font-size:10px;color:var(--ink3);margin-top:1px">${s.team}</div>
-      </td>
-      ${cells.join('')}
-      <td style="border-bottom:1px solid var(--border);padding:8px;text-align:center;font-size:12px;font-weight:500;color:var(--ink2)">${worked}</td>
+  // Rows grouped by team
+  const teamsPresent = [...new Set(staff.map(s=>s.team))].sort((a,b)=>{
+    const ia=TEAM_ORDER.indexOf(a),ib=TEAM_ORDER.indexOf(b);
+    return (ia===-1?99:ia)-(ib===-1?99:ib);
+  });
+  let bodyRows = '';
+  teamsPresent.forEach(team => {
+    const members = staff.filter(s=>s.team===team);
+    bodyRows += `<tr style="background:#f1f5f9">
+      <td colspan="${days.length+2}" style="padding:5px 14px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);border-bottom:1px solid var(--border2)">${TEAM_ICONS[team]||'👤'} ${team}</td>
     </tr>`;
-  }).join('');
-
-  const [weekStart, weekEnd] = [days[0], days[6]];
-  const fmtDate = d => { const [,m,dy] = d.split('-'); return `${parseInt(dy)} ${['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][parseInt(m)]}`; };
+    members.forEach(s => {
+      const isJulian = /juli[aá]n/i.test(s.name);
+      const enc = encodeURIComponent(s.name);
+      const cells = days.map(d => {
+        const t = getTurno(s.id,d); const sh = t?.shift||''; const def = sh?SHIFT_TYPES[sh]:null;
+        return `<td style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:1px;text-align:center;cursor:pointer;${d===today?'background:#fef9f0':''}" onclick="openShiftPicker('${s.id}','${enc}','${d}',event)">
+          ${def?`<div title="${def.label} · ${def.hours}" style="border-radius:4px;background:${def.bg};color:${def.color};font-size:10px;font-weight:700;padding:3px 2px;margin:2px;min-height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;line-height:1.1"><span>${sh}</span><span style="font-size:9px;font-weight:400;opacity:.8">${def.hours}</span></div>`:`<div style="min-height:36px;display:flex;align-items:center;justify-content:center;color:#d1d5db;font-size:16px;margin:2px">·</div>`}
+        </td>`;
+      });
+      const worked = days.filter(d=>{ const t=getTurno(s.id,d); return t&&t.shift&&t.shift!=='OFF'; }).length;
+      bodyRows += `<tr>
+        <td style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:6px 14px;font-size:12px;white-space:nowrap;min-width:150px">
+          <span style="font-weight:400;color:var(--ink)">${s.name}</span>
+          ${isJulian?'<span style="margin-left:5px;font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:10px;font-weight:600">FIJO</span>':''}
+        </td>
+        ${cells.join('')}
+        <td style="border-bottom:1px solid var(--border);padding:6px;text-align:center;font-size:12px;font-weight:500;color:var(--ink2)">${worked}d</td>
+      </tr>`;
+    });
+  });
 
   document.getElementById('content').innerHTML = `
-    <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <span style="font-size:14px;font-weight:500;color:var(--ink)">Semana ${fmtDate(weekStart)} – ${fmtDate(weekEnd)}</span>
-        ${turnosWeekOffset===0?'<span style="margin-left:8px;font-size:11px;background:var(--gold3);color:var(--gold);padding:2px 7px;border-radius:3px">Esta semana</span>':''}
+    <div style="margin-bottom:12px;background:var(--white);border:1px solid var(--border);border-left:3px solid var(--gold)">
+      <div style="display:flex;align-items:center;padding:9px 14px;cursor:pointer;gap:8px;user-select:none" onclick="toggleReglas()">
+        <span style="font-size:12px;font-weight:500;color:var(--ink)">📋 Reglas automáticas de horario</span>
+        <span id="reglasChev" style="font-size:10px;color:var(--ink3);margin-left:auto">${_reglasOpen?'▲':'▼'}</span>
       </div>
-      <div style="font-size:11px;color:var(--ink3)">Haz clic en una celda para asignar turno</div>
+      <div id="reglasList" style="${_reglasOpen?'':'display:none;'}padding:0 14px 12px;border-top:1px solid var(--border)">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:4px;margin-top:8px">
+          ${REGLAS.map((r,i)=>`<div style="font-size:11px;color:var(--ink2);padding:4px 8px;background:var(--sand);border-left:2px solid var(--gold3)"><span style="color:var(--gold);font-weight:700">${i+1}.</span> ${r}</div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:14px;font-weight:500;color:var(--ink)">Semana ${fmtWD(days[0])} – ${fmtWD(days[6])}</span>
+      ${turnosWeekOffset===0?'<span style="font-size:11px;background:var(--gold3);color:var(--gold);padding:2px 7px;border-radius:3px">Esta semana</span>':''}
+      <span style="font-size:11px;color:var(--ink3);margin-left:auto">Clic en celda → asignar turno</span>
     </div>
     <div style="overflow-x:auto;border:1px solid var(--border);background:var(--white);border-radius:2px">
-      <table style="width:100%;border-collapse:collapse;min-width:720px">
-        <thead>${header}</thead>
-        <tbody>${rows}</tbody>
+      <table style="width:100%;border-collapse:collapse;min-width:760px">
+        <thead>
+          <tr>
+            <th style="background:var(--sand);padding:8px 14px;font-size:11px;text-align:left;border-bottom:1px solid var(--border2);border-right:1px solid var(--border);font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);min-width:150px">Colaborador</th>
+            ${days.map((d,i)=>{
+              const isToday=d===today,[,mo,dy]=d.split('-');
+              return `<th style="background:${isToday?'#fef9f0':'var(--sand)'};padding:8px;font-size:11px;text-align:center;border-bottom:1px solid var(--border2);border-right:1px solid var(--border);font-weight:${isToday?600:400};color:${isToday?'var(--gold)':'var(--ink3)'};width:84px">
+                <div>${DAY_NAMES[i]}</div>
+                <div style="font-size:13px;font-weight:500;color:${isToday?'var(--gold)':'var(--ink)'}">${parseInt(dy)}</div>
+              </th>`;
+            }).join('')}
+            <th style="background:var(--sand);padding:8px;font-size:11px;text-align:center;border-bottom:1px solid var(--border2);font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);width:48px">Días</th>
+          </tr>
+          ${eventsRow}
+        </thead>
+        <tbody>${bodyRows}</tbody>
       </table>
     </div>`;
 }
 
-function cycleTurno(staffId, staffName, date) {
-  const order = ['', 'M', 'T', 'N', 'E', 'R', 'L'];
-  const cur = getTurno(staffId, date)?.shift || '';
-  const next = order[(order.indexOf(cur) + 1) % order.length];
-  setTurno(staffId, staffName, date, next);
+function toggleReglas() {
+  _reglasOpen = !_reglasOpen;
+  const list=document.getElementById('reglasList'), chev=document.getElementById('reglasChev');
+  if (list) list.style.display=_reglasOpen?'':'none';
+  if (chev) chev.textContent=_reglasOpen?'▲':'▼';
+}
+
+function setDayEvent(date, type) {
+  dayEvents[date]=type;
+  lsSet('hr_devents', JSON.stringify(dayEvents));
+}
+
+function autoFillJulian() {
+  const julian=staff.find(s=>/juli[aá]n/i.test(s.name));
+  if (!julian) { alert('No se encontró Julián en el equipo. Agrégalo en la pestaña Equipo.'); return; }
+  const days=getTurnosWeek(turnosWeekOffset);
+  let filled=0;
+  days.slice(0,6).forEach(d=>{
+    if (!getTurno(julian.id,d)) {
+      turnos.push({ id:`tn_${julian.id}_${d}`, staffId:julian.id, staffName:julian.name, date:d, shift:'STD' });
+      filled++;
+    }
+  });
+  if (!filled) { alert('Julián ya tiene turnos asignados esta semana.'); return; }
+  save(KEY.turnos, turnos);
+  renderTurnos();
+}
+
+function openShiftPicker(staffId, enc, date, e) {
+  e.stopPropagation();
+  const staffName=decodeURIComponent(enc);
+  let picker=document.getElementById('shiftPicker');
+  if (!picker) {
+    picker=document.createElement('div');
+    picker.id='shiftPicker';
+    picker.style.cssText="display:none;position:fixed;z-index:600;background:var(--white);border:1px solid var(--border2);box-shadow:0 6px 24px rgba(0,0,0,.14);border-radius:4px;min-width:220px;overflow:hidden;font-family:'Jost',sans-serif";
+    picker.onclick=ev=>ev.stopPropagation();
+    document.body.appendChild(picker);
+  }
+  const cur=getTurno(staffId,date)?.shift||'';
+  picker.innerHTML=`
+    <div style="padding:7px 12px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);border-bottom:1px solid var(--border);background:var(--sand)">${staffName} · ${fmtDateShort(date)}</div>
+    <div style="max-height:320px;overflow-y:auto">
+      <div onclick="pickShift('${staffId}','${enc}','${date}','')" style="padding:6px 12px;cursor:pointer;font-size:11px;color:var(--ink3);display:flex;align-items:center;gap:8px;${!cur?'background:var(--sand2)':''}">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#e5e7eb;border:1px solid #d1d5db;flex-shrink:0"></span>
+        <span>Sin turno / Limpiar</span>
+      </div>
+      ${Object.entries(SHIFT_TYPES).map(([k,v])=>`<div onclick="pickShift('${staffId}','${enc}','${date}','${k}')" style="padding:6px 12px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:8px;${cur===k?'background:var(--sand2)':''}">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${v.bg};border:1px solid ${v.color};flex-shrink:0"></span>
+        <span style="font-weight:700;color:${v.color};min-width:38px">${k}</span>
+        <span style="color:var(--ink2)">${v.label}</span>
+        <span style="color:var(--ink3);font-size:10px;margin-left:auto;white-space:nowrap">${v.hours}</span>
+      </div>`).join('')}
+    </div>`;
+  const rect=e.target.closest('td').getBoundingClientRect(), ph=360;
+  picker.style.top=Math.max(4,rect.bottom+ph>window.innerHeight?rect.top-ph:rect.bottom+2)+'px';
+  picker.style.left=Math.max(4,Math.min(rect.left,window.innerWidth-228))+'px';
+  picker.style.display='block';
+  setTimeout(()=>document.addEventListener('click',closeShiftPicker,{once:true}),10);
+}
+
+function pickShift(staffId, enc, date, shift) {
+  closeShiftPicker();
+  setTurno(staffId, decodeURIComponent(enc), date, shift);
+}
+
+function closeShiftPicker() {
+  const p=document.getElementById('shiftPicker'); if(p) p.style.display='none';
 }
 
 // ── INIT ────────────────────────────────────────────────────
