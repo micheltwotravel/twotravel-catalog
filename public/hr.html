@@ -275,18 +275,41 @@ if (!staff.length) {
     { id:"s7",  name:"Amaury Rocha",      team:"Concierge MDE" },
     { id:"s8",  name:"Julián Pardo",      team:"Logistics" },
     { id:"s9",  name:"Miguel Cruz",       team:"Chef" },
-    { id:"s10", name:"Genesis Sierra",    team:"Finance" },
-    { id:"s11", name:"Lyna Atencio",      team:"Finance" },
     { id:"s12", name:"Sebastian Anibal",  team:"Finance" },
     { id:"s13", name:"Mario Padilla",     team:"Finance" },
     { id:"s14", name:"Julith Villa",      team:"Finance" },
+    { id:"s23", name:"Patricia Capistran",team:"Finance" },
     { id:"s15", name:"Michel Sanchez",    team:"Admin" },
     { id:"s16", name:"Valentina Bedoya",  team:"Admin" },
     { id:"s17", name:"Alexandra Rey",     team:"Bodas" },
     { id:"s18", name:"Angélica Cruz",     team:"Bodas" },
     { id:"s19", name:"Oskalia Valencia",  team:"Bodas" },
+    { id:"s10", name:"Genesis Sierra",    team:"Bodas" },
+    { id:"s11", name:"Lyna Atencio",      team:"Bodas" },
+    { id:"s21", name:"Natalia Peniche",   team:"Bodas" },
+    { id:"s22", name:"Nataly Cruz",       team:"Bodas" },
+    { id:"s24", name:"Ray Kanesvky",      team:"Operations" },
   ];
   save(KEY.staff, staff);
+}
+
+// Migrate: fix team assignments and add missing staff
+{
+  const TEAM_FIX = { "Genesis Sierra":"Bodas", "Lyna Atencio":"Bodas" };
+  const TO_ADD = [
+    { id:"s21", name:"Natalia Peniche",   team:"Bodas" },
+    { id:"s22", name:"Nataly Cruz",       team:"Bodas" },
+    { id:"s23", name:"Patricia Capistran",team:"Finance" },
+    { id:"s24", name:"Ray Kanesvky",      team:"Operations" },
+  ];
+  let changed = false;
+  staff.forEach(s => {
+    if (TEAM_FIX[s.name] && s.team !== TEAM_FIX[s.name]) { s.team = TEAM_FIX[s.name]; changed = true; }
+  });
+  TO_ADD.forEach(ns => {
+    if (!staff.find(s => s.id === ns.id || s.name === ns.name)) { staff.push(ns); changed = true; }
+  });
+  if (changed) save(KEY.staff, staff);
 }
 
 // ── STATE ──────────────────────────────────────────────────
