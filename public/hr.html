@@ -255,7 +255,10 @@ let attendance = load(KEY.attendance); // [{ personId, date, type, status }]
 let staff      = load(KEY.staff);
 let cultura    = load(KEY.cultura) || { empMonth: null, gallery: [], posts: [] };
 let turnos     = load(KEY.turnos)   || []; // [{ id, staffId, staffName, date, shift, note }]
-let dayEvents  = {}; try { dayEvents = JSON.parse(lsGet('hr_devents') || '{}'); } catch {}
+const SB_URL = "https://zcgisoigfzytpanoaomq.supabase.co";
+const SB_KEY = "sb_publishable_7k9A4WP1x7hDQdrsHY52jQ_Rpj3ASjU";
+let _weekEvents = {}; // date → [{type:'checkin'|'checkout'|'bote', name, city}]
+let _eventsLoading = false;
 // ensure estructura
 if (!cultura.empMonth && !cultura.gallery) cultura = { empMonth: null, gallery: [], posts: [] };
 
@@ -268,6 +271,7 @@ if (!staff.length) {
     { id:"s4",  name:"Laura Agamez",      team:"Concierge" },
     { id:"s5",  name:"Yosayro Moncaris",  team:"Jr Concierge" },
     { id:"s6",  name:"Xilene Beltrán",    team:"Jr Concierge" },
+    { id:"s20", name:"Juan Ramos",        team:"Jr Concierge" },
     { id:"s7",  name:"Amaury Rocha",      team:"Concierge MDE" },
     { id:"s8",  name:"Julián Pardo",      team:"Logistics" },
     { id:"s9",  name:"Miguel Cruz",       team:"Chef" },
@@ -369,7 +373,7 @@ function render() {
   else if (currentTab === "attendance") renderAttendance();
   else if (currentTab === "cultura") renderCultura();
   else if (currentTab === "staff") renderStaff();
-  else if (currentTab === "turnos") renderTurnos();
+  else if (currentTab === "turnos") loadWeekEvents();
 }
 
 // ══════════════════════════════════════════════
@@ -1238,23 +1242,14 @@ const SHIFT_TYPES = {
   "OFF":  { label:"Libre",       hours:"✕",           color:"#6b7280", bg:"#f3f4f6" },
 };
 
-const DAY_EVENT_TYPES = {
-  normal:  { label:"Normal",       color:"#6b7280", bg:"#f3f4f6" },
-  bote:    { label:"🛥 Bote",      color:"#0891b2", bg:"#cffafe" },
-  cin_mde: { label:"🏙 C/In MDE",  color:"#059669", bg:"#d1fae5" },
-  cin_ctg: { label:"⚓ C/In CTG",  color:"#2563eb", bg:"#dbeafe" },
-  cout:    { label:"🔑 Check-Out", color:"#7c3aed", bg:"#ede9fe" },
-  boda:    { label:"💒 Boda",      color:"#be185d", bg:"#fce7f3" },
-};
-
 const REGLAS = [
   "🛥 Día de Bote → ambos Jr Concierge: MAÑ 08:00–16:00",
-  "⚓🏙 C/In CTG + MDE mismo día → Logistics: NITE",
+  "⚓🏙 Check-In CTG + Check-In MDE mismo día → Logistics: NITE",
   "🏙 Check-In Medellín → Amaury Rocha: turno de día",
-  "📅 Julián Pardo: STD 09:00–17:00 Lun–Sáb (auto con ⚡)",
-  "🍽 Miguel – Chef Dinner / BBQ noche → TAR 12:00–20:00",
-  "🍽 Miguel – Chef on board → MAÑ 08:00–16:00",
+  "📅 Julián Pardo: STD 09:00–17:00 Lun–Sáb de forma continua (auto ⚡)",
+  "🍽 Miguel – Chef Dinner / BBQ noche → TAR 12:00–20:00 · Chef on board → MAÑ 08:00–16:00",
   "🔑 Check-Out sin otros clientes → solo Concierge: COUT 10:00–14:00",
+  "📅 Check-In Only sáb/dom → CIN 10:00–15:00 (sujeto a disponibilidad de Logistics)",
 ];
 
 const TEAM_ORDER = ["Concierge","Jr Concierge","Concierge MDE","Logistics","Chef","Finance","Admin","Bodas","Dirección","Operations"];
@@ -1298,24 +1293,32 @@ function renderTurnos() {
   const fmtWD = d => { const [,m,dy]=d.split('-'); return `${parseInt(dy)} ${['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][parseInt(m)]}`; };
 
   document.getElementById('toolbar').innerHTML = `
-    <button class="tbtn" onclick="turnosWeekOffset--;renderTurnos()">← Anterior</button>
-    <button class="tbtn primary" onclick="turnosWeekOffset=0;renderTurnos()">Esta semana</button>
-    <button class="tbtn" onclick="turnosWeekOffset++;renderTurnos()">Siguiente →</button>
+    <button class="tbtn" onclick="turnosWeekOffset--;loadWeekEvents()">← Anterior</button>
+    <button class="tbtn primary" onclick="turnosWeekOffset=0;loadWeekEvents()">Esta semana</button>
+    <button class="tbtn" onclick="turnosWeekOffset++;loadWeekEvents()">Siguiente →</button>
     <button class="tbtn" onclick="autoFillJulian()" title="Aplicar STD a Julián L-S (solo celdas vacías)">⚡ Auto Julián</button>
     <div style="margin-left:auto;display:flex;gap:5px;flex-wrap:wrap;align-items:center">
       ${Object.entries(SHIFT_TYPES).map(([k,v])=>`<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;white-space:nowrap"><span style="width:9px;height:9px;border-radius:2px;background:${v.bg};border:1px solid ${v.color};display:inline-block;flex-shrink:0"></span><span style="color:${v.color};font-weight:600">${k}</span></span>`).join('')}
     </div>`;
 
-  // Day events row
-  const eventsRow = `<tr style="background:#f8fafc">
-    <td style="padding:4px 10px;font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);border-right:1px solid var(--border);border-bottom:1px solid var(--border2);white-space:nowrap">Tipo de día</td>
+  // Events row — auto-populated from itinerary (Supabase)
+  const EVT_STYLE = {
+    checkin:  {icon:"⬆", color:"#059669", bg:"#d1fae5"},
+    checkout: {icon:"⬇", color:"#7c3aed", bg:"#ede9fe"},
+    bote:     {icon:"🛥", color:"#0891b2", bg:"#cffafe"},
+  };
+  const eventsRow = `<tr style="background:#fafaf9">
+    <td style="padding:4px 10px;font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);border-right:1px solid var(--border);border-bottom:1px solid var(--border2);white-space:nowrap">
+      ${_eventsLoading?'<span style="color:var(--gold)">⟳</span> ':''}Clientes
+    </td>
     ${days.map(d=>{
-      const ev = dayEvents[d]||'normal';
-      const def = DAY_EVENT_TYPES[ev];
-      return `<td style="border-bottom:1px solid var(--border2);border-right:1px solid var(--border);padding:2px;text-align:center">
-        <select style="font-size:10px;border:none;background:${def.bg};color:${def.color};border-radius:3px;padding:2px 1px;cursor:pointer;font-family:'Jost',sans-serif;font-weight:600;width:100%;outline:none" onchange="setDayEvent('${d}',this.value)">
-          ${Object.entries(DAY_EVENT_TYPES).map(([k,v])=>`<option value="${k}" ${ev===k?'selected':''}>${v.label}</option>`).join('')}
-        </select>
+      const evs = _weekEvents[d]||[];
+      return `<td style="border-bottom:1px solid var(--border2);border-right:1px solid var(--border);padding:2px 3px;vertical-align:top;min-height:28px">
+        ${evs.length?evs.map(ev=>{
+          const s=EVT_STYLE[ev.type]||{icon:'·',color:'#6b7280',bg:'#f3f4f6'};
+          const shortName=(ev.name||'').split(' ').slice(0,2).join(' ');
+          return `<div style="font-size:9px;font-weight:600;color:${s.color};background:${s.bg};border-radius:3px;padding:1px 4px;margin:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:82px" title="${ev.name}${ev.city?' · '+ev.city:''}">${s.icon} ${shortName}${ev.city?' '+ev.city:''}</div>`;
+        }).join(''):'<span style="color:#d1d5db;font-size:11px;line-height:28px;display:block;text-align:center">·</span>'}
       </td>`;
     }).join('')}
     <td style="border-bottom:1px solid var(--border2)"></td>
@@ -1398,9 +1401,40 @@ function toggleReglas() {
   if (chev) chev.textContent=_reglasOpen?'▲':'▼';
 }
 
-function setDayEvent(date, type) {
-  dayEvents[date]=type;
-  lsSet('hr_devents', JSON.stringify(dayEvents));
+async function fetchWeekClients(days) {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/kickoffs?select=data`, {
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` }
+    });
+    if (!res.ok) return {};
+    const rows = await res.json();
+    const events = {};
+    days.forEach(d => events[d] = []);
+    const daySet = new Set(days);
+    rows.forEach(row => {
+      const d = row.data;
+      if (!d || d.deletedAt) return;
+      const name = (d.guestName || d.tripName || '').trim();
+      const rawCity = (d.city || d.Ciudad || d.destinacion || d.destination || '').toLowerCase();
+      const city = rawCity.includes('mde')||rawCity.includes('medellin')||rawCity.includes('medellín') ? 'MDE'
+                 : rawCity.includes('ctg')||rawCity.includes('cartagena') ? 'CTG' : '';
+      const push = (date, type) => { if (date && daySet.has(date)) events[date].push({type, name, city}); };
+      push(d.arrivalDate,   'checkin');
+      push(d.departureDate, 'checkout');
+      push(d.arrivalDate2,  'checkin');
+      push(d.departureDate2,'checkout');
+      push(d.boatDay,       'bote');
+    });
+    return events;
+  } catch(e) { return {}; }
+}
+
+async function loadWeekEvents() {
+  _eventsLoading = true;
+  renderTurnos();
+  _weekEvents = await fetchWeekClients(getTurnosWeek(turnosWeekOffset));
+  _eventsLoading = false;
+  renderTurnos();
 }
 
 function autoFillJulian() {
