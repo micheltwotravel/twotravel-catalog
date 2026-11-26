@@ -1252,6 +1252,29 @@ const REGLAS = [
   "📅 Check-In Only sáb/dom → CIN 10:00–15:00 (sujeto a disponibilidad de Logistics)",
 ];
 
+const TEAM_COLORS = {"Concierge":"#2563eb","Jr Concierge":"#0891b2","Concierge MDE":"#7c3aed","Logistics":"#d97706","Chef":"#059669","Finance":"#be185d","Admin":"#374151","Bodas":"#9d174d","Dirección":"#4f46e5","Operations":"#64748b"};
+
+function initials(name) {
+  const p = name.trim().split(/\s+/);
+  return (p[0][0]+(p[1]?p[1][0]:'')).toUpperCase();
+}
+
+function suggestShift(teamName, name, date, dayEvents) {
+  if (!dayEvents || !dayEvents.length) return null;
+  const hasCI  = (city) => dayEvents.some(e=>e.type==='checkin'  &&(!city||e.city===city));
+  const hasCO  = (city) => dayEvents.some(e=>e.type==='checkout' &&(!city||e.city===city));
+  const hasBote= ()     => dayEvents.some(e=>e.type==='bote');
+  const isJulian=/juli[aá]n/i.test(name);
+  const dow=new Date(date+'T12:00:00').getDay();
+  if (isJulian && dow>=1&&dow<=6) return 'STD';
+  if (teamName==='Jr Concierge' && hasBote()) return 'MAÑ';
+  if (teamName==='Logistics' && hasCI('CTG')&&hasCI('MDE')) return 'NITE';
+  if (teamName==='Concierge MDE' && hasCI('MDE')) return 'STD';
+  if (teamName==='Concierge' && !hasCI()&&hasCO()&&!hasBote()) return 'COUT';
+  if (teamName==='Concierge' && hasCI()&&!hasCO()&&(dow===0||dow===6)) return 'CIN';
+  return null;
+}
+
 const TEAM_ORDER = ["Concierge","Jr Concierge","Concierge MDE","Logistics","Chef","Finance","Admin","Bodas","Dirección","Operations"];
 const TEAM_ICONS = {"Concierge":"👥","Jr Concierge":"👤","Concierge MDE":"🏙","Logistics":"🚗","Chef":"🍽","Finance":"💼","Admin":"📊","Bodas":"💒","Dirección":"⭐","Operations":"⚙"};
 
@@ -1297,8 +1320,9 @@ function renderTurnos() {
     <button class="tbtn primary" onclick="turnosWeekOffset=0;loadWeekEvents()">Esta semana</button>
     <button class="tbtn" onclick="turnosWeekOffset++;loadWeekEvents()">Siguiente →</button>
     <button class="tbtn" onclick="autoFillJulian()" title="Aplicar STD a Julián L-S (solo celdas vacías)">⚡ Auto Julián</button>
-    <div style="margin-left:auto;display:flex;gap:5px;flex-wrap:wrap;align-items:center">
-      ${Object.entries(SHIFT_TYPES).map(([k,v])=>`<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;white-space:nowrap"><span style="width:9px;height:9px;border-radius:2px;background:${v.bg};border:1px solid ${v.color};display:inline-block;flex-shrink:0"></span><span style="color:${v.color};font-weight:600">${k}</span></span>`).join('')}
+    <button class="tbtn" onclick="applyAutoSuggestions()" title="Aplicar turnos sugeridos (celdas vacías con reglas)">💡 Sugerencias</button>
+    <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+      ${Object.entries(SHIFT_TYPES).map(([k,v])=>`<span style="display:inline-flex;align-items:center;gap:3px;font-size:9px;white-space:nowrap;background:${v.bg};border:1px solid ${v.color}44;border-radius:3px;padding:1px 5px"><span style="color:${v.color};font-weight:700">${v.label}</span></span>`).join('')}
     </div>`;
 
   // Events row — auto-populated from itinerary (Supabase)
@@ -1317,7 +1341,8 @@ function renderTurnos() {
         ${evs.length?evs.map(ev=>{
           const s=EVT_STYLE[ev.type]||{icon:'·',color:'#6b7280',bg:'#f3f4f6'};
           const shortName=(ev.name||'').split(' ').slice(0,2).join(' ');
-          return `<div style="font-size:9px;font-weight:600;color:${s.color};background:${s.bg};border-radius:3px;padding:1px 4px;margin:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:82px" title="${ev.name}${ev.city?' · '+ev.city:''}">${s.icon} ${shortName}${ev.city?' '+ev.city:''}</div>`;
+          const evIdx=evs.indexOf(ev);
+          return `<div data-client="1" onclick="showClientInfo('${d}',${evIdx},event)" style="font-size:9px;font-weight:600;color:${s.color};background:${s.bg};border-radius:4px;padding:2px 6px;margin:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px;cursor:pointer;border:1px solid ${s.color}44" title="Clic para ver info del cliente">${s.icon} ${shortName}${ev.city?' · '+ev.city:''}</div>`;
         }).join(''):'<span style="color:#d1d5db;font-size:11px;line-height:28px;display:block;text-align:center">·</span>'}
       </td>`;
     }).join('')}
@@ -1340,15 +1365,35 @@ function renderTurnos() {
       const enc = encodeURIComponent(s.name);
       const cells = days.map(d => {
         const t = getTurno(s.id,d); const sh = t?.shift||''; const def = sh?SHIFT_TYPES[sh]:null;
-        return `<td style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:1px;text-align:center;cursor:pointer;${d===today?'background:#fef9f0':''}" onclick="openShiftPicker('${s.id}','${enc}','${d}',event)">
-          ${def?`<div title="${def.label} · ${def.hours}" style="border-radius:4px;background:${def.bg};color:${def.color};font-size:10px;font-weight:700;padding:3px 2px;margin:2px;min-height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;line-height:1.1"><span>${sh}</span><span style="font-size:9px;font-weight:400;opacity:.8">${def.hours}</span></div>`:`<div style="min-height:36px;display:flex;align-items:center;justify-content:center;color:#d1d5db;font-size:16px;margin:2px">·</div>`}
+        const sug = !sh ? suggestShift(s.team,s.name,d,_weekEvents[d]||[]) : null;
+        const sugDef = sug ? SHIFT_TYPES[sug] : null;
+        return `<td style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:2px;cursor:pointer;${d===today?'background:#fef9f0':''}" onclick="openShiftPicker('${s.id}','${enc}','${d}',event)">
+          ${def
+            ? `<div style="border-radius:7px;background:${def.bg};border-left:3px solid ${def.color};padding:6px 7px;margin:1px;min-height:56px;display:flex;flex-direction:column;justify-content:center;gap:2px">
+                <span style="font-size:11px;font-weight:700;color:${def.color};line-height:1.1">${def.label}</span>
+                <span style="font-size:10px;color:${def.color};opacity:.85">${def.hours}</span>
+              </div>`
+            : sugDef
+              ? `<div style="border-radius:7px;background:${sugDef.bg}55;border:1.5px dashed ${sugDef.color}88;padding:5px 7px;margin:1px;min-height:56px;display:flex;flex-direction:column;justify-content:center;gap:2px" title="Sugerido por regla">
+                  <span style="font-size:9px;color:var(--ink3)">💡 sugerido</span>
+                  <span style="font-size:11px;font-weight:600;color:${sugDef.color}bb;line-height:1.1">${sugDef.label}</span>
+                  <span style="font-size:10px;color:${sugDef.color};opacity:.6">${sugDef.hours}</span>
+                </div>`
+              : `<div style="min-height:56px;display:flex;align-items:center;justify-content:center;color:#d1d5db;font-size:20px;margin:1px">+</div>`
+          }
         </td>`;
       });
       const worked = days.filter(d=>{ const t=getTurno(s.id,d); return t&&t.shift&&t.shift!=='OFF'; }).length;
+      const tColor = TEAM_COLORS[s.team]||'#6b7280';
       bodyRows += `<tr>
-        <td style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:6px 14px;font-size:12px;white-space:nowrap;min-width:150px">
-          <span style="font-weight:400;color:var(--ink)">${s.name}</span>
-          ${isJulian?'<span style="margin-left:5px;font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:10px;font-weight:600">FIJO</span>':''}
+        <td style="border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:6px 10px;white-space:nowrap;min-width:160px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:30px;height:30px;border-radius:50%;background:${tColor};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials(s.name)}</div>
+            <div>
+              <div style="font-size:12px;font-weight:500;color:var(--ink);line-height:1.3">${s.name}</div>
+              ${isJulian?'<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:0 5px;border-radius:10px;font-weight:600">FIJO</span>':''}
+            </div>
+          </div>
         </td>
         ${cells.join('')}
         <td style="border-bottom:1px solid var(--border);padding:6px;text-align:center;font-size:12px;font-weight:500;color:var(--ink2)">${worked}d</td>
@@ -1418,7 +1463,12 @@ async function fetchWeekClients(days) {
       const rawCity = (d.city || d.Ciudad || d.destinacion || d.destination || '').toLowerCase();
       const city = rawCity.includes('mde')||rawCity.includes('medellin')||rawCity.includes('medellín') ? 'MDE'
                  : rawCity.includes('ctg')||rawCity.includes('cartagena') ? 'CTG' : '';
-      const push = (date, type) => { if (date && daySet.has(date)) events[date].push({type, name, city}); };
+      const extra = { name, city,
+        dates: `${d.arrivalDate||''}${d.departureDate?' → '+d.departureDate:''}`,
+        pax: d.pax||d.groupSize||d.guests||d.numberOfGuests||'',
+        accommodation: d.accommodation||d.alojamiento||d.hotel||d.villa||'',
+        concierge: d.conciergeAssigned||d.concierge||d.conciergeRep||'' };
+      const push = (date, type) => { if (date && daySet.has(date)) events[date].push({type, ...extra}); };
       push(d.arrivalDate,   'checkin');
       push(d.departureDate, 'checkout');
       push(d.arrivalDate2,  'checkin');
@@ -1465,17 +1515,25 @@ function openShiftPicker(staffId, enc, date, e) {
     document.body.appendChild(picker);
   }
   const cur=getTurno(staffId,date)?.shift||'';
+  const sm=staff.find(s=>s.id===staffId);
+  const sug=sm?suggestShift(sm.team,sm.name,date,_weekEvents[date]||[]):null;
+  const sugDef=sug?SHIFT_TYPES[sug]:null;
   picker.innerHTML=`
-    <div style="padding:7px 12px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);border-bottom:1px solid var(--border);background:var(--sand)">${staffName} · ${fmtDateShort(date)}</div>
+    <div style="padding:8px 12px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);border-bottom:1px solid var(--border);background:var(--sand)">${staffName} · ${fmtDateShort(date)}</div>
+    ${sugDef&&!cur?`<div onclick="pickShift('${staffId}','${enc}','${date}','${sug}')" style="padding:7px 12px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:8px;background:${sugDef.bg}66;border-bottom:1px solid var(--border)">
+      <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${sugDef.bg};border:2px solid ${sugDef.color};flex-shrink:0"></span>
+      <span style="color:var(--ink2)">💡 Sugerido:</span>
+      <span style="font-weight:700;color:${sugDef.color}">${sugDef.label}</span>
+      <span style="color:var(--ink3);font-size:10px;margin-left:auto">${sugDef.hours}</span>
+    </div>`:''}
     <div style="max-height:320px;overflow-y:auto">
-      <div onclick="pickShift('${staffId}','${enc}','${date}','')" style="padding:6px 12px;cursor:pointer;font-size:11px;color:var(--ink3);display:flex;align-items:center;gap:8px;${!cur?'background:var(--sand2)':''}">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#e5e7eb;border:1px solid #d1d5db;flex-shrink:0"></span>
+      <div onclick="pickShift('${staffId}','${enc}','${date}','')" style="padding:7px 12px;cursor:pointer;font-size:11px;color:var(--ink3);display:flex;align-items:center;gap:8px;${!cur?'background:var(--sand2)':''}">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#e5e7eb;border:1px solid #d1d5db;flex-shrink:0"></span>
         <span>Sin turno / Limpiar</span>
       </div>
-      ${Object.entries(SHIFT_TYPES).map(([k,v])=>`<div onclick="pickShift('${staffId}','${enc}','${date}','${k}')" style="padding:6px 12px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:8px;${cur===k?'background:var(--sand2)':''}">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${v.bg};border:1px solid ${v.color};flex-shrink:0"></span>
-        <span style="font-weight:700;color:${v.color};min-width:38px">${k}</span>
-        <span style="color:var(--ink2)">${v.label}</span>
+      ${Object.entries(SHIFT_TYPES).map(([k,v])=>`<div onclick="pickShift('${staffId}','${enc}','${date}','${k}')" style="padding:7px 12px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:8px;${cur===k?'background:var(--sand2)':''}">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${v.bg};border:2px solid ${v.color};flex-shrink:0"></span>
+        <span style="font-weight:700;color:${v.color};min-width:90px">${v.label}</span>
         <span style="color:var(--ink3);font-size:10px;margin-left:auto;white-space:nowrap">${v.hours}</span>
       </div>`).join('')}
     </div>`;
@@ -1493,6 +1551,70 @@ function pickShift(staffId, enc, date, shift) {
 
 function closeShiftPicker() {
   const p=document.getElementById('shiftPicker'); if(p) p.style.display='none';
+}
+
+function showClientInfo(date, idx, e) {
+  e.stopPropagation();
+  const ev = (_weekEvents[date]||[])[idx];
+  if (!ev) return;
+  let popup = document.getElementById('clientInfoPopup');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.id = 'clientInfoPopup';
+    popup.style.cssText = "display:none;position:fixed;z-index:700;background:var(--white);border:1px solid var(--border2);box-shadow:0 8px 32px rgba(0,0,0,.18);border-radius:10px;min-width:260px;max-width:320px;overflow:hidden;font-family:'Jost',sans-serif";
+    popup.onclick = e2 => e2.stopPropagation();
+    document.body.appendChild(popup);
+  }
+  const EVT_STYLE = {checkin:{icon:"⬆",color:"#059669",bg:"#d1fae5",label:"Check-In"},checkout:{icon:"⬇",color:"#7c3aed",bg:"#ede9fe",label:"Check-Out"},bote:{icon:"🛥",color:"#0891b2",bg:"#cffafe",label:"Día de Bote"}};
+  const s = EVT_STYLE[ev.type]||{icon:'·',color:'#6b7280',bg:'#f3f4f6',label:ev.type};
+  const rows = [
+    ev.city ? `<div><span style="font-weight:600;color:var(--ink)">📍 Ciudad:</span> ${ev.city}</div>` : '',
+    ev.dates ? `<div><span style="font-weight:600;color:var(--ink)">📅 Fechas:</span> ${ev.dates}</div>` : '',
+    ev.pax ? `<div><span style="font-weight:600;color:var(--ink)">👥 Pax:</span> ${ev.pax}</div>` : '',
+    ev.accommodation ? `<div><span style="font-weight:600;color:var(--ink)">🏠 Alojamiento:</span> ${ev.accommodation}</div>` : '',
+    ev.concierge ? `<div><span style="font-weight:600;color:var(--ink)">👤 Concierge:</span> ${ev.concierge}</div>` : '',
+  ].filter(Boolean).join('');
+  popup.innerHTML = `
+    <div style="padding:12px 14px;background:${s.bg};border-bottom:2px solid ${s.color}30">
+      <div style="font-size:10px;font-weight:700;color:${s.color};letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">${s.icon} ${s.label}</div>
+      <div style="font-size:16px;font-weight:600;color:var(--ink)">${ev.name||'Sin nombre'}</div>
+    </div>
+    ${rows ? `<div style="padding:12px 14px;display:flex;flex-direction:column;gap:7px;font-size:11px;color:var(--ink2)">${rows}</div>` : '<div style="padding:12px 14px;font-size:11px;color:var(--ink3)">Sin detalles adicionales.</div>'}`;
+  const rect = e.target.closest('[data-client]').getBoundingClientRect();
+  const ph = popup.offsetHeight || 200;
+  popup.style.top = Math.max(4, rect.bottom+ph>window.innerHeight ? rect.top-ph-4 : rect.bottom+4)+'px';
+  popup.style.left = Math.max(4, Math.min(rect.left, window.innerWidth-328))+'px';
+  popup.style.display = 'block';
+  setTimeout(()=>document.addEventListener('click',closeClientInfo,{once:true}),10);
+}
+
+function closeClientInfo() {
+  const p=document.getElementById('clientInfoPopup'); if(p) p.style.display='none';
+}
+
+function applyAutoSuggestions() {
+  const days = getTurnosWeek(turnosWeekOffset);
+  let applied = 0;
+  staff.forEach(s => {
+    days.forEach(d => {
+      if (!getTurno(s.id, d)) {
+        const sug = suggestShift(s.team, s.name, d, _weekEvents[d]||[]);
+        if (sug) {
+          turnos.push({ id:`tn_${s.id}_${d}`, staffId:s.id, staffName:s.name, date:d, shift:sug });
+          applied++;
+        }
+      }
+    });
+  });
+  if (!applied) { alert('No hay sugerencias aplicables esta semana (celdas ya llenas o sin eventos).'); return; }
+  save(KEY.turnos, turnos);
+  renderTurnos();
+  const msg = `✅ ${applied} turno${applied>1?'s':''} sugerido${applied>1?'s':''} aplicado${applied>1?'s':''}`;
+  const toast = document.createElement('div');
+  toast.style.cssText = "position:fixed;bottom:20px;right:20px;background:#059669;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:500;z-index:800;box-shadow:0 4px 16px rgba(0,0,0,.2)";
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(()=>toast.remove(), 3000);
 }
 
 // ── INIT ────────────────────────────────────────────────────
@@ -1517,6 +1639,10 @@ if (!candidates.length && !projects.length) {
   save(KEY.candidates, candidates);
   save(KEY.projects, projects);
 }
+
+// Migrate: remove staff named Alia/Aria (ya no trabaja)
+const _aliaIdx = staff.findIndex(s => /^(alia|aria)\b/i.test(s.name));
+if (_aliaIdx >= 0) { staff.splice(_aliaIdx, 1); save(KEY.staff, staff); }
 
 const _initTab = new URLSearchParams(location.search).get('tab');
 if (_initTab && ["hiring","projects","attendance","cultura","staff","turnos"].includes(_initTab)) {
