@@ -217,6 +217,17 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
         </div>
       </div>
 
+      <div class="form-row">
+        <div class="form-group" style="flex:1.5">
+          <label class="form-label">NIT del cliente (para factura)</label>
+          <input class="form-input" id="n-nit" placeholder="ej. 901561178-7" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label">N° Factura WorldOffice</label>
+          <input class="form-input" id="n-fvt" placeholder="ej. FVT 737">
+        </div>
+      </div>
+
       <div class="form-row triple">
         <div class="form-group">
           <label class="form-label">Monto total servicio *</label>
@@ -235,8 +246,16 @@ html,body{height:100%;font-family:'Jost',sans-serif;background:var(--sand);color
         </div>
         <div class="form-group">
           <label class="form-label">Monto comisión</label>
-          <input class="form-input" id="n-amount" type="number" placeholder="0" step="0.01">
+          <input class="form-input" id="n-amount" type="number" placeholder="0" step="0.01" oninput="calcComision()">
         </div>
+      </div>
+
+      <!-- WorldOffice / QB tax breakdown -->
+      <div id="wo-calc" style="display:none;margin:-6px 0 14px;padding:10px 14px;background:#f0f7ef;border:1px solid #bbf7d0;font-size:11px;color:var(--ink2);display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        <div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:2px">Base (comisión)</div><div id="wo-base" style="font-weight:600;color:var(--ink)">—</div></div>
+        <div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:2px">IVA 19%</div><div id="wo-iva" style="font-weight:600;color:#1565c0">—</div></div>
+        <div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:2px">Retefuente 11%</div><div id="wo-ret" style="font-weight:600;color:#b45309">—</div></div>
+        <div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:2px">Total documento</div><div id="wo-total" style="font-weight:700;color:#15803d">—</div></div>
       </div>
 
       <div class="form-row triple">
@@ -673,9 +692,28 @@ function calcComision(){
     document.getElementById('n-amount').value = com.toFixed(2);
     const cur = document.getElementById('n-currency').value;
     document.getElementById('n-pct-hint').textContent = `= ${cur} ${com.toLocaleString('es',{minimumFractionDigits:2})}`;
+    updateWOCalc(com, cur);
   } else {
+    const manualAmt = parseFloat(document.getElementById('n-amount').value) || 0;
+    if(manualAmt){
+      const cur = document.getElementById('n-currency').value;
+      updateWOCalc(manualAmt, cur);
+    } else {
+      document.getElementById('wo-calc').style.display = 'none';
+    }
     document.getElementById('n-pct-hint').textContent = '';
   }
+}
+function fmtWO(n, cur){ return (cur==='COP'||cur==='MXN') ? '$'+Math.round(n).toLocaleString('es') : cur+' '+n.toFixed(2); }
+function updateWOCalc(base, cur){
+  const iva = base * 0.19;
+  const ret = base * 0.11;
+  const totalDoc = base + iva - ret;
+  document.getElementById('wo-calc').style.display = 'grid';
+  document.getElementById('wo-base').textContent = fmtWO(base, cur);
+  document.getElementById('wo-iva').textContent  = fmtWO(iva, cur);
+  document.getElementById('wo-ret').textContent  = fmtWO(ret, cur);
+  document.getElementById('wo-total').textContent= fmtWO(totalDoc, cur);
 }
 
 /* ── RENDER ── */
@@ -774,11 +812,16 @@ function render(){
       <th>Proveedor</th>
       <th>Categoría</th>
       <th>Cliente / Grupo</th>
+      <th style="color:#1565c0">NIT</th>
       <th>Descripción</th>
       <th>Total servicio</th>
       <th>%</th>
-      <th>Comisión</th>
+      <th>Comisión (base)</th>
+      <th style="color:#1565c0">IVA 19%</th>
+      <th style="color:#b45309">ReteFte 11%</th>
+      <th style="color:#15803d">Total doc</th>
       <th>Gestionado por</th>
+      <th style="color:#1565c0">N° FVT</th>
       <th>Facturar</th>
       <th>Soporte</th>
       <th>Vencimiento</th>
@@ -793,7 +836,7 @@ function render(){
   items.forEach(c => { html += renderRow(c, today); });
 
   html += `<tr class="add-row" onclick="openNewModal()">
-    <td colspan="${COUNTRY_MODE !== 'mx' ? 17 : 16}">+ Agregar comisión</td>
+    <td colspan="${COUNTRY_MODE !== 'mx' ? 22 : 21}">+ Agregar comisión</td>
   </tr>`;
   html += `</tbody></table></div>`;
 
@@ -812,16 +855,28 @@ function renderRow(c, today){
 
   const pctBadge = c.pct ? `<span class="pct-badge">${c.pct}%</span>` : '—';
 
+  const base = parseFloat(c.amount) || 0;
+  const iva  = base * 0.19;
+  const ret  = base * 0.11;
+  const totalDoc = base + iva - ret;
+  const cur  = c.currency || 'USD';
+  const fmtT = n => n ? fmtWO(n, cur) : '—';
+
   return `<tr data-id="${c.id}">
     <td><div class="cell editable" ondblclick="editField('${c.id}','date')">${fmtDate(c.date)}</div></td>
     <td><div class="cell editable" style="font-weight:500" ondblclick="editField('${c.id}','vendor')">${esc(c.vendor||'')}</div></td>
     <td><div class="cell" style="font-size:11px;color:var(--ink3)">${esc(c.category||'—')}</div></td>
     <td><div class="cell editable" ondblclick="editField('${c.id}','client')">${esc(c.client||'')}</div></td>
+    <td><div class="cell editable" ondblclick="editField('${c.id}','nit')" style="font-size:11px;color:#1565c0;white-space:nowrap">${esc(c.nit||'—')}</div></td>
     <td><div class="cell" style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px" title="${esc(c.desc||'')}">${esc(c.desc||'—')}</div></td>
     <td><div class="cell amount-cell" style="font-size:11px;color:var(--ink3)">${fmtAmount(c.total, c.currency)}</div></td>
     <td><div class="cell" style="justify-content:center">${pctBadge}</div></td>
     <td><div class="cell amount-cell" style="color:#3d7a52">${fmtAmount(c.amount, c.currency)}</div></td>
+    <td><div class="cell" style="font-size:11px;color:#1565c0;font-variant-numeric:tabular-nums">${base?fmtT(iva):'—'}</div></td>
+    <td><div class="cell" style="font-size:11px;color:#b45309;font-variant-numeric:tabular-nums">${base?fmtT(ret):'—'}</div></td>
+    <td><div class="cell" style="font-size:11px;font-weight:600;color:#15803d;font-variant-numeric:tabular-nums">${base?fmtT(totalDoc):'—'}</div></td>
     <td><div class="cell" style="gap:6px;padding:5px 8px">${avatar}<span style="font-size:11px;color:var(--ink3)">${c.person||'—'}</span></div></td>
+    <td><div class="cell editable" ondblclick="editField('${c.id}','fvt')" style="font-size:11px;color:#1565c0;font-weight:500;white-space:nowrap">${esc(c.fvt||'—')}</div></td>
     <td><div class="cell" style="font-size:11px;${dueStyle}">${fmtDate(c.dueDate)||'—'}</div></td>
     <td><div class="cell" style="justify-content:center;flex-direction:column;gap:3px;padding:4px 6px">
       ${c.phone ? `
@@ -860,7 +915,7 @@ function renderRow(c, today){
 function editField(id, field){
   const c = comisiones.find(x=>x.id===id);
   if(!c) return;
-  const colMap = {date:1,vendor:2,client:4,notes:12};
+  const colMap = {date:1,vendor:2,client:4,nit:5,notes:20,fvt:14};
   const el = document.querySelector(`tr[data-id="${id}"] td:nth-child(${colMap[field]}) .cell`);
   if(!el) return;
   const input = document.createElement('input');
@@ -959,6 +1014,9 @@ function openNewModal(){
   document.getElementById('n-pct-hint').textContent = '';
   document.getElementById('n-phone-hint').textContent = '';
   document.getElementById('n-facturar').value = '';
+  document.getElementById('n-nit').value = '';
+  document.getElementById('n-fvt').value = '';
+  document.getElementById('wo-calc').style.display = 'none';
   resetSoporte();
   _selectedClientCart = [];
   document.getElementById('client-services').style.display = 'none';
@@ -995,6 +1053,8 @@ function createComision(){
     notes:     document.getElementById('n-notes').value.trim(),
     facturar:  document.getElementById('n-facturar').value,
     soporte:   document.getElementById('n-soporte').value.trim(),
+    nit:       document.getElementById('n-nit').value.trim(),
+    fvt:       document.getElementById('n-fvt').value.trim(),
     status:    'pend',
     createdAt: new Date().toISOString(),
   };
@@ -1032,22 +1092,20 @@ function cobrarComision(id){
 
 /* ── EXPORT CSV ── */
 function exportCSV(){
-  const headers = ['Fecha','Proveedor','Categoría','Cliente','Descripción','Total Servicio','% Comisión','Monto Comisión','Moneda','Gestionado por','Vencimiento','Estado','Notas'];
-  const rows = comisiones.map(c => [
-    c.date||'',
-    c.vendor||'',
-    c.category||'',
-    c.client||'',
-    c.desc||'',
-    c.total||'',
-    c.pct ? c.pct+'%' : '',
-    c.amount||'',
-    c.currency||'',
-    c.person||'',
-    c.dueDate||'',
-    (STATUSES[c.status]||STATUSES.pend).label,
-    c.notes||'',
-  ].map(v => `"${String(v).replace(/"/g,'""')}"`));
+  const headers = ['Fecha','Proveedor','Categoría','Cliente','NIT','Descripción','Total Servicio','% Comisión','Base Comisión','IVA 19%','ReteFuente 11%','Total Documento','Moneda','N° FVT','Gestionado por','Vencimiento','Estado','Notas'];
+  const rows = comisiones.map(c => {
+    const base = parseFloat(c.amount)||0;
+    const iva  = Math.round(base*0.19);
+    const ret  = Math.round(base*0.11);
+    const totalDoc = base + iva - ret;
+    return [
+      c.date||'',c.vendor||'',c.category||'',c.client||'',c.nit||'',
+      c.desc||'',c.total||'',c.pct?c.pct+'%':'',
+      base||'',base?iva:'',base?ret:'',base?totalDoc:'',
+      c.currency||'',c.fvt||'',c.person||'',c.dueDate||'',
+      (STATUSES[c.status]||STATUSES.pend).label,c.notes||'',
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`)
+  });
   const csv = '﻿' + [headers.map(h=>`"${h}"`), ...rows].map(r=>r.join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
